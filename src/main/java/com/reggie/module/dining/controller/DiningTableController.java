@@ -112,7 +112,7 @@ public class DiningTableController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增桌台", description = "创建新的桌台并关联区域")
-    public R<DiningTable> save(@Valid @RequestBody DiningTable table) {
+    public R<DiningTable> save(@Parameter(description = "桌台信息（名称、区域、容量等）", required = true) @Valid @RequestBody DiningTable table) {
         log.info("新增桌台: {}", table.getName());
         table.setTenantId(BaseContext.getCurrentTenantId());
         if (table.getAreaId() == null) {
@@ -133,7 +133,7 @@ public class DiningTableController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改桌台", description = "更新桌台基本信息")
-    public R<String> update(@Valid @RequestBody DiningTable table) {
+    public R<String> update(@Parameter(description = "桌台信息（含ID）", required = true) @Valid @RequestBody DiningTable table) {
         log.info("修改桌台: {}", table.getId());
         // 租户归属校验：按 id + tenantId 查询，确认桌台归属当前租户
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -214,7 +214,7 @@ public class DiningTableController {
     @PutMapping("/status")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改桌台状态", description = "更新桌台使用状态（空闲/使用中/已预订等）")
-    public R<String> changeStatus(@Valid @RequestBody ChangeTableStatusDTO dto) {
+    public R<String> changeStatus(@Parameter(description = "桌台状态变更请求（桌台ID、目标状态）", required = true) @Valid @RequestBody ChangeTableStatusDTO dto) {
         log.info("修改桌台状态: id={}, status={}", dto.getId(), dto.getStatus());
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -283,7 +283,7 @@ public class DiningTableController {
     @PostMapping("/open")
     @RateLimit(maxRequestsPerSecond = 5)
     @Operation(summary = "开台", description = "将桌台状态从空闲改为占用，并绑定订单")
-    public R<String> openTable(@Valid @RequestBody OpenTableDTO dto) {
+    public R<String> openTable(@Parameter(description = "开台请求（桌台ID、订单ID）", required = true) @Valid @RequestBody OpenTableDTO dto) {
         log.info("开台请求: tableId={}, orderId={}", dto.getTableId(), dto.getOrderId());
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -304,9 +304,9 @@ public class DiningTableController {
     @PostMapping("/openWithOrder")
     @RateLimit(maxRequestsPerSecond = 5)
     @Operation(summary = "一键开台", description = "创建堂食占位订单并绑定到桌台，桌台状态改为占用")
-    public R<Map<String, Object>> openWithOrder(@RequestParam Long tableId,
-                                                @RequestParam(required = false) Integer customerCount,
-                                                @RequestParam(required = false) String remark) {
+    public R<Map<String, Object>> openWithOrder(@Parameter(description = "桌台ID", required = true) @RequestParam Long tableId,
+                                                @Parameter(description = "用餐人数（可选）") @RequestParam(required = false) Integer customerCount,
+                                                @Parameter(description = "备注（可选）") @RequestParam(required = false) String remark) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             return R.error("无操作权限");
@@ -357,7 +357,7 @@ public class DiningTableController {
     @PostMapping("/transfer")
     @RateLimit(maxRequestsPerSecond = 5)
     @Operation(summary = "转台", description = "将订单从原桌台迁移到新桌台")
-    public R<String> transferTable(@Valid @RequestBody TransferTableDTO dto) {
+    public R<String> transferTable(@Parameter(description = "转台请求（原桌台ID、目标桌台ID）", required = true) @Valid @RequestBody TransferTableDTO dto) {
         log.info("转台请求: fromTableId={}, toTableId={}", dto.getFromTableId(), dto.getToTableId());
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -402,7 +402,7 @@ public class DiningTableController {
     @PostMapping("/merge")
     @RateLimit(maxRequestsPerSecond = 5)
     @Operation(summary = "并台", description = "将多个桌台的订单合并到主桌台")
-    public R<String> mergeTables(@Valid @RequestBody MergeTableDTO dto) {
+    public R<String> mergeTables(@Parameter(description = "并台请求（主桌台ID、待合并桌台ID列表）", required = true) @Valid @RequestBody MergeTableDTO dto) {
         log.info("并台请求: masterTableId={}, mergeTableIds={}", dto.getMasterTableId(), dto.getMergeTableIds());
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -423,9 +423,9 @@ public class DiningTableController {
     @PostMapping("/split")
     @RateLimit(maxRequestsPerSecond = 5)
     @Operation(summary = "拆台", description = "将桌台的订单拆分到新桌台")
-    public R<String> splitTable(@RequestParam Long originalTableId,
-                                 @RequestParam Long newTableId,
-                                 @RequestParam List<Long> splitOrderIds) {
+    public R<String> splitTable(@Parameter(description = "原桌台ID", required = true) @RequestParam Long originalTableId,
+                                 @Parameter(description = "新桌台ID", required = true) @RequestParam Long newTableId,
+                                 @Parameter(description = "需要拆分出去的订单ID列表", required = true) @RequestParam List<Long> splitOrderIds) {
         log.info("拆台请求: originalTableId={}, newTableId={}, splitOrderIds={}", originalTableId, newTableId, splitOrderIds);
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -444,7 +444,7 @@ public class DiningTableController {
     @PostMapping("/splitBill")
     @RateLimit(maxRequestsPerSecond = 5)
     @Operation(summary = "AA 分账", description = "为订单创建拆分子单，支持按份数均分")
-    public R<String> splitBill(@Valid @RequestBody SplitBillDTO dto) {
+    public R<String> splitBill(@Parameter(description = "分账请求（订单ID、份数）", required = true) @Valid @RequestBody SplitBillDTO dto) {
         log.info("AA 分账请求: orderId={}, parts={}", dto.getOrderId(), dto.getParts());
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {

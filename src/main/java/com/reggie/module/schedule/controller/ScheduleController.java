@@ -43,7 +43,7 @@ public class ScheduleController {
     @Operation(summary = "员工排班", description = "获取某员工某月的排班详情")
     @Parameter(name = "employeeId", description = "员工ID", required = true)
     public R<List<Map<String, Object>>> employeeSchedule(@PathVariable Long employeeId,
-                                                         @RequestParam(required = false) String month) {
+                                                         @Parameter(description = "月份，格式 yyyy-MM", example = "2026-08") @RequestParam(required = false) String month) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> schedules = workScheduleService.getEmployeeSchedule(employeeId, month, tenantId);
         return R.success(schedules);
@@ -52,7 +52,7 @@ public class ScheduleController {
     @PostMapping("/save")
     @RequireEmployee
     @Operation(summary = "保存排班", description = "保存或更新员工的某日排班信息")
-    public R<Void> saveSchedule(@Valid @RequestBody SaveScheduleDTO dto) {
+    public R<Void> saveSchedule(@Parameter(description = "排班信息（员工ID、日期、班次、起止时间）", required = true) @Valid @RequestBody SaveScheduleDTO dto) {
         Long employeeId = dto.getEmployeeId();
         String date = dto.getDate();
         int shift = dto.getShift() != null ? dto.getShift() : 0;

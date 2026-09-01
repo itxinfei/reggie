@@ -67,7 +67,7 @@ public class StockCheckController {
     public R<Page<StockCheck>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String startDate,
-                                     @Parameter(description = "EndDate")
+                                     @Parameter(description = "结束日期（可选），格式yyyy-MM-dd")
                                      @RequestParam(required = false) String endDate) {
         Page<StockCheck> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<StockCheck> qw = new LambdaQueryWrapper<>();
@@ -94,7 +94,7 @@ public class StockCheckController {
      */
     @PostMapping
     @Operation(summary = "创建盘点单", description = "创建新的库存盘点单")
-    public R<StockCheck> create(@Validated @RequestBody CreateStockCheckDTO dto) {
+    public R<StockCheck> create(@Parameter(description = "盘点单创建信息", required = true) @Validated @RequestBody CreateStockCheckDTO dto) {
         StockCheck sc = stockCheckService.createCheck(dto.getOperator(), dto.getRemark());
         return R.success(sc);
     }
@@ -108,7 +108,7 @@ public class StockCheckController {
     @PutMapping("/complete/{id}")
     @Operation(summary = "完成盘点", description = "提交盘点结果并更新库存")
     @Parameter(name = "id", description = "盘点单ID", required = true)
-    public R<String> complete(@PathVariable Long id, @Valid @RequestBody CompleteStockCheckDTO dto) {
+    public R<String> complete(@Parameter(description = "盘点单ID", required = true) @PathVariable Long id, @Parameter(description = "盘点结果明细", required = true) @Valid @RequestBody CompleteStockCheckDTO dto) {
         stockCheckService.completeCheck(id, dto.getItems());
         return R.success("盘点完成");
     }

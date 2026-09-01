@@ -80,7 +80,7 @@ public class AIChatController {
     @PostMapping("/chat")
     @RateLimit(maxRequestsPerSecond = 2, type = RateLimitType.USER)
     @Operation(summary = "通用AI对话", description = "支持多场景：点餐推荐、菜品描述、经营分析、营销文案")
-    public R<AIChatResponse> chat(@Valid @RequestBody AIChatRequest request) {
+    public R<AIChatResponse> chat(@Parameter(description = "AI对话请求参数（消息内容、场景、对话ID）", required = true) @Valid @RequestBody AIChatRequest request) {
         Long userId = BaseContext.getCurrentId();
         if (userId != null) request.setUserId(userId);
         log.info("AI对话请求: userId={}, scene={}, messageLength={}",
@@ -114,9 +114,9 @@ public class AIChatController {
     @GetMapping("/chat/stream")
     @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
     @Operation(summary = "AI流式对话", description = "SSE流式输出，逐字显示AI回复")
-    @Parameter(description = "Message")
+    @Parameter(description = "用户消息")
     public SseEmitter chatStream(@RequestParam String message, @RequestParam(required = false) String scene,
-                                  @Parameter(description = "conversationId")
+                                  @Parameter(description = "对话ID")
                                   @RequestParam(required = false) String conversationId) {
         Long userId = BaseContext.getCurrentId();
         log.info("AI流式对话: userId={}, scene={}, messageLength={}", userId, scene, message.length());
@@ -144,7 +144,7 @@ public class AIChatController {
     @PostMapping("/order-assistant")
     @RateLimit(maxRequestsPerSecond = 2, type = RateLimitType.USER)
     @Operation(summary = "智能点餐助手", description = "用户用自然语言描述需求，AI推荐最合适的菜品")
-    public R<AIChatResponse> orderAssistant(@Valid @RequestBody OrderAssistantRequest params) {
+    public R<AIChatResponse> orderAssistant(@Parameter(description = "点餐推荐请求参数（消息内容、对话ID）", required = true) @Valid @RequestBody OrderAssistantRequest params) {
         String message = params.getMessage();
         // #10 安全修复：删除客户端 userId 入参，统一从登录上下文获取，防止越权 IDOR
         Long userId = BaseContext.getCurrentId();
@@ -178,9 +178,9 @@ public class AIChatController {
     @GetMapping("/order-assistant/stream")
     @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
     @Operation(summary = "智能点餐助手（流式）", description = "SSE流式输出推荐结果")
-    @Parameter(description = "Message")
+    @Parameter(description = "用户消息")
     public SseEmitter orderAssistantStream(@RequestParam String message,
-                                            @Parameter(description = "conversationId")
+                                            @Parameter(description = "对话ID")
                                             @RequestParam(required = false) String conversationId) {
         Long userId = BaseContext.getCurrentId();
         log.info("智能点餐流式: userId={}, messageLength={}", userId, message.length());
@@ -197,7 +197,7 @@ public class AIChatController {
     @PostMapping("/dish-description")
     @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
     @Operation(summary = "AI菜品描述生成", description = "输入菜品名称，AI生成专业美食描述文案")
-    public R<String> generateDishDescription(@Valid @RequestBody DishDescriptionRequest params) {
+    public R<String> generateDishDescription(@Parameter(description = "菜品描述请求参数（菜品名、分类、食材）", required = true) @Valid @RequestBody DishDescriptionRequest params) {
         String dishName = params.getDishName();
         String categoryName = params.getCategoryName();
         String ingredients = params.getIngredients();
@@ -216,7 +216,7 @@ public class AIChatController {
     @PostMapping("/business-analysis")
     @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
     @Operation(summary = "AI经营分析", description = "输入经营数据和问题，AI提供专业分析")
-    public R<String> analyzeBusiness(@Valid @RequestBody BusinessAnalysisRequest params) {
+    public R<String> analyzeBusiness(@Parameter(description = "经营分析请求参数（问题、数据）", required = true) @Valid @RequestBody BusinessAnalysisRequest params) {
         String question = params.getQuestion();
         String dataJson = params.getData();
         if (dataJson == null) dataJson = "{}";
@@ -257,9 +257,9 @@ public class AIChatController {
      */
     @GetMapping("/conversations")
     @Operation(summary = "获取对话列表", description = "获取当前用户的AI对话历史列表")
-    @Parameter(description = "Page")
+    @Parameter(description = "页码")
     public R<List<AIConversation>> getConversations(@RequestParam(defaultValue = "1") @Min(1) int page,
-                                                     @Parameter(description = "Page size")
+                                                     @Parameter(description = "每页条数")
                                                      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int pageSize) {
         Long userId = BaseContext.getCurrentId();
         List<AIConversation> conversations = aiChatService.getUserConversations(userId, page, PageUtils.cap(pageSize));
@@ -273,7 +273,7 @@ public class AIChatController {
      */
     @GetMapping("/conversations/{conversationId}")
     @Operation(summary = "获取对话详情", description = "获取指定对话的消息历史")
-    @Parameter(description = "ConversationId")
+    @Parameter(description = "对话ID")
     public R<List<AIMessageRecord>> getConversationDetail(@PathVariable String conversationId) {
         // 修复 P2-9：校验 conversationId 属于当前用户，防止 IDOR 越权
         Long userId = BaseContext.getCurrentId();
@@ -297,7 +297,7 @@ public class AIChatController {
     @PostMapping("/conversations")
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     @Operation(summary = "创建对话", description = "创建新的AI对话")
-    public R<AIConversation> createConversation(@RequestBody(required = false) CreateConversationRequest params) {
+    public R<AIConversation> createConversation(@Parameter(description = "创建对话请求参数（标题、场景，可选）", required = false) @RequestBody(required = false) CreateConversationRequest params) {
         Long userId = BaseContext.getCurrentId();
         String title = params != null ? params.getTitle() : null;
         String scene = params != null && params.getScene() != null ? params.getScene() : "order_assistant";
@@ -313,7 +313,7 @@ public class AIChatController {
     @DeleteMapping("/conversations/{conversationId}")
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     @Operation(summary = "删除对话", description = "软删除指定对话")
-    @Parameter(description = "ConversationId")
+    @Parameter(description = "对话ID")
     public R<String> deleteConversation(@PathVariable String conversationId) {
         Long userId = BaseContext.getCurrentId();
         aiChatService.deleteConversation(conversationId, userId);
@@ -330,7 +330,7 @@ public class AIChatController {
     @PostMapping("/feedback")
     @RateLimit(maxRequestsPerSecond = 10, type = RateLimitType.USER)
     @Operation(summary = "记录反馈", description = "用户对AI回复的反馈（有用/没用）")
-    public R<String> recordFeedback(@Valid @RequestBody RecordFeedbackRequest params) {
+    public R<String> recordFeedback(@Parameter(description = "反馈请求参数（消息ID、反馈类型）", required = true) @Valid @RequestBody RecordFeedbackRequest params) {
         Long userId = BaseContext.getCurrentId();
         Long messageId = params.getMessageId();
         String feedbackType = params.getFeedbackType();
@@ -396,11 +396,11 @@ public class AIChatController {
      */
     @GetMapping("/conversations/search")
     @Operation(summary = "搜索对话", description = "按标题关键词搜索对话")
-    @Parameter(description = "Keyword")
+    @Parameter(description = "搜索关键词")
     public R<List<AIConversation>> searchConversations(@RequestParam String keyword,
-                                                       @Parameter(description = "Page number")
+                                                       @Parameter(description = "页码")
                                                        @RequestParam(defaultValue = "1") @Min(1) int page,
-                                                       @Parameter(description = "Page size")
+                                                       @Parameter(description = "每页条数")
                                                        @RequestParam(defaultValue = "20") @Min(1) @Max(100) int pageSize) {
         Long userId = BaseContext.getCurrentId();
         LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
@@ -423,7 +423,7 @@ public class AIChatController {
      */
     @PostMapping("/conversations/{conversationId}/reset")
     @Operation(summary = "重置对话上下文", description = "清除对话的上下文缓存，保留历史消息记录")
-    @Parameter(description = "ConversationId")
+    @Parameter(description = "对话ID")
     public R<String> resetConversationContext(@PathVariable String conversationId) {
         Long userId = BaseContext.getCurrentId();
         // 验证所有权
@@ -446,7 +446,7 @@ public class AIChatController {
      */
     @GetMapping("/conversations/{conversationId}/context-stats")
     @Operation(summary = "上下文统计", description = "获取对话的上下文使用情况统计")
-    @Parameter(description = "ConversationId")
+    @Parameter(description = "对话ID")
     public R<Map<String, Object>> getContextStats(@PathVariable String conversationId) {
         Map<String, Object> stats = aiChatService.getContextStats(conversationId);
         return R.success(stats);

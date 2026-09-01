@@ -8,6 +8,7 @@ import com.reggie.common.utils.PageUtils;
 import com.reggie.module.platform.model.DishPlatformMapping;
 import com.reggie.module.platform.service.DishPlatformMappingService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,11 +36,11 @@ public class DishPlatformMappingController {
     @Operation(summary = "分页查询映射列表")
     @GetMapping("/page")
     public R<IPage<DishPlatformMapping>> page(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer pageSize,
-            @RequestParam(required = false) Long dishId,
-            @RequestParam(required = false) String platformType,
-            @RequestParam(required = false) Integer status) {
+            @Parameter(description = "页码，从1开始", required = true) @RequestParam(defaultValue = "1") Integer page,
+            @Parameter(description = "每页条数，最大100", required = true) @RequestParam(defaultValue = "20") Integer pageSize,
+            @Parameter(description = "菜品ID，按菜品筛选") @RequestParam(required = false) Long dishId,
+            @Parameter(description = "平台类型（如 meituan、eleme）") @RequestParam(required = false) String platformType,
+            @Parameter(description = "映射状态（1-已上架，0-已下架）") @RequestParam(required = false) Integer status) {
         Page<DishPlatformMapping> pageParam = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<DishPlatformMapping> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DishPlatformMapping::getIsDeleted, 0);
@@ -81,19 +82,19 @@ public class DishPlatformMappingController {
 
     @Operation(summary = "按菜品ID查询映射")
     @GetMapping("/dish/{dishId}")
-    public R<List<DishPlatformMapping>> listByDishId(@PathVariable @NotNull Long dishId) {
+    public R<List<DishPlatformMapping>> listByDishId(@Parameter(description = "菜品ID", required = true) @PathVariable @NotNull Long dishId) {
         return R.success(mappingService.listByDishId(dishId));
     }
 
     @Operation(summary = "按平台类型查询映射")
     @GetMapping("/platform/{platformType}")
-    public R<List<DishPlatformMapping>> listByPlatformType(@PathVariable String platformType) {
+    public R<List<DishPlatformMapping>> listByPlatformType(@Parameter(description = "平台类型（如 meituan、eleme）", required = true) @PathVariable String platformType) {
         return R.success(mappingService.listByPlatformType(platformType));
     }
 
     @Operation(summary = "新增映射")
     @PostMapping
-    public R<DishPlatformMapping> add(@RequestBody DishPlatformMapping mapping) {
+    public R<DishPlatformMapping> add(@Parameter(description = "映射信息（菜品ID、平台类型、平台菜品ID）", required = true) @RequestBody DishPlatformMapping mapping) {
         mapping.setIsDeleted(0);
         mapping.setStatus(1);
         mappingService.save(mapping);
@@ -102,13 +103,13 @@ public class DishPlatformMappingController {
 
     @Operation(summary = "更新映射")
     @PutMapping
-    public R<Boolean> update(@RequestBody DishPlatformMapping mapping) {
+    public R<Boolean> update(@Parameter(description = "映射信息（含ID）", required = true) @RequestBody DishPlatformMapping mapping) {
         return R.success(mappingService.updateById(mapping));
     }
 
     @Operation(summary = "删除映射")
     @DeleteMapping("/{id}")
-    public R<Boolean> delete(@PathVariable Long id) {
+    public R<Boolean> delete(@Parameter(description = "映射ID", required = true) @PathVariable Long id) {
         return R.success(mappingService.removeById(id));
     }
 }

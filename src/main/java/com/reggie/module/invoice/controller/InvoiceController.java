@@ -10,6 +10,7 @@ import com.reggie.module.invoice.model.InvoiceRecord;
 import com.reggie.module.invoice.model.InvoiceTitle;
 import com.reggie.module.invoice.service.InvoiceService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,14 +43,14 @@ public class InvoiceController {
 
     @PostMapping("/title/save")
     @Operation(summary = "保存发票抬头")
-    public R<Void> saveTitle(@RequestBody InvoiceTitle title) {
+    public R<Void> saveTitle(@Parameter(description = "发票抬头信息", required = true) @RequestBody InvoiceTitle title) {
         invoiceService.saveTitle(title);
         return R.success(null);
     }
 
     @DeleteMapping("/title/{id}")
     @Operation(summary = "删除发票抬头")
-    public R<Void> deleteTitle(@PathVariable Long id) {
+    public R<Void> deleteTitle(@Parameter(description = "发票抬头ID", required = true) @PathVariable Long id) {
         invoiceService.deleteTitle(id, currentTenantId(), currentUserId());
         return R.success(null);
     }
@@ -58,8 +59,8 @@ public class InvoiceController {
 
     @PostMapping("/apply/{orderId}")
     @Operation(summary = "申请开票")
-    public R<InvoiceRecord> applyInvoice(@PathVariable Long orderId,
-                                         @RequestBody InvoiceRecord applyDTO) {
+    public R<InvoiceRecord> applyInvoice(@Parameter(description = "订单ID", required = true) @PathVariable Long orderId,
+                                         @Parameter(description = "开票申请信息（抬头/税号/类型）", required = true) @RequestBody InvoiceRecord applyDTO) {
         Long tenantId = currentTenantId();
         Long userId = currentUserId();
         InvoiceRecord record = invoiceService.applyInvoice(
@@ -71,7 +72,7 @@ public class InvoiceController {
 
     @GetMapping("/order/{orderId}")
     @Operation(summary = "查询订单发票记录")
-    public R<InvoiceRecord> getInvoiceByOrder(@PathVariable Long orderId) {
+    public R<InvoiceRecord> getInvoiceByOrder(@Parameter(description = "订单ID", required = true) @PathVariable Long orderId) {
         return R.success(invoiceService.getInvoiceByOrder(orderId, currentUserId(), currentTenantId()));
     }
 
@@ -80,9 +81,9 @@ public class InvoiceController {
     @GetMapping("/list")
     @RequireEmployee
     @Operation(summary = "发票列表（后台，分页）")
-    public R<Page<InvoiceRecord>> listRecords(@RequestParam(required = false) Integer status,
-                                              @RequestParam(defaultValue = "1") Integer page,
-                                              @RequestParam(defaultValue = "10") Integer pageSize) {
+    public R<Page<InvoiceRecord>> listRecords(@Parameter(description = "发票状态（可选，如 PENDING/ISSUED/VOID）") @RequestParam(required = false) Integer status,
+                                              @Parameter(description = "页码，从1开始", required = true) @RequestParam(defaultValue = "1") Integer page,
+                                              @Parameter(description = "每页条数，最大100", required = true) @RequestParam(defaultValue = "10") Integer pageSize) {
         // 修改点(2026-09-01)：租户从员工会话获取，防止跨租户越权查询；分页上限由 PageUtils.cap 收敛
         Long tenantId = currentTenantId();
         Page<InvoiceRecord> pageInfo = PageUtils.of(page, PageUtils.cap(pageSize));
@@ -101,10 +102,10 @@ public class InvoiceController {
     @PostMapping("/issue/{recordId}")
     @RequireEmployee
     @Operation(summary = "开具发票")
-    public R<Void> issueInvoice(@PathVariable Long recordId,
-                                @RequestParam String invoiceNo,
-                                @RequestParam String invoiceCode,
-                                @RequestParam String invoiceUrl) {
+    public R<Void> issueInvoice(@Parameter(description = "发票申请记录ID", required = true) @PathVariable Long recordId,
+                                @Parameter(description = "发票号码", required = true) @RequestParam String invoiceNo,
+                                @Parameter(description = "发票代码", required = true) @RequestParam String invoiceCode,
+                                @Parameter(description = "发票PDF/图片地址", required = true) @RequestParam String invoiceUrl) {
         Long tenantId = currentTenantId();
         invoiceService.issueInvoice(recordId, invoiceNo, invoiceCode, invoiceUrl, tenantId);
         return R.success(null);
@@ -113,7 +114,7 @@ public class InvoiceController {
     @PostMapping("/void/{recordId}")
     @RequireEmployee
     @Operation(summary = "作废发票")
-    public R<Void> voidInvoice(@PathVariable Long recordId) {
+    public R<Void> voidInvoice(@Parameter(description = "发票申请记录ID", required = true) @PathVariable Long recordId) {
         Long tenantId = currentTenantId();
         invoiceService.voidInvoice(recordId, tenantId);
         return R.success(null);

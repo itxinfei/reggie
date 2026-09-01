@@ -13,6 +13,7 @@ import com.reggie.module.member.service.CouponTemplateService;
 import com.reggie.module.member.service.CouponUserService;
 import com.reggie.module.member.service.MemberService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -104,7 +105,7 @@ public class FrontCouponController {
     @PostMapping("/claim/{templateId}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "领取优惠券", description = "当前登录用户领取指定优惠券模板，从 session 绑定会员，不信任请求方传入的 memberId")
-    public R<String> claim(@PathVariable Long templateId) {
+    public R<String> claim(@Parameter(description = "优惠券模板ID", required = true) @PathVariable Long templateId) {
         Member member = currentMember();
         if (member == null) {
             return R.error("尚未开通会员，请先注册会员");
@@ -124,7 +125,7 @@ public class FrontCouponController {
      */
     @GetMapping("/usable")
     @Operation(summary = "下单可用券", description = "按订单金额筛出当前用户可抵扣的未使用优惠券")
-    public R<List<CouponAvailableDTO>> usableCoupons(@RequestParam BigDecimal orderAmount) {
+    public R<List<CouponAvailableDTO>> usableCoupons(@Parameter(description = "订单金额（元），不含运费与优惠", required = true) @RequestParam BigDecimal orderAmount) {
         Member member = currentMember();
         if (member == null) {
             return R.error("尚未开通会员，请先注册会员");

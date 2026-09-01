@@ -50,7 +50,7 @@ public class FranchiseeController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增加盟商", description = "新增加盟商，自动关联当前租户")
-    public R<Franchisee> save(@Valid @RequestBody Franchisee franchisee) {
+    public R<Franchisee> save(@Parameter(description = "加盟商信息", required = true) @Valid @RequestBody Franchisee franchisee) {
         franchisee.setTenantId(BaseContext.getCurrentTenantId());
         if (franchisee.getStatus() == null) {
             franchisee.setStatus(Franchisee.STATUS_ENABLED);
@@ -62,7 +62,7 @@ public class FranchiseeController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改加盟商", description = "更新加盟商信息，仅限本租户")
-    public R<String> update(@Valid @RequestBody Franchisee franchisee) {
+    public R<String> update(@Parameter(description = "加盟商信息", required = true) @Valid @RequestBody Franchisee franchisee) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");
@@ -87,7 +87,7 @@ public class FranchiseeController {
     @DeleteMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除加盟商", description = "删除加盟商（逻辑删除），逐条校验租户归属")
-    public R<String> delete(@RequestParam("ids") List<Long> ids) {
+    public R<String> delete(@Parameter(description = "加盟商ID列表", required = true) @RequestParam("ids") List<Long> ids) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");
@@ -107,7 +107,7 @@ public class FranchiseeController {
 
     @GetMapping("/{id}")
     @Operation(summary = "查询加盟商详情")
-    public R<Franchisee> getById(@PathVariable Long id) {
+    public R<Franchisee> getById(@Parameter(description = "加盟商ID", required = true) @PathVariable Long id) {
         Franchisee franchisee = franchiseeService.getById(id);
         if (franchisee == null) {
             return R.error("加盟商不存在");

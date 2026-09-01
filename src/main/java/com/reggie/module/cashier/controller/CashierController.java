@@ -66,8 +66,7 @@ public class CashierController {
 
     @GetMapping("/record/order/{orderId}")
     @Operation(summary = "根据订单ID获取收银记录")
-    @Parameter(description = "OrderId")
-    public R<CashierRecord> getCashierRecordByOrderId(@PathVariable Long orderId) {
+    public R<CashierRecord> getCashierRecordByOrderId(@Parameter(description = "订单ID", required = true) @PathVariable Long orderId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         CashierRecord record = cashierService.getCashierRecordByOrderId(orderId, tenantId);
         return R.success(record);
@@ -76,7 +75,7 @@ public class CashierController {
     @PostMapping("/record")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存收银记录")
-    public R<String> saveCashierRecord(@Valid @RequestBody CashierRecord cashierRecord) {
+    public R<String> saveCashierRecord(@Parameter(description = "收银记录信息", required = true) @Valid @RequestBody CashierRecord cashierRecord) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long userId = BaseContext.getCurrentId();
         cashierRecord.setTenantId(tenantId);
@@ -128,7 +127,7 @@ public class CashierController {
     @DeleteMapping("/record/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除收银记录")
-    public R<String> deleteCashierRecord(@PathVariable Long id) {
+    public R<String> deleteCashierRecord(@Parameter(description = "收银记录ID", required = true) @PathVariable Long id) {
         boolean success = cashierService.deleteCashierRecord(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
@@ -147,8 +146,7 @@ public class CashierController {
 
     @GetMapping("/settlement/date/{date}")
     @Operation(summary = "根据日期获取日结")
-    @Parameter(description = "Date")
-    public R<DailySettlement> getDailySettlementByDate(@PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+    public R<DailySettlement> getDailySettlementByDate(@Parameter(description = "结算日期，格式 yyyy-MM-dd", required = true) @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
         Long tenantId = BaseContext.getCurrentTenantId();
         DailySettlement settlement = cashierService.getDailySettlementByDate(date, tenantId);
         return R.success(settlement);
@@ -196,7 +194,7 @@ public class CashierController {
     @DeleteMapping("/settlement/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除日结")
-    public R<String> deleteDailySettlement(@PathVariable Long id) {
+    public R<String> deleteDailySettlement(@Parameter(description = "日结记录ID", required = true) @PathVariable Long id) {
         boolean success = cashierService.deleteDailySettlement(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }

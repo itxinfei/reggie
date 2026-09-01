@@ -28,7 +28,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/retention")
-@Tag(name = "Membership Retention Automation")
+@Tag(name = "会员留存自动化")
 @RequireEmployee
 @Slf4j
 public class RetentionController {
@@ -37,7 +37,7 @@ public class RetentionController {
     private RetentionService retentionService;
 
     @GetMapping("/overview")
-    @Operation(summary = "Get retention overview with tiered statistics")
+    @Operation(summary = "会员留存概览")
     public R<Map<String, Object>> getRetentionOverview() {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> overview = retentionService.getRetentionOverview(tenantId);
@@ -45,17 +45,17 @@ public class RetentionController {
     }
 
     @GetMapping("/list")
-    @Operation(summary = "Get member list with optional filters")
+    @Operation(summary = "会员留存列表")
     public R<List<Map<String, Object>>> getMemberList(
-            @Parameter(description = "Level filter (GOLD/SILVER/NORMAL)") @RequestParam(required = false) String level,
-            @Parameter(description = "Status filter (ACTIVE/DORMANT/CHURNED)") @RequestParam(required = false) String status) {
+            @Parameter(description = "等级筛选（GOLD/SILVER/NORMAL）") @RequestParam(required = false) String level,
+            @Parameter(description = "状态筛选（ACTIVE/DORMANT/CHURNED）") @RequestParam(required = false) String status) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> list = retentionService.getMemberList(tenantId, level, status);
         return R.success(list);
     }
 
     @GetMapping("/ranking")
-    @Operation(summary = "Get points ranking top 20")
+    @Operation(summary = "积分排行榜")
     public R<List<Map<String, Object>>> getPointsRanking() {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> ranking = retentionService.getPointsRanking(tenantId);
@@ -63,7 +63,7 @@ public class RetentionController {
     }
 
     @GetMapping("/warning")
-    @Operation(summary = "Get churn warning members (>30 days without order)")
+    @Operation(summary = "流失预警会员")
     public R<List<Map<String, Object>>> getChurnWarning() {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> warning = retentionService.getChurnWarning(tenantId);
@@ -71,7 +71,7 @@ public class RetentionController {
     }
 
     @GetMapping("/recommend")
-    @Operation(summary = "Get smart coupon recommendation")
+    @Operation(summary = "智能券推荐")
     public R<List<Map<String, Object>>> getSmartRecommend() {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> recommend = retentionService.getSmartRecommend(tenantId);
@@ -79,17 +79,17 @@ public class RetentionController {
     }
 
     @PostMapping("/send")
-    @Operation(summary = "Send coupon to a specific member")
+    @Operation(summary = "定向发券")
     public R<Void> sendCoupon(
-            @Parameter(description = "Member ID") @RequestParam Long memberId) {
+            @Parameter(description = "会员ID") @RequestParam Long memberId) {
         log.info("Send coupon to member: {}", memberId);
         return retentionService.sendCoupon(memberId);
     }
 
     @PostMapping("/send-batch")
-    @Operation(summary = "Batch send coupons to members")
+    @Operation(summary = "批量发券")
     public R<Void> batchSendCoupon(
-            @Parameter(description = "Member ID list") @RequestBody List<Long> memberIds) {
+            @Parameter(description = "会员ID列表") @RequestBody List<Long> memberIds) {
         log.info("Batch send coupon to {} members", memberIds != null ? memberIds.size() : 0);
         return retentionService.batchSendCoupon(memberIds);
     }

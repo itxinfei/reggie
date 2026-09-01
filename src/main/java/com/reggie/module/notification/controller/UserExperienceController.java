@@ -23,7 +23,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/ux")
-@Tag(name = "User Experience Management")
+@Tag(name = "用户体验管理")
 public class UserExperienceController {
 
     @Autowired
@@ -35,33 +35,33 @@ public class UserExperienceController {
     // ==================== WebSocket Management ====================
 
     @PostMapping("/notification/order")
-    @Operation(summary = "Send order notification")
+    @Operation(summary = "发送下单通知")
     public R<String> sendOrderNotification(
-                        @Parameter(description = "Order ID") @RequestParam Long orderId,
-            @Parameter(description = "Order number") @RequestParam String orderNumber,
-            @Parameter(description = "Notification type") @RequestParam String type,
-            @Parameter(description = "Message") @RequestParam String message) {
+                        @Parameter(description = "订单ID") @RequestParam Long orderId,
+            @Parameter(description = "订单号") @RequestParam String orderNumber,
+            @Parameter(description = "通知类型") @RequestParam String type,
+            @Parameter(description = "消息内容") @RequestParam String message) {
         webSocketMessageService.sendOrderNotification(orderId, orderNumber, type, message);
         return R.success("Notification sent");
     }
 
     @PostMapping("/notification/kitchen")
-    @Operation(summary = "Send kitchen notification")
+    @Operation(summary = "发送后厨通知")
     public R<String> sendKitchenNotification(
-                        @Parameter(description = "Order ID") @RequestParam Long orderId,
-            @Parameter(description = "Order number") @RequestParam String orderNumber,
-            @Parameter(description = "Items summary") @RequestParam String items,
-            @Parameter(description = "Type") @RequestParam(defaultValue = "new") String type) {
+                        @Parameter(description = "订单ID") @RequestParam Long orderId,
+            @Parameter(description = "订单号") @RequestParam String orderNumber,
+            @Parameter(description = "菜品明细摘要") @RequestParam String items,
+            @Parameter(description = "类型") @RequestParam(defaultValue = "new") String type) {
         webSocketMessageService.sendKitchenNotification(orderId, orderNumber, items, type);
         return R.success("Kitchen notification sent");
     }
 
     @PostMapping("/notification/system")
-    @Operation(summary = "Send system notification")
+    @Operation(summary = "发送系统通知")
     public R<String> sendSystemNotification(
-                        @Parameter(description = "Type") @RequestParam String type,
-            @Parameter(description = "Title") @RequestParam String title,
-            @Parameter(description = "Message") @RequestParam String message) {
+                        @Parameter(description = "类型") @RequestParam String type,
+            @Parameter(description = "标题") @RequestParam String title,
+            @Parameter(description = "消息内容") @RequestParam String message) {
         webSocketMessageService.sendSystemNotification(type, title, message);
         return R.success("System notification sent");
     }
@@ -69,37 +69,37 @@ public class UserExperienceController {
     // ==================== Voice Broadcast ====================
 
     @GetMapping("/voice/new-order")
-    @Operation(summary = "Get new order voice data")
+    @Operation(summary = "新订单语音播报")
     public R<Map<String, Object>> getNewOrderVoice(
-                        @Parameter(description = "Order number") @RequestParam String orderNumber,
-            @Parameter(description = "Amount") @RequestParam String amount) {
+                        @Parameter(description = "订单号") @RequestParam String orderNumber,
+            @Parameter(description = "金额") @RequestParam String amount) {
         Map<String, Object> voiceData = voiceBroadcastService.generateNewOrderVoice(orderNumber, amount);
         return R.success(voiceData);
     }
 
     @GetMapping("/voice/order-reminder")
-    @Operation(summary = "Get order reminder voice data")
+    @Operation(summary = "催单语音播报")
     public R<Map<String, Object>> getOrderReminderVoice(
-                        @Parameter(description = "Order number") @RequestParam String orderNumber,
-            @Parameter(description = "Minutes") @RequestParam int minutes) {
+                        @Parameter(description = "订单号") @RequestParam String orderNumber,
+            @Parameter(description = "等待分钟数") @RequestParam int minutes) {
         Map<String, Object> voiceData = voiceBroadcastService.generateOrderReminderVoice(orderNumber, minutes);
         return R.success(voiceData);
     }
 
     @GetMapping("/voice/payment-received")
-    @Operation(summary = "Get payment received voice data")
+    @Operation(summary = "收款到账语音播报")
     public R<Map<String, Object>> getPaymentReceivedVoice(
-                        @Parameter(description = "Order number") @RequestParam String orderNumber,
-            @Parameter(description = "Amount") @RequestParam String amount) {
+                        @Parameter(description = "订单号") @RequestParam String orderNumber,
+            @Parameter(description = "金额") @RequestParam String amount) {
         Map<String, Object> voiceData = voiceBroadcastService.generatePaymentReceivedVoice(orderNumber, amount);
         return R.success(voiceData);
     }
 
     @GetMapping("/voice/queue-call")
-    @Operation(summary = "Get queue call voice data")
+    @Operation(summary = "叫号语音播报")
     public R<Map<String, Object>> getQueueCallVoice(
-                        @Parameter(description = "Queue number") @RequestParam String queueNumber,
-            @Parameter(description = "Table name") @RequestParam String tableName) {
+                        @Parameter(description = "排队号") @RequestParam String queueNumber,
+            @Parameter(description = "桌名") @RequestParam String tableName) {
         Map<String, Object> voiceData = voiceBroadcastService.generateQueueCallVoice(queueNumber, tableName);
         return R.success(voiceData);
     }

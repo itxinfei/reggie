@@ -70,7 +70,7 @@ public class PointsRecordController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "phone", description = "会员手机号（可选，精确查询）")
     public R<Map<String, Object>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, String phone,
-                                       @RequestParam(required = false) String type) {
+                                       @Parameter(description = "积分类型（earn-获取/consume-消耗，可选）") @RequestParam(required = false) String type) {
         Page<PointsRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<PointsRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(type != null && !type.isEmpty(), PointsRecord::getType, type);
@@ -155,7 +155,7 @@ public class PointsRecordController {
     @PostMapping("/adjust")
     @RequireEmployee
     @Operation(summary = "积分调整", description = "运营手动调整会员积分：正数发放、负数扣减，并写入积分流水")
-    public R<String> adjust(@Validated @RequestBody AdjustPointsDTO dto) {
+    public R<String> adjust(@Parameter(description = "积分调整参数（会员ID、积分变动数、说明）", required = true) @Validated @RequestBody AdjustPointsDTO dto) {
         if (dto.getPoints() == null || dto.getPoints() == 0) {
             return R.error("积分变动数不能为0");
         }

@@ -59,9 +59,9 @@ public class MemberLevelController {
     @GetMapping("/page")
     @Operation(summary = "分页查询", description = "分页查询会员等级列表，自动过滤当前租户数据")
     public R<Page<MemberLevel>> page(
-            @Parameter(description = "Page")
+            @Parameter(description = "页码")
             @RequestParam(defaultValue = "1") @Min(1) int page,
-            @Parameter(description = "PageSize")
+            @Parameter(description = "每页条数")
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
             @Parameter(description = "等级名称（可选，模糊查询）")
             @RequestParam(required = false) String name) {
@@ -102,7 +102,7 @@ public class MemberLevelController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增等级", description = "创建新的会员等级")
-    public R<String> save(@RequestBody MemberLevel memberLevel) {
+    public R<String> save(@Parameter(description = "会员等级信息（名称、门槛、权益）", required = true) @RequestBody MemberLevel memberLevel) {
         log.info("新增会员等级: {}", memberLevel.getName());
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -124,7 +124,7 @@ public class MemberLevelController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改等级", description = "更新会员等级信息")
-    public R<String> update(@RequestBody MemberLevel memberLevel) {
+    public R<String> update(@Parameter(description = "会员等级信息（含ID）", required = true) @RequestBody MemberLevel memberLevel) {
         log.info("修改会员等级: {}", memberLevel.getId());
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {

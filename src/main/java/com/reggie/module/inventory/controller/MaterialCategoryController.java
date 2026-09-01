@@ -73,7 +73,7 @@ public class MaterialCategoryController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增分类", description = "创建新的食材分类")
-    public R<String> save(@RequestBody MaterialCategory category) {
+    public R<String> save(@Parameter(description = "食材分类信息", required = true) @RequestBody MaterialCategory category) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");
@@ -90,7 +90,7 @@ public class MaterialCategoryController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改分类", description = "更新食材分类信息")
-    public R<String> update(@RequestBody MaterialCategory category) {
+    public R<String> update(@Parameter(description = "食材分类信息（含ID）", required = true) @RequestBody MaterialCategory category) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");

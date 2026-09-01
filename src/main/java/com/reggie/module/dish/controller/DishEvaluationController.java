@@ -54,8 +54,7 @@ public class DishEvaluationController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增菜品评价", description = "用户对已购买菜品进行评价，需登录")
-    @Parameter(name = "evaluation", description = "评价信息（订单ID、菜品ID、评分、内容等）", required = true)
-    public R<DishEvaluation> addEvaluation(@Valid @RequestBody DishEvaluation evaluation) {
+    public R<DishEvaluation> addEvaluation(@Parameter(description = "评价信息（订单ID、菜品ID、评分、内容等）", required = true) @Valid @RequestBody DishEvaluation evaluation) {
         log.info("用户新增菜品评价：userId={}, dishId={}, starRating={}",
                 BaseContext.getCurrentId(), evaluation.getDishId(), evaluation.getStarRating());
 
@@ -81,12 +80,10 @@ public class DishEvaluationController {
      */
     @GetMapping("/dish/{dishId}")
     @Operation(summary = "获取菜品评价列表", description = "分页查询指定菜品的已通过审核评价，按时间倒序")
-    @Parameter(name = "dishId", description = "菜品ID", required = true)
     public R<Page<DishEvaluation>> listByDishId(
-            @PathVariable Long dishId,
-            @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") Integer page,
-            @Parameter(description = "PageSize")
-            @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页条数不能小于1") @Max(value = 50, message = "每页最多50条") Integer pageSize) {
+            @Parameter(description = "菜品ID", required = true) @PathVariable Long dishId,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") Integer page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页条数不能小于1") @Max(value = 50, message = "每页最多50条") Integer pageSize) {
 
         log.info("查询菜品评价列表：dishId={}, page={}, pageSize={}", dishId, page, pageSize);
 
@@ -130,10 +127,8 @@ public class DishEvaluationController {
     @GetMapping("/user/my")
     @Operation(summary = "获取我的评价列表", description = "查询当前登录用户的历史评价，按时间倒序")
     public R<Page<DishEvaluation>> listMyEvaluations(
-            @Parameter(description = "Page")
-            @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") Integer page,
-            @Parameter(description = "PageSize")
-            @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页条数不能小于1") @Max(value = 50, message = "每页最多50条") Integer pageSize) {
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") Integer page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页条数不能小于1") @Max(value = 50, message = "每页最多50条") Integer pageSize) {
 
         log.info("查询我的评价列表：userId={}, page={}, pageSize={}", BaseContext.getCurrentId(), page, pageSize);
 
@@ -156,11 +151,10 @@ public class DishEvaluationController {
     @PutMapping("/{id}/reply")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "商家回复评价", description = "商家对已通过审核的评价进行回复，需商家/管理员权限")
-    @Parameter(name = "id", description = "评价ID", required = true)
     @RequiresPermission("evaluation:reply")
     public R<String> replyEvaluation(
-            @PathVariable Long id,
-            @Parameter(name = "replyContent", description = "回复内容", required = true)
+            @Parameter(description = "评价ID", required = true) @PathVariable Long id,
+            @Parameter(description = "回复内容（字段：replyContent）", required = true)
             @RequestBody Map<String, String> params) {
 
         String replyContent = params.get("replyContent");
@@ -250,10 +244,8 @@ public class DishEvaluationController {
     @Operation(summary = "获取待审核评价列表", description = "分页查询待审核的评价，需商家/管理员权限")
     @RequiresPermission("evaluation:view")
     public R<Page<DishEvaluation>> listPending(
-            @Parameter(description = "Page")
-            @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") Integer page,
-            @Parameter(description = "PageSize")
-            @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页条数不能小于1") @Max(value = 50, message = "每页最多50条") Integer pageSize) {
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码不能小于1") Integer page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页条数不能小于1") @Max(value = 50, message = "每页最多50条") Integer pageSize) {
 
         log.info("查询待审核评价列表：page={}, pageSize={}", page, pageSize);
 
@@ -315,7 +307,7 @@ public class DishEvaluationController {
     @DeleteMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除自己的评价", description = "用户删除自己未审核的评价，需登录")
-    public R<String> deleteMyEvaluation(@RequestBody Map<String, Long> params) {
+    public R<String> deleteMyEvaluation(@Parameter(description = "请求体，包含id（评价ID）", required = true) @RequestBody Map<String, Long> params) {
         Long id = params.get("id");
         if (id == null) {
             return R.error("评价ID不能为空");

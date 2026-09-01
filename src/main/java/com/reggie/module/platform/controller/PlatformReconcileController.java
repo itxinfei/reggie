@@ -6,6 +6,7 @@ import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.platform.model.PlatformReconcileTask;
 import com.reggie.module.platform.service.PlatformReconcileTaskService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,8 +45,8 @@ public class PlatformReconcileController {
     @PostMapping("/execute")
     @Operation(summary = "执行对账", description = "对指定平台和日期执行订单对账")
     public R<PlatformReconcileTask> executeReconcile(
-            @RequestParam String platformType,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+            @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
+            @Parameter(description = "对账日期，格式 yyyy-MM-dd", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
         log.info("执行对账: platformType={}, date={}", platformType, date);
         PlatformReconcileTask task = reconcileTaskService.reconcile(platformType, date);
         return R.success(task);
@@ -61,8 +62,8 @@ public class PlatformReconcileController {
     @GetMapping("/query")
     @Operation(summary = "查询对账", description = "查询指定平台和日期的对账任务结果")
     public R<PlatformReconcileTask> queryReconcile(
-            @RequestParam String platformType,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+            @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
+            @Parameter(description = "对账日期，格式 yyyy-MM-dd", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
         PlatformReconcileTask task = reconcileTaskService.getByDate(platformType, date);
         if (task == null) {
             return R.error("未找到对账记录");

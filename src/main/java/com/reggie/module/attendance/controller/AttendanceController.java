@@ -41,7 +41,7 @@ public class AttendanceController {
     @Operation(summary = "考勤日历", description = "获取某员工某月的每日考勤状态日历")
     @Parameter(name = "employeeId", description = "员工ID", required = true)
     public R<Map<String, Object>> calendar(@PathVariable Long employeeId,
-                                           @RequestParam(required = false) String month) {
+                                           @Parameter(description = "月份，格式 yyyy-MM", example = "2026-08") @RequestParam(required = false) String month) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> calendar = attendanceService.getAttendanceCalendar(employeeId, month, tenantId);
         return R.success(calendar);

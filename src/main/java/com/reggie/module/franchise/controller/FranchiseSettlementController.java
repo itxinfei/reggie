@@ -51,7 +51,7 @@ public class FranchiseSettlementController {
     @PutMapping("/confirm/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "确认结算单", description = "待确认 → 已确认（总部核对营业额与抽成后确认）")
-    public R<String> confirm(@PathVariable Long id) {
+    public R<String> confirm(@Parameter(description = "结算单ID", required = true) @PathVariable Long id) {
         franchiseSettlementService.confirmSettlement(id);
         return R.success("确认成功");
     }
@@ -59,14 +59,14 @@ public class FranchiseSettlementController {
     @PutMapping("/settle/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "完成结算", description = "已确认 → 已结算（完成抽成划转）")
-    public R<String> settle(@PathVariable Long id) {
+    public R<String> settle(@Parameter(description = "结算单ID", required = true) @PathVariable Long id) {
         franchiseSettlementService.settleSettlement(id);
         return R.success("结算成功");
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "查询结算单详情")
-    public R<FranchiseSettlement> getById(@PathVariable Long id) {
+    public R<FranchiseSettlement> getById(@Parameter(description = "结算单ID", required = true) @PathVariable Long id) {
         FranchiseSettlement settlement = franchiseSettlementService.getById(id);
         if (settlement == null) {
             return R.error("结算单不存在");

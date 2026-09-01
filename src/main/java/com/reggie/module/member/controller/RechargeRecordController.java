@@ -67,7 +67,7 @@ public class RechargeRecordController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "phone", description = "会员手机号（可选，精确查询）")
     public R<Map<String, Object>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, String phone,
-                                       @RequestParam(required = false) String paymentMethod) {
+                                       @Parameter(description = "支付方式（WECHAT/ALIPAY/CASH/BALANCE 等，可选）") @RequestParam(required = false) String paymentMethod) {
         Page<RechargeRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<RechargeRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(paymentMethod != null && !paymentMethod.isEmpty(), RechargeRecord::getPaymentMethod, paymentMethod);

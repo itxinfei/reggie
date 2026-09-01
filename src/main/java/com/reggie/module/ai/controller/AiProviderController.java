@@ -149,7 +149,7 @@ public class AiProviderController {
     @PostMapping("/activate/{id}")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "切换供应商", description = "激活指定供应商（切换后AI将使用该供应商）")
-    public R<String> activate(@PathVariable Long id) {
+    public R<String> activate(@Parameter(description = "供应商配置ID", required = true) @PathVariable Long id) {
         AiProviderConfig target = providerConfigService.getById(id);
         if (target == null) {
             return R.error("供应商配置不存在");
@@ -171,7 +171,7 @@ public class AiProviderController {
 
     @GetMapping("/get/{id}")
     @Operation(summary = "获取单个供应商", description = "获取指定供应商的配置（API密钥已脱敏）")
-    public R<AiProviderConfig> getDetail(@PathVariable Long id) {
+    public R<AiProviderConfig> getDetail(@Parameter(description = "供应商配置ID", required = true) @PathVariable Long id) {
         AiProviderConfig config = providerConfigService.getById(id);
         if (config == null) {
             return R.error("供应商配置不存在");
@@ -183,7 +183,7 @@ public class AiProviderController {
     @GetMapping("/test/{id}")
     @RateLimit(maxRequestsPerSecond = 2)
     @Operation(summary = "测试连通性", description = "测试指定AI供应商的连接是否正常")
-    public R<Map<String, String>> test(@PathVariable Long id) {
+    public R<Map<String, String>> test(@Parameter(description = "供应商配置ID", required = true) @PathVariable Long id) {
         String result = providerConfigService.testProvider(id);
         Map<String, String> resp = new HashMap<>();
         resp.put("result", result);
@@ -196,7 +196,7 @@ public class AiProviderController {
     @PostMapping("/fetch-models")
     @RateLimit(maxRequestsPerSecond = 2)
     @Operation(summary = "拉取模型列表", description = "调用AI供应商的 /models 接口获取可用模型列表（参考ChatBox/NextChat交互模式）")
-    public R<List<String>> fetchModels(@RequestBody Map<String, String> params) {
+    public R<List<String>> fetchModels(@Parameter(description = "请求参数（baseUrl API地址、apiKey 密钥）", required = true) @RequestBody Map<String, String> params) {
         String baseUrl = params.get("baseUrl");
         String apiKey = params.get("apiKey");
 

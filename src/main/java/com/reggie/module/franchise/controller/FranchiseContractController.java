@@ -50,7 +50,7 @@ public class FranchiseContractController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增加盟合同", description = "新增加盟合同，自动关联当前租户")
-    public R<FranchiseContract> save(@Valid @RequestBody FranchiseContract contract) {
+    public R<FranchiseContract> save(@Parameter(description = "加盟合同信息（含抽成规则）", required = true) @Valid @RequestBody FranchiseContract contract) {
         contract.setTenantId(BaseContext.getCurrentTenantId());
         if (contract.getSettleCycle() == null) {
             contract.setSettleCycle(FranchiseContract.SETTLE_CYCLE_MONTHLY);
@@ -65,7 +65,7 @@ public class FranchiseContractController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改加盟合同", description = "更新合同与抽成规则，先校验租户归属")
-    public R<String> update(@Valid @RequestBody FranchiseContract contract) {
+    public R<String> update(@Parameter(description = "加盟合同信息（含抽成规则）", required = true) @Valid @RequestBody FranchiseContract contract) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");
@@ -94,7 +94,7 @@ public class FranchiseContractController {
     @DeleteMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除加盟合同", description = "删除合同（逻辑删除），逐条校验租户归属")
-    public R<String> delete(@RequestParam("ids") List<Long> ids) {
+    public R<String> delete(@Parameter(description = "合同ID列表", required = true) @RequestParam("ids") List<Long> ids) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");
@@ -114,7 +114,7 @@ public class FranchiseContractController {
 
     @GetMapping("/{id}")
     @Operation(summary = "查询合同详情")
-    public R<FranchiseContract> getById(@PathVariable Long id) {
+    public R<FranchiseContract> getById(@Parameter(description = "合同ID", required = true) @PathVariable Long id) {
         FranchiseContract contract = franchiseContractService.getById(id);
         if (contract == null) {
             return R.error("加盟合同不存在");

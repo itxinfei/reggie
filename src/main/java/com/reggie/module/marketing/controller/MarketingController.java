@@ -57,7 +57,7 @@ import java.util.Set;
 @Slf4j
 @RestController
 @RequestMapping("/marketing")
-@Tag(name = "Marketing Activity Management")
+@Tag(name = "营销活动管理")
 @RequireEmployee
 public class MarketingController {
 
@@ -70,9 +70,9 @@ public class MarketingController {
     // ==================== Full Reduction Rule Management ====================
 
     @GetMapping("/full-reduction/list")
-    @Operation(summary = "Get full reduction rule list")
+    @Operation(summary = "查询满减规则列表")
     public R<List<FullReductionRule>> getFullReductionRules(
-            @Parameter(description = "Campaign ID") @RequestParam(required = false) Long campaignId) {
+            @Parameter(description = "活动ID（可选）") @RequestParam(required = false) Long campaignId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<FullReductionRule> rules = marketingService.getFullReductionRules(campaignId, tenantId);
         return R.success(rules);
@@ -80,8 +80,8 @@ public class MarketingController {
 
     @PostMapping("/full-reduction")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Save full reduction rule")
-    public R<String> saveFullReductionRule(@Valid @RequestBody FullReductionRule rule) {
+    @Operation(summary = "新增满减规则")
+    public R<String> saveFullReductionRule(@Parameter(description = "满减规则信息", required = true) @Valid @RequestBody FullReductionRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = marketingService.saveOrUpdateFullReductionRule(rule);
@@ -90,8 +90,8 @@ public class MarketingController {
 
     @PutMapping("/full-reduction")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Update full reduction rule")
-    public R<String> updateFullReductionRule(@Valid @RequestBody FullReductionRule rule) {
+    @Operation(summary = "修改满减规则")
+    public R<String> updateFullReductionRule(@Parameter(description = "满减规则信息（含ID）", required = true) @Valid @RequestBody FullReductionRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = marketingService.saveOrUpdateFullReductionRule(rule);
@@ -100,16 +100,16 @@ public class MarketingController {
 
     @DeleteMapping("/full-reduction/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Delete full reduction rule")
-    public R<String> deleteFullReductionRule(@Parameter(description = "ID") @PathVariable Long id) {
+    @Operation(summary = "删除满减规则")
+    public R<String> deleteFullReductionRule(@Parameter(description = "满减规则ID", required = true) @PathVariable Long id) {
         boolean success = marketingService.deleteFullReductionRule(id);
         return success ? R.success("Deleted successfully") : R.error("Delete failed");
     }
 
     @PostMapping("/full-reduction/batch")
     @RateLimit(maxRequestsPerSecond = 3)
-    @Operation(summary = "Batch save full reduction rules")
-    public R<String> batchSaveFullReductionRules(@Valid @RequestBody List<FullReductionRule> rules) {
+    @Operation(summary = "批量新增满减规则")
+    public R<String> batchSaveFullReductionRules(@Parameter(description = "满减规则列表", required = true) @Valid @RequestBody List<FullReductionRule> rules) {
         Long tenantId = BaseContext.getCurrentTenantId();
         for (FullReductionRule rule : rules) {
             rule.setTenantId(tenantId);
@@ -121,9 +121,9 @@ public class MarketingController {
     // ==================== Discount Rule Management ====================
 
     @GetMapping("/discount/list")
-    @Operation(summary = "Get discount rule list")
+    @Operation(summary = "查询折扣规则列表")
     public R<List<DiscountRule>> getDiscountRules(
-            @Parameter(description = "Campaign ID") @RequestParam(required = false) Long campaignId) {
+            @Parameter(description = "活动ID（可选）") @RequestParam(required = false) Long campaignId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<DiscountRule> rules = marketingService.getDiscountRules(campaignId, tenantId);
         return R.success(rules);
@@ -131,8 +131,8 @@ public class MarketingController {
 
     @PostMapping("/discount")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Save discount rule")
-    public R<String> saveDiscountRule(@Valid @RequestBody DiscountRule rule) {
+    @Operation(summary = "新增折扣规则")
+    public R<String> saveDiscountRule(@Parameter(description = "折扣规则信息", required = true) @Valid @RequestBody DiscountRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = marketingService.saveOrUpdateDiscountRule(rule);
@@ -141,8 +141,8 @@ public class MarketingController {
 
     @PutMapping("/discount")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Update discount rule")
-    public R<String> updateDiscountRule(@Valid @RequestBody DiscountRule rule) {
+    @Operation(summary = "修改折扣规则")
+    public R<String> updateDiscountRule(@Parameter(description = "折扣规则信息（含ID）", required = true) @Valid @RequestBody DiscountRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = marketingService.saveOrUpdateDiscountRule(rule);
@@ -151,16 +151,16 @@ public class MarketingController {
 
     @DeleteMapping("/discount/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Delete discount rule")
-    public R<String> deleteDiscountRule(@Parameter(description = "ID") @PathVariable Long id) {
+    @Operation(summary = "删除折扣规则")
+    public R<String> deleteDiscountRule(@Parameter(description = "折扣规则ID") @PathVariable Long id) {
         boolean success = marketingService.deleteDiscountRule(id);
         return success ? R.success("Deleted successfully") : R.error("Delete failed");
     }
 
     @PostMapping("/discount/batch")
     @RateLimit(maxRequestsPerSecond = 3)
-    @Operation(summary = "Batch save discount rules")
-    public R<String> batchSaveDiscountRules(@Valid @RequestBody List<DiscountRule> rules) {
+    @Operation(summary = "批量新增折扣规则")
+    public R<String> batchSaveDiscountRules(@Parameter(description = "折扣规则列表", required = true) @Valid @RequestBody List<DiscountRule> rules) {
         Long tenantId = BaseContext.getCurrentTenantId();
         for (DiscountRule rule : rules) {
             rule.setTenantId(tenantId);
@@ -173,10 +173,10 @@ public class MarketingController {
 
     @PostMapping("/calculate/full-reduction")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Calculate full reduction discount")
+    @Operation(summary = "计算满减优惠金额")
     public R<BigDecimal> calculateFullReduction(
-            @Parameter(description = "Campaign ID") @RequestParam Long campaignId,
-            @Parameter(description = "Order amount") @RequestParam BigDecimal orderAmount) {
+            @Parameter(description = "活动ID", required = true) @RequestParam Long campaignId,
+            @Parameter(description = "订单金额", required = true) @RequestParam BigDecimal orderAmount) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long userId = BaseContext.getCurrentId();
         BigDecimal discount = marketingService.calculateFullReduction(campaignId, orderAmount, userId, tenantId);
@@ -185,11 +185,11 @@ public class MarketingController {
 
     @PostMapping("/calculate/discount")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Calculate discount")
+    @Operation(summary = "计算折扣优惠金额")
     public R<BigDecimal> calculateDiscount(
-            @Parameter(description = "Campaign ID") @RequestParam Long campaignId,
-            @Parameter(description = "Order amount") @RequestParam BigDecimal orderAmount,
-            @Parameter(description = "Dish ID list") @RequestBody List<Long> dishIds) {
+            @Parameter(description = "活动ID", required = true) @RequestParam Long campaignId,
+            @Parameter(description = "订单金额", required = true) @RequestParam BigDecimal orderAmount,
+            @Parameter(description = "菜品ID列表", required = true) @RequestBody List<Long> dishIds) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long userId = BaseContext.getCurrentId();
         BigDecimal discount = marketingService.calculateDiscount(campaignId, orderAmount, dishIds, userId, tenantId);
@@ -198,10 +198,10 @@ public class MarketingController {
 
     @PostMapping("/calculate/best")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Calculate best discount")
+    @Operation(summary = "计算最优优惠")
     public R<Map<String, Object>> calculateBestDiscount(
-            @Parameter(description = "Order amount") @RequestParam BigDecimal orderAmount,
-            @Parameter(description = "Dish ID list") @RequestBody List<Long> dishIds) {
+            @Parameter(description = "订单金额", required = true) @RequestParam BigDecimal orderAmount,
+            @Parameter(description = "菜品ID列表", required = true) @RequestBody List<Long> dishIds) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long userId = BaseContext.getCurrentId();
         Map<String, Object> result = marketingService.calculateBestDiscount(orderAmount, dishIds, userId, tenantId);
@@ -211,21 +211,21 @@ public class MarketingController {
     // ==================== Usage Records ====================
 
     @GetMapping("/usage/list")
-    @Operation(summary = "Get usage record list")
+    @Operation(summary = "查询活动使用记录")
     public R<List<CampaignUsageRecord>> getUsageRecords(
-            @Parameter(description = "Campaign ID") @RequestParam(required = false) Long campaignId,
-            @Parameter(description = "Start date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "End date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+            @Parameter(description = "活动ID（可选）") @RequestParam(required = false) Long campaignId,
+            @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<CampaignUsageRecord> records = marketingService.getUsageRecords(campaignId, startDate, endDate, tenantId);
         return R.success(records);
     }
 
     @GetMapping("/usage/count")
-    @Operation(summary = "Get user usage count")
+    @Operation(summary = "查询用户使用次数")
     public R<Integer> getUserUsageCount(
-            @Parameter(description = "Campaign ID") @RequestParam Long campaignId,
-            @Parameter(description = "Rule ID") @RequestParam Long ruleId) {
+            @Parameter(description = "活动ID", required = true) @RequestParam Long campaignId,
+            @Parameter(description = "规则ID", required = true) @RequestParam Long ruleId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long userId = BaseContext.getCurrentId();
         int count = marketingService.getUserUsageCount(campaignId, ruleId, userId, tenantId);
@@ -235,45 +235,45 @@ public class MarketingController {
     // ==================== Statistics ====================
 
     @GetMapping("/statistics")
-    @Operation(summary = "Get marketing statistics")
+    @Operation(summary = "营销统计")
     public R<Map<String, Object>> getMarketingStatistics(
-            @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+            @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = marketingService.getMarketingStatistics(startDate, endDate, tenantId);
         return R.success(statistics);
     }
 
     @GetMapping("/effect/full-reduction/{campaignId}")
-    @Operation(summary = "Get full reduction effect")
-    public R<Map<String, Object>> getFullReductionEffect(@Parameter(description = "Campaign ID") @PathVariable Long campaignId) {
+    @Operation(summary = "满减活动效果")
+    public R<Map<String, Object>> getFullReductionEffect(@Parameter(description = "活动ID", required = true) @PathVariable Long campaignId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> effect = marketingService.getFullReductionEffect(campaignId, tenantId);
         return R.success(effect);
     }
 
     @GetMapping("/effect/discount/{campaignId}")
-    @Operation(summary = "Get discount effect")
-    public R<Map<String, Object>> getDiscountEffect(@Parameter(description = "Campaign ID") @PathVariable Long campaignId) {
+    @Operation(summary = "折扣活动效果")
+    public R<Map<String, Object>> getDiscountEffect(@Parameter(description = "活动ID", required = true) @PathVariable Long campaignId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> effect = marketingService.getDiscountEffect(campaignId, tenantId);
         return R.success(effect);
     }
 
     @GetMapping("/trend")
-    @Operation(summary = "Get marketing trend")
+    @Operation(summary = "营销趋势")
     public R<Map<String, Object>> getMarketingTrend(
-            @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+            @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> trend = marketingService.getMarketingTrend(startDate, endDate, tenantId);
         return R.success(trend);
     }
 
     @GetMapping("/top")
-    @Operation(summary = "Get top activities")
+    @Operation(summary = "热门活动排行")
     public R<List<Map<String, Object>>> getTopActivities(
-            @Parameter(description = "Limit") @RequestParam(defaultValue = "10") int limit) {
+            @Parameter(description = "返回条数（默认10）") @RequestParam(defaultValue = "10") int limit) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> topActivities = marketingService.getTopActivities(limit, tenantId);
         return R.success(topActivities);

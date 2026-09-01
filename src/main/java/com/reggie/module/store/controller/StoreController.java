@@ -369,7 +369,7 @@ public class StoreController {
     public R<List<Map<String, Object>>> syncLogs(
             @RequestParam Long sourceTenantId,
             @RequestParam(defaultValue = "1") @Min(1) int page,
-            @Parameter(description = "PageSize")
+            @Parameter(description = "每页条数")
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize) {
         List<Map<String, Object>> logs = storeSyncService.getSyncLogs(sourceTenantId, page, PageUtils.cap(pageSize));
         return R.success(logs);

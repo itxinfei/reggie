@@ -53,7 +53,7 @@ public class DishSpecController {
 
     @GetMapping("/group/{id}")
     @Operation(summary = "获取规格组详情")
-    public R<DishSpecGroup> getSpecGroupById(@PathVariable Long id) {
+    public R<DishSpecGroup> getSpecGroupById(@Parameter(description = "规格组ID", required = true) @PathVariable Long id) {
         DishSpecGroup group = dishSpecService.getSpecGroupById(id);
         return R.success(group);
     }
@@ -61,7 +61,7 @@ public class DishSpecController {
     @PostMapping("/group")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存规格组")
-    public R<String> saveSpecGroup(@RequestBody DishSpecGroup group) {
+    public R<String> saveSpecGroup(@Parameter(description = "规格组信息", required = true) @RequestBody DishSpecGroup group) {
         Long tenantId = BaseContext.getCurrentTenantId();
         group.setTenantId(tenantId);
         boolean success = dishSpecService.saveOrUpdateSpecGroup(group);
@@ -71,7 +71,7 @@ public class DishSpecController {
     @PutMapping("/group")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新规格组")
-    public R<String> updateSpecGroup(@RequestBody DishSpecGroup group) {
+    public R<String> updateSpecGroup(@Parameter(description = "规格组信息", required = true) @RequestBody DishSpecGroup group) {
         Long tenantId = BaseContext.getCurrentTenantId();
         group.setTenantId(tenantId);
         boolean success = dishSpecService.saveOrUpdateSpecGroup(group);
@@ -81,7 +81,7 @@ public class DishSpecController {
     @DeleteMapping("/group/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除规格组")
-    public R<String> deleteSpecGroup(@PathVariable Long id) {
+    public R<String> deleteSpecGroup(@Parameter(description = "规格组ID", required = true) @PathVariable Long id) {
         boolean success = dishSpecService.deleteSpecGroup(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
@@ -101,7 +101,7 @@ public class DishSpecController {
     @PostMapping("/option")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存规格选项")
-    public R<String> saveSpecOption(@RequestBody DishSpecOption option) {
+    public R<String> saveSpecOption(@Parameter(description = "规格选项信息", required = true) @RequestBody DishSpecOption option) {
         Long tenantId = BaseContext.getCurrentTenantId();
         option.setTenantId(tenantId);
         boolean success = dishSpecService.saveOrUpdateSpecOption(option);
@@ -111,7 +111,7 @@ public class DishSpecController {
     @PutMapping("/option")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新规格选项")
-    public R<String> updateSpecOption(@RequestBody DishSpecOption option) {
+    public R<String> updateSpecOption(@Parameter(description = "规格选项信息", required = true) @RequestBody DishSpecOption option) {
         Long tenantId = BaseContext.getCurrentTenantId();
         option.setTenantId(tenantId);
         boolean success = dishSpecService.saveOrUpdateSpecOption(option);
@@ -121,7 +121,7 @@ public class DishSpecController {
     @DeleteMapping("/option/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除规格选项")
-    public R<String> deleteSpecOption(@PathVariable Long id) {
+    public R<String> deleteSpecOption(@Parameter(description = "规格选项ID", required = true) @PathVariable Long id) {
         boolean success = dishSpecService.deleteSpecOption(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
@@ -129,7 +129,7 @@ public class DishSpecController {
     @PostMapping("/option/batch")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量保存规格选项")
-    public R<String> batchSaveSpecOptions(@RequestBody List<DishSpecOption> options) {
+    public R<String> batchSaveSpecOptions(@Parameter(description = "规格选项列表", required = true) @RequestBody List<DishSpecOption> options) {
         Long tenantId = BaseContext.getCurrentTenantId();
         for (DishSpecOption option : options) {
             option.setTenantId(tenantId);
@@ -142,8 +142,7 @@ public class DishSpecController {
 
     @GetMapping("/dish/{dishId}")
     @Operation(summary = "获取菜品规格组")
-    @Parameter(description = "DishId")
-    public R<List<Map<String, Object>>> getDishSpecGroups(@PathVariable Long dishId) {
+    public R<List<Map<String, Object>>> getDishSpecGroups(@Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> groups = dishSpecService.getDishSpecGroups(dishId, tenantId);
         return R.success(groups);
@@ -153,9 +152,8 @@ public class DishSpecController {
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "设置菜品规格关联")
     public R<String> setDishSpecGroups(
-            @Parameter(description = "Dish ID")
-            @PathVariable Long dishId,
-            @RequestBody List<Long> groupIds) {
+            @Parameter(description = "菜品ID", required = true) @PathVariable Long dishId,
+            @Parameter(description = "规格组ID列表", required = true) @RequestBody List<Long> groupIds) {
         Long tenantId = BaseContext.getCurrentTenantId();
         boolean success = dishSpecService.setDishSpecGroups(dishId, groupIds, tenantId);
         return success ? R.success("设置成功") : R.error("设置失败");
@@ -164,8 +162,7 @@ public class DishSpecController {
     @DeleteMapping("/dish/{dishId}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除菜品规格关联")
-    @Parameter(description = "DishId")
-    public R<String> deleteDishSpecRelations(@PathVariable Long dishId) {
+    public R<String> deleteDishSpecRelations(@Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
         boolean success = dishSpecService.deleteDishSpecRelations(dishId);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
@@ -185,8 +182,7 @@ public class DishSpecController {
 
     @GetMapping("/detail/{dishId}")
     @Operation(summary = "获取菜品规格详情")
-    @Parameter(description = "DishId")
-    public R<Map<String, Object>> getDishSpecDetail(@PathVariable Long dishId) {
+    public R<Map<String, Object>> getDishSpecDetail(@Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> detail = dishSpecService.getDishSpecDetail(dishId, tenantId);
         return R.success(detail);

@@ -70,7 +70,6 @@ public class RecommendController {
     @GetMapping("/dishes")
     @Operation(summary = "菜品推荐", description = "获取个性化菜品推荐，未登录时返回热门菜品")
     public R<List<Map<String, Object>>> recommendDishes(
-            @Parameter(description = "L i m i t")
             @Parameter(description = "推荐数量", example = "10") @RequestParam(defaultValue = "10") int limit,
             HttpSession session) {
         Long userId = getUserId(session);
@@ -91,7 +90,6 @@ public class RecommendController {
     @GetMapping("/hot")
     @Operation(summary = "热门排行", description = "获取热门菜品排行")
     public R<List<Map<String, Object>>> hotRank(
-            @Parameter(description = "L i m i t")
             @Parameter(description = "返回数量", example = "10") @RequestParam(defaultValue = "10") int limit) {
         List<Map<String, Object>> result = recommendService.hotRankRecommend(null, limit);
         return R.success(result);
@@ -118,7 +116,6 @@ public class RecommendController {
     @GetMapping("/new-arrivals")
     @Operation(summary = "新品推荐", description = "获取新品尝鲜推荐列表")
     public R<List<Map<String, Object>>> newArrivals(
-            @Parameter(description = "L i m i t")
             @Parameter(description = "推荐数量", example = "6") @RequestParam(defaultValue = "6") int limit,
             HttpSession session) {
         Long userId = getUserId(session);
@@ -138,7 +135,6 @@ public class RecommendController {
     @GetMapping("/setmeals")
     @Operation(summary = "套餐推荐", description = "获取套餐推荐列表")
     public R<List<Map<String, Object>>> recommendSetmeals(
-            @Parameter(description = "L i m i t")
             @Parameter(description = "推荐数量", example = "6") @RequestParam(defaultValue = "6") int limit,
             HttpSession session) {
         Long userId = getUserId(session);
@@ -222,7 +218,6 @@ public class RecommendController {
     @GetMapping("/browse-history")
     @Operation(summary = "浏览历史", description = "获取用户浏览历史列表")
     public R<List<BrowseHistory>> browseHistory(
-            @Parameter(description = "L i m i t")
             @Parameter(description = "返回数量", example = "20") @RequestParam(defaultValue = "20") int limit,
             HttpSession session) {
         Long userId = getUserId(session);
@@ -289,7 +284,6 @@ public class RecommendController {
     @GetMapping("/messages")
     @Operation(summary = "用户消息列表", description = "获取当前用户的所有营销消息列表（分页）")
     public R<com.baomidou.mybatisplus.extension.plugins.pagination.Page<Map<String, Object>>> getUserMessages(
-            @Parameter(description = "P a g e")
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "20") @Min(1) @Max(100) int pageSize,
             HttpSession session) {
@@ -345,7 +339,6 @@ public class RecommendController {
     @RequireEmployee
     @Operation(summary = "反馈统计", description = "获取推荐反馈分布统计，用于概览页反馈图表")
     public R<Map<String, Integer>> feedbackStats(
-            @Parameter(description = "D a y s")
             @Parameter(description = "统计天数") @RequestParam(defaultValue = "7") int days) {
         Map<String, Integer> stats = analyticsService.getFeedbackStats(days);
         return R.success(stats);
@@ -384,7 +377,6 @@ public class RecommendController {
     @RequireEmployee
     @Operation(summary = "浏览趋势", description = "获取浏览行为趋势数据，用于概览页趋势图")
     public R<Map<String, Object>> browseTrend(
-            @Parameter(description = "D a y s")
             @Parameter(description = "统计天数") @RequestParam(defaultValue = "7") int days) {
         Map<String, Object> result = analyticsService.getBrowseTrend(days);
         return R.success(result);

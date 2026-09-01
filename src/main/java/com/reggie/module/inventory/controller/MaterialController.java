@@ -72,7 +72,7 @@ public class MaterialController {
     public R<Page<Material>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                    @RequestParam(required = false) String name,
                                    @RequestParam(required = false) Long categoryId,
-                                   @Parameter(description = "Status")
+                                   @Parameter(description = "状态（可选）：0-禁用，1-启用")
                                    @RequestParam(required = false) String status) {
         Page<Material> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Material> qw = new LambdaQueryWrapper<>();
@@ -93,7 +93,7 @@ public class MaterialController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增食材", description = "创建新的食材信息")
-    public R<String> save(@RequestBody Material material) {
+    public R<String> save(@Parameter(description = "食材信息", required = true) @RequestBody Material material) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");
@@ -110,7 +110,7 @@ public class MaterialController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改食材", description = "更新食材信息")
-    public R<String> update(@RequestBody Material material) {
+    public R<String> update(@Parameter(description = "食材信息（含ID）", required = true) @RequestBody Material material) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");
@@ -246,7 +246,7 @@ public class MaterialController {
     @PostMapping("/batch-restock")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量补货", description = "批量补货：创建采购单并自动入库")
-    public R<Long> batchRestock(@Validated @RequestBody BatchRestockDTO dto) {
+    public R<Long> batchRestock(@Parameter(description = "批量补货信息", required = true) @Validated @RequestBody BatchRestockDTO dto) {
         Long orderId = materialService.batchRestock(dto);
         return R.success(orderId);
     }

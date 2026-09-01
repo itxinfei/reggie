@@ -6,6 +6,7 @@ import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.platform.model.PlatformSyncLog;
 import com.reggie.module.platform.service.PlatformSyncLogService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,12 +50,12 @@ public class PlatformSyncLogController {
     @GetMapping("/page")
     @Operation(summary = "查询同步日志", description = "分页查询平台同步操作日志")
     public R<Page<PlatformSyncLog>> page(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(required = false) String platformType,
-            @RequestParam(required = false) String action,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
+            @Parameter(description = "页码，从1开始", required = true) @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数，最大100", required = true) @RequestParam(defaultValue = "20") int pageSize,
+            @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）") @RequestParam(required = false) String platformType,
+            @Parameter(description = "动作类型（PULL_ORDER-拉单/PUSH_STATUS-回传/SYNC_DISH-菜品同步等）") @RequestParam(required = false) String action,
+            @Parameter(description = "开始时间，格式 yyyy-MM-dd HH:mm:ss") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @Parameter(description = "结束时间，格式 yyyy-MM-dd HH:mm:ss") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
         Page<PlatformSyncLog> result = syncLogService.page(page, pageSize, platformType, action, startTime, endTime);
         return R.success(result);
     }
@@ -69,8 +70,8 @@ public class PlatformSyncLogController {
     @GetMapping("/failure-count")
     @Operation(summary = "统计失败次数", description = "统计最近N小时的同步失败次数")
     public R<Map<String, Object>> countFailures(
-            @RequestParam int hours,
-            @RequestParam(required = false) String platformType) {
+            @Parameter(description = "统计最近N小时（如 24）", required = true) @RequestParam int hours,
+            @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）") @RequestParam(required = false) String platformType) {
         long count = syncLogService.countFailuresInLastHours(hours, platformType);
         java.util.Map<String, Object> result = new java.util.HashMap<>();
         result.put("hours", hours);
@@ -89,8 +90,8 @@ public class PlatformSyncLogController {
     @GetMapping("/abnormal")
     @Operation(summary = "查询异常订单", description = "查询失败且重试次数超过阈值的订单")
     public R<List<PlatformSyncLog>> getAbnormalOrders(
-            @RequestParam String platformType,
-            @RequestParam(defaultValue = "3") int maxRetryCount) {
+            @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
+            @Parameter(description = "最大重试次数阈值，默认3", required = true) @RequestParam(defaultValue = "3") int maxRetryCount) {
         List<PlatformSyncLog> logs = syncLogService.getAbnormalOrders(platformType, maxRetryCount);
         return R.success(logs);
     }

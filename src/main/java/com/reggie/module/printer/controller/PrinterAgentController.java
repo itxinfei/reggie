@@ -49,7 +49,7 @@ public class PrinterAgentController {
      */
     @PostMapping("/register")
     @Operation(summary = "代理注册（登记终端并获取token）")
-    public R<Map<String, Object>> register(@RequestBody @Valid AgentRegisterDTO dto) {
+    public R<Map<String, Object>> register(@Parameter(description = "注册请求（终端唯一码、名称、类型等）", required = true) @RequestBody @Valid AgentRegisterDTO dto) {
         return R.success(printTerminalService.register(dto));
     }
 

@@ -85,7 +85,7 @@ public class MemberController {
     @Parameter(name = "name", description = "会员姓名（可选，模糊查询）")
     @Parameter(name = "phone", description = "手机号（可选，模糊查询）")
     public R<Page<Member>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, String name, String phone,
-                                @RequestParam(required = false) Long levelId) {
+                                @Parameter(description = "会员等级ID，按等级筛选（可选）") @RequestParam(required = false) Long levelId) {
         Page<Member> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Member> qw = new LambdaQueryWrapper<>();
         qw.like(name != null && !name.isEmpty(), Member::getName, name);
@@ -155,7 +155,7 @@ public class MemberController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增会员", description = "根据手机号注册新会员，自动生成会员卡号")
-    public R<Member> save(@Valid @RequestBody Member member) {
+    public R<Member> save(@Parameter(description = "会员信息（手机号必填）", required = true) @Valid @RequestBody Member member) {
         log.info("新增会员: {}", LogMaskUtils.maskPhone(member.getPhone()));
         Member result = memberService.registerByPhone(member.getPhone(), member.getName());
         return R.success(result);
@@ -170,7 +170,7 @@ public class MemberController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改会员", description = "更新会员基本信息")
-    public R<String> update(@Valid @RequestBody Member member) {
+    public R<String> update(@Parameter(description = "会员信息（含ID，仅更新白名单字段）", required = true) @Valid @RequestBody Member member) {
         if (member.getId() == null) {
             return R.error("会员ID不能为空");
         }
@@ -281,7 +281,7 @@ public class MemberController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "会员充值", description = "为会员账户充值，支持赠送金额")
-    public R<String> recharge(@Validated @RequestBody RechargeDTO dto) {
+    public R<String> recharge(@Parameter(description = "充值请求（会员ID、充值金额、赠送金额、支付方式）", required = true) @Validated @RequestBody RechargeDTO dto) {
         Long currentTenantId = BaseContext.getCurrentTenantId();
         Member member = memberService.getById(dto.getMemberId());
         if (member == null) {
@@ -305,7 +305,7 @@ public class MemberController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "扣减余额", description = "扣减会员账户余额（用于订单抵扣等）")
-    public R<String> deductBalance(@Validated @RequestBody DeductBalanceDTO dto) {
+    public R<String> deductBalance(@Parameter(description = "扣减请求（会员ID、扣减金额）", required = true) @Validated @RequestBody DeductBalanceDTO dto) {
         Long currentTenantId = BaseContext.getCurrentTenantId();
         Member member = memberService.getById(dto.getMemberId());
         if (member == null) {

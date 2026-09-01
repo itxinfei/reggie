@@ -81,7 +81,7 @@ public class PurchaseOrderController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "创建采购单", description = "创建新的采购单并关联供应商")
-    public R<PurchaseOrder> create(@Validated @RequestBody CreatePurchaseOrderDTO dto) {
+    public R<PurchaseOrder> create(@Parameter(description = "采购单创建信息（含供应商ID）", required = true) @Validated @RequestBody CreatePurchaseOrderDTO dto) {
         PurchaseOrder po = purchaseOrderService.createOrder(dto.getSupplierId(), dto.getOperator(), dto.getRemark());
         return R.success(po);
     }
@@ -118,7 +118,7 @@ public class PurchaseOrderController {
     @PostMapping("/addDetail")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "添加明细", description = "为采购单添加食材明细项")
-    public R<String> addDetail(@Validated @RequestBody AddPurchaseDetailDTO dto) {
+    public R<String> addDetail(@Parameter(description = "采购单明细信息（含采购单ID）", required = true) @Validated @RequestBody AddPurchaseDetailDTO dto) {
         purchaseOrderService.addDetail(dto.getOrderId(), dto.getMaterialId(), dto.getQty(), dto.getUnitPrice());
         return R.success("添加明细成功");
     }
@@ -176,7 +176,7 @@ public class PurchaseOrderController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改采购单", description = "修改采购单的供应商、操作员与备注，已完成/已取消单据不可编辑")
-    public R<String> update(@RequestBody PurchaseOrder order) {
+    public R<String> update(@Parameter(description = "采购单信息（含ID）", required = true) @RequestBody PurchaseOrder order) {
         if (order == null || order.getId() == null) {
             return R.error("采购单ID不能为空");
         }

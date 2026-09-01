@@ -52,7 +52,7 @@ public class DeliveryEnhancedController {
 
     @GetMapping("/range/{id}")
     @Operation(summary = "获取配送范围规则详情")
-    public R<DeliveryRangeRule> getRangeRuleById(@PathVariable Long id) {
+    public R<DeliveryRangeRule> getRangeRuleById(@Parameter(description = "配送范围规则ID", required = true) @PathVariable Long id) {
         DeliveryRangeRule rule = deliveryEnhancedService.getRangeRuleById(id);
         return R.success(rule);
     }
@@ -60,7 +60,7 @@ public class DeliveryEnhancedController {
     @PostMapping("/range")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存配送范围规则")
-    public R<String> saveRangeRule(@RequestBody DeliveryRangeRule rule) {
+    public R<String> saveRangeRule(@Parameter(description = "配送范围规则信息", required = true) @RequestBody DeliveryRangeRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = deliveryEnhancedService.saveOrUpdateRangeRule(rule);
@@ -70,7 +70,7 @@ public class DeliveryEnhancedController {
     @PutMapping("/range")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新配送范围规则")
-    public R<String> updateRangeRule(@RequestBody DeliveryRangeRule rule) {
+    public R<String> updateRangeRule(@Parameter(description = "配送范围规则信息（含ID）", required = true) @RequestBody DeliveryRangeRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = deliveryEnhancedService.saveOrUpdateRangeRule(rule);
@@ -80,7 +80,7 @@ public class DeliveryEnhancedController {
     @DeleteMapping("/range/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除配送范围规则")
-    public R<String> deleteRangeRule(@PathVariable Long id) {
+    public R<String> deleteRangeRule(@Parameter(description = "配送范围规则ID", required = true) @PathVariable Long id) {
         boolean success = deliveryEnhancedService.deleteRangeRule(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
@@ -99,7 +99,7 @@ public class DeliveryEnhancedController {
     @PostMapping("/fee-step")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存配送费阶梯规则")
-    public R<String> saveFeeStep(@RequestBody DeliveryFeeStep step) {
+    public R<String> saveFeeStep(@Parameter(description = "配送费阶梯规则信息", required = true) @RequestBody DeliveryFeeStep step) {
         Long tenantId = BaseContext.getCurrentTenantId();
         step.setTenantId(tenantId);
         boolean success = deliveryEnhancedService.saveOrUpdateFeeStep(step);
@@ -109,7 +109,7 @@ public class DeliveryEnhancedController {
     @PutMapping("/fee-step")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新配送费阶梯规则")
-    public R<String> updateFeeStep(@RequestBody DeliveryFeeStep step) {
+    public R<String> updateFeeStep(@Parameter(description = "配送费阶梯规则信息（含ID）", required = true) @RequestBody DeliveryFeeStep step) {
         Long tenantId = BaseContext.getCurrentTenantId();
         step.setTenantId(tenantId);
         boolean success = deliveryEnhancedService.saveOrUpdateFeeStep(step);
@@ -119,7 +119,7 @@ public class DeliveryEnhancedController {
     @DeleteMapping("/fee-step/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除配送费阶梯规则")
-    public R<String> deleteFeeStep(@PathVariable Long id) {
+    public R<String> deleteFeeStep(@Parameter(description = "配送费阶梯规则ID", required = true) @PathVariable Long id) {
         boolean success = deliveryEnhancedService.deleteFeeStep(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
@@ -127,7 +127,7 @@ public class DeliveryEnhancedController {
     @PostMapping("/fee-step/batch")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量保存配送费阶梯规则")
-    public R<String> batchSaveFeeSteps(@RequestBody List<DeliveryFeeStep> steps) {
+    public R<String> batchSaveFeeSteps(@Parameter(description = "配送费阶梯规则列表", required = true) @RequestBody List<DeliveryFeeStep> steps) {
         Long tenantId = BaseContext.getCurrentTenantId();
         for (DeliveryFeeStep step : steps) {
             step.setTenantId(tenantId);

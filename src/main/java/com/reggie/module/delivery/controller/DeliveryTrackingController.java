@@ -36,7 +36,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/delivery/tracking")
-@Tag(name = "Delivery Tracking Management")
+@Tag(name = "配送跟踪管理")
 @RequireEmployee
 public class DeliveryTrackingController {
 
@@ -46,25 +46,25 @@ public class DeliveryTrackingController {
     // ==================== Rider Management ====================
 
     @GetMapping("/rider/list")
-    @Operation(summary = "Get rider list")
+    @Operation(summary = "骑手列表")
     public R<List<Rider>> getRiderList(
-                        @Parameter(description = "Status") @RequestParam(required = false) Integer status) {
+                        @Parameter(description = "状态（可选）：1-空闲，2-配送中") @RequestParam(required = false) Integer status) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Rider> list = deliveryTrackingService.getRiderList(status, tenantId);
         return R.success(list);
     }
 
     @GetMapping("/rider/{id}")
-    @Operation(summary = "Get rider by ID")
-    public R<Rider> getRiderById(@PathVariable Long id) {
+    @Operation(summary = "查询骑手详情")
+    public R<Rider> getRiderById(@Parameter(description = "骑手ID", required = true) @PathVariable Long id) {
         Rider rider = deliveryTrackingService.getRiderById(id);
         return R.success(rider);
     }
 
     @PostMapping("/rider")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Save rider")
-    public R<String> saveRider(@RequestBody Rider rider) {
+    @Operation(summary = "新增骑手")
+    public R<String> saveRider(@Parameter(description = "骑手信息", required = true) @RequestBody Rider rider) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rider.setTenantId(tenantId);
         boolean success = deliveryTrackingService.saveOrUpdateRider(rider);
@@ -73,8 +73,8 @@ public class DeliveryTrackingController {
 
     @PutMapping("/rider")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Update rider")
-    public R<String> updateRider(@RequestBody Rider rider) {
+    @Operation(summary = "修改骑手")
+    public R<String> updateRider(@Parameter(description = "骑手信息（含ID）", required = true) @RequestBody Rider rider) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rider.setTenantId(tenantId);
         boolean success = deliveryTrackingService.saveOrUpdateRider(rider);
@@ -83,19 +83,19 @@ public class DeliveryTrackingController {
 
     @DeleteMapping("/rider/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Delete rider")
-    public R<String> deleteRider(@PathVariable Long id) {
+    @Operation(summary = "删除骑手")
+    public R<String> deleteRider(@Parameter(description = "骑手ID", required = true) @PathVariable Long id) {
         boolean success = deliveryTrackingService.deleteRider(id);
         return success ? R.success("Deleted successfully") : R.error("Delete failed");
     }
 
     @PostMapping("/rider/{id}/status")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Update rider status")
+    @Operation(summary = "更新骑手状态")
     public R<String> updateRiderStatus(
-            @Parameter(description = "ID")
+            @Parameter(description = "骑手ID", required = true)
             @PathVariable Long id,
-            @Parameter(description = "Status") @RequestParam Integer status) {
+            @Parameter(description = "状态", required = true) @RequestParam Integer status) {
         boolean success = deliveryTrackingService.updateRiderStatus(id, status);
         return success ? R.success("Status updated") : R.error("Update failed");
     }
@@ -104,39 +104,37 @@ public class DeliveryTrackingController {
 
     @PostMapping("/location/update")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Update rider location")
+    @Operation(summary = "上报骑手位置")
     public R<String> updateRiderLocation(
-                        @Parameter(description = "Rider ID") @RequestParam Long riderId,
-            @Parameter(description = "Longitude") @RequestParam BigDecimal longitude,
-            @Parameter(description = "Latitude") @RequestParam BigDecimal latitude,
-            @Parameter(description = "Speed") @RequestParam(required = false) BigDecimal speed,
-            @Parameter(description = "Direction") @RequestParam(required = false) BigDecimal direction) {
+                        @Parameter(description = "骑手ID", required = true) @RequestParam Long riderId,
+            @Parameter(description = "经度", required = true) @RequestParam BigDecimal longitude,
+            @Parameter(description = "纬度", required = true) @RequestParam BigDecimal latitude,
+            @Parameter(description = "速度（可选）") @RequestParam(required = false) BigDecimal speed,
+            @Parameter(description = "方向（可选）") @RequestParam(required = false) BigDecimal direction) {
         boolean success = deliveryTrackingService.updateRiderLocation(riderId, longitude, latitude, speed, direction);
         return success ? R.success("Location updated") : R.error("Update failed");
     }
 
     @GetMapping("/location/history")
-    @Operation(summary = "Get rider location history")
+    @Operation(summary = "查询骑手位置轨迹")
     public R<List<RiderLocationRecord>> getRiderLocationHistory(
-                        @Parameter(description = "Rider ID") @RequestParam Long riderId,
-            @Parameter(description = "Start time") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
-            @Parameter(description = "End time") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
+                        @Parameter(description = "骑手ID", required = true) @RequestParam Long riderId,
+            @Parameter(description = "开始时间", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
+            @Parameter(description = "结束时间", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime) {
         List<RiderLocationRecord> history = deliveryTrackingService.getRiderLocationHistory(riderId, startTime, endTime);
         return R.success(history);
     }
 
     @GetMapping("/tracking/order/{orderId}")
-    @Operation(summary = "Get order delivery tracking")
-    @Parameter(description = "OrderId")
-    public R<Map<String, Object>> getOrderDeliveryTracking(@PathVariable Long orderId) {
+    @Operation(summary = "查询订单配送轨迹")
+    public R<Map<String, Object>> getOrderDeliveryTracking(@Parameter(description = "订单ID", required = true) @PathVariable Long orderId) {
         Map<String, Object> tracking = deliveryTrackingService.getOrderDeliveryTracking(orderId);
         return R.success(tracking);
     }
 
     @GetMapping("/tracking/rider/{riderId}")
-    @Operation(summary = "Get rider current location")
-    @Parameter(description = "RiderId")
-    public R<Map<String, Object>> getRiderCurrentLocation(@PathVariable Long riderId) {
+    @Operation(summary = "查询骑手当前位置")
+    public R<Map<String, Object>> getRiderCurrentLocation(@Parameter(description = "骑手ID", required = true) @PathVariable Long riderId) {
         Map<String, Object> location = deliveryTrackingService.getRiderCurrentLocation(riderId);
         return R.success(location);
     }
@@ -145,8 +143,8 @@ public class DeliveryTrackingController {
 
     @PostMapping("/time/record")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Create delivery time record")
-    public R<String> createDeliveryTimeRecord(@RequestBody DeliveryTimeRecord record) {
+    @Operation(summary = "新增配送时效记录")
+    public R<String> createDeliveryTimeRecord(@Parameter(description = "配送时效记录信息", required = true) @RequestBody DeliveryTimeRecord record) {
         Long tenantId = BaseContext.getCurrentTenantId();
         record.setTenantId(tenantId);
         boolean success = deliveryTrackingService.createDeliveryTimeRecord(record);
@@ -155,35 +153,34 @@ public class DeliveryTrackingController {
 
     @PutMapping("/time/record")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Update delivery time record")
-    public R<String> updateDeliveryTimeRecord(@RequestBody DeliveryTimeRecord record) {
+    @Operation(summary = "修改配送时效记录")
+    public R<String> updateDeliveryTimeRecord(@Parameter(description = "配送时效记录信息（含ID）", required = true) @RequestBody DeliveryTimeRecord record) {
         boolean success = deliveryTrackingService.updateDeliveryTimeRecord(record);
         return success ? R.success("Record updated") : R.error("Update failed");
     }
 
     @GetMapping("/time/order/{orderId}")
-    @Operation(summary = "Get delivery time by order ID")
-    @Parameter(description = "OrderId")
-    public R<DeliveryTimeRecord> getDeliveryTimeByOrderId(@PathVariable Long orderId) {
+    @Operation(summary = "按订单查询配送时效")
+    public R<DeliveryTimeRecord> getDeliveryTimeByOrderId(@Parameter(description = "订单ID", required = true) @PathVariable Long orderId) {
         DeliveryTimeRecord record = deliveryTrackingService.getDeliveryTimeByOrderId(orderId);
         return R.success(record);
     }
 
     @PostMapping("/time/estimate")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Estimate delivery time")
+    @Operation(summary = "预估配送时长")
     public R<Integer> estimateDeliveryTime(
-                        @Parameter(description = "Distance (meters)") @RequestParam BigDecimal distance,
-            @Parameter(description = "Rider ID") @RequestParam(required = false) Long riderId) {
+                        @Parameter(description = "距离（米）", required = true) @RequestParam BigDecimal distance,
+            @Parameter(description = "骑手ID（可选）") @RequestParam(required = false) Long riderId) {
         int minutes = deliveryTrackingService.estimateDeliveryTime(distance, riderId);
         return R.success(minutes);
     }
 
     @GetMapping("/time/statistics")
-    @Operation(summary = "Get delivery time statistics")
+    @Operation(summary = "配送时效统计")
     public R<Map<String, Object>> getDeliveryTimeStatistics(
-                        @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+                        @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = deliveryTrackingService.getDeliveryTimeStatistics(startDate, endDate, tenantId);
         return R.success(statistics);
@@ -192,18 +189,18 @@ public class DeliveryTrackingController {
     // ==================== Statistics ====================
 
     @GetMapping("/rider/{riderId}/statistics")
-    @Operation(summary = "Get rider statistics")
+    @Operation(summary = "骑手配送统计")
     public R<Map<String, Object>> getRiderStatistics(
-            @Parameter(description = "riderId")
+            @Parameter(description = "骑手ID", required = true)
             @PathVariable Long riderId,
-            @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+            @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Map<String, Object> statistics = deliveryTrackingService.getRiderStatistics(riderId, startDate, endDate);
         return R.success(statistics);
     }
 
     @GetMapping("/overview")
-    @Operation(summary = "Get delivery overview")
+    @Operation(summary = "配送总览")
     public R<Map<String, Object>> getDeliveryOverview() {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> overview = deliveryTrackingService.getDeliveryOverview(tenantId);

@@ -8,6 +8,7 @@ import com.reggie.module.inventory.dto.DishMaterialSaveDTO;
 import com.reggie.module.inventory.model.DishMaterial;
 import com.reggie.module.inventory.service.DishMaterialService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,35 +35,35 @@ public class DishMaterialController {
 
     @GetMapping("/listByDish/{dishId}")
     @Operation(summary = "查询某菜品全部食材配方")
-    public R<List<DishMaterial>> listByDish(@PathVariable Long dishId) {
+    public R<List<DishMaterial>> listByDish(@Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
         List<DishMaterial> list = dishMaterialService.listByDishId(dishId);
         return R.success(list);
     }
 
     @PostMapping
     @Operation(summary = "保存食材关联")
-    public R<String> save(@Validated @RequestBody DishMaterialSaveDTO dto) {
+    public R<String> save(@Parameter(description = "食材关联信息", required = true) @Validated @RequestBody DishMaterialSaveDTO dto) {
         dishMaterialService.saveMaterial(dto);
         return R.success("保存成功");
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "更新食材关联")
-    public R<String> update(@PathVariable Long id, @Validated @RequestBody DishMaterialSaveDTO dto) {
+    public R<String> update(@Parameter(description = "食材关联ID", required = true) @PathVariable Long id, @Parameter(description = "食材关联信息", required = true) @Validated @RequestBody DishMaterialSaveDTO dto) {
         dishMaterialService.updateMaterial(id, dto);
         return R.success("更新成功");
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "删除食材关联")
-    public R<String> delete(@PathVariable Long id) {
+    public R<String> delete(@Parameter(description = "食材关联ID", required = true) @PathVariable Long id) {
         dishMaterialService.deleteMaterial(id);
         return R.success("删除成功");
     }
 
     @PostMapping("/batchSave")
     @Operation(summary = "批量保存某菜品的食材配方（先删后插）")
-    public R<String> batchSave(@Validated @RequestBody DishMaterialBatchDTO batchDTO) {
+    public R<String> batchSave(@Parameter(description = "批量食材配方信息（先删后插）", required = true) @Validated @RequestBody DishMaterialBatchDTO batchDTO) {
         dishMaterialService.batchSave(batchDTO);
         return R.success("保存成功");
     }

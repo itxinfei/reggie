@@ -83,7 +83,7 @@ public class QueueController {
     @PostMapping("/take")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "取号", description = "顾客取号排队，支持指定座位数和手机号")
-    public R<QueueRecord> takeNumber(@Valid @RequestBody TakeNumberDTO dto) {
+    public R<QueueRecord> takeNumber(@Parameter(description = "取号请求（座位数、手机号）", required = true) @Valid @RequestBody TakeNumberDTO dto) {
         log.info("取号: seatCount={}, phone={}", dto.getSeatCount(),
             LogMaskUtils.maskPhone(dto.getPhone()));
         QueueRecord record = queueService.takeNumber(dto.getSeatCount(), dto.getPhone());
@@ -98,7 +98,7 @@ public class QueueController {
     @PutMapping("/call")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "叫号", description = "呼叫下一位顾客，支持按座位数筛选")
-    public R<QueueRecord> callNext(@RequestBody(required = false) CallNextDTO dto) {
+    public R<QueueRecord> callNext(@Parameter(description = "叫号请求（可选，含座位数筛选）") @RequestBody(required = false) CallNextDTO dto) {
         Integer seatCount = dto != null ? dto.getSeatCount() : null;
         log.info("叫号: seatCount={}", seatCount);
         QueueRecord record = queueService.callNext(seatCount);
@@ -128,7 +128,7 @@ public class QueueController {
     @PutMapping("/seat")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "安排入座", description = "将已叫号顾客安排入座（CALLED→SEATED）")
-    public R<String> seatCustomer(@Valid @RequestBody SeatCustomerDTO dto) {
+    public R<String> seatCustomer(@Parameter(description = "入座请求（排队记录ID、桌台ID）", required = true) @Valid @RequestBody SeatCustomerDTO dto) {
         log.info("安排入座: queueId={}, tableId={}", dto.getQueueId(), dto.getTableId());
         queueService.seatCustomer(dto.getQueueId(), dto.getTableId());
         return R.success("安排入座成功");

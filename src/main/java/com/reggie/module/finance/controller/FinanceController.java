@@ -36,7 +36,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/finance")
-@Tag(name = "Finance Management")
+@Tag(name = "财务管理")
 @RequireEmployee
 public class FinanceController {
 
@@ -46,27 +46,27 @@ public class FinanceController {
     // ==================== Withdrawal Management ====================
 
     @GetMapping("/withdrawal/list")
-    @Operation(summary = "Get withdrawal list")
+    @Operation(summary = "提现申请分页查询")
     public R<List<WithdrawalApplication>> getWithdrawalList(
-                        @Parameter(description = "Status") @RequestParam(required = false) Integer status,
-            @Parameter(description = "Start date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "End date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+                        @Parameter(description = "提现状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<WithdrawalApplication> list = financeService.getWithdrawalList(status, startDate, endDate, tenantId);
         return R.success(list);
     }
 
     @GetMapping("/withdrawal/{id}")
-    @Operation(summary = "Get withdrawal by ID")
-    public R<WithdrawalApplication> getWithdrawalById(@PathVariable Long id) {
+    @Operation(summary = "查询提现申请详情")
+    public R<WithdrawalApplication> getWithdrawalById(@Parameter(description = "提现申请ID", required = true) @PathVariable Long id) {
         WithdrawalApplication application = financeService.getWithdrawalById(id);
         return R.success(application);
     }
 
     @PostMapping("/withdrawal")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Create withdrawal application")
-    public R<String> createWithdrawal(@Valid @RequestBody WithdrawalApplication application) {
+    @Operation(summary = "提交提现申请")
+    public R<String> createWithdrawal(@Parameter(description = "提现申请信息", required = true) @Valid @RequestBody WithdrawalApplication application) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long userId = BaseContext.getCurrentId();
         application.setTenantId(tenantId);
@@ -77,12 +77,11 @@ public class FinanceController {
 
     @PostMapping("/withdrawal/{id}/review")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Review withdrawal application")
+    @Operation(summary = "审核提现申请")
     public R<String> reviewWithdrawal(
-            @Parameter(description = "ID")
-            @PathVariable Long id,
-            @Parameter(description = "Status (1=approved, 3=rejected)") @RequestParam Integer status,
-            @Parameter(description = "Review remark") @RequestParam(required = false) String remark) {
+            @Parameter(description = "提现申请ID", required = true) @PathVariable Long id,
+            @Parameter(description = "审核状态（1=通过，3=驳回）", required = true) @RequestParam Integer status,
+            @Parameter(description = "审核备注（可选）") @RequestParam(required = false) String remark) {
         Long userId = BaseContext.getCurrentId();
         String userName = "Admin"; // Should get from user service
         boolean success = financeService.reviewWithdrawal(id, status, userId, userName, remark);
@@ -91,27 +90,26 @@ public class FinanceController {
 
     @PostMapping("/withdrawal/{id}/payment")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Process withdrawal payment")
+    @Operation(summary = "确认打款")
     public R<String> processWithdrawalPayment(
-            @Parameter(description = "ID")
-            @PathVariable Long id,
-            @Parameter(description = "Payment number") @RequestParam String paymentNo) {
+            @Parameter(description = "提现申请ID", required = true) @PathVariable Long id,
+            @Parameter(description = "支付单号", required = true) @RequestParam String paymentNo) {
         boolean success = financeService.processWithdrawalPayment(id, paymentNo);
         return success ? R.success("Payment processed") : R.error("Payment failed");
     }
 
     @PostMapping("/withdrawal/{id}/cancel")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Cancel withdrawal")
-    public R<String> cancelWithdrawal(@PathVariable Long id) {
+    @Operation(summary = "取消提现申请")
+    public R<String> cancelWithdrawal(@Parameter(description = "提现申请ID", required = true) @PathVariable Long id) {
         boolean success = financeService.cancelWithdrawal(id);
         return success ? R.success("Cancelled") : R.error("Cancellation failed");
     }
 
     @DeleteMapping("/withdrawal/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Delete withdrawal")
-    public R<String> deleteWithdrawal(@PathVariable Long id) {
+    @Operation(summary = "删除提现申请")
+    public R<String> deleteWithdrawal(@Parameter(description = "提现申请ID", required = true) @PathVariable Long id) {
         boolean success = financeService.deleteWithdrawal(id);
         return success ? R.success("Deleted") : R.error("Deletion failed");
     }
@@ -119,29 +117,29 @@ public class FinanceController {
     // ==================== Reconciliation Management ====================
 
     @GetMapping("/reconciliation/list")
-    @Operation(summary = "Get reconciliation list")
+    @Operation(summary = "对账单分页查询")
     public R<List<ReconciliationStatement>> getReconciliationList(
-                        @Parameter(description = "Start date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @Parameter(description = "End date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
-            @Parameter(description = "Platform") @RequestParam(required = false) String platform) {
+                        @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
+            @Parameter(description = "平台（可选）") @RequestParam(required = false) String platform) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<ReconciliationStatement> list = financeService.getReconciliationList(startDate, endDate, platform, tenantId);
         return R.success(list);
     }
 
     @GetMapping("/reconciliation/{id}")
-    @Operation(summary = "Get reconciliation by ID")
-    public R<ReconciliationStatement> getReconciliationById(@PathVariable Long id) {
+    @Operation(summary = "查询对账单详情")
+    public R<ReconciliationStatement> getReconciliationById(@Parameter(description = "对账单ID", required = true) @PathVariable Long id) {
         ReconciliationStatement statement = financeService.getReconciliationById(id);
         return R.success(statement);
     }
 
     @PostMapping("/reconciliation/generate")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Generate reconciliation")
+    @Operation(summary = "生成对账单")
     public R<ReconciliationStatement> generateReconciliation(
-                        @Parameter(description = "Date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
-            @Parameter(description = "Platform") @RequestParam(defaultValue = "all") String platform) {
+                        @Parameter(description = "对账日期，格式yyyy-MM-dd", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date,
+            @Parameter(description = "平台（默认all）", required = false) @RequestParam(defaultValue = "all") String platform) {
         Long tenantId = BaseContext.getCurrentTenantId();
         ReconciliationStatement statement = financeService.generateReconciliation(date, platform, tenantId);
         return R.success(statement);
@@ -149,8 +147,8 @@ public class FinanceController {
 
     @PostMapping("/reconciliation/{id}/confirm")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Confirm reconciliation")
-    public R<String> confirmReconciliation(@PathVariable Long id) {
+    @Operation(summary = "确认对账单")
+    public R<String> confirmReconciliation(@Parameter(description = "对账单ID", required = true) @PathVariable Long id) {
         Long userId = BaseContext.getCurrentId();
         String userName = "Admin";
         boolean success = financeService.confirmReconciliation(id, userId, userName);
@@ -159,8 +157,8 @@ public class FinanceController {
 
     @DeleteMapping("/reconciliation/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Delete reconciliation")
-    public R<String> deleteReconciliation(@PathVariable Long id) {
+    @Operation(summary = "删除对账单")
+    public R<String> deleteReconciliation(@Parameter(description = "对账单ID", required = true) @PathVariable Long id) {
         boolean success = financeService.deleteReconciliation(id);
         return success ? R.success("Deleted") : R.error("Deletion failed");
     }
@@ -168,19 +166,18 @@ public class FinanceController {
     // ==================== Profit Analysis ====================
 
     @GetMapping("/profit/list")
-    @Operation(summary = "Get profit analysis list")
+    @Operation(summary = "利润分析分页查询")
     public R<List<ProfitAnalysis>> getProfitAnalysisList(
-                        @Parameter(description = "Start date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @Parameter(description = "End date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+                        @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<ProfitAnalysis> list = financeService.getProfitAnalysisList(startDate, endDate, tenantId);
         return R.success(list);
     }
 
     @GetMapping("/profit/date/{date}")
-    @Operation(summary = "Get profit analysis by date")
-    @Parameter(description = "Date")
-    public R<ProfitAnalysis> getProfitAnalysisByDate(@PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+    @Operation(summary = "按日期查询利润分析")
+    public R<ProfitAnalysis> getProfitAnalysisByDate(@Parameter(description = "利润日期，格式yyyy-MM-dd", required = true) @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
         Long tenantId = BaseContext.getCurrentTenantId();
         ProfitAnalysis analysis = financeService.getProfitAnalysisByDate(date, tenantId);
         return R.success(analysis);
@@ -188,29 +185,29 @@ public class FinanceController {
 
     @PostMapping("/profit/generate")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Generate profit analysis")
+    @Operation(summary = "生成利润分析")
     public R<ProfitAnalysis> generateProfitAnalysis(
-                        @Parameter(description = "Date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+                        @Parameter(description = "利润日期，格式yyyy-MM-dd", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
         Long tenantId = BaseContext.getCurrentTenantId();
         ProfitAnalysis analysis = financeService.generateProfitAnalysis(date, tenantId);
         return R.success(analysis);
     }
 
     @GetMapping("/profit/trend")
-    @Operation(summary = "Get profit trend")
+    @Operation(summary = "利润趋势")
     public R<Map<String, Object>> getProfitTrend(
-                        @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+                        @Parameter(description = "开始日期，格式yyyy-MM-dd", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @Parameter(description = "结束日期，格式yyyy-MM-dd", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> trend = financeService.getProfitTrend(startDate, endDate, tenantId);
         return R.success(trend);
     }
 
     @GetMapping("/profit/structure")
-    @Operation(summary = "Get profit structure")
+    @Operation(summary = "利润结构")
     public R<Map<String, Object>> getProfitStructure(
-                        @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+                        @Parameter(description = "开始日期，格式yyyy-MM-dd", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @Parameter(description = "结束日期，格式yyyy-MM-dd", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> structure = financeService.getProfitStructure(startDate, endDate, tenantId);
         return R.success(structure);
@@ -219,17 +216,17 @@ public class FinanceController {
     // ==================== Statistics ====================
 
     @GetMapping("/statistics")
-    @Operation(summary = "Get finance statistics")
+    @Operation(summary = "财务统计")
     public R<Map<String, Object>> getFinanceStatistics(
-                        @Parameter(description = "Start date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "End date") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+                        @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = financeService.getFinanceStatistics(startDate, endDate, tenantId);
         return R.success(statistics);
     }
 
     @GetMapping("/withdrawal/statistics")
-    @Operation(summary = "Get withdrawal statistics")
+    @Operation(summary = "提现统计")
     public R<Map<String, Object>> getWithdrawalStatistics() {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = financeService.getWithdrawalStatistics(tenantId);

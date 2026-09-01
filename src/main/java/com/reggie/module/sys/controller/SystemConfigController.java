@@ -68,7 +68,7 @@ public class SystemConfigController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量更新配置", description = "批量更新系统配置项")
-    public R<String> rootBatchUpdate(@Valid @RequestBody List<SystemConfig> configs) {
+    public R<String> rootBatchUpdate(@Parameter(description = "系统配置列表（configKey/configValue）", required = true) @Valid @RequestBody List<SystemConfig> configs) {
         if (configs != null && !configs.isEmpty()) {
             for (SystemConfig config : configs) {
                 if (config.getConfigKey() != null) {

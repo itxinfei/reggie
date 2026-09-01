@@ -64,9 +64,9 @@ public class StockRecordController {
     public R<Page<StockRecord>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                       @RequestParam(required = false) Long materialId,
                                       @RequestParam(required = false) String type,
-                                      @Parameter(description = "StartDate")
+                                      @Parameter(description = "开始日期（可选），格式yyyy-MM-dd")
                                       @RequestParam(required = false) String startDate,
-                                      @Parameter(description = "EndDate")
+                                      @Parameter(description = "结束日期（可选），格式yyyy-MM-dd")
                                       @RequestParam(required = false) String endDate) {
         // 修改点：统一使用 LambdaQueryWrapper 支持所有筛选条件，而非分流到 pageByMaterial
         Page<StockRecord> pageInfo = PageUtils.of(page, pageSize);
@@ -97,7 +97,7 @@ public class StockRecordController {
     @PostMapping("/stockIn")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "入库", description = "食材入库操作，增加库存数量")
-    public R<String> stockIn(@Validated @RequestBody StockInDTO dto) {
+    public R<String> stockIn(@Parameter(description = "入库信息（含食材ID、数量、单价）", required = true) @Validated @RequestBody StockInDTO dto) {
         stockRecordService.stockIn(dto.getMaterialId(), dto.getQty(), dto.getUnitPrice(),
             dto.getBizId(), dto.getRemark(), dto.getOperator());
         return R.success("入库成功");
@@ -111,7 +111,7 @@ public class StockRecordController {
     @PostMapping("/stockOut")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "出库", description = "食材出库操作，减少库存数量")
-    public R<String> stockOut(@Validated @RequestBody StockOutDTO dto) {
+    public R<String> stockOut(@Parameter(description = "出库信息（含食材ID、数量）", required = true) @Validated @RequestBody StockOutDTO dto) {
         stockRecordService.stockOut(dto.getMaterialId(), dto.getQty(), dto.getBizId(),
             dto.getRemark(), dto.getOperator());
         return R.success("出库成功");

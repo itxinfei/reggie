@@ -90,7 +90,7 @@ public class AddressBookController {
      */
     @PutMapping
     @Operation(summary = "修改地址", description = "更新地址信息，自动校验租户权限")
-    public R<AddressBook> update(@Valid @RequestBody AddressBook addressBook) {
+    public R<AddressBook> update(@Parameter(description = "地址信息（含ID）", required = true) @Valid @RequestBody AddressBook addressBook) {
         // 租户校验：确保只能修改本租户的地址
         AddressBook existing = addressBookService.getById(addressBook.getId());
         Long currentTenantId = BaseContext.getCurrentTenantId();

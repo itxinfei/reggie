@@ -301,13 +301,13 @@ public class NotificationController {
     @GetMapping("/record/page")
     @Operation(summary = "分页查询发送记录", description = "分页查询通知发送记录")
     public R<Page<NotificationRecord>> recordPage(
-            @Parameter(description = "Page")
+            @Parameter(description = "页码")
             @RequestParam(defaultValue = "1") @Min(1) int page,
-            @Parameter(description = "PageSize")
+            @Parameter(description = "每页条数")
             @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
-            @Parameter(description = "BizType")
+            @Parameter(description = "业务类型")
             @RequestParam(required = false) String bizType,
-            @Parameter(description = "Status")
+            @Parameter(description = "状态")
             @RequestParam(required = false) Integer status) {
         Long tenantId = BaseContext.getCurrentTenantId();
         // 域4 改造：分页查询下沉到 Service

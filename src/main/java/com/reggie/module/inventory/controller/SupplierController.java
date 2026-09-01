@@ -79,7 +79,7 @@ public class SupplierController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增供应商", description = "创建新的供应商信息")
-    public R<String> save(@RequestBody Supplier supplier) {
+    public R<String> save(@Parameter(description = "供应商信息", required = true) @RequestBody Supplier supplier) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");
@@ -96,7 +96,7 @@ public class SupplierController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改供应商", description = "更新供应商信息")
-    public R<String> update(@RequestBody Supplier supplier) {
+    public R<String> update(@Parameter(description = "供应商信息（含ID）", required = true) @RequestBody Supplier supplier) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");

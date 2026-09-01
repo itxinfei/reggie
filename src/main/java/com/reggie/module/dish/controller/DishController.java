@@ -125,7 +125,7 @@ public class DishController {
     public R<Page<DishDto>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String name,
                                   @RequestParam(required = false) String status,
                                   @RequestParam(required = false) Long categoryId,
-                                  @Parameter(description = "code")
+                                  @Parameter(description = "商品码（可选，模糊查询）")
                                   @RequestParam(required = false) String code){
 
         //构造分页构造器对象

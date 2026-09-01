@@ -56,8 +56,7 @@ public class CostController {
 
     @GetMapping("/dish/{dishId}")
     @Operation(summary = "根据菜品ID获取成本")
-    @Parameter(description = "DishId")
-    public R<DishCost> getDishCostByDishId(@PathVariable Long dishId) {
+    public R<DishCost> getDishCostByDishId(@Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         DishCost dishCost = costService.getDishCostByDishId(dishId, tenantId);
         return R.success(dishCost);
@@ -66,7 +65,7 @@ public class CostController {
     @PostMapping("/dish")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存菜品成本")
-    public R<String> saveDishCost(@RequestBody DishCost dishCost) {
+    public R<String> saveDishCost(@Parameter(description = "菜品成本信息", required = true) @RequestBody DishCost dishCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         dishCost.setTenantId(tenantId);
         boolean success = costService.saveOrUpdateDishCost(dishCost);
@@ -76,7 +75,7 @@ public class CostController {
     @PutMapping("/dish")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新菜品成本")
-    public R<String> updateDishCost(@RequestBody DishCost dishCost) {
+    public R<String> updateDishCost(@Parameter(description = "菜品成本信息", required = true) @RequestBody DishCost dishCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         dishCost.setTenantId(tenantId);
         boolean success = costService.saveOrUpdateDishCost(dishCost);
@@ -86,7 +85,7 @@ public class CostController {
     @DeleteMapping("/dish/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除菜品成本")
-    public R<String> deleteDishCost(@PathVariable Long id) {
+    public R<String> deleteDishCost(@Parameter(description = "菜品成本记录ID", required = true) @PathVariable Long id) {
         boolean success = costService.deleteDishCost(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
@@ -94,7 +93,7 @@ public class CostController {
     @PostMapping("/dish/batch")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量更新菜品成本")
-    public R<String> batchUpdateDishCost(@RequestBody List<DishCost> dishCosts) {
+    public R<String> batchUpdateDishCost(@Parameter(description = "菜品成本列表", required = true) @RequestBody List<DishCost> dishCosts) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         for (DishCost dishCost : dishCosts) {
             dishCost.setTenantId(tenantId);
@@ -119,7 +118,7 @@ public class CostController {
     @PostMapping("/record")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存成本记录")
-    public R<String> saveCostRecord(@RequestBody CostRecord costRecord) {
+    public R<String> saveCostRecord(@Parameter(description = "成本记录信息", required = true) @RequestBody CostRecord costRecord) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         costRecord.setTenantId(tenantId);
         costRecord.setCreateUser(com.reggie.common.BaseContext.getCurrentId());
@@ -130,7 +129,7 @@ public class CostController {
     @DeleteMapping("/record/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除成本记录")
-    public R<String> deleteCostRecord(@PathVariable Long id) {
+    public R<String> deleteCostRecord(@Parameter(description = "成本记录ID", required = true) @PathVariable Long id) {
         boolean success = costService.deleteCostRecord(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
@@ -149,7 +148,7 @@ public class CostController {
     @PostMapping("/labor")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存人工成本")
-    public R<String> saveLaborCost(@RequestBody LaborCost laborCost) {
+    public R<String> saveLaborCost(@Parameter(description = "人工成本信息", required = true) @RequestBody LaborCost laborCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         laborCost.setTenantId(tenantId);
         boolean success = costService.saveOrUpdateLaborCost(laborCost);
@@ -159,7 +158,7 @@ public class CostController {
     @PutMapping("/labor")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新人工成本")
-    public R<String> updateLaborCost(@RequestBody LaborCost laborCost) {
+    public R<String> updateLaborCost(@Parameter(description = "人工成本信息", required = true) @RequestBody LaborCost laborCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         laborCost.setTenantId(tenantId);
         boolean success = costService.saveOrUpdateLaborCost(laborCost);
@@ -169,7 +168,7 @@ public class CostController {
     @DeleteMapping("/labor/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除人工成本")
-    public R<String> deleteLaborCost(@PathVariable Long id) {
+    public R<String> deleteLaborCost(@Parameter(description = "人工成本记录ID", required = true) @PathVariable Long id) {
         boolean success = costService.deleteLaborCost(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
@@ -177,7 +176,7 @@ public class CostController {
     @PostMapping("/labor/batch")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量保存人工成本")
-    public R<String> batchSaveLaborCost(@RequestBody List<LaborCost> laborCosts) {
+    public R<String> batchSaveLaborCost(@Parameter(description = "人工成本列表", required = true) @RequestBody List<LaborCost> laborCosts) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         for (LaborCost laborCost : laborCosts) {
             laborCost.setTenantId(tenantId);
@@ -202,7 +201,7 @@ public class CostController {
     @PostMapping("/other")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存其他成本")
-    public R<String> saveOtherCost(@RequestBody OtherCost otherCost) {
+    public R<String> saveOtherCost(@Parameter(description = "其他成本信息", required = true) @RequestBody OtherCost otherCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         otherCost.setTenantId(tenantId);
         boolean success = costService.saveOrUpdateOtherCost(otherCost);
@@ -212,7 +211,7 @@ public class CostController {
     @PutMapping("/other")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新其他成本")
-    public R<String> updateOtherCost(@RequestBody OtherCost otherCost) {
+    public R<String> updateOtherCost(@Parameter(description = "其他成本信息", required = true) @RequestBody OtherCost otherCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         otherCost.setTenantId(tenantId);
         boolean success = costService.saveOrUpdateOtherCost(otherCost);
@@ -222,7 +221,7 @@ public class CostController {
     @DeleteMapping("/other/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除其他成本")
-    public R<String> deleteOtherCost(@PathVariable Long id) {
+    public R<String> deleteOtherCost(@Parameter(description = "其他成本记录ID", required = true) @PathVariable Long id) {
         boolean success = costService.deleteOtherCost(id);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
@@ -270,8 +269,7 @@ public class CostController {
 
     @GetMapping("/dish/profit-rate/{dishId}")
     @Operation(summary = "计算菜品毛利率")
-    @Parameter(description = "DishId")
-    public R<BigDecimal> calculateProfitRate(@PathVariable Long dishId) {
+    public R<BigDecimal> calculateProfitRate(@Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         BigDecimal profitRate = costService.calculateProfitRate(dishId, tenantId);
         return R.success(profitRate);

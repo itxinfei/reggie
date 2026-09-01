@@ -9,6 +9,7 @@ import com.reggie.module.platform.model.PlatformConfig;
 import com.reggie.module.platform.service.PlatformConfigService;
 import com.reggie.module.platform.service.PlatformSyncService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,8 +61,8 @@ public class PlatformOrderPullController {
     @RequireEmployee
     @GetMapping("/pull")
     @Operation(summary = "从外卖平台拉单并落库")
-    public R<Map<String, Object>> pull(@RequestParam String platformType,
-                                       @RequestParam(defaultValue = "30") int minutes) {
+    public R<Map<String, Object>> pull(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
+                                       @Parameter(description = "回溯时间窗（分钟），默认30", required = true) @RequestParam(defaultValue = "30") int minutes) {
         if (BaseContext.getCurrentTenantId() == null) {
             return R.error("缺少租户上下文");
         }
@@ -93,9 +94,9 @@ public class PlatformOrderPullController {
     @RequireEmployee
     @PostMapping("/pushStatus")
     @Operation(summary = "回传订单状态到外卖平台")
-    public R<Void> pushStatus(@RequestParam String platformType,
-                              @RequestParam String platformOrderId,
-                              @RequestParam String action) {
+    public R<Void> pushStatus(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
+                              @Parameter(description = "平台订单号", required = true) @RequestParam String platformOrderId,
+                              @Parameter(description = "动作（accept-接单/reject-拒单/prepare-出餐/complete-完成/cancel-取消）", required = true) @RequestParam String action) {
         if (BaseContext.getCurrentTenantId() == null) {
             return R.error("缺少租户上下文");
         }

@@ -10,6 +10,7 @@ import com.reggie.module.platform.service.DishPlatformMappingService;
 import com.reggie.module.platform.service.PlatformConfigService;
 import com.reggie.module.platform.service.PlatformSyncService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,9 +59,9 @@ public class PlatformSyncController {
      */
     @PostMapping("/syncDish")
     @Operation(summary = "同步菜品上/下架到外卖平台")
-    public R<Void> syncDish(@RequestParam String platformType,
-                            @RequestParam Long dishId,
-                            @RequestParam String action) {
+    public R<Void> syncDish(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
+                            @Parameter(description = "本系统菜品ID", required = true) @RequestParam Long dishId,
+                            @Parameter(description = "动作（on_shelf-上架/off_shelf-下架）", required = true) @RequestParam String action) {
         PlatformConfig config = resolveConfig(platformType);
         List<DishPlatformMapping> mappings = mappingService.listByDishIdAndPlatformType(dishId, platformType);
         DishPlatformMapping mapping = (mappings != null && !mappings.isEmpty()) ? mappings.get(0) : null;
@@ -87,9 +88,9 @@ public class PlatformSyncController {
      */
     @PostMapping("/syncStock")
     @Operation(summary = "同步库存到外卖平台")
-    public R<Void> syncStock(@RequestParam String platformType,
-                             @RequestParam String platformDishId,
-                             @RequestParam int remainQty) {
+    public R<Void> syncStock(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
+                             @Parameter(description = "平台菜品ID", required = true) @RequestParam String platformDishId,
+                             @Parameter(description = "剩余可售数量", required = true) @RequestParam int remainQty) {
         PlatformConfig config = resolveConfig(platformType);
         try {
             syncService.syncStock(config, platformDishId, remainQty);
@@ -110,8 +111,8 @@ public class PlatformSyncController {
      */
     @PostMapping("/syncBusiness")
     @Operation(summary = "同步营业状态到外卖平台")
-    public R<Void> syncBusiness(@RequestParam String platformType,
-                                @RequestParam boolean open) {
+    public R<Void> syncBusiness(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
+                                @Parameter(description = "是否营业（true-营业/false-休息）", required = true) @RequestParam boolean open) {
         PlatformConfig config = resolveConfig(platformType);
         try {
             syncService.syncBusinessStatus(config, open);

@@ -82,9 +82,9 @@ public class ReservationController {
     public R<Page<Reservation>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String customerName,
-                                     @Parameter(description = "Phone")
+                                     @Parameter(description = "手机号（可选，模糊搜索）")
                                      @RequestParam(required = false) String phone,
-                                     @Parameter(description = "ReservedDate")
+                                     @Parameter(description = "预订日期（可选，格式yyyy-MM-dd）")
                                      @RequestParam(required = false) String reservedDate) {
         Page<Reservation> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Reservation> qw = new LambdaQueryWrapper<>();
@@ -134,7 +134,7 @@ public class ReservationController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增预订", description = "创建新的预订记录，支持指定桌台和人数")
-    public R<Reservation> create(@Valid @RequestBody CreateReservationDTO dto) {
+    public R<Reservation> create(@Parameter(description = "预订请求（客户姓名、手机号、预订时间、人数、桌台ID、备注）", required = true) @Valid @RequestBody CreateReservationDTO dto) {
         log.info("新增预订: customerName={}, phone={}", dto.getCustomerName(),
             LogMaskUtils.maskPhone(dto.getPhone()));
         Reservation r = reservationService.createReservation(

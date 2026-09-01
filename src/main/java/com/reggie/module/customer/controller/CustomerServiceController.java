@@ -36,7 +36,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/cs")
 @RequireEmployee
-@Tag(name = "Customer Service Management")
+@Tag(name = "客服管理")
 public class CustomerServiceController {
 
     @Autowired
@@ -46,10 +46,10 @@ public class CustomerServiceController {
 
     @PostMapping("/session/create")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Create customer service session")
+    @Operation(summary = "创建客服会话")
     public R<CsSession> createSession(
-                        @Parameter(description = "Session type") @RequestParam Integer sessionType,
-            @Parameter(description = "Order ID") @RequestParam(required = false) Long orderId) {
+                        @Parameter(description = "会话类型", required = true) @RequestParam Integer sessionType,
+            @Parameter(description = "关联订单ID（可选）") @RequestParam(required = false) Long orderId) {
         Long userId = BaseContext.getCurrentId();
         String userName = "User"; // Should get from user service
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -58,41 +58,39 @@ public class CustomerServiceController {
     }
 
     @GetMapping("/session/list")
-    @Operation(summary = "Get session list")
+    @Operation(summary = "查询会话列表")
     public R<List<CsSession>> getSessionList(
-                        @Parameter(description = "Status") @RequestParam(required = false) Integer status) {
+                        @Parameter(description = "会话状态（可选）") @RequestParam(required = false) Integer status) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<CsSession> list = customerService.getSessionList(status, tenantId);
         return R.success(list);
     }
 
     @GetMapping("/session/{id}")
-    @Operation(summary = "Get session by ID")
-    public R<CsSession> getSessionById(@PathVariable Long id) {
+    @Operation(summary = "查询会话详情")
+    public R<CsSession> getSessionById(@Parameter(description = "客服会话ID", required = true) @PathVariable Long id) {
         CsSession session = customerService.getSessionById(id);
         return R.success(session);
     }
 
     @PostMapping("/session/{id}/assign")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Assign agent to session")
+    @Operation(summary = "分配客服")
     public R<String> assignAgent(
-            @Parameter(description = "ID")
-            @PathVariable Long id,
-            @Parameter(description = "Agent ID") @RequestParam Long agentId,
-            @Parameter(description = "Agent name") @RequestParam String agentName) {
+            @Parameter(description = "客服会话ID", required = true) @PathVariable Long id,
+            @Parameter(description = "客服ID", required = true) @RequestParam Long agentId,
+            @Parameter(description = "客服姓名", required = true) @RequestParam String agentName) {
         boolean success = customerService.assignAgent(id, agentId, agentName);
         return success ? R.success("Agent assigned") : R.error("Assignment failed");
     }
 
     @PostMapping("/session/{id}/close")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Close session")
+    @Operation(summary = "关闭会话")
     public R<String> closeSession(
-            @Parameter(description = "ID")
-            @PathVariable Long id,
-            @Parameter(description = "Satisfaction rating (1-5)") @RequestParam(required = false) Integer rating,
-            @Parameter(description = "User feedback") @RequestParam(required = false) String feedback) {
+            @Parameter(description = "客服会话ID", required = true) @PathVariable Long id,
+            @Parameter(description = "满意度评分（1-5，可选）") @RequestParam(required = false) Integer rating,
+            @Parameter(description = "用户反馈（可选）") @RequestParam(required = false) String feedback) {
         boolean success = customerService.closeSession(id, rating, feedback);
         return success ? R.success("Session closed") : R.error("Close failed");
     }
@@ -101,13 +99,13 @@ public class CustomerServiceController {
 
     @PostMapping("/message/send")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Send message")
+    @Operation(summary = "发送消息")
     public R<CsMessage> sendMessage(
-                        @Parameter(description = "Session ID") @RequestParam Long sessionId,
-            @Parameter(description = "Sender type: 1-User, 2-Agent") @RequestParam Integer senderType,
-            @Parameter(description = "Message type: 1-Text, 2-Image") @RequestParam(defaultValue = "1") Integer messageType,
-            @Parameter(description = "Content") @RequestParam String content,
-            @Parameter(description = "Image URL") @RequestParam(required = false) String imageUrl) {
+                        @Parameter(description = "客服会话ID", required = true) @RequestParam Long sessionId,
+            @Parameter(description = "发送方类型：1-用户 2-客服", required = true) @RequestParam Integer senderType,
+            @Parameter(description = "消息类型：1-文本 2-图片", required = false) @RequestParam(defaultValue = "1") Integer messageType,
+            @Parameter(description = "消息内容", required = true) @RequestParam String content,
+            @Parameter(description = "图片URL（可选）") @RequestParam(required = false) String imageUrl) {
         Long senderId = BaseContext.getCurrentId();
         String senderName = senderType == 1 ? "User" : "Agent";
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -116,30 +114,27 @@ public class CustomerServiceController {
     }
 
     @GetMapping("/message/list/{sessionId}")
-    @Operation(summary = "Get session messages")
-    @Parameter(description = "SessionId")
-    public R<List<CsMessage>> getSessionMessages(@PathVariable Long sessionId) {
+    @Operation(summary = "查询会话消息")
+    public R<List<CsMessage>> getSessionMessages(@Parameter(description = "客服会话ID", required = true) @PathVariable Long sessionId) {
         List<CsMessage> messages = customerService.getSessionMessages(sessionId);
         return R.success(messages);
     }
 
     @GetMapping("/message/unread/{sessionId}")
-    @Operation(summary = "Get unread message count")
+    @Operation(summary = "查询未读消息数")
     public R<Integer> getUnreadMessageCount(
-            @Parameter(description = "sessionId")
-            @PathVariable Long sessionId,
-            @Parameter(description = "User type: 1-User, 2-Agent") @RequestParam Integer userType) {
+            @Parameter(description = "客服会话ID", required = true) @PathVariable Long sessionId,
+            @Parameter(description = "用户类型：1-用户 2-客服", required = true) @RequestParam Integer userType) {
         int count = customerService.getUnreadMessageCount(sessionId, userType);
         return R.success(count);
     }
 
     @PostMapping("/message/read/{sessionId}")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Mark messages as read")
+    @Operation(summary = "标记消息已读")
     public R<String> markMessagesAsRead(
-            @Parameter(description = "sessionId")
-            @PathVariable Long sessionId,
-            @Parameter(description = "User type: 1-User, 2-Agent") @RequestParam Integer userType) {
+            @Parameter(description = "客服会话ID", required = true) @PathVariable Long sessionId,
+            @Parameter(description = "用户类型：1-用户 2-客服", required = true) @RequestParam Integer userType) {
         boolean success = customerService.markMessagesAsRead(sessionId, userType);
         return success ? R.success("Messages marked as read") : R.error("Operation failed");
     }
@@ -148,8 +143,8 @@ public class CustomerServiceController {
 
     @PostMapping("/complaint/create")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Create complaint")
-    public R<Complaint> createComplaint(@Valid @RequestBody Complaint complaint) {
+    @Operation(summary = "创建投诉")
+    public R<Complaint> createComplaint(@Parameter(description = "投诉信息", required = true) @Valid @RequestBody Complaint complaint) {
         Long userId = BaseContext.getCurrentId();
         Long tenantId = BaseContext.getCurrentTenantId();
         complaint.setUserId(userId);
@@ -159,30 +154,29 @@ public class CustomerServiceController {
     }
 
     @GetMapping("/complaint/list")
-    @Operation(summary = "Get complaint list")
+    @Operation(summary = "查询投诉列表")
     public R<List<Complaint>> getComplaintList(
-                        @Parameter(description = "Status") @RequestParam(required = false) Integer status,
-            @Parameter(description = "Type") @RequestParam(required = false) Integer type) {
+                        @Parameter(description = "投诉状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "投诉类型（可选）") @RequestParam(required = false) Integer type) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Complaint> list = customerService.getComplaintList(status, type, tenantId);
         return R.success(list);
     }
 
     @GetMapping("/complaint/{id}")
-    @Operation(summary = "Get complaint by ID")
-    public R<Complaint> getComplaintById(@PathVariable Long id) {
+    @Operation(summary = "查询投诉详情")
+    public R<Complaint> getComplaintById(@Parameter(description = "投诉ID", required = true) @PathVariable Long id) {
         Complaint complaint = customerService.getComplaintById(id);
         return R.success(complaint);
     }
 
     @PostMapping("/complaint/{id}/handle")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Handle complaint")
+    @Operation(summary = "处理投诉")
     public R<String> handleComplaint(
-            @Parameter(description = "ID")
-            @PathVariable Long id,
-            @Parameter(description = "Handle result") @RequestParam String handleResult,
-            @Parameter(description = "Compensation amount") @RequestParam(required = false) BigDecimal compensationAmount) {
+            @Parameter(description = "投诉ID", required = true) @PathVariable Long id,
+            @Parameter(description = "处理结果", required = true) @RequestParam String handleResult,
+            @Parameter(description = "补偿金额（可选）") @RequestParam(required = false) BigDecimal compensationAmount) {
         Long handlerId = BaseContext.getCurrentId();
         String handlerName = "Handler";
         boolean success = customerService.handleComplaint(id, handlerId, handlerName, handleResult, compensationAmount);
@@ -191,20 +185,19 @@ public class CustomerServiceController {
 
     @PostMapping("/complaint/{id}/close")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Close complaint")
-    public R<String> closeComplaint(@PathVariable Long id) {
+    @Operation(summary = "关闭投诉")
+    public R<String> closeComplaint(@Parameter(description = "投诉ID", required = true) @PathVariable Long id) {
         boolean success = customerService.closeComplaint(id);
         return success ? R.success("Complaint closed") : R.error("Close failed");
     }
 
     @PostMapping("/complaint/{id}/rate")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "Rate complaint handling")
+    @Operation(summary = "评价投诉处理")
     public R<String> rateComplaint(
-            @Parameter(description = "ID")
-            @PathVariable Long id,
-            @Parameter(description = "Satisfaction (1-5)") @RequestParam Integer satisfaction,
-            @Parameter(description = "Feedback") @RequestParam(required = false) String feedback) {
+            @Parameter(description = "投诉ID", required = true) @PathVariable Long id,
+            @Parameter(description = "满意度评分（1-5）", required = true) @RequestParam Integer satisfaction,
+            @Parameter(description = "评价反馈（可选）") @RequestParam(required = false) String feedback) {
         boolean success = customerService.rateComplaint(id, satisfaction, feedback);
         return success ? R.success("Rating submitted") : R.error("Rating failed");
     }
@@ -212,32 +205,31 @@ public class CustomerServiceController {
     // ==================== Statistics ====================
 
     @GetMapping("/statistics")
-    @Operation(summary = "Get customer service statistics")
+    @Operation(summary = "客服服务统计")
     public R<Map<String, Object>> getCustomerServiceStatistics(
-                        @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+                        @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = customerService.getCustomerServiceStatistics(startDate, endDate, tenantId);
         return R.success(statistics);
     }
 
     @GetMapping("/complaint/statistics")
-    @Operation(summary = "Get complaint statistics")
+    @Operation(summary = "投诉统计")
     public R<Map<String, Object>> getComplaintStatistics(
-                        @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+                        @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = customerService.getComplaintStatistics(startDate, endDate, tenantId);
         return R.success(statistics);
     }
 
     @GetMapping("/agent/{agentId}/workload")
-    @Operation(summary = "Get agent workload")
+    @Operation(summary = "客服工作量统计")
     public R<Map<String, Object>> getAgentWorkload(
-            @Parameter(description = "agentId")
-            @PathVariable Long agentId,
-            @Parameter(description = "Start date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "End date") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+            @Parameter(description = "客服ID", required = true) @PathVariable Long agentId,
+            @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Map<String, Object> workload = customerService.getAgentWorkload(agentId, startDate, endDate);
         return R.success(workload);
     }

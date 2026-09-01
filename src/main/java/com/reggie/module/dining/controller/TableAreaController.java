@@ -76,7 +76,7 @@ public class TableAreaController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增区域", description = "创建新的桌台区域")
-    public R<TableArea> save(@RequestBody TableArea area) {
+    public R<TableArea> save(@Parameter(description = "区域信息（名称、排序）", required = true) @RequestBody TableArea area) {
         log.info("新增区域: {}", area.getName());
         area.setTenantId(BaseContext.getCurrentTenantId());
         tableAreaService.save(area);
@@ -93,7 +93,7 @@ public class TableAreaController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改区域", description = "更新桌台区域信息")
-    public R<String> update(@RequestBody TableArea area) {
+    public R<String> update(@Parameter(description = "区域信息（ID、名称、排序）", required = true) @RequestBody TableArea area) {
         log.info("修改区域: {}", area.getId());
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
