@@ -5,6 +5,8 @@ import com.reggie.common.BaseContext;
 import com.reggie.module.platform.model.PlatformSyncLog;
 import com.reggie.module.platform.service.PlatformSyncLogService;
 import com.reggie.module.platform.service.PlatformSyncService;
+import com.reggie.module.tenant.model.Tenant;
+import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -35,31 +37,53 @@ public class PlatformRetryTask {
     @Autowired
     private PlatformSyncService platformSyncService;
 
+    @Autowired
+    private TenantService tenantService;
+
     /**
      * 每 2 分钟执行一次，重试失败的同步操作
      */
     @Scheduled(fixedDelay = 120000)
     public void retryFailedOperations() {
         log.info("[平台重试] 开始扫描失败日志");
-        Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId == null) {
-            log.warn("[平台重试] 租户上下文缺失，跳过");
+        List<Tenant> tenants = tenantService.listActiveTenants();
+        if (tenants == null || tenants.isEmpty()) {
+            log.info("[平台重试] 无活跃租户，跳过");
             return;
         }
 
-        // 查询所有失败且重试次数未达上限的日志
+        for (Tenant tenant : tenants) {
+            Long originalTenantId = BaseContext.getCurrentTenantId();
+            BaseContext.setCurrentTenantId(tenant.getId());
+            try {
+                retryTenant();
+            } catch (Exception e) {
+                log.error("[平台重试] 租户 {} 扫描失败: {}", tenant.getId(), e.getMessage());
+            } finally {
+                if (originalTenantId != null) {
+                    BaseContext.setCurrentTenantId(originalTenantId);
+                } else {
+                    BaseContext.remove();
+                }
+            }
+        }
+    }
+
+    /**
+     * 重试当前租户（BaseContext 已注入）下所有失败且重试次数未达上限的日志
+     */
+    private void retryTenant() {
+        // 查询该租户下所有失败且重试次数未达上限的日志（租户插件自动注入 tenant_id）
         LambdaQueryWrapper<PlatformSyncLog> qw = new LambdaQueryWrapper<>();
-        qw.eq(PlatformSyncLog::getTenantId, tenantId)
-          .eq(PlatformSyncLog::getStatus, 1) // 失败
+        qw.eq(PlatformSyncLog::getStatus, 1) // 失败
           .lt(PlatformSyncLog::getRetryCount, MAX_RETRY_COUNT);
         List<PlatformSyncLog> failedLogs = syncLogService.list(qw);
 
         if (failedLogs == null || failedLogs.isEmpty()) {
-            log.info("[平台重试] 无待重试记录");
             return;
         }
 
-        log.info("[平台重试] 发现 {} 条待重试记录", failedLogs.size());
+        log.info("[平台重试] 租户 {} 发现 {} 条待重试记录", BaseContext.getCurrentTenantId(), failedLogs.size());
 
         for (PlatformSyncLog logEntry : failedLogs) {
             try {

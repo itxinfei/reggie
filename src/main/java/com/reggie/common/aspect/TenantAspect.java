@@ -35,7 +35,8 @@ import java.lang.reflect.Field;
  * 不拦截：
  * - 忽略表（tenant/employee/shopping_cart/ai_provider_config/permission/role_permission 等）
  *   走专用 Mapper，不受 TenantLineInnerInterceptor 影响，此处也不干预。
- * - 定时任务、异步事件：由 BaseContext + TaskDecorator 保证上下文传播，不在此处告警。
+ * - 定时任务：遍历租户的入口 TenantServiceImpl.listActiveTenants() 已显式豁免
+ *   （切点排除），不在此处告警。
  * </p>
  *
  * <p>
@@ -58,12 +59,19 @@ public class TenantAspect {
     /**
      * 兜底校验：任何以 service 命名空间的方法，BaseContext.tenantId 必须非空。
      * 命中：com.reggie.module.*.service.impl.*ServiceImpl.*
+     * <p>
+     * 豁免 {@code TenantServiceImpl.listActiveTenants()}：该方法是定时任务遍历活跃租户的
+     * 统一入口（PlatformPullTask/PlatformRetryTask/UnacceptedOrderScanTask 等均先枚举租户
+     * 再逐租户设置 BaseContext），此时本就无租户上下文，且 tenant 表在 IGNORE_TABLES
+     * 白名单内不受租户插件影响。豁免后消除全站定时任务每轮产生的 WARN 噪音。
+     * </p>
      *
      * @param pjp 切点
      * @return 原方法返回值
      * @throws Throwable 传播原异常
      */
-    @Around("execution(* com.reggie.module..service.impl.*ServiceImpl.*(..))")
+    @Around("execution(* com.reggie.module..service.impl.*ServiceImpl.*(..)) "
+            + "&& !execution(* com.reggie.module.tenant.service.impl.TenantServiceImpl.listActiveTenants(..))")
     public Object checkTenantContext(ProceedingJoinPoint pjp) throws Throwable {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
