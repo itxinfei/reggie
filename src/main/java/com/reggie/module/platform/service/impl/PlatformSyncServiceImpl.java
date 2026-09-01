@@ -53,7 +53,7 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
         return adapters.stream()
                 .filter(a -> a.platformType().equals(platformType))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("不支持的平台类型: " + platformType));
+                .orElse(null);
     }
 
     /**
@@ -103,6 +103,10 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
     public List<PlatformOrder> pullOrders(PlatformConfig config, String beginTime, String endTime) {
         return executeWithRetry(config.getPlatformType(), "PULL", () -> {
             PlatformAdapter adapter = getAdapter(config.getPlatformType());
+            if (adapter == null) {
+                log.warn("[平台同步] 未找到适配器，跳过: platformType={}", config.getPlatformType());
+                return java.util.Collections.emptyList();
+            }
             log.info("[平台同步] 开始拉单: platformType={}, shopId={}", config.getPlatformType(), config.getShopId());
             List<PlatformOrder> orders = adapter.pullOrders(config, beginTime, endTime);
             log.info("[平台同步] 拉单完成: platformType={}, count={}", config.getPlatformType(), orders.size());
@@ -155,6 +159,10 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
     public void pushOrderStatus(PlatformConfig config, String platformOrderId, String action) {
         executeWithRetry(config.getPlatformType(), "PUSH_STATUS:" + action, () -> {
             PlatformAdapter adapter = getAdapter(config.getPlatformType());
+            if (adapter == null) {
+                log.warn("[平台同步] 未找到适配器，跳过状态回传: platformType={}", config.getPlatformType());
+                return null;
+            }
             log.info("[平台同步] 状态回传: platformType={}, orderId={}, action={}",
                     config.getPlatformType(), platformOrderId, action);
             switch (action.toLowerCase()) {
@@ -184,6 +192,10 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
     public void syncDish(PlatformConfig config, Long dishId, String platformDishId, String action) {
         executeWithRetry(config.getPlatformType(), "SYNC_DISH:" + action, () -> {
             PlatformAdapter adapter = getAdapter(config.getPlatformType());
+            if (adapter == null) {
+                log.warn("[平台同步] 未找到适配器，跳过商品同步: platformType={}", config.getPlatformType());
+                return null;
+            }
             log.info("[平台同步] 商品同步: platformType={}, dishId={}, action={}",
                     config.getPlatformType(), dishId, action);
             if ("on_shelf".equals(action)) {
@@ -201,6 +213,10 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
     public void syncStock(PlatformConfig config, String platformDishId, int remainQty) {
         executeWithRetry(config.getPlatformType(), "SYNC_STOCK", () -> {
             PlatformAdapter adapter = getAdapter(config.getPlatformType());
+            if (adapter == null) {
+                log.warn("[平台同步] 未找到适配器，跳过库存同步: platformType={}", config.getPlatformType());
+                return null;
+            }
             log.info("[平台同步] 库存同步: platformType={}, platformDishId={}, remainQty={}",
                     config.getPlatformType(), platformDishId, remainQty);
             adapter.syncStock(config, platformDishId, remainQty);
@@ -212,6 +228,10 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
     public void syncBusinessStatus(PlatformConfig config, boolean open) {
         executeWithRetry(config.getPlatformType(), "SYNC_BUSINESS_STATUS", () -> {
             PlatformAdapter adapter = getAdapter(config.getPlatformType());
+            if (adapter == null) {
+                log.warn("[平台同步] 未找到适配器，跳过营业状态同步: platformType={}", config.getPlatformType());
+                return null;
+            }
             log.info("[平台同步] 营业状态同步: platformType={}, open={}", config.getPlatformType(), open);
             adapter.syncBusinessStatus(config, open);
             return null;
@@ -222,6 +242,10 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
     public boolean checkHealth(PlatformConfig config) {
         try {
             PlatformAdapter adapter = getAdapter(config.getPlatformType());
+            if (adapter == null) {
+                log.warn("[平台同步] 未找到适配器，健康检查跳过: platformType={}", config.getPlatformType());
+                return false;
+            }
             return adapter.healthCheck(config);
         } catch (Exception e) {
             log.error("[平台同步] 健康检查失败: platformType={}", config.getPlatformType(), e);

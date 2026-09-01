@@ -28,7 +28,8 @@ public interface OperationLogService extends IService<OperationLog> {
      */
     Page<OperationLog> pageQuery(int page, int pageSize, String module,
                                   String operationType, String operatorName,
-                                  LocalDateTime beginTime, LocalDateTime endTime);
+                                  LocalDateTime beginTime, LocalDateTime endTime,
+                                  Integer isSuccess);
 
     /**
      * 查询指定业务记录的操作日志

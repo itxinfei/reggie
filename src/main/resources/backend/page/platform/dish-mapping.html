@@ -31,8 +31,8 @@
       </div>
     </header>
 
-    <!-- 统计卡片 -->
-    <stat-cards :cards="statsCards"></stat-cards>
+    <!-- 修改点：统计卡片支持点击筛选（点击总数/已上架/已下架按状态过滤数据） -->
+    <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
     <!-- 筛选区 -->
     <el-card shadow="never" class="ds-card ds-card--filter">
@@ -111,13 +111,17 @@
         // 不含 tableData；此前模板与 statsCards 计算属性直接访问 this.tableData.filter(...)，
         // 首次渲染时为 undefined 触发 TypeError，导致整页渲染失败（白屏）
         tableData: [],
+        // 修改点：当前激活的统计卡片 key（'' 全部 / '1' 已上架 / '0' 已下架），点击卡片按状态筛选
+        activeFilter: '',
+        // 修改点：菜品平台映射统计（总数/已上架/已下架/覆盖平台数），由 /admin/platform/mapping/stats 加载
+        stats: {},
         filters: { platformType: '', dishId: '' },
         columns: [
           { prop: 'platformType', label: '平台', width: 100, align: 'center', slot: true },
           { prop: 'dishId', label: '菜品ID', width: 100, align: 'center' },
           { prop: 'platformDishId', label: '平台菜品ID', minWidth: 160, align: 'center' },
           { prop: 'platformShopId', label: '平台门店ID', minWidth: 140, align: 'center' },
-          { prop: 'price', label: '平台价', width: 110, align: 'right', type: 'money', slot: true },
+          { prop: 'price', label: '平台价', width: 110, align: 'center', type: 'money', slot: true },
           { prop: 'status', label: '状态', width: 80, align: 'center', slot: true }
         ],
         businessPlatform: 'MEITUAN',
@@ -128,28 +132,44 @@
       this.fetchData()
     },
     computed: {
+      // 修改点：4 张可点击统计卡片（总数/已上架/已下架/覆盖平台），点击按状态/维度筛选数据
       statsCards() {
+        var s = this.stats || {}
         return [
-          { key: 'total', icon: 'el-icon-shopping-cart-full', label: '映射总数', value: this.counts || 0, color: 'primary' },
-          { key: 'online', icon: 'el-icon-circle-check', label: '已上架', value: this.tableData.filter(function(r){ return r.status === 1 }).length, color: 'success' },
-          { key: 'offline', icon: 'el-icon-circle-close', label: '已下架', value: this.tableData.filter(function(r){ return r.status === 0 }).length, color: 'info' },
-          { key: 'platforms', icon: 'el-icon-office-building', label: '覆盖平台', value: this.counts ? 4 : 0, color: 'warning' }
+          { key: '', icon: 'el-icon-shopping-cart-full', label: '映射总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+          { key: '1', icon: 'el-icon-circle-check', label: '已上架', value: s.onlineCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
+          { key: '0', icon: 'el-icon-circle-close', label: '已下架', value: s.offlineCount || 0, color: 'info', clickable: true, active: this.activeFilter === '0' },
+          { key: '', icon: 'el-icon-office-building', label: '覆盖平台', value: s.platformCount || 0, color: 'warning' }
         ]
       }
     },
     methods: {
-      async fetchData() {
+      // 修改点：列表数据拉取（后端分页，返回 records/total），reloadStats 控制是否重载统计卡片
+      async fetchData(reloadStats) {
+        if (reloadStats === undefined) { reloadStats = true }
         this.loading = true
+        // 状态筛选：统计卡片 activeFilter（'' 全部 / '1' 已上架 / '0' 已下架）
+        var status = this.activeFilter === '' ? undefined : Number(this.activeFilter)
+        var params = { page: this.page, pageSize: this.pageSize }
+        if (this.filters.platformType) params.platformType = this.filters.platformType
+        if (this.filters.dishId) params.dishId = this.filters.dishId
+        if (status !== undefined) { params.status = status }
         try {
-          const params = { page: this.page, pageSize: this.pageSize }
-          if (this.filters.platformType) params.platformType = this.filters.platformType
-          if (this.filters.dishId) params.dishId = this.filters.dishId
-          const res = await window.platformApi.mappingPage(params)
+          var requests = [window.platformApi.mappingPage(params)]
+          if (reloadStats) { requests.push(this.loadMappingStats()) }
+          var results = await Promise.all(requests)
+          var res = results[0]
           if (String(res.code) === '1' && res.data) {
             this.tableData = res.data.records || []
             this.counts = Number(res.data.total) || 0
           } else {
             ReggieUI.error((res && res.msg) || '加载映射失败')
+          }
+          if (reloadStats) {
+            var statsRes = results[1]
+            if (statsRes && statsRes.code === 1 && statsRes.data) {
+              this.stats = statsRes.data
+            }
           }
         } catch (err) {
           if (err.message !== 'NOTLOGIN') {
@@ -159,9 +179,29 @@
           this.loading = false
         }
       },
+      // 修改点：加载菜品平台映射统计（总数/已上架/已下架/覆盖平台数），供统计卡片展示
+      async loadMappingStats() {
+        try {
+          var res = await window.platformApi.mappingStats()
+          if (res && String(res.code) === '1' && res.data) {
+            return { code: 1, data: res.data }
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') {
+            console.warn('加载映射统计失败:', err)
+          }
+        }
+        return { code: 0 }
+      },
+      // 修改点：统计卡片点击 — 按状态筛选数据
+      onCardClick(payload) {
+        this.activeFilter = payload.activeKey
+        this.page = 1
+        this.fetchData(false)
+      },
       search() {
         this.page = 1
-        this.fetchData()
+        this.fetchData(false)
       },
       resetFilters() {
         this.filters = { platformType: '', dishId: '' }
@@ -170,12 +210,12 @@
       },
       handlePageChange(p) {
         this.page = p
-        this.fetchData()
+        this.fetchData(false)
       },
       handleSizeChange(s) {
         this.pageSize = s
         this.page = 1
-        this.fetchData()
+        this.fetchData(false)
       },
       platformTypeText(type) {
         const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音', SELF: '自营', OTHER: '其他' }
@@ -197,7 +237,7 @@
           } catch (err) {
             ReggieUI.error('同步失败，请检查网络或平台配置')
           }
-        }).catch(() => {})
+        }).catch((err) => { console.warn('[菜品映射] 菜品同步操作取消或失败:', err) })
       },
       // 修改点：同步营业状态到平台
       async syncBusiness(open) {

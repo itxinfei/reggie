@@ -222,7 +222,7 @@
                 if (res.code === 1 && res.data) {
                     this.stats = Object.assign(this.stats, res.data);
                 }
-            }).catch(() => {});
+            }).catch((err) => { console.warn('[推荐] 加载统计数据失败:', err) });
         },
 
         // 加载反馈分布

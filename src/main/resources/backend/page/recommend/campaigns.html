@@ -592,7 +592,7 @@
             couponTemplatePage({ page: 1, pageSize: 100 })
                 .then(function(res) {
                     if (res.code === 1 && res.data) self.couponTemplates = res.data.records || [];
-                }).catch(function() {});
+                }).catch(function(err) { console.warn('[campaigns] 加载优惠券模板失败:', err) });
         },
         loadData: function() {
             const self = this;
@@ -628,7 +628,7 @@
                     self.summary.totalPushed = s.total_pushed || 0;
                     self.renderOverviewCharts();
                 }
-            }).catch(function() {});
+            }).catch(function(err) { console.warn('[campaigns] 加载统计数据失败:', err) });
         },
 
         /* ====== 表单与规则 ====== */
@@ -720,7 +720,7 @@
                         ReggieUI.error(res.msg || '批量删除失败');
                     }
                 }).catch(function() { ReggieUI.error('批量删除失败'); });
-            }).catch(function() {});
+            }).catch(function(err) { console.warn('[campaigns] 批量删除操作取消或失败:', err) });
         },
         batchPause: function() {
             const self = this;
@@ -732,7 +732,7 @@
                     ReggieUI.success('批量暂停成功');
                     self.loadData();
                 }).catch(function() { ReggieUI.error('部分暂停失败'); });
-            }).catch(function() {});
+            }).catch(function(err) { console.warn('[campaigns] 批量暂停操作取消或失败:', err) });
         },
 
         /* ====== 对话框 ====== */
@@ -810,7 +810,7 @@
                     if (res.code === 1) { ReggieUI.success('发布成功'); self.loadData(); }
                     else { ReggieUI.error(res.msg || '发布失败'); }
                 });
-            }).catch(function() {});
+            }).catch(function(err) { console.warn('[campaigns] 发布活动取消或失败:', err) });
         },
         pauseCampaign: function(row) {
             const self = this;
@@ -819,7 +819,7 @@
                     if (res.code === 1) { ReggieUI.success('已暂停'); self.loadData(); }
                     else { ReggieUI.error(res.msg || '暂停失败'); }
                 });
-            }).catch(function() {});
+            }).catch(function(err) { console.warn('[campaigns] 暂停活动取消或失败:', err) });
         },
         deleteCampaign: function(row) {
             const self = this;
@@ -830,7 +830,7 @@
                     if (res.code === 1) { ReggieUI.success('删除成功'); self.loadData(); }
                     else { ReggieUI.error(res.msg || '删除失败'); }
                 });
-            }).catch(function() {});
+            }).catch(function(err) { console.warn('[campaigns] 删除活动取消或失败:', err) });
         },
 
         /* ====== 推送 ====== */

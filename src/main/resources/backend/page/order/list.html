@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>订单明细 - 瑞吉外卖管理端</title>
+  <title>订单明细 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -287,7 +288,7 @@
             { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
             { prop: 'userName', label: '用户', width: 80, align: 'center' },
             { prop: 'phone', label: '手机号', width: 110, align: 'center' },
-            { prop: 'amount', label: '金额', slot: true, width: 110, align: 'right', type: 'money' },
+            { prop: 'amount', label: '金额', slot: true, width: 110, align: 'center', type: 'money' },
             { prop: 'payMethod', label: '支付', width: 70, align: 'center', slot: true },
             { prop: 'source', label: '就餐', width: 70, align: 'center', slot: true },
             { prop: 'tableName', label: '桌台', width: 60, align: 'center' },
@@ -503,7 +504,7 @@
             if (res && res.code === 1 && res.data) {
               self.diaForm = res.data
             }
-          }).catch(function() {})
+          }).catch(function(err) { console.warn('[order] 获取订单详情失败:', err) })
         },
         cancelOrder: function(row) {
           const self = this

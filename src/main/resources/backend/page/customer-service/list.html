@@ -91,8 +91,8 @@
         <!-- 修改点：:loading 不是 el-table 的合法 prop（加载态永远不显示），改为 v-loading 指令；
              :data 改为分页后的切片 sessionPagedList -->
         <el-table v-loading="sessionLoading" :data="sessionPagedList" border stripe style="width:100%" size="medium" aria-label="会话列表">
-          <el-table-column prop="sessionNo" label="会话号" width="180"></el-table-column>
-          <el-table-column prop="userName" label="用户" width="120"></el-table-column>
+          <el-table-column prop="sessionNo" label="会话号" width="180" align="center"></el-table-column>
+          <el-table-column prop="userName" label="用户" width="120" align="center"></el-table-column>
           <el-table-column prop="sessionType" label="类型" width="80" align="center">
             <template slot-scope="{row}">
               <el-tag :type="row.sessionType === 1 ? '' : 'success'" size="small">
@@ -100,7 +100,7 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="agentName" label="客服" width="120"></el-table-column>
+          <el-table-column prop="agentName" label="客服" width="120" align="center"></el-table-column>
           <el-table-column label="状态" width="90" align="center">
             <template slot-scope="{row}">
               <el-tag :type="row.status === 1 ? 'success' : (row.status === 0 ? 'warning' : 'info')" size="small">
@@ -108,9 +108,9 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="createTime" label="创建时间" width="170"></el-table-column>
-          <el-table-column prop="closeTime" label="结束时间" width="170"></el-table-column>
-          <el-table-column label="操作" width="260" fixed="right">
+          <el-table-column prop="createTime" label="创建时间" width="170" align="center"></el-table-column>
+          <el-table-column prop="closeTime" label="结束时间" width="170" align="center"></el-table-column>
+          <el-table-column label="操作" width="260" align="center" fixed="right">
             <template slot-scope="{row}">
               <el-button type="text" size="small" @click="onViewSession(row)">查看</el-button>
               <el-button type="text" size="small" v-if="row.status === 0" @click="onAssign(row)">分配</el-button>
@@ -178,22 +178,22 @@
 
         <!-- 修改点：:loading -> v-loading（同上），:data 改为分页切片 complaintPagedList -->
         <el-table v-loading="complaintLoading" :data="complaintPagedList" border stripe style="width:100%" size="medium" aria-label="投诉列表">
-          <el-table-column prop="complaintNo" label="投诉号" width="170"></el-table-column>
-          <el-table-column prop="userName" label="用户" width="100"></el-table-column>
-          <el-table-column prop="userPhone" label="电话" width="130"></el-table-column>
+          <el-table-column prop="complaintNo" label="投诉号" width="170" align="center"></el-table-column>
+          <el-table-column prop="userName" label="用户" width="100" align="center"></el-table-column>
+          <el-table-column prop="userPhone" label="电话" width="130" align="center"></el-table-column>
           <el-table-column label="类型" width="90" align="center">
             <template slot-scope="{row}">
               <el-tag size="small">{{ typeTextComplaint(row.complaintType) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="title" label="标题" min-width="150"></el-table-column>
+          <el-table-column prop="title" label="标题" min-width="150" align="center"></el-table-column>
           <el-table-column label="状态" width="90" align="center">
             <template slot-scope="{row}">
               <el-tag :type="statusTagComplaint(row.status)" size="small">{{ statusTextComplaint(row.status) }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="createTime" label="创建时间" width="170"></el-table-column>
-          <el-table-column label="操作" width="260" fixed="right">
+          <el-table-column prop="createTime" label="创建时间" width="170" align="center"></el-table-column>
+          <el-table-column label="操作" width="260" align="center" fixed="right">
             <template slot-scope="{row}">
               <el-button type="text" size="small" @click="onViewComplaint(row)">查看</el-button>
               <el-button type="text" size="small" v-if="row.status === 0 || row.status === 1" @click="onHandleComplaint(row)">处理</el-button>
@@ -272,10 +272,12 @@
       </crud-dialog>
 
       <!-- 分配客服弹窗 -->
-      <crud-dialog title="分配客服" :visible.sync="assignForm.visible" width="400px" @submit="onSubmitAssign">
+      <crud-dialog title="分配客服" :visible.sync="assignForm.visible" width="400px" :submit-loading="dialogSubmitting" @submit="onSubmitAssign">
         <el-form label-width="80px">
-          <el-form-item label="客服姓名：">
-            <el-input v-model="assignForm.agentName" placeholder="请输入客服姓名"></el-input>
+          <el-form-item label="客服姓名：" required>
+            <el-select v-model="assignForm.agentId" placeholder="请选择客服" filterable clearable style="width:100%">
+              <el-option v-for="emp in agentOptions" :key="emp.id" :label="emp.name" :value="emp.id"></el-option>
+            </el-select>
           </el-form-item>
         </el-form>
       </crud-dialog>
@@ -298,9 +300,9 @@
       </crud-dialog>
 
       <!-- 处理投诉弹窗 -->
-      <crud-dialog title="处理投诉" :visible.sync="handleForm.visible" width="480px" @submit="onSubmitHandleComplaint">
+      <crud-dialog title="处理投诉" :visible.sync="handleForm.visible" width="480px" :submit-loading="dialogSubmitting" @submit="onSubmitHandleComplaint">
         <el-form label-width="100px">
-          <el-form-item label="处理结果：">
+          <el-form-item label="处理结果：" required>
             <el-input type="textarea" v-model="handleForm.handleResult" :rows="3" placeholder="请输入处理结果说明"></el-input>
           </el-form-item>
           <el-form-item label="补偿金额：">
@@ -317,6 +319,7 @@
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js"></script>
   <script src="../../api/customer-service.js"></script>
+  <script src="../../api/attendance.js"></script>
   <script src="../../js/components.js"></script>
 <script>
     new Vue({
@@ -343,7 +346,9 @@
           currentSessionId: null,
 
           // 分配
-          assignForm: { visible: false, id: null, agentName: '' },
+          assignForm: { visible: false, id: null, agentId: null, agentName: '' },
+          agentOptions: [],
+          dialogSubmitting: false,
 
           // 投诉
           complaintList: [],
@@ -361,6 +366,12 @@
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
         const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59)
         this.statsDateRange = [startOfDay, endOfDay]
+        // 加载可选客服列表
+        getAgentOptions().then(function(res) {
+          if (res.code === 1 && res.data) {
+            this.agentOptions = res.data
+          }
+        }.bind(this)).catch(function() {})
         this.fetchStatistics()
         this.fetchSessionList()
         this.fetchComplaintList()
@@ -525,23 +536,32 @@
           }
         },
         onAssign(row) {
-          this.assignForm = { visible: true, id: row.id, agentName: '' }
+          this.assignForm = { visible: true, id: row.id, agentId: row.agentId || null, agentName: '' }
         },
         async onSubmitAssign() {
-          if (!this.assignForm.agentName.trim()) {
-            ReggieUI.warning('请输入客服姓名')
+          if (this.dialogSubmitting) { return }
+          if (!this.assignForm.agentId) {
+            ReggieUI.warning('请选择客服')
             return
           }
+          // 找到选中的员工姓名
+          var selectedEmp = this.agentOptions.find(function(emp) {
+            return emp.id === this.assignForm.agentId
+          }.bind(this))
+          var agentName = selectedEmp ? selectedEmp.name : ''
+          this.dialogSubmitting = true
           try {
             await assignSession(this.assignForm.id, {
-              agentId: 1,
-              agentName: this.assignForm.agentName
+              agentId: this.assignForm.agentId,
+              agentName: agentName
             })
             this.assignForm.visible = false
             ReggieUI.success('分配成功')
             this.fetchSessionList()
           } catch(e) {
             console.error('分配失败', e)
+          } finally {
+            this.dialogSubmitting = false
           }
         },
         async onCloseSession(row) {
@@ -553,7 +573,7 @@
             } catch(e) {
               console.error('结束会话失败', e)
             }
-          }).catch(function() {})
+          }).catch(function(err) { console.warn('[customer-service] 结束会话操作失败:', err) })
         },
 
         // ===== 投诉 =====
@@ -608,10 +628,12 @@
           this.handleForm = { visible: true, id: row.id, handleResult: '', compensationAmount: null }
         },
         async onSubmitHandleComplaint() {
+          if (this.dialogSubmitting) { return }
           if (!this.handleForm.handleResult.trim()) {
             ReggieUI.warning('请输入处理结果')
             return
           }
+          this.dialogSubmitting = true
           try {
             var params = { handleResult: this.handleForm.handleResult }
             if (this.handleForm.compensationAmount !== null && this.handleForm.compensationAmount !== undefined) {
@@ -623,6 +645,8 @@
             this.fetchComplaintList()
           } catch(e) {
             console.error('处理投诉失败', e)
+          } finally {
+            this.dialogSubmitting = false
           }
         },
         async onCloseComplaint(id) {
@@ -634,7 +658,7 @@
             } catch(e) {
               console.error('关闭投诉失败', e)
             }
-          }).catch(function() {})
+          }).catch(function(err) { console.warn('[customer-service] 关闭投诉操作失败:', err) })
         }
       }
     })

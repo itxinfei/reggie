@@ -69,9 +69,9 @@ body > .container {
 /* 手写 el-table（cashier/delivery/finance/marketing 等）与 crud-table 数据单元格统一居中；
    与 page.css 表头居中（.el-table th !important）策略一致，用 !important 强制生效，
    防止 Element UI 默认 left / 其他样式文件的同特异性规则覆盖。
-   金额/数字列（.is-right）右对齐，符合金额展示规范。
-   修改点：文本长内容列（.is-left）左对齐，便于中文长文本扫读；
-          显式 align:center 的短标识列（.is-center）居中。三态对齐均 !important 保证一致性。 */
+   修改点(2026-09-01)：全站表格表头与内容必须居中——crud-table resolveColAlign 默认已全 center，
+   金额/数字列不再右对齐；.is-right/.is-left 仅作为页面显式覆盖的兜底通道。
+   三态对齐均 !important 保证一致性。 */
 .el-table td.is-left .cell,
 .el-table th.is-left .cell {
   text-align: left !important;

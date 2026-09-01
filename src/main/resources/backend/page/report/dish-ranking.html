@@ -248,7 +248,7 @@
             endDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[1] : ''
           }).then(function(res) {
             if (res.code === 1 && res.data) self.renderTrendChart(res.data);
-          }).catch(function() {});
+          }).catch(function(err) { console.warn('[菜品排行] 加载趋势数据失败:', err) });
         },
         renderTrendChart: function(data) {
           if (!this.trendChart) return;

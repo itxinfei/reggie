@@ -389,7 +389,7 @@
                   ReggieUI.error('请求失败：' + err)
                 })
               })
-            }).catch(() => {})
+            }).catch((err) => { console.warn('[category] 获取分类引用数量失败:', err) })
           },
           // 修改点：数据提交——用 el-form validate() 替代手动 toast 校验，错误直接 inline 显示在字段下方
           submitForm(st) {

@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>菜品评价管理 - 瑞吉外卖管理端</title>
+  <title>菜品评价管理 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -259,6 +260,7 @@
 
     <!-- ========== 图片预览 ========== -->
     <crud-dialog
+      title="图片预览"
       :visible.sync="previewVisible"
       size="md"
       :show-submit="false"
@@ -364,7 +366,7 @@
                 if (results[1] && String(results[1].code) === '1') self.stats.pending = results[1].data.total || 0;
                 if (results[2] && String(results[2].code) === '1') self.stats.approved = results[2].data.total || 0;
                 if (results[3] && String(results[3].code) === '1') self.stats.rejected = results[3].data.total || 0;
-              }).catch(function() {});
+              }).catch(function(err) { console.warn('[评价] 加载评价统计失败:', err) });
           },
           handleSearch: function() { this.page = 1; this.loadData(); },
           resetFilters: function() {

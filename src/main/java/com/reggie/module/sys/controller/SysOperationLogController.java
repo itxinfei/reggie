@@ -121,7 +121,8 @@ public class SysOperationLogController {
             @Parameter(description = "操作类型：INSERT/UPDATE/DELETE/OTHER") String operationType,
             @Parameter(description = "操作人姓名") String operatorName,
             @Parameter(description = "开始时间(yyyy-MM-dd)") String beginTime,
-            @Parameter(description = "结束时间(yyyy-MM-dd)") String endTime) {
+            @Parameter(description = "结束时间(yyyy-MM-dd)") String endTime,
+            @Parameter(description = "是否成功：1=成功 0=失败") Integer isSuccess) {
 
         // 修改点：日期格式与区间校验，避免 LocalDateTime.parse 抛异常导致 500
         LocalDateTime beginDateTime = null;
@@ -142,7 +143,7 @@ public class SysOperationLogController {
         }
 
         Page<OperationLog> pageInfo = operationLogService.pageQuery(
-                page, pageSize, module, operationType, operatorName, beginDateTime, endDateTime);
+                page, pageSize, module, operationType, operatorName, beginDateTime, endDateTime, isSuccess);
         return R.success(pageInfo);
     }
 

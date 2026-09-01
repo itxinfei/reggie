@@ -31,7 +31,8 @@
   <meta charset="UTF-8">
   <meta name="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>列表页模板 - 瑞吉外卖管理端</title>
+  <title>列表页模板 - 瑞吉外卖管理端</title>
+
     <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
@@ -103,9 +104,10 @@
       :submit-loading="submitLoading"
       @submit="onSubmit"
     >
-      <el-form label-width="100px">
+      <!-- 表单必带 ref + :model + :rules，提交前调 validate() 拦截空值 -->
+      <el-form ref="form" :model="form" :rules="formRules" label-width="100px">
         <!-- 替换为你的表单字段 -->
-        <el-form-item label="名称：">
+        <el-form-item label="名称：" prop="name">
           <el-input v-model="form.name" placeholder="请输入名称" />
         </el-form-item>
       </el-form>
@@ -152,7 +154,11 @@
           ],
           tableData: [],
           form: { title: '', id: undefined, name: '', visible: false },
-          submitLoading: false
+          submitLoading: false,
+          // 表单校验规则：对应 el-form-item 的 prop，提交前会 validate()
+          formRules: {
+            name: [{ required: true, message: '请输入名称', trigger: 'blur' }]
+          }
         }
       },
       created() {
@@ -195,6 +201,17 @@
           this.form = { title: '编辑', id: row.id, name: row.name, visible: true }
         },
         async onSubmit() {
+          // 提交前校验：validate() 不通过则拦截（空值/格式错误）
+          try {
+            await new Promise(function(resolve, reject) {
+              this.$refs.form.validate(function(valid) {
+                if (valid) { resolve() }
+                else { reject(new Error('invalid')) }
+              })
+            }.bind(this))
+          } catch (e) {
+            return
+          }
           this.submitLoading = true
           try {
             // await saveXxx(this.form)
@@ -210,7 +227,7 @@
             // await deleteXxx(id)
             ReggieUI.success('删除成功')
             this.fetchData()
-          }).catch(function () {})
+          }).catch(function (err) { console.warn('[列表模板] 删除操作取消或失败:', err) })
         }
       }
     })

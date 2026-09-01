@@ -169,3 +169,11 @@ const getAgentWorkload = (agentId, params) => {
     params: params
   })
 }
+
+// 获取可选客服列表（员工列表）
+const getAgentOptions = () => {
+  return $axios({
+    url: '/employee/list',
+    method: 'get'
+  })
+}

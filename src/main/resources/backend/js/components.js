@@ -719,15 +719,11 @@ Vue.component('crud-table', {
   methods: {
     /**
      * 列对齐解析：
-     *  - 金额列（col.type='money'）右对齐（tabular-nums 等宽数字，金额规范）
-     *  - 数字列（col.type='number'）默认右对齐（与金额一致，便于数值比对）
-     *  - 页面显式 align 优先
-     *  - 其余列默认居中对齐（统一视觉风格）
-     *    短标识列（状态/排序等）由页面显式 align 控制，金额/数字列仍右对齐
+     *  - 全站表格统一居中（修改点 2026-09-01：用户要求"表头与内容必须居中"，
+     *    金额/数字列不再默认右对齐，与文本列一致居中展示）
+     *  - 页面显式 align 仍可覆盖默认
      */
     resolveColAlign: function (col) {
-      // 全局统一居中对齐：仅金额/数字列保留右对齐（便于数值比对），其余列一律居中
-      if (col.type === 'money' || col.type === 'number') return col.align || 'right'
       return col.align || 'center'
     },
     /** 列宽解析（内容驱动策略）：

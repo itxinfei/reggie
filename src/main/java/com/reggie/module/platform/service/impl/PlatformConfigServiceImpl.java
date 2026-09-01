@@ -30,8 +30,14 @@ public class PlatformConfigServiceImpl extends ServiceImpl<PlatformConfigMapper,
 
     @Override
     public IPage<PlatformConfig> pageMasked(IPage<PlatformConfig> page) {
+        return pageMasked(page, null);
+    }
+
+    @Override
+    public IPage<PlatformConfig> pageMasked(IPage<PlatformConfig> page, Integer enabled) {
         LambdaQueryWrapper<PlatformConfig> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(PlatformConfig::getIsDeleted, 0)
+                .eq(enabled != null, PlatformConfig::getEnabled, enabled)
                 .orderByDesc(PlatformConfig::getUpdateTime);
         IPage<PlatformConfig> result = this.page(page, wrapper);
         for (PlatformConfig config : result.getRecords()) {

@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>菜品管理 - 瑞吉外卖管理端</title>
+  <title>菜品管理 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -274,7 +275,7 @@
         <el-button size="small" @click="loadBOMItems">刷新</el-button>
       </div>
       <el-table :data="bomItems" size="small" border style="width: 100%;">
-        <el-table-column label="食材名称" width="180">
+        <el-table-column label="食材名称" width="180" align="center">
           <template slot-scope="scope">
             <el-select v-model="scope.row.materialId" placeholder="请选择食材" size="small" filterable
               @change="onMaterialChange(scope.row, $event)" style="width: 100%;">
@@ -285,7 +286,7 @@
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column label="用量" width="140" align="right">
+        <el-table-column label="用量" width="140" align="center">
           <template slot-scope="scope">
             <el-input-number v-model="scope.row.usageQty" :min="0.001" :precision="3"
               controls-position="right" size="small" style="width: 100%;" />
@@ -388,7 +389,8 @@
           bomSubmitting: false,
           // C.5 批量修改分类
           categoryDialog: { visible: false },
-          categoryForm: { categoryId: '' }
+          categoryForm: { categoryId: '' },
+          categorySubmitting: false
         }
       },
       computed: {
@@ -563,23 +565,29 @@
           this.categoryDialog.visible = true
         },
         async submitBatchCategory() {
+          if (this.categorySubmitting) { return }
           var self = this
           if (!this.categoryForm.categoryId) { ReggieUI.warning('请选择目标分类'); return }
           var rows = this.tableData.filter(function(r) { return self.checkList.indexOf(r.id) > -1 })
           if (!rows.length) { ReggieUI.error('勾选的数据已不在当前列表，请刷新后重试'); return }
-          this.categoryDialog.visible = false
-          var okCount = 0
-          for (var i = 0; i < rows.length; i++) {
-            var p = this.buildDishParams(rows[i])
-            p.categoryId = this.categoryForm.categoryId
-            try {
-              var res = await editDish(p)
-              if (res.code === 1) { okCount++ }
-              else { ReggieUI.error('第 ' + (i + 1) + ' 条「' + (rows[i].name || '') + '」失败：' + (res.msg || '未知错误')) }
-            } catch (err) { ReggieUI.error('第 ' + (i + 1) + ' 条请求失败') }
+          this.categorySubmitting = true
+          try {
+            this.categoryDialog.visible = false
+            var okCount = 0
+            for (var i = 0; i < rows.length; i++) {
+              var p = this.buildDishParams(rows[i])
+              p.categoryId = this.categoryForm.categoryId
+              try {
+                var res = await editDish(p)
+                if (res.code === 1) { okCount++ }
+                else { ReggieUI.error('第 ' + (i + 1) + ' 条「' + (rows[i].name || '') + '」失败：' + (res.msg || '未知错误')) }
+              } catch (err) { ReggieUI.error('第 ' + (i + 1) + ' 条请求失败') }
+            }
+            if (okCount > 0) { ReggieUI.success('成功移动 ' + okCount + '/' + rows.length + ' 个菜品') }
+            this.refreshAll()
+          } finally {
+            this.categorySubmitting = false
           }
-          if (okCount > 0) { ReggieUI.success('成功移动 ' + okCount + '/' + rows.length + ' 个菜品') }
-          this.refreshAll()
         },
         onPageChange: function(payload) { this.page = payload.page; this.init() },
         onSizeChange: function(payload) { this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload; this.page = 1; this.init() },

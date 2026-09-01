@@ -5,7 +5,8 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>用户管理 - 瑞吉外卖管理端</title>
-  <!-- 引入样式 -->
+  <!-- 引入样式 -->
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -105,7 +106,7 @@
       :title="statusDialog.title"
       :visible.sync="statusDialog.visible"
       :submit-loading="submitting"
-      width="30%"
+      size="sm"
       @submit="confirmStatus"
       @close="handleStatusClose"
     >
@@ -395,7 +396,7 @@
             } catch (err) {
               ReggieUI.error('请求失败：' + err)
             }
-          }).catch(() => {})
+          }).catch((err) => { console.warn('[user] 删除用户操作取消或失败:', err) })
         },
 
         // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除

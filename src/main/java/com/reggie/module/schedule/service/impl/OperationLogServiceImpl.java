@@ -53,7 +53,8 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
     @Override
     public Page<OperationLog> pageQuery(int page, int pageSize, String module,
                                          String operationType, String operatorName,
-                                         LocalDateTime beginTime, LocalDateTime endTime) {
+                                         LocalDateTime beginTime, LocalDateTime endTime,
+                                         Integer isSuccess) {
         Page<OperationLog> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
 
@@ -65,6 +66,9 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
         }
         if (operatorName != null && !operatorName.isEmpty()) {
             wrapper.like(OperationLog::getOperatorName, operatorName);
+        }
+        if (isSuccess != null) {
+            wrapper.eq(OperationLog::getIsSuccess, isSuccess);
         }
         if (beginTime != null) {
             wrapper.ge(OperationLog::getCreateTime, beginTime);

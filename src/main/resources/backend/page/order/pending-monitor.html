@@ -139,7 +139,7 @@
               self.lastUpdate = new Date().toLocaleTimeString('zh-CN', { hour12: false })
               self.speakAlarms()
             })
-            .catch(function () {})
+            .catch(function (err) { console.warn('[order-monitor] 加载监控数据失败:', err) })
         },
         speakAlarms: function () {
           if (!this.soundOn) return

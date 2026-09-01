@@ -456,7 +456,7 @@
                         }).catch(function(err) {
                             ReggieUI.error('删除失败，请重试');
                         });
-                    }).catch(function() {});
+                    }).catch(function(err) { console.warn('[ai-assistant] 删除对话操作取消或失败:', err) });
                 },
 
                 /** 获取场景图标 — 返回 RemixIcon 类名（用在 <i :class="...">） */

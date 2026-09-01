@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>库存预警 - 瑞吉外卖管理端</title>
+  <title>库存预警 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -323,13 +324,13 @@
           smartSelectedRows: [],
           smartColumns: [
             { prop: 'materialName', label: '食材', minWidth: 120 },
-            { prop: 'dailyUsage', label: '日均消耗', width: 110, align: 'right', slot: true },
+            { prop: 'dailyUsage', label: '日均消耗', width: 110, align: 'center', slot: true },
             { prop: 'estimatedDays', label: '预计天数', width: 90, align: 'center', type: 'number' },
             { prop: 'urgency', label: '紧急度', width: 80, align: 'center', slot: true },
-            { prop: 'stockQty', label: '当前库存', width: 90, align: 'right', type: 'number' },
-            { prop: 'minStock', label: '最低库存', width: 90, align: 'right', type: 'number' },
-            { prop: 'suggestQty', label: '建议补货', width: 90, align: 'right', type: 'number' },
-            { prop: 'estimatedCost', label: '预估费用', width: 100, align: 'right', slot: true },
+            { prop: 'stockQty', label: '当前库存', width: 90, align: 'center', type: 'number' },
+            { prop: 'minStock', label: '最低库存', width: 90, align: 'center', type: 'number' },
+            { prop: 'suggestQty', label: '建议补货', width: 90, align: 'center', type: 'number' },
+            { prop: 'estimatedCost', label: '预估费用', width: 100, align: 'center', slot: true },
             { prop: 'unit', label: '单位', width: 70, align: 'center' }
           ]
         }
@@ -364,9 +365,9 @@
               { prop: 'supplierName', label: '供应商', width: 120, formatter: function (v, row) { return mapName(self.supplierOptions, row.supplierId) || v || '-' } },
               { prop: 'severity', label: '严重度', slot: true, width: 90, align: 'center' },
               { prop: 'warningRatio', label: '阈值比例', slot: true, width: 170 },
-              { prop: 'stockQty', label: '当前库存', slot: true, width: 90, align: 'right' },
-              { prop: 'minStock', label: '最低库存', slot: true, width: 90, align: 'right' },
-              { prop: 'unitPrice', label: '单价', slot: true, width: 90, align: 'right', type: 'money' }
+              { prop: 'stockQty', label: '当前库存', slot: true, width: 90, align: 'center' },
+              { prop: 'minStock', label: '最低库存', slot: true, width: 90, align: 'center' },
+              { prop: 'unitPrice', label: '单价', slot: true, width: 90, align: 'center', type: 'money' }
             ]
           }
       },

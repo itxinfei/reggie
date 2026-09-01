@@ -226,7 +226,7 @@
                         url: window.location.origin + '/front/index.html'
                     }
                     if(navigator.share){
-                        navigator.share(shareData).catch(() => {})
+                        navigator.share(shareData).catch((e) => { console.warn('[order.html] 分享订单失败:', e) })
                     } else {
                         const ta = document.createElement('textarea')
                         ta.value = shareData.url
@@ -326,7 +326,7 @@
                         } finally {
                             this.submitting = false
                         }
-                    }).catch(() => {})
+                    }).catch((e) => { console.warn('[order.html] 用户取消确认收货:', e) })
                 },
                 // 修改点：用户申请售后（status=4，整单退款申请，需填写原因）
                 applyRefund(order){
@@ -369,8 +369,8 @@
                             } finally {
                                 this.submitting = false
                             }
-                        }).catch(() => {})
-                    }).catch(() => {})
+                        }).catch((e) => { console.warn('[order.html] 用户取消填写退款原因:', e) })
+                    }).catch((e) => { console.warn('[order.html] 用户取消申请售后:', e) })
                 },
             }
         })

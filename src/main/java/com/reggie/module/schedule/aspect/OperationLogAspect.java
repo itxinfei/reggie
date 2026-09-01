@@ -137,14 +137,16 @@ public class OperationLogAspect {
             opLog.setTableName(extractTableName(className));
             opLog.setOperationType(determineOperationType(request.getMethod()));
 
-            // 记录请求参数（脱敏处理）
+            // 记录请求参数（脱敏处理）：跳过 Servlet 基础设施对象（request/response/session 不可序列化），
+            // 取第一个可序列化的业务参数（如 DTO），避免每次写日志都触发序列化 WARN
             Object[] args = joinPoint.getArgs();
             if (args != null && args.length > 0) {
-                try {
-                    String params = OBJECT_MAPPER.writeValueAsString(args[0]);
-                    opLog.setRequestParams(LogMaskUtils.maskSensitiveInfo(params));
-                } catch (Exception e) {
-                    log.warn("序列化请求参数失败", e);
+                for (Object arg : args) {
+                    String params = serializeRequestParam(arg);
+                    if (params != null) {
+                        opLog.setRequestParams(LogMaskUtils.maskSensitiveInfo(params));
+                        break;
+                    }
                 }
             }
 
@@ -167,6 +169,29 @@ public class OperationLogAspect {
             return opLog;
         } catch (Exception e) {
             log.error("构建操作日志对象失败", e);
+            return null;
+        }
+    }
+
+    /**
+     * 序列化单个请求参数为 JSON。
+     * <p>Servlet 基础设施对象（ServletRequest/Response/HttpSession）无法被 Jackson 序列化，
+     * 直接跳过；其余业务参数序列化失败时记 WARN 并返回 null（不影响操作日志落库）。
+     *
+     * @param arg 方法入参
+     * @return JSON 字符串；不可序列化/失败返回 null
+     */
+    private String serializeRequestParam(Object arg) {
+        if (arg == null
+            || arg instanceof javax.servlet.ServletRequest
+            || arg instanceof javax.servlet.ServletResponse
+            || arg instanceof javax.servlet.http.HttpSession) {
+            return null;
+        }
+        try {
+            return OBJECT_MAPPER.writeValueAsString(arg);
+        } catch (Exception e) {
+            log.warn("序列化请求参数失败: {}", arg.getClass().getSimpleName());
             return null;
         }
     }

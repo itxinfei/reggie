@@ -79,7 +79,7 @@
                         url: window.location.origin + '/front/index.html'
                     }
                     if(navigator.share){
-                        navigator.share(shareData).catch(() => {})
+                        navigator.share(shareData).catch((e) => { console.warn('[pay-success.html] 分享订单失败:', e) })
                     } else {
                         const ta = document.createElement('textarea')
                         ta.value = shareData.url

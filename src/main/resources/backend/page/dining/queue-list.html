@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>排队叫号 - 瑞吉外卖管理端</title>
+  <title>排队叫号 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -63,8 +63,8 @@
         </div>
       </header>
 
-      <!-- 统计卡片（固定 4 个） -->
-      <stat-cards :cards="statsCards" :loading="statsLoading"></stat-cards>
+      <!-- 修改点：统计卡片支持点击筛选（点击按排队状态过滤数据，与状态下拉框联动） -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
       <!-- 筛选栏 -->
       <div class="filter-bar">
@@ -74,7 +74,7 @@
         </div>
         <div class="filter-bar__col">
           <span class="filter-bar__label">状态：</span>
-          <el-select v-model="searchStatus" class="filter-bar__input" style="width:150px" clearable aria-label="状态" placeholder="全部状态">
+          <el-select v-model="searchStatus" class="filter-bar__input" style="width:150px" clearable aria-label="状态" placeholder="全部状态" @change="onStatusChange">
             <el-option value="WAITING" label="等待中"></el-option>
             <el-option value="CALLED" label="已叫号"></el-option>
             <el-option value="SEATED" label="已入座"></el-option>
@@ -235,11 +235,13 @@
           // 筛选
           searchPhone: '',
           searchStatus: '',
-          // 统计
-          statsLoading: false,
+          // 修改点：当前激活的统计卡片 key（''=全部 / 'WAITING'=等待中 / 'CALLED'=已叫号 / 'SEATED'=已入座），点击卡片按状态筛选
+          activeFilter: '',
+          // 修改点：按状态统计数据，由 /api/dining/queue/stats 加载，供统计卡片展示
           stats: { totalQueues: 0, waitingCount: 0, calledCount: 0, seatedCount: 0, cancelledCount: 0 },
           // 表格
           tableLoading: false,
+          loading: false,
           page: 1,
           pageSize: 10,
           counts: 0,
@@ -279,20 +281,19 @@
         }
       },
       computed: {
-        // 统计卡片（固定 4 个：总数/等待中/已叫号/已入座，已取消并入总数说明）
+        // 修改点：4 张可点击统计卡片（总数/等待中/已叫号/已入座），点击按状态筛选数据
         statsCards: function () {
           var s = this.stats || {}
           return [
-            { key: 'total', icon: 'ri-file-list-3-line', label: '排队总数', value: s.totalQueues || 0, color: 'primary', subText: '今日累计 · 已取消 ' + (s.cancelledCount || 0) },
-            { key: 'waiting', icon: 'ri-time-line', label: '等待中', value: s.waitingCount || 0, color: 'warning', subText: '尚未叫号' },
-            { key: 'called', icon: 'ri-notification-3-line', label: '已叫号', value: s.calledCount || 0, color: 'danger', subText: '待安排入座' },
-            { key: 'seated', icon: 'ri-checkbox-circle-line', label: '已入座', value: s.seatedCount || 0, color: 'success', subText: '完成就座' }
+            { key: '', icon: 'ri-file-list-3-line', label: '排队总数', value: s.totalQueues || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+            { key: 'WAITING', icon: 'ri-time-line', label: '等待中', value: s.waitingCount || 0, color: 'warning', clickable: true, active: this.activeFilter === 'WAITING' },
+            { key: 'CALLED', icon: 'ri-notification-3-line', label: '已叫号', value: s.calledCount || 0, color: 'danger', clickable: true, active: this.activeFilter === 'CALLED' },
+            { key: 'SEATED', icon: 'ri-checkbox-circle-line', label: '已入座', value: s.seatedCount || 0, color: 'success', clickable: true, active: this.activeFilter === 'SEATED' }
           ]
         }
       },
       created: function() {
-        this.loadStats()
-        this.loadTable()
+        this.fetchData()
         this.loadTableOptions()
       },
       methods: {
@@ -307,42 +308,49 @@
           var map = { WAITING: '等待中', CALLED: '已叫号', SEATED: '已入座', CANCELLED: '已取消' }
           return map[status] || '未知'
         },
-        // 加载统计
-        loadStats: function() {
+        // 修改点：原 loadStats/loadTable 合并为 fetchData，reloadStats=true 并行重载统计（初始进入/增删改后）；搜索/卡片筛选时传 false 不重算
+        async fetchData(reloadStats) {
+          if (reloadStats === undefined) { reloadStats = true }
+          this.loading = true
           var self = this
-          self.statsLoading = true
-          queueStats().then(function(res) {
-            self.statsLoading = false
-            if (res.code === 1 && res.data) {
-              self.stats = res.data
-            }
-          }).catch(function(err) {
-            self.statsLoading = false
-            console.warn('加载排队统计失败:', err)
-          })
-        },
-        // 加载表格
-        loadTable: function() {
-          var self = this
-          self.tableLoading = true
           var params = {
             page: self.page,
             pageSize: self.pageSize
           }
           if (self.searchPhone && self.searchPhone.trim()) { params.phone = self.searchPhone.trim() }
           if (self.searchStatus) { params.status = self.searchStatus }
-          queuePage(params).then(function(res) {
-            self.tableLoading = false
+          var requests = [queuePage(params)]
+          if (reloadStats) { requests.push(self.loadQueueStats()) }
+          try {
+            var results = await Promise.all(requests)
+            var res = results[0]
             if (res.code === 1) {
               self.tableData = res.data.records || []
-              self.counts = res.data.total
-            } else {
-              ReggieUI.error(res.msg || '加载失败')
+              self.counts = res.data.total || 0
             }
-          }).catch(function(err) {
-            self.tableLoading = false
-            ReggieUI.error('请求失败：' + err)
-          })
+            if (reloadStats) {
+              var statsRes = results[1]
+              if (statsRes && statsRes.code === 1 && statsRes.data) {
+                self.stats = statsRes.data
+              }
+            }
+          } catch (err) {
+            console.warn('加载排队列表失败:', err)
+          } finally {
+            self.loading = false
+          }
+        },
+        // 修改点：加载按状态统计数据（总数/等待中/已叫号/已入座/已取消），供统计卡片展示
+        async loadQueueStats() {
+          try {
+            var res = await queueStats()
+            if (res.code === 1 && res.data) {
+              return { code: 1, data: res.data }
+            }
+          } catch (err) {
+            console.warn('加载排队统计失败:', err)
+          }
+          return { code: 0 }
         },
         // 加载桌台选项（入座弹窗用）
         loadTableOptions: function() {
@@ -364,22 +372,36 @@
         // 筛选
         onSearch: function() {
           this.page = 1
-          this.loadTable()
+          this.fetchData(false)
         },
         onReset: function() {
           this.searchPhone = ''
           this.searchStatus = ''
+          this.activeFilter = ''
           this.page = 1
-          this.loadTable()
+          this.fetchData(false)
+        },
+        // 修改点：统计卡片点击 — 按状态筛选数据，与状态下拉框联动同步选中项
+        onCardClick: function(payload) {
+          this.activeFilter = payload.activeKey
+          this.searchStatus = payload.activeKey || ''
+          this.page = 1
+          this.fetchData(false)
+        },
+        // 修改点：状态下拉框变化 — 与统计卡片联动，同步激活对应卡片
+        onStatusChange: function() {
+          this.activeFilter = this.searchStatus || ''
+          this.page = 1
+          this.fetchData(false)
         },
         onPageChange: function(payload) {
           this.page = payload.page
-          this.loadTable()
+          this.fetchData(false)
         },
         onSizeChange: function(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.page = 1
-          this.loadTable()
+          this.fetchData(false)
         },
         // 叫下一位
         callNext: function() {
@@ -392,8 +414,7 @@
             self.callLoading = false
             if (res.code === 1 && res.data) {
               ReggieUI.success('叫号成功！排队号：' + res.data.queueNo)
-              self.loadStats()
-              self.loadTable()
+              self.fetchData()
             } else {
               ReggieUI.warning(res.msg || '没有等待中的顾客')
             }
@@ -424,8 +445,7 @@
               if (res.code === 1) {
                 ReggieUI.success('取号成功！排队号：' + (res.data ? res.data.queueNo : ''))
                 self.takeForm.dialogVisible = false
-                self.loadStats()
-                self.loadTable()
+                self.fetchData()
               } else {
                 ReggieUI.error(res.msg || '操作失败')
               }
@@ -459,8 +479,7 @@
             if (res.code === 1) {
               ReggieUI.success('安排入座成功！')
               self.seatForm.dialogVisible = false
-              self.loadStats()
-              self.loadTable()
+              self.fetchData()
             } else {
               ReggieUI.error(res.msg || '操作失败')
             }
@@ -476,7 +495,7 @@
             .then(function() {
               var id = row.id || row.queueId
               if (id) { recallQueue(id).then(function(res) {
-                if (res.code === 1) { ReggieUI.success('已退回等待'); self.loadStats(); self.loadTable() }
+                if (res.code === 1) { ReggieUI.success('已退回等待'); self.fetchData() }
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) }) }
             })
@@ -487,7 +506,7 @@
           ReggieUI.confirm('确认恢复该排队记录？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               reactivateQueue(id).then(function(res) {
-                if (res.code === 1) { ReggieUI.success('已恢复排队'); self.loadStats(); self.loadTable() }
+                if (res.code === 1) { ReggieUI.success('已恢复排队'); self.fetchData() }
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
@@ -498,7 +517,7 @@
           ReggieUI.confirm('确认取消该排队记录？', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               queueCancel(id).then(function(res) {
-                if (res.code === 1) { ReggieUI.success('已取消！'); self.loadStats(); self.loadTable() }
+                if (res.code === 1) { ReggieUI.success('已取消！'); self.fetchData() }
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })

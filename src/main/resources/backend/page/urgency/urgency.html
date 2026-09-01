@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>紧急催菜 - 瑞吉外卖管理端</title>
+  <title>紧急催菜 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -298,7 +299,7 @@
               <span>{{ row.tableNo }}号</span>
             </template>
           </el-table-column>
-          <el-table-column label="菜品" min-width="200">
+          <el-table-column label="菜品" min-width="200" align="center">
             <template slot-scope="{ row }">
             <span class="dish-cell" :title="row.displayDishes">{{ row.displayDishes }}</span>
             </template>

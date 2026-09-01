@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>优惠券管理 - 瑞吉外卖管理端</title>
+  <title>优惠券管理 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -296,7 +297,7 @@
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
       :submit-loading="submitting"
-      width="35%"
+      size="md"
       @submit="submitForm"
       @close="handleClose"
     >
@@ -999,13 +1000,13 @@
               if (!valid) return
               self.$confirm('确认发放优惠券到目标会员？发放后不可撤销。', '确认发放', {
                 confirmButtonText: '确认发放', cancelButtonText: '取消', type: 'warning'
-              }).then(function() { self.issueCoupon() }).catch(function() {})
+              }).then(function() { self.issueCoupon() }).catch(function(err) { console.warn('[优惠券] 发放确认取消或失败:', err) })
             })
             return
           }
           this.$confirm('确认发放优惠券到目标会员？发放后不可撤销。', '确认发放', {
             confirmButtonText: '确认发放', cancelButtonText: '取消', type: 'warning'
-          }).then(function() { self.issueCoupon() }).catch(function() {})
+          }).then(function() { self.issueCoupon() }).catch(function(err) { console.warn('[优惠券] 发放确认取消或失败:', err) })
         },
         async issueCoupon() {
           this.issuing = true

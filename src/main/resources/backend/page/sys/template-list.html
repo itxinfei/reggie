@@ -402,7 +402,7 @@
                   self.init()
                 }
               })
-            }).catch(function() {})
+            }).catch(function(err) { console.warn('[模板管理] 删除操作取消或失败:', err) })
         }
       }
     })

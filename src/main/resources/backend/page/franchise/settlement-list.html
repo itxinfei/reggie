@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>分账结算 - 瑞吉外卖管理端</title>
+  <title>分账结算 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
@@ -88,7 +89,7 @@
       :title="genData.title"
       :visible.sync="genData.dialogVisible"
       :submit-loading="generating"
-      width="42%"
+      size="md"
       @submit="submitGenerate"
       @close="genData.dialogVisible = false"
     >
@@ -119,7 +120,7 @@
     <crud-dialog
       title="结算单详情"
       :visible.sync="detailVisible"
-      width="46%"
+      size="lg"
       custom-class="settlement-detail-dialog"
       :show-submit="false"
       cancel-text="关闭"
@@ -184,7 +185,7 @@
           actionConfig: [
             { key: 'generate', text: '+ 生成结算单', type: 'primary' }
           ],
-          // 表格列配置（对齐由 components.js resolveColAlign 统一控制：文本居中、金额/数字右对齐）
+          // 表格列配置（对齐由 components.js resolveColAlign 统一控制：表头与内容全部居中）
           columns: [
             { prop: 'settlePeriod', label: '结算周期', width: 110 },
             { prop: 'franchiseeId', label: '加盟商', slot: true, minWidth: 120 },
@@ -361,7 +362,7 @@
                 ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
-          }).catch(function() { /* 用户取消，无需处理 */ })
+          }).catch(function(err) { console.warn('[franchise-settlement] 确认结算单操作取消或失败:', err) })
         },
         // 完成结算（已确认 → 已结算）
         settleHandle(row) {
@@ -377,7 +378,7 @@
                 ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
-          }).catch(function() { /* 用户取消，无需处理 */ })
+          }).catch(function(err) { console.warn('[franchise-settlement] 完成结算操作取消或失败:', err) })
         },
         // 详情
         detailHandle(row) {

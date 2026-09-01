@@ -473,7 +473,7 @@
                         confirmButtonText: '确认删除',
                     }).then(function () {
                         that.doDelete()
-                    }).catch(function () {})
+                    }).catch(function (e) { console.warn('[address-edit.html] 用户取消删除地址:', e) })
                 } else if (confirm('确认删除该地址？')) {
                     this.doDelete()
                 }

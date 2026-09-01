@@ -146,6 +146,7 @@ public class FranchiseeController {
     }
 
     @GetMapping("/stats")
+    @RequiresPermission("franchise:manage")
     @Operation(summary = "加盟商统计", description = "返回总数/启用/禁用/关联合同数，按当前租户聚合")
     public R<Map<String, Object>> stats() {
         Long tenantId = BaseContext.getCurrentTenantId();

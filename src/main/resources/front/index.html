@@ -607,7 +607,7 @@
                 if(res && res.code === 1){
                   this.recommendDishes = res.data || []
                 }
-              }).catch(() => {})
+              }).catch((e) => { console.warn('[index.html] 加载推荐菜品失败:', e) })
             },
             // 修改点：获取未读消息数量，更新铃铛角标
             fetchUnreadCount(){
@@ -616,7 +616,7 @@
                 if(res && res.code === 1 && typeof res.data === 'number'){
                   self.unreadMsgCount = res.data;
                 }
-              }).catch(function() {});
+              }).catch(function(e) { console.warn('[index.html] 获取未读消息数失败:', e) });
             },
             // 修改点：跳转到消息中心页面
             toMessagePage(){

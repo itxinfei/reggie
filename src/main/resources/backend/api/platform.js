@@ -48,6 +48,13 @@ window.platformApi = {
       params: { id: id, enabled: enabled }
     })
   },
+  // 平台配置统计（总数/已启用/已停用，供统计卡片点击筛选）
+  stats: function () {
+    return $axios({
+      url: '/admin/platform/config/stats',
+      method: 'get'
+    })
+  },
   // 即时拉单：从指定平台拉取最近订单并落库
   pull: function (platformType, minutes) {
     return $axios({
@@ -94,6 +101,13 @@ window.platformApi = {
       url: '/admin/platform/mapping/page',
       method: 'get',
       params: params
+    })
+  },
+  // 菜品平台映射统计（总数/已上架/已下架/覆盖平台数，供统计卡片点击筛选）
+  mappingStats: function () {
+    return $axios({
+      url: '/admin/platform/mapping/stats',
+      method: 'get'
     })
   }
 }

@@ -181,7 +181,7 @@
     </crud-dialog>
 
     <!-- 申请对话框 -->
-    <crud-dialog title="申请提现" :visible.sync="addDialogVisible" size="md" @submit="handleAddSubmit">
+    <crud-dialog title="申请提现" :visible.sync="addDialogVisible" size="md" :submit-loading="submitLoading" @submit="handleAddSubmit">
       <el-form :model="addForm" :rules="addRules" ref="addForm" label-width="100px">
         <el-form-item label="提现金额" prop="amount">
           <el-input-number v-model="addForm.amount" :precision="2" :min="1" style="width: 100%;"></el-input-number>
@@ -206,7 +206,7 @@
     </crud-dialog>
 
     <!-- 审核对话框 -->
-    <crud-dialog title="审核提现申请" :visible.sync="reviewDialogVisible" size="md" @submit="handleReviewSubmit">
+    <crud-dialog title="审核提现申请" :visible.sync="reviewDialogVisible" size="md" :submit-loading="submitLoading" @submit="handleReviewSubmit">
       <el-form :model="reviewForm" :rules="reviewRules" ref="reviewFormRef" label-width="100px">
         <el-form-item label="申请编号">
           <span>{{ reviewForm.applicationNo }}</span>
@@ -227,7 +227,7 @@
     </crud-dialog>
 
     <!-- 打款对话框 -->
-    <crud-dialog title="确认打款" :visible.sync="paymentDialogVisible" size="md" @submit="handlePaymentSubmit">
+    <crud-dialog title="确认打款" :visible.sync="paymentDialogVisible" size="md" :submit-loading="submitLoading" @submit="handlePaymentSubmit">
       <el-form :model="paymentForm" :rules="paymentRules" ref="paymentFormRef" label-width="100px">
         <el-form-item label="申请编号">
           <span>{{ paymentForm.applicationNo }}</span>
@@ -289,7 +289,7 @@
           columns: [
             { prop: 'applicationNo', label: '申请编号', width: 180, align: 'center' },
             { prop: 'applicantName', label: '申请人', width: 100, align: 'center' },
-            { prop: 'amount', label: '提现金额', width: 120, align: 'right', type: 'money', slot: true },
+            { prop: 'amount', label: '提现金额', width: 120, align: 'center', type: 'money', slot: true },
             { prop: 'withdrawMethod', label: '提现方式', width: 100, align: 'center', slot: true },
             { prop: 'receiveAccount', label: '收款账户', minWidth: 150, align: 'center' },
             { prop: 'status', label: '状态', width: 100, align: 'center', slot: true },

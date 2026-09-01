@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>日结管理 - 瑞吉外卖管理端</title>
+  <title>日结管理 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
@@ -205,12 +206,12 @@
           tableData: [],
           columns: [
             { prop: 'settlementDate', label: '结算日期', width: 150, align: 'center' },
-            { prop: 'totalRevenue', label: '营业额', width: 120, align: 'right', type: 'money' },
+            { prop: 'totalRevenue', label: '营业额', width: 120, align: 'center', type: 'money' },
             { prop: 'orderCount', label: '订单数', width: 100, align: 'center' },
-            { prop: 'refundAmount', label: '退款金额', width: 120, align: 'right', type: 'money', slot: 'col-refundAmount' },
-            { prop: 'netIncome', label: '净收入', width: 120, align: 'right', type: 'money', slot: 'col-netIncome' },
-            { prop: 'totalCost', label: '总成本', width: 120, align: 'right', type: 'money' },
-            { prop: 'grossProfit', label: '毛利润', width: 120, align: 'right', slot: 'col-grossProfit' },
+            { prop: 'refundAmount', label: '退款金额', width: 120, align: 'center', type: 'money', slot: 'col-refundAmount' },
+            { prop: 'netIncome', label: '净收入', width: 120, align: 'center', type: 'money', slot: 'col-netIncome' },
+            { prop: 'totalCost', label: '总成本', width: 120, align: 'center', type: 'money' },
+            { prop: 'grossProfit', label: '毛利润', width: 120, align: 'center', slot: 'col-grossProfit' },
             { prop: 'status', label: '状态', width: 100, align: 'center', slot: 'col-status' }
           ],
           summary: {

@@ -106,6 +106,26 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         detail.setAmount(unitPrice != null ? unitPrice.multiply(qty).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
         detail.setReceivedQty(BigDecimal.ZERO);
         detailService.save(detail);
+        // 修改点：添加明细后实时重算采购单总金额，保证草稿期列表金额与明细合计一致（此前仅收货时重算）
+        po.setTotalAmount(calcTotalAmount(orderId));
+        if (!updateById(po)) {
+            throw new CustomException("采购单已被他人更新，请刷新后重试");
+        }
+    }
+
+    /**
+     * 修改点：按明细计算采购单总金额 = Σ明细金额（qty×unitPrice）。
+     *
+     * @param orderId 采购单ID
+     * @return 总金额（保留2位小数）
+     */
+    private BigDecimal calcTotalAmount(Long orderId) {
+        List<PurchaseOrderDetail> details = detailService.list(
+            new LambdaQueryWrapper<PurchaseOrderDetail>().eq(PurchaseOrderDetail::getPurchaseOrderId, orderId));
+        return details.stream()
+            .map(d -> d.getAmount() != null ? d.getAmount() : BigDecimal.ZERO)
+            .reduce(BigDecimal.ZERO, BigDecimal::add)
+            .setScale(2, RoundingMode.HALF_UP);
     }
 
     @Override
@@ -234,8 +254,12 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         if (!PurchaseOrderStatus.DRAFT.getValue().equals(po.getStatus())) {
             throw new CustomException("只有草稿状态的采购单才能审核");
         }
+        // 修改点：审核通过时同步重算总金额，兜底历史脏数据/手工改库导致的总金额与明细不一致
         po.setStatus(PurchaseOrderStatus.ORDERED.getValue());
-        updateById(po);
+        po.setTotalAmount(calcTotalAmount(orderId));
+        if (!updateById(po)) {
+            throw new CustomException("采购单已被他人更新，请刷新后重试");
+        }
     }
 
     @Override

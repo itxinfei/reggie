@@ -283,7 +283,8 @@
   background: var(--bg-subtle);
   border-bottom: 2px solid var(--color-brand-300);
 }
-/* 金额/数字列右对齐（表头与单元格一致，money/number 由 col.type 驱动） */
+/* 修改点(2026-09-01)：全站表格统一居中，金额/数字列不再默认右对齐；
+   .is-right 仅作为页面显式覆盖的兜底通道（等宽数字保留） */
 .crud-table-wrapper .tableBox.el-table td.is-right,
 .crud-table-wrapper .tableBox.el-table th.is-right {
   text-align: right;

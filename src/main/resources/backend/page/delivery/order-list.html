@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>外卖平台订单 - 瑞吉外卖管理端</title>
+  <title>外卖平台订单 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -135,7 +136,7 @@
         :visible.sync="cancelVisible"
         size="sm"
         :submit-loading="cancelLoading"
-        :close-on-click-modal="true"
+        :close-on-click-modal="false"
         @submit="confirmCancel"
         @close="cancelForm = {}; $refs.cancelForm && $refs.cancelForm.clearValidate()"
       >
@@ -385,7 +386,7 @@
                 else { ReggieUI.error(res.msg || '操作失败') }
               })
               .catch(function(err) { ReggieUI.error('请求失败：' + err) })
-          }).catch(function() { })
+          }).catch(function(err) { console.warn('[delivery-order] 派单操作取消或失败:', err) })
         },
         // 修改点：完整的状态流转操作
         statusChange: function(row, targetStatus) {
@@ -403,7 +404,7 @@
                 else { ReggieUI.error(res.msg || '操作失败') }
               })
               .catch(function(err) { ReggieUI.error('请求失败：' + err) })
-          }).catch(function() { })
+          }).catch(function(err) { console.warn('[delivery-order] 状态流转操作取消或失败:', err) })
         },
         cancelOrder: function(row) {
           this.cancelForm = {

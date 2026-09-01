@@ -23,8 +23,8 @@
         <div class="ds-page-header__actions"></div>
       </header>
 
-      <!-- 统计卡片 -->
-      <stat-cards :cards="statsCards"></stat-cards>
+      <!-- 修改点：统计卡片支持点击筛选（点击总数/已启用/已禁用按状态过滤数据） -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
       <!-- 搜索 + 操作栏 -->
       <table-bar
@@ -67,7 +67,7 @@
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
       :submit-loading="submitting"
-      width="40%"
+      size="md"
       @submit="submitForm"
       @close="handleClose"
     >
@@ -130,7 +130,7 @@
           actionConfig: [
             { key: 'add', text: '+ 新增加盟商', type: 'primary' }
           ],
-          // 表格列配置（对齐由 components.js resolveColAlign 统一控制：文本居中、金额/数字右对齐）
+          // 表格列配置（对齐由 components.js resolveColAlign 统一控制：表头与内容全部居中）
           columns: [
             { prop: 'name', label: '加盟商名称', minWidth: 140 },
             { prop: 'contactPerson', label: '联系人', width: 100 },
@@ -155,21 +155,23 @@
             name: [{ required: true, whitespace: true, message: '请输入加盟商名称', trigger: 'blur' }]
           },
           searchValues: {},
+          // 修改点：当前激活的统计卡片 key（'' 全部 / '1' 启用 / '0' 禁用）
+          activeFilter: '',
           // 后端聚合统计（总数/启用/禁用/关联合同数）
           stats: {}
         }
       },
       created() {
         this.loadStats()
-        this.init()
+        this.init(true)
       },
       computed: {
         statsCards() {
           const s = this.stats || {}
           return [
-            { key: 'total', icon: 'el-icon-office-building', label: '加盟商总数', value: s.total || 0, color: 'primary' },
-            { key: 'enabled', icon: 'el-icon-circle-check', label: '已启用', value: s.enabled || 0, color: 'success' },
-            { key: 'disabled', icon: 'el-icon-circle-close', label: '已禁用', value: s.disabled || 0, color: 'info' },
+            { key: '', icon: 'el-icon-office-building', label: '加盟商总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+            { key: '1', icon: 'el-icon-circle-check', label: '已启用', value: s.enabled || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
+            { key: '0', icon: 'el-icon-circle-close', label: '已禁用', value: s.disabled || 0, color: 'info', clickable: true, active: this.activeFilter === '0' },
             { key: 'contracts', icon: 'el-icon-document', label: '合同关联', value: s.contractCount || 0, color: 'warning' }
           ]
         }
@@ -185,46 +187,87 @@
             // 统计加载失败不影响列表展示
           }
         },
-        async init() {
+        // 修改点：列表数据拉取（后端分页，返回 records/total）
+        // reloadStats=true 时并行重载统计卡片（初始进入/增删改后）；搜索/卡片筛选时传 false 不重算
+        async init(reloadStats) {
+          if (reloadStats === undefined) { reloadStats = true }
           this.loading = true
-          const sv = this.searchValues || {};
+          const sv = Object.assign({}, this.searchValues)
+          // 卡片筛选与 searchValues 互斥，卡片优先级更高
+          if (this.activeFilter !== '') {
+            sv.status = Number(this.activeFilter)
+          } else {
+            delete sv.status
+          }
           const params = Object.assign({}, sv, { page: this.page, pageSize: this.pageSize })
           try {
-            const res = await franchiseePage(params)
+            var requests = [franchiseePage(params)]
+            if (reloadStats) { requests.push(this.loadStatsPromise()) }
+            var results = await Promise.all(requests)
+            var res = results[0]
             if (String(res.code) === '1') {
               this.tableData = res.data.records || []
               this.counts = res.data.total
             } else {
               ReggieUI.error(res.msg || '操作失败')
             }
+            if (reloadStats && results[1]) {
+              var statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1' && statsRes.data) {
+                this.stats = statsRes.data
+              }
+            }
           } catch (err) {
             ReggieUI.error('请求失败：' + err)
+          } finally {
+            this.loading = false
           }
-          this.loading = false
+        },
+        // 修改点：加载统计卡片数据（供 Promise.all 并行）
+        async loadStatsPromise() {
+          try {
+            const res = await franchiseeStats()
+            if (res && String(res.code) === '1') {
+              return { code: 1, data: res.data || {} }
+            }
+          } catch (err) {
+            if (err.message !== 'NOTLOGIN') {
+              console.warn('加载加盟商统计失败:', err)
+            }
+          }
+          return { code: 0 }
         },
         // table-bar 回调
         onSearch(searchParams) {
           this.searchValues = searchParams
+          this.activeFilter = ''
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onReset() {
           this.searchValues = {}
+          this.activeFilter = ''
           this.page = 1
-          this.init()
+          this.init(false)
         },
         onAction(payload) {
           if (payload.key === 'add') this.addHandle()
         },
+        // 统计卡片点击 — 按状态筛选数据
+        onCardClick(payload) {
+          this.activeFilter = payload.activeKey
+          this.page = 1
+          this.init(false)
+        },
         // 分页
         onPageChange(payload) {
           this.page = payload.page
-          this.init()
+          this.init(false)
         },
         onSizeChange(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.page = 1
-          this.init()
+          this.init(false)
         },
         // CRUD 操作
         addHandle() {
@@ -312,7 +355,7 @@
                 ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
-          }).catch(function() { /* 用户取消，无需处理 */ })
+          }).catch(function(err) { console.warn('[franchise-franchisee] 删除加盟商操作取消或失败:', err) })
         },
         handleClose() {
           this.formData.dialogVisible = false

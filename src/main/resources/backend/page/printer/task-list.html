@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>打印任务 - 瑞吉外卖管理端</title>
+  <title>打印任务 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
@@ -94,7 +95,7 @@
     </div>
 
     <!-- 任务详情弹窗 -->
-    <crud-dialog :title="dialog.title" :visible.sync="dialog.visible" :show-submit="false" :show-cancel="false" size="lg" @close="cancel">
+    <crud-dialog :title="dialog.title" :visible.sync="dialog.visible" :show-submit="false" size="lg" cancel-text="关 闭" @close="cancel">
       <div class="task-detail">
         <el-row :gutter="16" class="task-detail__row">
           <el-col :span="8"><span class="task-detail__label">任务ID：</span>{{ dialog.row.id }}</el-col>

@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>消息通知管理 - 瑞吉外卖管理端</title>
+    <title>消息通知管理 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/main.css" />
@@ -51,10 +52,11 @@
 
         /* 用户列表 */
         .user-list-table { width: 100%; border-collapse: collapse; }
-        .user-list-table th { background: var(--el-bg-base); padding: var(--space-2) 10px; text-align: left; font-size:var(--font-size-xs);
+        /* 修改点(2026-09-01)：表头/内容统一居中 */
+        .user-list-table th { background: var(--el-bg-base); padding: var(--space-2) 10px; text-align: center; font-size:var(--font-size-xs);
                                font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border-default);
                                position: sticky; top: 0; z-index: 1; }
-        .user-list-table td { padding: 7px 10px; font-size:var(--font-size-sm); border-bottom: 1px solid var(--border-subtle); }
+        .user-list-table td { padding: 7px 10px; font-size:var(--font-size-sm); text-align: center; border-bottom: 1px solid var(--border-subtle); }
         .user-list-table tr:hover td { background: var(--color-brand-50); }
         .user-list-table tr.selected td { background: var(--color-brand-100); }
         .user-list-table input[type="checkbox"] { cursor: pointer; }
@@ -88,9 +90,9 @@
 
         /* 记录列表 */
         table { width: 100%; border-collapse: collapse; }
-        th { background: var(--el-bg-base); padding: var(--space-3) var(--space-3); text-align: left; font-size:var(--font-size-sm); font-weight: 600;
+        th { background: var(--el-bg-base); padding: var(--space-3) var(--space-3); text-align: center; font-size:var(--font-size-sm); font-weight: 600;
              color: var(--text-primary); border-bottom: 2px solid var(--border-default); white-space: nowrap; }
-        td { padding: var(--space-3) var(--space-3); font-size:var(--font-size-sm); border-bottom: 1px solid var(--border-subtle); }
+        td { padding: var(--space-3) var(--space-3); font-size:var(--font-size-sm); text-align: center; border-bottom: 1px solid var(--border-subtle); }
         tr:hover td { background: var(--color-brand-50); }
 
         .status-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size:var(--font-size-xs); }
@@ -885,7 +887,7 @@
                                 todayFail: Number(d.todayFail) || 0
                             };
                         }
-                    }).catch(function() {});
+                    }).catch(function(err) { console.warn('[通知] 加载统计数据失败:', err) });
                 },
 
                 checkMockMode: function() {
@@ -976,7 +978,7 @@
                         }).catch(function(err) {
                             ReggieUI.error('删除模板异常');
                         });
-                    }).catch(function() {});
+                    }).catch(function(err) { console.warn('[通知] 删除模板确认取消或失败:', err) });
                 },
 
                 // ==================== 工具方法 ====================

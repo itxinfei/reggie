@@ -1,5 +1,6 @@
 package com.reggie.module.platform.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
@@ -10,10 +11,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.constraints.NotNull;
-import java.util.List;
+import java.util.*;
 
 /**
  * 商品平台映射管理控制器
@@ -36,10 +38,44 @@ public class DishPlatformMappingController {
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer pageSize,
             @RequestParam(required = false) Long dishId,
-            @RequestParam(required = false) String platformType) {
+            @RequestParam(required = false) String platformType,
+            @RequestParam(required = false) Integer status) {
         Page<DishPlatformMapping> pageParam = PageUtils.of(page, pageSize);
-        // LambdaQueryWrapper 不能在 Page 构造后直接用，通过 service 层封装
-        IPage<DishPlatformMapping> result = mappingService.page(pageParam);
+        LambdaQueryWrapper<DishPlatformMapping> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(DishPlatformMapping::getIsDeleted, 0);
+        if (dishId != null) {
+            wrapper.eq(DishPlatformMapping::getDishId, dishId);
+        }
+        if (StringUtils.hasText(platformType)) {
+            wrapper.eq(DishPlatformMapping::getPlatformType, platformType);
+        }
+        if (status != null) {
+            wrapper.eq(DishPlatformMapping::getStatus, status);
+        }
+        wrapper.orderByDesc(DishPlatformMapping::getUpdateTime);
+        IPage<DishPlatformMapping> result = mappingService.page(pageParam, wrapper);
+        return R.success(result);
+    }
+
+    @Operation(summary = "菜品平台映射统计（总数/已上架/已下架/覆盖平台数）")
+    @GetMapping("/stats")
+    public R<Map<String, Object>> stats() {
+        long total = mappingService.count();
+        long onlineCount = mappingService.count(
+                new LambdaQueryWrapper<DishPlatformMapping>().eq(DishPlatformMapping::getStatus, 1));
+        long offlineCount = mappingService.count(
+                new LambdaQueryWrapper<DishPlatformMapping>().eq(DishPlatformMapping::getStatus, 0));
+        long platformCount = mappingService.list()
+                .stream()
+                .filter(m -> StringUtils.hasText(m.getPlatformType()))
+                .map(DishPlatformMapping::getPlatformType)
+                .distinct()
+                .count();
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", total);
+        result.put("onlineCount", onlineCount);
+        result.put("offlineCount", offlineCount);
+        result.put("platformCount", platformCount);
         return R.success(result);
     }
 

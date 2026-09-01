@@ -191,14 +191,26 @@ public class InventoryServiceTest {
         assertEquals("DRAFT", po.getStatus());
         assertTrue(po.getOrderNo().startsWith("PO"));
 
+        // 修改点：断言添加明细后总金额实时 = Σ明细金额（10×50=500）
         purchaseOrderService.addDetail(po.getId(), material.getId(),
             new BigDecimal("10"), new BigDecimal("50.00"));
+        PurchaseOrder afterFirst = purchaseOrderService.getById(po.getId());
+        assertEquals(0, new BigDecimal("500.00").compareTo(afterFirst.getTotalAmount()));
+
+        // 修改点：追加第二条明细，总金额应累加为 500 + 5×100 = 1000
+        purchaseOrderService.addDetail(po.getId(), material.getId(),
+            new BigDecimal("5"), new BigDecimal("100.00"));
+        PurchaseOrder afterSecond = purchaseOrderService.getById(po.getId());
+        assertEquals(0, new BigDecimal("1000.00").compareTo(afterSecond.getTotalAmount()));
 
         List<PurchaseOrderDetail> details = purchaseOrderDetailService.list();
-        assertEquals(1, details.size());
+        assertEquals(2, details.size());
 
-        po.setStatus("ORDERED");
-        purchaseOrderService.updateById(po);
+        // 修改点：走真实审核流程（内部重算总金额），断言状态与金额
+        purchaseOrderService.approveOrder(po.getId());
+        PurchaseOrder approved = purchaseOrderService.getById(po.getId());
+        assertEquals("ORDERED", approved.getStatus());
+        assertEquals(0, new BigDecimal("1000.00").compareTo(approved.getTotalAmount()));
 
         purchaseOrderService.receiveOrder(po.getId());
 
@@ -206,7 +218,32 @@ public class InventoryServiceTest {
         assertEquals("RECEIVED", received.getStatus());
 
         Material updated = materialService.getById(material.getId());
-        assertEquals(0, new BigDecimal("10").compareTo(updated.getStockQty()));
+        assertEquals(0, new BigDecimal("15").compareTo(updated.getStockQty()));
+    }
+
+    /**
+     * 修改点：异常场景——非草稿状态的采购单禁止添加明细
+     */
+    @Test
+    void testAddDetailAfterApproveRejected() {
+        Material material = new Material();
+        material.setTenantId(1L);
+        material.setCategoryId(1L);
+        material.setName("面粉");
+        material.setUnit("袋");
+        material.setStockQty(BigDecimal.ZERO);
+        material.setMinStock(new BigDecimal("5"));
+        material.setStatus(1);
+        materialService.save(material);
+
+        PurchaseOrder po = purchaseOrderService.createOrder(1L, "admin", "异常测试");
+        purchaseOrderService.addDetail(po.getId(), material.getId(),
+            new BigDecimal("10"), new BigDecimal("20.00"));
+        purchaseOrderService.approveOrder(po.getId());
+
+        assertThrows(Exception.class, () ->
+            purchaseOrderService.addDetail(po.getId(), material.getId(),
+                new BigDecimal("1"), new BigDecimal("1.00")));
     }
 
     @Test

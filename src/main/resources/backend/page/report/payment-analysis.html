@@ -263,7 +263,7 @@
                 self.refundAnalysis = res.data;
                 self.$nextTick(function() { self.renderRefundChart(); });
               }
-            }).catch(function() {});
+            }).catch(function(err) { console.warn('[支付分析] 加载退款分析失败:', err) });
           },
           renderRefundChart: function() {
             if (!this.refundChart) return;
@@ -310,7 +310,7 @@
             if (!self.trendChart) return;
             reportPaymentTrend({ startDate: self.dateRange[0], endDate: self.dateRange[1] })
               .then(function(res) { if (res.code === 1 && res.data) self.renderPaymentTrend(res.data); })
-              .catch(function() {});
+              .catch(function(err) { console.warn('[支付分析] 加载支付趋势失败:', err) });
           },
           renderPaymentTrend: function(data) {
             if (!this.trendChart) return;

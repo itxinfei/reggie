@@ -47,66 +47,6 @@
       width: 100%;
     }
 
-    /* ========== Redis 状态条 - 品牌金纯色卡片（符合"禁止渐变发光"规范） ========== */
-    .redis-status-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-      background: var(--color-brand-500);
-      color: var(--text-on-brand);
-      padding: 14px 24px;
-      border-radius: var(--radius-lg);
-      margin-bottom: 16px;
-      font-size:var(--font-size-base);
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--color-brand-400);
-    }
-    .redis-status-bar .redis-indicator {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .redis-status-bar .redis-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      display: inline-block;
-      flex-shrink: 0;
-      animation: pulse 2s infinite;
-    }
-    .redis-status-bar .redis-dot.on {
-      background: var(--color-success);
-    }
-    .redis-status-bar .redis-dot.off {
-      background: var(--color-danger);
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.6; transform: scale(1.1); }
-    }
-    .redis-flow-tag {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size:var(--font-size-xs);
-      opacity: 0.95;
-      flex-shrink: 0;
-    }
-    .redis-flow-tag span {
-      background: color-mix(in srgb, var(--bg-surface) 15%, transparent);
-      padding: 4px 12px;
-      border-radius: var(--radius-lg);
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-    .redis-flow-tag span:hover {
-      background: color-mix(in srgb, var(--bg-surface) 25%, transparent);
-      transform: translateY(-1px);
-    }
-
     /* ========== 库存预警条（内联样式收敛为类） ========== */
     .inventory-alert {
       margin-bottom: var(--space-3);
@@ -350,7 +290,6 @@
       from { opacity: 0; }
       to { opacity: 1; }
     }
-    .redis-status-bar { animation: ds-fade-in 0.3s ease both; }
     .chart-panel { animation: ds-fade-in 0.3s ease both; }
     .bottom-panel { animation: ds-fade-in 0.3s ease both; }
 
@@ -369,9 +308,6 @@
       .bottom-row {
         grid-template-columns: 1fr;
         gap: 16px;
-      }
-      .redis-flow-tag {
-        display: none;
       }
     }
 

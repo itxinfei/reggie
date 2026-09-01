@@ -5,7 +5,8 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>套餐管理 - 瑞吉外卖管理端</title>
-  <!-- 引入样式 -->
+  <!-- 引入样式 -->
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -167,7 +168,7 @@
             <div class="table">
               <el-table aria-label="数据表格" :data="comboDishTable" border size="small" class="tableBox">
                 <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
-                <el-table-column prop="price" label="原价" width="180" align="right">
+                <el-table-column prop="price" label="原价" width="180" align="center">
                   <template slot-scope="scope">￥{{ scope.row.price }}</template>
                 </el-table-column>
                 <el-table-column prop="copies" label="份数" width="100" align="center">

@@ -5,7 +5,8 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>供应商管理 - 瑞吉外卖管理端</title>
-  <!-- 引入样式 -->
+  <!-- 引入样式 -->
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -143,8 +144,8 @@
       <p>该供应商暂无采购记录</p>
     </div>
     <el-table v-else :data="purchaseList" stripe border size="small" :loading="purchaseLoading">
-      <el-table-column prop="orderNo" label="采购单号" min-width="160"></el-table-column>
-      <el-table-column prop="totalAmount" label="金额" width="110" align="right">
+      <el-table-column prop="orderNo" label="采购单号" min-width="160" align="center"></el-table-column>
+      <el-table-column prop="totalAmount" label="金额" width="110" align="center">
         <template slot-scope="s">￥{{ formatMoney(s.row.totalAmount) }}</template>
       </el-table-column>
       <el-table-column prop="status" label="状态" width="110" align="center">
@@ -153,7 +154,7 @@
       <el-table-column prop="createdTime" label="下单时间" width="160" align="center">
         <template slot-scope="s">{{ formatDate(s.row.createdTime) }}</template>
       </el-table-column>
-      <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
+      <el-table-column prop="remark" label="备注" min-width="120" align="center"></el-table-column>
     </el-table>
   </crud-dialog>
 
@@ -233,7 +234,7 @@
             { prop: 'phone', label: '联系电话', width: 120, align: 'center' },
             { prop: 'address', label: '地址', minWidth: 120 },
             // 修改点：8.3.3 采购汇总列（后端按供应商聚合回填 totalPurchaseAmount / purchaseCount）
-            { prop: 'totalPurchaseAmount', label: '累计采购额', width: 110, align: 'right', slot: true, type: 'money' },
+            { prop: 'totalPurchaseAmount', label: '累计采购额', width: 110, align: 'center', slot: true, type: 'money' },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
           ]
         }

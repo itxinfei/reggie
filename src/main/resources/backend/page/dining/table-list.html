@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>桌台管理 - 瑞吉外卖管理端</title>
+  <title>桌台管理 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -357,7 +358,7 @@
         <el-form-item label="原桌台">
           <el-input :value="transferDialog.fromName" disabled />
         </el-form-item>
-        <el-form-item label="目标桌台" prop="toTableId">
+        <el-form-item label="目标桌台" prop="toTableId" required>
           <el-select v-model="transferForm.toTableId" placeholder="选择空闲桌台" style="width:100%;" filterable>
             <el-option v-for="t in freeTables" :key="t.id" :label="t.name + (t.areaName ? '（' + t.areaName + '）' : '')" :value="t.id" :disabled="t.id === transferDialog.fromId" />
           </el-select>
@@ -524,7 +525,7 @@
             const self = this
             tableInfo(row.id).then(function(res) {
               if (res.code === 1 && res.data) { self.mapOrder = res.data }
-            }).catch(function() {})
+            }).catch(function(err) { console.warn('[table-list] 加载桌台订单信息失败:', err) })
           }
         },
         mapStatusKey: function(status) { return status || 'FREE' },
@@ -687,7 +688,7 @@
           // 修改点：pageSize 由 200 收敛为 100 —— 后端声明 @Max(100)，传 200 会 400 导致转台下拉为空
           tablePage({ page: 1, pageSize: 100, status: 'FREE' }).then(function(res) {
             if (res.code === 1 && res.data) { self.freeTables = res.data.records || [] }
-          }).catch(function() {})
+          }).catch(function(err) { console.warn('[table-list] 加载空闲桌台列表失败:', err) })
         },
         transferHandle: function(row) {
           this.transferDialog = { visible: true, fromId: row.id, fromName: row.name, loading: false }
@@ -722,7 +723,7 @@
             } else {
               ReggieUI.warning('该桌台未绑定订单，无法加菜')
             }
-          }).catch(function() {})
+          }).catch(function(err) { console.warn('[table-list] 加载桌台加菜信息失败:', err) })
         },
         // 修改点：结账（跳转收银台，按桌台当前订单收款）
         checkoutHandle: function(row) {

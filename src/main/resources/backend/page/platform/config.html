@@ -23,8 +23,8 @@
       </div>
     </header>
 
-    <!-- 统计卡片 -->
-    <stat-cards :cards="statsCards"></stat-cards>
+    <!-- 修改点：统计卡片支持点击筛选（点击总数/已启用/已停用按状态过滤数据） -->
+    <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
     <!-- 数据区：卡片容器 + 标准表格 -->
     <el-card shadow="never" class="ds-card">
@@ -158,6 +158,10 @@
         // 不含 tableData；此前模板与 statsCards 计算属性直接访问 this.tableData.filter(...)，
         // 首次渲染时为 undefined 触发 TypeError，导致整页渲染失败（白屏）
         tableData: [],
+        // 修改点：当前激活的统计卡片 key（'' 全部 / '1' 启用 / '0' 停用），点击卡片按状态筛选
+        activeFilter: '',
+        // 修改点：平台配置统计（总数/已启用/已停用），由 /admin/platform/config/stats 加载
+        stats: { total: 0, enabledCount: 0, disabledCount: 0 },
         // 修改点：列配置（供 <crud-table> 使用，对齐走 resolveColAlign 单一来源）
         columns: [
           { prop: 'platformName', label: '平台名称', minWidth: 160, align: 'center' },
@@ -191,12 +195,13 @@
       dialogTitle() {
         return this.action === 'edit' ? '编辑平台配置' : '添加平台配置'
       },
-      // 统计卡片
+      // 修改点：3 张可点击统计卡片（总数/已启用/已停用），点击按启用状态筛选数据
       statsCards() {
+        var s = this.stats || {}
         return [
-          { key: 'total', icon: 'el-icon-office-building', label: '平台总数', value: this.counts || 0, color: 'primary' },
-          { key: 'enabled', icon: 'el-icon-circle-check', label: '已启用', value: this.tableData.filter(function(r){ return r.enabled === 1 }).length, color: 'success' },
-          { key: 'disabled', icon: 'el-icon-circle-close', label: '已停用', value: this.tableData.filter(function(r){ return r.enabled === 0 }).length, color: 'info' }
+          { key: '', icon: 'el-icon-office-building', label: '平台总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+          { key: '1', icon: 'el-icon-circle-check', label: '已启用', value: s.enabledCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
+          { key: '0', icon: 'el-icon-circle-close', label: '已停用', value: s.disabledCount || 0, color: 'info', clickable: true, active: this.activeFilter === '0' }
         ]
       }
     },
@@ -212,15 +217,30 @@
         }
       },
       // 修改点：列表数据拉取（后端分页，返回 records/total）
-      async fetchData() {
+      // reloadStats=true 时并行重载统计卡片（初始进入/增删改/启停后）；卡片筛选/翻页时传 false 不重算
+      async fetchData(reloadStats) {
+        if (reloadStats === undefined) { reloadStats = true }
         this.loading = true
+        // 启用状态筛选：统计卡片 activeFilter（'' 全部 / '1' 启用 / '0' 停用）
+        var enabled = this.activeFilter === '' ? undefined : Number(this.activeFilter)
+        var params = { page: this.page, pageSize: this.pageSize }
+        if (enabled !== undefined) { params.enabled = enabled }
         try {
-          const res = await window.platformApi.list({ page: this.page, pageSize: this.pageSize })
+          var requests = [window.platformApi.list(params)]
+          if (reloadStats) { requests.push(this.loadPlatformStats()) }
+          var results = await Promise.all(requests)
+          var res = results[0]
           if (String(res.code) === '1' && res.data) {
             this.tableData = res.data.records || []
             this.counts = Number(res.data.total) || 0
           } else {
             ReggieUI.error((res && res.msg) || '加载平台配置失败')
+          }
+          if (reloadStats) {
+            var statsRes = results[1]
+            if (statsRes && statsRes.code === 1 && statsRes.data) {
+              this.stats = statsRes.data
+            }
           }
         } catch (err) {
           if (err.message !== 'NOTLOGIN') {
@@ -230,15 +250,35 @@
           this.loading = false
         }
       },
-      // 修改点：翻页/改页大小（ReggieListMixin 已更新 page/pageSize，重新拉取）
+      // 修改点：加载平台配置统计（总数/已启用/已停用），供统计卡片展示
+      async loadPlatformStats() {
+        try {
+          var res = await window.platformApi.stats()
+          if (res && String(res.code) === '1' && res.data) {
+            return { code: 1, data: res.data }
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') {
+            console.warn('加载平台统计失败:', err)
+          }
+        }
+        return { code: 0 }
+      },
+      // 修改点：统计卡片点击 — 按启用状态筛选数据
+      onCardClick(payload) {
+        this.activeFilter = payload.activeKey
+        this.page = 1
+        this.fetchData(false)
+      },
+      // 修改点：翻页/改页大小（不重算统计，仅刷新当前页数据）
       handlePageChange(p) {
         this.page = p
-        this.fetchData()
+        this.fetchData(false)
       },
       handleSizeChange(s) {
         this.pageSize = s
         this.page = 1
-        this.fetchData()
+        this.fetchData(false)
       },
       platformTypeText(type) {
         const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音', SELF: '自营', OTHER: '其他' }
@@ -317,7 +357,7 @@
           } else {
             ReggieUI.error('操作失败')
           }
-        }).catch(() => {})
+        }).catch((err) => { console.warn('[平台配置] 启用/停用操作取消或失败:', err) })
       },
       // 修改点：删除（高危二次确认）
       remove(row) {
@@ -329,7 +369,7 @@
           } else {
             ReggieUI.error('删除失败')
           }
-        }).catch(() => {})
+        }).catch((err) => { console.warn('[平台配置] 删除操作取消或失败:', err) })
       }
     }
   })

@@ -580,7 +580,7 @@
                             }
                         }
                         self.saveConversations();
-                    }).catch(function() {});
+                    }).catch(function(e) { console.warn('[ai-assistant.html] 用户取消删除对话:', e) });
                 },
                 toggleSidebar: function(force) {
                     if (typeof force === 'boolean') {
@@ -655,7 +655,7 @@
                         });
                         self.conversations.sort(function(a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
                         self.saveConversations();
-                    }).catch(function() {});
+                    }).catch(function(e) { console.warn('[ai-assistant.html] 同步后端对话列表失败:', e) });
                 },
                 clearAllConversations: function() {
                     var self = this;
@@ -668,7 +668,7 @@
                         self.messages = [];
                         localStorage.removeItem('ai_conversations');
                         self.newConversation(true);
-                    }).catch(function() {});
+                    }).catch(function(e) { console.warn('[ai-assistant.html] 用户取消清空对话:', e) });
                 },
                 switchScene: function(scene) {
                     if (this.currentScene === scene) return;
@@ -714,7 +714,7 @@
                                     self.userProfileTags = result.tags.slice(0, 5);
                                     try { localStorage.setItem('ai_profile_tags', JSON.stringify(self.userProfileTags)); } catch(e) {}
                                 }
-                            }).catch(function() {});
+                            }).catch(function(e) { console.warn('[ai-assistant.html] 加载用户画像标签失败:', e) });
                         }
                     } catch (e) {}
                 },

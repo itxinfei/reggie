@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>门店管理 - 瑞吉外卖管理端</title>
+    <title>门店管理 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -420,7 +421,7 @@
           { prop: 'contactPerson', label: '联系人 / 电话', minWidth: 140, align: 'center', slot: 'col-contact' },
           { prop: 'status', label: '状态', width: 60, align: 'center', slot: 'col-status' },
           { prop: 'todayOrders', label: '今日订单', width: 80, align: 'center', slot: 'col-todayOrders', sortable: 'custom' },
-          { prop: 'todayAmount', label: '今日营收', width: 100, align: 'right', type: 'money', slot: 'col-todayAmount', sortable: 'custom' }
+          { prop: 'todayAmount', label: '今日营收', width: 100, align: 'center', type: 'money', slot: 'col-todayAmount', sortable: 'custom' }
         ],
         selection: [],           // 已选行
         // 统计
@@ -530,7 +531,7 @@
                     self.stats.inactiveStores = Number(d.inactiveStores) || 0;
                     self.stats.todayTotalStores = Number(d.todayTotalStores) || 0;
                 }
-            }).catch(function() {});
+            }).catch(function(err) { console.warn('[门店管理] 加载统计数据失败:', err) });
         },
 
         // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
@@ -601,7 +602,7 @@
                         ReggieUI.error(label + '失败');
                     }
                 }).catch(function() { ReggieUI.error(label + '失败'); });
-            }).catch(function() {});
+            }).catch(function(err) { console.warn('[门店管理] 批量操作取消或失败:', err) });
         },
         doExport: function() {
             var self = this;

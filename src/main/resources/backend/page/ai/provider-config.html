@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI模型配置 - 瑞吉外卖管理端</title>
+    <title>AI模型配置 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
     <link rel="stylesheet" href="../../styles/ai-provider.css" />
@@ -111,7 +112,7 @@
 
     <!-- 添加/编辑弹窗 -->
     <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" 
-               :show-close="true" :close-on-click-modal="false" @submit="submitForm">
+               :show-close="true" :close-on-click-modal="false" :submit-loading="submitting" @submit="submitForm">
         <!-- 修改点：补全 ref/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
         <el-form ref="providerForm" :model="form" :rules="providerRules" label-width="100px" size="small" class="dialog-form">
             <el-form-item label="供应商名称" prop="providerName">
@@ -311,7 +312,7 @@
                     }).catch(function(err) {
                         ReggieUI.error('切换失败：' + (err.message || err));
                     });
-                }).catch(function() {});
+                }).catch(function(err) { console.warn('[provider-config] 切换供应商操作取消或失败:', err) });
             },
 
             testProvider: function(id) {
@@ -368,7 +369,7 @@
                             ReggieUI.error(res.msg || '删除失败');
                         }
                     });
-                }).catch(function() {});
+                }).catch(function(err) { console.warn('[provider-config] 删除供应商操作取消或失败:', err) });
             },
 
             openAddDialog: function() {
@@ -501,7 +502,7 @@
                     }).catch(function(err) {
                         ReggieUI.error('初始化失败：' + (err.message || err));
                     });
-                }).catch(function() {});
+                }).catch(function(err) { console.warn('[provider-config] 初始化供应商操作取消或失败:', err) });
             },
 
             // 修改点：从AI供应商API拉取可用模型列表（参考ChatBox/NextChat交互方式）

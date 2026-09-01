@@ -199,9 +199,22 @@
         },
         initEmployees: function () {
           const self = this
-          const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
-          self.employeeOptions = names.map(function (n, i) {
-            return { id: i + 1, name: n }
+          employeeList().then(function (res) {
+            if (res.code === 1 && res.data) {
+              self.employeeOptions = res.data.map(function (emp) {
+                return { id: emp.id, name: emp.name }
+              })
+            } else {
+              const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
+              self.employeeOptions = names.map(function (n, i) {
+                return { id: i + 1, name: n }
+              })
+            }
+          }).catch(function () {
+            const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
+            self.employeeOptions = names.map(function (n, i) {
+              return { id: i + 1, name: n }
+            })
           })
         },
 
@@ -431,7 +444,6 @@
                 const labels = {}
                 self.$set(self.scheduleData[self.form.employeeId], day, { shift: self.form.shift, label: labels[self.form.shift] })
               }
-              self.submitting = false
               self.dialog.visible = false
               self.$message.success('排班已保存（本地）')
             })

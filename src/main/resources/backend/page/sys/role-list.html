@@ -10,11 +10,24 @@
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <style>
+    /* 权限树弹窗 */
     .perm-tree-dialog .el-tree { max-height: 400px; overflow-y: auto; border: 1px solid var(--el-border-light); border-radius: var(--radius-sm); padding: 10px; }
     .perm-tree-dialog .el-tree-node__content { height: 32px; }
     .perm-tree-dialog .el-tree-node__label { font-size:var(--font-size-sm); }
     .perm-header { display: flex; align-items: center; gap: 8px; }
     .perm-header .el-tag { margin: 0; }
+    /* 权限树工具栏：搜索 + 计数 + 展开切换 */
+    .perm-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .perm-toolbar__info { flex: none; font-size: var(--font-size-sm); color: var(--el-text-regular); white-space: nowrap; }
+    .perm-toolbar__info strong { margin-left: 2px; }
+    .perm-toolbar__count { margin-left: 8px; }
+    .perm-toolbar__search { flex: 1; }
+    /* 分配用户弹窗：transfer 自适应拉宽 */
+    .perm-user-dialog .el-transfer { display: flex; align-items: stretch; }
+    .perm-user-dialog .el-transfer-panel { width: 42%; }
+    .perm-user-dialog .el-transfer-panel__list { min-height: 320px; }
+    .perm-user-dialog .el-transfer__buttons { padding: 0 8px; }
+    .perm-user-tip { margin-bottom: 12px; font-size: var(--font-size-sm); color: var(--text-secondary); }
   </style>
 </head>
 <body>
@@ -57,7 +70,7 @@
         :page-size="pageSize"
         :total="counts"
         :show-actions="true"
-        :actions-width="200"
+        :actions-width="280"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -71,6 +84,7 @@
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="openPermDialog(row)">权限分配</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="openUserDialog(row)">分配用户</el-button>
           <el-button type="text" size="small" class="btn-edit" @click="openDialog(row)">编辑</el-button>
           <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
         </template>
@@ -109,7 +123,7 @@
       </el-form>
     </crud-dialog>
 
-    <!-- 权限分配弹窗 -->
+    <!-- 权限分配弹窗（专注权限树：搜索 + 展开切换 + 半选计数） -->
     <crud-dialog
       title="权限分配"
       :visible.sync="permDialogVisible"
@@ -118,22 +132,34 @@
       custom-class="perm-tree-dialog"
       :close-on-click-modal="false"
       @submit="submitPerms"
-      @close="permDialogVisible = false"
+      @close="closePermDialog"
     >
-      <div style="margin-bottom: 12px; font-size:var(--font-size-sm); color: var(--el-text-regular);">
-        当前角色：<strong>{{ currentRole ? currentRole.roleName : '' }}</strong>
-        <span style="margin-left: 12px;">已选 <el-tag type="success" size="mini">{{ checkedPerms.length }}</el-tag> 项权限</span>
+      <div class="perm-toolbar">
+        <div class="perm-toolbar__info">
+          当前角色：<strong>{{ currentRole ? currentRole.roleName : '' }}</strong>
+          <span class="perm-toolbar__count">已选 <el-tag type="success" size="mini">{{ checkedCount }}</el-tag> 项</span>
+          <el-button type="text" size="mini" @click="toggleExpand">{{ expanded ? '折叠全部' : '展开全部' }}</el-button>
+        </div>
+        <el-input
+          class="perm-toolbar__search"
+          v-model="permFilterText"
+          size="small"
+          clearable
+          prefix-icon="el-icon-search"
+          placeholder="搜索权限名称或标识"
+        ></el-input>
       </div>
       <el-tree
         ref="permTree"
         :data="permTreeData"
         show-checkbox
         node-key="id"
-        :default-expand-all="true"
+        :default-expand-all="expanded"
         :default-checked-keys="checkedPerms"
+        :filter-node-method="filterPermNode"
         :props="{ children: 'children', label: 'permissionName' }"
-        @check-change="handleCheckChange">
-        <template slot-scope="{ node, data }">
+        @check="handleCheck">
+        <template slot-scope="{ data }">
           <span class="perm-header">
             <i class="el-icon-folder" v-if="data.children && data.children.length" style="color:var(--el-color-primary);margin-right:4px;"></i>
             <i class="el-icon-document" v-else style="color:var(--color-info);margin-right:4px;"></i>
@@ -142,21 +168,37 @@
           </span>
         </template>
       </el-tree>
-      <div style="margin-top: 16px; border-top: 1px solid var(--border-default); padding-top: 16px;">
-        <div style="margin-bottom: 8px; font-size: var(--font-size-sm); color: var(--text-secondary);">
-          分配用户（一个员工可分配多个角色，穿梭框左→右添加）：
+      <div class="perm-toolbar" style="margin-top: 12px; margin-bottom: 0;">
+        <div class="perm-toolbar__info">
+          全选父级 = 授予其下所有子权限；父级勾选为半选时仅子级生效。
         </div>
-        <el-transfer
-          filterable
-          :filter-method="filterEmployee"
-          filter-placeholder="搜索员工姓名"
-          v-model="checkedUserIds"
-          :data="userTransferData"
-          :titles="['未分配', '已分配']"
-          :button-texts="['移除', '添加']"
-          target-order="push">
-        </el-transfer>
       </div>
+    </crud-dialog>
+
+    <!-- 分配用户弹窗（独立：专注 员工↔角色 穿梭框） -->
+    <crud-dialog
+      title="分配用户"
+      :visible.sync="userDialogVisible"
+      size="md"
+      :submit-loading="userSubmitting"
+      custom-class="perm-user-dialog"
+      :close-on-click-modal="false"
+      @submit="submitUsers"
+      @close="closeUserDialog"
+    >
+      <div class="perm-user-tip">
+        当前角色：<strong>{{ currentRole ? currentRole.roleName : '' }}</strong>（一个员工可分配多个角色，左→右添加）
+      </div>
+      <el-transfer
+        filterable
+        :filter-method="filterEmployee"
+        filter-placeholder="搜索员工姓名"
+        v-model="checkedUserIds"
+        :data="userTransferData"
+        :titles="['未分配', '已分配']"
+        :button-texts="['移除', '添加']"
+        target-order="push">
+      </el-transfer>
     </crud-dialog>
   </div>
 
@@ -220,7 +262,12 @@
           currentRole: null,
           permTreeData: [],
           checkedPerms: [],
-          // 角色用户分配（el-transfer：RBAC 闭环 用户→角色）
+          checkedCount: 0,
+          permFilterText: '',
+          expanded: true,
+          // 分配用户（独立弹窗：el-transfer 用户↔角色）
+          userDialogVisible: false,
+          userSubmitting: false,
           userTransferData: [],
           checkedUserIds: []
         }
@@ -238,6 +285,11 @@
             { key: 'disabled', icon: 'ri-pause-circle-line', label: '已禁用', value: self.stats.disabled || 0, color: 'warning', clickable: true, active: self.activeFilter === 'disabled' },
             { key: 'withPerms', icon: 'ri-lock-2-line', label: '已分配权限', value: self.stats.withPerms || 0, color: 'info', clickable: true, active: self.activeFilter === 'withPerms' }
           ]
+        },
+      },
+      watch: {
+        permFilterText: function(val) {
+          if (this.$refs.permTree) { this.$refs.permTree.filter(val || '') }
         }
       },
       methods: {
@@ -385,15 +437,30 @@
                   self.init()
                 }
               })
-            }).catch(function() {})
+            }).catch(function(err) { console.warn('[角色管理] 删除操作取消或失败:', err) })
         },
-        // ========== 权限分配 ==========
+        // ========== 权限分配（权限树） ==========
         openPermDialog(row) {
           this.currentRole = row
           this.permDialogVisible = true
+          this.permFilterText = ''
+          this.expanded = true
+          this.checkedCount = 0
           this.loadPermTree()
           this.loadRolePerms(row.id)
+        },
+        closePermDialog() {
+          this.permDialogVisible = false
+          this.permFilterText = ''
+        },
+        // ========== 分配用户（员工↔角色） ==========
+        openUserDialog(row) {
+          this.currentRole = row
+          this.userDialogVisible = true
           this.loadRoleUsers(row.id)
+        },
+        closeUserDialog() {
+          this.userDialogVisible = false
         },
         loadPermTree() {
           const self = this
@@ -426,6 +493,7 @@
           sysApi.rolePermissions(roleId).then(function(res) {
             if (res && res.code === 1) {
               self.checkedPerms = res.data || []
+              self.checkedCount = self.checkedPerms.length
               self.$nextTick(function() {
                 if (self.$refs.permTree) {
                   self.$refs.permTree.setCheckedKeys(self.checkedPerms)
@@ -452,28 +520,62 @@
         filterEmployee(query, item) {
           return item.label.indexOf(query) > -1
         },
-        handleCheckChange() {
+        // 权限树搜索：匹配名称或标识
+        filterPermNode(value, data) {
+          if (!value) { return true }
+          return data.permissionName.indexOf(value) > -1 || (data.permissionKey || '').indexOf(value) > -1
+        },
+        // 展开/折叠全部
+        toggleExpand() {
+          this.expanded = !this.expanded
+          this.$nextTick(function() {
+            var tree = this.$refs.permTree
+            if (!tree) { return }
+            var nodesMap = tree.store.nodesMap
+            Object.keys(nodesMap).forEach(function(key) {
+              var node = nodesMap[key]
+              if (!node) { return }
+              if (this.expanded) { node.expand() } else { node.collapse() }
+            }.bind(this))
+          })
+        },
+        // 勾选变化：仅保存全选节点（半选父级不落库，回显由叶子全选还原）
+        handleCheck() {
           if (this.$refs.permTree) {
             this.checkedPerms = this.$refs.permTree.getCheckedKeys()
+            // 计数含半选父级，更符合用户认知；用响应式变量而非 computed（tree 非响应式不会触发重算）
+            this.checkedCount = this.checkedPerms.length + this.$refs.permTree.getHalfCheckedKeys().length
           }
         },
         submitPerms() {
           const keys = this.$refs.permTree ? this.$refs.permTree.getCheckedKeys() : this.checkedPerms
           this.permSubmitting = true
           const self = this
-          // RBAC 闭环：权限分配（角色→权限）+ 用户分配（用户→角色）同时提交
-          const permPromise = sysApi.assignPermissions(this.currentRole.id, keys)
-          const userPromise = sysApi.assignRoleUsers(this.currentRole.id, this.checkedUserIds.slice())
-          Promise.all([permPromise, userPromise]).then(function(results) {
-            const ok = results.every(function(r) { return r && r.code === 1 })
-            if (ok) {
-              ReggieUI.success('权限与用户分配成功')
+          sysApi.assignPermissions(this.currentRole.id, keys).then(function(res) {
+            if (res && res.code === 1) {
+              ReggieUI.success('权限分配成功')
               self.permDialogVisible = false
+              self.permFilterText = ''
             } else {
-              ReggieUI.error('操作失败')
+              ReggieUI.error(res ? res.msg : '操作失败')
             }
           }).catch(function() { ReggieUI.error('操作失败') })
             .finally(function() { self.permSubmitting = false })
+        },
+        // 用户分配提交
+        submitUsers() {
+          if (!this.currentRole) { return }
+          this.userSubmitting = true
+          const self = this
+          sysApi.assignRoleUsers(this.currentRole.id, this.checkedUserIds.slice()).then(function(res) {
+            if (res && res.code === 1) {
+              ReggieUI.success('用户分配成功')
+              self.userDialogVisible = false
+            } else {
+              ReggieUI.error(res ? res.msg : '操作失败')
+            }
+          }).catch(function() { ReggieUI.error('操作失败') })
+            .finally(function() { self.userSubmitting = false })
         }
       }
     })

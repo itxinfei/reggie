@@ -1,5 +1,6 @@
 package com.reggie.module.platform.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.reggie.common.R;
 import com.reggie.common.annotation.RequiresPermission;
@@ -15,6 +16,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 外卖平台接入配置 Controller
@@ -34,13 +38,14 @@ public class PlatformConfigController {
     @Autowired
     private PlatformConfigService platformConfigService;
 
-    /** 列表（凭据脱敏，分页） */
+    /** 列表（凭据脱敏，分页，支持按启用状态筛选） */
     @GetMapping("/list")
     @RequiresPermission("platform:manage")
     public R<IPage<PlatformConfig>> list(@RequestParam(defaultValue = "1") Integer page,
-                                         @RequestParam(defaultValue = "10") Integer pageSize) {
+                                         @RequestParam(defaultValue = "10") Integer pageSize,
+                                         @RequestParam(required = false) Integer enabled) {
         IPage<PlatformConfig> pageReq = PageUtils.of(page, pageSize);
-        return R.success(platformConfigService.pageMasked(pageReq));
+        return R.success(platformConfigService.pageMasked(pageReq, enabled));
     }
 
     /** 详情（凭据脱敏） */
@@ -85,5 +90,24 @@ public class PlatformConfigController {
     @RequiresPermission("platform:manage")
     public R<Boolean> toggle(@RequestParam Long id, @RequestParam Integer enabled) {
         return R.success(platformConfigService.setEnabled(id, enabled));
+    }
+
+    /**
+     * 平台配置统计
+     * <p>按启用状态统计总数/已启用/已停用，供前端统计卡片点击筛选使用</p>
+     */
+    @GetMapping("/stats")
+    @RequiresPermission("platform:manage")
+    public R<Map<String, Object>> stats() {
+        long total = platformConfigService.count();
+        long enabledCount = platformConfigService.count(
+                new LambdaQueryWrapper<PlatformConfig>().eq(PlatformConfig::getEnabled, 1));
+        long disabledCount = platformConfigService.count(
+                new LambdaQueryWrapper<PlatformConfig>().eq(PlatformConfig::getEnabled, 0));
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", total);
+        result.put("enabledCount", enabledCount);
+        result.put("disabledCount", disabledCount);
+        return R.success(result);
     }
 }

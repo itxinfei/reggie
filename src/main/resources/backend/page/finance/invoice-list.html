@@ -224,7 +224,7 @@
                 voided: s.voided || 0
               }
             }
-          }).catch(function() {})
+          }).catch(function(err) { console.warn('[invoice] 加载统计数据失败:', err) })
         },
         // ========== 状态展示 ==========
         statusText: function(status) {
@@ -325,7 +325,7 @@
             }).catch(function(err) {
               if (err.message !== 'NOTLOGIN') ReggieUI.error('作废失败')
             })
-          }).catch(function() {})
+          }).catch(function(err) { console.warn('[invoice] 作废操作取消或失败:', err) })
         },
         // 查看发票 PDF（新窗口打开，POST 后使用后端返回链接）
         openInvoiceUrl: function(url) {

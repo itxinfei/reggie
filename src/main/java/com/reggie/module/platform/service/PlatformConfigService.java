@@ -20,6 +20,13 @@ public interface PlatformConfigService extends IService<PlatformConfig> {
     IPage<PlatformConfig> pageMasked(IPage<PlatformConfig> page);
 
     /**
+     * 分页列表查询（凭据脱敏，按启用状态筛选）
+     *
+     * @param enabled 启用状态筛选（1 启用 / 0 停用，null 不筛选）
+     */
+    IPage<PlatformConfig> pageMasked(IPage<PlatformConfig> page, Integer enabled);
+
+    /**
      * 按 ID 查询（凭据脱敏）
      */
     PlatformConfig getMaskedById(Long id);

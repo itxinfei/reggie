@@ -305,7 +305,7 @@
                 </span>
               </template>
             </el-table-column>
-            <el-table-column label="会员名称" min-width="140">
+            <el-table-column label="会员名称" min-width="140" align="center">
               <template slot-scope="{ row }">
                 <span class="member-name-cell" :title="row.memberName">{{ row.memberName }}</span>
               </template>
@@ -315,12 +315,12 @@
                 <el-tag :type="levelTagType(row.level)" size="mini">{{ levelLabel(row.level) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="积分" width="120" align="right">
+            <el-table-column label="积分" width="120" align="center">
               <template slot-scope="{ row }">
                 <span class="points-cell">{{ row.points || 0 }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="近30天下单" width="110" align="right">
+            <el-table-column label="近30天下单" width="110" align="center">
               <template slot-scope="{ row }">
                 <span class="points-cell">{{ row.recentOrders || 0 }}</span>
               </template>
@@ -353,7 +353,7 @@
               <span style="font-variant-numeric:tabular-nums">{{ row.memberId }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="会员名称" min-width="140">
+          <el-table-column label="会员名称" min-width="140" align="center">
             <template slot-scope="{ row }">
               <span class="member-name-cell" :title="row.memberName">{{ row.memberName }}</span>
             </template>
@@ -368,14 +368,14 @@
               <span>{{ row.lastOrderTime }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="沉睡天数" width="100" align="right">
+          <el-table-column label="沉睡天数" width="100" align="center">
             <template slot-scope="{ row }">
               <span class="dormant-days" :class="dormantClass(row.daysSinceLastOrder)">
                 {{ row.daysSinceLastOrder || 0 }}
               </span>
             </template>
           </el-table-column>
-          <el-table-column label="积分" width="100" align="right">
+          <el-table-column label="积分" width="100" align="center">
             <template slot-scope="{ row }">
               <span class="points-cell">{{ row.points || 0 }}</span>
             </template>
@@ -474,7 +474,7 @@
             style="width:100%"
             size="mini"
           >
-            <el-table-column label="会员名称" min-width="120">
+            <el-table-column label="会员名称" min-width="120" align="center">
               <template slot-scope="{ row }">
                 <span class="member-name-cell" :title="row.memberName">{{ row.memberName }}</span>
               </template>
@@ -489,7 +489,7 @@
                 <el-tag :type="statusTagType(row.status)" size="mini">{{ statusLabel(row.status) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="积分" width="80" align="right">
+            <el-table-column label="积分" width="80" align="center">
               <template slot-scope="{ row }">
                 <span class="points-cell">{{ row.points || 0 }}</span>
               </template>

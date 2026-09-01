@@ -446,7 +446,7 @@
               self.levelOptions = res.data.records || []
               self.searchConfig[2].options = self.levelOptions.map(function(l) { return { label: l.name, value: l.id } })
             }
-          }).catch(function() {})
+          }).catch(function(err) { console.warn('[会员] 加载会员等级失败:', err) })
         },
         getLevelClass: function(name) {
           if (!name) return 'level-badge default-badge'

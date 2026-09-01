@@ -436,12 +436,12 @@ a.breadcrumb__item:hover,
 }
 
 /* ========== 12. 表格数字 / 金额对齐（统一视觉，消除各页不一致） ========== */
+/* 修改点(2026-09-01)：全站表格统一居中，ds-num/ds-money 不再强制右对齐（对齐由
+   resolveColAlign + consistency.css 三态控制），保留等宽数字与字重/颜色 */
 .ds-num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;   /* 等宽数字，右对齐不跳动 */
+  font-variant-numeric: tabular-nums;   /* 等宽数字，对齐不跳动 */
 }
 .ds-money {
-  text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: var(--font-weight-semibold);
   color: var(--text-primary);

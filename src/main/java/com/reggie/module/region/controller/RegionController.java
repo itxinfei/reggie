@@ -179,6 +179,28 @@ public class RegionController {
     }
 
     /**
+     * 行政区划统计
+     * <p>按层级统计省/市/区数量，供前端统计卡片点击筛选使用</p>
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "行政区划统计", description = "按层级统计省/市/区数量")
+    public R<Map<String, Object>> stats() {
+        long total = regionService.count();
+        long provinceCount = regionService.count(
+                new LambdaQueryWrapper<Region>().eq(Region::getLevel, 1));
+        long cityCount = regionService.count(
+                new LambdaQueryWrapper<Region>().eq(Region::getLevel, 2));
+        long districtCount = regionService.count(
+                new LambdaQueryWrapper<Region>().eq(Region::getLevel, 3));
+        Map<String, Object> result = new HashMap<>();
+        result.put("total", total);
+        result.put("provinceCount", provinceCount);
+        result.put("cityCount", cityCount);
+        result.put("districtCount", districtCount);
+        return R.success(result);
+    }
+
+    /**
      * 获取筛选下拉选项（地区名称列表）
      * <p>从数据库动态查询所有地区名称，供前端下拉框使用</p>
      */

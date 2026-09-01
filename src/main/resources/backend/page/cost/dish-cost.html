@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>菜品成本管理 - 瑞吉外卖管理端</title>
+  <title>菜品成本管理 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
   <style>
@@ -164,14 +165,14 @@
           searchName: '',
           tableData: [],
           columns: [
-            { prop: 'dishName', label: '菜品名称', width: 160, align: 'left' },
-            { prop: 'materialCost', label: '食材成本', width: 110, align: 'right', type: 'money' },
-            { prop: 'laborCost', label: '人工成本', width: 110, align: 'right', type: 'money' },
-            { prop: 'otherCost', label: '其他成本', width: 110, align: 'right', type: 'money' },
-            { prop: 'totalCost', label: '总成本', width: 110, align: 'right', type: 'money' },
-            { prop: 'salePrice', label: '售价', width: 110, align: 'right', type: 'money' },
+            { prop: 'dishName', label: '菜品名称', width: 160, align: 'center' },
+            { prop: 'materialCost', label: '食材成本', width: 110, align: 'center', type: 'money' },
+            { prop: 'laborCost', label: '人工成本', width: 110, align: 'center', type: 'money' },
+            { prop: 'otherCost', label: '其他成本', width: 110, align: 'center', type: 'money' },
+            { prop: 'totalCost', label: '总成本', width: 110, align: 'center', type: 'money' },
+            { prop: 'salePrice', label: '售价', width: 110, align: 'center', type: 'money' },
             { prop: 'profitRate', label: '毛利率', width: 100, align: 'center', slot: 'col-profitRate' },
-            { prop: 'remark', label: '备注', minWidth: 180, align: 'left' }
+            { prop: 'remark', label: '备注', minWidth: 180, align: 'center' }
           ],
           dialogVisible: false,
           dialogTitle: '新增菜品成本',

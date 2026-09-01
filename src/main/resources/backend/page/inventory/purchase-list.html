@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>采购入库 - 瑞吉外卖管理端</title>
+  <title>采购入库 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -77,13 +78,13 @@
             <el-table-column prop="materialName" label="食材名称" min-width="140" align="center" />
             <el-table-column prop="materialId" label="食材ID" width="80" align="center" />
             <el-table-column prop="qty" label="数量" width="80" align="center" />
-            <el-table-column label="单价" width="100" align="right">
+            <el-table-column label="单价" width="100" align="center">
               <template slot-scope="scope">￥{{ scope.row.unitPrice }}</template>
             </el-table-column>
             <el-table-column label="已收货" width="90" align="center">
               <template slot-scope="scope">{{ scope.row.receivedQty || 0 }}</template>
             </el-table-column>
-            <el-table-column label="小计" width="110" align="right">
+            <el-table-column label="小计" width="110" align="center">
               <template slot-scope="scope">￥{{ scope.row.amount }}</template>
             </el-table-column>
             <el-table-column prop="remark" label="备注" min-width="120" align="center" />
@@ -194,7 +195,7 @@
           columns: [
             { prop: 'orderNo', label: '采购单号', minWidth: 140 },
             { prop: 'supplierName', label: '供应商', minWidth: 120 },
-            { prop: 'totalAmount', label: '总金额', width: 110, align: 'right', slot: true, type: 'money' },
+            { prop: 'totalAmount', label: '总金额', width: 110, align: 'center', slot: true, type: 'money' },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
             { prop: 'operator', label: '操作员', width: 80, align: 'center' },
             { prop: 'remark', label: '备注', minWidth: 100 },
@@ -369,7 +370,7 @@
               if (res.code === 1) { ReggieUI.success('审核通过！'); this.handleQuery() }
               else ReggieUI.error(res.msg || '操作失败')
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
-          }).catch(() => {})
+          }).catch((err) => { console.warn('[purchase-list] 审核操作取消或失败:', err) })
         },
         receiveHandle(row) {
           ReggieUI.confirm('确认收货该采购单? 收货后将自动入库增加库存。', '提示', {
@@ -379,7 +380,7 @@
               if (res.code === 1) { ReggieUI.success('收货成功！库存已更新'); this.handleQuery() }
               else ReggieUI.error(res.msg || '操作失败')
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
-          }).catch(() => {})
+          }).catch((err) => { console.warn('[purchase-list] 收货操作取消或失败:', err) })
         },
         cancelHandle(row) {
           ReggieUI.confirm('确认取消该采购单?', '提示', {
@@ -389,7 +390,7 @@
               if (res.code === 1) { ReggieUI.success('取消成功！'); this.handleQuery() }
               else ReggieUI.error(res.msg || '操作失败')
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
-          }).catch(() => {})
+          }).catch((err) => { console.warn('[purchase-list] 取消操作取消或失败:', err) })
         },
         // 修改点：打开编辑弹窗（仅改基本信息，明细不属于本接口职责）
         editHandle(row) {
@@ -437,7 +438,7 @@
               if (res.code === 1) { ReggieUI.success('删除成功！'); this.handleQuery() }
               else ReggieUI.error(res.msg || '删除失败')
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
-          }).catch(() => {})
+          }).catch((err) => { console.warn('[purchase-list] 删除操作取消或失败:', err) })
         },
         async submitForm() {
           const self = this

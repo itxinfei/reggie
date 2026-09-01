@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>行政区划管理 - 瑞吉外卖管理端</title>
+  <title>行政区划管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
@@ -22,8 +22,8 @@
         </div>
         <div class="ds-page-header__actions"></div>
       </header>
-      <!-- 统计卡片 - 使用统一的 <stat-cards> 组件 -->
-      <stat-cards :cards="statsCards"></stat-cards>
+      <!-- 修改点：统计卡片支持点击筛选（点击省份/城市/区县卡片按层级过滤数据，与层级下拉框互斥） -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
       <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
       <table-bar
         :search-items="tableSearchItems"
@@ -36,7 +36,7 @@
             :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="handleQuery" >
             <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
           </el-select>
-          <el-select v-model="input.level" placeholder="层级" clearable class="el-select--wide-xs" @change="handleQuery">
+          <el-select v-model="input.level" placeholder="层级" clearable class="el-select--wide-xs" @change="onLevelChange">
             <el-option label="全部" :value="null"></el-option>
             <el-option label="省份" :value="1"></el-option>
             <el-option label="城市" :value="2"></el-option>
@@ -123,6 +123,10 @@
       data() {
         return {
           input: { name: '', level: null },
+          // 修改点：当前激活的统计卡片 key（'' 全部 / '1' 省 / '2' 市 / '3' 区），点击卡片按层级筛选
+          activeFilter: '',
+          // 修改点：按层级统计数据，由 /region/stats 加载，供统计卡片展示
+          stats: { total: 0, provinceCount: 0, cityCount: 0, districtCount: 0 },
           // 修改点：搜索下拉框动态选项（从数据库加载地区名称）
           filterOptions: { names: [] },
           // 修改点：<table-bar> 统一组件配置
@@ -160,36 +164,14 @@
         this.fetchData()
       },
       computed: {
+        // 修改点：4 张可点击统计卡片（总数/省份/城市/区县），点击按层级筛选数据
         statsCards() {
+          var s = this.stats || {}
           return [
-            {
-              key: 'province',
-              icon: 'el-icon-office-building',
-              label: '省份',
-              value: this.counts ? Math.ceil(this.counts / 4) : 0,
-              color: 'primary'
-            },
-            {
-              key: 'city',
-              icon: 'el-icon-location',
-              label: '城市',
-              value: 0,
-              color: 'success'
-            },
-            {
-              key: 'district',
-              icon: 'el-icon-map-location',
-              label: '区/县',
-              value: 0,
-              color: 'warning'
-            },
-            {
-              key: 'total',
-              icon: 'el-icon-data-analysis',
-              label: '总计',
-              value: this.counts || 0,
-              color: 'info'
-            }
+            { key: '', icon: 'el-icon-location-outline', label: '地区总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+            { key: '1', icon: 'el-icon-place', label: '省份', value: s.provinceCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
+            { key: '2', icon: 'el-icon-office-building', label: '城市', value: s.cityCount || 0, color: 'warning', clickable: true, active: this.activeFilter === '2' },
+            { key: '3', icon: 'el-icon-school', label: '区/县', value: s.districtCount || 0, color: 'danger', clickable: true, active: this.activeFilter === '3' }
           ]
         }
       },
@@ -238,26 +220,71 @@
             }
         },
         // 修改点：原 init() 重命名为 fetchData()，由 ReggieListMixin 的翻页/改大小自动调用
-        async fetchData() {
+        // reloadStats=true 时并行重载统计卡片（初始进入/增删改后）；搜索/卡片筛选时传 false 不重算
+        async fetchData(reloadStats) {
+          if (reloadStats === undefined) { reloadStats = true }
           this.loading = true
-          const params = { page: this.page, pageSize: this.pageSize, name: this.input.name || undefined, level: this.input.level }
-          const res = await regionPage(params)
-          this.loading = false
-          if (res.code === 1) {
-            this.tableData = res.data.records || []
-            this.counts = res.data.total || 0
+          // 层级筛选：优先统计卡片 activeFilter，其次层级下拉框 input.level（两者互斥）
+          var level = this.activeFilter || this.input.level
+          var params = { page: this.page, pageSize: this.pageSize, name: this.input.name || undefined, level: level || undefined }
+          try {
+            var requests = [regionPage(params)]
+            if (reloadStats) { requests.push(this.loadRegionStats()) }
+            var results = await Promise.all(requests)
+            var res = results[0]
+            if (res.code === 1) {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total || 0
+            }
+            if (reloadStats) {
+              var statsRes = results[1]
+              if (statsRes && statsRes.code === 1 && statsRes.data) {
+                this.stats = statsRes.data
+              }
+            }
+          } catch (err) {
+            console.warn('加载地区列表失败:', err)
+          } finally {
+            this.loading = false
           }
         },
+        // 修改点：加载按层级统计数据（总数/省/市/区），供统计卡片展示
+        async loadRegionStats() {
+          try {
+            var res = await regionStats()
+            if (res.code === 1 && res.data) {
+              return { code: 1, data: res.data }
+            }
+          } catch (err) {
+            console.warn('加载地区统计失败:', err)
+          }
+          return { code: 0 }
+        },
         handleQuery() {
+          // 名称搜索保持当前层级筛选，仅翻回第 1 页
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
+        },
+        // 修改点：层级下拉框变化 — 与统计卡片联动，同步激活对应卡片
+        onLevelChange() {
+          this.activeFilter = this.input.level ? String(this.input.level) : ''
+          this.page = 1
+          this.fetchData(false)
+        },
+        // 修改点：统计卡片点击 — 按层级筛选数据，与下拉框联动同步选中项
+        onCardClick(payload) {
+          this.activeFilter = payload.activeKey
+          this.input.level = payload.activeKey ? Number(payload.activeKey) : null
+          this.page = 1
+          this.fetchData(false)
         },
         // 重置搜索条件，恢复表格初始状态
         reset() {
           this.input.name = ''
           this.input.level = null
+          this.activeFilter = ''
           this.page = 1
-          this.fetchData()
+          this.fetchData(false)
         },
 
         // 加载可选的上级地区
@@ -336,7 +363,7 @@
             } else {
               ReggieUI.error(res.msg || '删除失败')
             }
-          }).catch(() => {})
+          }).catch((err) => { console.warn('[region] 删除地区操作取消或失败:', err) })
         }
       }
     })

@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>加盟合同管理 - 瑞吉外卖管理端</title>
+  <title>加盟合同管理 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
 <link rel="stylesheet" href="../../styles/components-stats-card.css" />
@@ -79,7 +80,7 @@
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
       :submit-loading="submitting"
-      width="45%"
+      size="md"
       @submit="submitForm"
       @close="handleClose"
     >
@@ -170,7 +171,7 @@
           actionConfig: [
             { key: 'add', text: '+ 新增加盟合同', type: 'primary' }
           ],
-          // 表格列配置（对齐由 components.js resolveColAlign 统一控制：文本居中、金额/数字右对齐）
+          // 表格列配置（对齐由 components.js resolveColAlign 统一控制：表头与内容全部居中）
           columns: [
             { prop: 'contractNo', label: '合同编号', minWidth: 160 },
             { prop: 'franchiseeId', label: '加盟商', slot: true, minWidth: 120 },
@@ -405,7 +406,7 @@
                 ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
-          }).catch(function() { /* 用户取消，无需处理 */ })
+          }).catch(function(err) { console.warn('[franchise-contract] 删除合同操作取消或失败:', err) })
         },
         handleClose() {
           this.formData.dialogVisible = false

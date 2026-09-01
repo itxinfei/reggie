@@ -141,10 +141,10 @@
 
       <div class="po-detail__items-title">菜品明细</div>
       <el-table :data="detail.orderDetails || []" size="small" border class="po-detail__table">
-        <el-table-column prop="name" label="菜品" min-width="140"></el-table-column>
-        <el-table-column prop="dishFlavor" label="规格" min-width="120"></el-table-column>
+        <el-table-column prop="name" label="菜品" min-width="140" align="center"></el-table-column>
+        <el-table-column prop="dishFlavor" label="规格" min-width="120" align="center"></el-table-column>
         <el-table-column prop="number" label="数量" width="80" align="center"></el-table-column>
-        <el-table-column label="金额" width="100" align="right">
+        <el-table-column label="金额" width="100" align="center">
           <template #default="{ row }">￥{{ formatMoney(row.amount) }}</template>
         </el-table-column>
       </el-table>
@@ -202,13 +202,13 @@
         tableData: [],
         // 修改点：筛选条件
         filters: { platformType: '', status: '', platformOrderId: '' },
-        // 修改点：列配置（对齐走 resolveColAlign 单一来源，金额右对齐）
+        // 修改点：列配置（对齐走 resolveColAlign 单一来源，表头与内容全部居中）
         columns: [
           { prop: 'platformType', label: '平台', width: 100, align: 'center', slot: true },
           { prop: 'platformOrderId', label: '平台订单号', minWidth: 160, align: 'center' },
           { prop: 'number', label: '本地单号', minWidth: 140, align: 'center' },
           { prop: 'status', label: '状态', width: 90, align: 'center', slot: true },
-          { prop: 'amount', label: '金额', width: 110, align: 'right', type: 'money', slot: true },
+          { prop: 'amount', label: '金额', width: 110, align: 'center', type: 'money', slot: true },
           { prop: 'userName', label: '顾客', minWidth: 100, align: 'center' },
           { prop: 'orderTime', label: '下单时间', minWidth: 150, align: 'center' }
         ],
@@ -308,7 +308,7 @@
           if (res && res.code === 1 && res.data) {
             self.detail = res.data
           }
-        }).catch(function () {})
+        }).catch(function (err) { console.warn('[平台订单] 获取订单详情失败:', err) })
       },
       // 修改点：打开拉单弹窗
       openPull() {
@@ -370,7 +370,7 @@
           } catch (err) {
             ReggieUI.error(meta.text + '失败，请检查网络或平台配置')
           }
-        }).catch(() => {})
+        }).catch((err) => { console.warn('[平台订单] 状态回传操作取消或失败:', err) })
       }
     }
   })

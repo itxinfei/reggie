@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>库存盘点 - 瑞吉外卖管理端</title>
+  <title>库存盘点 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -173,8 +174,8 @@
             { prop: 'checkNo', label: '盘点单号', width: 140 },
             { prop: 'operator', label: '操作员', width: 90, align: 'center' },
             { prop: 'itemCount', label: '盘点项数', width: 90, type: 'number' },
-            { prop: 'totalDiffAmount', label: '总差异金额', width: 115, align: 'right', slot: true, type: 'money' },
-            { prop: 'profitLoss', label: '盈亏金额', width: 115, align: 'right', slot: true, type: 'money' },
+            { prop: 'totalDiffAmount', label: '总差异金额', width: 115, align: 'center', slot: true, type: 'money' },
+            { prop: 'profitLoss', label: '盈亏金额', width: 115, align: 'center', slot: true, type: 'money' },
             { prop: 'remark', label: '备注', minWidth: 90 },
             { prop: 'status', label: '状态', width: 90, align: 'center', slot: true },
             { prop: 'createdTime', label: '创建时间', width: 155 }
@@ -363,7 +364,7 @@
               if (res.code === 1) { ReggieUI.success('删除成功！'); self.init() }
               else ReggieUI.error(res.msg || '删除失败')
             }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
-          }).catch(function() {})
+          }).catch(function(err) { console.warn('[inventory] 删除盘点单操作取消或失败:', err) })
         },
         openEntryDialog: function(checkId) {
           const self = this

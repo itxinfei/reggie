@@ -20,6 +20,10 @@
           <h1 class="ds-page-header__title" id="page-title">考勤管理</h1>
           <p class="ds-page-header__subtitle">查看员工出勤状况与考勤异常</p>
         </div>
+        <div class="ds-page-header__actions">
+          <el-button type="primary" size="small" icon="ri-checkbox-circle-line" @click="handleClockIn" :loading="clockBtnLoading">签到打卡</el-button>
+          <el-button type="success" size="small" icon="ri-close-circle-line" @click="handleClockOut" :loading="clockBtnLoading">签退打卡</el-button>
+        </div>
       </header>
 
       <!-- 统计卡片 -->
@@ -116,6 +120,7 @@
         return {
           loading: false,
           calendarLoading: false,
+          clockBtnLoading: false,
           statsCards: [],
           todayList: [],
           abnormalList: [],
@@ -132,6 +137,39 @@
         this.fetchAll()
       },
       methods: {
+        // ===== 签到签退 =====
+        handleClockIn: function () {
+          const self = this
+          self.clockBtnLoading = true
+          attendanceClockIn().then(function (res) {
+            self.clockBtnLoading = false
+            if (res.code === 1) {
+              self.$message.success('签到成功：' + (res.data.status || ''))
+              self.fetchAll()
+            } else {
+              self.$message.error(res.msg || '签到失败')
+            }
+          }).catch(function (e) {
+            self.clockBtnLoading = false
+            self.$message.error('签到失败，请稍后重试')
+          })
+        },
+        handleClockOut: function () {
+          const self = this
+          self.clockBtnLoading = true
+          attendanceClockOut({}).then(function (res) {
+            self.clockBtnLoading = false
+            if (res.code === 1) {
+              self.$message.success('签退成功：' + (res.data.status || ''))
+              self.fetchAll()
+            } else {
+              self.$message.error(res.msg || '签退失败')
+            }
+          }).catch(function (e) {
+            self.clockBtnLoading = false
+            self.$message.error('签退失败，请稍后重试')
+          })
+        },
         // ===== 日期初始化 =====
         initDates: function () {
           const now = new Date()
@@ -143,13 +181,34 @@
         },
         initEmployeeOptions: function () {
           const self = this
-          const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
-          self.employeeOptions = names.map(function (n, i) {
-            return { id: i + 1, name: n, avatar: n.charAt(0) }
+          employeeList().then(function (res) {
+            if (res.code === 1 && res.data) {
+              self.employeeOptions = res.data.map(function (emp) {
+                return { id: emp.id, name: emp.name, avatar: emp.name.substring(0, 1) }
+              })
+              if (self.employeeOptions.length > 0 && !self.calendarEmployee) {
+                self.calendarEmployee = self.employeeOptions[0].id
+              }
+            } else {
+              // 降级到模拟数据
+              const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
+              self.employeeOptions = names.map(function (n, i) {
+                return { id: i + 1, name: n, avatar: n.charAt(0) }
+              })
+              if (self.employeeOptions.length > 0) {
+                self.calendarEmployee = self.employeeOptions[0].id
+              }
+            }
+          }).catch(function () {
+            // 降级到模拟数据
+            const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
+            self.employeeOptions = names.map(function (n, i) {
+              return { id: i + 1, name: n, avatar: n.charAt(0) }
+            })
+            if (self.employeeOptions.length > 0) {
+              self.calendarEmployee = self.employeeOptions[0].id
+            }
           })
-          if (self.employeeOptions.length > 0) {
-            self.calendarEmployee = self.employeeOptions[0].id
-          }
         },
 
         // ===== 数据加载 =====
@@ -176,7 +235,7 @@
               { key: 'present', icon: 'ri-user-star-line', label: '本周出勤', value: data.presentCount || 0, color: 'primary', unit: '人' },
               { key: 'absent',  icon: 'ri-user-unfollow-line', label: '缺勤', value: data.absentCount || 0, color: 'danger', unit: '人' },
               { key: 'late',    icon: 'ri-time-line', label: '迟到', value: data.lateCount || 0, color: 'warning', unit: '人' },
-              { key: 'hours',   icon: 'ri-timer-line', label: '平均工时', value: data.avgHours || 0, color: 'primary', unit: '小时' }
+              { key: 'hours',   icon: 'ri-timer-line', label: '平均工时', value: data.averageWorkHours || 0, color: 'primary', unit: '小时' }
             ]
           }).catch(function () {
             self.statsCards = [
@@ -262,7 +321,9 @@
           const self = this
           self.calendarLoading = true
           attendanceCalendar({ month: self.calendarMonth, employeeId: self.calendarEmployee }).then(function (res) {
-            self.buildCalendar(self.calendarMonth, res.data)
+            // 后端返回 {employeeId, month, calendar: [...], summary: {...}}，提取calendar数组
+            var calData = (res.data && res.data.calendar) || []
+            self.buildCalendar(self.calendarMonth, calData)
             self.calendarLoading = false
           }).catch(function () {
             self.buildCalendar(self.calendarMonth, null)
@@ -289,7 +350,14 @@
           // 使用后端数据或 mock
           if (backendDays && backendDays.length) {
             backendDays.forEach(function (d) {
-              dayStatuses[d.day] = d.status
+              // 后端返回 {day, status(1=正常,2=迟到,0=缺勤,3=早退,4=请假), ...}
+              // 转换为前端状态字符串：normal/late/absent/rest
+              var s = d.status
+              if (s === 1) dayStatuses[d.day] = 'normal'
+              else if (s === 2) dayStatuses[d.day] = 'late'
+              else if (s === 3 || s === 4) dayStatuses[d.day] = 'rest'
+              else if (s === 0) dayStatuses[d.day] = 'absent'
+              else dayStatuses[d.day] = ''
             })
           } else {
             // mock 数据：随机分配状态

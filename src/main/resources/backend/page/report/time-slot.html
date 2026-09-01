@@ -228,7 +228,7 @@
             const self = this; if (!self.heatmapChart) return;
             reportTimeSlotHeatmap({ startDate: self.dateRange[0], endDate: self.dateRange[1] })
               .then(function(res) { if (res.code === 1 && res.data) self.renderHeatmap(res.data); })
-              .catch(function() {});
+              .catch(function(err) { console.warn('[时段分析] 加载热力图失败:', err) });
           },
           renderHeatmap: function(data) {
             if (!this.heatmapChart) return;
