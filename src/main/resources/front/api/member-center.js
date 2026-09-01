@@ -1,3 +1,8 @@
+// 获取会员等级列表
+function getMemberLevels() {
+  return $axios({ url: '/api/member/level/page', method: 'get', params: { page: 1, pageSize: 100 } })
+}
+
 // 获取当前用户的会员信息（含等级、积分、余额、优惠券数量）
 function getMyMemberInfo() {
   return $axios({ url: '/api/member/member/my-info', method: 'get' })

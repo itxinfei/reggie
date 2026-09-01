@@ -194,12 +194,7 @@
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js"></script>
     <script src="./../api/address.js"></script>
-    <script>
-    // 地区数据API
-    function regionChildrenApi(parentId) {
-        return $axios({ url: '/region/children', method: 'get', params: { parentId: parentId || 0 } })
-    }
-    </script>
+    <script src="./../api/region.js"></script>
     <script>
     new Vue({
         el: "#address_edit",
@@ -318,7 +313,7 @@
                 this.pickerLoading = true
                 this.pickerVisible = true
                 try {
-                    var res = await regionChildrenApi(parentId)
+                    var res = await getRegionChildren(parentId)
                     if (res.code === 1) {
                         this.pickerList = res.data || []
                     } else {
@@ -348,7 +343,7 @@
 
                 this.pickerLoading = true
                 try {
-                    var res = await regionChildrenApi(parentId)
+                    var res = await getRegionChildren(parentId)
                     if (res.code === 1) {
                         this.pickerList = res.data || []
                     }

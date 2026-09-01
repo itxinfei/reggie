@@ -38,7 +38,7 @@
             <div v-for="item in evalList" :key="item.id" class="eval-card">
                 <div class="eval-header">
                     <div class="dish-info">
-                        <img v-if="item.dishImage" :src="getImageUrl(item.dishImage)" class="dish-img" />
+                        <img v-if="item.dishImage" :src="getImageUrl(item.dishImage)" class="dish-img" :alt="item.dishName || '菜品'" />
                         <div class="dish-text">
                             <div class="dish-name">{{ item.dishName || '未知菜品' }}</div>
                             <div class="eval-meta">
@@ -57,7 +57,7 @@
                 <!-- 评价图片 -->
                 <div class="eval-imgs" v-if="item.images && item.images.length > 0">
                     <img v-for="(img, idx) in getImageList(item.images)" :key="idx"
-                         :src="getImageUrl(img)" @click="previewImage(getImageUrl(img))" />
+                         :src="getImageUrl(img)" :alt="'评价图片' + (idx + 1)" @click="previewImage(getImageUrl(img))" />
                 </div>
 
                 <!-- 商家回复 -->
@@ -78,8 +78,8 @@
 
         <!-- 空状态 -->
         <div class="empty-state" v-else-if="!loading">
-            <img src="./../images/no_order.png" style="width: 120px; opacity: 0.4;" />
-            <p style="color: var(--color-text-hint); margin-top: 16px; font-size: 14px;">暂无评价记录</p>
+            <img src="./../images/no_order.png" class="empty-img" alt="暂无评价记录"/>
+            <p class="empty-text">暂无评价记录</p>
             <!-- 修改点：el-button 替换为原生button -->
             <button class="btn-primary" @click="goToOrder">去下单</button>
         </div>
@@ -91,7 +91,7 @@
             :total-items="total"
             :items-per-page="pageSize"
             @change="onPageChange"
-            style="margin: 16px 0;"
+            class="pagination-wrap"
         />
 
         <!-- 提交评价弹窗——el-dialog 替换为纯CSS模态框 -->

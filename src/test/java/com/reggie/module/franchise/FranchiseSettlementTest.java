@@ -218,14 +218,14 @@ public class FranchiseSettlementTest {
         assertEquals(2, ((Number) feStat.get("enabled")).intValue());
         assertEquals(1, ((Number) feStat.get("disabled")).intValue());
         // 有合同（含已终止）的加盟商去重 = 2（A、C）
-        assertEquals(2, ((Number) feStat.get("contractCount")).intValue());
+        assertEquals(2, statInt(feStat, "contractCount"));
 
         // 合同统计
         java.util.Map<String, Object> ctStat = franchiseContractService.statContracts(1L);
         assertEquals(3, ((Number) ctStat.get("total")).intValue());
         assertEquals(2, ((Number) ctStat.get("active")).intValue());
         assertEquals(1, ((Number) ctStat.get("expired")).intValue());
-        assertEquals(2, ((Number) ctStat.get("franchiseeCount")).intValue());
+        assertEquals(2, statInt(ctStat, "franchiseeCount"));
 
         // 结算单统计：s1 待确认 → 确认 → 结算（settled），s2 仍待确认（pending）
         java.util.Map<String, Object> stStat = franchiseSettlementService.statSettlements(1L);
@@ -233,6 +233,19 @@ public class FranchiseSettlementTest {
         assertEquals(1, ((Number) stStat.get("pending")).intValue());
         assertEquals(0, ((Number) stStat.get("confirmed")).intValue());
         assertEquals(1, ((Number) stStat.get("settled")).intValue());
+    }
+
+    /**
+     * 读取聚合统计 Map 字段。H2 测试库 DATABASE_TO_LOWER=TRUE 会把未加引号的列别名
+     * 转为小写（如 contractCount → contractcount），MySQL 保留原始大小写，此处兼容两种 key。
+     */
+    private static int statInt(java.util.Map<String, Object> map, String key) {
+        Object v = map.get(key);
+        if (v == null) {
+            v = map.get(key.toLowerCase());
+        }
+        assertNotNull(v, "聚合字段 " + key + " 不应为 null");
+        return ((Number) v).intValue();
     }
 
     @Test

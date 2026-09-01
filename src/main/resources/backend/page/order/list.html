@@ -139,7 +139,7 @@
             <div v-if="diaForm.orderDetails && diaForm.orderDetails.length > 0" class="od-items">
               <div v-for="(item, idx) in diaForm.orderDetails" :key="idx" class="od-item">
                 <el-image v-if="item.image" :src="item.image" class="od-item-img" fit="cover"
-                          :preview-src-list="[item.image]"></el-image>
+                          :preview-src-list="[item.image]" alt="订单菜品图片"></el-image>
                 <div v-else class="od-item-img od-item-img--ph"><i class="el-icon-picture-outline"></i></div>
                 <div class="od-item-body">
                   <div class="od-item-name">{{ item.name }}</div>

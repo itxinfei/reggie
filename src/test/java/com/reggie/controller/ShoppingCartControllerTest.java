@@ -12,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -23,6 +24,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+// 购物车加购会校验 dish/setmeal 存在且可售（服务端取价），须建核心表并插入测试菜品/套餐
+@Sql(scripts = {"classpath:schema.sql", "classpath:shopping-cart-test-data.sql"},
+        executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class ShoppingCartControllerTest extends BaseControllerTest {
 
     @Autowired

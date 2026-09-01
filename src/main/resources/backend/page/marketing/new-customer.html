@@ -226,9 +226,13 @@
           }
           try {
             const res = await getNewCustomerDiscounts(params)
-            if (String(res.code) === '1') {
-              self.tableData = res.data || []
-              self.counts = res.total || (res.data ? res.data.length : 0)
+            // 修改点：修复字段层级。分页接口返回 {code, data:{records, total}}，
+            // res.data 是分页对象（含 records/total），非数组；原 tableData=res.data 导致表格拿到对象渲染失败。
+            if (String(res.code) === '1' && res.data) {
+              var d = res.data;
+              // 兼容分页响应 {records, total} 与数组响应 [...]
+              self.tableData = Array.isArray(d) ? d : (d.records || []);
+              self.counts = Array.isArray(d) ? d.length : (d.total != null ? d.total : self.tableData.length);
             }
           } catch (err) {
             ReggieUI.error('获取新客优惠列表失败')
@@ -241,8 +245,16 @@
               getNewCustomerDiscounts({ page: 1, pageSize: 1, status: '1' }),
               getNewCustomerDiscounts({ page: 1, pageSize: 1, status: '0' })
             ])
-            const activeCount = (String(results[0].code) === '1') ? (results[0].total || results[0].data.length || 0) : 0
-            const inactiveCount = (String(results[1].code) === '1') ? (results[1].total || results[1].data.length || 0) : 0
+            // 修改点：修复字段层级错误。request.js 返回 {code, msg, data:{records, total}}，
+            // total 在 data 内层，原 results[0].total / results[0].data.length 均层级错误，
+            // 且 total=0 时短路到 data.length 会抛 TypeError（data 是对象非数组）。
+            var extractCount = function(res) {
+              if (!res || String(res.code) !== '1' || !res.data) return 0;
+              var d = res.data;
+              return (d.total != null ? d.total : ((d.records || []).length)) || 0;
+            };
+            const activeCount = extractCount(results[0]);
+            const inactiveCount = extractCount(results[1]);
             this.stats = {
               total: activeCount + inactiveCount,
               active: activeCount,

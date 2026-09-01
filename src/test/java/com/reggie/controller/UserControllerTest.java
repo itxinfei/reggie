@@ -51,6 +51,16 @@ public class UserControllerTest {
         if (rateLimitKeys != null && !rateLimitKeys.isEmpty()) {
             redisTemplate.delete(rateLimitKeys);
         }
+        // 清除暴力破解防护残留（login:failure:*/login:locked:*），
+        // 否则历史失败计数/锁定键会让 /user/login 直接返回 429
+        Set<String> failureKeys = redisTemplate.keys("login:failure:*");
+        if (failureKeys != null && !failureKeys.isEmpty()) {
+            redisTemplate.delete(failureKeys);
+        }
+        Set<String> lockedKeys = redisTemplate.keys("login:locked:*");
+        if (lockedKeys != null && !lockedKeys.isEmpty()) {
+            redisTemplate.delete(lockedKeys);
+        }
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 

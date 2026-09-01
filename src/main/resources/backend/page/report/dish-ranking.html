@@ -256,7 +256,11 @@
             this.trendChart.setOption({
               title: { text: '暂无趋势数据', left: 'center', top: 'center',
                 textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
-            }, true); return;
+            }, true);
+            // 修改点：v-show 从隐藏切到可见后 echarts 宽高为 0，需 resize 才能正确渲染
+            var emptyChart = this.trendChart;
+            setTimeout(function() { if (emptyChart && !emptyChart.isDisposed()) emptyChart.resize(); }, 200);
+            return;
           }
           var hexToRgba = function(hex, alpha) {
             let h = hex.replace('#','');

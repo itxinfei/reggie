@@ -80,7 +80,7 @@
                 <i class="icon-back-arrow" @click="goBack"></i>个人中心
             </div>
             <div class="divUser">
-                <img :src="userAvatar || './../images/headPage.png'"/>
+                <img :src="userAvatar || './../images/headPage.png'" alt="用户头像"/>
                 <div class="desc">
                     <div class="divName">
                         {{ userName || '用户' }}
@@ -129,37 +129,37 @@
 
             <div class="divLinks">
                 <div class="item" @click="goMemberCenter">
-                    <img src="./../images/locations.png"/>
+                    <img src="./../images/locations.png" alt="会员中心"/>
                     <span>会员中心</span>
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toAddressPage">
-                    <img src="./../images/locations.png"/>
+                    <img src="./../images/locations.png" alt="地址管理"/>
                     <span>地址管理</span>
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toMessagePage">
-                    <img src="./../images/orders.png"/>
+                    <img src="./../images/orders.png" alt="消息中心"/>
                     <span>消息中心</span>
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toOrderPage">
-                    <img src="./../images/orders.png"/>
+                    <img src="./../images/orders.png" alt="历史订单"/>
                     <span>历史订单</span>
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toFrequentPage">
-                    <img src="./../images/orders.png"/>
+                    <img src="./../images/orders.png" alt="常购清单"/>
                     <span>常购清单</span>
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toEvaluationPage">
-                    <img src="./../images/orders.png"/>
+                    <img src="./../images/orders.png" alt="我的评价"/>
                     <span>我的评价</span>
                     <i class="icon-arrow-right"></i>
                 </div>
@@ -254,7 +254,7 @@
                             sessionStorage.setItem("userAvatar", this.userAvatar)
                             sessionStorage.setItem("userPhone", this.userPhone)
                         }
-                    } catch(e) {}
+                    } catch(e) { console.warn('[user] fetchUserInfo 失败:', e) }
                 },
                 async fetchMemberInfo(){
                     try {
@@ -265,7 +265,7 @@
                                 sessionStorage.setItem("memberId", res.data.member.id)
                             }
                         }
-                    } catch(e) {}
+                    } catch(e) { console.warn('[user] fetchMemberInfo 失败:', e) }
                 },
                 goBack: function(){ history.go(-1) },
                 getStatus: function(status){ return getStatus(status) },

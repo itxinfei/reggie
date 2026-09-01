@@ -173,6 +173,9 @@
   justify-content: center;
   padding: 80px 20px;
 }
+.empty-state .empty-img { width: 120rem; opacity: 0.4; }
+.empty-state .empty-text { color: var(--color-text-hint); margin-top: 16rem; font-size: 14rem; }
+.empty-state .pagination-wrap { margin: 16rem 0; }
 
 /* 修改点：自定义星级评分组件（替代el-rate） */
 .star-rating {

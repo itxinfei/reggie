@@ -78,7 +78,8 @@
             <template #col-image="{ row }">
               <el-image class="cell-img"
                 :src="getImage(row.image)"
-                :preview-src-list="[getImage(row.image)]">
+                :preview-src-list="[getImage(row.image)]"
+                alt="菜品图片">
                 <div slot="error" class="image-slot">
                   <img src="./../../images/noImg.png" class="cell-img" alt="暂无图片">
                 </div>

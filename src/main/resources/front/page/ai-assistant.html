@@ -134,7 +134,11 @@
                 <div :class="'chat-msg ' + msg.role" :key="msg.id || idx"
                      @contextmenu.prevent="showMsgMenu($event, msg)"
                      @longpress="showMsgMenu($event, msg)">
-                    <div class="chat-avatar" v-html="msg.role === 'assistant' ? '<i class=\'ri-robot-line\'></i>' : (userInfo && userAvatar ? userAvatar : '<i class=\'ri-user-line\'></i>')"></div>
+                    <div class="chat-avatar">
+                        <i v-if="msg.role === 'assistant'" class="ri-robot-line"></i>
+                        <img v-else-if="userInfo && userAvatar" :src="userAvatar" alt="avatar" />
+                        <i v-else class="ri-user-line"></i>
+                    </div>
                     <div class="msg-body">
                         <div class="chat-bubble" :class="{'streaming-cursor': msg.streaming}">
                             <!-- 安全渲染 -->
@@ -844,9 +848,9 @@
                         if (typeof aiApi !== 'undefined' && aiApi.recordFeedback) {
                             aiApi.recordFeedback({
                                 messageId: msg.id, feedbackType: type, scene: self.currentScene
-                            }).catch(function() {});
+                            }).catch(function(e) { console.warn('[ai-assistant] recordFeedback 失败:', e) });
                         }
-                    } catch (e) {}
+                    } catch (e) { console.warn('[ai-assistant] recordFeedback 异常:', e) }
                     this.saveConversations();
                 },
 

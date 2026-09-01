@@ -124,7 +124,7 @@
                     <div class="itemList">
                         <div class="item" v-for="(item,index) in cartData" :key="index">
                             <!-- 修改点：el-image替换为原生img，错误时显示占位图 -->
-                            <img :src="imgPath(item.image)" @error="imgError" class="dish-image" />
+                            <img :src="imgPath(item.image)" @error="imgError" class="dish-image" :alt="item.name || '菜品'" />
                             <div class="desc">
                                 <div class="name">{{item.name}}</div>
                                 <div class="numPrice">
@@ -227,6 +227,7 @@
         <script src="./../js/common.js"></script>
         <script src="./../api/main.js"></script>
         <script src="./../api/order.js"></script>
+        <script src="./../api/coupon.js"></script>
         <script>
             new Vue({
                 el:"#add_order",
@@ -444,7 +445,7 @@
                         this.couponLoading = true
                         try{
                             var amount = Number(this.goodsPrice).toFixed(2)
-                            const res = await $axios({ url: '/front/coupon/usable', method: 'get', params: { orderAmount: amount } })
+                            const res = await getUsableCoupons(amount)
                             if(res.code === 1 && Array.isArray(res.data)){
                                 this.couponList = res.data
                                 // 若当前选中的券不在新列表里（金额变化导致不可用），清空

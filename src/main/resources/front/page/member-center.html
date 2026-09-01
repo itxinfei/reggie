@@ -154,13 +154,22 @@
     .mc-recharge-info { flex: 1; }
     .mc-recharge-info .r-time { font-size: 13rem; color: var(--color-text-primary); }
     .mc-recharge-info .r-gift { font-size: 11rem; color: var(--color-success); margin-top: 2rem; }
+    /* 内联样式抽离为类 */
+    #member-center { min-height: 100vh; }
+    .mc-loading-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+    .mc-activate-btn { margin-left: 8rem; }
+    .mc-coupon-section-title { padding-left: 0; margin-bottom: 0; font-size: 13rem; }
+    .mc-coupon-section-title--gap { margin-top: 8rem; }
+    .mc-coupon-empty { padding: 24rem 0; }
+    .mc-coupon-actions { display: flex; justify-content: flex-end; margin-top: 4rem; }
+    .mc-bottom-spacer { height: 30rem; }
   </style>
 </head>
 <body>
-  <div id="member-center" style="min-height:100vh;">
+  <div id="member-center">
     <!-- 加载 -->
     <van-overlay :show="loading" :z-index="999">
-      <van-loading size="36rem" text-color="#fff" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);">加载中...</van-loading>
+      <van-loading size="36rem" text-color="#fff" class="mc-loading-center">加载中...</van-loading>
     </van-overlay>
 
     <!-- 头部 -->
@@ -207,7 +216,7 @@
       </div>
       <div class="mc-non-member" v-else-if="!memberInfo.isMember">
         成为会员，享专属折扣与权益
-        <van-button type="warning" size="small" round style="margin-left:8rem;" @click="activateMember">立即开通</van-button>
+        <van-button type="warning" size="small" round class="mc-activate-btn" @click="activateMember">立即开通</van-button>
       </div>
     </div>
 
@@ -266,10 +275,10 @@
 
       <!-- 我的优惠券 -->
       <div class="mc-coupons" v-if="activeTab==='coupons'">
-        <div class="mc-section-title" style="padding-left:0;margin-bottom:0;font-size:13rem;">
+        <div class="mc-section-title mc-coupon-section-title">
           可领取 <span class="count">({{ availCoupons.length }}张)</span>
         </div>
-        <div v-if="availCoupons.length===0" class="mc-empty" style="padding:24rem 0;">暂无可领取的优惠券</div>
+        <div v-if="availCoupons.length===0" class="mc-empty mc-coupon-empty">暂无可领取的优惠券</div>
         <div class="mc-coupon" v-for="c in availCoupons" :key="'avail-'+c.id">
           <div class="mc-coupon-left">
             <div class="c-amount">￥{{ Number(c.discountAmount||0).toFixed(0) }}</div>
@@ -278,16 +287,16 @@
           <div class="mc-coupon-right">
             <div class="c-name">{{ c.name }}</div>
             <div class="c-cond" v-if="c.conditionAmount>0">满￥{{ c.conditionAmount }}可用</div>
-            <div style="display:flex;justify-content:flex-end;margin-top:4rem;">
+            <div class="mc-coupon-actions">
               <button class="mc-claim-btn" @click="doClaim(c.id)" :disabled="claimLoading">立即领取</button>
             </div>
           </div>
         </div>
 
-        <div class="mc-section-title" style="padding-left:0;margin-bottom:0;margin-top:8rem;font-size:13rem;">
+        <div class="mc-section-title mc-coupon-section-title mc-coupon-section-title--gap">
           我的优惠券 <span class="count">({{ myCoupons.length }}张)</span>
         </div>
-        <div v-if="myCoupons.length===0" class="mc-empty" style="padding:24rem 0;">暂无优惠券</div>
+        <div v-if="myCoupons.length===0" class="mc-empty mc-coupon-empty">暂无优惠券</div>
         <div :class="['mc-coupon', c.status==='USED'||c.status==='EXPIRED' ? 'used' : '']" v-for="c in myCoupons" :key="'my-'+c.id">
           <div class="mc-coupon-left">
             <div class="c-amount">￥{{ Number(c.amount||0).toFixed(0) }}</div>
@@ -314,7 +323,7 @@
       </div>
     </div>
 
-    <div style="height: 30rem;"></div>
+    <div class="mc-bottom-spacer"></div>
   </div>
 
   <script src="../../backend/plugins/vue/vue.js"></script>
@@ -323,6 +332,7 @@
   <script src="../../backend/plugins/axios/axios.min.js"></script>
   <script src="../js/request.js"></script>
   <script src="../api/member-center.js"></script>
+  <script src="../api/coupon.js"></script>
   <script>
     new Vue({
       el: '#member-center',
@@ -393,18 +403,18 @@
             try {
               var lvRes = await this.fetchLevels()
               if (lvRes && lvRes.code === 1) this.allLevels = lvRes.data.records || []
-            } catch(e) {}
+            } catch(e) { console.warn('[member-center] fetchLevels 失败:', e) }
             // 加载各tab数据
             await Promise.all([
               this.loadPoints(),
               this.loadCoupons(),
               this.loadRecharge()
             ])
-          } catch(e) {}
+          } catch(e) { console.warn('[member-center] 初始化失败:', e) }
           this.loading = false
         },
         fetchLevels: function() {
-          return $axios({ url: '/api/member/level/page', method: 'get', params: { page: 1, pageSize: 100 } })
+          return getMemberLevels()
         },
         async loadPoints() {
           var memberId = this.memberInfo && this.memberInfo.member ? this.memberInfo.member.id : null
@@ -413,20 +423,20 @@
             var phone = this.memberInfo.member.phone || ''
             var res = await getMyPointsList({ page: 1, pageSize: 30, phone: phone })
             if (res.code === 1) this.pointsData = res.data.records || []
-          } catch(e) {}
+          } catch(e) { console.warn('[member-center] loadPoints 失败:', e) }
         },
         async loadCoupons() {
           try {
-            var myRes = await $axios({ url: '/front/coupon/my', method: 'get' })
+            var myRes = await getMyCouponsFront()
             if (myRes.code === 1) this.myCoupons = myRes.data || []
-            var availRes = await $axios({ url: '/front/coupon/available', method: 'get' })
+            var availRes = await getAvailableCouponsFront()
             if (availRes.code === 1) {
               var myTemplateIds = this.myCoupons.map(function(c) { return c.templateId })
               this.availCoupons = (Array.isArray(availRes.data) ? availRes.data : []).filter(function(c) {
                 return (c.remainCount || 0) > 0 && myTemplateIds.indexOf(c.id) === -1
               })
             }
-          } catch(e) {}
+          } catch(e) { console.warn('[member-center] loadCoupons 失败:', e) }
         },
         async loadRecharge() {
           var memberId = this.memberInfo && this.memberInfo.member ? this.memberInfo.member.id : null
@@ -435,14 +445,14 @@
             var phone = this.memberInfo.member.phone || ''
             var res = await getMyRechargeList({ page: 1, pageSize: 20, phone: phone })
             if (res.code === 1) this.rechargeData = res.data.records || []
-          } catch(e) {}
+          } catch(e) { console.warn('[member-center] loadRecharge 失败:', e) }
         },
         switchTab: function(t) { this.activeTab = t },
         async doClaim(templateId) {
           if (!this.memberInfo || !this.memberInfo.member) { vant.Toast.fail('请先成为会员'); return }
           this.claimLoading = true
           try {
-            var res = await $axios({ url: '/front/coupon/claim/' + templateId, method: 'post' })
+            var res = await claimCouponFront(templateId)
             if (res.code === 1) {
               vant.Toast.success('领取成功')
               this.loadCoupons()

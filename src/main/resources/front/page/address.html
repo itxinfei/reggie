@@ -38,11 +38,11 @@
                         <span>{{item.sex === '0' ? '女士' : '先生'}}</span>
                         <span>{{item.phone}}</span>
                     </div>
-                    <img src="./../images/edit.png" @click.stop.prevent="toAddressEditPage(item)" class="btnEdit"/>
+                    <img src="./../images/edit.png" @click.stop.prevent="toAddressEditPage(item)" class="btnEdit" alt="编辑地址"/>
                     <div class="divSplit"></div>
                     <div class="divDefault" @click.stop="item.isDefault !== 1 && setDefaultAddress(item)">
-                        <img src="./../images/checked_true.png" v-if="item.isDefault === 1">
-                        <img src="./../images/checked_false.png" v-else>设为默认地址
+                        <img src="./../images/checked_true.png" v-if="item.isDefault === 1" alt="默认地址">
+                        <img src="./../images/checked_false.png" v-else alt="设为默认">设为默认地址
                     </div>
                 </div>
                 <!-- 修改点：空状态提示 -->
