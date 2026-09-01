@@ -6,6 +6,7 @@ import com.reggie.common.annotation.RequiresPermission;
 import com.reggie.module.sys.model.Role;
 import com.reggie.module.sys.mapper.RoleMapper;
 import com.reggie.module.sys.service.PermissionService;
+import com.reggie.module.sys.service.RoleService;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -21,6 +22,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -54,6 +56,9 @@ public class PermissionAspect {
 
     @Autowired
     private RoleMapper roleMapper;
+
+    @Autowired
+    private RoleService roleService;
 
     private static final String PERMISSION_PREFIX = "sys:employee:permissions:";
 
@@ -195,22 +200,29 @@ public class PermissionAspect {
      */
     private Set<String> loadPermissionsFromDb(Long employeeId, String roleKey) {
         try {
-            Role role = roleMapper.findByRoleKeyAndTenantId(BaseContext.getCurrentTenantId(), roleKey);
-            if (role == null) {
-                log.warn("[权限加载] 未找到角色：roleKey={}, employeeId={}", roleKey, employeeId);
-                return Collections.emptySet();
+            Long tenantId = BaseContext.getCurrentTenantId();
+            // RBAC 闭环：优先查 employee_role 显式关联角色（多对多），实现多角色权限聚合
+            List<Long> roleIds = roleService.getEmployeeRoleIds(employeeId, tenantId);
+            if (roleIds == null || roleIds.isEmpty()) {
+                // 兼容老员工：未显式分配角色时 fallback 到 roleKey 内置角色（不 union，避免越权）
+                Role role = roleMapper.findByRoleKeyAndTenantId(tenantId, roleKey);
+                if (role == null) {
+                    log.warn("[权限加载] 未找到角色：roleKey={}, employeeId={}", roleKey, employeeId);
+                    return Collections.emptySet();
+                }
+                roleIds = new ArrayList<>();
+                roleIds.add(role.getId());
             }
 
-            List<String> permKeys = permissionService.getPermissionKeysByRoleIds(
-                    Collections.singletonList(role.getId()));
+            List<String> permKeys = permissionService.getPermissionKeysByRoleIds(roleIds);
             if (permKeys == null || permKeys.isEmpty()) {
-                log.warn("[权限加载] 角色无权限：roleId={}, roleKey={}, employeeId={}",
-                        role.getId(), roleKey, employeeId);
+                log.warn("[权限加载] 角色无权限：roleIds={}, roleKey={}, employeeId={}",
+                        roleIds, roleKey, employeeId);
                 return Collections.emptySet();
             }
 
-            log.info("[权限加载] 数据库加载成功：employeeId={}, roleKey={}, permCount={}",
-                    employeeId, roleKey, permKeys.size());
+            log.info("[权限加载] 数据库加载成功：employeeId={}, roleIds={}, permCount={}",
+                    employeeId, roleIds, permKeys.size());
             return new HashSet<>(permKeys);
         } catch (Exception e) {
             log.error("[权限加载] 数据库查询异常：employeeId={}, roleKey={}, error={}",

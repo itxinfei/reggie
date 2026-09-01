@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import com.reggie.controller.BaseControllerTest;
 import com.reggie.test.TestDatabaseCleaner;
@@ -25,11 +26,13 @@ import java.util.List;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@Sql(scripts = "classpath:schema.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class RoleControllerTest extends BaseControllerTest {
 
     @Autowired
@@ -51,10 +54,13 @@ public class RoleControllerTest extends BaseControllerTest {
 
     private Long testRoleId;
     private Long testPermId;
+    // 测试员工ID（employee_role 表无 FK 约束，虚拟 id 即可验证关联逻辑，无需建员工实体）
+    private static final Long TEST_EMP_ID_1 = 1L;
+    private static final Long TEST_EMP_ID_2 = 2L;
 
     @BeforeEach
     void setUp() {
-        cleaner.cleanTables("role", "permission", "role_permission", "system_config");
+        cleaner.cleanTables("role", "permission", "role_permission", "system_config", "employee_role");
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(1L);
 
@@ -94,6 +100,112 @@ public class RoleControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.records").isArray())
                 .andExpect(jsonPath("$.data.records[0].roleName").value("店长"));
+    }
+
+    // ==================== 角色-用户分配（RBAC 闭环：用户→角色） ====================
+
+    @Test
+    void testGetRoleUsersEmpty() throws Exception {
+        mockMvc.perform(get("/sys/role/" + testRoleId + "/users")
+                .with(request -> {
+                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("roleKey", ADMIN_BYPASS_ATTRIBUTE);
+                    return request;
+                }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.assignedUserIds").isArray())
+                .andExpect(jsonPath("$.data.assignedUserIds").isEmpty())
+                .andExpect(jsonPath("$.data.employees").isArray());
+    }
+
+    @Test
+    void testAssignRoleUsers() throws Exception {
+        mockMvc.perform(put("/sys/role/" + testRoleId + "/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"employeeIds\":[" + TEST_EMP_ID_1 + "," + TEST_EMP_ID_2 + "]}")
+                .with(request -> {
+                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("roleKey", ADMIN_BYPASS_ATTRIBUTE);
+                    return request;
+                }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 验证已分配 2 个员工
+        List<Long> userIds = roleService.getRoleUserIds(testRoleId);
+        assertEquals(2, userIds.size());
+        assertTrue(userIds.contains(TEST_EMP_ID_1));
+        assertTrue(userIds.contains(TEST_EMP_ID_2));
+    }
+
+    @Test
+    void testAssignRoleUsersIdempotent() throws Exception {
+        // 重复分配同一员工，删旧批插新保证幂等（uk_employee_role 唯一索引兜底）
+        String body = "{\"employeeIds\":[" + TEST_EMP_ID_1 + "]}";
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(put("/sys/role/" + testRoleId + "/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body)
+                    .with(request -> {
+                        request.setAttribute("employeeId", 1L);
+                        request.setAttribute("roleKey", ADMIN_BYPASS_ATTRIBUTE);
+                        return request;
+                    }))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(1));
+        }
+        List<Long> userIds = roleService.getRoleUserIds(testRoleId);
+        assertEquals(1, userIds.size());
+    }
+
+    @Test
+    void testAssignRoleUsersClear() throws Exception {
+        // 先分配再传空数组清空
+        roleService.assignUsersToRole(testRoleId, java.util.Arrays.asList(TEST_EMP_ID_1, TEST_EMP_ID_2));
+        assertFalse(roleService.getRoleUserIds(testRoleId).isEmpty());
+
+        mockMvc.perform(put("/sys/role/" + testRoleId + "/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"employeeIds\":[]}")
+                .with(request -> {
+                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("roleKey", ADMIN_BYPASS_ATTRIBUTE);
+                    return request;
+                }))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        assertTrue(roleService.getRoleUserIds(testRoleId).isEmpty());
+    }
+
+    @Test
+    void testDeleteCascadesEmployeeRole() {
+        // 先分配员工，再删角色，验证 employee_role 级联清理无孤儿关联
+        roleService.assignUsersToRole(testRoleId, java.util.Arrays.asList(TEST_EMP_ID_1));
+        assertFalse(roleService.getRoleUserIds(testRoleId).isEmpty());
+
+        roleService.deleteTenantRole(testRoleId);
+
+        // 级联清理后，该员工不再关联已删角色
+        List<Long> roleIds = roleService.getEmployeeRoleIds(TEST_EMP_ID_1, 1L);
+        assertFalse(roleIds.contains(testRoleId));
+    }
+
+    @Test
+    void testGetEmployeeRoleIdsMultiple() {
+        // 同一员工分配多个角色，验证多角色聚合（PermissionAspect.loadPermissionsFromDb 改造依赖）
+        roleService.addTenantRole("收银员", "cashier", "前台收银", 8, 1);
+        Role cashier = roleService.getOne(
+                new LambdaQueryWrapper<Role>().eq(Role::getRoleKey, "cashier"));
+
+        roleService.assignUsersToRole(testRoleId, java.util.Arrays.asList(TEST_EMP_ID_1));
+        roleService.assignUsersToRole(cashier.getId(), java.util.Arrays.asList(TEST_EMP_ID_1));
+
+        List<Long> roleIds = roleService.getEmployeeRoleIds(TEST_EMP_ID_1, 1L);
+        assertEquals(2, roleIds.size());
+        assertTrue(roleIds.contains(testRoleId));
+        assertTrue(roleIds.contains(cashier.getId()));
     }
 
     @Test

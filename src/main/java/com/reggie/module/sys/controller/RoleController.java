@@ -7,6 +7,8 @@ import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.module.sys.model.Permission;
 import com.reggie.module.sys.model.Role;
+import com.reggie.module.auth.model.Employee;
+import com.reggie.module.auth.service.EmployeeService;
 import com.reggie.common.annotation.RequiresAdmin;
 import com.reggie.common.aspect.PermissionAspect;
 import com.reggie.module.sys.service.PermissionService;
@@ -60,6 +62,9 @@ public class RoleController {
 
     @Autowired
     private PermissionAspect permissionAspect;
+
+    @Autowired
+    private EmployeeService employeeService;
 
     /**
      * 角色分页查询
@@ -203,6 +208,62 @@ public class RoleController {
         log.info("[角色权限] 角色{} 重新分配了{}个权限", id,
                 permissionIds != null ? permissionIds.size() : 0);
         return R.success("权限分配成功");
+    }
+
+    /**
+     * 查询角色已分配的员工ID列表 + 全量员工选项
+     * <p>RBAC 闭环：一次请求返回 {assignedUserIds, employees}，
+     * 前端 el-transfer 用 employees 作 data、assignedUserIds 作右栏初始值。
+     * employees 仅含当前租户员工（MP 租户拦截器自动隔离 tenant_id）。</p>
+     *
+     * @param id 角色ID
+     * @return {assignedUserIds:[...], employees:[{id,name},...]}
+     */
+    @GetMapping("/{id}/users")
+    @Operation(summary = "查询角色员工", description = "获取角色已分配员工ID及全量员工选项")
+    public R<Map<String, Object>> getRoleUsers(@Parameter(description = "角色ID") @PathVariable Long id) {
+        List<Long> assignedUserIds = roleService.getRoleUserIds(id);
+        Map<String, Object> result = new HashMap<>();
+        result.put("assignedUserIds", assignedUserIds != null ? assignedUserIds : new ArrayList<>());
+        // 显式按 tenantId 过滤员工，避免依赖 MP 拦截器的隐性行为
+        Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<Employee> empWrapper = new LambdaQueryWrapper<>();
+        empWrapper.eq(Employee::getTenantId, tenantId)
+                  .select(Employee::getId, Employee::getName);
+        List<Employee> employees = employeeService.list(empWrapper);
+        List<Map<String, Object>> empOptions = new ArrayList<>();
+        for (Employee emp : employees) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", emp.getId());
+            item.put("name", emp.getName());
+            empOptions.add(item);
+        }
+        result.put("employees", empOptions);
+        return R.success(result);
+    }
+
+    /**
+     * 为角色分配员工（多对多）
+     * <p>RBAC 闭环：用户→角色。删旧批插新，幂等。
+     * 分配后清除全量员工权限缓存，确保新角色权限立即生效。</p>
+     *
+     * @param id 角色ID
+     * @param body {employeeIds:[...]}
+     * @return 操作结果
+     */
+    @PutMapping("/{id}/users")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "分配角色员工", description = "为角色批量分配员工，支持多对多")
+    public R<String> assignRoleUsers(
+            @Parameter(description = "角色ID") @PathVariable Long id,
+            @Parameter(description = "员工ID列表") @RequestBody Map<String, List<Long>> body) {
+        List<Long> employeeIds = body.get("employeeIds");
+        roleService.assignUsersToRole(id, employeeIds);
+        // 角色-用户变更，清除全量员工权限缓存
+        permissionAspect.clearAllEmployeePermissionCache();
+        log.info("[角色用户] 角色{} 重新分配了{}个员工", id,
+                employeeIds != null ? employeeIds.size() : 0);
+        return R.success("员工分配成功");
     }
 
     /**

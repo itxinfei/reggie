@@ -7,8 +7,10 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.module.sys.model.Role;
 import com.reggie.module.sys.model.RolePermission;
+import com.reggie.module.sys.model.EmployeeRoleRelation;
 import com.reggie.module.sys.mapper.RoleMapper;
 import com.reggie.module.sys.mapper.RolePermissionMapper;
+import com.reggie.module.sys.mapper.EmployeeRoleRelationMapper;
 import com.reggie.module.sys.service.RoleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +34,9 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
 
     @Autowired
     private RolePermissionMapper rolePermissionMapper;
+
+    @Autowired
+    private EmployeeRoleRelationMapper employeeRoleRelationMapper;
     @Override
     public Role getByRoleKey(String roleKey) {
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
@@ -80,6 +85,62 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void assignUsersToRole(Long roleId, List<Long> employeeIds) {
+        // 删除旧关联：按 role_id + 当前租户过滤，防跨租户误删（与 MP 租户拦截器双保险）
+        Long tenantId = BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<EmployeeRoleRelation> delWrapper = new LambdaQueryWrapper<>();
+        delWrapper.eq(EmployeeRoleRelation::getRoleId, roleId);
+        if (tenantId != null) {
+            delWrapper.eq(EmployeeRoleRelation::getTenantId, tenantId);
+        }
+        employeeRoleRelationMapper.delete(delWrapper);
+
+        // 批量插入新关联（uk_employee_role 唯一索引兜底幂等）
+        if (employeeIds != null && !employeeIds.isEmpty()) {
+            for (Long empId : employeeIds) {
+                EmployeeRoleRelation rel = new EmployeeRoleRelation();
+                rel.setEmployeeId(empId);
+                rel.setRoleId(roleId);
+                rel.setTenantId(tenantId);
+                rel.setCreateTime(java.time.LocalDateTime.now());
+                employeeRoleRelationMapper.insert(rel);
+            }
+        }
+        log.info("[角色用户] 角色{} 分配了{}个员工", roleId,
+                employeeIds != null ? employeeIds.size() : 0);
+    }
+
+    @Override
+    public List<Long> getRoleUserIds(Long roleId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<EmployeeRoleRelation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(EmployeeRoleRelation::getRoleId, roleId);
+        if (tenantId != null) {
+            wrapper.eq(EmployeeRoleRelation::getTenantId, tenantId);
+        }
+        wrapper.select(EmployeeRoleRelation::getEmployeeId);
+        List<EmployeeRoleRelation> rels = employeeRoleRelationMapper.selectList(wrapper);
+        return rels.stream()
+                .map(EmployeeRoleRelation::getEmployeeId)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Long> getEmployeeRoleIds(Long employeeId, Long tenantId) {
+        LambdaQueryWrapper<EmployeeRoleRelation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(EmployeeRoleRelation::getEmployeeId, employeeId);
+        if (tenantId != null) {
+            wrapper.eq(EmployeeRoleRelation::getTenantId, tenantId);
+        }
+        wrapper.select(EmployeeRoleRelation::getRoleId);
+        List<EmployeeRoleRelation> rels = employeeRoleRelationMapper.selectList(wrapper);
+        return rels.stream()
+                .map(EmployeeRoleRelation::getRoleId)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<Map<String, Object>> getRoleOptions(Long tenantId) {
         List<Role> roles = listEnabledByTenantId(tenantId);
         return roles.stream().map(r -> {
@@ -112,6 +173,11 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         LambdaQueryWrapper<RolePermission> delWrapper = new LambdaQueryWrapper<>();
         delWrapper.eq(RolePermission::getRoleId, roleId);
         rolePermissionMapper.delete(delWrapper);
+
+        // 清理员工-角色关联（避免孤儿关联指向已删角色）
+        LambdaQueryWrapper<EmployeeRoleRelation> delUserRole = new LambdaQueryWrapper<>();
+        delUserRole.eq(EmployeeRoleRelation::getRoleId, roleId);
+        employeeRoleRelationMapper.delete(delUserRole);
 
         role.setIsDeleted(1);
         this.updateById(role);
@@ -220,6 +286,10 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         LambdaQueryWrapper<RolePermission> delWrapper = new LambdaQueryWrapper<>();
         delWrapper.eq(RolePermission::getRoleId, roleId);
         rolePermissionMapper.delete(delWrapper);
+        // 清理员工-角色关联（避免孤儿关联指向已删角色）
+        LambdaQueryWrapper<EmployeeRoleRelation> delUserRole = new LambdaQueryWrapper<>();
+        delUserRole.eq(EmployeeRoleRelation::getRoleId, roleId);
+        employeeRoleRelationMapper.delete(delUserRole);
         // 逻辑删除：用 UpdateWrapper.set() 强制写入 is_deleted
         // MyBatis-Plus @TableLogic 会自动从普通 update 的 SET 子句中移除 is_deleted，
         // 但 UpdateWrapper.set() 显式设置的列不会被过滤

@@ -30,6 +30,13 @@ const sysApi = {
     assignPermissions(id, permissionIds) {
         return $axios.put('/sys/role/' + id + '/permissions', { permissionIds })
     },
+    // RBAC 闭环：角色-用户分配（多对多）
+    roleUsers(id) {
+        return $axios.get('/sys/role/' + id + '/users')
+    },
+    assignRoleUsers(id, employeeIds) {
+        return $axios.put('/sys/role/' + id + '/users', { employeeIds })
+    },
     permissionTree() {
         return $axios.get('/sys/role/permissions/tree')
     },

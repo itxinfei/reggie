@@ -5,7 +5,6 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>角色管理 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -114,7 +113,7 @@
     <crud-dialog
       title="权限分配"
       :visible.sync="permDialogVisible"
-      size="md"
+      size="lg"
       :submit-loading="permSubmitting"
       custom-class="perm-tree-dialog"
       :close-on-click-modal="false"
@@ -143,6 +142,21 @@
           </span>
         </template>
       </el-tree>
+      <div style="margin-top: 16px; border-top: 1px solid var(--border-default); padding-top: 16px;">
+        <div style="margin-bottom: 8px; font-size: var(--font-size-sm); color: var(--text-secondary);">
+          分配用户（一个员工可分配多个角色，穿梭框左→右添加）：
+        </div>
+        <el-transfer
+          filterable
+          :filter-method="filterEmployee"
+          filter-placeholder="搜索员工姓名"
+          v-model="checkedUserIds"
+          :data="userTransferData"
+          :titles="['未分配', '已分配']"
+          :button-texts="['移除', '添加']"
+          target-order="push">
+        </el-transfer>
+      </div>
     </crud-dialog>
   </div>
 
@@ -205,7 +219,10 @@
           permSubmitting: false,
           currentRole: null,
           permTreeData: [],
-          checkedPerms: []
+          checkedPerms: [],
+          // 角色用户分配（el-transfer：RBAC 闭环 用户→角色）
+          userTransferData: [],
+          checkedUserIds: []
         }
       },
       created() {
@@ -376,6 +393,7 @@
           this.permDialogVisible = true
           this.loadPermTree()
           this.loadRolePerms(row.id)
+          this.loadRoleUsers(row.id)
         },
         loadPermTree() {
           const self = this
@@ -416,6 +434,24 @@
             }
           })
         },
+        loadRoleUsers(roleId) {
+          const self = this
+          sysApi.roleUsers(roleId).then(function(res) {
+            if (res && res.code === 1) {
+              const data = res.data || {}
+              const employees = data.employees || []
+              // el-transfer data 格式：{ key, label, disabled }
+              self.userTransferData = employees.map(function(e) {
+                return { key: e.id, label: e.name, disabled: false }
+              })
+              // 右栏初始值：已分配员工ID
+              self.checkedUserIds = (data.assignedUserIds || []).slice()
+            }
+          })
+        },
+        filterEmployee(query, item) {
+          return item.label.indexOf(query) > -1
+        },
         handleCheckChange() {
           if (this.$refs.permTree) {
             this.checkedPerms = this.$refs.permTree.getCheckedKeys()
@@ -425,12 +461,16 @@
           const keys = this.$refs.permTree ? this.$refs.permTree.getCheckedKeys() : this.checkedPerms
           this.permSubmitting = true
           const self = this
-          sysApi.assignPermissions(this.currentRole.id, keys).then(function(res) {
-            if (res && res.code === 1) {
-              ReggieUI.success('权限分配成功')
+          // RBAC 闭环：权限分配（角色→权限）+ 用户分配（用户→角色）同时提交
+          const permPromise = sysApi.assignPermissions(this.currentRole.id, keys)
+          const userPromise = sysApi.assignRoleUsers(this.currentRole.id, this.checkedUserIds.slice())
+          Promise.all([permPromise, userPromise]).then(function(results) {
+            const ok = results.every(function(r) { return r && r.code === 1 })
+            if (ok) {
+              ReggieUI.success('权限与用户分配成功')
               self.permDialogVisible = false
             } else {
-              ReggieUI.error(res ? res.msg : '操作失败')
+              ReggieUI.error('操作失败')
             }
           }).catch(function() { ReggieUI.error('操作失败') })
             .finally(function() { self.permSubmitting = false })

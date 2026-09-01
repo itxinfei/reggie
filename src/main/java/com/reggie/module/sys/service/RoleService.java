@@ -110,5 +110,34 @@ public interface RoleService extends IService<Role> {
      * @return 是否删除成功
      */
     boolean deleteTenantRole(Long roleId);
+
+    /**
+     * 为角色分配员工（多对多，删旧批插新，幂等）
+     * <p>补全 RBAC 闭环：用户→角色。配合 {@link #assignPermissions}（角色→权限）
+     * 实现"分配权限时可选用户"。tenantId 从 BaseContext 强制取得，防前端篡改租户归属。
+     * 删除旧关联时按 role_id + tenant_id 过滤，防跨租户误删。</p>
+     *
+     * @param roleId       角色ID
+     * @param employeeIds  员工ID列表（空列表表示清空该角色所有员工）
+     */
+    void assignUsersToRole(Long roleId, List<Long> employeeIds);
+
+    /**
+     * 查询角色已分配的员工ID列表
+     *
+     * @param roleId 角色ID
+     * @return 员工ID列表
+     */
+    List<Long> getRoleUserIds(Long roleId);
+
+    /**
+     * 查询员工已分配的角色ID列表（供 PermissionAspect 多角色权限聚合用）
+     * <p>tenantId 显式传入，与 MP 租户拦截器双保险；null 时不过滤（跨租户聚合场景）。</p>
+     *
+     * @param employeeId 员工ID
+     * @param tenantId   租户ID
+     * @return 角色ID列表
+     */
+    List<Long> getEmployeeRoleIds(Long employeeId, Long tenantId);
 }
 

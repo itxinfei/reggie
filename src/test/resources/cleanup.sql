@@ -10,6 +10,7 @@ DELETE FROM dish WHERE 1=1;
 DELETE FROM setmeal WHERE 1=1;
 DELETE FROM category WHERE 1=1;
 DELETE FROM role_permission WHERE 1=1;
+DELETE FROM employee_role WHERE 1=1;
 DELETE FROM role WHERE 1=1;
 DELETE FROM permission WHERE 1=1;
 DELETE FROM system_config WHERE 1=1;
