@@ -95,7 +95,7 @@
   top: var(--spacing-lg);
   right: var(--spacing-lg);
   font-size: var(--font-size-sm);
-  color: var(--color-text-hint);
+  color: var(--color-text-secondary);
 }
 
 /* ---- 消息头部 ---- */
@@ -148,7 +148,7 @@
 
 #messageApp .msg-time {
   font-size: var(--font-size-sm);
-  color: var(--color-text-hint);
+  color: var(--color-text-secondary);
 }
 
 /* ---- 空状态 ---- */

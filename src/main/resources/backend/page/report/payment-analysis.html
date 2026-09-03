@@ -270,7 +270,7 @@
             const byReason = (this.refundAnalysis && this.refundAnalysis.byReason) || [];
             if (!byReason.length) {
               this.refundChart.setOption({ title: { text: '暂无退款数据', left: 'center', top: 'center',
-                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } } }, true);
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }, true);
               return;
             }
             const reasons = byReason.map(function(r) { return r.reason; }).reverse();
@@ -316,7 +316,7 @@
             if (!this.trendChart) return;
             if (!data || !data.dates || !data.dates.length) {
               this.trendChart.setOption({ title: { text: '暂无趋势数据', left: 'center', top: 'center',
-                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } } }, true); return;
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }, true); return;
             }
             const dates = data.dates || [];
             var makeAreaGrad = function(c) { return c; };
@@ -368,7 +368,7 @@
           renderPie: function() {
             if (!this.pieChart || !this.tableData.length) {
               if (this.pieChart) this.pieChart.setOption({ title: { text: '暂无支付数据', left: 'center', top: 'center',
-                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } } }, true); return;
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }, true); return;
             }
             var pieData = this.tableData.filter(function(r) { return r.transactionCount > 0; })
               .map(function(r) { return { name: r.channel, value: r.transactionCount,
@@ -391,7 +391,7 @@
           renderBar: function() {
             if (!this.barChart || !this.tableData.length) {
               if (this.barChart) this.barChart.setOption({ title: { text: '暂无支付数据', left: 'center', top: 'center',
-                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } } }, true); return;
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }, true); return;
             }
             var names = this.tableData.map(function(r) { return r.channel; });
             var counts = this.tableData.map(function(r) { return r.transactionCount; });

@@ -108,7 +108,7 @@
 
             <!-- ===== 数据表格 ===== -->
             <div v-loading="loading" class="store-table">
-                <crud-table aria-label="数据表格"
+                <crud-table v-if="loading || tableData.length > 0" aria-label="数据表格"
                     :data="tableData"
                     :columns="columns"
                     :loading="loading"
@@ -577,7 +577,9 @@
         },
 
         // ========== 选择 ==========
-        onSelectionChange: function(val) { this.selection = val; },
+        // crud-table 的 selection-change 载荷为 { rows, ids, count }（components.js），
+        // 直接赋数组否则 length/disabled/map 全部失效
+        onSelectionChange: function(val) { this.selection = (val && val.rows) || []; },
 
         // ========== 批量操作 ==========
         batchEnable: function() {

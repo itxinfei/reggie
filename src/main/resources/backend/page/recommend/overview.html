@@ -136,7 +136,7 @@
             <p>加载热门数据中...</p>
         </div>
         <div v-if="!loadingHot && hotDishes.length === 0" class="loading-wrap">
-            <i class="el-icon-document" style="font-size:var(--font-size-4xl); color:var(--el-border-base);"></i>
+            <i class="el-icon-document" style="font-size:var(--font-size-4xl); color:var(--text-muted);"></i>
             <p>暂无数据，请先确保有订单和浏览数据</p>
         </div>
     </div>
@@ -258,7 +258,7 @@
             if (!this.feedbackChart) return;
             this.feedbackChart.setOption({
                 title: { text: '暂无反馈数据', left: 'center', top: 'center',
-                    textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
+                    textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
             }, true);
         },
 
@@ -293,7 +293,7 @@
             if (!this.preferenceChart) return;
             this.preferenceChart.setOption({
                 title: { text: '暂无偏好数据，需用户产生浏览/下单行为', left: 'center', top: 'center',
-                    textStyle: { color: RgPalette.borderBase, fontSize: 13, fontWeight: 'normal' } }
+                    textStyle: { color: RgPalette.textSecondary, fontSize: 13, fontWeight: 'normal' } }
             }, true);
         },
 
@@ -334,7 +334,7 @@
             if (!this.algoChart) return;
             this.algoChart.setOption({
                 title: { text: '暂无推荐算法数据', left: 'center', top: 'center',
-                    textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
+                    textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
             }, true);
         },
 
@@ -382,7 +382,7 @@
             if (!this.browseChart) return;
             this.browseChart.setOption({
                 title: { text: '暂无浏览数据', left: 'center', top: 'center',
-                    textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
+                    textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
             }, true);
         },
 

@@ -104,7 +104,7 @@
           </el-tag>
         </template>
         <template #col-points="{ row }">
-          <span :style="{color: row.type==='IN'?'var(--legacy-22c55e)':'var(--legacy-f97316)', fontWeight:600}">
+          <span :style="{color: row.type==='IN'?'var(--color-success)':'var(--color-danger)', fontWeight:600}">
             {{ row.type === 'IN' ? '+' : '-' }}{{ row.points }}
           </span>
         </template>

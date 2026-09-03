@@ -263,11 +263,11 @@
           return year + '-' + month + '-' + day + ' ' + hour + ':' + min
         },
         statusTagType: function(status) {
-          const map = { 1: 'success', 2: 'warning', 3: 'info' }
+          const map = { 0: 'info', 1: 'success', 2: 'warning', 3: 'info' }
           return map[status] || 'info'
         },
         statusText: function(status) {
-          const map = { 1: '进行中', 2: '已暂停', 3: '已结束' }
+          const map = { 0: '草稿', 1: '进行中', 2: '已暂停', 3: '已结束' }
           return map[status] || '未知'
         },
         // 修改点：/dish/options 返回 Map<String,List<String>>（无 id/price），秒杀需按 id 回写菜名与原价，

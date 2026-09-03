@@ -191,7 +191,7 @@
             <img v-for="(img, idx) in getImageList(row.images).slice(0, 3)" :key="idx"
                  :src="getImageUrl(img)" @click="previewImage(getImageUrl(img))" alt="评价图片" />
           </div>
-          <span v-else style="color:var(--el-border-base);font-size:var(--font-size-xs);">无</span>
+          <span v-else style="color:var(--text-muted);font-size:var(--font-size-xs);">无</span>
         </template>
         <template #col-user="{ row }">{{ row.userName || '用户#' + row.userId }}</template>
         <template #col-status="{ row }">
@@ -202,7 +202,7 @@
         </template>
         <template #col-reply="{ row }">
           <span v-if="row.replyContent" style="color:var(--color-success);font-weight:600;">✓ 已回复</span>
-          <span v-else style="color:var(--el-border-base);">未回复</span>
+          <span v-else style="color:var(--text-muted);">未回复</span>
         </template>
         <template #col-createTime="{ row }">{{ formatDate(row.createTime) }}</template>
         <template #actions="{ row }">

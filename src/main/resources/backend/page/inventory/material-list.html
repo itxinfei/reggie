@@ -458,12 +458,14 @@
           async submitForm() {
             if (this.submitting) return // 提交防重
             const self = this
-            await new Promise(function(resolve, reject) {
-              self.$refs.materialForm.validate(function(valid) { valid ? resolve() : reject() })
-            }).catch(function() {
+            // 校验失败须中断提交（此前 catch 吞掉 reject 会带着空必填项继续发请求）
+            const valid = await new Promise(function(resolve) {
+              self.$refs.materialForm.validate(function(v) { resolve(v) })
+            })
+            if (!valid) {
               ReggieUI.warning('请完善表单必填项')
               return
-            })
+            }
             self.submitting = true
             const fd = self.formData
             const params = {

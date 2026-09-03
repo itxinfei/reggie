@@ -191,7 +191,8 @@
                 ReggieUI.error(res.msg || '登录失败')
                 self.loading = false
               }
-            }).catch(function() {
+            }).catch(function(err) {
+              ReggieUI.error((err && err.message) || '网络异常，请稍后重试')
               self.loading = false
             })
           })

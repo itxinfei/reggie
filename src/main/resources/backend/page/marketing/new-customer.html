@@ -217,7 +217,7 @@
         async init() {
           this.loading = true
           const self = this
-          const params = {}
+          const params = { page: self.page || 1, pageSize: self.pageSize || 10 }
           if (self.lastSearch.name) {
             params.name = self.lastSearch.name
           }
@@ -362,11 +362,12 @@
         // 修改点：`async X: function(){}` 是非法语法（整页 JS 解析失败导致白屏），改为合法的 async 方法简写
         async handleSubmit() {
           const self = this
-          await new Promise(function(resolve, reject) {
-            this.$refs.ruleForm.validate(function(valid) { valid ? resolve() : reject() })
-          }).catch(function() {
-            return
+          if (self.submitLoading) return // 提交防重
+          // 校验失败须中断提交；此前 this 指向错误 + catch 吞错导致校验从未生效、空表单照常提交
+          const valid = await new Promise(function(resolve) {
+            self.$refs.ruleForm.validate(function(v) { resolve(v) })
           })
+          if (!valid) return
           if (self.formData.discountType === 2 && (!self.formData.maxDiscountAmount || self.formData.maxDiscountAmount <= 0)) {
             ReggieUI.error('按比例优惠必须填写最大优惠金额')
             return

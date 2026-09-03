@@ -136,13 +136,14 @@
   padding-bottom: 5rem;
   display: flex;
   justify-content: space-between;
-  height: 20rem;
+  align-items: center;
+  min-height: 20rem;
   font-size: var(--font-size-md);
   font-family: var(--font-family-body);
   font-weight: 400;
   text-align: left;
   color: var(--color-text-secondary);
-  line-height: 20rem;
+  line-height: 1.5;
 }
 
 #order .divBody .item .result {

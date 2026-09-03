@@ -279,7 +279,7 @@
                   @click="handleGroupSelect(g)"
                   @keydown.enter="handleGroupSelect(g)">
                   <div class="spec-group-nav__main">
-                    <span class="spec-group-nav__name">{{ g.name }}</span>
+                    <span class="spec-group-nav__name" :title="g.name">{{ g.name }}</span>
                     <div class="spec-group-nav__tags">
                       <el-tag :type="g.type === 1 ? 'primary' : 'success'" size="mini">
                         {{ g.type === 1 ? '单选' : '多选' }}

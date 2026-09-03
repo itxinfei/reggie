@@ -111,6 +111,7 @@
 
       <!-- 明细表格 -->
       <crud-table
+        v-if="counts > 0 || tableLoading"
         ref="crudTable"
         :data="tableData"
         :columns="columns"

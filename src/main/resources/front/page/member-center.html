@@ -176,7 +176,7 @@
     <div class="mc-header">
       <div class="mc-header-bg">
         <div class="mc-header-top">
-          <div class="mc-back" @click="goBack"></div>
+          <div class="mc-back" role="button" tabindex="0" aria-label="返回" @click="goBack" @keydown.enter="goBack"></div>
           <div class="mc-title">{{ memberInfo && memberInfo.isMember ? '我的会员' : '会员中心' }}</div>
           <div class="mc-rule" @click="showRules">规则</div>
         </div>

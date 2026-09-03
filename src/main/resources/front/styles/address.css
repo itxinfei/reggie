@@ -132,7 +132,7 @@ body.scrollable-page {
 #address .divContent .divItem .divAddress .spanCompany {
   background: var(--addr-tag-company-gradient);
   /* 与地址编辑页 .tagCompany 深金棕文字保持一致 */
-  color: #a36d00;
+  color: var(--addr-tag-company-fg);
 }
 #address .divContent .divItem .divAddress .spanHome {
   background: var(--addr-tag-home-gradient);

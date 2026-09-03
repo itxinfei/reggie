@@ -170,7 +170,7 @@
             </template>
             <template #col-participants="{ row }">
                 <span style="color:var(--el-text-primary);">{{ row.currentParticipants || 0 }}</span>
-                <span style="color:var(--el-border-base);"> / </span>
+                <span style="color:var(--text-muted);"> / </span>
                 <span>{{ row.maxParticipants || '∞' }}</span>
                 <el-progress v-if="row.maxParticipants"
                     :percentage="Math.round((row.currentParticipants || 0) / row.maxParticipants * 100)"

@@ -89,7 +89,7 @@
             </el-table-column>
             <el-table-column prop="remark" label="备注" min-width="120" align="center" />
           </el-table>
-          <div v-else style="text-align:center;padding:16px;color:var(--el-border-base);">暂无明细数据</div>
+          <div v-else style="text-align:center;padding:16px;color:var(--text-muted);">暂无明细数据</div>
         </template>
         <template #col-totalAmount="{ row }">￥{{ (row.totalAmount || 0).toString() }}</template>
         <template #col-status="{ row }">
@@ -117,13 +117,13 @@
       @close="handleClose"
     >
       <!-- 修改点：移除误导性死 class demo-form-inline（label-width 100 可接受，保持不变） -->
-      <el-form ref="purchaseForm" :rules="purchaseRules" label-width="100px">
-        <el-form-item label="供应商：">
-          <el-select v-model="formData.supplierId" placeholder="请选择" style="width:100%">
+      <el-form ref="purchaseForm" :model="formData" :rules="purchaseRules" label-width="100px">
+        <el-form-item label="供应商：" prop="supplierId">
+          <el-select v-model="formData.supplierId" placeholder="请选择供应商" style="width:100%">
             <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="操作员：">
+        <el-form-item label="操作员：" prop="operator">
           <el-input v-model="formData.operator" placeholder="请输入操作员姓名" style="width:220px" />
         </el-form-item>
         <el-form-item label="备注：">
@@ -306,7 +306,7 @@
           if (!dom) return
           // 修改点：echarts 依赖外部 CDN，加载失败时给出占位提示而非 340px 空白块（避免误判为布局问题）
           if (typeof echarts === 'undefined') {
-            dom.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--el-border-base);font-size:var(--font-size-sm);">图表组件加载失败，请检查网络后刷新</div>'
+            dom.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:var(--font-size-sm);">图表组件加载失败，请检查网络后刷新</div>'
             return
           }
           if (!this.trendChart) this.trendChart = echarts.init(dom)

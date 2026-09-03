@@ -261,6 +261,7 @@
 
           <!-- 明细表格 -->
           <crud-table
+            v-if="expiringCounts > 0 || expiringLoading"
             ref="expiringTable"
             :data="expiringData"
             :columns="expiringColumns"

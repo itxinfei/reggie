@@ -73,7 +73,7 @@
 
 .eval-date {
   font-size: 12px;
-  color: var(--color-text-disabled);
+  color: var(--color-text-secondary);
 }
 
 .status-tag {
@@ -145,7 +145,7 @@
 
 .reply-time {
   font-size: 12px;
-  color: var(--color-text-disabled);
+  color: var(--color-text-secondary);
   margin-top: 6px;
 }
 

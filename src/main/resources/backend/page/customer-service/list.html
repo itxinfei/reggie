@@ -572,6 +572,7 @@
               this.fetchSessionList()
             } catch(e) {
               console.error('结束会话失败', e)
+              ReggieUI.error('结束会话失败，请稍后重试')
             }
           }).catch(function(err) { console.warn('[customer-service] 结束会话操作失败:', err) })
         },
@@ -657,6 +658,7 @@
               this.fetchComplaintList()
             } catch(e) {
               console.error('关闭投诉失败', e)
+              ReggieUI.error('关闭投诉失败，请稍后重试')
             }
           }).catch(function(err) { console.warn('[customer-service] 关闭投诉操作失败:', err) })
         }

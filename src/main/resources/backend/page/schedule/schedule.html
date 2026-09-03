@@ -62,7 +62,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="emp in scheduleRows" :key="emp.id">
+              <tr v-for="emp in employeeOptions" :key="emp.id">
                 <td class="col-employee">
                   <span class="emp-name">{{ emp.name }}</span>
                 </td>
@@ -161,6 +161,10 @@
   <script src="../../js/components.js"></script>
   <script src="../../api/attendance.js"></script>
   <script>
+    // ===== 班次元信息（全页唯一配色/文案来源，与图例保持一致）=====
+    const SHIFT_META = { morning: { label: '早班', tag: 'success' }, noon: { label: '中班', tag: 'primary' }, night: { label: '晚班', tag: 'info' }, full: { label: '全天', tag: 'danger' }, rest: { label: '休息', tag: '' } }
+    const SHIFT_CODE2KEY = { 0: 'morning', 1: 'noon', 2: 'night', 3: 'full' }
+    const SHIFT_KEY2CODE = { morning: 0, noon: 1, night: 2, full: 3 }
     new Vue({
       el: '#schedule-app',
       data: function () {
@@ -170,7 +174,6 @@
           statsCards: [],
           scheduleMonth: '',
           dayHeaders: [],
-          scheduleRows: [],
           scheduleData: {},
           dialog: { visible: false },
           form: { employeeId: '', date: '', shift: 'morning', startTime: '', endTime: '', remark: '' },
@@ -200,21 +203,20 @@
         initEmployees: function () {
           const self = this
           employeeList().then(function (res) {
-            if (res.code === 1 && res.data) {
+            if (res && res.code === 1 && res.data) {
               self.employeeOptions = res.data.map(function (emp) {
                 return { id: emp.id, name: emp.name }
               })
             } else {
-              const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
-              self.employeeOptions = names.map(function (n, i) {
-                return { id: i + 1, name: n }
-              })
+              ReggieUI.error((res && res.msg) || '员工列表加载失败')
+              self.employeeOptions = []
             }
+            // 员工到位后重算统计/周分布（员工列表与排班请求并发，避免统计恒 0）
+            self.buildStats()
+            self.buildWeekShiftData()
           }).catch(function () {
-            const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
-            self.employeeOptions = names.map(function (n, i) {
-              return { id: i + 1, name: n }
-            })
+            ReggieUI.error('员工列表加载失败，请刷新重试')
+            self.employeeOptions = []
           })
         },
 
@@ -223,78 +225,62 @@
           const self = this
           self.loading = true
           scheduleMonthly({ month: self.scheduleMonth }).then(function (res) {
-            self.buildSchedule(res.data)
-            self.buildStats()
+            if (res && res.code === 1) {
+              self.buildSchedule(res.data)
+            } else {
+              ReggieUI.error((res && res.msg) || '排班数据加载失败')
+              self.buildEmptyMonth()
+            }
             self.loading = false
           }).catch(function () {
-            self.loadMockSchedule()
+            ReggieUI.error('排班数据加载失败，请刷新重试')
+            self.buildEmptyMonth()
             self.loading = false
           })
         },
-        loadMockSchedule: function () {
+        /** 生成"本月无数据"的空日历（仅日期表头），请求失败/后端无数据时使用，不回落假数据 */
+        buildEmptyMonth: function () {
           const self = this
           const parts = self.scheduleMonth.split('-')
           const year = parseInt(parts[0], 10)
           const month = parseInt(parts[1], 10)
           const daysInMonth = new Date(year, month, 0).getDate()
           const weekdays = ['一', '二', '三', '四', '五', '六', '日']
-          // 生成日期列头
           self.dayHeaders = []
           for (let d = 1; d <= daysInMonth; d++) {
-            const wd = new Date(year, month - 1, d).getDay()
-            const label = d + '(' + weekdays[wd] + ')'
-            self.dayHeaders.push(label)
+            // getDay()：0=周日，转周一为首 (wd+6)%7
+            const wd = (new Date(year, month - 1, d).getDay() + 6) % 7
+            self.dayHeaders.push(d + '(' + weekdays[wd] + ')')
           }
-
-          // 构建排班数据
-          const shifts = ['morning', 'noon', 'night', 'full', 'rest']
-          const labels = {}
-          const data = {}
-          self.employeeOptions.forEach(function (emp) {
-            const empKey = emp.id
-            data[empKey] = {}
-            for (let dd = 1; dd <= daysInMonth; dd++) {
-              const wd = new Date(year, month - 1, dd).getDay()
-              var s
-              if (wd === 0 || wd === 6) {
-                s = 'rest'
-              } else {
-                const idx = ((emp.id + dd) % shifts.length)
-                s = shifts[idx]
-              }
-              if (s !== 'rest') {
-                data[empKey][dd] = { shift: s, label: labels[s] }
-              }
-            }
-          })
-          self.scheduleData = data
+          self.scheduleData = {}
           self.buildStats()
           self.buildWeekShiftData()
         },
-        buildSchedule: function (backendData) {
+        buildSchedule: function (payload) {
           const self = this
-          if (!backendData || !backendData.rows) {
-            self.loadMockSchedule()
-            return
-          }
+          // /api/schedule/monthly 返回 R<List<Map>>：data 为数组，元素含
+          // employeeId / date(yyyy-MM-dd) / shift(0=早 1=中 2=晚 3=全天) / shiftName / remark
+          // （兼容历史 {rows:[...]} 结构）
+          const rows = Array.isArray(payload) ? payload : (payload && Array.isArray(payload.rows) ? payload.rows : [])
           const parts = self.scheduleMonth.split('-')
           const year = parseInt(parts[0], 10)
           const month = parseInt(parts[1], 10)
           const daysInMonth = new Date(year, month, 0).getDate()
           const weekdays = ['一', '二', '三', '四', '五', '六', '日']
-          const labels = {}
-          const shiftMap = {}
           self.dayHeaders = []
           for (let d = 1; d <= daysInMonth; d++) {
-            const wd = new Date(year, month - 1, d).getDay()
+            const wd = (new Date(year, month - 1, d).getDay() + 6) % 7
             self.dayHeaders.push(d + '(' + weekdays[wd] + ')')
           }
 
           const newData = {}
-          backendData.rows.forEach(function (row) {
-            const key = row.employeeId
-            newData[key] = newData[key] || {}
-            newData[key][row.day] = { shift: shiftMap[row.shift] || 'morning', label: labels[shiftMap[row.shift]] || row.shift }
+          rows.forEach(function (row) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(row.date || '')
+            if (!m || (m[1] + '-' + m[2]) !== self.scheduleMonth) return
+            const day = parseInt(m[3], 10)
+            const key = SHIFT_CODE2KEY[row.shift] || 'morning'
+            if (!newData[row.employeeId]) newData[row.employeeId] = {}
+            newData[row.employeeId][day] = { shift: key, label: SHIFT_META[key].label }
           })
           self.scheduleData = newData
           self.buildStats()
@@ -347,10 +333,11 @@
           // 修改点：colors / shiftNames 原为空对象，导致下方 colors.morning 等全为 undefined，
           // 班次色块渲染不出颜色；此处补全四种班次的配色与名称（取自设计令牌语义色）
           const colors = {
-            morning: 'var(--el-color-primary)',
-            noon: 'var(--color-success)',
-            night: 'var(--color-warning)',
-            full: 'var(--color-info)'
+            // 与图例/单元格 tag 语义一致：早=success 中=primary 晚=info 全天=danger
+            morning: 'var(--el-color-success)',
+            noon: 'var(--el-color-primary)',
+            night: 'var(--el-color-info)',
+            full: 'var(--el-color-danger)'
           }
           const shiftNames = { morning: '早班', noon: '中班', night: '晚班', full: '全天' }
           // 修改点：totalAll 在循环中累加，const 会抛 "Assignment to constant variable."
@@ -408,8 +395,8 @@
           return this.scheduleData[empId] && this.scheduleData[empId][day] || null
         },
         getShiftTagType: function (shift) {
-          const map = { morning: 'info', noon: 'warning', night: 'danger', full: 'success', rest: '' }
-          return map[shift] || 'info'
+          const meta = SHIFT_META[shift]
+          return meta ? meta.tag : 'info'
         },
 
         // ===== 弹窗操作 =====
@@ -422,30 +409,22 @@
           self.$refs.scheduleForm.validate(function (valid) {
             if (!valid) return
             self.submitting = true
+            // 后端契约：shift 为 0-3 数字（0=早 1=中 2=晚 3=全天），时间字段名为 shiftStart/shiftEnd
             const data = {
-            employeeId: self.form.employeeId,
-            date: self.form.date,
-            shift: self.form.shift,
-            startTime: self.form.startTime,
-            endTime: self.form.endTime,
-            remark: self.form.remark
-          }
-          scheduleSave(data).then(function () {
+              employeeId: self.form.employeeId,
+              date: self.form.date,
+              shift: SHIFT_KEY2CODE[self.form.shift] !== undefined ? SHIFT_KEY2CODE[self.form.shift] : 0
+            }
+            if (self.form.startTime) data.shiftStart = self.form.startTime
+            if (self.form.endTime) data.shiftEnd = self.form.endTime
+            scheduleSave(data).then(function () {
               self.submitting = false
               self.dialog.visible = false
-              self.$message.success('排班添加成功')
+              self.$message.success('排班保存成功')
               self.fetchScheduleData()
             }).catch(function (e) {
               self.submitting = false
-              // 后端未就绪时，本地 mock 保存
-              var match = self.form.date.match(/-(\d{2})$/)
-              if (match) {
-                const day = parseInt(match[1], 10)
-                const labels = {}
-                self.$set(self.scheduleData[self.form.employeeId], day, { shift: self.form.shift, label: labels[self.form.shift] })
-              }
-              self.dialog.visible = false
-              self.$message.success('排班已保存（本地）')
+              self.$message.error((e && e.message) || '保存失败，请重试')
             })
           })
         },

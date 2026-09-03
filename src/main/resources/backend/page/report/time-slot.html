@@ -284,7 +284,7 @@
             if (!this.barChart) return;
             if (!this.tableData.length) {
               this.barChart.setOption({ title: { text: '暂无时段数据', left: 'center', top: 'center',
-                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } } }, true); return;
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }, true); return;
             }
             var names = this.tableData.map(function(r) { return r.name; });
             var counts = this.tableData.map(function(r) { return r.count; });

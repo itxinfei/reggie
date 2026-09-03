@@ -73,7 +73,7 @@
               <span>{{ t.title }}</span>
               <span v-if="t.taxNumber" class="tax">（{{ t.taxNumber }}）</span>
             </van-radio>
-            <van-icon name="delete-o" class="del" @click.stop="deleteTitle(t)"></van-icon>
+            <van-icon name="delete-o" class="del" role="button" aria-label="删除抬头" @click.stop="deleteTitle(t)"></van-icon>
           </div>
         </van-radio-group>
         <div v-if="titles.length === 0" class="empty-tip">暂无发票抬头，请先在下方新增</div>

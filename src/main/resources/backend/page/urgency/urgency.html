@@ -86,10 +86,9 @@
     }
     .urgency-table .dish-cell {
       display: inline-block;
-      max-width: 220px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      max-width: 360px;
+      white-space: normal;
+      word-break: break-all;
       vertical-align: middle;
     }
     .urgency-table .wait-time {
@@ -281,6 +280,7 @@
         </div>
 
         <el-table
+          v-if="filteredOrders.length > 0 || tableLoading"
           v-loading="tableLoading"
           :data="filteredOrders"
           :row-class-name="tableRowClassName"

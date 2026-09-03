@@ -304,6 +304,7 @@
           </div>
 
           <el-table
+            v-if="rankingList.length > 0 || rankingLoading"
             v-loading="rankingLoading"
             :data="rankingList"
             style="width:100%"
@@ -356,6 +357,7 @@
         </div>
 
         <el-table
+          v-if="warningList.length > 0 || warningLoading"
           v-loading="warningLoading"
           :data="warningList"
           style="width:100%"
@@ -483,6 +485,7 @@
 
           <!-- 修改点：移除 max-height="280"，会员列表最多 15 条全量展示，避免数据只显示一部分；增加 member-table class 统一表头样式 -->
           <el-table
+            v-if="filteredMembers.length > 0 || memberLoading"
             v-loading="memberLoading"
             :data="filteredMembers"
             style="width:100%"
@@ -905,13 +908,11 @@
               })
               .catch(function () {
                 self.couponLoading = false
-                self.couponDialogVisible = false
-                self.$message.success('已模拟发放优惠券');
+                self.$message.error('发放失败，请稍后重试')
               })
           } catch (e) {
             self.couponLoading = false
-            self.couponDialogVisible = false
-            self.$message.success('已模拟发放优惠券');
+            self.$message.error('发放失败，请稍后重试')
           }
         },
 

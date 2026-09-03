@@ -113,6 +113,7 @@
 
       <!-- 数据表格 -->
       <crud-table
+        v-if="counts > 0 || tableLoading"
         ref="crudTable"
         empty-hint="暂无排队记录"
         :data="tableData"

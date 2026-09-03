@@ -132,10 +132,12 @@
             font-size: var(--font-size-md);
             font-weight: 600;
             color: var(--color-text-primary);
-            line-height: 22rem;
+            line-height: 1.5;
             overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            word-break: break-all;
         }
         .dish-card .dish-meta {
             font-size: var(--font-size-sm);

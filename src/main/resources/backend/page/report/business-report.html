@@ -101,6 +101,7 @@
         <!-- ===== Tab2 销售明细 ===== -->
         <el-tab-pane label="销售明细" name="detail">
           <crud-table
+            v-if="detailLoading || detailRows.length > 0"
             :data="detailRows"
             :columns="detailColumns"
             :loading="detailLoading"
@@ -129,6 +130,7 @@
             :columns="slotColumns"
             :loading="slotLoading"
             :show-pagination="false"
+            empty-hint="当前日期范围内暂无时段数据"
           >
             <template #col-ratio="{ row }">
               <span>{{ slotPercent(row.count) }}%</span>
@@ -146,6 +148,7 @@
             <div class="chart-box" id="rankChart"></div>
           </div>
           <crud-table
+            v-if="rankingLoading || rankingRows.length > 0"
             :data="rankingRows"
             :columns="rankingColumns"
             :loading="rankingLoading"

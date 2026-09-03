@@ -82,7 +82,7 @@
         @size-change="onSizeChange"
       >
         <template #col-name="{ row }"><span style="font-weight:600;">{{ row.name }}</span></template>
-        <template #col-minPoints="{ row }"><span style="font-weight:600;color:var(--legacy-8b5cf6);">{{ row.minPoints }}</span></template>
+        <template #col-minPoints="{ row }"><span style="font-weight:600;color:var(--color-brand-700);">{{ row.minPoints }}</span></template>
         <template #col-discount="{ row }">
           <el-tag :type="row.discount >= 0.9 ? 'info' : row.discount >= 0.8 ? 'warning' : 'danger'" size="small" effect="dark">
             {{ row.discount != null ? (row.discount * 100).toFixed(0) + '%' : '-' }}

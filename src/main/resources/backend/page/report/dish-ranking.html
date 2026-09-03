@@ -255,7 +255,7 @@
           if (!data || !data.dates || !data.dates.length) {
             this.trendChart.setOption({
               title: { text: '暂无趋势数据', left: 'center', top: 'center',
-                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
             }, true);
             // 修改点：v-show 从隐藏切到可见后 echarts 宽高为 0，需 resize 才能正确渲染
             var emptyChart = this.trendChart;
@@ -316,7 +316,7 @@
           if (!this.tableData || this.tableData.length === 0) {
             this.chart.setOption({
               title: { text: '暂无排行数据', left: 'center', top: 'center',
-                textStyle: { color: RgPalette.borderBase, fontSize: 14, fontWeight: 'normal' } }
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
             }, true); return;
           }
           var names = this.tableData.map(function(item) { return item.name; }).reverse();

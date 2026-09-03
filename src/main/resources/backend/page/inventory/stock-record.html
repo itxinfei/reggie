@@ -72,7 +72,7 @@
           <span v-if="row.bizId != null && String(row.bizId) !== '' && String(row.bizId) !== '0'" :title="row.remark || ''" style="cursor:default;">
             {{ sourceDocText(row) }}
           </span>
-          <span v-else style="color:var(--el-border-base);">-</span>
+          <span v-else style="color:var(--text-muted);">-</span>
         </template>
         <template #col-unitPrice="{ row }">￥{{ row.unitPrice }}</template>
         <template #col-totalAmount="{ row }">￥{{ row.totalAmount }}</template>

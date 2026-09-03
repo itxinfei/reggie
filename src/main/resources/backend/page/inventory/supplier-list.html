@@ -75,9 +75,9 @@
       <template #col-totalPurchaseAmount="{ row }">
         <span v-if="row.totalPurchaseAmount != null">
           ￥{{ formatMoney(row.totalPurchaseAmount) }}
-          <span style="color:var(--el-border-base);font-size:var(--font-size-xs);margin-left:2px;" v-if="row.purchaseCount">/ {{ row.purchaseCount }} 单</span>
+          <span style="color:var(--text-muted);font-size:var(--font-size-xs);margin-left:2px;" v-if="row.purchaseCount">/ {{ row.purchaseCount }} 单</span>
         </span>
-        <span v-else style="color:var(--el-border-base);">-</span>
+        <span v-else style="color:var(--text-muted);">-</span>
       </template>
       <!-- 状态列自定义渲染 -->
       <template #col-status="{ row }">

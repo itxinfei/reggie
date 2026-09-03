@@ -29,6 +29,7 @@
     <!-- 数据区：卡片容器 + 标准表格 -->
     <el-card shadow="never" class="ds-card">
       <crud-table
+        v-if="loading || tableData.length > 0"
         :data="tableData"
         :columns="columns"
         :page="page"
