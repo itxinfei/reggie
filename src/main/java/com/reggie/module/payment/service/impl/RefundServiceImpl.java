@@ -191,8 +191,18 @@ public class RefundServiceImpl implements RefundService {
                 }
                 return null;
             });
-        } catch (CustomException e) {
-            // 渠道已退款但本地落库失败——资金已出、数据未同步，必须告警人工核对
+        } catch (Exception e) {
+            // 渠道已退款但本地落库失败——资金已出、数据未同步，必须告警人工核对。
+            // catch Exception 覆盖 CustomException（业务校验）+ DataAccessException（DB 异常）等所有本地失败，
+            // 避免渠道已退款却因非业务异常漏留对账痕迹导致资金流失。
+            // 1. 降级持久化对账待办痕迹（独立事务，供 RefundReconcileTask 扫描）
+            try {
+                refundRecordService.recordReconcileTrace(paymentOrder.getId(), refundAmount, fReason);
+            } catch (Exception traceEx) {
+                log.error("【严重】渠道退款成功但本地落库失败，对账痕迹持久化也失败: orderId={}, paymentOrderId={}, refundAmount={}",
+                        orderId, paymentOrder.getId(), refundAmount, traceEx);
+            }
+            // 2. 主日志告警
             log.error("【严重】渠道退款成功但本地数据更新失败，需人工核对对账！orderId={}, paymentOrderId={}, refundAmount={}",
                     orderId, paymentOrder.getId(), refundAmount, e);
             return false;

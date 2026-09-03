@@ -211,6 +211,55 @@ public class GroupBuyServiceTest {
         assertEquals("OPEN", stillOpen.getStatus());
     }
 
+    @Test
+    void scanGroupFormed_paidEnough_marksClosed() {
+        // 已过期且 OPEN 的活动，已付款人数达标 → 成团标记 CLOSED
+        GroupBuyCampaign campaign = buildCampaign(
+                LocalDateTime.now().minusDays(1),
+                LocalDateTime.now().minusHours(1));
+        campaign.setMinMembers(2);
+        groupBuyService.createCampaign(campaign);
+        insertPaidParticipation(campaign.getId(), 300L, 10L);
+        insertPaidParticipation(campaign.getId(), 301L, 11L);
+
+        int handled = groupBuyService.scanGroupFormedAndNotFormed();
+        assertEquals(1, handled);
+
+        GroupBuyCampaign updated = groupBuyService.getById(campaign.getId());
+        assertEquals("CLOSED", updated.getStatus());
+    }
+
+    @Test
+    void scanGroupNotFormed_paidNotEnough_marksEnded() {
+        // 已过期且 OPEN 的活动，已付款人数不足 → 标记 ENDED；
+        // 未成团退款调 refundByOrder，无支付单时静默返回 false 不抛异常（try-catch 兜底）
+        GroupBuyCampaign campaign = buildCampaign(
+                LocalDateTime.now().minusDays(1),
+                LocalDateTime.now().minusHours(1));
+        campaign.setMinMembers(2);
+        groupBuyService.createCampaign(campaign);
+        insertPaidParticipation(campaign.getId(), 302L, 12L);
+
+        int handled = groupBuyService.scanGroupFormedAndNotFormed();
+        assertEquals(1, handled);
+
+        GroupBuyCampaign updated = groupBuyService.getById(campaign.getId());
+        assertEquals("ENDED", updated.getStatus());
+    }
+
+    private void insertPaidParticipation(Long campaignId, Long orderId, Long userId) {
+        GroupBuyParticipation p = new GroupBuyParticipation();
+        p.setTenantId(1L);
+        p.setGroupBuyId(campaignId);
+        p.setOrderId(orderId);
+        p.setUserId(userId);
+        p.setStatus("PAID");
+        p.setJoinTime(LocalDateTime.now());
+        p.setPayTime(LocalDateTime.now());
+        p.setCreateTime(LocalDateTime.now());
+        participationMapper.insert(p);
+    }
+
     private GroupBuyCampaign buildCampaign(LocalDateTime start, LocalDateTime end) {
         GroupBuyCampaign c = new GroupBuyCampaign();
         c.setName("测试拼团");

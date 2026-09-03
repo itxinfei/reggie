@@ -11,6 +11,8 @@ import com.reggie.module.groupbuy.mapper.GroupBuyParticipationMapper;
 import com.reggie.module.groupbuy.model.GroupBuyCampaign;
 import com.reggie.module.groupbuy.model.GroupBuyParticipation;
 import com.reggie.module.groupbuy.service.GroupBuyService;
+import com.reggie.module.payment.service.RefundService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,10 +28,14 @@ import java.util.List;
  * @since 2026-09-01
  */
 @Service
+@Slf4j
 public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, GroupBuyCampaign> implements GroupBuyService {
 
     @Autowired
     private GroupBuyParticipationMapper participationMapper;
+
+    @Autowired
+    private RefundService refundService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -160,18 +166,63 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int autoCloseExpiredCampaigns() {
+        // 委托统一的成团/未成团判定，避免与 scanGroupFormedAndNotFormed 语义分裂：
+        // 旧实现把过期 OPEN 全标 ENDED，会误伤已达标的成团活动（应 CLOSED）且漏退款。
+        // this 调用共享当前事务，无需走代理；scan 内部退款用独立事务，互不影响。
+        return scanGroupFormedAndNotFormed();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int scanGroupFormedAndNotFormed() {
+        // 拉取所有已结束且处于 OPEN 的 campaign（endTime 到，但未做成团/未成团判定）
         LambdaQueryWrapper<GroupBuyCampaign> qw = new LambdaQueryWrapper<>();
         qw.eq(GroupBuyCampaign::getStatus, "OPEN");
         qw.le(GroupBuyCampaign::getEndTime, LocalDateTime.now());
-        List<GroupBuyCampaign> expired = list(qw);
-        if (expired.isEmpty()) {
+        List<GroupBuyCampaign> campaigns = list(qw);
+        if (campaigns.isEmpty()) {
             return 0;
         }
-        for (GroupBuyCampaign campaign : expired) {
-            campaign.setStatus("ENDED");
+        int handled = 0;
+        for (GroupBuyCampaign campaign : campaigns) {
+            int paidCount = participationMapper.countPaidParticipants(campaign.getId());
+            if (paidCount >= campaign.getMinMembers()) {
+                // 成团：标记 CLOSED，下游可据此发券/打标签/履约
+                campaign.setStatus("CLOSED");
+            } else {
+                // 未成团：标记 ENDED，触发参与订单退款
+                campaign.setStatus("ENDED");
+                refundNotFormedParticipants(campaign);
+            }
             campaign.setUpdateTime(LocalDateTime.now());
             updateById(campaign);
+            handled++;
         }
-        return expired.size();
+        return handled;
+    }
+
+    /**
+     * 未成团场景：对已支付参与者的订单发起全额退款，幂等重试安全。
+     * <p>
+     * refundByOrder 内部已判断订单是否可退（STATUS=6 REFUND 等直接返回 false）；
+     * 此处 try-catch 包裹，单条失败不影响其它 campaign/订单。
+     * </p>
+     */
+    private void refundNotFormedParticipants(GroupBuyCampaign campaign) {
+        List<GroupBuyParticipation> participants = participationMapper.selectList(
+                new LambdaQueryWrapper<GroupBuyParticipation>()
+                        .eq(GroupBuyParticipation::getGroupBuyId, campaign.getId())
+                        .eq(GroupBuyParticipation::getStatus, "PAID"));
+        if (participants == null || participants.isEmpty()) {
+            return;
+        }
+        for (GroupBuyParticipation p : participants) {
+            try {
+                refundService.refundByOrder(p.getOrderId(), "拼团未成团自动退款");
+            } catch (Exception e) {
+                log.error("[拼团] 未成团退款失败: campaignId={}, orderId={}, error={}",
+                        campaign.getId(), p.getOrderId(), e.getMessage());
+            }
+        }
     }
 }

@@ -13,9 +13,11 @@ import com.reggie.module.payment.mapper.RefundRecordMapper;
 import com.reggie.module.payment.model.PaymentOrder;
 import com.reggie.module.payment.model.RefundRecord;
 import com.reggie.module.payment.service.RefundRecordService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
  * @author 心飞为你飞
  * @since 2026-07-09
  */
+@Slf4j
 @Service
 @Transactional(rollbackFor = Exception.class)
 public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, RefundRecord> implements RefundRecordService {
@@ -277,6 +280,38 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
         return this.list(new LambdaQueryWrapper<RefundRecord>()
                 .eq(RefundRecord::getOrderId, orderId)
                 .orderByDesc(RefundRecord::getCreatedTime));
+    }
+
+    /**
+     * 持久化"渠道已退款但本地落库失败"的对账待办痕迹。
+     * <p>
+     * 独立事务（REQUIRES_NEW）写入 PENDING 痕迹，reason 以 {@code [对账待办]} 前缀标识，
+     * 供 {@link com.reggie.module.payment.task.RefundReconcileTask} 扫描告警人工核对。
+     * tenantId 直接取自支付单，不依赖 BaseContext（调用方可能已无租户上下文）。
+     * </p>
+     */
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    public void recordReconcileTrace(Long paymentOrderId, BigDecimal amount, String reason) {
+        PaymentOrder paymentOrder = paymentOrderMapper.selectById(paymentOrderId);
+        if (paymentOrder == null) {
+            log.warn("[对账待办] 支付单不存在，跳过痕迹持久化: paymentOrderId={}", paymentOrderId);
+            return;
+        }
+        String safeReason = (reason != null && !reason.trim().isEmpty())
+                ? reason : "渠道已退款本地落库失败";
+        RefundRecord trace = new RefundRecord();
+        trace.setPaymentOrderId(paymentOrderId);
+        trace.setOrderId(paymentOrder.getOrderId());
+        trace.setTenantId(paymentOrder.getTenantId());
+        trace.setRefundNo(generateRefundNo());
+        trace.setAmount(amount);
+        trace.setReason("[对账待办]" + safeReason);
+        trace.setStatus(RefundStatus.PENDING.getCode());
+        trace.setCreatedTime(LocalDateTime.now());
+        this.save(trace);
+        log.warn("[对账待办] 已持久化渠道退款成功但本地落库失败的待办痕迹: paymentOrderId={}, amount={}, refundNo={}",
+                paymentOrderId, amount, trace.getRefundNo());
     }
 }
 

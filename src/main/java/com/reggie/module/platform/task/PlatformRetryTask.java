@@ -2,7 +2,11 @@ package com.reggie.module.platform.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
+import com.reggie.module.platform.adapter.PlatformOrder;
+import com.reggie.module.platform.model.PlatformConfig;
 import com.reggie.module.platform.model.PlatformSyncLog;
+import com.reggie.module.platform.service.PlatformConfigService;
 import com.reggie.module.platform.service.PlatformSyncLogService;
 import com.reggie.module.platform.service.PlatformSyncService;
 import com.reggie.module.tenant.model.Tenant;
@@ -36,6 +40,9 @@ public class PlatformRetryTask {
 
     @Autowired
     private PlatformSyncService platformSyncService;
+
+    @Autowired
+    private PlatformConfigService platformConfigService;
 
     @Autowired
     private TenantService tenantService;
@@ -97,41 +104,62 @@ public class PlatformRetryTask {
 
     /**
      * 重试单条日志记录
+     * <p>
+     * 按同步方向分发到真实同步方法：
+     * <ul>
+     *   <li>IN（拉单）：调用 pullOrders + persistOrders 重新拉取并落库。
+     *       因 PlatformSyncLog 未记录原始时间范围，重试采用近期 10 分钟窗口；
+     *       如需精确还原原始拉单范围，应在写 log 时记录 beginTime/endTime。</li>
+     *   <li>OUT（状态回传）：调用 pushOrderStatus，action 字段即具体动作
+     *       （accept/reject/prepare/complete/cancel）。</li>
+     * </ul>
+     * 真实调用成功才标记 status=0；失败保持 status=1 并记 errorMessage，
+     * retryCount 在方法开头累加，达到 MAX_RETRY_COUNT 后不再被 retryTenant 查到。
+     * </p>
      */
     private void retryLogEntry(PlatformSyncLog logEntry) {
         logEntry.setRetryCount(logEntry.getRetryCount() + 1);
 
         try {
-            switch (logEntry.getAction()) {
-                case "PULL":
-                    // 拉单重试：重新执行拉单逻辑
-                    // 注意：实际项目中需要从日志中提取配置和参数
-                    log.info("[平台重试] 拉单重试: platformType={}, count={}",
-                            logEntry.getPlatformType(), logEntry.getRetryCount());
-                    break;
-                case "PUSH_STATUS":
-                    // 状态回传重试
-                    log.info("[平台重试] 状态回传重试: platformType={}, orderId={}, count={}",
-                            logEntry.getPlatformType(), logEntry.getPlatformOrderId(),
-                            logEntry.getRetryCount());
-                    break;
-                default:
-                    log.warn("[平台重试] 未知动作类型: {}", logEntry.getAction());
+            PlatformConfig config = platformConfigService.getByPlatformType(
+                    logEntry.getPlatformType(), logEntry.getTenantId());
+            if (config == null) {
+                throw new CustomException("无可用平台配置: platformType=" + logEntry.getPlatformType());
             }
 
-            // 标记为成功
+            String direction = logEntry.getDirection();
+            if ("IN".equals(direction)) {
+                // 拉单重试：log 未记录原始时间范围，采用近期 10 分钟窗口重新拉取
+                String endTime = java.time.LocalDateTime.now().toString();
+                String beginTime = java.time.LocalDateTime.now().minusMinutes(10).toString();
+                List<PlatformOrder> orders = platformSyncService.pullOrders(config, beginTime, endTime);
+                int persisted = platformSyncService.persistOrders(config, orders);
+                log.info("[平台重试] 拉单重试成功: platformType={}, 拉取={}, 落库={}",
+                        logEntry.getPlatformType(),
+                        orders == null ? 0 : orders.size(), persisted);
+            } else if ("OUT".equals(direction)) {
+                // 状态回传重试：action 字段即具体动作
+                platformSyncService.pushOrderStatus(config, logEntry.getPlatformOrderId(), logEntry.getAction());
+                log.info("[平台重试] 状态回传重试成功: platformType={}, orderId={}, action={}",
+                        logEntry.getPlatformType(), logEntry.getPlatformOrderId(), logEntry.getAction());
+            } else {
+                throw new CustomException("未知同步方向: " + direction);
+            }
+
+            // 真实调用成功才标记成功（修复原先无条件 setStatus(0) 的缺陷）
             logEntry.setStatus(0);
             logEntry.setErrorMessage(null);
-            syncLogService.updateById(logEntry);
             log.info("[平台重试] 重试成功: id={}, action={}, retryCount={}",
                     logEntry.getId(), logEntry.getAction(), logEntry.getRetryCount());
 
         } catch (Exception e) {
-            // 重试仍然失败，记录错误
+            // 重试仍失败：保持 status=1，记错误信息，retryCount 已在开头累加
+            logEntry.setStatus(1);
             logEntry.setErrorMessage(e.getMessage());
+            log.error("[平台重试] 重试仍失败: id={}, action={}, retryCount={}, error={}",
+                    logEntry.getId(), logEntry.getAction(), logEntry.getRetryCount(), e.getMessage());
+        } finally {
             syncLogService.updateById(logEntry);
-            log.error("[平台重试] 重试仍失败: id={}, action={}, retryCount={}",
-                    logEntry.getId(), logEntry.getAction(), logEntry.getRetryCount(), e);
         }
     }
 

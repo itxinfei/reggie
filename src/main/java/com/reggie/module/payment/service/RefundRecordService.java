@@ -77,4 +77,21 @@ public interface RefundRecordService extends IService<RefundRecord> {
      * @return 退款记录列表（按创建时间倒序）
      */
     List<RefundRecord> listUserRefundByOrderId(Long orderId);
+
+    /**
+     * 持久化"渠道已退款但本地落库失败"的对账待办痕迹。
+     * <p>
+     * 使用独立事务（REQUIRES_NEW），确保外层事务回滚后该痕迹仍存活，供对账定时任务扫描告警人工核对。
+     * 痕迹以 {@code [对账待办]} 前缀的 reason 标识，状态为 PENDING。
+     * </p>
+     * <p>
+     * <b>禁止</b>据此自动重试渠道退款——渠道侧可能已退款成功，重试会导致重复退款。
+     * 仅作可观测痕迹，由人工核对渠道后台后决定是否标记 SUCCESS。
+     * </p>
+     *
+     * @param paymentOrderId 支付单ID
+     * @param amount         退款金额
+     * @param reason         原始退款原因
+     */
+    void recordReconcileTrace(Long paymentOrderId, BigDecimal amount, String reason);
 }

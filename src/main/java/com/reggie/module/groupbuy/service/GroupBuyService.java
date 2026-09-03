@@ -55,4 +55,17 @@ public interface GroupBuyService extends IService<GroupBuyCampaign> {
      * 定时关闭过期拼团活动
      */
     int autoCloseExpiredCampaigns();
+
+    /**
+     * 成团判定并处理状态流转
+     * <p>
+     * 由定时任务调用，扫描所有 OPEN 状态且已结束未成团的 campaign：
+     * <ul>
+     *   <li>已付款参与人数 ≥ minMembers → 成团，标记 campaign=CLOSED（可履约）</li>
+     *   <li>未成团 → 标记 campaign=ENDED，触发全额退款</li>
+     * </ul>
+     * </p>
+     * @return 处理数量
+     */
+    int scanGroupFormedAndNotFormed();
 }

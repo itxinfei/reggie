@@ -196,4 +196,34 @@ class PaymentChannelSignTest {
             put("sign", "abc");
         }}));
     }
+
+    /** handleNotify 生产模式（mock-mode=false）下 trade_status 非 SUCCESS 应拒绝回流 */
+    @Test
+    void alipayHandleNotifyRejectsNonSuccessTradeStatus() {
+        config.setMockMode(false);
+        config.setAlipayPublicKey("dummy");
+        // 模拟支付宝回调 trade_status=WAIT_BUYER_PAY（待付款）
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("out_trade_no", "T1");
+        params.put("trade_no", "N1");
+        params.put("trade_status", "WAIT_BUYER_PAY");
+        assertFalse(alipayChannel.handleNotify(params).isSuccess());
+        assertTrue(alipayChannel.handleNotify(params).getErrorMsg() != null);
+    }
+
+    /** handleNotify 生产模式（mock-mode=false）下 result_code 非 SUCCESS 应拒绝回流 */
+    @Test
+    void wechatHandleNotifyRejectsNonSuccessResultCode() {
+        config.setMockMode(false);
+        config.setWechatApiKey("dummy_key_32_chars_12345678");
+        // 模拟微信回调 result_code=FAIL
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("out_trade_no", "T1");
+        params.put("transaction_id", "N1");
+        params.put("return_code", "SUCCESS");
+        params.put("result_code", "FAIL");
+        params.put("sign", "dummy");
+        assertFalse(wechatPayChannel.handleNotify(params).isSuccess());
+        assertTrue(wechatPayChannel.handleNotify(params).getErrorMsg() != null);
+    }
 }

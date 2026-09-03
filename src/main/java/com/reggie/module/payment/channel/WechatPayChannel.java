@@ -85,9 +85,25 @@ public class WechatPayChannel implements PaymentChannel {
     public PayResponse handleNotify(Map<String, String> params) {
         log.info("WechatPay handleNotify: params={}", params);
         PayResponse response = new PayResponse();
-        response.setSuccess(true);
         // 修复 P1：微信支付回调字段名为 transaction_id（平台流水号），非 trade_no（商户订单号=out_trade_no）
         response.setChannelTradeNo(params.get("transaction_id"));
+        // mock 模式：跳过业务状态校验，直接标记成功（仅供开发/演示，与验签 mock 跳过语义对称）
+        if (paymentConfig.isMockMode()) {
+            response.setSuccess(true);
+            return response;
+        }
+        // 生产模式：仅 result_code=SUCCESS 才视为支付成功。
+        // 微信 APIv2 回调中 return_code=SUCCESS 仅表示通信成功，result_code 才表示业务结果；
+        // result_code=FAIL 表示支付失败，不应触发支付成功回流，否则会造成未付款订单被标记已支付。
+        String resultCode = params.get("result_code");
+        if ("SUCCESS".equals(resultCode)) {
+            response.setSuccess(true);
+        } else {
+            response.setSuccess(false);
+            response.setErrorMsg("result_code 非 SUCCESS: " + resultCode);
+            log.warn("WechatPay handleNotify 拒绝回流：result_code={}, transaction_id={}",
+                    resultCode, params.get("transaction_id"));
+        }
         return response;
     }
 

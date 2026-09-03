@@ -96,8 +96,25 @@ public class AlipayChannel implements PaymentChannel {
     public PayResponse handleNotify(Map<String, String> params) {
         log.info("Alipay handleNotify: params={}", params);
         PayResponse response = new PayResponse();
-        response.setSuccess(true);
         response.setChannelTradeNo(params.get("trade_no"));
+        // mock 模式：跳过业务状态校验，直接标记成功（仅供开发/演示，与验签 mock 跳过语义对称）
+        if (paymentConfig.isMockMode()) {
+            response.setSuccess(true);
+            return response;
+        }
+        // 生产模式：仅 trade_status=TRADE_SUCCESS 才视为支付成功。
+        // 验签通过只证明回调来自支付宝，不代表交易已成功——WAIT_BUYER_PAY（待付款）、
+        // TRADE_CLOSED（交易关闭）等状态不应触发支付成功回流，必须显式拒绝，
+        // 否则会把"待付款"误判为"已支付"造成虚拟发货。
+        String tradeStatus = params.get("trade_status");
+        if ("TRADE_SUCCESS".equals(tradeStatus)) {
+            response.setSuccess(true);
+        } else {
+            response.setSuccess(false);
+            response.setErrorMsg("trade_status 非 TRADE_SUCCESS: " + tradeStatus);
+            log.warn("Alipay handleNotify 拒绝回流：trade_status={}, trade_no={}",
+                    tradeStatus, params.get("trade_no"));
+        }
         return response;
     }
 
