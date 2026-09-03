@@ -182,7 +182,7 @@
         initEmployeeOptions: function () {
           const self = this
           employeeList().then(function (res) {
-            if (res.code === 1 && res.data) {
+            if (res && res.code === 1 && res.data) {
               self.employeeOptions = res.data.map(function (emp) {
                 return { id: emp.id, name: emp.name, avatar: emp.name.substring(0, 1) }
               })
@@ -190,24 +190,12 @@
                 self.calendarEmployee = self.employeeOptions[0].id
               }
             } else {
-              // 降级到模拟数据
-              const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
-              self.employeeOptions = names.map(function (n, i) {
-                return { id: i + 1, name: n, avatar: n.charAt(0) }
-              })
-              if (self.employeeOptions.length > 0) {
-                self.calendarEmployee = self.employeeOptions[0].id
-              }
+              ReggieUI.error((res && res.msg) || '员工列表加载失败')
+              self.employeeOptions = []
             }
           }).catch(function () {
-            // 降级到模拟数据
-            const names = ['张三', '李四', '王五', '赵六', '钱七', '孙八']
-            self.employeeOptions = names.map(function (n, i) {
-              return { id: i + 1, name: n, avatar: n.charAt(0) }
-            })
-            if (self.employeeOptions.length > 0) {
-              self.calendarEmployee = self.employeeOptions[0].id
-            }
+            ReggieUI.error('员工列表加载失败，请刷新重试')
+            self.employeeOptions = []
           })
         },
 
@@ -239,18 +227,17 @@
             ]
           }).catch(function () {
             self.statsCards = [
-              { key: 'present', icon: 'ri-user-star-line', label: '本周出勤', value: 18, color: 'primary', unit: '人' },
-              { key: 'absent',  icon: 'ri-user-unfollow-line', label: '缺勤', value: 2, color: 'danger', unit: '人' },
-              { key: 'late',    icon: 'ri-time-line', label: '迟到', value: 4, color: 'warning', unit: '人' },
-              { key: 'hours',   icon: 'ri-timer-line', label: '平均工时', value: 8.2, color: 'primary', unit: '小时' }
+              { key: 'present', icon: 'ri-user-star-line', label: '本周出勤', value: 0, color: 'primary', unit: '人' },
+              { key: 'absent',  icon: 'ri-user-unfollow-line', label: '缺勤', value: 0, color: 'danger', unit: '人' },
+              { key: 'late',    icon: 'ri-time-line', label: '迟到', value: 0, color: 'warning', unit: '人' },
+              { key: 'hours',   icon: 'ri-timer-line', label: '平均工时', value: 0, color: 'primary', unit: '小时' }
             ]
           })
         },
         fetchTodayList: function () {
           const self = this
           return attendanceToday().then(function (res) {
-            // 修改点：后端返回 R<Map>，res.data 是 Map（含 checkedInList/notCheckedInList/leaveList），非数组
-            // 合并三个子列表并映射字段，与 fallback 演示数据结构对齐
+            // 后端返回 R<Map>，res.data 是 Map（含 checkedInList/notCheckedInList/leaveList）
             var d = res.data || {};
             var all = [].concat(d.checkedInList || [], d.notCheckedInList || [], d.leaveList || []);
             var statusMap = {
@@ -272,48 +259,23 @@
                 statusType: st.type
               };
             });
-          }).catch(function (e) {
-            console.warn('[attendance] 加载今日考勤失败:', e)
-            self.todayList = [
-              { id: 1, name: '张三', avatar: '张', shiftName: '早班', shiftTime: '08:00-16:00', statusText: '已签到', statusType: 'success' },
-              { id: 2, name: '李四', avatar: '李', shiftName: '中班', shiftTime: '12:00-20:00', statusText: '已签到', statusType: 'success' },
-              { id: 3, name: '王五', avatar: '王', shiftName: '早班', shiftTime: '08:00-16:00', statusText: '迟到', statusType: 'warning' },
-              { id: 4, name: '赵六', avatar: '赵', shiftName: '晚班', shiftTime: '16:00-24:00', statusText: '未签到', statusType: 'info' },
-              { id: 5, name: '钱七', avatar: '钱', shiftName: '全天', shiftTime: '08:00-20:00', statusText: '已签到', statusType: 'success' },
-              { id: 6, name: '孙八', avatar: '孙', shiftName: '中班', shiftTime: '12:00-20:00', statusText: '缺勤', statusType: 'danger' }
-            ]
+          }).catch(function () {
+            console.warn('[attendance] 加载今日考勤失败')
+            self.todayList = []
           })
         },
         fetchAbnormalList: function () {
           const self = this
-          const now = new Date()
-          const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-          const items = [
-            { id: 1, name: '张三', avatar: '张', type: 'late', statusText: '迟到', detail: '签到 08:32，超出 32 分钟', daysBack: 1 },
-            { id: 2, name: '李四', avatar: '李', type: 'early', statusText: '早退', detail: '打卡 11:30，早退 30 分钟', daysBack: 2 },
-            { id: 3, name: '王五', avatar: '王', type: 'absent', statusText: '缺勤', detail: '全天无打卡记录', daysBack: 3 },
-            { id: 4, name: '赵六', avatar: '赵', type: 'late', statusText: '迟到', detail: '签到 12:45，超出 45 分钟', daysBack: 4 },
-            { id: 5, name: '钱七', avatar: '钱', type: 'late', statusText: '迟到', detail: '签到 08:15，超出 15 分钟', daysBack: 1 }
-          ]
-          const typeMap = {}
-          const textMap = {}
-          const type2key = {}
-          self.abnormalList = items.map(function (it) {
-            const dt = new Date(now)
-            dt.setDate(dt.getDate() - it.daysBack)
-            return {
-              id: it.id, name: it.name, avatar: it.avatar,
-              date: dt.getFullYear() + '-' + pad2(dt.getMonth() + 1) + '-' + pad2(dt.getDate()),
-              type: type2key[it.type] || 'info',
-              statusText: it.statusText,
-              detail: it.detail
-            }
-          })
-          // 尝试从后端获取
           attendanceAbnormal({ weekStart: '' }).then(function (res) {
-            // 修改点：后端返回 R<Map>，res.data 是 Map（含 abnormalList/lateCount 等），非数组
-            if (res.data && res.data.abnormalList) self.abnormalList = res.data.abnormalList
-          }).catch(function (e) { console.warn('[attendance] 加载异常考勤失败:', e) })
+            if (res.data && res.data.abnormalList) {
+              self.abnormalList = res.data.abnormalList
+            } else {
+              self.abnormalList = []
+            }
+          }).catch(function () {
+            console.warn('[attendance] 加载异常考勤失败')
+            self.abnormalList = []
+          })
         },
 
         // ===== 考勤日历 =====

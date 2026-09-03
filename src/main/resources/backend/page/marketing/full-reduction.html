@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>满减活动管理 - 瑞吉外卖管理端</title>
+  <title>满减活动管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -397,14 +397,10 @@
         },
         async handleSubmit() {
           const self = this
-          try {
-            await new Promise(function(resolve, reject) {
-              self.$refs.ruleForm.validate(function(valid) { valid ? resolve() : reject() })
-            })
-          } catch (e) {
-            ReggieUI.warning('请完善表单必填项')
-            return
-          }
+          const valid = await new Promise(function(resolve) {
+            self.$refs.ruleForm.validate(function(v) { resolve(v) })
+          })
+          if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
           self.submitLoading = true
           const apiCall = self.formData.id ? updateFullReductionRule(self.formData) : saveFullReductionRule(self.formData)
           apiCall.then(function(res) {

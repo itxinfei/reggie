@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>食材分类管理 - 瑞吉外卖管理端</title>
+  <title>食材分类管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
@@ -247,14 +247,10 @@
         async submitForm() {
           if (this.submitting) return // 提交防重
           const self = this
-          try {
-            await new Promise(function(resolve, reject) {
-              self.$refs.categoryForm.validate(function(valid) { valid ? resolve() : reject() })
-            })
-          } catch (e) {
-            ReggieUI.warning('请完善表单必填项')
-            return
-          }
+          const valid = await new Promise(function(resolve) {
+            self.$refs.categoryForm.validate(function(v) { resolve(v) })
+          })
+          if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
           self.submitting = true
           const fd = self.formData
           const action = fd.id ? updateMatCategory : addMatCategory

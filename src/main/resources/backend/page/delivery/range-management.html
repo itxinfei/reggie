@@ -564,12 +564,10 @@
         },
         async handleSubmit() {
           const self = this
-          await new Promise(function(resolve, reject) {
-            self.$refs.ruleForm.validate(function(valid) { valid ? resolve() : reject() })
-          }).catch(function() {
-            ReggieUI.warning('请完善表单必填项')
-            return
+          const valid = await new Promise(function(resolve) {
+            self.$refs.ruleForm.validate(function(v) { resolve(v) })
           })
+          if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
 
           self.submitLoading = true
           const apiCall = self.formData.id ? updateRangeRule(self.formData) : saveRangeRule(self.formData)
@@ -648,14 +646,12 @@
           }
         },
         async handleFeeStepSubmit() {
-          await new Promise(function(resolve, reject) {
-            this.$refs.feeStepFormRef.validate(function(valid) { valid ? resolve() : reject() })
-          }).catch(function() {
-            ReggieUI.warning('请完善表单必填项')
-            return
-          })
-
           const self = this
+          const valid = await new Promise(function(resolve) {
+            self.$refs.feeStepFormRef.validate(function(v) { resolve(v) })
+          })
+          if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
+
           self.submitLoading = true
           const apiCall = self.feeStepForm.id ? updateFeeStep(self.feeStepForm) : saveFeeStep(self.feeStepForm)
           apiCall.then(function(res) {

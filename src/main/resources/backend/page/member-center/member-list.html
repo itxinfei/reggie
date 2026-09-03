@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>会员管理 - 瑞吉外卖管理端</title>
+  <title>会员管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -523,12 +523,10 @@
         async submitRecharge() {
           if (this.submitting) return // 提交防重
           const self = this
-          await new Promise(function(resolve, reject) {
-            self.$refs.rechargeFormRef.validate(function(valid) { valid ? resolve() : reject() })
-          }).catch(function() {
-            ReggieUI.warning('请完善表单必填项')
-            return
+          const valid = await new Promise(function(resolve) {
+            self.$refs.rechargeFormRef.validate(function(v) { resolve(v) })
           })
+          if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
           if (!self.rechargeForm.amount || self.rechargeForm.amount <= 0) { ReggieUI.error('请输入有效的充值金额'); return }
           self.submitting = true
           memberRecharge({ memberId: self.rechargeMember.id, amount: self.rechargeForm.amount, giftAmount: self.rechargeForm.giftAmount || 0, paymentMethod: self.rechargeForm.paymentMethod }).then(function(res) {
