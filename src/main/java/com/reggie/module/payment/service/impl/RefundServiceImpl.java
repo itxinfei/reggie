@@ -109,12 +109,17 @@ public class RefundServiceImpl implements RefundService {
         } catch (Exception e) {
             log.error("【严重】订单取消自动退款渠道调用异常，需人工处理！orderId={}, paymentOrderId={}, amount={}",
                     orderId, paymentOrder.getId(), refundAmount, e);
+            // 渠道调用异常（钱未出）——留对账待办痕迹，供 RefundReconcileTask 扫描告警人工退款，
+            // 避免 campaign ENDED 后 scan 不再扫 OPEN 导致永久漏退（M1）
+            recordReconcileTraceSafely(paymentOrder, refundAmount, "[对账待办]渠道退款调用异常待人工");
             return false;
         }
         if (refundResponse == null || !refundResponse.isSuccess()) {
+            String errMsg = refundResponse != null ? refundResponse.getErrorMsg() : "无响应";
             log.error("【严重】订单取消自动退款被渠道拒绝，需人工处理！orderId={}, paymentOrderId={}, errorMsg={}",
-                    orderId, paymentOrder.getId(),
-                    refundResponse != null ? refundResponse.getErrorMsg() : "无响应");
+                    orderId, paymentOrder.getId(), errMsg);
+            // 渠道拒绝（钱未出）——留对账待办痕迹，供 RefundReconcileTask 扫描告警人工退款（M1）
+            recordReconcileTraceSafely(paymentOrder, refundAmount, "[对账待办]渠道退款被拒绝待人工：" + errMsg);
             return false;
         }
 
@@ -209,5 +214,22 @@ public class RefundServiceImpl implements RefundService {
         }
         log.info("订单自动退款成功: orderId={}, paymentOrderId={}, refundAmount={}", orderId, paymentOrder.getId(), refundAmount);
         return true;
+    }
+
+    /**
+     * 安全持久化对账待办痕迹（渠道退款失败场景：钱未出，待人工退款）。
+     * <p>
+     * 复用 {@link RefundRecordService#recordReconcileTrace} 的 REQUIRES_NEW 独立事务机制，
+     * reason 以 {@code [对账待办]} 前缀标识，供 {@link com.reggie.module.payment.task.RefundReconcileTask} 扫描告警。
+     * trace 自身失败仅 log.error，不阻断调用方流程。
+     * </p>
+     */
+    private void recordReconcileTraceSafely(PaymentOrder paymentOrder, BigDecimal amount, String reason) {
+        try {
+            refundRecordService.recordReconcileTrace(paymentOrder.getId(), amount, reason);
+        } catch (Exception traceEx) {
+            log.error("【严重】渠道退款失败对账痕迹持久化也失败，需人工核查: paymentOrderId={}, amount={}",
+                    paymentOrder.getId(), amount, traceEx);
+        }
     }
 }

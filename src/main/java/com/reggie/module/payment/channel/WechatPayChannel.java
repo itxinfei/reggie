@@ -83,7 +83,10 @@ public class WechatPayChannel implements PaymentChannel {
      */
     @Override
     public PayResponse handleNotify(Map<String, String> params) {
-        log.info("WechatPay handleNotify: params={}", params);
+        // 脱敏：仅打关键字段，避免 sign/OpenID 等敏感参数全量落日志（L3）
+        log.info("WechatPay handleNotify: out_trade_no={}, transaction_id={}, result_code={}, total_fee={}",
+                params.get("out_trade_no"), params.get("transaction_id"),
+                params.get("result_code"), params.get("total_fee"));
         PayResponse response = new PayResponse();
         // 修复 P1：微信支付回调字段名为 transaction_id（平台流水号），非 trade_no（商户订单号=out_trade_no）
         response.setChannelTradeNo(params.get("transaction_id"));
@@ -129,7 +132,8 @@ public class WechatPayChannel implements PaymentChannel {
         }
         String sign = params.get("sign");
         if (sign == null || sign.trim().isEmpty()) {
-            log.warn("WechatPay 回调签名校验失败：缺少 sign 参数，params={}", params);
+            log.warn("WechatPay 回调签名校验失败：缺少 sign 参数，out_trade_no={}, transaction_id={}",
+                    params.get("out_trade_no"), params.get("transaction_id"));
             return false;
         }
         if (paymentConfig.isMockMode()) {

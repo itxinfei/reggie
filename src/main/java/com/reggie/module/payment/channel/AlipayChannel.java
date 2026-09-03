@@ -94,7 +94,10 @@ public class AlipayChannel implements PaymentChannel {
      */
     @Override
     public PayResponse handleNotify(Map<String, String> params) {
-        log.info("Alipay handleNotify: params={}", params);
+        // 脱敏：仅打关键字段，避免 sign/notify_id 等敏感参数全量落日志（L3）
+        log.info("Alipay handleNotify: out_trade_no={}, trade_no={}, trade_status={}, total_amount={}",
+                params.get("out_trade_no"), params.get("trade_no"),
+                params.get("trade_status"), params.get("total_amount"));
         PayResponse response = new PayResponse();
         response.setChannelTradeNo(params.get("trade_no"));
         // mock 模式：跳过业务状态校验，直接标记成功（仅供开发/演示，与验签 mock 跳过语义对称）
@@ -140,7 +143,8 @@ public class AlipayChannel implements PaymentChannel {
         }
         String sign = params.get("sign");
         if (sign == null || sign.trim().isEmpty()) {
-            log.warn("Alipay 回调签名校验失败：缺少 sign 参数，params={}", params);
+            log.warn("Alipay 回调签名校验失败：缺少 sign 参数，out_trade_no={}, trade_no={}",
+                    params.get("out_trade_no"), params.get("trade_no"));
             return false;
         }
         if (paymentConfig.isMockMode()) {

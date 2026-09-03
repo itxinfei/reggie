@@ -11,9 +11,12 @@ import com.reggie.module.groupbuy.mapper.GroupBuyParticipationMapper;
 import com.reggie.module.groupbuy.model.GroupBuyCampaign;
 import com.reggie.module.groupbuy.model.GroupBuyParticipation;
 import com.reggie.module.groupbuy.service.GroupBuyService;
+import com.reggie.module.payment.model.PaymentOrder;
+import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.payment.service.RefundService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
@@ -36,6 +39,14 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
 
     @Autowired
     private RefundService refundService;
+
+    /**
+     * 支付单服务（@Lazy 避免与 PaymentOrderServiceImpl 注入 GroupBuyService 形成循环依赖）。
+     * 用于 scan 自愈：查 JOINED 参与的订单是否已成功支付，补偿标记 PAID（F1）。
+     */
+    @Autowired
+    @Lazy
+    private PaymentOrderService paymentOrderService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -185,6 +196,9 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         }
         int handled = 0;
         for (GroupBuyCampaign campaign : campaigns) {
+            // F1 自愈：markParticipationPaid 首次失败致 participation 卡 JOINED 时，
+            // scan 过期判定前先补偿——查其订单支付单 SUCCESS 则 JOINED→PAID，避免误判未成团漏退
+            healJoinedParticipations(campaign);
             int paidCount = participationMapper.countPaidParticipants(campaign.getId());
             if (paidCount >= campaign.getMinMembers()) {
                 // 成团：标记 CLOSED，下游可据此发券/打标签/履约
@@ -221,6 +235,46 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
                 refundService.refundByOrder(p.getOrderId(), "拼团未成团自动退款");
             } catch (Exception e) {
                 log.error("[拼团] 未成团退款失败: campaignId={}, orderId={}, error={}",
+                        campaign.getId(), p.getOrderId(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 自愈卡在 JOINED 的参与：若其订单已有 SUCCESS 支付单，补偿标记 PAID（F1）。
+     * <p>
+     * 场景：支付回调时 markParticipationPaid（REQUIRES_NEW）因 DB 抖动失败被
+     * PaymentOrderServiceImpl 静默 catch，participation 留 JOINED。若不补偿，
+     * countPaidParticipants（仅计 PAID）会误判未成团，refundNotFormedParticipants
+     * 又只退 PAID，导致已付款订单既未成团也未退款，资金卡死。
+     * 此处在 scan 过期判定前补偿，markParticipationPaid 幂等，重复执行安全。
+     * </p>
+     */
+    private void healJoinedParticipations(GroupBuyCampaign campaign) {
+        List<GroupBuyParticipation> joinedList = participationMapper.selectList(
+                new LambdaQueryWrapper<GroupBuyParticipation>()
+                        .eq(GroupBuyParticipation::getGroupBuyId, campaign.getId())
+                        .eq(GroupBuyParticipation::getStatus, "JOINED"));
+        if (joinedList == null || joinedList.isEmpty()) {
+            return;
+        }
+        for (GroupBuyParticipation p : joinedList) {
+            try {
+                PaymentOrder successPo = paymentOrderService.lambdaQuery()
+                        .eq(PaymentOrder::getOrderId, p.getOrderId())
+                        .eq(PaymentOrder::getStatus, PaymentOrder.STATUS_SUCCESS)
+                        .orderByDesc(PaymentOrder::getId)
+                        .last("limit 1")
+                        .one();
+                if (successPo != null) {
+                    p.setStatus("PAID");
+                    p.setPayTime(LocalDateTime.now());
+                    participationMapper.updateById(p);
+                    log.warn("[拼团自愈] JOINED→PAID 补偿标记: campaignId={}, orderId={}, participationId={}",
+                            campaign.getId(), p.getOrderId(), p.getId());
+                }
+            } catch (Exception e) {
+                log.warn("[拼团自愈] 补偿 JOINED→PAID 失败，跳过: campaignId={}, orderId={}, err={}",
                         campaign.getId(), p.getOrderId(), e.getMessage());
             }
         }

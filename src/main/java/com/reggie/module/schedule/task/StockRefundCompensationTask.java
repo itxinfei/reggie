@@ -163,9 +163,13 @@ public class StockRefundCompensationTask {
             int number = detail.getNumber() != null ? detail.getNumber() : 1;
             BigDecimal qty = new BigDecimal(number);
 
-            // 单品菜品：原子增加库存
+            // 单品菜品：原子增加库存（Redis 幂等防重，避免部分失败重试时重复 addStock 致超原值 F2）
             if (detail.getDishId() != null) {
-                if (refundStockAtomic(detail.getDishId(), qty)) {
+                String subKey = "dish:" + detail.getDishId();
+                if (isCompensated(orderId, detail.getId(), subKey)) {
+                    successCount++;
+                } else if (refundStockAtomic(detail.getDishId(), qty)) {
+                    markCompensated(orderId, detail.getId(), subKey);
                     successCount++;
                 } else {
                     failCount++;
@@ -181,7 +185,12 @@ public class StockRefundCompensationTask {
                 for (SetmealDish sd : setmealDishes) {
                     int copies = sd.getCopies() != null ? sd.getCopies() : 1;
                     BigDecimal totalQty = qty.multiply(new BigDecimal(copies));
-                    if (refundStockAtomic(sd.getDishId(), totalQty)) {
+                    // 套餐内菜品逐项幂等防重（Redis key 含 setmealDishId），部分失败重试时不重复 addStock（F2）
+                    String subKey = "sd:" + sd.getId();
+                    if (isCompensated(orderId, detail.getId(), subKey)) {
+                        successCount++;
+                    } else if (refundStockAtomic(sd.getDishId(), totalQty)) {
+                        markCompensated(orderId, detail.getId(), subKey);
                         successCount++;
                     } else {
                         failCount++;
@@ -229,6 +238,43 @@ public class StockRefundCompensationTask {
         } catch (Exception e) {
             log.error("[库存补偿] 菜品ID={} 回退{}份失败: {}", dishId, qty, e.getMessage(), e);
             return false;
+        }
+    }
+
+    // ──────────────────────────────────────
+    // 库存补偿幂等辅助（Redis 防重，避免部分失败重试时重复 addStock 致库存超原值 F2）
+    // ──────────────────────────────────────
+
+    /** 补偿幂等 key TTL：略大于补偿窗口 24h，确保窗口内跨轮次有效 */
+    private static final long COMPENSATE_KEY_TTL_HOURS = 25;
+
+    private String compensateKey(Long orderId, Long detailId, String subKey) {
+        return "stock:refund:" + orderId + ":" + detailId + ":" + subKey;
+    }
+
+    /** 该明细项是否已补偿过（Redis 不可用时返回 false，但此时 tryLock 已跳过整个任务，不会执行到此处） */
+    private boolean isCompensated(Long orderId, Long detailId, String subKey) {
+        if (redisTemplate == null) {
+            return false;
+        }
+        try {
+            return Boolean.TRUE.equals(redisTemplate.hasKey(compensateKey(orderId, detailId, subKey)));
+        } catch (Exception e) {
+            log.debug("[库存补偿] 幂等检查异常，按未补偿处理: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /** 标记该明细项已补偿成功（TTL 25h，覆盖 24h 补偿窗口） */
+    private void markCompensated(Long orderId, Long detailId, String subKey) {
+        if (redisTemplate == null) {
+            return;
+        }
+        try {
+            redisTemplate.opsForValue().set(compensateKey(orderId, detailId, subKey), "1",
+                    COMPENSATE_KEY_TTL_HOURS, TimeUnit.HOURS);
+        } catch (Exception e) {
+            log.debug("[库存补偿] 幂等标记异常: {}", e.getMessage());
         }
     }
 
