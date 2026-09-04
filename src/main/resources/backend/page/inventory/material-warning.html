@@ -201,7 +201,7 @@
     </div>
 
     <!-- 批量补货弹窗 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="restockForm.title"
       :visible.sync="restockForm.dialogVisible"
       :submit-loading="restockLoading"
@@ -240,7 +240,7 @@
     </crud-dialog>
 
     <!-- 补货建议弹窗 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="补货建议"
       :visible.sync="suggestDialogVisible"
       width="600px"

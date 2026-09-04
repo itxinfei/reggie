@@ -178,7 +178,7 @@
     </div>
 
     <!-- ===== 新建/编辑门店对话框 ===== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="dialogTitle"
       :visible.sync="formDialogVisible"
       size="lg"
@@ -301,7 +301,7 @@
     </crud-dialog>
 
     <!-- ===== 门店详情对话框（点击行 / 详情按钮打开，展示完整信息，避免列表列过多） ===== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="门店详情"
       :visible.sync="detailDialogVisible"
       size="lg"
@@ -368,7 +368,7 @@
     </crud-dialog>
 
     <!-- ===== 数据同步对话框 ===== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="数据同步"
       :visible.sync="syncDialogVisible"
       size="md"

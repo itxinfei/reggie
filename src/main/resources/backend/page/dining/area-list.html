@@ -70,8 +70,8 @@
       </crud-table>
     </div>
 
-    <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog -->
-    <crud-dialog
+    <!-- 修改点：使用 <crud-dialog :show-submit="true" :show-cancel="true"> 统一组件替代手写 el-dialog -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="dialog.title"
       :visible.sync="dialog.visible"
       :submit-loading="submitting"

@@ -167,7 +167,7 @@
     </crud-table>
 
     <!-- 申请详情弹窗 -->
-    <crud-dialog title="申请详情" :visible.sync="detailDialogVisible" size="md" :show-submit="false" cancel-text="关 闭">
+    <crud-dialog :show-cancel="true" title="申请详情" :visible.sync="detailDialogVisible" size="md" :show-submit="false" cancel-text="关 闭">
       <div v-if="detailRow" class="withdraw-detail">
         <div class="dt-item"><span class="dt-label">申请编号</span><span class="dt-value">{{ detailRow.applicationNo }}</span></div>
         <div class="dt-item"><span class="dt-label">申请人</span><span class="dt-value">{{ detailRow.applicantName }}</span></div>
@@ -181,7 +181,7 @@
     </crud-dialog>
 
     <!-- 申请对话框 -->
-    <crud-dialog title="申请提现" :visible.sync="addDialogVisible" size="md" :submit-loading="submitLoading" @submit="handleAddSubmit">
+    <crud-dialog :show-submit="true" :show-cancel="true" title="申请提现" :visible.sync="addDialogVisible" size="md" :submit-loading="submitLoading" @submit="handleAddSubmit">
       <el-form :model="addForm" :rules="addRules" ref="addForm" label-width="100px">
         <el-form-item label="提现金额" prop="amount">
           <el-input-number v-model="addForm.amount" :precision="2" :min="1" style="width: 100%;"></el-input-number>
@@ -206,7 +206,7 @@
     </crud-dialog>
 
     <!-- 审核对话框 -->
-    <crud-dialog title="审核提现申请" :visible.sync="reviewDialogVisible" size="md" :submit-loading="submitLoading" @submit="handleReviewSubmit">
+    <crud-dialog :show-submit="true" :show-cancel="true" title="审核提现申请" :visible.sync="reviewDialogVisible" size="md" :submit-loading="submitLoading" @submit="handleReviewSubmit">
       <el-form :model="reviewForm" :rules="reviewRules" ref="reviewFormRef" label-width="100px">
         <el-form-item label="申请编号">
           <span>{{ reviewForm.applicationNo }}</span>
@@ -227,7 +227,7 @@
     </crud-dialog>
 
     <!-- 打款对话框 -->
-    <crud-dialog title="确认打款" :visible.sync="paymentDialogVisible" size="md" :submit-loading="submitLoading" @submit="handlePaymentSubmit">
+    <crud-dialog :show-submit="true" :show-cancel="true" title="确认打款" :visible.sync="paymentDialogVisible" size="md" :submit-loading="submitLoading" @submit="handlePaymentSubmit">
       <el-form :model="paymentForm" :rules="paymentRules" ref="paymentFormRef" label-width="100px">
         <el-form-item label="申请编号">
           <span>{{ paymentForm.applicationNo }}</span>

@@ -280,7 +280,7 @@
     </main>
 
     <!-- 新增/编辑弹窗 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="dialog.title"
       :visible.sync="dialog.visible"
       :submit-loading="submitting"

@@ -63,7 +63,7 @@
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
       :submit-loading="submitting"

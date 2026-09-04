@@ -75,7 +75,7 @@
   </div>
 
   <!-- 新增/编辑对话框 -->
-  <crud-dialog
+  <crud-dialog :show-submit="true" :show-cancel="true"
     :title="dialogTitle"
     :visible.sync="dialogVisible"
     size="lg"

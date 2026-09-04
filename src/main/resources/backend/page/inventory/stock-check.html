@@ -100,7 +100,7 @@
     </div>
 
     <!-- 新增盘点对话框（操作人 + 备注） -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="新增盘点单"
       :visible.sync="formData.dialogVisible"
       size="md"
@@ -122,7 +122,7 @@
     </crud-dialog>
 
     <!-- 录入盘点数据并完成对话框 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="录入盘点数据"
       :visible.sync="entryDialogVisible"
       size="lg"

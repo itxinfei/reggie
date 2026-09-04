@@ -71,8 +71,8 @@
       </crud-table>
     </div>
 
-    <!-- 修改点：新增/编辑弹窗改用 <crud-dialog> 统一组件（内置关闭/重置逻辑，底部按钮统一 medium） -->
-    <crud-dialog
+    <!-- 修改点：新增/编辑弹窗改用 <crud-dialog :show-submit="true" :show-cancel="true"> 统一组件（内置关闭/重置逻辑，底部按钮统一 medium） -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
       width="600px"

@@ -111,7 +111,7 @@
     </div>
 
     <!-- 添加/编辑弹窗 -->
-    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" 
+    <crud-dialog :show-submit="true" :show-cancel="true" :title="dialogTitle" :visible.sync="dialogVisible" 
                :show-close="true" :close-on-click-modal="false" :submit-loading="submitting" @submit="submitForm">
         <!-- 修改点：补全 ref/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
         <el-form ref="providerForm" :model="form" :rules="providerRules" label-width="100px" size="small" class="dialog-form">

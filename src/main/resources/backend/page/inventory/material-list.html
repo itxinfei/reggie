@@ -76,8 +76,8 @@
         </template>
       </crud-table>
     </main>
-    <!-- 修改点：使用 <crud-dialog> 统一弹窗组件替代手写 el-dialog -->
-    <crud-dialog
+    <!-- 修改点：使用 <crud-dialog :show-submit="true" :show-cancel="true"> 统一弹窗组件替代手写 el-dialog -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
       :submit-loading="submitting"
@@ -124,8 +124,8 @@
         </el-form-item>
       </el-form>
     </crud-dialog>
-    <!-- 修改点：使用 <crud-dialog> 统一弹窗组件替代手写 el-dialog（仅展示，隐藏确认按钮） -->
-    <crud-dialog title="库存预警" :visible.sync="warningDialogVisible" size="lg" :show-submit="false" cancel-text="关 闭">
+    <!-- 修改点：使用 <crud-dialog :show-submit="true" :show-cancel="true"> 统一弹窗组件替代手写 el-dialog（仅展示，隐藏确认按钮） -->
+    <crud-dialog :show-cancel="true" title="库存预警" :visible.sync="warningDialogVisible" size="lg" :show-submit="false" cancel-text="关 闭">
       <el-table aria-label="数据表格" :data="warningData" stripe class="tableBox">
         <el-table-column prop="name" label="食材名称" min-width="160" align="center"></el-table-column>
         <el-table-column label="食材分类" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true">

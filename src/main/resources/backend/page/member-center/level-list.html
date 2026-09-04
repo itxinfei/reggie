@@ -97,8 +97,8 @@
     </div>
 
     <!-- ===== 弹窗 ===== -->
-    <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，默认 footer 提供"取消/确定" -->
-    <crud-dialog :title="formData.title" :visible.sync="formData.dialogVisible" :submit-loading="submitting" size="md" @submit="submitForm">
+    <!-- 修改点：使用 <crud-dialog :show-submit="true" :show-cancel="true"> 统一组件替代手写 el-dialog，默认 footer 提供"取消/确定" -->
+    <crud-dialog :show-submit="true" :show-cancel="true" :title="formData.title" :visible.sync="formData.dialogVisible" :submit-loading="submitting" size="md" @submit="submitForm">
       <el-form label-width="90px" :model="formData" :rules="formRules" ref="levelForm">
         <el-form-item label="等级名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入等级名称" maxlength="20"></el-input>

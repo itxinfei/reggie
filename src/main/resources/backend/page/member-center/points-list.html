@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>积分管理 - 瑞吉外卖管理端</title>
+  <title>积分管理 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -115,7 +116,7 @@
     </div>
 
     <!-- ===== 积分调整弹窗（8.4.3：发放/扣减/说明） ===== -->
-    <crud-dialog title="积分调整" :visible.sync="adjustForm.dialogVisible" :submit-loading="adjustLoading" width="480px" @submit="submitAdjust">
+    <crud-dialog :show-submit="true" :show-cancel="true" title="积分调整" :visible.sync="adjustForm.dialogVisible" :submit-loading="adjustLoading" width="480px" @submit="submitAdjust">
       <el-form :model="adjustForm" :rules="adjustRules" ref="adjustFormRef" label-width="90px" size="small">
         <el-form-item label="会员手机：" prop="phone">
           <div style="display:flex;gap:8px;width:100%;">

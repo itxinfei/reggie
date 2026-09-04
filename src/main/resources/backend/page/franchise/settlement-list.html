@@ -85,7 +85,7 @@
     </div>
 
     <!-- 生成结算单弹窗 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="genData.title"
       :visible.sync="genData.dialogVisible"
       :submit-loading="generating"

@@ -102,7 +102,7 @@
     </div>
 
     <!-- 新增/编辑弹窗 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
       :submit-loading="submitting"
@@ -134,7 +134,7 @@
     </crud-dialog>
 
     <!-- 权限分配弹窗（专注权限树：搜索 + 类型筛选 + 快捷勾选 + 半选计数） -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="permDialogTitle"
       :visible.sync="permDialogVisible"
       size="lg"
@@ -198,7 +198,7 @@
     </crud-dialog>
 
     <!-- 分配用户弹窗（独立：专注 员工↔角色 穿梭框） -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="userDialogTitle"
       :visible.sync="userDialogVisible"
       size="md"

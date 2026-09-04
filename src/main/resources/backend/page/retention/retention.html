@@ -521,7 +521,7 @@
       </div>
 
       <!-- 优惠券发放弹窗 -->
-      <crud-dialog
+      <crud-dialog :show-submit="true" :show-cancel="true"
         title="发放优惠券"
         :visible.sync="couponDialogVisible"
         :submit-loading="couponLoading"

@@ -294,7 +294,7 @@
     </div>
 
     <!-- ===== 新增/编辑弹窗 ===== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
       :submit-loading="submitting"
@@ -338,7 +338,7 @@
     </crud-dialog>
 
     <!-- ===== 发券弹窗（8.4.2 券模板详情内发放，不跳页） ===== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="定向发放优惠券"
       :visible.sync="issueForm.dialogVisible"
       :show-submit="false"
@@ -430,7 +430,7 @@
     </crud-dialog>
 
     <!-- ===== 效果统计弹窗 ===== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="优惠券效果统计"
       :visible.sync="effectDialogVisible"
       :show-submit="false"
@@ -456,7 +456,7 @@
     </crud-dialog>
 
     <!-- ===== 批量延期弹窗 ===== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="extendForm.title"
       :visible.sync="extendForm.dialogVisible"
       :submit-loading="extendLoading"

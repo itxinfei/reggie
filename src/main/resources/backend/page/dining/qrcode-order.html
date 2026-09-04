@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>扫码点餐 - 瑞吉外卖</title>
+  <title>扫码点餐 - 瑞吉外卖</title>
+
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/remixicon.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
@@ -118,7 +119,7 @@
     </div>
 
     <!-- 购物车弹窗 -->
-    <crud-dialog title="购物车" :visible.sync="cartDialog.visible"  :show-close="true" :close-on-click-modal="true"  :show-submit="false">
+    <crud-dialog :show-cancel="true" title="购物车" :visible.sync="cartDialog.visible"  :show-close="true" :close-on-click-modal="true"  :show-submit="false">
       <div v-if="cart.length === 0" class="empty-cart">购物车是空的</div>
       <div v-for="item in cart" :key="item.dishId" class="cart-item">
         <div class="cart-item-name">{{ item.name }}</div>
@@ -132,7 +133,7 @@
     </crud-dialog>
 
     <!-- 提交订单弹窗 -->
-    <crud-dialog title="确认订单" :visible.sync="submitDialog.visible" 
+    <crud-dialog :show-submit="true" :show-cancel="true" title="确认订单" :visible.sync="submitDialog.visible" 
       :close-on-click-modal="false" @submit="confirmSubmit">
       <div style="padding: 10px 0;">
         <div class="qr-title">

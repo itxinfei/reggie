@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>充值记录 - 瑞吉外卖管理端</title>
+  <title>充值记录 - 瑞吉外卖管理端</title>
+
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -106,7 +107,7 @@
     </div>
 
     <!-- ===== 手动充值弹窗（8.4.3：金额/赠送/支付方式，充值后余额即时更新） ===== -->
-    <crud-dialog title="手动充值" :visible.sync="rechargeForm.dialogVisible" :submit-loading="rechargeLoading" width="480px" @submit="submitRecharge">
+    <crud-dialog :show-submit="true" :show-cancel="true" title="手动充值" :visible.sync="rechargeForm.dialogVisible" :submit-loading="rechargeLoading" width="480px" @submit="submitRecharge">
       <el-form :model="rechargeForm" :rules="rechargeRules" ref="rechargeFormRef" label-width="90px" size="small">
         <el-form-item label="会员手机：" prop="phone">
           <div style="display:flex;gap:8px;width:100%;">

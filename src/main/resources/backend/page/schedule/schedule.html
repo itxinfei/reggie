@@ -122,7 +122,7 @@
       </el-row>
 
       <!-- 添加排班弹窗 -->
-      <crud-dialog title="添加排班" :visible.sync="dialog.visible" :submit-loading="submitting" size="md" @submit="submitForm">
+      <crud-dialog :show-submit="true" :show-cancel="true" title="添加排班" :visible.sync="dialog.visible" :submit-loading="submitting" size="md" @submit="submitForm">
         <el-form ref="scheduleForm" :model="form" :rules="formRules" label-width="80px" size="small">
           <el-form-item label="员工" prop="employeeId">
             <el-select v-model="form.employeeId" placeholder="请选择员工" style="width:293px;" clearable>

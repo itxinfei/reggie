@@ -109,7 +109,7 @@
     </div>
 
     <!-- 支付详情弹窗 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="支付详情"
       :visible.sync="detailVisible"
       size="md"
@@ -157,7 +157,7 @@
     </crud-dialog>
 
     <!-- 退款弹框 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="退款处理"
       :visible.sync="refundVisible"
       :submit-loading="submitting"

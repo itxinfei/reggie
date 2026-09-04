@@ -99,7 +99,7 @@
    组件4：crud-dialog — 新增/编辑弹窗
    表单内容通过默认插槽传入，底部按钮由组件统一管理
    ============================================================ -->
-  <crud-dialog
+  <crud-dialog :show-submit="true" :show-cancel="true"
     :title="dialogTitle"
     :visible.sync="dialogVisible"
     :submit-loading="submitting"
@@ -132,7 +132,7 @@
   <!-- ============================================================
    组件5：crud-dialog — 采购记录弹窗（8.3.3 供应商历史采购，复用 purchaseOrder page 接口）
    ============================================================ -->
-  <crud-dialog
+  <crud-dialog :show-submit="true" :show-cancel="true"
     :title="purchaseDialog.title"
     :visible.sync="purchaseDialog.visible"
     size="lg"

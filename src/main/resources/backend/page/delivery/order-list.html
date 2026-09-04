@@ -85,7 +85,7 @@
       </crud-table>
 
       <!-- 订单详情弹窗 -->
-      <crud-dialog
+      <crud-dialog :show-submit="true" :show-cancel="true"
         title="订单详情"
         :visible.sync="detailVisible"
         size="md"
@@ -131,7 +131,7 @@
       </crud-dialog>
 
       <!-- 取消原因弹窗 -->
-      <crud-dialog
+      <crud-dialog :show-submit="true" :show-cancel="true"
         title="取消订单"
         :visible.sync="cancelVisible"
         size="sm"

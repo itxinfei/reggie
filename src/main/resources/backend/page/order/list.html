@@ -102,7 +102,7 @@
     </main>
 
     <!-- 订单详情弹窗 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="订单详情"
       :visible.sync="dialogVisible"
       size="xl"
@@ -196,7 +196,7 @@
     </crud-dialog>
 
     <!-- 退款弹框 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="订单退款"
       :visible.sync="refundVisible"
       size="sm"

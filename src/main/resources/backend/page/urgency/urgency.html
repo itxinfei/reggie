@@ -395,7 +395,7 @@
       </div>
 
       <!-- 催菜确认弹窗 -->
-      <crud-dialog
+      <crud-dialog :show-submit="true" :show-cancel="true"
         title="催菜提醒"
         :visible.sync="urgeDialogVisible"
         :submit-loading="urgeLoading"

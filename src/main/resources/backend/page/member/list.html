@@ -88,8 +88,8 @@
     </main>
 
     <!-- 新增/修改员工弹窗 -->
-    <!-- 修改点：使用 <crud-dialog> 统一组件替代手写 el-dialog，footer 插槽保留"保存并继续添加" -->
-    <crud-dialog
+    <!-- 修改点：使用 <crud-dialog :show-submit="true" :show-cancel="true"> 统一组件替代手写 el-dialog，footer 插槽保留"保存并继续添加" -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="memberDialog.title"
       :visible.sync="memberDialog.visible"
       size="md"

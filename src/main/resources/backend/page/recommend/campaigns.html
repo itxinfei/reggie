@@ -194,7 +194,7 @@
     </div>
 
     <!-- ========== 新建/编辑对话框 ========== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="dialogTitle"
       :visible.sync="dialogVisible"
       size="lg"
@@ -274,7 +274,7 @@
     </crud-dialog>
 
     <!-- ========== 推送消息对话框 ========== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="推送营销消息"
       :visible.sync="pushDialogVisible"
       size="md"
@@ -314,7 +314,7 @@
     </crud-dialog>
 
     <!-- ========== 活动统计对话框 ========== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="活动效果统计"
       :visible.sync="statsDialogVisible"
       size="lg"

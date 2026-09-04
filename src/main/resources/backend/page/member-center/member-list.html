@@ -103,7 +103,7 @@
     </div>
 
     <!-- ===== 会员详情弹窗（2026-09-01：原 8.4.1 双栏右卡迁移为弹窗式详情） ===== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="会员详情"
       :visible.sync="detailVisible"
       size="md"
@@ -162,7 +162,7 @@
     </crud-dialog>
 
     <!-- ===== 充值弹窗 ===== -->
-    <crud-dialog title="会员充值" :visible.sync="rechargeDialogVisible" :submit-loading="submitting" size="sm" @submit="submitRecharge" @close="rechargeDialogVisible = false">
+    <crud-dialog :show-submit="true" :show-cancel="true" title="会员充值" :visible.sync="rechargeDialogVisible" :submit-loading="submitting" size="sm" @submit="submitRecharge" @close="rechargeDialogVisible = false">
       <!-- 修改点：补全 ref/:model/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
       <el-form ref="rechargeFormRef" :model="rechargeForm" :rules="rechargeRules" label-width="110px" size="small">
         <el-form-item label="会员名称："><span style="font-weight:600;">{{ rechargeMember.name }}</span></el-form-item>
@@ -188,7 +188,7 @@
     </crud-dialog>
 
     <!-- ===== 新增/编辑会员弹窗 ===== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="editDialogTitle"
       :visible.sync="editDialogVisible"
       :submit-loading="submitting"

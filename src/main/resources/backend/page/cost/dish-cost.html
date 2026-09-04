@@ -107,7 +107,7 @@
     </div>
 
     <!-- 新增/编辑对话框 -->
-    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" size="lg" @submit="handleSubmit">
+    <crud-dialog :show-submit="true" :show-cancel="true" :title="dialogTitle" :visible.sync="dialogVisible" size="lg" @submit="handleSubmit">
       <el-form :model="formData" :rules="formRules" ref="costForm" label-width="100px">
         <el-form-item label="菜品" prop="dishId">
           <el-select

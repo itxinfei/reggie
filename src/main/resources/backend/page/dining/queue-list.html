@@ -153,7 +153,7 @@
     </div>
 
     <!-- 取号弹窗 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="取号"
       :visible.sync="takeForm.dialogVisible"
       :submit-loading="takeLoading"
@@ -175,7 +175,7 @@
     </crud-dialog>
 
     <!-- 入座弹窗 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="安排入座"
       :visible.sync="seatForm.dialogVisible"
       :submit-loading="seatLoading"

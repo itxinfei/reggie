@@ -97,7 +97,7 @@
   </div>
 
   <!-- 订单详情弹窗 -->
-  <crud-dialog
+  <crud-dialog :show-submit="true" :show-cancel="true"
     title="平台订单详情"
     :visible.sync="detailVisible"
     size="lg"
@@ -154,7 +154,7 @@
   </crud-dialog>
 
   <!-- 即时拉单弹窗 -->
-  <crud-dialog
+  <crud-dialog :show-submit="true" :show-cancel="true"
     title="即时拉单"
     :visible.sync="pullVisible"
     size="sm"

@@ -15,7 +15,13 @@
     /* ========== 采购管理专用样式 ========== */
     .purchase-chart { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px 24px; box-shadow: var(--shadow-sm); margin-bottom: 20px; height: 340px; }
     .detail-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
-  </style>
+  
+    /* 采购管理表单宽度工具类 */
+    .rg-w-full { width: 100% !important; }
+    .rg-w-220 { width: 220px !important; }
+    .rg-w-160 { width: 160px !important; }
+    .rg-w-100 { width: 100px !important; }
+</style>
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -75,7 +81,7 @@
         @expand-change="loadDetails">
         <template #expand="{ row }">
           <el-table aria-label="数据表格" :data="row.details" stripe class="tableBox" v-if="row.details && row.details.length">
-            <el-table-column prop="materialName" label="食材名称" min-width="140" align="center" />
+            <el-table-column prop="materialName" label="食材名称" min-width="140" align="center" :header-align="'center'" />
             <el-table-column prop="materialId" label="食材ID" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
             <el-table-column prop="qty" label="数量" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
             <el-table-column label="单价" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
@@ -87,7 +93,7 @@
             <el-table-column label="小计" width="110" align="center">
               <template slot-scope="scope">￥{{ scope.row.amount }}</template>
             </el-table-column>
-            <el-table-column prop="remark" label="备注" min-width="120" align="center" />
+            <el-table-column prop="remark" label="备注" min-width="120" align="center" :header-align="'center'" />
           </el-table>
           <div v-else style="text-align:center;padding:16px;color:var(--text-muted);">暂无明细数据</div>
         </template>
@@ -119,23 +125,23 @@
       <!-- 修改点：移除误导性死 class demo-form-inline（label-width 100 可接受，保持不变） -->
       <el-form ref="purchaseForm" :model="formData" :rules="purchaseRules" label-width="100px">
         <el-form-item label="供应商：" prop="supplierId">
-          <el-select v-model="formData.supplierId" placeholder="请选择供应商" style="width:100%">
+          <el-select v-model="formData.supplierId" placeholder="请选择供应商" class="rg-w-full">
             <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="操作员：" prop="operator">
-          <el-input v-model="formData.operator" placeholder="请输入操作员姓名" style="width:220px" />
+          <el-input v-model="formData.operator" placeholder="请输入操作员姓名" class="rg-w-220" />
         </el-form-item>
         <el-form-item label="备注：">
           <el-input v-model="formData.remark" placeholder="采购备注（可选）" />
         </el-form-item>
         <el-form-item label="采购明细：">
           <div v-for="(item, index) in formData.details" :key="index" class="detail-row">
-            <el-select v-model="item.materialId" placeholder="食材" style="width:160px" filterable>
+            <el-select v-model="item.materialId" placeholder="食材" class="rg-w-160" filterable>
               <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id"></el-option>
             </el-select>
-            <el-input v-model="item.qty" placeholder="数量" type="number" style="width:100px" />
-            <el-input v-model="item.unitPrice" placeholder="单价" type="number" style="width:100px" />
+            <el-input v-model="item.qty" placeholder="数量" type="number" class="rg-w-100" />
+            <el-input v-model="item.unitPrice" placeholder="单价" type="number" class="rg-w-100" />
             <el-button type="danger" size="mini" @click="removeDetail(index)">删除</el-button>
           </div>
           <el-button type="primary" size="mini" @click="addDetail">+ 添加明细</el-button>
@@ -158,7 +164,7 @@
           <span style="font-weight:600;">{{ editForm.orderNo }}</span>
         </el-form-item>
         <el-form-item label="供应商：">
-          <el-select v-model="editForm.supplierId" placeholder="请选择" style="width:100%">
+          <el-select v-model="editForm.supplierId" placeholder="请选择" class="rg-w-full">
             <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
           </el-select>
         </el-form-item>
@@ -193,12 +199,12 @@
           cardFilter: '',
           // 修改点：crud-table 列配置（替代手写 el-table-column）
           columns: [
-            { prop: 'orderNo', label: '采购单号', minWidth: 140 },
-            { prop: 'supplierName', label: '供应商', minWidth: 120 },
+            { prop: 'orderNo', label: '采购单号', minWidth: 140, align: 'center' },
+            { prop: 'supplierName', label: '供应商', minWidth: 120, align: 'center' },
             { prop: 'totalAmount', label: '总金额', width: 110, align: 'center', slot: true, type: 'money' },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
             { prop: 'operator', label: '操作员', width: 80, align: 'center' },
-            { prop: 'remark', label: '备注', minWidth: 100 },
+            { prop: 'remark', label: '备注', minWidth: 100, align: 'center' },
             { prop: 'createdTime', label: '创建时间', width: 160, align: 'center' }
           ],
           // 修改点：<table-bar> 统一组件配置
@@ -359,7 +365,9 @@
           this.loadSupplierOptions(); this.loadMaterialOptions()
         },
         handleClose() { this.formData.dialogVisible = false },
-        addDetail() { this.formData.details.push({ materialId: '', qty: '', unitPrice: '' }) },
+        addDetail() {
+            this.formData.details.push({ materialId: '', qty: '', unitPrice: '' })
+          },
         removeDetail(index) { this.formData.details.splice(index, 1) },
         // 修改点：审核采购单
         approveHandle(row) {

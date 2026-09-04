@@ -272,7 +272,7 @@
       </crud-dialog>
 
       <!-- 分配客服弹窗 -->
-      <crud-dialog title="分配客服" :visible.sync="assignForm.visible" width="400px" :submit-loading="dialogSubmitting" @submit="onSubmitAssign">
+      <crud-dialog :show-submit="true" :show-cancel="true" title="分配客服" :visible.sync="assignForm.visible" width="400px" :submit-loading="dialogSubmitting" @submit="onSubmitAssign">
         <el-form label-width="80px">
           <el-form-item label="客服姓名：" required>
             <el-select v-model="assignForm.agentId" placeholder="请选择客服" filterable clearable style="width:100%">
@@ -300,7 +300,7 @@
       </crud-dialog>
 
       <!-- 处理投诉弹窗 -->
-      <crud-dialog title="处理投诉" :visible.sync="handleForm.visible" width="480px" :submit-loading="dialogSubmitting" @submit="onSubmitHandleComplaint">
+      <crud-dialog :show-submit="true" :show-cancel="true" title="处理投诉" :visible.sync="handleForm.visible" width="480px" :submit-loading="dialogSubmitting" @submit="onSubmitHandleComplaint">
         <el-form label-width="100px">
           <el-form-item label="处理结果：" required>
             <el-input type="textarea" v-model="handleForm.handleResult" :rows="3" placeholder="请输入处理结果说明"></el-input>

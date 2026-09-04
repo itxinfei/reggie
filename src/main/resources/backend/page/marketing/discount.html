@@ -102,7 +102,7 @@
     </main>
 
     <!-- 新增/编辑对话框 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :size="'md'"
       :title="dialogTitle"
       :visible.sync="dialogVisible"

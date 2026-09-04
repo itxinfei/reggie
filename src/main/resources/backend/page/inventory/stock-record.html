@@ -80,7 +80,7 @@
     </div>
 
     <!-- C.4：入库/出库操作（流水页内新增，不再跳独立页） -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :size="'md'"
       :title="flowDialog.title"
       :visible.sync="flowDialog.visible"

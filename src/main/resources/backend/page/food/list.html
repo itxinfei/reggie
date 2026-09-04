@@ -137,7 +137,7 @@
     </main>
 
     <!-- 新增/修改菜品弹窗（统一 crud-dialog 组件，M2） -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :size="'xl'"
       :title="dishDialog.title"
       :visible.sync="dishDialog.visible"
@@ -216,7 +216,7 @@
     </crud-dialog>
 
     <!-- C.5 批量修改分类弹窗 -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :size="'sm'"
       title="批量修改分类"
       :visible.sync="categoryDialog.visible"
@@ -236,7 +236,7 @@
     </crud-dialog>
 
     <!-- 库存编辑弹窗（统一 crud-dialog 组件，M2） -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :size="'sm'"
       title="编辑库存"
       :visible.sync="stockDialog.visible"
@@ -261,7 +261,7 @@
     </crud-dialog>
 
     <!-- 配方编辑弹窗（统一 crud-dialog 组件，M2） -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :size="'lg'"
       :title="'编辑配方 - ' + (bomDialog.dishName || '')"
       :visible.sync="bomDialog.visible"

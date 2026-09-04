@@ -217,7 +217,7 @@
     </div>
 
     <!-- ========== 详情弹窗 ========== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       :title="'评价详情' + (detailData.dishName ? ' - ' + detailData.dishName : '')"
       :visible.sync="detailVisible"
       size="md"
@@ -259,7 +259,7 @@
     </crud-dialog>
 
     <!-- ========== 图片预览 ========== -->
-    <crud-dialog
+    <crud-dialog :show-submit="true" :show-cancel="true"
       title="图片预览"
       :visible.sync="previewVisible"
       size="md"
