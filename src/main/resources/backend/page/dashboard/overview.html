@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>数据概览 - 瑞吉外卖管理端</title>
+  <title>数据概览 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -1045,12 +1045,19 @@
           if (val === null || val === undefined) return '0.00'
           return Number(val).toFixed(2)
         },
-        // 修改点：统一页面跳转（供库存预警按钮等使用）
+        // 修改点：统一页面跳转（供 KPI 卡片、待办台、库存预警按钮等使用）
+        // 注意：带 query 的 URL（如 page/order/list.html?status=2）无法与菜单「精确」匹配，
+        // 若直接 window.location.href 会在 iframe 内相对「当前文档目录」解析，
+        // 产生错误路径 /backend/page/dashboard/page/order/list.html 而 404（Whitelabel）。
+        // 因此这里先完整 URL 匹配、再「仅路径(忽略 query)」匹配，命中即交给顶层 menuHandle
+        // （iframe 的 src 相对顶层文档解析，路径正确）；都不命中才用 /backend/ 绝对前缀兜底。
         goTo(url) {
           try {
+            const path = String(url || '').split('?')[0];
             if (window.parent && window.parent !== window && typeof window.parent.menuHandle === 'function') {
               const menuList = window.parent.menuList;
               if (menuList && menuList.length) {
+                // 第一轮：完整 URL 精确匹配（无 query 的菜单项走这里）
                 for (let i = 0; i < menuList.length; i++) {
                   const item = menuList[i];
                   if (item.url === url) { window.parent.menuHandle(item, false); return; }
@@ -1063,11 +1070,26 @@
                     }
                   }
                 }
+                // 第二轮：仅按路径匹配（忽略 ?query），命中后带 query 整体交给 menuHandle，
+                // 由 iframe 的 src 相对顶层文档解析，避免相对 iframe 文档产生错误路径
+                for (let i = 0; i < menuList.length; i++) {
+                  const item = menuList[i];
+                  if (item.url === path) { window.parent.menuHandle({ ...item, url: url }, false); return; }
+                  if (item.children && item.children.length) {
+                    for (let j = 0; j < item.children.length; j++) {
+                      if (item.children[j].url === path) {
+                        window.parent.menuHandle({ ...item.children[j], url: url }, false);
+                        return;
+                      }
+                    }
+                  }
+                }
               }
             }
-            window.location.href = url;
+            // 兜底：用 /backend/ 绝对前缀跳转，确保相对 iframe 文档也能解析到正确位置
+            window.location.href = '/backend/' + String(url || '').replace(/^\/?/, '');
           } catch (e) {
-            window.location.href = url;
+            window.location.href = '/backend/' + String(url || '').replace(/^\/?/, '');
           }
         }
       }
