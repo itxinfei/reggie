@@ -617,7 +617,7 @@ Vue.component('crud-table', {
       '<el-table-column v-if="expand" type="expand" :width="expandWidth">' +
         '<template slot-scope="props">' +
           '<slot name="expand" :row="props.row" :$index="props.$index">' +
-            '<div style="padding:16px;color:#c0c4cc;">暂无展开内容</div>' +
+            '<div style="padding:16px;color:var(--text-muted);">暂无展开内容</div>' +
           '</slot>' +
         '</template>' +
       '</el-table-column>' +

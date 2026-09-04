@@ -406,7 +406,10 @@
           exportRecords: [],
           recordsExpanded: false,
           // 成功导出的 Blob 缓存（用于重新下载）
-          _blobCache: {},
+          // 注意：属性名不能用 _ 前缀。Vue 2 的 initData 不会代理以 _ / $ 开头的
+          // data 属性到 vm 实例上（isReserved 判断），写 this._blobCache 会恒为
+          // undefined 从而抛 "Cannot set properties of undefined"。
+          blobCache: {},
           dateShortcuts: [
             {
               text: '今天',
@@ -779,7 +782,7 @@
               fileName: fileName
             }
             this.exportRecords.unshift(record)
-            this._blobCache[record.id] = blob
+            this.blobCache[record.id] = blob
 
             // 展开导出记录面板
             this.recordsExpanded = true
@@ -864,11 +867,11 @@
             type: 'warning'
           }).then(() => {
             const record = this.exportRecords[index]
-            if (record && record.id && this._blobCache[record.id]) {
+            if (record && record.id && this.blobCache[record.id]) {
               // 释放 Blob 缓存
               try {
                 // Blob 本身无需 revokeObjectURL（URL.createObjectURL 返回的才需要）
-                delete this._blobCache[record.id]
+                delete this.blobCache[record.id]
               } catch (e) { /* ignore */ }
             }
             this.exportRecords.splice(index, 1)
