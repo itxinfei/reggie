@@ -142,16 +142,27 @@ var exportApi = (function() {
             a.style.display = 'none';
 
             var disposition = res.headers['content-disposition'];
+            var parsedName = null;
             if (disposition) {
-                var match = disposition.match(/filename[^;=\\n]*=((['"]).*?\\2|[^;\\n]*)/);
-                if (match && match[1]) {
-                    a.download = decodeURIComponent(match[1].replace(/['"]/g, ''));
-                } else {
-                    a.download = fileName;
+                // 优先 RFC 5987 的 filename*（后端中文名走这条：filename*=UTF-8''%E8%AE%A2...）
+                // 旧正则有两个问题：
+                //   ① [^;=\\n] 中的 \\n 在正则字面量里表示「反斜杠或字母 n」，本意应是 \n；
+                //   ② 它会先命中后端给出的 ASCII 兜底名 filename="download.xlsx"，
+                //      导致中文文件名永远取不到，下载下来一律叫 download.xlsx。
+                var star = disposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+                if (star && star[1]) {
+                    try { parsedName = decodeURIComponent(star[1].trim()); } catch (e) { parsedName = null; }
                 }
-            } else {
-                a.download = fileName;
+                // 退化：普通 filename="xxx"
+                if (!parsedName) {
+                    var plain = disposition.match(/filename\s*=\s*"([^"]+)"/i)
+                             || disposition.match(/filename\s*=\s*([^;]+)/i);
+                    if (plain && plain[1]) {
+                        parsedName = plain[1].trim().replace(/^["']+|["']+$/g, '');
+                    }
+                }
             }
+            a.download = parsedName || fileName;
 
             document.body.appendChild(a);
             a.click();
