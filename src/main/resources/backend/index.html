@@ -177,7 +177,14 @@
                  allow-same-origin: 允许同域访问（因为iframe加载的是同域页面）
                  allow-scripts: 允许执行脚本（页面需要Vue等JS运行）
                  allow-forms: 允许提交表单
-                 allow-popups: 允许弹出窗口（如下载）
+                 allow-popups: 允许弹出窗口（window.open）
+                 allow-downloads: 允许下载文件（★必需，缺失则导出功能不可用★）
+                   说明：iframe 一旦带 sandbox 属性，从该框架发起的下载会被浏览器阻止，
+                   Chrome 控制台报 "Download was blocked because the frame initiating
+                   it is sandboxed and does not have the 'allow-downloads' flag set."。
+                   注意 allow-popups 只管 window.open 弹窗，管不了 <a download> /
+                   createObjectURL 下载 —— 此前误以为它能覆盖下载，导致导出接口后端
+                   已正常生成文件（日志可见"文件下载响应构建完成"）但浏览器就是不下载。
                  注意：不添加 allow-top-navigation，防止iframe内页面跳转顶层窗口绕过登录校验 -->
             <iframe
               id="cIframe"
@@ -187,7 +194,7 @@
               width="100%"
               scrolling="yes"
               frameborder="0"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads"
               v-show="!loading"
             ></iframe>
           </div>
