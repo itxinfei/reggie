@@ -36,6 +36,22 @@ public interface RefundRecordService extends IService<RefundRecord> {
     RefundRecord createRefund(Long paymentOrderId, BigDecimal amount, String reason);
 
     /**
+     * 创建退款记录并复用指定退款单号。
+     * <p>
+     * 用于"先生成渠道幂等键 out_request_no、后本地落库"的退款流程：
+     * 保证本地 refund_no 与渠道 out_request_no 一一对应，可直接对账。
+     * refundNo 为空时回退内部生成。
+     * </p>
+     *
+     * @param paymentOrderId 支付订单ID
+     * @param amount         退款金额
+     * @param reason         退款原因
+     * @param refundNo       退款单号（渠道 out_request_no，可为 null 回退内部生成）
+     * @return 退款记录
+     */
+    RefundRecord createRefund(Long paymentOrderId, BigDecimal amount, String reason, String refundNo);
+
+    /**
      * 更新退款记录状态为成功（渠道退款成功后调用，修复原先记录永远停留在 PENDING 的问题）。
      *
      * @param refundNo 退款流水号

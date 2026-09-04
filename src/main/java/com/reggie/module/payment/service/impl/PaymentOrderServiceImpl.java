@@ -7,14 +7,18 @@ import com.reggie.module.order.model.Orders;
 import com.reggie.module.payment.mapper.PaymentOrderMapper;
 import com.reggie.module.payment.model.PaymentOrder;
 import com.reggie.module.payment.service.PaymentOrderService;
+import com.reggie.module.payment.service.RefundService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.groupbuy.service.GroupBuyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -45,6 +49,11 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     /** 拼团服务（支付成功后标记拼团参与已支付，幂等，非拼团单自动跳过） */
     @Autowired
     private GroupBuyService groupBuyService;
+
+    /** 退款服务（@Lazy 避免与 RefundServiceImpl 的循环依赖；订单已取消但支付成功时自动退款） */
+    @Autowired
+    @Lazy
+    private RefundService refundService;
 
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
@@ -207,6 +216,15 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
                 } else {
                     log.warn("支付成功但订单状态非待付款，跳过联动更新: orderId={}, currentStatus={}",
                             po.getOrderId(), order.getStatus());
+                    // P0-2 修复（取消/支付 TOCTOU 资金漏洞）：
+                    // 此前取消订单的 hasSuccessPaymentOrder 是无锁 count 查询，支付回调并发时可能读到 false，
+                    // 订单被 CAS 置为已取消(5)；随后本回调 SUCCESS 后看到订单已取消只 log.warn 跳过，
+                    // 形成"payment SUCCESS + order CANCELLED + no refund"的资金矛盾（收钱不退）。
+                    // 现于订单为已取消(5)时注册 afterCommit 自动退款，复用 refundService.refundByOrder
+                    // （其内部含 Redis 锁 + 幂等校验，重复触发安全）：主事务提交后走渠道全额退款并联动订单为已退款(6)。
+                    if (Objects.equals(order.getStatus(), Orders.STATUS_CANCELLED)) {
+                        registerAutoRefundOnCancelled(po.getOrderId(), order.getTenantId());
+                    }
                 }
             }
         } finally {
@@ -264,6 +282,34 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
                 BaseContext.remove();
             }
         }
+    }
+
+    /**
+     * 订单已取消但支付成功：主事务提交后自动发起渠道全额退款（P0-2 TOCTOU 资金闭环）。
+     * <p>
+     * 复用 {@code refundService.refundByOrder}（其内部含 Redis 分布式锁 + 幂等校验 + 累计退款复查，
+     * 重复触发安全）：支付回调并发于取消时，订单已被 CAS 置为已取消(5)，本回调 SUCCESS 后须自动退款，
+     * 避免"payment SUCCESS + order CANCELLED + no refund"的资金矛盾（收钱不退）。
+     * 注意：此处不回退库存——取消路径已回退过库存，且退款到账与库存回退解耦。
+     * </p>
+     */
+    private void registerAutoRefundOnCancelled(Long orderId, Long tenantId) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    boolean refunded = refundService.refundByOrder(orderId, "订单已取消支付成功自动退款");
+                    if (refunded) {
+                        log.info("订单已取消但支付成功，自动退款完成: orderId={}", orderId);
+                    } else {
+                        log.warn("订单已取消但支付成功，自动退款未完成（幂等跳过或已留对账待办）: orderId={}", orderId);
+                    }
+                } catch (Exception e) {
+                    log.error("【严重】订单已取消但支付成功，自动退款异常，需人工处理！orderId={}, tenantId={}",
+                            orderId, tenantId, e);
+                }
+            }
+        });
     }
 
     private String generateTradeNo() {

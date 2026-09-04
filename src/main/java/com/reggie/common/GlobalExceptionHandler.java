@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import java.sql.SQLIntegrityConstraintViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
 import java.util.List;
@@ -62,6 +63,22 @@ public class GlobalExceptionHandler {
                     .body(R.error("数据已存在，请勿重复提交"));
         }
 
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(R.error("数据已存在，请勿重复提交"));
+    }
+
+    /**
+     * 处理唯一约束冲突（DuplicateKeyException，Spring 对 JDBC 唯一键冲突的统一定义）
+     * 返回 409 Conflict
+     * <p>
+     * MyBatis-Plus/MyBatis 在唯一键冲突时抛出的 {@code SQLIntegrityConstraintViolationException}
+     * 会被 Spring 异常转换器包装为 {@code DuplicateKeyException}（DataAccessException 子类），
+     * 此兜底保证无论以哪种异常形态到达全局处理器都返回 409 而非 500。
+     * </p>
+     */
+    @ExceptionHandler(DuplicateKeyException.class)
+    public ResponseEntity<R<String>> handleDuplicateKeyException(DuplicateKeyException ex) {
+        log.error("Duplicate key violation", ex);
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(R.error("数据已存在，请勿重复提交"));
     }

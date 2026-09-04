@@ -67,6 +67,11 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
 
     @Override
     public RefundRecord createRefund(Long paymentOrderId, BigDecimal amount, String reason) {
+        return createRefund(paymentOrderId, amount, reason, null);
+    }
+
+    @Override
+    public RefundRecord createRefund(Long paymentOrderId, BigDecimal amount, String reason, String refundNo) {
         if (amount == null) {
             throw new CustomException("退款金额不能为空");
         }
@@ -105,7 +110,9 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
             RefundRecord record = new RefundRecord();
             record.setPaymentOrderId(paymentOrderId);
             record.setTenantId(currentTenantId);
-            record.setRefundNo(generateRefundNo());
+            // 优先复用调用方传入的退款单号（即渠道 out_request_no），保证本地 refund_no 与渠道幂等键一一对应可对账；
+            // 为空则内部生成。
+            record.setRefundNo(refundNo != null && !refundNo.trim().isEmpty() ? refundNo : generateRefundNo());
             record.setAmount(amount);
             record.setReason(reason);
             record.setStatus(RefundStatus.PENDING.getCode());

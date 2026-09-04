@@ -54,6 +54,18 @@ public interface NotificationService {
     NotificationRecord sendToAllUsers(String bizType, Integer channel, Map<String, String> params);
 
     /**
+     * 执行定时发送记录的实际发送（供定时调度任务调用）。
+     * <p>
+     * 定时发送（batchSend 传入未来 sendTime）只建 status=0 待发送记录，
+     * 由 {@code NotificationSendTask} 扫描到点后调用本方法补发：
+     * CAS 抢占 status 0->1 防多实例重复发送 → 还原模板/目标/参数 → 逐目标发送 → 更新结果。
+     * </p>
+     *
+     * @param record 待发送的通知记录（status=0 且已到 sendTime）
+     */
+    void sendScheduledRecord(NotificationRecord record);
+
+    /**
      * 发送单条短信
      *
      * @param phone    手机号

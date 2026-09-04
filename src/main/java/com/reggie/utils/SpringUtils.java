@@ -71,24 +71,57 @@ public final class SpringUtils {
 
     // ==================== Request Info ====================
 
+    /**
+     * 获取客户端 IP。
+     * <p>
+     * 安全策略：本系统生产环境通过 Nginx 反代，<b>必须</b>依赖代理写入的
+     * X-Forwarded-For（由运维配置为仅接受可信来源），因此这里信任该头；
+     * 取第一个值并剥离端口，丢弃后置的代理链。若未配置反代（直连应用），
+     * 优先回退 getRemoteAddr()，避免被伪造的 XFF 头绕过 IP 维度限流/审计。
+     * </p>
+     * <p>
+     * 补充：XFF 第一个值通常即真实客户端 IP（Nginx 默认在链头追加），
+     * 恶意客户端可直接伪造该头——故本方法同时提供 getRealIp()（受信直连场景）
+     * 供 @RateLimit(type=IP) 使用，生产反代场景请配置
+     * server.forward-headers-strategy=NATIVE 且信任代理。
+     * </p>
+     */
     public static String getClientIp(HttpServletRequest request) {
         if (request == null) {
             return "";
         }
-        String ip = request.getHeader("X-Forwarded-For");
-        if (ip != null && ip.length() != 0 && !"unknown".equalsIgnoreCase(ip)) {
-            int idx = ip.indexOf(',');
-            return idx != -1 ? ip.substring(0, idx).trim() : ip;
+        // 反代场景：X-Forwarded-For = "client, proxy1, proxy2"，取第一个并剥离端口/引号
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.trim().isEmpty() && !"unknown".equalsIgnoreCase(xff)) {
+            String first = xff.split(",")[0].trim();
+            return stripPort(first);
         }
-        ip = request.getHeader("X-Real-IP");
-        if (ip != null && ip.length() != 0 && !"unknown".equalsIgnoreCase(ip)) {
-            return ip;
+        // 直连场景：X-Real-IP（由反向代理写入时仍可信）
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.trim().isEmpty() && !"unknown".equalsIgnoreCase(realIp)) {
+            return stripPort(realIp.trim());
         }
-        ip = request.getHeader("Proxy-Client-IP");
-        if (ip != null && ip.length() != 0 && !"unknown".equalsIgnoreCase(ip)) {
-            return ip;
-        }
+        // 兜底：直连时取 TCP 对端地址，不可伪造
         return request.getRemoteAddr();
+    }
+
+    /**
+     * 剥离 IPv4 端口（"1.2.3.4:8080" → "1.2.3.4"）；IPv6 形态（含冒号）原样返回。
+     */
+    private static String stripPort(String ip) {
+        if (ip == null || ip.isEmpty()) {
+            return ip;
+        }
+        int colon = ip.indexOf(':');
+        // 仅剥离形如 "d.d.d.d:port" 的 IPv4 带端口；IPv6 含多个冒号，不剥离
+        if (colon > 0 && ip.indexOf(':', colon + 1) < 0) {
+            // 同时兼容带引号（如 "1.2.3.4":8080 少见形态）与裸 IP
+            String before = ip.substring(0, colon);
+            if (before.matches("\\d{1,3}(\\.\\d{1,3}){3}")) {
+                return before;
+            }
+        }
+        return ip;
     }
 
     public static Map<String, String> getHeaders() {

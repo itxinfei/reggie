@@ -4,10 +4,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.Ordered;
-import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
+import javax.servlet.Filter;
+import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -28,12 +32,17 @@ import java.util.UUID;
  *  2. CsrfFilter               (@Order(1))              — CSRF 校验
  *  3. LoginCheckFilter         (无 @Order，字母序)      — 登录态校验
  *
+ * 修复记录：此前该类只有 @Order 没有 @WebFilter，未被 ServletComponentScan
+ * 扫描注册，是死代码，MDC traceId 与响应头 X-Trace-Id 完全不生效。
+ * 现补 @WebFilter 使全链路 traceId 生效（可观测性）。
+ *
  * @author AI
  * @since 2026-08-22
  */
 @Slf4j
+@WebFilter(filterName = "traceIdFilter", urlPatterns = "/*", asyncSupported = true)
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
-public class TraceIdFilter extends OncePerRequestFilter {
+public class TraceIdFilter implements Filter {
 
     /** 请求头名称 */
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
@@ -42,6 +51,16 @@ public class TraceIdFilter extends OncePerRequestFilter {
     private static final String MDC_TRACE_ID_KEY = "traceId";
 
     @Override
+    public void init(FilterConfig filterConfig) {
+        // no-op
+    }
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response,
+                         FilterChain filterChain) throws IOException, ServletException {
+        doFilterInternal((HttpServletRequest) request, (HttpServletResponse) response, filterChain);
+    }
+
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain)
@@ -63,5 +82,10 @@ public class TraceIdFilter extends OncePerRequestFilter {
             MDC.remove(MDC_TRACE_ID_KEY);
             BaseContext.removeTraceId();
         }
+    }
+
+    @Override
+    public void destroy() {
+        // no-op
     }
 }

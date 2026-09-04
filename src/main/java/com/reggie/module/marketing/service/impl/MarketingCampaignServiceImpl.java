@@ -482,69 +482,80 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
 
         Long tenantId = BaseContext.getCurrentTenantId();
 
-        // 查询当前门店所有用户
-        LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
-        userWrapper.eq(tenantId != null, User::getTenantId, tenantId)
-                   .eq(User::getStatus, 1);
-        List<User> allUsers = userMapper.selectList(userWrapper);
-        if (allUsers == null || allUsers.isEmpty()) {
-            log.info("[批量推送] 活动{}无可推送用户", campaignId);
-            return 0;
-        }
-
-        // ========== 批量预查询用户画像标签（避免 N+1） ==========
-        List<Long> userIds = new ArrayList<>(allUsers.size());
-        for (User u : allUsers) {
-            userIds.add(u.getId());
-        }
-
-        // 1. 批量查询优惠券领取数量（判断新用户）
-        Map<Long, Long> couponCountMap = batchQueryCouponCounts(userIds);
-
-        // 2. 批量查询订单数（判断高频用户 + 流失预警）
-        Map<Long, Integer> orderCountMap = batchQueryRecentOrderCounts(userIds);
-
-        // 3. 批量查询浏览记录数（判断流失预警：7天内有浏览）
-        Map<Long, Integer> browseCountMap = batchQueryRecentBrowseCounts(userIds);
-        // ============================================
-
+        // 分页查询当前门店用户（每页 500，避免大租户全量加载 OOM）
         List<MarketingMessage> messagesToInsert = new ArrayList<>();
         int pushed = 0;
-        for (User user : allUsers) {
-            try {
-                Long userId = user.getId();
-
-                // 新用户：优惠券领取数<=1
-                boolean isNewUser = (couponCountMap.getOrDefault(userId, 0L) <= 1);
-                // 高频用户：最近30天订单>=8
-                boolean isHighFreq = (orderCountMap.getOrDefault(userId, 0) >= 8);
-                // 流失预警：最近30天无订单 + 最近7天有浏览
-                boolean isChurnWarning = (orderCountMap.getOrDefault(userId, 0) == 0
-                        && browseCountMap.getOrDefault(userId, 0) > 0);
-
-                if (!isUserMatchCampaign(campaign, isNewUser, isHighFreq, isChurnWarning)) {
-                    continue;
-                }
-
-                // 检查参与上限
-                if (campaign.getMaxParticipants() != null
-                        && campaign.getCurrentParticipants() >= campaign.getMaxParticipants()) {
-                    break;
-                }
-
-                MarketingMessage message = new MarketingMessage();
-                message.setCampaignId(campaignId);
-                message.setUserId(userId);
-                message.setPushType(pushType != null ? pushType : MarketingMessage.PUSH_POPUP);
-                message.setTitle(campaign.getName());
-                message.setContent(campaign.getDescription() != null ?
-                        campaign.getDescription() : "您有一份专属优惠待领取！");
-                message.setStatus(MarketingMessage.STATUS_SENT);
-                messagesToInsert.add(message);
-                pushed++;
-            } catch (Exception e) {
-                log.warn("[批量推送] 用户匹配失败", e);
+        int totalScanned = 0;
+        int pageSize = 500;
+        long pageNum = 1;
+        boolean reachedLimit = false;
+        while (true) {
+            Page<User> userPage = new Page<>(pageNum, pageSize);
+            LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
+            userWrapper.select(User::getId)
+                       .eq(tenantId != null, User::getTenantId, tenantId)
+                       .eq(User::getStatus, 1);
+            Page<User> pageResult = userMapper.selectPage(userPage, userWrapper);
+            List<User> pageUsers = pageResult.getRecords();
+            if (pageUsers == null || pageUsers.isEmpty()) {
+                break;
             }
+            totalScanned += pageUsers.size();
+
+            // 本页用户画像预查询（避免 N+1）
+            List<Long> userIds = new ArrayList<>(pageUsers.size());
+            for (User u : pageUsers) {
+                userIds.add(u.getId());
+            }
+            Map<Long, Long> couponCountMap = batchQueryCouponCounts(userIds);
+            Map<Long, Integer> orderCountMap = batchQueryRecentOrderCounts(userIds);
+            Map<Long, Integer> browseCountMap = batchQueryRecentBrowseCounts(userIds);
+
+            for (User user : pageUsers) {
+                try {
+                    Long userId = user.getId();
+
+                    // 新用户：优惠券领取数<=1
+                    boolean isNewUser = (couponCountMap.getOrDefault(userId, 0L) <= 1);
+                    // 高频用户：最近30天订单>=8
+                    boolean isHighFreq = (orderCountMap.getOrDefault(userId, 0) >= 8);
+                    // 流失预警：最近30天无订单 + 最近7天有浏览
+                    boolean isChurnWarning = (orderCountMap.getOrDefault(userId, 0) == 0
+                            && browseCountMap.getOrDefault(userId, 0) > 0);
+
+                    if (!isUserMatchCampaign(campaign, isNewUser, isHighFreq, isChurnWarning)) {
+                        continue;
+                    }
+
+                    // 检查参与上限
+                    if (campaign.getMaxParticipants() != null
+                            && campaign.getCurrentParticipants() >= campaign.getMaxParticipants()) {
+                        reachedLimit = true;
+                        break;
+                    }
+
+                    MarketingMessage message = new MarketingMessage();
+                    message.setCampaignId(campaignId);
+                    message.setUserId(userId);
+                    message.setPushType(pushType != null ? pushType : MarketingMessage.PUSH_POPUP);
+                    message.setTitle(campaign.getName());
+                    message.setContent(campaign.getDescription() != null ?
+                            campaign.getDescription() : "您有一份专属优惠待领取！");
+                    message.setStatus(MarketingMessage.STATUS_SENT);
+                    messagesToInsert.add(message);
+                    pushed++;
+                } catch (Exception e) {
+                    log.warn("[批量推送] 用户匹配失败", e);
+                }
+            }
+            if (reachedLimit || pageUsers.size() < pageSize) {
+                break;
+            }
+            pageNum++;
+        }
+        if (totalScanned == 0) {
+            log.info("[批量推送] 活动{}无可推送用户", campaignId);
+            return 0;
         }
 
         // 批量插入推送消息
@@ -558,7 +569,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         campaign.setCurrentParticipants((curParticipants != null ? curParticipants : 0) + pushed);
         updateById(campaign);
 
-        log.info("[批量推送] 活动{}批量推送完成：推送{}/{}人", campaignId, pushed, allUsers.size());
+        log.info("[批量推送] 活动{}批量推送完成：推送{}/{}人", campaignId, pushed, totalScanned);
         return pushed;
     }
 

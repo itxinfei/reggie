@@ -103,6 +103,7 @@ public class LoginCheckFilter implements Filter{
                 // 必须同时有员工ID和租户ID才算登录有效
                 if (tenantId == null) {
                     log.warn("员工登录态不完整，tenantId为null");
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json;charset=UTF-8");
                     response.getWriter().write(OBJECT_MAPPER.writeValueAsString(R.error("NOTLOGIN")));
                     return;
@@ -127,6 +128,7 @@ public class LoginCheckFilter implements Filter{
                 // 必须同时有用户ID和租户ID才算登录有效
                 if (tenantId == null) {
                     log.warn("用户登录态不完整，tenantId为null");
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json;charset=UTF-8");
                     response.getWriter().write(OBJECT_MAPPER.writeValueAsString(R.error("NOTLOGIN")));
                     return;
@@ -139,7 +141,10 @@ public class LoginCheckFilter implements Filter{
             }
 
             log.info("用户未登录");
-            //5、如果未登录则返回未登录结果，通过输出流方式向客户端页面响应数据
+            //5、如果未登录则返回未登录结果：HTTP 401 + JSON 体 NOTLOGIN
+            //   （此前仅返回 200 + NOTLOGIN，前端按 body 判断；补 401 让标准客户端/网关/监控
+            //    能识别未授权，且与 CommonController.download 的 SC_UNAUTHORIZED 行为一致）
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write(OBJECT_MAPPER.writeValueAsString(R.error("NOTLOGIN")));
         } finally {

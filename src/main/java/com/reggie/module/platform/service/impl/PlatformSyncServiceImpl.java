@@ -118,12 +118,16 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
                         config.getPlatformType(), config.getShopId(), tenantId, orders);
                 log.info("[平台同步] 拉单落库完成: platformType={}, 拉取={}, 新增={}",
                         config.getPlatformType(), orders.size(), inserted);
+                // 记录成功日志，便于对账与排查
+                saveSyncLog(config, tenantId, "PULL", "IN",
+                        "count=" + orders.size() + ",inserted=" + inserted, null);
             } catch (Exception e) {
                 log.error("[平台同步] 拉单落库失败(已捕获，不影响拉取): platformType={}", config.getPlatformType(), e);
+                // 落库失败必须记 status=1 失败日志：否则对账表"全部成功"掩盖丢单，
+                // PlatformRetryTask 也无法按失败日志重试补拉
+                saveSyncLog(config, tenantId, "PULL", "IN",
+                        "count=" + orders.size(), "落库失败: " + e.getMessage());
             }
-
-            // 记录同步日志，便于对账与排查
-            saveSyncLog(config, tenantId, orders.size(), null, null);
             return orders;
         });
     }
@@ -137,18 +141,24 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
 
     /**
      * 记录平台同步日志（拉单/回传统一入口）
+     *
+     * @param action      同步动作（PULL / PUSH_STATUS:accept 等）
+     * @param direction   同步方向：IN=拉单，OUT=状态回传/上架/库存回传
+     * @param requestBody 请求摘要（如 count=10,inserted=8 或 orderId=xxx,action=accept）
+     * @param error       失败原因，null 表示成功（status=0），非 null 记 status=1
      */
-    private void saveSyncLog(PlatformConfig config, Long tenantId, Integer count, String action, String error) {
+    private void saveSyncLog(PlatformConfig config, Long tenantId, String action, String direction,
+                             String requestBody, String error) {
         try {
             PlatformSyncLog logEntity = new PlatformSyncLog();
             logEntity.setTenantId(tenantId);
             logEntity.setPlatformType(config.getPlatformType());
-            logEntity.setAction(action != null ? action : "PULL");
-            logEntity.setDirection("IN");
+            logEntity.setAction(action);
+            logEntity.setDirection(direction);
             logEntity.setStatus(error == null ? 0 : 1);
             logEntity.setErrorMessage(error);
             logEntity.setRetryCount(0);
-            logEntity.setRequestBody("count=" + count);
+            logEntity.setRequestBody(requestBody);
             syncLogMapper.insert(logEntity);
         } catch (Exception e) {
             log.warn("[平台同步] 写入同步日志失败(已忽略): {}", e.getMessage());
@@ -157,35 +167,47 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
 
     @Override
     public void pushOrderStatus(PlatformConfig config, String platformOrderId, String action) {
-        executeWithRetry(config.getPlatformType(), "PUSH_STATUS:" + action, () -> {
-            PlatformAdapter adapter = getAdapter(config.getPlatformType());
-            if (adapter == null) {
-                log.warn("[平台同步] 未找到适配器，跳过状态回传: platformType={}", config.getPlatformType());
+        Long tenantId = BaseContext.getCurrentTenantId();
+        try {
+            executeWithRetry(config.getPlatformType(), "PUSH_STATUS:" + action, () -> {
+                PlatformAdapter adapter = getAdapter(config.getPlatformType());
+                if (adapter == null) {
+                    log.warn("[平台同步] 未找到适配器，跳过状态回传: platformType={}", config.getPlatformType());
+                    return null;
+                }
+                log.info("[平台同步] 状态回传: platformType={}, orderId={}, action={}",
+                        config.getPlatformType(), platformOrderId, action);
+                switch (action.toLowerCase()) {
+                    case "accept":
+                        adapter.acceptOrder(config, platformOrderId);
+                        break;
+                    case "reject":
+                        adapter.rejectOrder(config, platformOrderId);
+                        break;
+                    case "prepare":
+                        adapter.prepareOrder(config, platformOrderId);
+                        break;
+                    case "complete":
+                        adapter.completeOrder(config, platformOrderId);
+                        break;
+                    case "cancel":
+                        adapter.cancelOrder(config, platformOrderId);
+                        break;
+                    default:
+                        log.warn("[平台同步] 未知的订单动作: {}", action);
+                }
                 return null;
-            }
-            log.info("[平台同步] 状态回传: platformType={}, orderId={}, action={}",
-                    config.getPlatformType(), platformOrderId, action);
-            switch (action.toLowerCase()) {
-                case "accept":
-                    adapter.acceptOrder(config, platformOrderId);
-                    break;
-                case "reject":
-                    adapter.rejectOrder(config, platformOrderId);
-                    break;
-                case "prepare":
-                    adapter.prepareOrder(config, platformOrderId);
-                    break;
-                case "complete":
-                    adapter.completeOrder(config, platformOrderId);
-                    break;
-                case "cancel":
-                    adapter.cancelOrder(config, platformOrderId);
-                    break;
-                default:
-                    log.warn("[平台同步] 未知的订单动作: {}", action);
-            }
-            return null;
-        });
+            });
+            // 成功后记录 OUT 方向审计日志（此前缺失，导致平台侧状态回传无任何痕迹可查）。
+            // action 存原始动作（accept/reject/...），PlatformRetryTask 重试时直接作为入参复用。
+            saveSyncLog(config, tenantId, action, "OUT",
+                    "orderId=" + platformOrderId, null);
+        } catch (Exception e) {
+            // 重试耗尽仍失败：记 OUT 失败日志，供 PlatformRetryTask 重试补偿
+            saveSyncLog(config, tenantId, action, "OUT",
+                    "orderId=" + platformOrderId, "回传失败: " + e.getMessage());
+            throw e;
+        }
     }
 
     @Override

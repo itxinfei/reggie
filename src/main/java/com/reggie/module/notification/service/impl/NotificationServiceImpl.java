@@ -2,6 +2,8 @@ package com.reggie.module.notification.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.aliyuncs.DefaultAcsClient;
 import com.aliyuncs.IAcsClient;
 import com.aliyuncs.dysmsapi.model.v20170525.SendSmsRequest;
@@ -645,6 +647,135 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     /**
+     * 执行定时发送记录的实际发送（供调度任务调用）。
+     * <p>
+     * 定时发送流程：batchSend 只建 status=0 待发送记录，由 NotificationSendTask 扫到 sendTime 到期后
+     * 调用本方法补发。采用 CAS 抢占（status 0->1）防多实例重复发送；record.targetValue 反序列化还原
+     * 目标列表后复用"逐目标发送 + 同步消息中心 + 更新结果"的主流程，行为与立即发送一致。
+     * </p>
+     *
+     * @param record 待发送的通知记录（status=0 且已到 sendTime）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void sendScheduledRecord(NotificationRecord record) {
+        if (record == null || record.getId() == null) {
+            log.warn("[通知定时发送] 记录为空，跳过");
+            return;
+        }
+        Long tenantId = record.getTenantId();
+        // CAS 抢占 status 0(待发送) -> 1(发送中)，仅受影响行数=1 的实例执行发送，防多实例重复发
+        int claimed = recordMapper.update(null, new LambdaUpdateWrapper<NotificationRecord>()
+                .eq(NotificationRecord::getId, record.getId())
+                .eq(NotificationRecord::getStatus, 0)
+                .set(NotificationRecord::getStatus, 1));
+        if (claimed == 0) {
+            log.info("[通知定时发送] 记录已被其他实例处理，幂等跳过: recordId={}", record.getId());
+            return;
+        }
+        try {
+            doSendRecord(record, tenantId);
+        } catch (Exception e) {
+            // 已 CAS 抢占（status=1），发送期间异常不得回滚抢占结果，否则多实例将重复抢占重发。
+            // 异常由 doSendRecord 内逐目标捕获，此处仅兜底记录并告警。
+            log.error("[通知定时发送] 发送过程异常: recordId={}, tenantId={}", record.getId(), tenantId, e);
+        }
+    }
+
+    /**
+     * 定时记录主发送流程：加载模板、解析目标、逐目标发送、更新结果。
+     * 与立即发送(batchSend 非 scheduled 分支)行为一致，供 sendScheduledRecord 复用。
+     */
+    private void doSendRecord(NotificationRecord record, Long tenantId) {
+        // 记录虽标记为发送中，但外层无租户上下文（定时任务），模板查询需显式补租户条件
+        LambdaQueryWrapper<NotificationTemplate> templateWrapper = new LambdaQueryWrapper<>();
+        templateWrapper.eq(NotificationTemplate::getId, record.getTemplateId())
+                .eq(NotificationTemplate::getStatus, 1);
+        if (tenantId != null) {
+            templateWrapper.eq(NotificationTemplate::getTenantId, tenantId);
+        }
+        templateWrapper.last("LIMIT 1");
+        NotificationTemplate template = templateMapper.selectOne(templateWrapper);
+        if (template == null) {
+            log.warn("[通知定时发送] 模板不存在或已停用，标记失败: recordId={}, templateId={}",
+                    record.getId(), record.getTemplateId());
+            NotificationRecord failed = new NotificationRecord();
+            failed.setId(record.getId());
+            failed.setFailCount(1);
+            failed.setStatus(3);
+            recordMapper.updateById(failed);
+            return;
+        }
+
+        List<String> targets = new ArrayList<>();
+        try {
+            String targetValue = record.getTargetValue();
+            if (targetValue != null && !targetValue.trim().isEmpty()) {
+                targets = objectMapper.readValue(targetValue,
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+            }
+        } catch (Exception e) {
+            log.warn("[通知定时发送] 目标列表反序列化失败: recordId={}", record.getId(), e);
+        }
+        if (targets == null || targets.isEmpty()) {
+            log.warn("[通知定时发送] 无有效目标，标记失败: recordId={}", record.getId());
+            NotificationRecord failed = new NotificationRecord();
+            failed.setId(record.getId());
+            failed.setFailCount(0);
+            failed.setStatus(3);
+            failed.setFailReason("目标列表为空");
+            recordMapper.updateById(failed);
+            return;
+        }
+
+        Integer channel = record.getChannel();
+        String title = record.getContent() != null
+                ? (template.getTitle() != null ? template.getTitle() : "系统通知")
+                : null;
+        String content = record.getContent();
+
+        // 批量预解析 target→userId 映射（供消息中心同步，消除 N+1）
+        Map<String, Long> userIdMap = resolveUserIds(targets, channel);
+
+        int successCount = 0;
+        int failCount = 0;
+        StringBuilder failReasons = new StringBuilder();
+        for (String target : targets) {
+            try {
+                boolean ok = sendToTarget(target, channel, template, title, content, null);
+                if (ok) {
+                    successCount++;
+                    syncToMarketingMessage(target, channel, title, content, userIdMap);
+                } else {
+                    failCount++;
+                    failReasons.append("[").append(target).append("]发送失败; ");
+                }
+            } catch (Exception e) {
+                failCount++;
+                failReasons.append("[").append(target).append("]异常:")
+                        .append(e.getMessage()).append("; ");
+                log.error("[通知定时发送] 单目标发送异常: recordId={}, target={}",
+                        record.getId(), target, e);
+            }
+        }
+
+        NotificationRecord result = new NotificationRecord();
+        result.setId(record.getId());
+        result.setSuccessCount(successCount);
+        result.setFailCount(failCount);
+        result.setFailReason(failReasons.toString());
+        if (failCount == 0) {
+            result.setStatus(2);
+        } else if (successCount == 0) {
+            result.setStatus(3);
+        } else {
+            result.setStatus(4);
+        }
+        recordMapper.updateById(result);
+        log.info("[通知定时发送] 完成: recordId={}, 成功{}, 失败{}", record.getId(), successCount, failCount);
+    }
+
+    /**
      * 简易消息发送（无需模板，直接发送文本内容到对应渠道）
      * 同时将消息内容同步写入用户消息中心
      */
@@ -751,35 +882,51 @@ public class NotificationServiceImpl implements NotificationService {
             return null;
         }
 
-        // 查询当前租户的所有用户
-        LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
-        userWrapper.eq(User::getStatus, 1);
-        userWrapper.eq(User::getTenantId, BaseContext.getCurrentTenantId());
-        List<User> users = userMapper.selectList(userWrapper);
-        if (users.isEmpty()) {
-            log.warn("没有可推送的用户");
-            return null;
-        }
-
-        // 根据渠道构建target列表
+        // 分页查询当前租户用户（每页 1000，仅取 id/phone，避免大租户全量加载 OOM）
         List<String> targets = new ArrayList<>();
-        for (User user : users) {
-            if (channel == 1) {
-                // 短信渠道：使用手机号
-                if (user.getPhone() != null && !user.getPhone().isEmpty()) {
-                    targets.add(user.getPhone());
+        Map<String, Long> userIdMap = new HashMap<>();
+        int pageSize = 1000;
+        long pageNum = 1;
+        while (true) {
+            Page<User> userPage = new Page<>(pageNum, pageSize);
+            LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
+            userWrapper.select(User::getId, User::getPhone)
+                       .eq(User::getStatus, 1)
+                       .eq(User::getTenantId, BaseContext.getCurrentTenantId());
+            Page<User> pageResult = userMapper.selectPage(userPage, userWrapper);
+            List<User> pageUsers = pageResult.getRecords();
+            if (pageUsers == null || pageUsers.isEmpty()) {
+                break;
+            }
+            for (User user : pageUsers) {
+                // 构建 phone/userId→userId 映射（发送回执匹配用）
+                if (user.getPhone() != null) {
+                    userIdMap.put(user.getPhone(), user.getId());
                 }
-            } else if (channel == 2) {
-                // 推送渠道：使用用户ID
-                targets.add(String.valueOf(user.getId()));
-            } else {
-                // 混合渠道：优先手机号，否则用户ID
-                if (user.getPhone() != null && !user.getPhone().isEmpty()) {
-                    targets.add(user.getPhone());
-                } else {
+                userIdMap.put(String.valueOf(user.getId()), user.getId());
+
+                // 根据渠道构建 target
+                if (channel == 1) {
+                    // 短信渠道：使用手机号
+                    if (user.getPhone() != null && !user.getPhone().isEmpty()) {
+                        targets.add(user.getPhone());
+                    }
+                } else if (channel == 2) {
+                    // 推送渠道：使用用户ID
                     targets.add(String.valueOf(user.getId()));
+                } else {
+                    // 混合渠道：优先手机号，否则用户ID
+                    if (user.getPhone() != null && !user.getPhone().isEmpty()) {
+                        targets.add(user.getPhone());
+                    } else {
+                        targets.add(String.valueOf(user.getId()));
+                    }
                 }
             }
+            if (pageUsers.size() < pageSize) {
+                break;
+            }
+            pageNum++;
         }
 
         if (targets.isEmpty()) {
@@ -797,15 +944,6 @@ public class NotificationServiceImpl implements NotificationService {
         record.setTargetType(3); // 3=全部用户
         record.setStatus(1);
         recordMapper.insert(record);
-
-        // 直接复用已查询的 users 列表构建 phone/userId→userId 映射，无需额外查库
-        Map<String, Long> userIdMap = new HashMap<>();
-        for (User u : users) {
-            if (u.getPhone() != null) {
-                userIdMap.put(u.getPhone(), u.getId());
-            }
-            userIdMap.put(String.valueOf(u.getId()), u.getId());
-        }
 
         // 事务外执行发送（外部 HTTP 调用不应包裹在事务内）
         int successCount = 0;

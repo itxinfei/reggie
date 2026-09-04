@@ -801,12 +801,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         cartQuery.eq(ShoppingCart::getUserId, userId);
         List<ShoppingCart> existingCarts = shoppingCartService.list(cartQuery);
 
-        // 构建 Map 方便查找：key = "dishId:xxx" 或 "setmealId:xxx"
+        // 构建 Map 方便查找：key = "dishId:xxx" 或 "setmealId:xxx"（含口味区分）
         java.util.Map<String, ShoppingCart> existingMap = new java.util.HashMap<>();
         for (ShoppingCart cart : existingCarts) {
             String key = cart.getDishId() != null
-                ? "dishId:" + cart.getDishId()
-                : "setmealId:" + cart.getSetmealId();
+                ? "dishId:" + cart.getDishId() + ":flavor:" + (cart.getDishFlavor() == null ? "" : cart.getDishFlavor())
+                : "setmealId:" + cart.getSetmealId() + ":flavor:" + (cart.getDishFlavor() == null ? "" : cart.getDishFlavor());
             existingMap.put(key, cart);
         }
 
@@ -831,8 +831,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         for (OrderDetail d : details) {
             String key = d.getDishId() != null
-                ? "dishId:" + d.getDishId()
-                : "setmealId:" + d.getSetmealId();
+                ? "dishId:" + d.getDishId() + ":flavor:" + (d.getDishFlavor() == null ? "" : d.getDishFlavor())
+                : "setmealId:" + d.getSetmealId() + ":flavor:" + (d.getDishFlavor() == null ? "" : d.getDishFlavor());
 
             ShoppingCart existing = existingMap.get(key);
             if (existing != null) {

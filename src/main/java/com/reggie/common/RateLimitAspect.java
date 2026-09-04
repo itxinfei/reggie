@@ -17,6 +17,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 限流切面
@@ -42,8 +44,8 @@ public class RateLimitAspect {
     private final boolean enabled;
 
     /**
-     * Redis 瞬态故障熔断标记：Redis 异常时降级放行（限流失效），
-     * 避免每次请求都重复打印 error 日志。熔断持续 30s 后自动恢复探测。
+     * Redis 瞬态故障熔断标记：Redis 异常时降级到本地内存计数（见 localWindow），
+     * 而不是静默放行——避免 Redis 故障时限流彻底失效（短信验证码可被爆破、资金接口可被高频打）。
      */
     private volatile long redisCircuitOpenUntil = 0;
 
@@ -51,6 +53,24 @@ public class RateLimitAspect {
      * 熔断持续时间（毫秒）
      */
     private static final long CIRCUIT_OPEN_DURATION_MS = 30_000L;
+
+    /**
+     * 本地内存降级窗口（fail-safe，而非 fail-open）：
+     * key = 限流Key，值 = 窗口内的累计请求数。
+     * Redis 故障时用 ConcurrentHashMap 兜底计数，保证限流在 Redis 恢复前依然生效；
+     * 本地窗口按注解 time 秒滑动，30s 熔断结束后自动回到 Redis。
+     * 注：本地降级是进程内近似计数（多实例部署时各实例独立），仅作兜底，
+     * 精度不及 Redis 滑动窗口，但绝不允许"Redis 挂了直接放行"。
+     */
+    private final ConcurrentHashMap<String, LocalWindow> localWindow = new ConcurrentHashMap<>();
+
+    /**
+     * 本地内存窗口：进入窗口时记 count=1 并记入窗时间，随后按 limit 上限/时间窗判定。
+     */
+    static class LocalWindow {
+        final AtomicInteger count = new AtomicInteger(0);
+        volatile long windowStartMs;
+    }
 
     /**
      * 匿名用户标识
@@ -121,6 +141,10 @@ public class RateLimitAspect {
         // 构建限流 key
         String limitKey = buildLimitKey(point, rateLimit);
 
+        // 限流检查：try 块仅包裹 Redis 调用，业务方法 point.proceed() 在下方独立调用。
+        // 历史 Bug（P0）：若把 point.proceed() 放进 try，业务异常会被 catch(Exception)
+        // 误判为 Redis 故障，导致业务方法被再次执行（收银入账/下单扣库存等非幂等操作
+        // 会重复执行），且误开全局 30s 熔断窗口。修复后业务异常原样上抛。
         try {
             // 使用Lua脚本原子性执行increment+expire
             Long count = redisTemplate.execute(rateLimitScript,
@@ -133,24 +157,44 @@ public class RateLimitAspect {
                     count, rateLimit.maxRequestsPerSecond(), limitKey);
                 throw new RateLimitExceededException("请求过于频繁，请稍后重试");
             }
-
-            // 放行
-            return point.proceed();
         } catch (RateLimitExceededException e) {
             // 限流命中：直接向上抛出，由 GlobalExceptionHandler 返回 429
             throw e;
         } catch (Exception e) {
-            // Redis 异常降级：瞬态故障熔断（fail-open），
-            // 30s 内静默放行降低噪声，之后恢复探测；异常首次发生时打 error 便于定位。
+            // Redis 异常：降级到本地内存计数（fail-safe 而非 fail-open）。
+            // 首次异常打 error 便于定位；随后 30s 熔断期走本地窗口，仍限制频率，
+            // 30s 后自动恢复 Redis 探测。业务方法在 try 块外仅执行一次。
             long now = System.currentTimeMillis();
-            if (now < redisCircuitOpenUntil) {
-                return point.proceed();
+            if (now >= redisCircuitOpenUntil) {
+                redisCircuitOpenUntil = now + CIRCUIT_OPEN_DURATION_MS;
+                log.error("限流检查异常（Redis连接问题），降级本地内存限流30s：{}",
+                        e.getMessage(), e);
             }
-            redisCircuitOpenUntil = now + CIRCUIT_OPEN_DURATION_MS;
-            log.error("限流检查异常（Redis连接问题），已降级放行并熔断30s（限流临时失效）：{}",
-                    e.getMessage(), e);
-            return point.proceed();
+            // 本地窗口计数判定：窗口按 rateLimit.time() 秒滑动，窗口起始时间取首次计数时刻，
+            // 超过 time 秒则重置窗口；否则累计。命中即抛 429，绝不静默放行。
+            long windowMs = (long) rateLimit.time() * 1000L;
+            long ts = System.currentTimeMillis();
+            LocalWindow lw = localWindow.computeIfAbsent(limitKey, k -> {
+                LocalWindow w = new LocalWindow();
+                w.windowStartMs = ts;
+                return w;
+            });
+            int localCount = lw.count.incrementAndGet();
+            if (ts - lw.windowStartMs > windowMs) {
+                // 窗口过期：重置为当前窗口计数 1
+                lw.windowStartMs = ts;
+                lw.count.set(1);
+                localCount = 1;
+            }
+            if (localCount > rateLimit.maxRequestsPerSecond()) {
+                log.warn("本地降级限流触发 - 请求数：{}/{}，Key：{}",
+                        localCount, rateLimit.maxRequestsPerSecond(), limitKey);
+                throw new RateLimitExceededException("请求过于频繁，请稍后重试");
+            }
         }
+
+        // 放行：执行业务方法。放在 try 块外，业务异常原样上抛，绝不因限流检查而二次执行。
+        return point.proceed();
     }
 
     /**
