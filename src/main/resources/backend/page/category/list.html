@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>分类管理 - 瑞吉外卖管理端</title>
-  <!-- 引入样式 -->
+  <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -64,7 +64,7 @@
         @size-change="onSizeChange"
       >
         <template #col-type="{ row }">
-          <span>{{ row.type == '1' ? '菜品分类' : '套餐分类' }}</span>
+          <el-tag :type="row.type == '1' ? 'success' : 'info'" size="small">{{ row.type == '1' ? '菜品分类' : '套餐分类' }}</el-tag>
         </template>
         <template #actions="{ row }">
           <el-button

@@ -66,7 +66,7 @@
       :title="formData.title"
       :visible.sync="formData.dialogVisible"
       :submit-loading="submitting"
-      width="500px"
+      size="md"
       @submit="submitForm"
       @close="formData.dialogVisible = false"
     >
@@ -198,7 +198,7 @@
               const stats = {}
               all.forEach(function(item) {
                 const t = String(item.configType || '4')
-                if (stats.hasOwnProperty('type' + t)) stats['type' + t]++
+                if (Object.prototype.hasOwnProperty.call(stats, 'type' + t)) stats['type' + t]++
               })
               stats.total = all.length
               return { code: 1, data: stats }

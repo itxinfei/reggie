@@ -187,7 +187,7 @@
 
     <!-- 新增/编辑对话框 -->
     <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" size="lg" show-close :show-submit="true" :show-cancel="true" :submit-loading="submitLoading" @submit="handleSubmit">
-      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px">
+      <el-form :model="formData" :rules="rangeTypeRules || formRules" ref="ruleForm" label-width="120px">
         <el-form-item label="规则名称" prop="ruleName">
           <el-input v-model="formData.ruleName" placeholder="请输入规则名称"></el-input>
         </el-form-item>
@@ -381,6 +381,7 @@
             rangeType: [{ required: true, message: '请选择范围类型', trigger: 'change' }],
             feeType: [{ required: true, message: '请选择配送费类型', trigger: 'change' }]
           },
+          rangeTypeRules: null,
           feeStepVisible: false,
           feeStepEditVisible: false,
           feeStepDialogTitle: '新增阶梯规则',
@@ -405,6 +406,20 @@
         }
       },
       computed: {
+        rangeTypeRules() {
+          if (this.formData.rangeType === 1) {
+            return {
+              centerLongitude: [{ required: true, message: '请输入中心经度', trigger: 'blur' }],
+              centerLatitude: [{ required: true, message: '请输入中心纬度', trigger: 'blur' }],
+              radius: [{ required: true, message: '请输入半径', trigger: 'blur' }]
+            }
+          } else if (this.formData.rangeType === 2) {
+            return {
+              polygonPoints: [{ required: true, whitespace: true, message: '请输入多边形坐标', trigger: 'blur' }]
+            }
+          }
+          return null
+        },
         statsCards() {
           return [
             { key: 'total', icon: 'el-icon-shopping-cart-full', label: '配送规则', value: this.allData.length, color: 'primary' },

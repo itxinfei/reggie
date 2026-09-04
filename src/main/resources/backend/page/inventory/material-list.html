@@ -62,7 +62,7 @@
         @size-change="onSizeChange"
       >
         <template #col-stockQty="{ row }">
-          <span :style="row.stockQty <= row.minStock ? 'color: red; font-weight: bold' : ''">{{ row.stockQty }}</span>
+          <span :style="row.stockQty <= row.minStock ? 'color: var(--color-danger); font-weight: bold' : ''">{{ row.stockQty }}</span>
         </template>
         <template #col-unitPrice="{ row }">￥{{ row.unitPrice }}</template>
         <template #col-status="{ row }">
@@ -91,21 +91,21 @@
         <el-form-item label="食材名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入食材名称" />
         </el-form-item>
-        <el-form-item label="食材分类：">
+        <el-form-item label="食材分类：" prop="categoryId">
           <el-select v-model="formData.categoryId" placeholder="请选择" style="width: 100%">
             <el-option v-for="item in categoryOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="单位：">
+        <el-form-item label="单位：" prop="unit">
           <el-input v-model="formData.unit" placeholder="如：斤、个、箱" />
         </el-form-item>
-        <el-form-item label="库存数量：">
+        <el-form-item label="库存数量：" prop="stockQty">
           <el-input v-model="formData.stockQty" type="number" placeholder="请输入库存数量" />
         </el-form-item>
-        <el-form-item label="最低库存：">
+        <el-form-item label="最低库存：" prop="minStock">
           <el-input v-model="formData.minStock" type="number" placeholder="请输入最低库存预警值" />
         </el-form-item>
-        <el-form-item label="单价：">
+        <el-form-item label="单价：" prop="unitPrice">
           <el-input v-model="formData.unitPrice" type="number" placeholder="请输入单价" />
         </el-form-item>
         <el-form-item label="供应商：">
@@ -207,7 +207,12 @@
             },
             // 修改点：食材表单校验规则（配合 el-form :rules + validate()）
             materialRules: {
-              name: [{ required: true, whitespace: true, message: '请输入食材名称', trigger: 'blur' }]
+              name: [{ required: true, whitespace: true, message: '请输入食材名称', trigger: 'blur' }],
+              categoryId: [{ required: true, message: '请选择食材分类', trigger: 'change' }],
+              unit: [{ required: true, message: '请输入单位', trigger: 'blur' }],
+              stockQty: [{ required: true, message: '请输入库存数量', trigger: 'blur' }, { type: 'number', min: 0, message: '库存数量不能为负数', trigger: 'blur' }],
+              minStock: [{ required: true, message: '请输入最低库存', trigger: 'blur' }, { type: 'number', min: 0, message: '最低库存不能为负数', trigger: 'blur' }],
+              unitPrice: [{ required: true, message: '请输入单价', trigger: 'blur' }, { type: 'number', min: 0, message: '单价不能为负数', trigger: 'blur' }]
             },
             warningDialogVisible: false,
             warningData: []

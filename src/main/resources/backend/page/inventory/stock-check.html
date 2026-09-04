@@ -113,7 +113,7 @@
       <!-- 修改点：补全 ref/:model/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
       <el-form ref="createForm" :model="formData" :rules="createRules" label-width="80px" size="small">
         <el-form-item label="操作人：" prop="operator">
-          <el-input v-model="formData.operator" placeholder="请输入操作人姓名" style="width:240px" />
+          <el-input v-model="formData.operator" placeholder="请输入操作人姓名" style="width:293px" />
         </el-form-item>
         <el-form-item label="备注：">
           <el-input v-model="formData.remark" placeholder="盘点备注（可选）" />
@@ -141,7 +141,7 @@
             <div v-for="(item, index) in entryForm.details" :key="item.id" class="detail-row">
               <span style="width:160px;flex-shrink:0;font-weight:500;">{{ item.materialName }}</span>
               <span style="color:var(--color-info);font-size:var(--font-size-xs);width:80px;">账面：{{ item.bookQty }}</span>
-              <el-input v-model="item.actualStock" placeholder="实际库存" type="number" style="width:120px" />
+              <el-input v-model="item.actualStock" placeholder="实际库存" type="number" style="width:140px" />
             </div>
           </div>
         </el-form-item>

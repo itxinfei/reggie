@@ -193,7 +193,7 @@
             </if>
         </where>
         ORDER BY t.create_time DESC
-        LIMIT 100000
+        LIMIT 10000
     </select>
 
 </mapper>

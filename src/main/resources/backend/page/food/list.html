@@ -196,7 +196,7 @@
               <div v-for="(item, index) in dishFlavors" :key="index" class="flavor-item-dialog">
                 <div class="flavor-header-dialog">
                   <span class="flavor-index">{{ index + 1 }}</span>
-                  <el-input v-model="item.name" size="small" placeholder="口味名称（如：辣度、温度）" maxlength="10" style="width: 140px;"></el-input>
+                  <el-input v-model="item.name" size="small" placeholder="口味名称（如：辣度、温度）" maxlength="10" class="el-input--narrow"></el-input>
                   <el-button type="text" size="small" class="btn-delete" @click="delDialogFlavor(index)">删除</el-button>
                 </div>
                 <div class="flavor-tags-dialog">

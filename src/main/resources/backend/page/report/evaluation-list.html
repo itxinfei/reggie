@@ -195,14 +195,10 @@
         </template>
         <template #col-user="{ row }">{{ row.userName || '用户#' + row.userId }}</template>
         <template #col-status="{ row }">
-          <span :class="['status-tag', statusClass(row.status)]">
-            <span :class="['status-dot', statusClass(row.status)]"></span>
-            {{ statusText(row.status) }}
-          </span>
+          <el-tag :type="statusClass(row.status) === 'pending' ? 'warning' : statusClass(row.status) === 'approved' ? 'success' : 'danger'" size="small">{{ statusText(row.status) }}</el-tag>
         </template>
         <template #col-reply="{ row }">
-          <span v-if="row.replyContent" style="color:var(--color-success);font-weight:600;">✓ 已回复</span>
-          <span v-else style="color:var(--text-muted);">未回复</span>
+          <el-tag :type="row.replyContent ? 'success' : 'info'" size="small">{{ row.replyContent ? '已回复' : '未回复' }}</el-tag>
         </template>
         <template #col-createTime="{ row }">{{ formatDate(row.createTime) }}</template>
         <template #actions="{ row }">
@@ -236,7 +232,7 @@
           <div class="detail-row"><span class="dlabel">评价人</span><span class="dvalue">{{ detailData.userName || ('用户#' + detailData.userId) }}</span></div>
           <div class="detail-row"><span class="dlabel">评价时间</span><span class="dvalue">{{ formatDate(detailData.createTime) }}</span></div>
           <div class="detail-row"><span class="dlabel">审核状态</span>
-            <span class="dvalue"><span :class="['status-tag', statusClass(detailData.status)]">{{ statusText(detailData.status) }}</span></span></div>
+            <span class="dvalue"><el-tag :type="statusClass(detailData.status) === 'pending' ? 'warning' : statusClass(detailData.status) === 'approved' ? 'success' : 'danger'" size="small">{{ statusText(detailData.status) }}</el-tag></span></div>
         </div>
         <div class="detail-section">
           <div class="detail-section-title"><i class="ri-chat-smile-3-line" aria-hidden="true"></i> 评价内容</div>

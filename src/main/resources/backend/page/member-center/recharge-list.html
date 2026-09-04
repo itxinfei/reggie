@@ -107,7 +107,7 @@
     </div>
 
     <!-- ===== 手动充值弹窗（8.4.3：金额/赠送/支付方式，充值后余额即时更新） ===== -->
-    <crud-dialog :show-submit="true" :show-cancel="true" title="手动充值" :visible.sync="rechargeForm.dialogVisible" :submit-loading="rechargeLoading" width="480px" @submit="submitRecharge">
+    <crud-dialog :show-submit="true" :show-cancel="true" title="手动充值" :visible.sync="rechargeForm.dialogVisible" :submit-loading="rechargeLoading" size="md" @submit="submitRecharge">
       <el-form :model="rechargeForm" :rules="rechargeRules" ref="rechargeFormRef" label-width="90px" size="small">
         <el-form-item label="会员手机：" prop="phone">
           <div style="display:flex;gap:8px;width:100%;">

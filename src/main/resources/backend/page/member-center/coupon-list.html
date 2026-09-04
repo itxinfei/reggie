@@ -342,7 +342,7 @@
       title="定向发放优惠券"
       :visible.sync="issueForm.dialogVisible"
       :show-submit="false"
-      width="560px"
+      size="md"
       cancel-text="关 闭"
     >
       <div class="issue-template-row">
@@ -434,7 +434,7 @@
       title="优惠券效果统计"
       :visible.sync="effectDialogVisible"
       :show-submit="false"
-      width="480px"
+      size="md"
       cancel-text="关 闭"
     >
       <div v-if="effectLoading" class="card-loading">统计加载中...</div>
@@ -460,7 +460,7 @@
       :title="extendForm.title"
       :visible.sync="extendForm.dialogVisible"
       :submit-loading="extendLoading"
-      width="380px"
+      size="sm"
       @submit="submitExtend"
       @close="handleExtendClose"
     >

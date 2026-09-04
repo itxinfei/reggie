@@ -84,7 +84,7 @@
       @submit="submitForm"
       @close="handleClose"
     >
-      <el-form ref="contractForm" :model="formData" :rules="formRules" label-width="110px" size="small">
+      <el-form ref="contractForm" :model="formData" :rules="commissionTypeRules || formRules" label-width="110px" size="small">
         <el-form-item label="加盟商：" prop="franchiseeId">
           <el-select v-model="formData.franchiseeId" placeholder="请选择加盟商" filterable style="width: 100%">
             <el-option v-for="f in franchiseeOptions" :key="f.id" :label="f.name" :value="f.id"></el-option>
@@ -198,8 +198,17 @@
           },
           formRules: {
             franchiseeId: [{ required: true, message: '请选择加盟商', trigger: 'change' }],
-            contractNo: [{ required: true, whitespace: true, message: '请输入合同编号', trigger: 'blur' }]
+            contractNo: [{ required: true, whitespace: true, message: '请输入合同编号', trigger: 'blur' }],
+            commissionRate: [
+              { required: true, message: '请输入抽成比例', trigger: 'blur' },
+              { type: 'number', min: 0, message: '抽成比例不能为负数', trigger: 'blur' }
+            ],
+            commissionAmount: [
+              { required: true, message: '请输入固定抽成金额', trigger: 'blur' },
+              { type: 'number', min: 0, message: '固定抽成不能为负数', trigger: 'blur' }
+            ]
           },
+          commissionTypeRules: null,
           searchValues: {},
           // 修改点：当前激活的统计卡片 key（'' 全部 / '1' 生效中 / '0' 已终止）
           activeFilter: '',
@@ -211,6 +220,27 @@
         this.loadFranchisees()
         this.loadStats()
         this.init(true)
+      },
+      watch: {
+        'formData.commissionType'(val) {
+          if (val === 1) {
+            this.commissionTypeRules = {
+              commissionRate: [
+                { required: true, message: '请输入抽成比例', trigger: 'blur' },
+                { type: 'number', min: 0, message: '抽成比例不能为负数', trigger: 'blur' }
+              ]
+            }
+          } else if (val === 2) {
+            this.commissionTypeRules = {
+              commissionAmount: [
+                { required: true, message: '请输入固定抽成金额', trigger: 'blur' },
+                { type: 'number', min: 0, message: '固定抽成不能为负数', trigger: 'blur' }
+              ]
+            }
+          } else {
+            this.commissionTypeRules = null
+          }
+        }
       },
       computed: {
         statsCards() {

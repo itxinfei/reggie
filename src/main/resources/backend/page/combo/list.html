@@ -224,7 +224,7 @@
       placeholder="请输入菜品名称进行搜索"
       size="small"
       clearable
-      style="width: 250px; margin-bottom: 15px;"
+      style="width: 293px; margin-bottom: 15px;"
       @input="debounceSearch"
       @keydown.esc="handleSearchEsc"
     >
@@ -259,7 +259,7 @@
                 <el-checkbox :label="item" :key="index">
                   <div class="item">
                     <span class="item-name">{{ item.dishName }}</span>
-                    <span>{{ item.status == 0 ? '停售' : '在售' }}</span>
+                    <el-tag :type="item.status == 0 ? 'danger' : 'success'" size="small">{{ item.status == 0 ? '停售' : '在售' }}</el-tag>
                     <span>￥{{ item.price }}</span>
                   </div>
                 </el-checkbox>

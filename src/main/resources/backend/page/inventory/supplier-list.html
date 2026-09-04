@@ -149,7 +149,9 @@
         <template slot-scope="s">￥{{ formatMoney(s.row.totalAmount) }}</template>
       </el-table-column>
       <el-table-column prop="status" label="状态" width="110" align="center">
-        <template slot-scope="s">{{ purchaseStatusText(s.row.status) }}</template>
+        <template slot-scope="s">
+          <el-tag :type="purchaseStatusTagType(s.row.status)" size="small">{{ purchaseStatusText(s.row.status) }}</el-tag>
+        </template>
       </el-table-column>
       <el-table-column prop="createdTime" label="下单时间" width="160" align="center">
         <template slot-scope="s">{{ formatDate(s.row.createdTime) }}</template>
@@ -389,6 +391,10 @@
         purchaseStatusText(status) {
           const m = { DRAFT: '草稿', ORDERED: '已下单', PARTIAL: '部分收货', RECEIVED: '已收货', CANCELLED: '已取消' }
           return m[status] || status || '-'
+        },
+        purchaseStatusTagType(status) {
+          const m = { DRAFT: 'info', ORDERED: 'warning', PARTIAL: 'warning', RECEIVED: 'success', CANCELLED: 'danger' }
+          return m[status] || ''
         },
 
         formatDate(d) {

@@ -243,7 +243,7 @@
       </div>
 
       <!-- 会话查看弹窗 -->
-      <crud-dialog :title="'会话详情 - ' + sessionDetail.sessionNo" :visible.sync="sessionDetail.visible" width="600px" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
+      <crud-dialog :title="'会话详情 - ' + sessionDetail.sessionNo" :visible.sync="sessionDetail.visible" size="lg" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
         <div v-if="sessionDetail.sessionNo">
           <div style="margin-bottom:12px">
             <span style="font-size:var(--font-size-sm);color:var(--text-muted)">用户：</span>
@@ -272,7 +272,7 @@
       </crud-dialog>
 
       <!-- 分配客服弹窗 -->
-      <crud-dialog :show-submit="true" :show-cancel="true" title="分配客服" :visible.sync="assignForm.visible" width="400px" :submit-loading="dialogSubmitting" @submit="onSubmitAssign">
+      <crud-dialog :show-submit="true" :show-cancel="true" title="分配客服" :visible.sync="assignForm.visible" size="sm" :submit-loading="dialogSubmitting" @submit="onSubmitAssign">
         <el-form label-width="80px">
           <el-form-item label="客服姓名：" required>
             <el-select v-model="assignForm.agentId" placeholder="请选择客服" filterable clearable style="width:100%">
@@ -283,7 +283,7 @@
       </crud-dialog>
 
       <!-- 投诉查看弹窗 -->
-      <crud-dialog :title="'投诉详情 - ' + complaintDetail.complaintNo" :visible.sync="complaintDetail.visible" width="560px" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
+      <crud-dialog :title="'投诉详情 - ' + complaintDetail.complaintNo" :visible.sync="complaintDetail.visible" size="md" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
         <div v-if="complaintDetail.complaintNo">
           <el-row :gutter="16" style="margin-bottom:12px">
             <el-col :span="12"><span style="color:var(--text-muted);font-size:var(--font-size-sm)">投诉人：</span>{{ complaintDetail.userName }}</el-col>
@@ -300,7 +300,7 @@
       </crud-dialog>
 
       <!-- 处理投诉弹窗 -->
-      <crud-dialog :show-submit="true" :show-cancel="true" title="处理投诉" :visible.sync="handleForm.visible" width="480px" :submit-loading="dialogSubmitting" @submit="onSubmitHandleComplaint">
+      <crud-dialog :show-submit="true" :show-cancel="true" title="处理投诉" :visible.sync="handleForm.visible" size="md" :submit-loading="dialogSubmitting" @submit="onSubmitHandleComplaint">
         <el-form label-width="100px">
           <el-form-item label="处理结果：" required>
             <el-input type="textarea" v-model="handleForm.handleResult" :rows="3" placeholder="请输入处理结果说明"></el-input>

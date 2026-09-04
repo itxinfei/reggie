@@ -470,7 +470,7 @@
                     modelName: '模型名称'
                 };
                 for (const key in rules) {
-                    if (!rules.hasOwnProperty(key)) continue;
+                    if (!Object.prototype.hasOwnProperty.call(rules, key)) continue;
                     const rule = rules[key];
                     const required = Array.isArray(rule)
                         ? rule.some(function(r) { return r.required; })

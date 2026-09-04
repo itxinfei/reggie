@@ -116,7 +116,7 @@
     </div>
 
     <!-- ===== 积分调整弹窗（8.4.3：发放/扣减/说明） ===== -->
-    <crud-dialog :show-submit="true" :show-cancel="true" title="积分调整" :visible.sync="adjustForm.dialogVisible" :submit-loading="adjustLoading" width="480px" @submit="submitAdjust">
+    <crud-dialog :show-submit="true" :show-cancel="true" title="积分调整" :visible.sync="adjustForm.dialogVisible" :submit-loading="adjustLoading" size="md" @submit="submitAdjust">
       <el-form :model="adjustForm" :rules="adjustRules" ref="adjustFormRef" label-width="90px" size="small">
         <el-form-item label="会员手机：" prop="phone">
           <div style="display:flex;gap:8px;width:100%;">
