@@ -285,6 +285,9 @@
       :visible.sync="dialog.visible"
       :submit-loading="submitting"
       size="md"
+      show-close
+      :show-submit="true"
+      :show-cancel="true"
       @submit="submitForm"
       @close="dialog.visible = false"
     >
@@ -318,7 +321,7 @@
     </crud-dialog>
 
     <!-- 二维码弹窗 -->
-    <crud-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible"  :close-on-click-modal="true" center  :show-submit="false">
+    <crud-dialog title="桌台二维码" :visible.sync="qrcodeDialog.visible" :close-on-click-modal="true" center :show-submit="false" :show-cancel="true" cancel-text="关 闭">
       <div class="qrcode-content">
         <div class="qrcode-title">桌台：{{ qrcodeDialog.tableName }}</div>
         <div class="qrcode-subtitle">编号：{{ qrcodeDialog.tableId }}</div>
@@ -338,7 +341,7 @@
     </crud-dialog>
 
     <!-- 开台弹窗 -->
-    <crud-dialog title="开台" :visible.sync="openDialog.visible" size="sm" :submit-loading="openDialog.loading" @submit="submitOpen">
+    <crud-dialog title="开台" :visible.sync="openDialog.visible" size="sm" show-close :show-submit="true" :show-cancel="true" :submit-loading="openDialog.loading" @submit="submitOpen">
       <el-form :model="openForm" label-width="80px" size="small">
         <el-form-item label="桌台">
           <el-input :value="openDialog.tableName" disabled />
@@ -353,7 +356,7 @@
     </crud-dialog>
 
     <!-- 转台弹窗 -->
-    <crud-dialog title="转台" :visible.sync="transferDialog.visible" size="sm" :submit-loading="transferDialog.loading" @submit="submitTransfer">
+    <crud-dialog title="转台" :visible.sync="transferDialog.visible" size="sm" show-close :show-submit="true" :show-cancel="true" :submit-loading="transferDialog.loading" @submit="submitTransfer">
       <el-form :model="transferForm" label-width="80px" size="small">
         <el-form-item label="原桌台">
           <el-input :value="transferDialog.fromName" disabled />

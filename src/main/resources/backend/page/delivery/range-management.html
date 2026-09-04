@@ -186,7 +186,7 @@
     </crud-table>
 
     <!-- 新增/编辑对话框 -->
-    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" size="lg" :submit-loading="submitLoading" @submit="handleSubmit">
+    <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" size="lg" show-close :show-submit="true" :show-cancel="true" :submit-loading="submitLoading" @submit="handleSubmit">
       <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px">
         <el-form-item label="规则名称" prop="ruleName">
           <el-input v-model="formData.ruleName" placeholder="请输入规则名称"></el-input>
@@ -268,17 +268,17 @@
     </crud-dialog>
 
     <!-- 阶梯规则对话框 -->
-    <crud-dialog title="配送费阶梯规则" :visible.sync="feeStepVisible" size="xl" :show-submit="false">
+    <crud-dialog title="配送费阶梯规则" :visible.sync="feeStepVisible" size="xl" show-close :show-submit="false" :show-cancel="true" cancel-text="关 闭">
       <div style="margin-bottom: 16px;">
         <el-button type="primary" size="small" icon="el-icon-plus" @click="handleAddFeeStep">新增阶梯</el-button>
       </div>
       <el-table aria-label="数据表格" :data="feeSteps" border stripe style="width: 100%">
-        <el-table-column prop="startDistance" label="起始距离(米)" width="120" align="center"></el-table-column>
-        <el-table-column prop="endDistance" label="结束距离(米)" width="120" align="center"></el-table-column>
+        <el-table-column prop="startDistance" label="起始距离(米)" width="120" align="center" :header-align="'center'"></el-table-column>
+        <el-table-column prop="endDistance" label="结束距离(米)" width="120" align="center" :header-align="'center'"></el-table-column>
         <el-table-column prop="fee" label="配送费(元)" width="130" align="center" :header-align="'center'" :show-overflow-tooltip="true"></el-table-column>
-        <el-table-column prop="incrementDistance" label="递增距离(米)" width="120" align="center"></el-table-column>
-        <el-table-column prop="incrementFee" label="递增费用(元)" width="120" align="center"></el-table-column>
-        <el-table-column label="操作" width="150" align="center" fixed="right">
+        <el-table-column prop="incrementDistance" label="递增距离(米)" width="120" align="center" :header-align="'center'"></el-table-column>
+        <el-table-column prop="incrementFee" label="递增费用(元)" width="120" align="center" :header-align="'center'"></el-table-column>
+        <el-table-column label="操作" width="150" align="center" :header-align="'center'" fixed="right">
           <template slot-scope="scope">
             <el-button type="text" size="small" @click="handleEditFeeStep(scope.row)">编辑</el-button>
             <el-button type="text" size="small" style="color: var(--el-color-danger);" @click="handleDeleteFeeStep(scope.row)">删除</el-button>
@@ -288,7 +288,7 @@
     </crud-dialog>
 
     <!-- 阶梯规则编辑对话框 -->
-    <crud-dialog :title="feeStepDialogTitle" :visible.sync="feeStepEditVisible" size="md" :submit-loading="submitLoading" @submit="handleFeeStepSubmit">
+    <crud-dialog :title="feeStepDialogTitle" :visible.sync="feeStepEditVisible" size="md" :show-submit="true" :show-cancel="true" :submit-loading="submitLoading" @submit="handleFeeStepSubmit">
       <el-form :model="feeStepForm" :rules="feeStepRules" ref="feeStepFormRef" label-width="100px">
         <el-form-item label="起始距离" prop="startDistance">
           <el-input-number v-model="feeStepForm.startDistance" :min="0" style="width: 100%;"></el-input-number>

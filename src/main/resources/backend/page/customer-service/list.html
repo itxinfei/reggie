@@ -243,7 +243,7 @@
       </div>
 
       <!-- 会话查看弹窗 -->
-      <crud-dialog :title="'会话详情 - ' + sessionDetail.sessionNo" :visible.sync="sessionDetail.visible" width="600px">
+      <crud-dialog :title="'会话详情 - ' + sessionDetail.sessionNo" :visible.sync="sessionDetail.visible" width="600px" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
         <div v-if="sessionDetail.sessionNo">
           <div style="margin-bottom:12px">
             <span style="font-size:var(--font-size-sm);color:var(--text-muted)">用户：</span>
@@ -283,7 +283,7 @@
       </crud-dialog>
 
       <!-- 投诉查看弹窗 -->
-      <crud-dialog :title="'投诉详情 - ' + complaintDetail.complaintNo" :visible.sync="complaintDetail.visible" width="560px">
+      <crud-dialog :title="'投诉详情 - ' + complaintDetail.complaintNo" :visible.sync="complaintDetail.visible" width="560px" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
         <div v-if="complaintDetail.complaintNo">
           <el-row :gutter="16" style="margin-bottom:12px">
             <el-col :span="12"><span style="color:var(--text-muted);font-size:var(--font-size-sm)">投诉人：</span>{{ complaintDetail.userName }}</el-col>
