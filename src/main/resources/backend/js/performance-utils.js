@@ -82,42 +82,46 @@ const PerformanceUtils = {
    */
   virtualList(container, items, renderItem, itemHeight = 40) {
     if (!container) return;
-    
+
     const containerHeight = container.clientHeight;
     const visibleCount = Math.ceil(containerHeight / itemHeight);
     const totalCount = items.length;
-    
-    // 创建占位元素
-    const placeholder = document.createElement('div');
-    placeholder.style.height = `${totalCount * itemHeight}px`;
-    placeholder.style.position = 'relative';
-    container.appendChild(placeholder);
-    
-    // 渲染可见项
+
+    // 使用独立的内容层，避免清空 container.innerHTML（会破坏监听器和子节点）
+    let content = container.querySelector('.rg-vl-content');
+    if (!content) {
+      content = document.createElement('div');
+      content.className = 'rg-vl-content';
+      content.style.position = 'relative';
+      content.style.height = (totalCount * itemHeight) + 'px';
+      container.style.position = container.style.position || 'relative';
+      container.appendChild(content);
+    } else {
+      content.style.height = (totalCount * itemHeight) + 'px';
+    }
+
     const renderVisibleItems = () => {
       const scrollTop = container.scrollTop;
-      const startIndex = Math.floor(scrollTop / itemHeight);
+      const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight));
       const endIndex = Math.min(startIndex + visibleCount + 1, totalCount);
-      
-      // 清空容器
-      container.innerHTML = '';
-      container.appendChild(placeholder);
-      
-      // 渲染可见项
+
+      // 只清空内容层，不破坏容器本身
+      while (content.firstChild) {
+        content.removeChild(content.firstChild);
+      }
       for (let i = startIndex; i < endIndex; i++) {
-        const item = items[i];
-        const element = renderItem(item, i);
+        const element = renderItem(items[i], i);
         element.style.position = 'absolute';
-        element.style.top = `${i * itemHeight}px`;
+        element.style.top = (i * itemHeight) + 'px';
         element.style.width = '100%';
-        container.appendChild(element);
+        content.appendChild(element);
       }
     };
-    
-    // 监听滚动事件
-    container.addEventListener('scroll', this.throttle(renderVisibleItems, 16));
-    
-    // 初始渲染
+
+    const handler = this.throttle(renderVisibleItems, 16);
+    container.addEventListener('scroll', handler, { passive: true });
+    // 暴露清理方法，供组件销毁时移除监听器（防止标签切换时内存泄漏）
+    container._rgVlCleanup = () => container.removeEventListener('scroll', handler);
     renderVisibleItems();
   },
   
