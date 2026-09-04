@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@Sql(scripts = "classpath:schema-member.sql",
+@Sql(scripts = {"classpath:schema-member.sql", "classpath:schema-groupbuy-withdraw.sql"},
         executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class WithdrawalServiceTest {
 

@@ -124,6 +124,26 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
             throw new CustomException("无权操作其他租户的会员积分");
         }
 
+        // 幂等短路：仅对携带业务ID的发放生效（唯一索引 uq_points_biz 的语义，
+        // bizId=null 的手动调整不受影响，可重复发放）。
+        // 并发窗口：查询存在 → 直接跳过，杜绝重复 increment + 重复流水；
+        // 先查后插的极小竞态窗口（双线程同时查无）由下方 save 的唯一索引冲突兜底，
+        // DuplicateKeyException 触发本方法事务回滚（积分 increment 与流水都不落库），
+        // 最终每个 (bizType,bizId,type) 只落一条 IN 流水、会员积分只累加一次。
+        // 调用方 grantReward 对该异常按"权益发放异常"记录日志但不重抛，
+        // 不影响订单主流程；重放/补偿再次进入本方法时命中短路直接返回。
+        if (bizId != null) {
+            boolean alreadyGranted = pointsRecordService.lambdaQuery()
+                    .eq(PointsRecord::getType, PointsRecordType.IN.getValue())
+                    .eq(PointsRecord::getBizType, bizType)
+                    .eq(PointsRecord::getBizId, bizId)
+                    .count() > 0;
+            if (alreadyGranted) {
+                log.info("积分发放幂等跳过：memberId={}, bizType={}, bizId={}", memberId, bizType, bizId);
+                return;
+            }
+        }
+
         // 修改点：改用参数化 @Update（incrementPointsById），消除 setSql 字符串拼接；
         // IFNULL 防止 points 为 NULL 时整条更新无效
         baseMapper.incrementPointsById(memberId, points);

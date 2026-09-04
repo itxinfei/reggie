@@ -22,6 +22,7 @@ import com.reggie.module.inventory.service.MaterialService;
 import com.reggie.module.inventory.service.StockCheckService;
 import com.reggie.module.inventory.service.StockRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -61,22 +62,47 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
     @Override
     public StockCheck createCheck(String operator, String remark) {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        LambdaQueryWrapper<StockCheck> qw = new LambdaQueryWrapper<>();
-        qw.likeRight(StockCheck::getCheckNo, "CK" + datePrefix);
-        qw.orderByDesc(StockCheck::getCheckNo).last("LIMIT 1");
-        StockCheck last = getOne(qw);
-        int seq = last != null ? Integer.parseInt(last.getCheckNo().substring(10)) + 1 : 1;
-
-        StockCheck sc = new StockCheck();
-        sc.setTenantId(BaseContext.getCurrentTenantId());
-        sc.setCheckNo("CK" + datePrefix + String.format("%03d", seq));
-        // 修改点：创建盘点单时设为"进行中"状态（原来的 DRAFT 未在 UI 中映射，导致无状态显示）
-        sc.setStatus(StockCheckStatus.IN_PROGRESS.getValue());
-        sc.setOperator(operator);
-        sc.setRemark(remark);
-        sc.setProfitLoss(BigDecimal.ZERO);
-        save(sc);
-        return sc;
+        // 并发下 MAX+1 生成单号可能撞号（两个请求同时读到同一 last），由唯一索引 uk_check_no 兜底：
+        // 冲突时递增 seq 重试，最多 5 次，保证同一日单号唯一不重复
+        int seq;
+        try {
+            LambdaQueryWrapper<StockCheck> qw = new LambdaQueryWrapper<>();
+            qw.likeRight(StockCheck::getCheckNo, "CK" + datePrefix);
+            qw.orderByDesc(StockCheck::getCheckNo).last("LIMIT 1");
+            StockCheck last = getOne(qw);
+            seq = last != null ? Integer.parseInt(last.getCheckNo().substring(10)) + 1 : 1;
+        } catch (NumberFormatException e) {
+            seq = Integer.MAX_VALUE;
+        }
+        if (seq == Integer.MAX_VALUE) {
+            StockCheck sc = new StockCheck();
+            sc.setTenantId(BaseContext.getCurrentTenantId());
+            sc.setCheckNo("CK" + datePrefix + System.currentTimeMillis());
+            sc.setStatus(StockCheckStatus.IN_PROGRESS.getValue());
+            sc.setOperator(operator);
+            sc.setRemark(remark);
+            sc.setProfitLoss(BigDecimal.ZERO);
+            save(sc);
+            return sc;
+        }
+        int attempts = 0;
+        while (attempts++ < 5) {
+            StockCheck sc = new StockCheck();
+            sc.setTenantId(BaseContext.getCurrentTenantId());
+            sc.setCheckNo("CK" + datePrefix + String.format("%03d", seq));
+            // 修改点：创建盘点单时设为"进行中"状态（原来的 DRAFT 未在 UI 中映射，导致无状态显示）
+            sc.setStatus(StockCheckStatus.IN_PROGRESS.getValue());
+            sc.setOperator(operator);
+            sc.setRemark(remark);
+            sc.setProfitLoss(BigDecimal.ZERO);
+            try {
+                save(sc);
+                return sc;
+            } catch (DuplicateKeyException e) {
+                seq++;
+            }
+        }
+        throw new CustomException("盘点单号生成冲突，请重试");
     }
 
     @Override

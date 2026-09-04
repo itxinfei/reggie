@@ -1,6 +1,7 @@
 package com.reggie.module.finance.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
@@ -137,14 +138,22 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
             throw new IllegalArgumentException("无效的审批结果");
         }
 
-        application.setStatus(status);
-        application.setReviewerId(reviewerId);
-        application.setReviewerName(reviewerName);
-        application.setReviewTime(LocalDateTime.now());
-        application.setReviewRemark(remark);
-        application.setUpdateTime(LocalDateTime.now());
-
-        return withdrawalMapper.updateById(application) > 0;
+        // 并发防护（P1）：先 CAS 抢占 PENDING -> 目标状态，仅 affected rows=1 的事务可完成审批。
+        // 此前 SELECT 校验 + updateById 无 CAS：并发双审批可同时通过 PENDING 校验并各自覆盖更新，
+        // 且 approve 后资金扣减/出账无状态互斥。现条件更新互斥，第二个请求 rows=0 返回失败。
+        int claimed = withdrawalMapper.update(null, new LambdaUpdateWrapper<WithdrawalApplication>()
+                .eq(WithdrawalApplication::getId, id)
+                .eq(WithdrawalApplication::getStatus, WithdrawalApplication.STATUS_PENDING)
+                .set(WithdrawalApplication::getStatus, status)
+                .set(WithdrawalApplication::getReviewerId, reviewerId)
+                .set(WithdrawalApplication::getReviewerName, reviewerName)
+                .set(WithdrawalApplication::getReviewTime, LocalDateTime.now())
+                .set(WithdrawalApplication::getReviewRemark, remark)
+                .set(WithdrawalApplication::getUpdateTime, LocalDateTime.now()));
+        if (claimed == 0) {
+            throw new IllegalArgumentException("提现申请状态已变更，请勿重复审批");
+        }
+        return true;
     }
 
     @Override
@@ -167,12 +176,20 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
             throw new IllegalArgumentException("仅已审批状态的提现申请可付款");
         }
 
-        application.setStatus(WithdrawalApplication.STATUS_PAID);
-        application.setPaymentTime(LocalDateTime.now());
-        application.setPaymentNo(paymentNo);
-        application.setUpdateTime(LocalDateTime.now());
-
-        return withdrawalMapper.updateById(application) > 0;
+        // 并发防护（P1）：先 CAS 抢占 APPROVED -> PAID，仅 affected rows=1 的事务可完成付款。
+        // 此前 SELECT 校验 + updateById 无 CAS：并发双付款（或付款+取消竞态）可同时通过校验并各自
+        // 覆盖更新，导致同一提现单被重复出账。现条件更新互斥，第二个请求 rows=0 直接拒绝。
+        int claimed = withdrawalMapper.update(null, new LambdaUpdateWrapper<WithdrawalApplication>()
+                .eq(WithdrawalApplication::getId, id)
+                .eq(WithdrawalApplication::getStatus, WithdrawalApplication.STATUS_APPROVED)
+                .set(WithdrawalApplication::getStatus, WithdrawalApplication.STATUS_PAID)
+                .set(WithdrawalApplication::getPaymentTime, LocalDateTime.now())
+                .set(WithdrawalApplication::getPaymentNo, paymentNo)
+                .set(WithdrawalApplication::getUpdateTime, LocalDateTime.now()));
+        if (claimed == 0) {
+            throw new IllegalArgumentException("提现申请状态已变更，请勿重复付款");
+        }
+        return true;
     }
 
     @Override

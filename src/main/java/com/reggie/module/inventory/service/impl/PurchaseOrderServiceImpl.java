@@ -20,6 +20,7 @@ import com.reggie.module.inventory.service.PurchaseOrderDetailService;
 import com.reggie.module.inventory.service.PurchaseOrderService;
 import com.reggie.module.inventory.service.StockRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -61,21 +62,48 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
     @Override
     public PurchaseOrder createOrder(Long supplierId, String operator, String remark) {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        LambdaQueryWrapper<PurchaseOrder> qw = new LambdaQueryWrapper<>();
-        qw.likeRight(PurchaseOrder::getOrderNo, "PO" + datePrefix);
-        qw.orderByDesc(PurchaseOrder::getOrderNo).last("LIMIT 1");
-        PurchaseOrder last = getOne(qw);
-        int seq = last != null ? Integer.parseInt(last.getOrderNo().substring(10)) + 1 : 1;
-
-        PurchaseOrder po = new PurchaseOrder();
-        po.setTenantId(BaseContext.getCurrentTenantId());
-        po.setOrderNo("PO" + datePrefix + String.format("%03d", seq));
-        po.setSupplierId(supplierId);
-        po.setStatus(PurchaseOrderStatus.DRAFT.getValue());
-        po.setOperator(operator);
-        po.setRemark(remark);
-        save(po);
-        return po;
+        // 并发下 MAX+1 生成单号可能撞号（两个请求同时读到同一 last），由唯一索引 uk_order_no 兜底：
+        // 冲突时递增 seq 重试，最多 5 次，保证同一日单号唯一不重复
+        int seq;
+        try {
+            LambdaQueryWrapper<PurchaseOrder> qw = new LambdaQueryWrapper<>();
+            qw.likeRight(PurchaseOrder::getOrderNo, "PO" + datePrefix);
+            qw.orderByDesc(PurchaseOrder::getOrderNo).last("LIMIT 1");
+            PurchaseOrder last = getOne(qw);
+            seq = last != null ? Integer.parseInt(last.getOrderNo().substring(10)) + 1 : 1;
+        } catch (NumberFormatException e) {
+            // 历史数据存在非纯数字后缀（异常单号）时，回退为当前时间戳后缀，避免阻塞创建
+            seq = Integer.MAX_VALUE;
+        }
+        if (seq == Integer.MAX_VALUE) {
+            PurchaseOrder po = new PurchaseOrder();
+            po.setTenantId(BaseContext.getCurrentTenantId());
+            po.setOrderNo("PO" + datePrefix + System.currentTimeMillis());
+            po.setSupplierId(supplierId);
+            po.setStatus(PurchaseOrderStatus.DRAFT.getValue());
+            po.setOperator(operator);
+            po.setRemark(remark);
+            save(po);
+            return po;
+        }
+        int attempts = 0;
+        while (attempts++ < 5) {
+            PurchaseOrder po = new PurchaseOrder();
+            po.setTenantId(BaseContext.getCurrentTenantId());
+            po.setOrderNo("PO" + datePrefix + String.format("%03d", seq));
+            po.setSupplierId(supplierId);
+            po.setStatus(PurchaseOrderStatus.DRAFT.getValue());
+            po.setOperator(operator);
+            po.setRemark(remark);
+            try {
+                save(po);
+                return po;
+            } catch (DuplicateKeyException e) {
+                // 单号冲突（并发建单），seq+1 重试
+                seq++;
+            }
+        }
+        throw new CustomException("采购单号生成冲突，请重试");
     }
 
     @Override

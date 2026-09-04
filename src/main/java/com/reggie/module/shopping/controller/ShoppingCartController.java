@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -114,6 +115,10 @@ public class ShoppingCartController {
             //添加到购物车的是套餐
             queryWrapper.eq(ShoppingCart::getSetmealId,shoppingCart.getSetmealId());
         }
+        // 口味（规格）相同的才合并数量；不同口味的同一菜品是不同购物车项
+        if (shoppingCart.getDishFlavor() != null && !shoppingCart.getDishFlavor().isEmpty()) {
+            queryWrapper.eq(ShoppingCart::getDishFlavor, shoppingCart.getDishFlavor());
+        }
 
         //查询当前菜品或者套餐是否在购物车中
         //SQL:select * from shopping_cart where user_id = ? and dish_id/setmeal_id = ?
@@ -132,8 +137,32 @@ public class ShoppingCartController {
             //如果不存在，则添加到购物车，数量默认就是一
             shoppingCart.setNumber(1);
             shoppingCart.setCreateTime(LocalDateTime.now());
-            shoppingCartService.save(shoppingCart);
-            cartServiceOne = shoppingCart;
+            try {
+                shoppingCartService.save(shoppingCart);
+                // 插入成功：返回新购物车项（此前遗漏赋值导致 R.success(null)，前端拿不到 data）
+                cartServiceOne = shoppingCart;
+            } catch (DuplicateKeyException e) {
+                // 并发下另一请求已插入同 (tenant,user,dish/setmeal,flavor) 记录：
+                // 唯一索引 uk_cart_tenant_user_dish 冲突 → 改为原子累加数量，避免两条重复购物车项
+                LambdaQueryWrapper<ShoppingCart> dupQuery = new LambdaQueryWrapper<>();
+                dupQuery.eq(ShoppingCart::getUserId, currentId);
+                if (dishId != null) {
+                    dupQuery.eq(ShoppingCart::getDishId, dishId);
+                } else {
+                    dupQuery.eq(ShoppingCart::getSetmealId, shoppingCart.getSetmealId());
+                }
+                if (shoppingCart.getDishFlavor() != null && !shoppingCart.getDishFlavor().isEmpty()) {
+                    dupQuery.eq(ShoppingCart::getDishFlavor, shoppingCart.getDishFlavor());
+                }
+                ShoppingCart existed = shoppingCartService.getOne(dupQuery);
+                if (existed != null) {
+                    shoppingCartService.addQuantityAtomically(existed.getId(), 1);
+                    cartServiceOne = shoppingCartService.getById(existed.getId());
+                } else {
+                    // 极罕见：索引冲突但查不到（记录被并发删除），返回原始项
+                    cartServiceOne = shoppingCart;
+                }
+            }
         }
 
         return R.success(cartServiceOne);

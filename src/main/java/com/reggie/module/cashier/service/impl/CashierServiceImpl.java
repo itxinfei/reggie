@@ -158,6 +158,25 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         if (!acquireCashPaymentLock(orderId)) {
             throw new IllegalArgumentException("收银失败：该订单正在处理中或已完成收银，请勿重复提交");
         }
+        try {
+            return doCashPayment(orderId, orderNumber, amount, actualAmount,
+                    payType, cashierId, cashierName, usedCouponId, memberUserId, remark, channel);
+        } finally {
+            // 释放幂等锁：事务提交/回滚后均删除。TTL 3600s 仅作异常兜底（进程崩溃/GC 停顿
+            // 时锁自然过期），正常路径由这里立即释放，避免同订单误报"处理中"。
+            releaseCashPaymentLock(orderId);
+        }
+    }
+
+    /**
+     * 收银支付核心逻辑（在幂等锁保护下执行）。
+     * 独立方法以便 finally 释放锁（@Transactional 只对 public 代理方法生效，
+     * 若把释放放在本方法内，事务提交后锁已不在作用域，故由外层 cashPayment 统一释放）。
+     */
+    private CashierRecord doCashPayment(Long orderId, String orderNumber, BigDecimal amount, BigDecimal actualAmount,
+                                        Integer payType, Long cashierId, String cashierName,
+                                        Long usedCouponId, Long memberUserId, String remark, String channel) {
+
         // 幂等返回：已存在收银记录则直接返回（覆盖并发场景下先插记录后落锁的顺序差）
         CashierRecord existingRecord = cashierRecordMapper.selectOne(
                 new LambdaQueryWrapper<CashierRecord>().eq(CashierRecord::getOrderId, orderId));
@@ -652,6 +671,29 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         Boolean acquired = stringRedisTemplate.opsForValue()
                 .setIfAbsent(key, UUID.randomUUID().toString(), CASHIER_IDEMPOTENCY_TTL_SECONDS, TimeUnit.SECONDS);
         return acquired != null && acquired;
+    }
+
+    /**
+     * 释放收银支付幂等锁。
+     * <p>
+     * 与 acquireCashPaymentLock 成对使用，正常路径在事务提交/回滚后立即释放，
+     * 避免同订单误报"处理中"；删除失败不阻断业务（TTL 3600s 兜底自动过期）。
+     * 注：锁持有窗口极短（毫秒级事务），简单 delete 即可；极端情况下锁因
+     * 超时被接管后再被旧请求 delete，最坏效果是提前释放新锁——由 DB 层
+     * cashier_record.order_id 唯一索引兜底（真重复扣款会被唯一约束拦截），
+     * 不会造成重复入账。
+     */
+    private void releaseCashPaymentLock(Long orderId) {
+        if (stringRedisTemplate == null || orderId == null) {
+            return;
+        }
+        try {
+            Long tenantId = BaseContext.getCurrentTenantId();
+            String key = CASHIER_IDEMPOTENCY_KEY_PREFIX + (tenantId != null ? tenantId : 0) + ":" + orderId;
+            stringRedisTemplate.delete(key);
+        } catch (Exception e) {
+            log.warn("释放收银幂等锁失败（TTL兜底自动过期）：orderId={}", orderId);
+        }
     }
 }
 
