@@ -565,7 +565,7 @@
           }
         },
         async onCloseSession(row) {
-          this.$confirm('确认结束该会话？', '提示', { type: 'warning' }).then(async () => {
+          ReggieUI.confirm('确认结束该会话？', '提示', { type: 'warning' }).then(async () => {
             try {
               await closeSession(row.id, {})
               ReggieUI.success('会话已结束')
@@ -651,7 +651,7 @@
           }
         },
         async onCloseComplaint(id) {
-          this.$confirm('确认关闭该投诉？', '提示', { type: 'warning' }).then(async () => {
+          ReggieUI.confirm('确认关闭该投诉？', '提示', { type: 'warning' }).then(async () => {
             try {
               await closeComplaint(id)
               ReggieUI.success('投诉已关闭')

@@ -999,13 +999,13 @@
           if (this.issueForm.mode === 'condition' && this.$refs.conditionForm) {
             this.$refs.conditionForm.validate(function(valid) {
               if (!valid) return
-              self.$confirm('确认发放优惠券到目标会员？发放后不可撤销。', '确认发放', {
+              ReggieUI.confirm('确认发放优惠券到目标会员？发放后不可撤销。', '确认发放', {
                 confirmButtonText: '确认发放', cancelButtonText: '取消', type: 'warning'
               }).then(function() { self.issueCoupon() }).catch(function(err) { console.warn('[优惠券] 发放确认取消或失败:', err) })
             })
             return
           }
-          this.$confirm('确认发放优惠券到目标会员？发放后不可撤销。', '确认发放', {
+          ReggieUI.confirm('确认发放优惠券到目标会员？发放后不可撤销。', '确认发放', {
             confirmButtonText: '确认发放', cancelButtonText: '取消', type: 'warning'
           }).then(function() { self.issueCoupon() }).catch(function(err) { console.warn('[优惠券] 发放确认取消或失败:', err) })
         },

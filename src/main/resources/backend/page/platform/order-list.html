@@ -354,7 +354,7 @@
         if (action === 'complete' || action === 'cancel') {
           confirmTip = '确认「' + meta.text + '」该订单并回传平台？'
         }
-        this.$confirm(confirmTip, '状态回传', { type: 'warning' }).then(async () => {
+        ReggieUI.confirm(confirmTip, '状态回传', { type: 'warning' }).then(async () => {
           // 拒单/取消/完成需同步本地订单状态（接单/出餐保持本地流转一致由后端返回驱动，这里乐观更新）
           const localStatus = meta.status
           try {

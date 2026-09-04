@@ -227,7 +227,7 @@
       syncDish(row, action) {
         const self = this
         const tip = action === 'on_shelf' ? '确认将该菜品上架到 ' + this.platformTypeText(row.platformType) + '？' : '确认将该菜品下架？'
-        this.$confirm(tip, '商品同步', { type: 'warning' }).then(async () => {
+        ReggieUI.confirm(tip, '商品同步', { type: 'warning' }).then(async () => {
           try {
             const res = await window.platformApi.syncDish(row.platformType, row.dishId, action)
             if (res && String(res.code) === '1') {

@@ -350,7 +350,7 @@
       toggle(row) {
         const enabled = row.enabled === 1 ? 0 : 1
         const tip = enabled === 1 ? '确认启用该平台配置？' : '确认停用该平台配置？'
-        this.$confirm(tip, '提示', { type: 'warning' }).then(async () => {
+        ReggieUI.confirm(tip, '提示', { type: 'warning' }).then(async () => {
           const res = await window.platformApi.toggle(row.id, enabled)
           if (res && String(res.code) === '1') {
             ReggieUI.success(enabled === 1 ? '已启用' : '已停用')
@@ -362,7 +362,7 @@
       },
       // 修改点：删除（高危二次确认）
       remove(row) {
-        this.$confirm('确认删除该平台配置？删除后不可恢复。', '提示', { type: 'warning' }).then(async () => {
+        ReggieUI.confirm('确认删除该平台配置？删除后不可恢复。', '提示', { type: 'warning' }).then(async () => {
           const res = await window.platformApi.remove(row.id)
           if (res && String(res.code) === '1') {
             ReggieUI.success('已删除')
