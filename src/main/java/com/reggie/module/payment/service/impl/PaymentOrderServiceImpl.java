@@ -11,15 +11,18 @@ import com.reggie.module.order.service.OrderService;
 import com.reggie.module.groupbuy.service.GroupBuyService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import static com.reggie.module.payment.model.PaymentOrder.STATUS_FAIL;
 import static com.reggie.module.payment.model.PaymentOrder.STATUS_PENDING;
@@ -43,8 +46,13 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     @Autowired
     private GroupBuyService groupBuyService;
 
-    /** 用于串行化同一订单的并发创建请求，防止 TOCTOU 竞态导致重复 PENDING 支付单 */
-    private final ConcurrentHashMap<Long, Object> createOrderLock = new ConcurrentHashMap<>();
+    @Autowired(required = false)
+    private RedisTemplate<String, Object> redisTemplate;
+
+    /**
+     * 分布式锁过期时间（毫秒）：覆盖一次 createPaymentOrder 调用耗时
+     */
+    private static final long LOCK_TTL_MS = 30 * 1000L; // 30秒
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -59,9 +67,15 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
             throw new CustomException("无权对其他租户的订单发起支付");
         }
 
-        // synchronized 串行化同一订单的并发创建请求，防止 TOCTOU 竞态
-        Object lock = createOrderLock.computeIfAbsent(orderId, k -> new Object());
-        synchronized (lock) {
+        // 分布式锁串行化同一订单的并发创建请求，防止 TOCTOU 竞态导致重复 PENDING 支付单（多实例生效）
+        String lockKey = "payment:lock:create-order:" + orderId;
+        String lockValue = tryLock(lockKey);
+        if (lockValue == null) {
+            // Redis 不可用或锁被占用：支付场景优先可用性，降级到 DB 层兜底
+            // （countByOrderIdAndStatuses + PENDING 复用）；极端并发可能创建两个 PENDING，回调 CAS 仅一个成功
+            log.warn("支付创建分布式锁获取失败，降级 DB 兜底: orderId={}", orderId);
+        }
+        try {
             // 重复支付检查：同一订单已存在 SUCCESS 支付单则拒绝
             java.util.List<String> statusList = new java.util.ArrayList<>();
             statusList.add(STATUS_SUCCESS);
@@ -89,6 +103,55 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
             save(po);
             log.info("创建支付订单: tradeNo={}, orderId={}, channel={}, amount={}", po.getTradeNo(), orderId, channel, amount);
             return po;
+        } finally {
+            if (lockValue != null) {
+                unlock(lockKey, lockValue);
+            }
+        }
+    }
+
+    // ──────────────────────────────────────
+    // 分布式锁辅助方法（与 OrderTimeoutTask 同模式）
+    // ──────────────────────────────────────
+
+    /**
+     * 尝试获取分布式锁（支付创建场景）
+     * @param lockKey 锁Key
+     * @return 锁值（UUID），Redis 不可用或被占用返回 null（降级 DB 兜底）
+     */
+    private String tryLock(String lockKey) {
+        if (redisTemplate == null) {
+            return null;
+        }
+        try {
+            String lockValue = UUID.randomUUID().toString();
+            Boolean success = redisTemplate.opsForValue()
+                    .setIfAbsent(lockKey, lockValue, LOCK_TTL_MS, TimeUnit.MILLISECONDS);
+            return Boolean.TRUE.equals(success) ? lockValue : null;
+        } catch (Exception e) {
+            log.error("支付创建获取分布式锁失败，降级 DB 兜底: {}", lockKey, e);
+            return null;
+        }
+    }
+
+    /**
+     * 释放分布式锁（Lua 脚本原子操作：比对锁值后才删除）
+     * @param lockKey 锁Key
+     * @param lockValue 锁值（UUID）
+     */
+    private void unlock(String lockKey, String lockValue) {
+        if (redisTemplate == null || lockValue == null) {
+            return;
+        }
+        try {
+            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            redisTemplate.execute(
+                new DefaultRedisScript<Long>(luaScript, Long.class),
+                Collections.singletonList(lockKey),
+                lockValue
+            );
+        } catch (Exception e) {
+            log.error("支付创建释放分布式锁失败: {}", lockKey, e);
         }
     }
 

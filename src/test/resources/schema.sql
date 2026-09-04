@@ -446,12 +446,22 @@ CREATE INDEX idx_ai_provider_config_code ON ai_provider_config(provider_code);
 CREATE INDEX idx_ai_provider_config_active ON ai_provider_config(is_active);
 
 -- ==================== 区域表 ====================
+-- 字段与 Region 实体（com.reggie.module.region.model.Region）及
+-- src/test/resources/schema-mysql.sql 中的权威定义保持一致。
+-- 说明：早期此处仅有 id/name/sort 等 6 列，缺少实体映射的
+-- code/parent_id/level/create_user/update_user，任何走 RegionMapper 的
+-- 查询都会报 Unknown column 'code' in 'field list'。
 CREATE TABLE region (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
-  name varchar(32) NOT NULL COMMENT '地区名称',
+  name varchar(50) NOT NULL COMMENT '地区名称',
+  code varchar(20) NULL DEFAULT NULL COMMENT '行政区划代码',
+  parent_id bigint NOT NULL DEFAULT 0 COMMENT '父级ID，0为省份',
+  level tinyint NOT NULL DEFAULT 1 COMMENT '层级：1省 2市 3区/县',
   sort int NOT NULL DEFAULT 0 COMMENT '排序',
   create_time datetime NOT NULL COMMENT '创建时间',
   update_time datetime NOT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '修改人',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '是否删除',
   PRIMARY KEY (id)
 );

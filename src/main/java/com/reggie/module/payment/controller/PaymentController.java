@@ -141,7 +141,13 @@ public class PaymentController {
     public R<String> notify(
                         @Parameter(description = "支付渠道：WECHAT-微信、ALIPAY-支付宝", required = true) @PathVariable String channel,
             @Parameter(description = "回调参数") @RequestBody Map<String, String> params) {
-        PaymentChannel paymentChannel = paymentChannelFactory.getChannel(channel);
+        // 回调场景用 getChannelNullable：未知/空渠道返回 200 + 业务错误码（而非抛异常触发 500），
+        // 主动停止支付平台重试（平台对 5xx 会重试，对 2xx 业务失败码通常不重试）
+        PaymentChannel paymentChannel = paymentChannelFactory.getChannelNullable(channel);
+        if (paymentChannel == null) {
+            log.warn("支付回调渠道不支持，拒绝处理：channel={}", channel);
+            return R.error("不支持的支付通道");
+        }
         // 签名校验：禁止直接信任未验签的回调参数（防回调伪造）
         if (!paymentChannel.verifyNotifySign(params)) {
             log.warn("支付回调签名校验失败：channel={}, params={}", channel, params);
