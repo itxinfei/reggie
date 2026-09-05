@@ -398,7 +398,8 @@
         loadHotByAlgo(type) {
             this.algoType = type;
             this.loadingHot = true;
-            // 修改点：return Promise 链，供 loadAll 的 Promise.all 真实等待
+            // 修改点：后端 /recommend/hot 不支持 algo 参数，仅按销量聚合排序，
+            // 标签切换仅重查同一接口刷新数据（与「刷新排行」行为一致）
             return recommendBackendApi.getHotRecommend(12).then(res => {
                 if (res.code === 1) {
                     this.hotDishes = res.data || [];

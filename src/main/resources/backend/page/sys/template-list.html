@@ -193,8 +193,8 @@
                 { label: 'APP推送', value: '2' },
                 { label: '短信+推送', value: '3' }
               ] },
-            // 修改点：后端 pageTemplates 仅支持 bizType/status 筛选，channel 参数被静默忽略
-            // （保留 channel 下拉仅为统计卡片口径参考，不参与列表筛选）
+            // 修改点：后端 pageTemplates 已实现 channel/status/bizType 三条件过滤，
+            // channel 下拉参与列表筛选，与统计卡片口径一致
             { type: 'select', field: 'status', placeholder: '状态', width: '100px',
               options: [
                 { label: '启用', value: '1' },
