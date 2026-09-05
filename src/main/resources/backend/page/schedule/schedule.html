@@ -36,7 +36,7 @@
               value-format="yyyy-MM"
               placeholder="选择月份"
               size="small"
-              style="width:220px;margin-right:12px;"
+              class="schedule-month-picker"
               @change="fetchScheduleData"
             ></el-date-picker>
             <el-button type="primary" size="small" @click="openDialog">
@@ -51,7 +51,7 @@
           <span class="legend-item"><el-tag type="info" size="mini">中班</el-tag></span>
           <span class="legend-item"><el-tag type="info" size="mini">晚班</el-tag></span>
           <span class="legend-item"><el-tag type="danger" size="mini">全天</el-tag></span>
-          <span class="legend-item"><el-tag type="" size="mini">休息</el-tag></span>
+          <span class="legend-item"><el-tag type="info" size="mini">休息</el-tag></span>
         </div>
         <div class="schedule-table-wrap" v-loading="loading">
           <table class="schedule-table">
@@ -141,8 +141,9 @@
             </el-radio-group>
           </el-form-item>
           <el-form-item label="时间">
-            <el-time-picker v-model="form.startTime" format="HH:mm" value-format="HH:mm" placeholder="开始时间" style="width:200px;margin-right:8px;"></el-time-picker>
-            <el-time-picker v-model="form.endTime" format="HH:mm" value-format="HH:mm" placeholder="结束时间" style="width:200px;"></el-time-picker>
+            <!-- 修改点：移除行内 200px 硬编码宽度 —— el-time-picker 在表单栅格内自适应（弹窗布局为 el-col 栅格，无需固定宽度） -->
+            <el-time-picker v-model="form.startTime" format="HH:mm" value-format="HH:mm" placeholder="开始时间" style="margin-right:8px;"></el-time-picker>
+            <el-time-picker v-model="form.endTime" format="HH:mm" value-format="HH:mm" placeholder="结束时间"></el-time-picker>
           </el-form-item>
           <el-form-item label="备注">
             <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="选填，如：负责收银台" maxlength="100" show-word-limit></el-input>
@@ -396,7 +397,8 @@
         },
         getShiftTagType: function (shift) {
           const meta = SHIFT_META[shift]
-          return meta ? meta.tag : 'info'
+          // 修改点：空字符串 type 属非法值（Element UI 2.x el-tag 仅支持 success/info/warning/danger），休息态兜底为 info 灰色标签
+          return meta && meta.tag ? meta.tag : 'info'
         },
 
         // ===== 弹窗操作 =====
@@ -473,6 +475,8 @@
       color: var(--text-muted);
     }
     .header-actions { display: flex; align-items: center; }
+    /* 修改点：月份选择器宽度令牌化 —— 原先 220px 硬编码，改弹性基准保持与输入框一致节奏 */
+    .header-actions .schedule-month-picker { flex: 0 1 220px; min-width: 180px; margin-right: 12px; }
 
     /* 排班图例 */
     .schedule-legend {

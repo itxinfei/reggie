@@ -678,14 +678,21 @@
 
         confirmUrge: function () {
           const self = this
+          // 修改点：方法级防重守卫（此前仅靠弹窗 :submit-loading，快速连点可并发触发多次催单）
+          if (self.urgeLoading) return
           const orderId = self.urgeOrder.orderId
           self.urgeLoading = true
           callOrder(orderId)
-            .then(function () {
+            .then(function (res) {
               self.urgeLoading = false
-              self.urgeDialogVisible = false
-              self.$message.success('催单已发送，后厨已收到提醒')
-              self.loadAllData()
+              // 修改点：校验后端响应 code，失败时不关闭弹窗、不给成功提示（此前无条件提示成功）
+              if (res && res.code === 1) {
+                self.urgeDialogVisible = false
+                self.$message.success('催单已发送，后厨已收到提醒')
+                self.loadAllData()
+              } else {
+                self.$message.error((res && res.msg) || '催单发送失败，请稍后重试')
+              }
             })
             .catch(function () {
               self.urgeLoading = false

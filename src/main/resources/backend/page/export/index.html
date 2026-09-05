@@ -452,8 +452,22 @@
                     if (this.history.length > 50) this.history.pop();
                 },
                 clearHistory() {
-                    this.history = [];
-                    showToast('导出记录已清空', 'info');
+                    // 修改点：清空导出记录属批量删除操作，补二次确认（此前直接清空无提示，误点不可恢复）
+                    if (!this.history || this.history.length === 0) return;
+                    var self = this;
+                    if (window.ReggieUI && typeof window.ReggieUI.confirm === 'function') {
+                        window.ReggieUI.confirm('确定清空全部导出记录吗？', '清空导出记录', {
+                            confirmButtonText: '清空', type: 'warning'
+                        }).then(function() {
+                            self.history = [];
+                            showToast('导出记录已清空', 'info');
+                        }).catch(function() {
+                            // 用户取消，不做任何操作
+                        });
+                    } else {
+                        this.history = [];
+                        showToast('导出记录已清空', 'info');
+                    }
                 }
             }
         });
