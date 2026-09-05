@@ -91,7 +91,8 @@
         @size-change="onSizeChange"
       >
         <template #col-channel="{ row }">
-          <el-tag :type="row.channel === 'ALIPAY' ? 'primary' : 'success'" size="small">
+          <!-- 修改点：ALIPAY 分支 primary 是非法 el-tag type，改为 warning 与微信 success 区分 -->
+          <el-tag :type="row.channel === 'ALIPAY' ? 'warning' : 'success'" size="small">
             {{ channelLabel(row.channel) }}
           </el-tag>
         </template>

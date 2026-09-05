@@ -373,7 +373,8 @@
           return map[method] || '未知'
         },
         getStatusTag(status) {
-          const map = { 0: 'warning', 1: 'primary', 2: 'success', 3: 'danger', 4: 'info' }
+          // 修改点：status=1 审核通过 primary 是非法 el-tag type，改为 success（审核通过即成功态）
+          const map = { 0: 'warning', 1: 'success', 2: 'success', 3: 'danger', 4: 'info' }
           return map[status] || 'info'
         },
         getStatusClass(status) {

@@ -99,7 +99,8 @@
           </span>
         </template>
         <template #col-paymentMethod="{ row }">
-          <el-tag :type="row.paymentMethod==='WECHAT'?'success':row.paymentMethod==='ALIPAY'?'primary':row.paymentMethod==='CASH'?'warning':'info'" size="small" effect="plain">
+          <!-- 修改点：ALIPAY 分支 primary 是非法 el-tag type（Element UI 仅支持 success/info/warning/danger），改为 info -->
+          <el-tag :type="row.paymentMethod==='WECHAT'?'success':row.paymentMethod==='ALIPAY'?'info':row.paymentMethod==='CASH'?'warning':'info'" size="small" effect="plain">
             {{ row.paymentMethod === 'WECHAT' ? '微信' : row.paymentMethod === 'ALIPAY' ? '支付宝' : row.paymentMethod === 'CASH' ? '现金' : row.paymentMethod || '--' }}
           </el-tag>
         </template>

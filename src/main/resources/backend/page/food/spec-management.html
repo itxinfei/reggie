@@ -281,7 +281,7 @@
                   <div class="spec-group-nav__main">
                     <span class="spec-group-nav__name" :title="g.name">{{ g.name }}</span>
                     <div class="spec-group-nav__tags">
-                      <el-tag :type="g.type === 1 ? 'primary' : 'success'" size="mini">
+                      <el-tag :type="g.type === 1 ? 'info' : 'success'" size="mini">
                         {{ g.type === 1 ? '单选' : '多选' }}
                       </el-tag>
                       <el-tag v-if="g.required === 1" type="info" size="mini">必选</el-tag>
@@ -308,7 +308,7 @@
               <div class="spec-panel__title-wrap">
                 <h2 class="spec-panel__title">{{ currentGroup.name }}</h2>
                 <div class="spec-group-head">
-                  <el-tag :type="currentGroup.type === 1 ? 'primary' : 'success'" size="small">
+                  <el-tag :type="currentGroup.type === 1 ? 'info' : 'success'" size="small">
                     {{ currentGroup.type === 1 ? '单选' : '多选' }}
                   </el-tag>
                   <el-tag v-if="currentGroup.required === 1" type="info" size="small">必选</el-tag>

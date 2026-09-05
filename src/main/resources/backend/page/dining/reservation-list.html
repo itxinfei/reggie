@@ -55,7 +55,8 @@
         @size-change="onSizeChange"
       >
         <template #col-status="{ row }">
-          <el-tag :type="row.status === 'PENDING' ? 'warning' : row.status === 'CONFIRMED' ? 'success' : row.status === 'ARRIVED' ? 'primary' : 'info'" size="small">
+          <!-- 修改点：ARRIVED 分支 primary 是非法 el-tag type，改为 info -->
+          <el-tag :type="row.status === 'PENDING' ? 'warning' : row.status === 'CONFIRMED' ? 'success' : row.status === 'ARRIVED' ? 'info' : 'info'" size="small">
             {{ row.status === 'PENDING' ? '待确认' : row.status === 'CONFIRMED' ? '已确认' : row.status === 'ARRIVED' ? '已到店' : '已取消' }}
           </el-tag>
         </template>

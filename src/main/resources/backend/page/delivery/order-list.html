@@ -69,7 +69,7 @@
           <el-tag v-if="row.status === 'PENDING'" type="warning" size="small">待接单</el-tag>
           <el-tag v-else-if="row.status === 'ACCEPTED'" size="small">已接单</el-tag>
           <el-tag v-else-if="row.status === 'PICKING'" type="warning" size="small">取餐中</el-tag>
-          <el-tag v-else-if="row.status === 'DELIVERING'" type="primary" size="small">配送中</el-tag>
+          <el-tag v-else-if="row.status === 'DELIVERING'" type="warning" size="small">配送中</el-tag>
           <el-tag v-else-if="row.status === 'DELIVERED'" type="success" size="small">已送达</el-tag>
           <el-tag v-else-if="row.status === 'CANCELLED'" type="danger" size="small">已取消</el-tag>
           <el-tag v-else size="small">{{ statusLabelMap[row.status] || '未知状态' }}</el-tag>
@@ -109,7 +109,7 @@
                   <el-tag v-if="detailOrder.status === 'PENDING'" type="warning" size="mini">待接单</el-tag>
                   <el-tag v-else-if="detailOrder.status === 'ACCEPTED'" size="mini">已接单</el-tag>
                   <el-tag v-else-if="detailOrder.status === 'PICKING'" type="warning" size="mini">取餐中</el-tag>
-                  <el-tag v-else-if="detailOrder.status === 'DELIVERING'" type="primary" size="mini">配送中</el-tag>
+                  <el-tag v-else-if="detailOrder.status === 'DELIVERING'" type="warning" size="mini">配送中</el-tag>
                   <el-tag v-else-if="detailOrder.status === 'DELIVERED'" type="success" size="mini">已送达</el-tag>
                   <el-tag v-else-if="detailOrder.status === 'CANCELLED'" type="danger" size="mini">已取消</el-tag>
                   <el-tag v-else size="mini">{{ statusLabelMap[detailOrder.status] || '未知状态' }}</el-tag>
