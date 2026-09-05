@@ -26,10 +26,6 @@
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
     }
-    .biz-type-tag {
-      font-weight: 500;
-      font-size:var(--font-size-xs);
-    }
     .channel-badge {
       display: inline-flex;
       align-items: center;
@@ -90,9 +86,9 @@
         @size-change="onSizeChange"
       >
         <template #col-bizType="{ row }">
-          <span class="biz-type-tag" :style="{ color: bizTypeColor(row.bizType) }">
+          <el-tag size="small" :type="bizTypeTagType(row.bizType)" effect="plain">
             <i :class="bizTypeIcon(row.bizType)" style="margin-right:4px;"></i>{{ bizTypeName(row.bizType) }}
-          </span>
+          </el-tag>
         </template>
         <template #col-channel="{ row }">
           <el-tag size="small" :type="channelTagType(row.channel)" effect="plain">
@@ -340,6 +336,17 @@
           this.page = 1
           this.init(false)
         },
+        // 修改点：bizType 状态列改用 el-tag 渲染（移除手写 span + 内联 color 的 .biz-type-tag 旧写法）
+        bizTypeTagType(type) {
+          const map = {
+            'ORDER_NOTICE': 'primary',
+            'PROMOTION': 'warning',
+            'VERIFY_CODE': 'success',
+            'SYSTEM': 'info',
+            'JOB_NOTICE': 'info'
+          }
+          return map[type] || 'info'
+        },
         bizTypeName(type) {
           const map = {
             'ORDER_NOTICE': '订单通知',
@@ -349,16 +356,6 @@
             'JOB_NOTICE': '工作通知'
           }
           return map[type] || '未知类型'
-        },
-        bizTypeColor(type) {
-          const map = {
-            'ORDER_NOTICE': 'var(--el-color-primary)',
-            'PROMOTION': 'var(--el-color-warning)',
-            'VERIFY_CODE': 'var(--el-color-success)',
-            'SYSTEM': 'var(--el-color-info)',
-            'JOB_NOTICE': 'var(--el-text-regular)'
-          }
-          return map[type] || 'var(--el-text-regular)'
         },
         bizTypeIcon(type) {
           const map = {

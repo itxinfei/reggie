@@ -16,7 +16,8 @@
     .purchase-chart { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px 24px; box-shadow: var(--shadow-sm); margin-bottom: 20px; height: 340px; }
     .detail-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
   
-    /* 采购管理表单宽度工具类 */
+    /* 采购管理表单宽度工具类（弹窗内表单用：page.css 的 --narrow* 仅限 .container .tableBar 搜索区，不可复用于弹窗）
+       rg-w-full 全宽 / rg-w-220 操作员 / rg-w-160 明细食材 / rg-w-100 明细数量单价 */
     .rg-w-full { width: 100% !important; }
     .rg-w-220 { width: 220px !important; }
     .rg-w-160 { width: 160px !important; }
@@ -159,17 +160,17 @@
       @submit="submitEdit"
       @close="editDialogVisible = false"
     >
-      <el-form label-width="100px" size="small">
+      <el-form ref="editForm" :model="editForm" :rules="editRules" label-width="100px" size="small">
         <el-form-item label="采购单号：">
           <span style="font-weight:600;">{{ editForm.orderNo }}</span>
         </el-form-item>
-        <el-form-item label="供应商：">
+        <el-form-item label="供应商：" prop="supplierId">
           <el-select v-model="editForm.supplierId" placeholder="请选择" class="rg-w-full">
             <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="操作员：">
-          <el-input v-model="editForm.operator" placeholder="请输入操作员姓名" style="width:100%;" />
+        <el-form-item label="操作员：" prop="operator">
+          <el-input v-model="editForm.operator" placeholder="请输入操作员姓名" class="rg-w-full" />
         </el-form-item>
         <el-form-item label="备注：">
           <el-input v-model="editForm.remark" placeholder="采购备注（可选）" />
@@ -223,6 +224,11 @@
           // 修改点：编辑采购单表单（仅供应商/操作员/备注，明细与金额不在此修改）
           editDialogVisible: false,
           editForm: { id: null, orderNo: '', supplierId: '', operator: '', remark: '' },
+          // 修改点：编辑表单必填校验（supplierId/operator 为必填）
+          editRules: {
+            supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
+            operator: [{ required: true, whitespace: true, message: '请输入操作员', trigger: 'blur' }]
+          },
           // 修改点：采购表单校验规则（配合 el-form :rules + validate()）
           purchaseRules: {
             supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
@@ -412,29 +418,34 @@
           this.loadSupplierOptions()
           this.editDialogVisible = true
         },
-        // 修改点：提交编辑
+        // 修改点：提交编辑（走 el-form 校验，错误 inline 显示）
         submitEdit() {
           const self = this
           if (self.submitting) return
-          if (!self.editForm.supplierId) { ReggieUI.warning('请选择供应商'); return }
-          self.submitting = true
-          updatePurchase({
-            id: self.editForm.id,
-            supplierId: self.editForm.supplierId,
-            operator: self.editForm.operator,
-            remark: self.editForm.remark
-          }).then(function(res) {
-            self.submitting = false
-            if (res.code === 1) {
-              ReggieUI.success('修改成功！')
-              self.editDialogVisible = false
-              self.handleQuery()
-            } else {
-              ReggieUI.error(res.msg || '修改失败')
+          self.$refs.editForm.validate(function(valid) {
+            if (!valid) {
+              ReggieUI.warning('请完善表单必填项')
+              return
             }
-          }).catch(function(err) {
-            self.submitting = false
-            ReggieUI.error('请求失败：' + err)
+            self.submitting = true
+            updatePurchase({
+              id: self.editForm.id,
+              supplierId: self.editForm.supplierId,
+              operator: self.editForm.operator,
+              remark: self.editForm.remark
+            }).then(function(res) {
+              self.submitting = false
+              if (res.code === 1) {
+                ReggieUI.success('修改成功！')
+                self.editDialogVisible = false
+                self.handleQuery()
+              } else {
+                ReggieUI.error(res.msg || '修改失败')
+              }
+            }).catch(function(err) {
+              self.submitting = false
+              ReggieUI.error('请求失败：' + err)
+            })
           })
         },
         // 修改点：删除采购单（后端限制仅草稿/已取消可删）
