@@ -88,34 +88,59 @@
       <!-- 修改点：移除误导性死 class demo-form-inline；label-width 120→90（"库存数量"等4字标签） -->
       <!-- 修改点：补全 ref/:model/:rules，启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
       <el-form ref="materialForm" :model="formData" :rules="materialRules" label-width="90px">
-        <el-form-item label="食材名称：" prop="name">
-          <el-input v-model="formData.name" placeholder="请输入食材名称" />
-        </el-form-item>
-        <el-form-item label="食材分类：" prop="categoryId">
-          <el-select v-model="formData.categoryId" placeholder="请选择" style="width: 100%">
-            <el-option v-for="item in categoryOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="单位：" prop="unit">
-          <el-input v-model="formData.unit" placeholder="如：斤、个、箱" />
-        </el-form-item>
-        <el-form-item label="库存数量：" prop="stockQty">
-          <el-input v-model="formData.stockQty" type="number" placeholder="请输入库存数量" />
-        </el-form-item>
-        <el-form-item label="最低库存：" prop="minStock">
-          <el-input v-model="formData.minStock" type="number" placeholder="请输入最低库存预警值" />
-        </el-form-item>
-        <el-form-item label="单价：" prop="unitPrice">
-          <el-input v-model="formData.unitPrice" type="number" placeholder="请输入单价" />
-        </el-form-item>
-        <el-form-item label="供应商：">
-          <el-select v-model="formData.supplierId" placeholder="请选择" style="width: 100%" clearable>
-            <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="条码：">
-          <el-input v-model="formData.barcode" placeholder="请输入条码" />
-        </el-form-item>
+        <!-- 双列栅格：大屏两列、小屏单列（CLAUDE.md 7.2 场景C）；状态跨全宽 -->
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="食材名称：" prop="name">
+              <el-input v-model="formData.name" placeholder="请输入食材名称" />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="食材分类：" prop="categoryId">
+              <el-select v-model="formData.categoryId" placeholder="请选择" style="width: 100%">
+                <el-option v-for="item in categoryOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="单位：" prop="unit">
+              <el-input v-model="formData.unit" placeholder="如：斤、个、箱" />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="库存数量：" prop="stockQty">
+              <el-input v-model="formData.stockQty" type="number" placeholder="请输入库存数量" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="最低库存：" prop="minStock">
+              <el-input v-model="formData.minStock" type="number" placeholder="请输入最低库存预警值" />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="单价：" prop="unitPrice">
+              <el-input v-model="formData.unitPrice" type="number" placeholder="请输入单价" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="供应商：">
+              <el-select v-model="formData.supplierId" placeholder="请选择" style="width: 100%" clearable>
+                <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="条码：">
+              <el-input v-model="formData.barcode" placeholder="请输入条码" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="状态：">
           <el-radio-group v-model="formData.status">
             <el-radio :label="'1'">启用</el-radio>

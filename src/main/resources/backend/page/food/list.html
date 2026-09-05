@@ -147,26 +147,45 @@
       @submit="submitDishForm"
     >
       <el-form ref="dishForm" :model="dishForm" :rules="dishRules" label-width="100px" size="small">
-        <el-form-item label="菜品名称:" prop="name">
-          <el-input v-model="dishForm.name" placeholder="请填写菜品名称" maxlength="20" />
-        </el-form-item>
-        <el-form-item label="商品码:" prop="code">
-          <el-input v-model="dishForm.code" placeholder="请输入商品码（如条形码）" maxlength="64" />
-        </el-form-item>
-        <el-form-item label="菜品分类:" prop="categoryId">
-          <el-select v-model="dishForm.categoryId" placeholder="请选择菜品分类">
-            <el-option v-for="item in dishList" :key="item.id" :label="item.name" :value="item.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="菜品价格:" prop="price" size="small">
-          <el-input v-model="dishForm.price" placeholder="请设置菜品价格" />
-        </el-form-item>
-        <el-form-item label="排序:" prop="sort">
-          <el-input-number v-model="dishForm.sort" :min="0" :max="999" placeholder="排序值，越小越靠前" />
-        </el-form-item>
-        <el-form-item label="当前库存:">
-          <el-input-number v-model="dishForm.stockQty" :min="0" :precision="0" placeholder="不限库存则不填" style="width: 100%;" />
-        </el-form-item>
+        <!-- 双列栅格：大屏两列、小屏单列（CLAUDE.md 7.2 场景C）；图片/描述/口味含复杂组件，保持跨全宽 -->
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="菜品名称:" prop="name">
+              <el-input v-model="dishForm.name" placeholder="请填写菜品名称" maxlength="20" />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="商品码:" prop="code">
+              <el-input v-model="dishForm.code" placeholder="请输入商品码（如条形码）" maxlength="64" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="菜品分类:" prop="categoryId">
+              <el-select v-model="dishForm.categoryId" placeholder="请选择菜品分类" style="width: 100%;">
+                <el-option v-for="item in dishList" :key="item.id" :label="item.name" :value="item.id" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="菜品价格:" prop="price" size="small">
+              <el-input v-model="dishForm.price" placeholder="请设置菜品价格" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="排序:" prop="sort">
+              <el-input-number v-model="dishForm.sort" :min="0" :max="999" placeholder="排序值，越小越靠前" style="width: 100%;" />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="当前库存:">
+              <el-input-number v-model="dishForm.stockQty" :min="0" :precision="0" placeholder="不限库存则不填" style="width: 100%;" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="最低库存预警:">
           <el-input-number v-model="dishForm.minStock" :min="0" :precision="0" placeholder="库存低于此值时预警" style="width: 100%;" />
         </el-form-item>

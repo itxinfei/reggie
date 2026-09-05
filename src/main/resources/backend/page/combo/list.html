@@ -128,14 +128,21 @@
     :close-on-click-modal="false"
   >
     <el-form ref="comboForm" :model="comboForm" :rules="comboRules" label-width="90px">
-      <el-form-item label="套餐名称:" prop="name">
-        <el-input v-model="comboForm.name" placeholder="请填写套餐名称" maxlength="20" />
-      </el-form-item>
-      <el-form-item label="套餐分类:" prop="categoryId">
-        <el-select v-model="comboForm.categoryId" placeholder="请选择套餐分类">
-          <el-option v-for="item in comboCategoryList" :key="item.id" :label="item.name" :value="item.id" />
-        </el-select>
-      </el-form-item>
+      <!-- 双列栅格：大屏两列、小屏单列（CLAUDE.md 7.2 场景C）；试算卡/套餐菜品/图片/描述含复杂组件，保持跨全宽 -->
+      <el-row :gutter="20">
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="套餐名称:" prop="name">
+            <el-input v-model="comboForm.name" placeholder="请填写套餐名称" maxlength="20" />
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="套餐分类:" prop="categoryId">
+            <el-select v-model="comboForm.categoryId" placeholder="请选择套餐分类" style="width: 100%;">
+              <el-option v-for="item in comboCategoryList" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+        </el-col>
+      </el-row>
       <el-form-item label="套餐价格:" prop="price">
         <el-input v-model="comboForm.price" placeholder="请设置套餐价格" />
       </el-form-item>

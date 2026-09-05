@@ -109,6 +109,7 @@
     <!-- 新增/编辑对话框 -->
     <crud-dialog :show-submit="true" :show-cancel="true" :title="dialogTitle" :visible.sync="dialogVisible" size="lg" @submit="handleSubmit">
       <el-form :model="formData" :rules="formRules" ref="costForm" label-width="100px">
+        <!-- 双列栅格：大屏两列、小屏单列（CLAUDE.md 7.2 场景C）；菜品远程搜索独占一行，备注跨全宽 -->
         <el-form-item label="菜品" prop="dishId">
           <el-select
             v-model="formData.dishId"
@@ -127,18 +128,30 @@
             </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="食材成本" prop="materialCost">
-          <el-input-number v-model="formData.materialCost" :precision="2" :min="0" style="width: 100%;"></el-input-number>
-        </el-form-item>
-        <el-form-item label="人工成本" prop="laborCost">
-          <el-input-number v-model="formData.laborCost" :precision="2" :min="0" style="width: 100%;"></el-input-number>
-        </el-form-item>
-        <el-form-item label="其他成本" prop="otherCost">
-          <el-input-number v-model="formData.otherCost" :precision="2" :min="0" style="width: 100%;"></el-input-number>
-        </el-form-item>
-        <el-form-item label="售价" prop="salePrice">
-          <el-input-number v-model="formData.salePrice" :precision="2" :min="0" style="width: 100%;"></el-input-number>
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="食材成本" prop="materialCost">
+              <el-input-number v-model="formData.materialCost" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="人工成本" prop="laborCost">
+              <el-input-number v-model="formData.laborCost" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="其他成本" prop="otherCost">
+              <el-input-number v-model="formData.otherCost" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="售价" prop="salePrice">
+              <el-input-number v-model="formData.salePrice" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="备注">
           <el-input v-model="formData.remark" type="textarea" :rows="3" placeholder="请输入备注"></el-input>
         </el-form-item>

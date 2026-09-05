@@ -188,33 +188,46 @@
     <!-- 新增/编辑对话框 -->
     <crud-dialog :title="dialogTitle" :visible.sync="dialogVisible" size="lg" show-close :show-submit="true" :show-cancel="true" :submit-loading="submitLoading" @submit="handleSubmit">
       <el-form :model="formData" :rules="rangeTypeRules || formRules" ref="ruleForm" label-width="120px">
-        <el-form-item label="规则名称" prop="ruleName">
-          <el-input v-model="formData.ruleName" placeholder="请输入规则名称"></el-input>
-        </el-form-item>
-        <el-form-item label="范围类型" prop="rangeType">
-          <el-radio-group v-model="formData.rangeType">
-            <el-radio :label="1">圆形范围</el-radio>
-            <el-radio :label="2">多边形范围</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        
+        <!-- 双列栅格：大屏两列、小屏单列（CLAUDE.md 7.2 场景C）；条件字段（多边形坐标/配送费类型/免费门槛）与备注保持跨全宽 -->
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="规则名称" prop="ruleName">
+              <el-input v-model="formData.ruleName" placeholder="请输入规则名称"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="范围类型" prop="rangeType">
+              <el-radio-group v-model="formData.rangeType">
+                <el-radio :label="1">圆形范围</el-radio>
+                <el-radio :label="2">多边形范围</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
         <!-- 圆形范围参数 -->
         <template v-if="formData.rangeType === 1">
-          <el-form-item label="中心经度" prop="centerLongitude">
-            <el-input-number v-model="formData.centerLongitude" :precision="8" :step="0.0001" style="width: 100%;"></el-input-number>
-          </el-form-item>
-          <el-form-item label="中心纬度" prop="centerLatitude">
-            <el-input-number v-model="formData.centerLatitude" :precision="8" :step="0.0001" style="width: 100%;"></el-input-number>
-          </el-form-item>
+          <el-row :gutter="20">
+            <el-col :xs="24" :sm="12">
+              <el-form-item label="中心经度" prop="centerLongitude">
+                <el-input-number v-model="formData.centerLongitude" :precision="8" :step="0.0001" style="width: 100%;"></el-input-number>
+              </el-form-item>
+            </el-col>
+            <el-col :xs="24" :sm="12">
+              <el-form-item label="中心纬度" prop="centerLatitude">
+                <el-input-number v-model="formData.centerLatitude" :precision="8" :step="0.0001" style="width: 100%;"></el-input-number>
+              </el-form-item>
+            </el-col>
+          </el-row>
           <el-form-item label="半径（米）" prop="radius">
             <el-input-number v-model="formData.radius" :min="100" :max="50000" style="width: 100%;"></el-input-number>
           </el-form-item>
         </template>
-        
+
         <!-- 多边形范围参数 -->
         <template v-if="formData.rangeType === 2">
           <el-form-item label="多边形坐标" prop="polygonPoints">
-            <el-input v-model="formData.polygonPoints" type="textarea" :rows="4" 
+            <el-input v-model="formData.polygonPoints" type="textarea" :rows="4"
               placeholder="请输入坐标点JSON，格式：[[lon1,lat1],[lon2,lat2],...]"></el-input>
             <div class="form-tip">
               至少需要3个坐标点，首尾点会自动闭合
@@ -223,7 +236,7 @@
         </template>
 
         <el-divider content-position="left">配送费设置</el-divider>
-        
+
         <el-form-item label="配送费类型" prop="feeType">
           <el-radio-group v-model="formData.feeType">
             <el-radio :label="1">固定配送费</el-radio>
@@ -231,36 +244,52 @@
             <el-radio :label="3">基础费+距离费</el-radio>
           </el-radio-group>
         </el-form-item>
-        
-        <el-form-item v-if="formData.feeType === 1 || formData.feeType === 3" label="基础配送费">
-          <el-input-number v-model="formData.baseFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
-        </el-form-item>
-        
-        <el-form-item v-if="formData.feeType === 3" label="每公里费用">
-          <el-input-number v-model="formData.feePerKm" :precision="2" :min="0" style="width: 100%;"></el-input-number>
-        </el-form-item>
-        
-        <el-form-item label="最低配送费">
-          <el-input-number v-model="formData.minFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
-          <div class="form-tip">0表示不限制</div>
-        </el-form-item>
-        
-        <el-form-item label="最高配送费">
-          <el-input-number v-model="formData.maxFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
-          <div class="form-tip">0表示不限制</div>
-        </el-form-item>
-        
+
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item v-if="formData.feeType === 1 || formData.feeType === 3" label="基础配送费">
+              <el-input-number v-model="formData.baseFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item v-if="formData.feeType === 3" label="每公里费用">
+              <el-input-number v-model="formData.feePerKm" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="最低配送费">
+              <el-input-number v-model="formData.minFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+              <div class="form-tip">0表示不限制</div>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="最高配送费">
+              <el-input-number v-model="formData.maxFee" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+              <div class="form-tip">0表示不限制</div>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
         <el-form-item label="免费配送门槛">
           <el-input-number v-model="formData.freeThreshold" :precision="2" :min="0" style="width: 100%;"></el-input-number>
           <div class="form-tip">订单金额达到此值免配送费，0表示不启用</div>
         </el-form-item>
 
-        <el-form-item label="排序">
-          <el-input-number v-model="formData.sortOrder" :min="0" style="width: 100%;"></el-input-number>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="formData.status" :active-value="1" :inactive-value="0"></el-switch>
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="排序">
+              <el-input-number v-model="formData.sortOrder" :min="0" style="width: 100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="状态">
+              <el-switch v-model="formData.status" :active-value="1" :inactive-value="0"></el-switch>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="备注">
           <el-input v-model="formData.remark" type="textarea" :rows="2" placeholder="请输入备注"></el-input>
         </el-form-item>
