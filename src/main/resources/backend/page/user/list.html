@@ -295,11 +295,11 @@
               phone: s.phone || this.input.phone || undefined,
               status: s.status != null ? (s.status === '' ? undefined : Number(s.status)) : (this.input.status != null ? this.input.status : undefined)
             }
-            const res = await userPage(params)
-            return res
+            return await userPage(params)
           } catch (err) {
-            ReggieUI.error('请求失败：' + err)
-            return { code: 0, msg: '请求失败' }
+            // 修改点：异常不在 getter 内弹错——fetchData 会基于 {code:0} 的返回统一提示一次，
+            // 此处再弹会与 else 分支的双重 toast 叠加，网络失败时用户看到两次相同错误
+            return { code: 0, msg: '请求失败：' + (err.message || err) }
           }
         },
 
