@@ -288,15 +288,22 @@
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/message.html' })
                 },
                 async getLatestOrder(){
-                    var params = { page:1, pageSize:1 }
-                    var res = await orderPagingApi(params)
-                    if(res.code === 1){
-                        this.order = res.data.records
-                        if(this.order && this.order.length > 0 && this.order[0].orderDetails){
-                            var number = 0
-                            this.order[0].orderDetails.forEach(function(item){ number += item.number })
-                            this.order[0].sumNum = number
+                    try {
+                        var res = await orderPagingApi({ page:1, pageSize:1 })
+                        if(res.code === 1 && res.data && res.data.records){
+                            this.order = res.data.records
+                            if(this.order.length > 0 && this.order[0].orderDetails){
+                                var number = 0
+                                this.order[0].orderDetails.forEach(function(item){ number += item.number })
+                                this.order[0].sumNum = number
+                            }
+                        } else {
+                            // 修改点：请求失败时置空列表，隐藏"最新订单"卡片，避免渲染 dummy 数据「共0件,实付 ￥NaN」
+                            this.order = []
                         }
+                    } catch(e) {
+                        console.warn('[user.html] 加载最新订单失败:', e)
+                        this.order = []
                     }
                 },
                 async addOrderAgain(){

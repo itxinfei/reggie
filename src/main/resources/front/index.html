@@ -182,7 +182,8 @@
         <div class="divContent">
           <div v-for="flavor in dialogFlavor.flavors" :key="flavor.id">
             <div class="divFlavorTitle">{{ flavor.name }}</div>
-            <span v-for="item in JSON.parse(flavor.value)"
+            <!-- 修改点：JSON.parse 移出模板，改用方法带 try-catch 预解析（非法 value 不再中断整个弹窗渲染） -->
+            <span v-for="item in parsedFlavorOptions(flavor)"
               :key="item"
               @click="flavorClick(flavor,item)"
               :class="{spanActive:flavor.dishFlavor === item}"
@@ -215,7 +216,8 @@
             <div class="divDesc">
               <div class="name">{{ item.name }}</div>
               <div class="price">
-                <span class="spanMoney">￥</span>{{ item.amount.toFixed(2) }}
+                <!-- 修改点：Number() 保护缺失金额不报错 -->
+                <span class="spanMoney">￥</span>{{ (Number(item.amount) || 0).toFixed(2) }}
               </div>
             </div>
             <div class="divNum">
@@ -1005,7 +1007,8 @@
                 const res = await dishListApi({categoryId:this.categoryId,status:1})
                 if(!res) return
                 if(res.code === 1){
-                  let dishList = res.data
+                  // 修改点：防御 res.data 为 null，避免 dishList.length 抛错
+                  let dishList = res.data || []
                   const cartData  = this.cartData
                   if(dishList.length > 0 && cartData.length > 0){
                     dishList.forEach(dish=>{
@@ -1030,7 +1033,8 @@
                 const res = await setmealListApi({categoryId:this.categoryId,status:1})
                 if(!res) return
                 if(res.code === 1){
-                    let dishList = res.data
+                    // 修改点：防御 res.data 为 null，避免 dishList.length 抛错
+                    let dishList = res.data || []
                     const cartData  = this.cartData
                     if(dishList.length > 0 && cartData.length > 0){
                       dishList.forEach(dish=>{
@@ -1241,6 +1245,17 @@
                 price: item.price,
                 show: true,
                 image: item.image
+              }
+            },
+            // 规格选项解析（带 try-catch，非法 JSON 返回空数组，避免中断渲染）
+            parsedFlavorOptions(flavor){
+              if(!flavor || !flavor.value) return []
+              try {
+                const arr = JSON.parse(flavor.value)
+                return Array.isArray(arr) ? arr : []
+              } catch(e) {
+                console.warn('口味值非法 JSON:', flavor.value)
+                return []
               }
             },
             // 规格选择高亮

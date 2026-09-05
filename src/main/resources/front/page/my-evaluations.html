@@ -172,6 +172,11 @@
             created() {
                 this.loadData()
                 this.checkPendingEvaluation()
+                // 修改点：从 order.html「评价」入口跳转时携带 ?orderId=xxx，此时自动打开提交弹窗
+                // （此前仅由用户手动点击"去评价"触发，入口跳转后评价流断裂）
+                if (this.getUrlParam('orderId')) {
+                    this.openSubmitModal()
+                }
             },
             methods: {
                 async loadData() {

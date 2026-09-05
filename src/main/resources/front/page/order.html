@@ -45,7 +45,7 @@
                             <span>{{getStatus(order.status)}}</span>
                         </div>
                         <div class="dishList">
-                            <div v-for="(item,dIdx) in order.orderDetails" :key="dIdx" class="item">
+                            <div v-for="(item,dIdx) in order.orderDetails || []" :key="dIdx" class="item">
                                 <span>{{item.name}}</span>
                                 <span>x{{item.number}}</span>
                             </div>
@@ -181,9 +181,12 @@
                             if(records && Array.isArray(records)){
                                 records.forEach(item=>{
                                     let number = 0
-                                    item.orderDetails.forEach(ele=>{
-                                        number += ele.number
-                                    })
+                                    // 修改点：订单详情为 null/非数组时跳过，防止页面渲染时报错
+                                    if(item.orderDetails && Array.isArray(item.orderDetails)){
+                                        item.orderDetails.forEach(ele=>{
+                                            number += ele.number
+                                        })
+                                    }
                                     item.sumNum = number
                                 })
                                 this.orderList.push(...records)
@@ -265,11 +268,17 @@
                     }
                 },
                 // 修改点：配送追踪
+                // 注意：/api/delivery/tracking/{orderId} 接收的是【平台订单号 platformOrderId】
+                // （delivery_order 表主键是 platformOrderId，getByPlatformOrderId 查询）。
+                // 本系统 Orders.number 是自增主键字符串，与平台订单号不同，直接传会导致"配送订单不存在"。
                 viewTracking(order){
-                    if(order && order.number){
+                    var platformOrderId = order && (order.platformOrderId || order.platformOrderId !== undefined ? order.platformOrderId : order.number);
+                    if(platformOrderId){
                         window.requestAnimationFrame(()=>{
-                            window.location.href = '/front/page/tracking.html?orderId=' + order.number
+                            window.location.href = '/front/page/tracking.html?orderId=' + encodeURIComponent(platformOrderId)
                         })
+                    } else {
+                        vant.Toast.fail('该订单无配送追踪信息');
                     }
                 },
                 // 修改点：取消订单

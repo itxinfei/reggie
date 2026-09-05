@@ -94,8 +94,8 @@
                             <van-datetime-picker
                                 v-model="scheduleDate"
                                 type="date"
-                                :min-date="minScheduleDate"
-                                :max-date="maxScheduleDate"
+                                :min-date="minScheduleDate()"
+                                :max-date="maxScheduleDate()"
                                 :formatter="dateFormatter"
                                 @confirm="onScheduleDateConfirm"
                                 @cancel="showSchedulePicker = false"
@@ -194,7 +194,7 @@
                             </div>
                             <div class="coupon-right">
                                 <div class="coupon-name">{{ coupon.templateName }}</div>
-                                <div class="coupon-desc">过期：{{ coupon.expireTime | fmtDate }}</div>
+                                <div class="coupon-desc">过期：{{ coupon.expireTime }}</div>
                             </div>
                             <i class="coupon-check" v-if="selectedCoupon && selectedCoupon.id === coupon.id">✓</i>
                         </div>
@@ -388,7 +388,8 @@
                     async defaultAddress(){
                         const res = await  getDefaultAddressApi()
                         if(res.code === 1){
-                           this.address = res.data
+                           // 修改点：防御 res.data 为 null，避免 addressFull computed 访问空对象属性抛错
+                           this.address = res.data || {}
                            this.finishTime = getFinishTime()
                            // 修改点：动态计算各送达时间选项的预计时刻
                            const base = new Date()
@@ -502,12 +503,22 @@
                             vant.Toast.fail('请选择时段')
                             return
                         }
-                        // 验证预约日期不能是今天（除非时间还未过）
+                        // 验证预约时间不能早于当前时间
+                        // 修改点：datetime-picker type="date" 只返回日期（00:00），getHours() 恒 0
+                        // 原逻辑导致「选今天任何时段都被拦、明天时段误判」，改为按选中时段开始时刻比较（含分钟）
                         const selected = new Date(this.scheduleDate)
                         const today = new Date()
-                        if(selected.toDateString() === today.toDateString() && selected.getHours() < today.getHours()){
-                            vant.Toast.fail('预约时间不能早于当前时间')
-                            return
+                        if(selected.toDateString() === today.toDateString()){
+                            const slot = this.scheduleTimeSlots.find(s => s.value === this.selectedScheduleSlot)
+                            const startTime = slot ? slot.time.split('-')[0] : ''
+                            if(startTime){
+                                const parts = startTime.split(':')
+                                const slotStart = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate(), Number(parts[0]), Number(parts[1]))
+                                if(slotStart.getTime() <= today.getTime()){
+                                    vant.Toast.fail('预约时间不能早于当前时间')
+                                    return
+                                }
+                            }
                         }
                         this.showSchedulePicker = false
                         vant.Toast.success('预约时间已设置')

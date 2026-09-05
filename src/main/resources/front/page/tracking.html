@@ -455,7 +455,12 @@
                 },
                 updateTimeText() {
                     if (!this.trackingData || !this.trackingData.updateTime) return '';
-                    const d = new Date(this.trackingData.updateTime);
+                    // 修改点：兼容"yyyy-MM-dd HH:mm:ss"空格分隔格式。
+                    // iOS Safari 等把空格分隔字符串 new Date 解析为 Invalid Date，此前渲染出 "NaN:NaN"
+                    // 注意：只能替换日期连字符 /-/，时间段的冒号必须保留（替换成斜杠会导致 Invalid Date）
+                    const raw = String(this.trackingData.updateTime).replace(/-/g, '/');
+                    const d = new Date(raw);
+                    if (isNaN(d.getTime())) return '';
                     const pad = (n) => String(n).padStart(2, '0');
                     return pad(d.getHours()) + ':' + pad(d.getMinutes());
                 },
@@ -515,13 +520,17 @@
                     const stepIdx = order.indexOf(stepStatus);
                     if (curIdx < 0 || stepIdx < 0) return '';
                     if (stepIdx <= curIdx) {
-                        return this.trackingData.status === 'DELIVERED' && stepStatus === 'DELIVERED'
-                            ? 'done active' : 'done';
+                        // 已送达（终态）时让时间线全部置灰，避免误判为配送中
+                        return 'done';
                     }
                     return '';
                 },
                 isStepDone(stepStatus) {
                     if (!this.trackingData || !this.trackingData.status) return false;
+                    // 修改点：已送达/已取消（终态）视为全部步骤完成，不再用 timeline active 高亮
+                    if (this.trackingData.status === 'DELIVERED' || this.trackingData.status === 'CANCELLED') {
+                        return this.trackingData.status === 'DELIVERED';
+                    }
                     const order = ['PENDING', 'ACCEPTED', 'PICKING', 'DELIVERING', 'DELIVERED'];
                     const curIdx = order.indexOf(this.trackingData.status);
                     const stepIdx = order.indexOf(stepStatus);

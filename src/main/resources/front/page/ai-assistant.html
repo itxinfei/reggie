@@ -254,6 +254,20 @@
             for (var li = 0; li < lines.length; li++) {
                 var line = lines[li];
                 if (li > 0) parts.push({ type: 'text', text: '\n' });
+                var trimmed = line.trim();
+                // 修改点：列表行先于 bold/text 解析判断，直接收集连续列表项为单个 list part，
+                // 避免该行再被当作纯文本 push 一次导致同一行内容渲染两遍（bullet 重复）
+                if (trimmed.startsWith('- ') || trimmed.startsWith('· ')) {
+                    var listItems = [];
+                    for (var ni = li; ni < lines.length; ni++) {
+                        var t = lines[ni].trim();
+                        if (t.startsWith('- ') || t.startsWith('· ')) listItems.push(t.replace(/^[-·]\s*/, ''));
+                        else break;
+                    }
+                    parts.push({ type: 'list', items: listItems });
+                    li += listItems.length - 1;
+                    continue;
+                }
                 var boldRegex = /\*\*(.*?)\*\*/g;
                 var lastIndex = 0;
                 var match;
@@ -263,18 +277,6 @@
                     lastIndex = match.index + match[0].length;
                 }
                 if (lastIndex < line.length) parts.push({ type: 'text', text: line.substring(lastIndex) });
-                if ((line.trim().startsWith('- ') || line.trim().startsWith('· ')) && parts.length > 0) {
-                    var listItems = [];
-                    listItems.push(line.trim().replace(/^[-·]\s*/, ''));
-                    for (var ni = li + 1; ni < lines.length; ni++) {
-                        var nextLine = lines[ni].trim();
-                        if (nextLine.startsWith('- ') || nextLine.startsWith('· ')) listItems.push(nextLine.replace(/^[-·]\s*/, ''));
-                        else break;
-                    }
-                    parts.push({ type: 'list', items: listItems });
-                    li += listItems.length - 1;
-                    continue;
-                }
             }
             if (parts.length === 0) return [{ type: 'text', text: content }];
             var merged = [];
@@ -572,6 +574,16 @@
                         title: '删除对话',
                         message: '确定要删除这个对话吗？此操作不可恢复。'
                     }).then(function() {
+                        // 修改点：同步删除后端记录，成功后更新本地；失败保留本地并提示。
+                        // 此前仅移除 localStorage，下次 syncConversationsFromBackend 会把已删对话"复活"
+                        var backendPromise = (typeof aiApi !== 'undefined' && aiApi.deleteConversation)
+                            ? aiApi.deleteConversation(id)
+                            : Promise.resolve({ code: 1 });
+                        return backendPromise.then(function(res) {
+                            if (res && res.code === 1) return true;
+                            throw new Error((res && res.msg) || '删除失败');
+                        });
+                    }).then(function() {
                         self.conversations = self.conversations.filter(function(c) { return c.id !== id; });
                         if (self.currentConversationId === id) {
                             if (self.conversations.length > 0) {
@@ -581,7 +593,11 @@
                             }
                         }
                         self.saveConversations();
-                    }).catch(function(e) { console.warn('[ai-assistant.html] 用户取消删除对话:', e) });
+                        vant.Toast.success('对话已删除');
+                    }).catch(function(e) {
+                        if (e && e.message) console.warn('[ai-assistant.html] 删除对话失败:', e.message);
+                        else console.warn('[ai-assistant.html] 用户取消删除对话:', e);
+                    });
                 },
                 toggleSidebar: function(force) {
                     if (typeof force === 'boolean') {
@@ -664,12 +680,21 @@
                         title: '清空对话',
                         message: '确定要清空全部对话记录吗？此操作不可恢复。'
                     }).then(function() {
+                        // 修改点：逐一同步删除后端对话，成功后清空本地；失败保留本地并提示。
+                        // 此前仅清 localStorage，下次同步会把已删对话全部"复活"
+                        var ids = self.conversations.map(function(c) { return c.id; }).filter(function(id) { return !!id; });
+                        var backendPromise = (typeof aiApi !== 'undefined' && aiApi.deleteConversation && ids.length > 0)
+                            ? Promise.all(ids.map(function(id) { return aiApi.deleteConversation(id); }))
+                            : Promise.resolve([]);
+                        return backendPromise;
+                    }).then(function() {
                         self.conversations = [];
                         self.currentConversationId = null;
                         self.messages = [];
                         localStorage.removeItem('ai_conversations');
                         self.newConversation(true);
-                    }).catch(function(e) { console.warn('[ai-assistant.html] 用户取消清空对话:', e) });
+                        vant.Toast.success('对话已清空');
+                    }).catch(function(e) { console.warn('[ai-assistant.html] 清空对话失败:', e); });
                 },
                 switchScene: function(scene) {
                     if (this.currentScene === scene) return;

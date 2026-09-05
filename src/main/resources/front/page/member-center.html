@@ -390,8 +390,9 @@
       methods: {
         async loadAll() {
           this.loading = true
+          // 修改点：getMyMemberInfo 独立 try/catch。此前会员信息接口失败会直接抛到外层，
+          // 积分/优惠券/充值三个 tab 全部加载不到（单点失败拖垮整页）
           try {
-            // 会员信息
             var miRes = await getMyMemberInfo()
             if (miRes.code === 1) {
               this.memberInfo = miRes.data
@@ -399,19 +400,19 @@
                 sessionStorage.setItem("memberId", miRes.data.member.id)
               }
             }
-            // 等级列表(用于升级进度)
-            try {
-              var lvRes = await this.fetchLevels()
-              // 修改点：C端端点 /api/member/member/my-levels 返回裸 List，非分页对象 {records}
-              if (lvRes && lvRes.code === 1) this.allLevels = Array.isArray(lvRes.data) ? lvRes.data : ((lvRes.data && lvRes.data.records) || [])
-            } catch(e) { console.warn('[member-center] fetchLevels 失败:', e) }
-            // 加载各tab数据
-            await Promise.all([
-              this.loadPoints(),
-              this.loadCoupons(),
-              this.loadRecharge()
-            ])
-          } catch(e) { console.warn('[member-center] 初始化失败:', e) }
+          } catch(e) { console.warn('[member-center] 会员信息加载失败:', e) }
+          // 等级列表(用于升级进度)
+          try {
+            var lvRes = await this.fetchLevels()
+            // 修改点：C端端点 /api/member/member/my-levels 返回裸 List，非分页对象 {records}
+            if (lvRes && lvRes.code === 1) this.allLevels = Array.isArray(lvRes.data) ? lvRes.data : ((lvRes.data && lvRes.data.records) || [])
+          } catch(e) { console.warn('[member-center] fetchLevels 失败:', e) }
+          // 加载各tab数据
+          await Promise.all([
+            this.loadPoints(),
+            this.loadCoupons(),
+            this.loadRecharge()
+          ])
           this.loading = false
         },
         fetchLevels: function() {
