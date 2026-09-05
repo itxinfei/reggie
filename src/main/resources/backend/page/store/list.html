@@ -413,6 +413,7 @@
     data: {
         loading: false,
         submitting: false,
+        exporting: false,
         // 表格数据
         tableData: [],
         columns: [
@@ -608,6 +609,9 @@
         },
         doExport: function() {
             var self = this;
+            // 修改点：防重守卫——导出期间禁止重复触发（连点多次调用会创建多个 Blob 下载）
+            if (self.exporting) return;
+            self.exporting = true;
             var params = {
                 keyword: self.search.keyword || null,
                 storeType: self.search.storeType,
@@ -625,25 +629,41 @@
                 ReggieUI.success('导出成功');
             }).catch(function() {
                 ReggieUI.error('导出失败');
-            });
+            }).finally(function() { self.exporting = false; });
         },
 
         // ========== 单行操作 ==========
         toggleSingleStatus: function(row) {
             var self = this;
-            updateStatus(row.tenantId, row.status).then(function(res) {
+            // 说明：el-switch 的 @change 在 v-model 更新【之后】触发，此时 row.status 已是目标状态，直接透传
+            var targetStatus = row.status === 1 ? '启用' : '停用';
+            ReggieUI.confirm('确认' + targetStatus + '门店「' + (row.storeName || row.storeCode || '') + '」？', '状态变更', { type: 'warning' }).then(function() {
+                return updateStatus(row.tenantId, row.status);
+            }).then(function(res) {
                 if (res && res.code === 1) {
                     ReggieUI.success('状态已更新');
+                    self.loadData(true);
+                } else {
+                    ReggieUI.error((res && res.msg) || '状态更新失败');
                 }
-            }).catch(function() { self.loadData(); });
+            }).catch(function(err) {
+                if (err && err.__cancelled) { self.loadData(); return; }
+                console.warn('[门店管理] 状态更新失败:', err);
+                ReggieUI.error('状态更新失败，请重试');
+            });
         },
         switchToStore: function(row) {
             var self = this;
             switchStore(row.tenantId).then(function(res) {
                 if (res && res.code === 1) {
                     ReggieUI.success('已切换到门店：' + row.storeName);
-                    self.loadData();
+                    self.loadData(true);
+                } else {
+                    ReggieUI.error((res && res.msg) || '切换门店失败');
                 }
+            }).catch(function(err) {
+                console.warn('[门店管理] 切换门店失败:', err);
+                ReggieUI.error('切换门店失败，请重试');
             });
         },
 
@@ -710,9 +730,9 @@
                         deliveryRadius: d.deliveryRadius || 3000,
                         minDeliveryAmount: d.minDeliveryAmount || 20.00,
                         deliveryFee: d.deliveryFee || 0.00,
-                        isDeliveryEnabled: d.isDeliveryEnabled || 1,
-                        isDineInEnabled: d.isDineInEnabled || 1,
-                        status: d.status || 1,
+                        isDeliveryEnabled: d.isDeliveryEnabled === 0 ? 0 : (d.isDeliveryEnabled || 1),
+                        isDineInEnabled: d.isDineInEnabled === 0 ? 0 : (d.isDineInEnabled || 1),
+                        status: d.status === 0 ? 0 : (d.status || 1),
                         adminUsername: '', adminPassword: ''
                     };
                     self.formDialogVisible = true;
@@ -800,8 +820,15 @@
         },
         doSync: function(type) {
             var self = this;
-            var sourceTenantId = null;
-            if (self.tableData.length > 0) sourceTenantId = self.tableData[0].tenantId;
+            // 修改点：同步源固定为"直营总店"（storeType===1），而非 tableData[0]。
+            // 原实现取列表第一行做源，当前筛选条件下第一行不一定是总店，
+            // 会把错误门店当源复制到目标门店，造成数据错乱。
+            var sourceRow = (self.tableData || []).filter(function(r) { return r.storeType === 1; })[0];
+            var sourceTenantId = sourceRow ? sourceRow.tenantId : null;
+            if (!sourceTenantId) {
+                ReggieUI.error('未找到「直营总店」，无法作为同步源');
+                return;
+            }
             var apiMap = {
                 dishes: syncDishes({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, dishIds: null, operatorId: 1 }),
                 categories: syncCategories({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, operatorId: 1 }),

@@ -262,8 +262,11 @@
               if (res && res.code === 1 && res.data) {
                 self.refundAnalysis = res.data;
                 self.$nextTick(function() { self.renderRefundChart(); });
+              } else {
+                // 修改点：此前仅 console.warn 静默，失败无用户提示
+                ReggieUI.error((res && res.msg) || '加载退款分析失败');
               }
-            }).catch(function(err) { console.warn('[支付分析] 加载退款分析失败:', err) });
+            }).catch(function(err) { ReggieUI.error('加载退款分析失败：' + (err || '网络异常')); });
           },
           renderRefundChart: function() {
             if (!this.refundChart) return;
@@ -309,8 +312,15 @@
             const self = this;
             if (!self.trendChart) return;
             reportPaymentTrend({ startDate: self.dateRange[0], endDate: self.dateRange[1] })
-              .then(function(res) { if (res.code === 1 && res.data) self.renderPaymentTrend(res.data); })
-              .catch(function(err) { console.warn('[支付分析] 加载支付趋势失败:', err) });
+              .then(function(res) {
+                if (res.code === 1 && res.data) {
+                  self.renderPaymentTrend(res.data);
+                } else {
+                  // 修改点：此前仅 console.warn 静默，失败无用户提示
+                  ReggieUI.error((res && res.msg) || '加载支付趋势失败');
+                }
+              })
+              .catch(function(err) { ReggieUI.error('加载支付趋势失败：' + (err || '网络异常')); });
           },
           renderPaymentTrend: function(data) {
             if (!this.trendChart) return;

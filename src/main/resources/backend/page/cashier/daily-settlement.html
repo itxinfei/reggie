@@ -202,6 +202,7 @@
       data() {
         return {
           loading: false,
+          submitting: false, // 日结防重复提交守卫
           dateRange: [],
           tableData: [],
           columns: [
@@ -298,10 +299,16 @@
             
             if (listRes.code === 1) {
               this.tableData = listRes.data || []
+            } else {
+              // 修改点：此前 else 静默，列表失败无任何反馈
+              ReggieUI.error((listRes && listRes.msg) || '获取日结列表失败')
             }
-            
+
             if (summaryRes.code === 1) {
               this.summary = summaryRes.data
+            } else {
+              // 修改点：此前 else 静默，汇总失败无任何反馈
+              ReggieUI.error((summaryRes && summaryRes.msg) || '获取日结汇总失败')
             }
           } catch (err) {
             ReggieUI.error('获取数据失败')
@@ -320,16 +327,19 @@
           this.fetchData()
         },
         async handleTodaySettlement() {
+          // 防重复提交守卫：日结进行中不允许再次点击
+          if (this.submitting) return
           try {
             await ReggieUI.confirm('确定要执行今日日结吗？', '提示', {
               confirmButtonText: '确定',
               cancelButtonText: '取消',
               type: 'warning'
             })
-            
+
+            this.submitting = true
             const today = this.formatDate(new Date())
             const res = await executeDailySettlement({ settlementDate: today })
-            
+
             if (res.code === 1) {
               ReggieUI.success('日结成功')
               this.fetchData()
@@ -337,9 +347,11 @@
               ReggieUI.error(res.msg || '日结失败')
             }
           } catch (err) {
-            if (err !== 'cancel') {
-              ReggieUI.error('日结失败')
-            }
+            if (err && err.__cancelled) { return }
+            console.warn('[daily-settlement] 日结失败:', err)
+            ReggieUI.error('日结失败')
+          } finally {
+            this.submitting = false
           }
         },
         handleViewDetail(row) {
@@ -363,9 +375,9 @@
               ReggieUI.error(res.msg || '取消失败')
             }
           } catch (err) {
-            if (err !== 'cancel') {
-              ReggieUI.error('取消失败')
-            }
+            if (err && err.__cancelled) { return }
+            console.warn('[daily-settlement] 取消失败:', err)
+            ReggieUI.error('取消失败')
           }
         },
         async handleDelete(row) {
@@ -385,9 +397,9 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            if (err !== 'cancel') {
-              ReggieUI.error('删除失败')
-            }
+            if (err && err.__cancelled) { return }
+            console.warn('[daily-settlement] 删除失败:', err)
+            ReggieUI.error('删除失败')
           }
         }
       }

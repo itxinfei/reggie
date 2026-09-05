@@ -125,17 +125,17 @@
             <el-option label="指定套餐" :value="4"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item v-if="formData.scope === 2" label="适用分类">
+        <el-form-item v-if="formData.scope === 2" label="适用分类" prop="categoryId">
           <el-select v-model="formData.categoryId" placeholder="请选择分类" filterable style="width: 100%;">
             <el-option v-for="item in categoryOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item v-if="formData.scope === 3" label="适用菜品">
+        <el-form-item v-if="formData.scope === 3" label="适用菜品" prop="dishId">
           <el-select v-model="formData.dishId" placeholder="请选择菜品" filterable style="width: 100%;">
             <el-option v-for="item in dishOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item v-if="formData.scope === 4" label="适用套餐">
+        <el-form-item v-if="formData.scope === 4" label="适用套餐" prop="setmealId">
           <el-select v-model="formData.setmealId" placeholder="请选择套餐" filterable style="width: 100%;">
             <el-option v-for="item in setmealOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
           </el-select>
@@ -236,7 +236,11 @@
             campaignId: [{ required: true, message: '请输入活动ID', trigger: 'blur' }],
             ruleName: [{ required: true, message: '请输入规则名称', trigger: 'blur' }],
             scope: [{ required: true, message: '请选择折扣范围', trigger: 'change' }],
-            discountRate: [{ required: true, message: '请输入折扣率', trigger: 'blur' }]
+            discountRate: [{ required: true, message: '请输入折扣率', trigger: 'blur' }],
+            // 条件字段：仅对应折扣范围时必填（v-if 渲染时校验生效）
+            categoryId: [{ required: true, message: '请选择适用分类', trigger: 'change' }],
+            dishId: [{ required: true, message: '请选择适用菜品', trigger: 'change' }],
+            setmealId: [{ required: true, message: '请选择适用套餐', trigger: 'change' }]
           },
           categoryOptions: [],
           dishOptions: [],
@@ -287,8 +291,8 @@
           return Number(value).toFixed(2)
         },
         getScopeTagType(scope) {
-          const map = { 1: 'info', 2: 'warning', 3: 'primary', 4: 'success' }
-          return map[scope] || ''
+          const map = { 1: 'info', 2: 'warning', 3: 'danger', 4: 'success' }
+          return map[scope] || 'info'
         },
         getScopeText(scope) {
           const map = { 1: '全场', 2: '指定分类', 3: '指定菜品', 4: '指定套餐' }
@@ -402,8 +406,14 @@
           })
         },
         async handleToggleStatus(row) {
+          // 修改点：补二次确认，防止误点状态切换（原直接调用接口无确认，与 full-reduction 对齐）
           try {
             const newStatus = row.status === 1 ? 0 : 1
+            await ReggieUI.confirm('确定要' + (newStatus === 1 ? '启用' : '禁用') + '该折扣规则吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
             var res = await updateDiscountRule(Object.assign({}, row, { status: newStatus }))
             if (res.code === 1) {
               ReggieUI.success(newStatus === 1 ? '已启用' : '已禁用')
@@ -413,6 +423,8 @@
               ReggieUI.error(res.msg || '操作失败')
             }
           } catch (err) {
+            if (err && err.__cancelled) { return }
+            console.warn('[discount] 启用/禁用失败:', err)
             ReggieUI.error('操作失败')
           }
         },
@@ -432,17 +444,22 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            if (err !== 'cancel') {
-              ReggieUI.error('删除失败')
-            }
+            if (err && err.__cancelled) { return }
+            console.warn('[discount] 删除失败:', err)
+            ReggieUI.error('删除失败')
           }
         },
         async handleSubmit() {
           const self = this
+          if (self.submitLoading) return // 提交防重：防止连点重复提交
           const valid = await new Promise(function(resolve) {
             self.$refs.ruleForm.validate(function(v) { resolve(v) })
           })
           if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
+          // 条件字段兜底校验：scope=2/3/4 时对应对象必选（校验失败可能被跳过的情况）
+          if (self.formData.scope === 2 && !self.formData.categoryId) { ReggieUI.warning('请选择适用分类'); return }
+          if (self.formData.scope === 3 && !self.formData.dishId) { ReggieUI.warning('请选择适用菜品'); return }
+          if (self.formData.scope === 4 && !self.formData.setmealId) { ReggieUI.warning('请选择适用套餐'); return }
           self.submitLoading = true
           const apiCall = self.formData.id ? updateDiscountRule(self.formData) : saveDiscountRule(self.formData)
           apiCall.then(function(res) {

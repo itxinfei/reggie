@@ -560,6 +560,7 @@
           }
         },
         async submitRestock() {
+          if (this.restockLoading) { return } // 提交防重：请求期间锁定，防止连点重复提交
           if (this.restockForm.items.length === 0) {
             ReggieUI.warning('无补货明细')
             return

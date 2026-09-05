@@ -157,6 +157,8 @@
                     page: 1,
                     pageSize: 10,
                     canEvaluate: false,
+                    // 最近一条可评价订单（供"去评价"入口回填）
+                    pendingOrder: null,
                     // 提交评价
                     submitVisible: false,
                     submitLoading: false,
@@ -284,26 +286,128 @@
                 goToOrder() {
                     window.location.href = '/front/page/order.html'
                 },
-                // 检查是否有待评价订单
+                // 提取订单中可评价的纯菜品条目（后端按 dishId 校验，套餐不可评价）
+                extractEvaluableDishes(order) {
+                    if (!order || !order.orderDetails) return []
+                    return order.orderDetails
+                        .filter(d => d && d.dishId)
+                        .map(d => ({
+                            dishId: d.dishId,
+                            dishName: d.name || '未知菜品',
+                            starRating: 0,
+                            content: ''
+                        }))
+                },
+                // 校验订单是否含可评价菜品
+                hasEvaluableDishes(order) {
+                    return order && order.orderDetails &&
+                        order.orderDetails.some(d => d && d.dishId)
+                },
+                // 解析 URL 参数（如 order.html 跳转 my-evaluations.html?orderId=xxx）
+                getUrlParam(name) {
+                    var match = location.search.match(new RegExp('[?&]' + name + '=([^&]+)'))
+                    return match ? decodeURIComponent(match[1]) : ''
+                },
+                // 检查是否有待评价订单（同时记录最近可评价订单，供"去评价"入口回填）
                 async checkPendingEvaluation() {
                     try {
                         const res = await orderPagingApi({ page: 1, pageSize: 5, status: 4 })
                         if (res.code === 1 && res.data && res.data.records) {
-                            // 检查是否有已完成的订单但未评价
-                            const hasPending = res.data.records.some(order => {
-                                if (!order.orderDetails) return false
-                                return order.orderDetails.some(d => d.dishId)
-                            })
-                            this.canEvaluate = hasPending
+                            const orders = res.data.records || []
+                            const pendingOrder = orders.find(o => this.hasEvaluableDishes(o))
+                            this.canEvaluate = !!pendingOrder
+                            this.pendingOrder = pendingOrder || null
                         }
                     } catch (e) {
                         // 不影响页面展示
                     }
                 },
                 // 打开评价提交弹窗
-                openSubmitModal() {
-                    this.submitData = { orderId: null, dishes: [] }
+                // 优先使用 URL 携带的 orderId（order.html 评价入口），其次用最近可评价订单兜底
+                async openSubmitModal() {
+                    const orderId = this.getUrlParam('orderId') || ''
+                    let dishes = []
+                    if (orderId) {
+                        const order = await this.findOrderById(orderId)
+                        if (order && this.hasEvaluableDishes(order)) {
+                            dishes = this.extractEvaluableDishes(order)
+                        } else {
+                            vant.Toast.fail('该订单暂无可评价的菜品')
+                            return
+                        }
+                    } else if (this.pendingOrder) {
+                        dishes = this.extractEvaluableDishes(this.pendingOrder)
+                    } else {
+                        // 兜底：实时拉最近一条已完成订单
+                        try {
+                            const res = await orderPagingApi({ page: 1, pageSize: 1, status: 4 })
+                            const latest = res && res.code === 1 && res.data && res.data.records ? res.data.records[0] : null
+                            if (latest && this.hasEvaluableDishes(latest)) {
+                                dishes = this.extractEvaluableDishes(latest)
+                            }
+                        } catch (e) { /* 保持空 dishes，由 doSubmit 提示 */ }
+                    }
+                    if (!dishes.length) {
+                        vant.Toast.fail('暂无可评价的菜品')
+                        return
+                    }
+                    this.submitData = { orderId: orderId || this.pendingOrder.id || '', dishes: dishes }
                     this.submitVisible = true
+                },
+                // 在用户已完成订单列表中定位指定订单
+                async findOrderById(orderId) {
+                    try {
+                        const res = await orderPagingApi({ page: 1, pageSize: 50 })
+                        if (res && res.code === 1 && res.data && res.data.records) {
+                            const orders = res.data.records || []
+                            return orders.find(o => String(o.id) === String(orderId)) || null
+                        }
+                    } catch (e) { /* 忽略 */ }
+                    return null
+                },
+                // 提交评价（逐菜提交）
+                async doSubmit() {
+                    if (this.submitLoading) return // 防重守卫：防止连点重复提交
+                    const orderId = this.submitData.orderId
+                    const dishes = this.submitData.dishes || []
+                    if (!orderId) {
+                        vant.Toast.fail('订单信息缺失，请重新进入评价页')
+                        return
+                    }
+                    // 校验每个菜品的评分
+                    for (let i = 0; i < dishes.length; i++) {
+                        if (!dishes[i].starRating || dishes[i].starRating < 1) {
+                            vant.Toast.fail('请为「' + (dishes[i].dishName || '菜品') + '」评分')
+                            return
+                        }
+                    }
+                    this.submitLoading = true
+                    try {
+                        for (let i = 0; i < dishes.length; i++) {
+                            const dish = dishes[i]
+                            const payload = {
+                                orderId: orderId,
+                                dishId: dish.dishId,
+                                starRating: dish.starRating,
+                                content: (dish.content || '').trim()
+                            }
+                            if (dish.dishName) payload.dishName = dish.dishName
+                            const res = await submitEvaluation(payload)
+                            if (res.code !== 1) {
+                                vant.Toast.fail((res.msg) || ('「' + dish.dishName + '」提交失败'))
+                                return
+                            }
+                        }
+                        vant.Toast.success('评价提交成功，感谢您的反馈')
+                        this.submitVisible = false
+                        this.submitData = { orderId: null, dishes: [] }
+                        this.loadData()
+                        this.checkPendingEvaluation()
+                    } catch (err) {
+                        vant.Toast.fail('提交失败：' + (err.message || err))
+                    } finally {
+                        this.submitLoading = false
+                    }
                 }
             }
         })

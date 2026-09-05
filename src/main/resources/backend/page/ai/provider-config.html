@@ -390,7 +390,8 @@
             openEditDialog: function(provider) {
                 this.form = JSON.parse(JSON.stringify(provider));
                 const self = this;
-                this.form._hasExistingKey = !!(provider.apiKey && provider.apiKey.indexOf('****') > 0);
+                // 修改点：掩码可能出现在开头（indexOf===0），>= 0 才能正确识别已有 key
+                this.form._hasExistingKey = !!(provider.apiKey && provider.apiKey.indexOf('****') >= 0);
                 // 修改点：重置模型列表状态
                 this.modelList = [];
                 this.modelFetchError = '';

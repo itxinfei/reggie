@@ -373,6 +373,7 @@
                 this.loadUserInfo();
                 this.loadConversations();
                 this.loadUserProfileTags();
+                this.loadCartContext();
                 this.loadDarkModePreference();
                 if (this.conversations.length === 0) {
                     this.newConversation(true);
@@ -721,9 +722,16 @@
                 loadCartContext: function() {
                     var self = this;
                     try {
-                        var cartData = sessionStorage.getItem('cartData');
-                        if (cartData) self.cartData = JSON.parse(cartData);
-                    } catch (e) {}
+                        // 从购物车接口拉取最新数据（sessionStorage 里的 cartData 可能过期，导致 AI 上下文把空车当有货）
+                        $axios({ url: '/shopping-cart/list', method: 'get' })
+                            .then(function(res) {
+                                if (res && res.code === 1 && Array.isArray(res.data)) {
+                                    self.cartData = res.data;
+                                    try { sessionStorage.setItem('cartData', JSON.stringify(res.data)); } catch (e) {}
+                                }
+                            })
+                            .catch(function(e) { console.warn('[ai-assistant.html] 刷新购物车上下文失败:', e); });
+                    } catch (e) { console.warn('[ai-assistant.html] 加载购物车上下文异常:', e); }
                 },
                 buildContext: function() {
                     var context = {};
@@ -829,15 +837,42 @@
 
                 // ==================== 推荐菜品 ====================
                 addToCart: function(dish) {
-                    var imgUrl = dish.image || '';
-                    if (!imgUrl && dish.imageUrl) imgUrl = dish.imageUrl;
+                    var self = this;
                     var dishId = dish.dishId || dish.id || 0;
-                    var price = dish.price ? parseFloat(Number(dish.price).toFixed(2)) : 0;
-                    if (window.addDishToCart) {
-                        window.addDishToCart({ id: dishId, name: dish.name, price: price, image: imgUrl, flavors: [] });
-                    } else {
-                        vant.Notify({ type: 'success', message: '已添加「' + dish.name + '」到购物车' });
+                    if (!dishId) {
+                        vant.Notify({ type: 'warning', message: '菜品信息不完整' });
+                        return;
                     }
+                    if (!sessionStorage.getItem('userId')) {
+                        vant.Dialog.confirm({
+                            title: '未登录',
+                            message: '请先登录后再添加购物车',
+                            confirmButtonText: '去登录'
+                        }).then(function() {
+                            window.location.href = '/front/page/login.html';
+                        }).catch(function(e) { console.warn('[ai-assistant.html] 用户取消登录跳转:', e); });
+                        return;
+                    }
+                    // 真实加购：AI 推荐仅提供菜品（dishId），userId/价格由服务端从登录态与菜品表绑定，防篡改
+                    var payload = {
+                        dishId: dishId,
+                        name: dish.name,
+                        image: dish.image || '',
+                        amount: dish.price ? Number(dish.price) : 0,
+                        number: 1
+                    };
+                    $axios({ url: '/shopping-cart/add', method: 'post', data: payload })
+                        .then(function(res) {
+                            if (res && res.code === 1) {
+                                vant.Notify({ type: 'success', message: '已添加「' + dish.name + '」到购物车' });
+                            } else {
+                                vant.Notify({ type: 'warning', message: (res && res.msg) || '添加失败' });
+                            }
+                        })
+                        .catch(function(e) {
+                            console.warn('[ai-assistant.html] 加购失败:', e);
+                            vant.Notify({ type: 'danger', message: '加购失败，请稍后重试' });
+                        });
                 },
 
                 // ==================== 反馈 ====================

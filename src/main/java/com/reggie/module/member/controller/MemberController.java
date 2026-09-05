@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.LogMaskUtils;
@@ -14,9 +15,13 @@ import com.reggie.dto.RechargeDTO;
 import com.reggie.module.member.model.CouponUser;
 import com.reggie.module.member.model.Member;
 import com.reggie.module.member.model.MemberLevel;
+import com.reggie.module.member.model.PointsRecord;
+import com.reggie.module.member.model.RechargeRecord;
 import com.reggie.module.member.service.CouponUserService;
 import com.reggie.module.member.service.MemberLevelService;
 import com.reggie.module.member.service.MemberService;
+import com.reggie.module.member.model.PointsRecord;
+import com.reggie.module.member.service.PointsRecordService;
 import com.reggie.module.member.service.RechargeRecordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,6 +38,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.Collections;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -60,13 +68,16 @@ public class MemberController {
     private final RechargeRecordService rechargeRecordService;
     private final MemberLevelService memberLevelService;
     private final CouponUserService couponUserService;
+    private final PointsRecordService pointsRecordService;
 
     public MemberController(MemberService memberService, RechargeRecordService rechargeRecordService,
-                            MemberLevelService memberLevelService, CouponUserService couponUserService) {
+                            MemberLevelService memberLevelService, CouponUserService couponUserService,
+                            PointsRecordService pointsRecordService) {
         this.memberService = memberService;
         this.rechargeRecordService = rechargeRecordService;
         this.memberLevelService = memberLevelService;
         this.couponUserService = couponUserService;
+        this.pointsRecordService = pointsRecordService;
     }
 
     /**
@@ -370,6 +381,137 @@ public class MemberController {
         result.put("couponCount", couponCount);
 
         return R.success(result);
+    }
+
+    /**
+     * C端：获取当前登录用户会员的积分记录
+     * <p>安全说明：通过当前登录态定位会员，禁止前端传 phone/memberId，杜绝越权查询他人流水。</p>
+     *
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 积分记录分页（含会员名称/手机号/余额）
+     */
+    @GetMapping("/my-points")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "C端-我的积分记录", description = "获取当前登录用户会员的积分流水，按当前登录态自动定位会员，防止越权查询")
+    public R<Map<String, Object>> myPoints(@RequestParam(defaultValue = "1") @Min(1) int page,
+                                           @RequestParam(defaultValue = "10") @Min(1) @Max(50) int pageSize) {
+        Member member = currentMemberOrError();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Page<PointsRecord> pageInfo = PageUtils.of(page, pageSize);
+        LambdaQueryWrapper<PointsRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(PointsRecord::getMemberId, member.getId());
+        if (tenantId != null) {
+            qw.eq(PointsRecord::getTenantId, tenantId);
+        }
+        qw.orderByDesc(PointsRecord::getCreatedTime);
+        pointsRecordService.page(pageInfo, qw);
+
+        // 组装增强记录（含会员名称/手机号/余额）
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (PointsRecord r : pageInfo.getRecords()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", r.getId());
+            item.put("type", r.getType());
+            item.put("points", r.getPoints());
+            item.put("bizType", r.getBizType());
+            item.put("remark", r.getRemark());
+            item.put("memberName", member.getName());
+            item.put("phone", member.getPhone());
+            item.put("balance", member.getBalance());
+            item.put("createdTime", r.getCreatedTime());
+            records.add(item);
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", records);
+        result.put("total", pageInfo.getTotal());
+        result.put("size", pageInfo.getSize());
+        result.put("current", pageInfo.getCurrent());
+        return R.success(result);
+    }
+
+    /**
+     * C端：获取当前登录用户会员的充值记录
+     * <p>安全说明：通过当前登录态定位会员，禁止前端传 phone/memberId，杜绝越权查询他人充值流水。</p>
+     *
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 充值记录分页（含会员名称/手机号）
+     */
+    @GetMapping("/my-recharges")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "C端-我的充值记录", description = "获取当前登录用户会员的充值流水，按当前登录态自动定位会员，防止越权查询")
+    public R<Map<String, Object>> myRecharges(@RequestParam(defaultValue = "1") @Min(1) int page,
+                                              @RequestParam(defaultValue = "10") @Min(1) @Max(50) int pageSize) {
+        Member member = currentMemberOrError();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        Page<RechargeRecord> pageInfo = PageUtils.of(page, pageSize);
+        LambdaQueryWrapper<RechargeRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(RechargeRecord::getMemberId, member.getId());
+        if (tenantId != null) {
+            qw.eq(RechargeRecord::getTenantId, tenantId);
+        }
+        qw.orderByDesc(RechargeRecord::getCreatedTime);
+        rechargeRecordService.page(pageInfo, qw);
+
+        List<Map<String, Object>> records = new ArrayList<>();
+        for (RechargeRecord r : pageInfo.getRecords()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", r.getId());
+            item.put("amount", r.getAmount());
+            item.put("giftAmount", r.getGiftAmount());
+            item.put("paymentMethod", r.getPaymentMethod());
+            item.put("memberName", member.getName());
+            item.put("phone", member.getPhone());
+            item.put("createdTime", r.getCreatedTime());
+            records.add(item);
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", records);
+        result.put("total", pageInfo.getTotal());
+        result.put("size", pageInfo.getSize());
+        result.put("current", pageInfo.getCurrent());
+        return R.success(result);
+    }
+
+    /**
+     * C端：会员等级列表
+     * <p>供 C 端会员中心展示升级进度（升级门槛、折扣率），无需员工权限。</p>
+     *
+     * @return 当前租户的全部会员等级（按升级门槛升序）
+     */
+    @GetMapping("/my-levels")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "C端-会员等级列表", description = "获取当前租户的全部会员等级，供会员中心展示升级进度")
+    public R<List<MemberLevel>> myLevels() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<MemberLevel> qw = new LambdaQueryWrapper<>();
+        if (tenantId != null) {
+            qw.eq(MemberLevel::getTenantId, tenantId);
+        }
+        qw.orderByAsc(MemberLevel::getMinPoints);
+        return R.success(memberLevelService.list(qw));
+    }
+
+    /**
+     * 根据当前登录态解析当前会员，未登录或非会员时抛出异常（统一由 GlobalExceptionHandler 转为 R.error）。
+     */
+    private Member currentMemberOrError() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            throw new CustomException("用户未登录");
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<Member> qw = new LambdaQueryWrapper<>();
+        qw.eq(Member::getUserId, userId);
+        if (tenantId != null) {
+            qw.eq(Member::getTenantId, tenantId);
+        }
+        Member member = memberService.getOne(qw);
+        if (member == null) {
+            throw new CustomException("您还不是会员，请先开通会员");
+        }
+        return member;
     }
 }
 

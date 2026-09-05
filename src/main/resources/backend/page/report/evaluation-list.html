@@ -213,7 +213,7 @@
     </div>
 
     <!-- ========== 详情弹窗 ========== -->
-    <crud-dialog :show-submit="true" :show-cancel="true"
+    <crud-dialog :show-cancel="true"
       :title="'评价详情' + (detailData.dishName ? ' - ' + detailData.dishName : '')"
       :visible.sync="detailVisible"
       size="md"
@@ -255,7 +255,7 @@
     </crud-dialog>
 
     <!-- ========== 图片预览 ========== -->
-    <crud-dialog :show-submit="true" :show-cancel="true"
+    <crud-dialog :show-cancel="true"
       title="图片预览"
       :visible.sync="previewVisible"
       size="md"
@@ -354,15 +354,25 @@
           },
           loadStats: function() {
             const self = this;
-            // 修改点：使用Promise.all批量请求，减少网络往返
-            const ps = [];
-            Promise.all(ps.map(function(p) { return p.catch(function() { return null; }); }))
-              .then(function(results) {
-                if (results[0] && String(results[0].code) === '1') self.stats.total = results[0].data.total || 0;
-                if (results[1] && String(results[1].code) === '1') self.stats.pending = results[1].data.total || 0;
-                if (results[2] && String(results[2].code) === '1') self.stats.approved = results[2].data.total || 0;
-                if (results[3] && String(results[3].code) === '1') self.stats.rejected = results[3].data.total || 0;
-              }).catch(function(err) { console.warn('[评价] 加载评价统计失败:', err) });
+            // 修改点：并行请求各状态总数（复用列表接口 total），修复此前 `const ps = [];` 恒为空导致统计卡片永远为 0
+            // 请求顺序对应 stats 字段：''=全部 / '0'=待审核 / '1'=已通过 / '2'=已拒绝
+            const requests = [null, '0', '1', '2'].map(function(status) {
+              const params = { page: 1, pageSize: 1 };
+              if (status !== null) params.status = Number(status);
+              return getEvaluationPage(params).catch(function() { return null; });
+            });
+            Promise.all(requests).then(function(results) {
+              const fields = ['total', 'pending', 'approved', 'rejected'];
+              for (let i = 0; i < results.length; i++) {
+                const r = results[i];
+                if (r && String(r.code) === '1' && r.data) {
+                  self.stats[fields[i]] = r.data.total || 0;
+                }
+              }
+            }).catch(function(err) {
+              if (err && err.message === 'NOTLOGIN') return;
+              ReggieUI.error('加载评价统计失败');
+            });
           },
           handleSearch: function() { this.page = 1; this.loadData(); },
           resetFilters: function() {

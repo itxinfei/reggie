@@ -707,28 +707,36 @@
         async fetchData() {
           try {
             // 获取今日统计
-            const today = new Date()
-            const startDate = today.toISOString().split('T')[0] + ' 00:00:00'
-            const endDate = today.toISOString().split('T')[0] + ' 23:59:59'
-            
+            const now = new Date()
+            // 修改点：toISOString() 是 UTC 时间，东八区会取错日期（UTC 日期先于本地一天）；
+            // 改用本地时间拼接 yyyy-MM-dd
+            const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0')
+            const startDate = todayStr + ' 00:00:00'
+            const endDate = todayStr + ' 23:59:59'
+
             const statsRes = await getCashierStatistics({ startDate, endDate })
             if (statsRes.code === 1) {
               this.todayStats = statsRes.data
+            } else {
+              // 修改点：此前 else 静默
+              ReggieUI.error((statsRes && statsRes.msg) || '获取今日统计失败')
             }
 
             // 获取待收银订单（管理端专用接口）
             const ordersRes = await getPendingCheckoutList()
             if (ordersRes.code === 1) {
               this.pendingOrders = ordersRes.data || []
+            } else {
+              // 修改点：此前 else 静默
+              ReggieUI.error((ordersRes && ordersRes.msg) || '获取待收银订单失败')
             }
 
             // C.1：今日日结状态（本日已结算金额）
-            const nowDate = new Date()
-            const todayStr = nowDate.getFullYear() + '-' + String(nowDate.getMonth() + 1).padStart(2, '0') + '-' + String(nowDate.getDate()).padStart(2, '0')
             const settleRes = await getDailySettlementByDate(todayStr)
             if (settleRes.code === 1) {
               this.settlementInfo = settleRes.data || null
             } else {
+              // 修改点：此前 else 静默（注意此处业务上无记录也返回非1，不应报错打扰，仅降级为空）
               this.settlementInfo = null
             }
           } catch (err) {

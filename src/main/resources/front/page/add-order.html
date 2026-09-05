@@ -130,7 +130,7 @@
                                 <div class="numPrice">
                                     <span class="num">x{{item.number}}</span>
                                     <div class="price">
-                                        <span class="spanMoney">￥</span>{{ item.amount.toFixed(2) }}</div>
+                                        <span class="spanMoney">￥</span>{{ (Number(item.amount) || 0).toFixed(2) }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -422,7 +422,8 @@
                     async getCartData(){
                         const res = await cartListApi({})
                         if(res.code === 1){
-                            this.cartData = res.data
+                            // 修改点：防御 res.data 为 null（异常返回）导致模板 toFixed 报错
+                            this.cartData = res.data || []
                         }else{
                             vant.Toast.fail(res.msg || '加载购物车失败');
                         }
@@ -530,14 +531,21 @@
                             expectDeliveryTime: this.expectDeliveryTime,
                             usedCouponId: this.selectedCoupon ? this.selectedCoupon.id : null
                         }
-                        const res = await addOrderApi(params)
-                        this.loading = false
-                        if(res.code === 1){
-                            window.requestAnimationFrame(()=>{
-                                window.location.replace('/front/page/pay-success.html')
-                            })
-                        }else{
-                            vant.Toast.fail(res.msg || '提交订单失败');
+                        try {
+                            const res = await addOrderApi(params)
+                            if(res.code === 1){
+                                window.requestAnimationFrame(()=>{
+                                    window.location.replace('/front/page/pay-success.html')
+                                })
+                            }else{
+                                vant.Toast.fail(res.msg || '提交订单失败');
+                            }
+                        } catch (err) {
+                            // 异常兜底：网络错误/接口 500 时给出提示，按钮不再永卡「提交中」
+                            console.error('提交订单失败:', err)
+                            vant.Toast.fail('提交订单失败，请稍后重试');
+                        } finally {
+                            this.loading = false
                         }
                     },
                 }

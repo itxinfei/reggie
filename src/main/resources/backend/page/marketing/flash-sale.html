@@ -447,9 +447,9 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            if (err !== 'cancel') {
-              ReggieUI.error('删除失败')
-            }
+            if (err && err.__cancelled) { return }
+            console.warn('[flash-sale] 删除失败:', err)
+            ReggieUI.error('删除失败')
           }
         },
         // 修改点：`async X: function(){}` 是非法语法（整页 JS 解析失败导致白屏），改为合法的 async 方法简写

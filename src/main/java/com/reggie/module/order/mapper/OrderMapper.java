@@ -70,6 +70,22 @@ public interface OrderMapper extends BaseMapper<Orders> {
                                                 @Param("completed") int completed);
 
     /**
+     * 聚合平台类型、状态下的订单金额总和（平台订单页统计卡片用）
+     * <p>租户过滤由 TenantLineInnerInterceptor 自动注入，无需手动拼接 tenant_id。
+     * 原生注解 SQL 不会自动应用 @TableLogic 逻辑删除过滤，需手动添加 is_deleted = 0。</p>
+     *
+     * @param platformType 平台类型（可为 null 表示全部平台）
+     * @param status       订单状态
+     * @return 聚合结果：amt=金额总和（COALESCE 保证非空）
+     */
+    @Select("<script>SELECT COALESCE(SUM(amount), 0) AS amt FROM orders "
+            + "WHERE 1=1 AND status = #{status} AND is_deleted = 0 "
+            + "<if test='platformType != null and platformType != \"\"'> AND platform_type = #{platformType}</if>"
+            + "</script>")
+    List<Map<String, Object>> statPlatformAmount(@Param("platformType") String platformType,
+                                                 @Param("status") int status);
+
+    /**
      * 聚合指定租户、状态、起始时间之后的订单金额总和（替代全量加载内存求和）
      * 使用 @InterceptorIgnore 避免租户拦截器重复追加 tenant_id 条件，由参数自行过滤
      * 注意：原生注解 SQL 不会自动应用 @TableLogic 逻辑删除过滤，需手动添加 is_deleted = 0。

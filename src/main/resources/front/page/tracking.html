@@ -336,14 +336,14 @@
                 </div>
             </div>
 
-            <!-- 骑手信息 -->
-            <div class="rider-card" v-if="isDelivering">
+            <!-- 骑手信息（仅存在真实骑手数据时展示，避免以顾客信息冒充骑手） -->
+            <div class="rider-card" v-if="isDelivering && hasRiderInfo">
                 <div class="rider-avatar">
                     <i class="ri-user-line"></i>
                 </div>
                 <div class="rider-info">
-                    <div class="rider-name">{{ trackingData.userName || '配送骑手' }}</div>
-                    <div class="rider-status-text">{{ statusText }} · {{ trackingData.phone || '' }}</div>
+                    <div class="rider-name">{{ trackingData.riderName || '配送骑手' }}</div>
+                    <div class="rider-status-text">{{ statusText }}</div>
                 </div>
                 <div class="rider-actions">
                     <div class="rider-action-btn" @click="callRider">
@@ -355,7 +355,7 @@
             <!-- 底部操作 -->
             <div class="bottom-actions" v-if="trackingData">
                 <van-button
-                    v-if="isDelivering"
+                    v-if="isDelivering && hasRiderInfo"
                     type="primary"
                     block
                     round
@@ -459,6 +459,10 @@
                     const pad = (n) => String(n).padStart(2, '0');
                     return pad(d.getHours()) + ':' + pad(d.getMinutes());
                 },
+                hasRiderInfo() {
+                    if (!this.trackingData) return false;
+                    return !!(this.trackingData.riderName || this.trackingData.riderPhone);
+                },
                 isDelivering() {
                     if (!this.trackingData) return false;
                     return ['PENDING', 'ACCEPTED', 'PICKING', 'DELIVERING']
@@ -524,8 +528,8 @@
                     return curIdx >= 0 && stepIdx >= 0 && stepIdx <= curIdx;
                 },
                 callRider() {
-                    if (this.trackingData && this.trackingData.phone) {
-                        window.location.href = 'tel:' + this.trackingData.phone;
+                    if (this.trackingData && this.trackingData.riderPhone) {
+                        window.location.href = 'tel:' + this.trackingData.riderPhone;
                     } else {
                         vant.Toast.info('暂无骑手联系方式');
                     }

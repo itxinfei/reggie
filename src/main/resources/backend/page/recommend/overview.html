@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能推荐概览 - 瑞吉外卖管理端</title>
+    <title>智能推荐概览 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
@@ -62,7 +62,7 @@
     <header class="ds-page-header">
       <div class="ds-page-header__titles">
         <h1 class="ds-page-header__title" id="page-title">智能推荐概览</h1>
-        <p class="ds-page-header__subtitle">基于协同过滤、内容推荐和热门融合的混合推荐算法引擎，实时分析用户偏好</p>
+        <p class="ds-page-header__subtitle">基于销量聚合的菜品热门排行，算法效果对比与浏览行为趋势实时分析</p>
       </div>
       <div class="ds-page-header__actions">
         <el-button type="primary" size="small" icon="el-icon-refresh" @click="refreshAll" :loading="loadingAll">刷新数据</el-button>
@@ -113,10 +113,10 @@
             <i class="el-icon-star-on" style="color:var(--color-warning);"></i> 今日热门菜品排行
             <el-button type="primary" size="small" @click="refreshHotRank" :loading="loadingHot">刷新排行</el-button>
         </div>
+        <!-- 修改点：后端 /recommend/hot 仅按销量聚合排序，不支持 cf/content 算法维度；
+             原「协同过滤/内容推荐」标签与「热门排行」请求同一接口、数据完全相同，属误导性功能，已移除 -->
         <div class="algo-tags">
             <span class="algo-tag" :class="{active: algoType === 'all'}" role="button" tabindex="0" @click="loadHotByAlgo('all')" @keydown.enter="loadHotByAlgo('all')" :aria-pressed="algoType === 'all'">全部算法</span>
-            <span class="algo-tag" :class="{active: algoType === 'cf'}" role="button" tabindex="0" @click="loadHotByAlgo('cf')" @keydown.enter="loadHotByAlgo('cf')" :aria-pressed="algoType === 'cf'">协同过滤</span>
-            <span class="algo-tag" :class="{active: algoType === 'content'}" role="button" tabindex="0" @click="loadHotByAlgo('content')" @keydown.enter="loadHotByAlgo('content')" :aria-pressed="algoType === 'content'">内容推荐</span>
             <span class="algo-tag" :class="{active: algoType === 'hot'}" role="button" tabindex="0" @click="loadHotByAlgo('hot')" @keydown.enter="loadHotByAlgo('hot')" :aria-pressed="algoType === 'hot'">热门排行</span>
         </div>
         <div v-if="!loadingHot" class="dish-grid">
@@ -206,19 +206,22 @@
         },
         loadAll() {
             this.loadingAll = true;
-            this.loadStats();
-            this.loadFeedback();
-            this.loadPreferences();
-            this.loadAlgoCompare();
-            this.loadBrowseTrend();
-            this.loadHotRank();
-            Promise.all([]).finally(() => { this.loadingAll = false; });
+            // 修改点：真实等待全部数据请求完成后再收起「刷新数据」loading，避免 Promise.all([]) 导致 loading 瞬间消失
+            Promise.all([
+                this.loadStats(),
+                this.loadFeedback(),
+                this.loadPreferences(),
+                this.loadAlgoCompare(),
+                this.loadBrowseTrend(),
+                this.loadHotRank()
+            ]).finally(() => { this.loadingAll = false; });
         },
         refreshAll() { this.loadAll(); },
 
         // 加载推荐统计
         loadStats() {
-            recommendBackendApi.getStats().then(res => {
+            // 修改点：return Promise 链，供 loadAll 的 Promise.all 真实等待
+            return recommendBackendApi.getStats().then(res => {
                 if (res.code === 1 && res.data) {
                     this.stats = Object.assign(this.stats, res.data);
                 }
@@ -227,7 +230,8 @@
 
         // 加载反馈分布
         loadFeedback() {
-            recommendBackendApi.getFeedbackStats({ days: 7 }).then(res => {
+            // 修改点：return Promise 链，供 loadAll 的 Promise.all 真实等待
+            return recommendBackendApi.getFeedbackStats({ days: 7 }).then(res => {
                 if (res.code === 1 && res.data) {
                     this.renderFeedbackChart(res.data);
                 } else {
@@ -264,7 +268,8 @@
 
         // 加载偏好分布
         loadPreferences() {
-            recommendBackendApi.getPreferenceDistribution().then(res => {
+            // 修改点：return Promise 链，供 loadAll 的 Promise.all 真实等待
+            return recommendBackendApi.getPreferenceDistribution().then(res => {
                 if (res.code === 1 && res.data && res.data.length > 0) {
                     this.renderPreferenceChart(res.data);
                 } else {
@@ -299,7 +304,8 @@
 
         // 算法效果对比
         loadAlgoCompare() {
-            recommendBackendApi.getAlgoCompare().then(res => {
+            // 修改点：return Promise 链，供 loadAll 的 Promise.all 真实等待
+            return recommendBackendApi.getAlgoCompare().then(res => {
                 if (res.code === 1 && res.data) {
                     this.renderAlgoChart(res.data);
                 } else {
@@ -340,7 +346,8 @@
 
         // 浏览趋势
         loadBrowseTrend() {
-            recommendBackendApi.getBrowseTrend({ days: 7 }).then(res => {
+            // 修改点：return Promise 链，供 loadAll 的 Promise.all 真实等待
+            return recommendBackendApi.getBrowseTrend({ days: 7 }).then(res => {
                 if (res.code === 1 && res.data) {
                     this.renderBrowseChart(res.data);
                 } else {
@@ -387,14 +394,16 @@
         },
 
         // 热门排行
-        loadHotRank() { this.loadHotByAlgo('all'); },
+        loadHotRank() { return this.loadHotByAlgo('all'); },
         loadHotByAlgo(type) {
             this.algoType = type;
             this.loadingHot = true;
-            recommendBackendApi.getHotRecommend(12).then(res => {
+            // 修改点：return Promise 链，供 loadAll 的 Promise.all 真实等待
+            return recommendBackendApi.getHotRecommend(12).then(res => {
                 if (res.code === 1) {
                     this.hotDishes = res.data || [];
                 }
+                return res;
             }).catch(err => {
                 ReggieUI.error('加载热门排行失败');
             }).finally(() => { this.loadingHot = false; });

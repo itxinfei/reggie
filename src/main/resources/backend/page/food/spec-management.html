@@ -680,8 +680,11 @@
           }.bind(this))
         },
         submitGroupForm: function () {
+          if (this.submitting) { return } // 提交防重
+          var self = this
+          this.submitting = true
           this.$refs.groupForm.validate(function (valid) {
-            if (!valid) { return }
+            if (!valid) { self.submitting = false; return }
             var payload = Object.assign({}, this.groupForm)
             if (payload.type === 1) { payload.maxSelect = null }
             else { payload.maxSelect = payload.maxSelect || 0 }
@@ -773,8 +776,11 @@
           }.bind(this))
         },
         submitOptionForm: function () {
+          if (this.submitting) { return } // 提交防重
+          var self = this
+          this.submitting = true
           this.$refs.optionForm.validate(function (valid) {
-            if (!valid) { return }
+            if (!valid) { self.submitting = false; return }
             var payload = Object.assign({}, this.optionForm)
             if (!payload.groupId && this.currentGroup) { payload.groupId = this.currentGroup.id }
             var done = function () {

@@ -315,12 +315,13 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            if (err !== 'cancel') {
-              ReggieUI.error('删除失败')
-            }
+            if (err && err.__cancelled) { return }
+            console.warn('[dish-cost] 删除失败:', err)
+            ReggieUI.error('删除失败')
           }
         },
         async handleSubmit() {
+          if (this.submitLoading) { return } // 提交防重：请求期间锁定提交
           const self = this
           const valid = await new Promise(function(resolve) {
             self.$refs.costForm.validate(function(v) { resolve(v) })

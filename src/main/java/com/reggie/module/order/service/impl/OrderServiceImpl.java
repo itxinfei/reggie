@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -1146,6 +1147,53 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
         wrapper.orderByDesc(Orders::getOrderTime);
         return this.page(pageParam, wrapper);
+    }
+
+    /**
+     * 平台订单全量统计（供平台订单页顶部统计卡片使用，翻页不重算）
+     * <p>与平台订单列表同租户语义：租户隔离由 TenantLineInnerInterceptor 自动注入；
+     * 待接单=STATUS_ORDERED(2)、已完成=STATUS_COMPLETED(4)，金额仅统计已完成订单。</p>
+     *
+     * @param platformType 平台类型（可选，与列表筛选保持一致）
+     * @param status       订单状态（可选，与列表筛选保持一致）
+     * @return totalOrders/pendingOrders/completedOrders/amount
+     */
+    @Override
+    public Map<String, Object> getPlatformOrderStatistics(String platformType, Integer status) {
+        Map<String, Object> stats = new LinkedHashMap<>();
+        // 租户隔离由拦截器自动注入，无需手动拼接 tenant_id（与 platformOrderPage 一致）
+        LambdaQueryWrapper<Orders> totalWrapper = new LambdaQueryWrapper<>();
+        totalWrapper.eq(Orders::getIsDeleted, 0);
+        if (StringUtils.isNotBlank(platformType)) {
+            totalWrapper.eq(Orders::getPlatformType, platformType);
+        }
+        if (status != null) {
+            totalWrapper.eq(Orders::getStatus, status);
+        }
+        stats.put("totalOrders", this.count(totalWrapper));
+
+        LambdaQueryWrapper<Orders> pendingWrapper = new LambdaQueryWrapper<>();
+        pendingWrapper.eq(Orders::getIsDeleted, 0)
+                      .eq(Orders::getStatus, Orders.STATUS_ORDERED);
+        if (StringUtils.isNotBlank(platformType)) {
+            pendingWrapper.eq(Orders::getPlatformType, platformType);
+        }
+        stats.put("pendingOrders", this.count(pendingWrapper));
+
+        LambdaQueryWrapper<Orders> completedWrapper = new LambdaQueryWrapper<>();
+        completedWrapper.eq(Orders::getIsDeleted, 0)
+                        .eq(Orders::getStatus, Orders.STATUS_COMPLETED);
+        if (StringUtils.isNotBlank(platformType)) {
+            completedWrapper.eq(Orders::getPlatformType, platformType);
+        }
+        stats.put("completedOrders", this.count(completedWrapper));
+
+        // 已完成订单金额总和——聚合查询，避免全量加载内存求和
+        List<Map<String, Object>> amountRows = getBaseMapper().statPlatformAmount(
+                platformType, Orders.STATUS_COMPLETED);
+        Object amt = (amountRows != null && !amountRows.isEmpty()) ? amountRows.get(0).get("amt") : null;
+        stats.put("amount", amt != null ? new BigDecimal(amt.toString()) : BigDecimal.ZERO);
+        return stats;
     }
 }
 

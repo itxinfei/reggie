@@ -253,21 +253,30 @@
       methods: {
         async init(reloadStats = true) {
           this.loading = true
-          const ls = this.lastSearch || {}
-          const params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
-          const requests = [sysApi.templatePage(params)]
-          if (reloadStats) { requests.push(this.loadTemplateStats()) }
-          const results = await Promise.all(requests)
-          const tplRes = results[0]
-          const statsRes = results[1]
-          if (tplRes && tplRes.code === 1) {
-            this.tableData = tplRes.data.records || []
-            this.counts = tplRes.data.total || 0
+          try {
+            const ls = this.lastSearch || {}
+            const params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
+            const requests = [sysApi.templatePage(params)]
+            if (reloadStats) { requests.push(this.loadTemplateStats()) }
+            const results = await Promise.all(requests)
+            const tplRes = results[0]
+            const statsRes = results[1]
+            if (tplRes && tplRes.code === 1) {
+              this.tableData = tplRes.data.records || []
+              this.counts = tplRes.data.total || 0
+            } else {
+              ReggieUI.error((tplRes && tplRes.msg) || '加载模板列表失败')
+            }
+            if (reloadStats && statsRes && statsRes.code === 1) {
+              this.stats = Object.assign({}, this.stats, statsRes.data  || {})
+            }
+          } catch (err) {
+            if (err.message !== 'NOTLOGIN') {
+              ReggieUI.error('加载模板列表失败，请刷新重试')
+            }
+          } finally {
+            this.loading = false
           }
-          if (reloadStats && statsRes && statsRes.code === 1) {
-            this.stats = Object.assign({}, this.stats, statsRes.data  || {})
-          }
-          this.loading = false
         },
         async loadTemplateStats() {
           try {
@@ -332,25 +341,43 @@
           this.init(false)
         },
         bizTypeName(type) {
-          const map = { 1: '订单通知', 2: '系统公告', 3: '营销活动', 4: '客服消息' }
+          const map = {
+            'ORDER_NOTICE': '订单通知',
+            'PROMOTION': '营销推送',
+            'VERIFY_CODE': '验证码',
+            'SYSTEM': '系统通知',
+            'JOB_NOTICE': '工作通知'
+          }
           return map[type] || '未知类型'
         },
         bizTypeColor(type) {
-          const map = { 1: 'var(--el-color-primary)', 2: 'var(--el-color-success)', 3: 'var(--el-color-warning)', 4: 'var(--el-color-info)' }
+          const map = {
+            'ORDER_NOTICE': 'var(--el-color-primary)',
+            'PROMOTION': 'var(--el-color-warning)',
+            'VERIFY_CODE': 'var(--el-color-success)',
+            'SYSTEM': 'var(--el-color-info)',
+            'JOB_NOTICE': 'var(--el-text-regular)'
+          }
           return map[type] || 'var(--el-text-regular)'
         },
         bizTypeIcon(type) {
-          const map = { 1: 'ri-file-list-line', 2: 'ri-bell-line', 3: 'ri-coupon-line', 4: 'ri-customer-service-line' }
+          const map = {
+            'ORDER_NOTICE': 'ri-file-list-line',
+            'PROMOTION': 'ri-coupon-line',
+            'VERIFY_CODE': 'ri-shield-check-line',
+            'SYSTEM': 'ri-bell-line',
+            'JOB_NOTICE': 'ri-customer-service-line'
+          }
           return map[type] || 'ri-file-text-line'
         },
         channelName(ch) {
-          const map = { 1: '站内信', 2: '短信', 3: 'APP推送', 4: '邮件' }
+          const map = { 1: '短信', 2: 'APP推送', 3: '短信+APP推送' }
           return map[ch] || '未知'
         },
         channelTagType(ch) {
-          if (ch === 1) return 'info'
-          if (ch === 2) return 'warning'
-          if (ch === 3) return 'success'
+          if (ch === 1) return 'warning'
+          if (ch === 2) return 'success'
+          if (ch === 3) return 'info'
           return 'info'
         },
         openDialog(row) {
@@ -364,6 +391,7 @@
         },
         submitForm() {
           const self = this
+          if (self.submitting) return // 提交防重
           self.$refs.templateForm.validate(function(valid) {
             if (!valid) {
               ReggieUI.warning('请完善表单必填项')
@@ -386,12 +414,21 @@
         toggleStatus(row) {
           const self = this
           const newStatus = row.status === 1 ? 0 : 1
-          sysApi.templateToggle(row.id, newStatus).then(function(res) {
-            if (res && res.code === 1) {
-              row.status = newStatus
-              ReggieUI.success(res.msg || '操作成功')
-            }
-          })
+          ReggieUI.confirm('确认' + (newStatus === 0 ? '停用' : '启用') + '该模板吗？', '提示',
+            { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              sysApi.templateToggle(row.id, newStatus).then(function(res) {
+                if (res && res.code === 1) {
+                  row.status = newStatus
+                  ReggieUI.success(res.msg || '操作成功')
+                  self.init()
+                } else {
+                  ReggieUI.error(res && res.msg ? res.msg : '操作失败')
+                }
+              }).catch(function(err) {
+                ReggieUI.error('请求失败：' + err)
+              })
+            }).catch(function(err) { console.warn('[模板管理] 状态切换取消或失败:', err) })
         },
         deleteHandle(id) {
           const self = this

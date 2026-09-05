@@ -177,6 +177,7 @@
             name="file"
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
+            :on-error="handleAvatarError"
             :on-change="onChange"
             ref="upload"
           >
@@ -708,17 +709,32 @@
           })
         },
         handleAvatarSuccess: function(response) {
-          if (response.code === 0 && response.msg === '未登录') {
-            if (window.self !== window.top) { try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch(e) {} }
-            else { window.location.href = '/backend/page/login/login.html' }
+          // 后端 /common/upload 未登录时返回 { code: 0, msg: 'NOTLOGIN' }（HTTP 401，走 el-upload 的 on-error 而非此处）
+          // 此处兜底判断：业务失败也提示，避免静默拿到 data:null 仍拼接下载地址
+          if (!response || String(response.code) !== '1' || !response.data) {
+            if (response && response.msg === 'NOTLOGIN') {
+              if (window.self !== window.top) { try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch(e) {} }
+              else { window.location.href = '/backend/page/login/login.html' }
+            } else {
+              ReggieUI.error((response && response.msg) || '图片上传失败，请重试')
+            }
+            return
           }
-          else { this.dishForm.imageUrl = '/common/download?name=' + response.data; this.dishForm.image = response.data }
+          this.dishForm.imageUrl = '/common/download?name=' + response.data; this.dishForm.image = response.data
+        },
+        // 修改点：el-upload 的 :on-error 回调 —— 上传 HTTP 非 2xx（含 401 未登录）统一由这里兜底
+        handleAvatarError: function(err, file, fileList) {
+          if (window.self !== window.top) { try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch(e) {} }
+          else { window.location.href = '/backend/page/login/login.html' }
+          var msg = (err && err.message) || '图片上传失败，请重试'
+          if (msg === 'Request failed with status code 401') { msg = '登录已过期，请重新登录' }
+          ReggieUI.error(msg)
         },
         onChange: function(file) {
           if (file) {
             var suffix = file.name.split('.')[1]; var size = file.size / 1024 / 1024 < 2
             if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) { ReggieUI.error('上传图片只支持 png、jpeg、jpg 格式！'); this.$refs.upload.clearFiles(); return false }
-            if (!size) { ReggieUI.error('上传文件大小不能超过 2MB!'); return false }
+            if (!size) { ReggieUI.error('上传文件大小不能超过 2MB!'); this.$refs.upload.clearFiles(); return false }
             return file
           }
         },

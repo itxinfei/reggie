@@ -285,7 +285,7 @@
     >
         <el-form label-width="90px" size="small">
             <el-form-item label="活动名称">
-                <el-tag type="primary">{{ pushTargetCampaign ? pushTargetCampaign.name : '' }}</el-tag>
+                <el-tag type="info">{{ pushTargetCampaign ? pushTargetCampaign.name : '' }}</el-tag>
             </el-form-item>
             <el-form-item label="目标人群">
                 <el-tag type="warning">{{ targetMap[pushTargetCampaign ? pushTargetCampaign.targetType : 1] }}</el-tag>
@@ -314,7 +314,7 @@
     </crud-dialog>
 
     <!-- ========== 活动统计对话框 ========== -->
-    <crud-dialog :show-submit="true" :show-cancel="true"
+    <crud-dialog
       title="活动效果统计"
       :visible.sync="statsDialogVisible"
       size="lg"

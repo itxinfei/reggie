@@ -344,6 +344,7 @@
           sessionMessages: [],
           newMessage: '',
           currentSessionId: null,
+          sending: false,
 
           // 分配
           assignForm: { visible: false, id: null, agentId: null, agentName: '' },
@@ -519,7 +520,9 @@
           }
         },
         async onSendMessage() {
+          if (this.sending) return // 提交防重：防止连点重复发送
           if (!this.newMessage.trim() || !this.currentSessionId) return
+          this.sending = true
           try {
             await sendMessage({
               sessionId: this.currentSessionId,
@@ -533,6 +536,9 @@
             if (resp.code === 1) this.sessionMessages = resp.data || []
           } catch(e) {
             console.error('发送消息失败', e)
+            ReggieUI.error('发送失败，请重试')
+          } finally {
+            this.sending = false
           }
         },
         onAssign(row) {

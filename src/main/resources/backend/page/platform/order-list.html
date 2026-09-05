@@ -98,11 +98,12 @@
   </div>
 
   <!-- 订单详情弹窗 -->
-  <crud-dialog :show-submit="true" :show-cancel="true"
+  <crud-dialog
     title="平台订单详情"
     :visible.sync="detailVisible"
     size="lg"
     :show-submit="false"
+    :show-cancel="false"
     cancel-text="关 闭"
     :close-on-click-modal="true"
   >
@@ -205,6 +206,8 @@
         tableData: [],
         // 修改点：筛选条件
         filters: { platformType: '', status: '', platformOrderId: '' },
+        // 修改点：平台订单全量统计（后端聚合，翻页不重算；字段：totalOrders/pendingOrders/completedOrders/amount）
+        platformStats: { totalOrders: 0, pendingOrders: 0, completedOrders: 0, amount: 0 },
         // 修改点：列配置（对齐走 resolveColAlign 单一来源，表头与内容全部居中）
         columns: [
           { prop: 'platformType', label: '平台', width: 100, align: 'center', slot: true },
@@ -232,33 +235,44 @@
       }
     },
     created() {
-      this.fetchData()
+      this.fetchData(true)
     },
     computed: {
       statsCards() {
+        const s = this.platformStats || {}
         return [
-          { key: 'total', icon: 'el-icon-shopping-cart-full', label: '订单总数', value: this.counts || 0, color: 'primary' },
-          { key: 'pending', icon: 'el-icon-time', label: '待接单', value: this.tableData.filter(function(r){ return r.status === 2 }).length, color: 'warning' },
-          { key: 'completed', icon: 'el-icon-circle-check', label: '已完成', value: this.tableData.filter(function(r){ return r.status === 4 }).length, color: 'success' },
-          { key: 'amount', icon: 'el-icon-money', label: '订单金额', value: '¥' + this.tableData.reduce(function(s, r){ return s + (Number(r.amount) || 0) }, 0).toFixed(2), color: 'info' }
+          { key: 'total', icon: 'el-icon-shopping-cart-full', label: '订单总数', value: (s.totalOrders != null ? s.totalOrders : this.counts) || 0, color: 'primary' },
+          { key: 'pending', icon: 'el-icon-time', label: '待接单', value: (s.pendingOrders != null ? s.pendingOrders : 0) || 0, color: 'warning' },
+          { key: 'completed', icon: 'el-icon-circle-check', label: '已完成', value: (s.completedOrders != null ? s.completedOrders : 0) || 0, color: 'success' },
+          { key: 'amount', icon: 'el-icon-money', label: '已完成金额', value: '¥' + this.formatMoney(s.amount), color: 'info' }
         ]
       }
     },
     methods: {
       // 修改点：列表数据拉取（复用后端 platformOrderPage，返回 records/total）
-      async fetchData() {
+      // reloadStats=true 时并行拉取全量统计（筛选变化触发），翻页/改页大小传 false 不重算统计
+      async fetchData(reloadStats) {
         this.loading = true
         try {
           const params = { page: this.page, pageSize: this.pageSize }
           if (this.filters.platformType) params.platformType = this.filters.platformType
           if (this.filters.status !== '') params.status = this.filters.status
           if (this.filters.platformOrderId) params.platformOrderId = this.filters.platformOrderId
-          const res = await getPlatformOrderPage(params)
+          const requests = [getPlatformOrderPage(params)]
+          if (reloadStats) { requests.push(getPlatformOrderStatistics(params)) }
+          const results = await Promise.all(requests)
+          const res = results[0]
           if (String(res.code) === '1' && res.data) {
             this.tableData = res.data.records || []
             this.counts = Number(res.data.total) || 0
           } else {
             ReggieUI.error((res && res.msg) || '加载平台订单失败')
+          }
+          if (reloadStats && results[1]) {
+            const statsRes = results[1]
+            if (String(statsRes.code) === '1' && statsRes.data) {
+              this.platformStats = statsRes.data
+            }
           }
         } catch (err) {
           if (err.message !== 'NOTLOGIN') {
@@ -270,21 +284,21 @@
       },
       search() {
         this.page = 1
-        this.fetchData()
+        this.fetchData(true)
       },
       resetFilters() {
         this.filters = { platformType: '', status: '', platformOrderId: '' }
         this.page = 1
-        this.fetchData()
+        this.fetchData(true)
       },
       handlePageChange(p) {
         this.page = p
-        this.fetchData()
+        this.fetchData(false)
       },
       handleSizeChange(s) {
         this.pageSize = s
         this.page = 1
-        this.fetchData()
+        this.fetchData(false)
       },
       platformTypeText(type) {
         const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音', SELF: '自营', OTHER: '其他' }
@@ -295,7 +309,7 @@
         return map[status] || '未知'
       },
       statusTagType(status) {
-        const map = { 1: 'info', 2: 'warning', 3: 'primary', 4: 'success', 5: 'info', 6: 'danger' }
+        const map = { 1: 'info', 2: 'warning', 3: 'warning', 4: 'success', 5: 'info', 6: 'danger' }
         return map[status] || 'info'
       },
       formatMoney(val) {
@@ -326,7 +340,7 @@
             const d = res.data
             ReggieUI.success('拉取 ' + (d.pulled || 0) + ' 单，新增 ' + (d.inserted || 0) + ' 单')
             this.pullVisible = false
-            this.fetchData()
+            this.fetchData(true)
           } else {
             ReggieUI.error((res && res.msg) || '拉单失败')
           }
@@ -366,7 +380,7 @@
               if (localStatus !== null && localStatus !== 3) {
                 try { await editOrderDetail({ id: row.id, status: localStatus }) } catch (e) { /* 本地流转失败不影响回传结果 */ }
               }
-              self.fetchData()
+              self.fetchData(true)
             } else {
               ReggieUI.error((res && res.msg) || (meta.text + '失败'))
             }

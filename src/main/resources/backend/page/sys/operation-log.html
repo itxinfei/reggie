@@ -142,23 +142,33 @@
         // 修改点：F9 性能 — 全局操作日志统计不随翻页重算，仅 reloadStats 时纳入 Promise.all
         async init(reloadStats = true) {
           this.loading = true
-          const ls = this.lastSearch || {}
-          const params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
-          const requests = [sysApi.logPage(params)]
-          if (reloadStats) { requests.push(this.loadStats()) }
-          const results = await Promise.all(requests)
-          const logRes = results[0]
-          if (logRes && logRes.code === 1) {
-            this.tableData = logRes.data.records || []
-            this.counts = logRes.data.total || 0
-          }
-          if (reloadStats) {
-            const statsRes = results[1]
-            if (statsRes && statsRes.code === 1) {
-              this.stats = Object.assign({}, this.stats, statsRes.data || {})
+          try {
+            const ls = this.lastSearch || {}
+            const params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
+            const requests = [sysApi.logPage(params)]
+            if (reloadStats) { requests.push(this.loadStats()) }
+            const results = await Promise.all(requests)
+            const logRes = results[0]
+            if (logRes && logRes.code === 1) {
+              this.tableData = logRes.data.records || []
+              this.counts = logRes.data.total || 0
+            } else {
+              // 修改点：接口失败兜底提示（原无 else 分支静默）
+              ReggieUI.error((logRes && logRes.msg) || '加载操作日志失败')
             }
+            if (reloadStats) {
+              const statsRes = results[1]
+              if (statsRes && statsRes.code === 1) {
+                this.stats = Object.assign({}, this.stats, statsRes.data || {})
+              }
+            }
+          } catch (err) {
+            if (err.message !== 'NOTLOGIN') {
+              ReggieUI.error('加载操作日志失败，请刷新重试')
+            }
+          } finally {
+            this.loading = false
           }
-          this.loading = false
         },
         async loadStats() {
           try {
@@ -224,7 +234,7 @@
           this.init(false)
         },
         opTypeTag(type) {
-          const map = { CREATE: 'success', UPDATE: 'warning', DELETE: 'danger', EXPORT: 'info', LOGIN: 'primary' }
+          const map = { CREATE: 'success', UPDATE: 'warning', DELETE: 'danger', EXPORT: 'info', LOGIN: 'info' }
           return map[type] || 'info'
         },
         methodTag(method) {

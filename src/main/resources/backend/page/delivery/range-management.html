@@ -122,7 +122,7 @@
       :loading="loading"
       :page="page"
       :page-size="pageSize"
-      :total="allData.length"
+      :total="filteredTotal"
       :show-actions="true"
       :actions-width="250"
       :actions-fixed="true"
@@ -132,7 +132,7 @@
     >
       <!-- 范围类型列 -->
       <template #col-rangeType="{ row }">
-        <el-tag :type="row.rangeType === 1 ? 'primary' : 'success'" size="small">
+        <el-tag :type="row.rangeType === 1 ? 'warning' : 'success'" size="small">
           {{ row.rangeType === 1 ? '圆形' : '多边形' }}
         </el-tag>
       </template>
@@ -445,6 +445,11 @@
             data = data.filter(function(item) { return item.status === params.status })
           }
           return data
+        },
+        // 修改点：分页 total 绑定 filteredData.length —— 原绑定 allData.length，
+        // 筛选后 total 与实际行数不符，翻到后页出现空表格
+        filteredTotal() {
+          return this.filteredData.length
         }
       },
       created() {
@@ -543,6 +548,16 @@
           })
         },
         async handleToggleStatus(row) {
+          // 修改点：启用/禁用属高危操作，补二次确认（对齐 handleDelete 确认模式）
+          try {
+            await ReggieUI.confirm(row.status === 1 ? '确定要禁用该配送范围规则吗？' : '确定要启用该配送范围规则吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
+          } catch (e) {
+            return // 用户取消
+          }
           try {
             const newStatus = row.status === 1 ? 0 : 1
             const res = await updateRangeRule({ ...row, status: newStatus })
@@ -563,7 +578,7 @@
               cancelButtonText: '取消',
               type: 'warning'
             })
-            
+
             const res = await deleteRangeRule(row.id)
             if (res.code === 1) {
               ReggieUI.success('删除成功')
@@ -572,9 +587,10 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            if (err !== 'cancel') {
-              ReggieUI.error('删除失败')
-            }
+            // 修改点：ReggieUI.confirm 取消时 reject {__cancelled}，静默返回；真实请求失败才提示
+            if (err && err.__cancelled) { return }
+            console.warn('[range-management] 删除失败:', err)
+            ReggieUI.error('删除失败')
           }
         },
         async handleSubmit() {
@@ -655,9 +671,9 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            if (err !== 'cancel') {
-              ReggieUI.error('删除失败')
-            }
+            if (err && err.__cancelled) { return }
+            console.warn('[range-management] 删除阶梯规则失败:', err)
+            ReggieUI.error('删除失败')
           }
         },
         async handleFeeStepSubmit() {

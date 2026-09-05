@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>打印终端 - 瑞吉外卖管理端</title>
+  <title>打印终端 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
@@ -292,7 +292,7 @@
           const MAP = {
             'BILL': { label: '小票', type: 'success' },
             'KITCHEN': { label: '厨房', type: 'warning' },
-            'DELIVERY': { label: '配送', type: 'primary' },
+            'DELIVERY': { label: '配送', type: 'info' },
             'TEST': { label: '测试', type: 'info' }
           }
           return printTypes.split(',').map(t => MAP[t.trim()] || { label: t, type: 'info' })

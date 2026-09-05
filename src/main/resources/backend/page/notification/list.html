@@ -982,18 +982,29 @@
                 },
 
                 // ==================== 工具方法 ====================
+                // 修改点：bizType 映射改为字符串枚举（模板编辑/筛选选项为 ORDER_NOTICE/PROMOTION 等，
+                // 此前的数字 key 导致模板列表业务类型恒显示「未知类型」）
                 bizTypeName: function(type) {
-                    const map = { 1: '订单通知', 2: '系统公告', 3: '营销活动', 4: '客服消息' };
+                    const map = {
+                        ORDER_NOTICE: '订单通知',
+                        PROMOTION: '营销推送',
+                        VERIFY_CODE: '验证码',
+                        SYSTEM: '系统通知',
+                        JOB_NOTICE: '工作通知'
+                    };
                     return map[type] || '未知类型';
                 },
 
+                // 修改点：渠道映射对齐发送记录筛选选项 {1:短信, 2:APP推送, 3:短信+推送}，
+                // 此前误用「站内信/邮件」导致渠道显示错位
                 channelName: function(ch) {
-                    const map = { 1: '站内信', 2: '短信', 3: 'APP推送', 4: '邮件' };
+                    const map = { 1: '短信', 2: 'APP推送', 3: '短信+推送' };
                     return map[ch] || '未知';
                 },
 
+                // 修改点：补 status 0(待发送)/4(部分成功) 映射，与发送记录状态下拉选项对齐
                 recordStatusName: function(st) {
-                    const map = { 1: '发送中', 2: '已发送', 3: '发送失败' };
+                    const map = { 0: '待发送', 1: '发送中', 2: '发送成功', 3: '发送失败', 4: '部分成功' };
                     return map[st] || '未知';
                 },
 

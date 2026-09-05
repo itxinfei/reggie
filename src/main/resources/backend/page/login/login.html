@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>登录 - 瑞吉外卖管理端</title>
-  <link rel="shortcut icon" href="../../favicon.ico">
+  <link rel="shortcut icon" href="../../favicon.ico">
     <link rel="stylesheet" href="../../styles/main.css" />
   <!-- 修改点：补设计令牌（全站后台页均已加载，登录页此前漏链，导致 login.css 内 var(--color-brand-500)/var(--color-white) 等令牌 undefined、配色错乱） -->
   <link rel="stylesheet" href="../../styles/tokens.css">
@@ -110,10 +110,9 @@
           loaded:   false,
           focus:    '',
           seePass:  false,
-          dark:     false,
-          fpShow:   false,
-          fpLoading: false,
-          fpForm:   { username: '', phone: '', newPassword: '' }
+          dark:     false
+          // 修改点：删除未接入的死代码。后端 /employee/forgot-password 端点存在且需 SMS 验证码(code)，
+          // 但登录页无忘记密码入口、模板无 fpFormRef 表单，调用即抛错；员工侧短信发送端点未确认，故移除半成品实现。
         }
       },
       computed: {
@@ -121,14 +120,6 @@
           return {
             username: [{ validator: this.chkUser, trigger: 'blur' }],
             password: [{ validator: this.chkPass, trigger: 'blur' }]
-          }
-        },
-        fpRules: function() {
-          return {
-            username:   [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-            phone:      [{ required: true, message: '请输入手机号', trigger: 'blur' },
-                         { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }],
-            newPassword: [{ validator: this.chkPass, trigger: 'blur' }]
           }
         }
       },
@@ -194,31 +185,6 @@
             }).catch(function(err) {
               ReggieUI.error((err && err.message) || '网络异常，请稍后重试')
               self.loading = false
-            })
-          })
-        },
-        showForgot: function() {
-          this.fpShow = true
-          this.fpForm = { username: '', phone: '', newPassword: '' }
-          const self = this
-          this.$nextTick(function() {
-            if (self.$refs.fpFormRef) self.$refs.fpFormRef.clearValidate()
-          })
-        },
-        doForgot: function() {
-          const self = this
-          this.$refs.fpFormRef.validate(function(ok) {
-            if (!ok) return
-            self.fpLoading = true
-            forgotPasswordApi(self.fpForm).then(function(res) {
-              if (String(res.code) === '1') {
-                ReggieUI.success(res.msg || '密码重置成功')
-                self.fpShow = false
-              } else {
-                ReggieUI.error(res.msg || '重置失败')
-              }
-            }).finally(function() {
-              self.fpLoading = false
             })
           })
         }

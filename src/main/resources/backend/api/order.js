@@ -25,6 +25,15 @@ const getPlatformOrderPage = (params) => {
   })
 }
 
+// 平台订单全量统计（平台订单页顶部统计卡片，翻页不重算）
+const getPlatformOrderStatistics = (params) => {
+  return $axios({
+    url: '/order/platform/statistics',
+    method: 'get',
+    params
+  })
+}
+
 // 查询所有订单（不分页）
 const getOrderList = (params) => {
   return $axios({

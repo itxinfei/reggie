@@ -2,6 +2,7 @@ package com.reggie.module.delivery.controller;
 import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
@@ -9,7 +10,12 @@ import com.reggie.dto.AcceptOrderDTO;
 import com.reggie.dto.SyncMenuDTO;
 import com.reggie.dto.SyncStockDTO;
 import com.reggie.module.delivery.model.DeliveryOrder;
+import com.reggie.module.delivery.model.DeliveryTimeRecord;
+import com.reggie.module.delivery.model.Rider;
 import com.reggie.module.delivery.service.DeliveryService;
+import com.reggie.module.delivery.service.DeliveryTrackingService;
+import com.reggie.module.user.model.User;
+import com.reggie.module.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +35,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Max;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -46,6 +53,12 @@ public class DeliveryController {
 
     @Autowired
     private DeliveryService deliveryService;
+
+    @Autowired
+    private DeliveryTrackingService deliveryTrackingService;
+
+    @Autowired
+    private UserService userService;
 
     // ==================== 订单查询 ====================
 
@@ -192,18 +205,48 @@ public class DeliveryController {
 
     /**
      * 根据平台订单号查询配送状态（供前端配送追踪页面使用）
+     * <p>仅返回展示所需字段（不含顾客姓名/电话裸数据），并校验当前登录用户是否归属该订单</p>
      *
      * @param orderId 平台订单号
-     * @return 配送订单详情
+     * @return 配送订单展示信息（含尽力而为的骑手字段）
      */
     @GetMapping("/tracking/{orderId}")
     @Operation(summary = "查询配送追踪", description = "根据平台订单号查询配送订单详情，供前端追踪页面使用")
-    public R<DeliveryOrder> tracking(@Parameter(description = "平台订单号", required = true) @PathVariable String orderId) {
+    public R<Map<String, Object>> tracking(@Parameter(description = "平台订单号", required = true) @PathVariable String orderId) {
         DeliveryOrder order = deliveryService.getByPlatformOrderId(orderId);
         if (order == null) {
             return R.error("配送订单不存在");
         }
-        return R.success(order);
+        // 归属校验：防止同租户下任意登录用户通过枚举 platformOrderId 获取他人顾客 PII（IDOR）
+        if (order.getPhone() != null) {
+            User user = userService.getById(BaseContext.getCurrentId());
+            if (user != null && user.getPhone() != null && !user.getPhone().equals(order.getPhone())) {
+                return R.error("无权查看该订单");
+            }
+        }
+        Map<String, Object> data = new HashMap<>();
+        data.put("platform", order.getPlatform());
+        data.put("platformOrderId", order.getPlatformOrderId());
+        data.put("dishSummary", order.getDishSummary());
+        data.put("amount", order.getAmount());
+        data.put("status", order.getStatus());
+        data.put("orderTime", order.getOrderTime());
+        data.put("updateTime", order.getUpdateTime());
+        data.put("address", order.getAddress());
+        // 尽力而为补充骑手信息：仅当本地订单有关联配送时效记录时才有真实骑手数据
+        if (order.getOrderId() != null) {
+            DeliveryTimeRecord record = deliveryTrackingService.getDeliveryTimeByOrderId(order.getOrderId());
+            if (record != null) {
+                data.put("riderName", record.getRiderName());
+                if (record.getRiderId() != null) {
+                    Rider rider = deliveryTrackingService.getById(record.getRiderId());
+                    if (rider != null) {
+                        data.put("riderPhone", rider.getPhone());
+                    }
+                }
+            }
+        }
+        return R.success(data);
     }
 
     // ==================== 平台回调 ====================

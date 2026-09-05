@@ -170,31 +170,37 @@
                     if(this.activeStatus !== null){
                         params.status = this.activeStatus
                     }
-                    const res = await orderPagingApi(params)
-                    if(res.code === 1){
-                        // 第一页时重置列表，防止重复累加
-                        if(this.paging.page === 1){
-                            this.orderList = []
-                        }
-                        let records = res.data.records
-                        if(records && Array.isArray(records)){
-                            records.forEach(item=>{
-                                let number = 0
-                                item.orderDetails.forEach(ele=>{
-                                    number += ele.number
+                    try {
+                        const res = await orderPagingApi(params)
+                        if(res.code === 1){
+                            // 第一页时重置列表，防止重复累加
+                            if(this.paging.page === 1){
+                                this.orderList = []
+                            }
+                            let records = res.data.records
+                            if(records && Array.isArray(records)){
+                                records.forEach(item=>{
+                                    let number = 0
+                                    item.orderDetails.forEach(ele=>{
+                                        number += ele.number
+                                    })
+                                    item.sumNum = number
                                 })
-                                item.sumNum = number
-                            })
-                            this.orderList.push(...records)
+                                this.orderList.push(...records)
+                            }
+                            if(this.paging.page >= res.data.pages){
+                                this.finished = true;
+                            }
+                            this.paging.page = this.paging.page + 1
+                        }else{
+                            vant.Toast.fail(res.msg || '加载订单失败');
                         }
+                    } catch (err) {
+                        // 异常兜底：网络错误/接口异常时给出提示，loading 由 finally 复位，避免永卡加载
+                        console.error('加载订单列表失败:', err)
+                        vant.Toast.fail('加载订单失败，请稍后重试');
+                    } finally {
                         this.loading = false;
-                        if(this.paging.page >= res.data.pages){
-                            this.finished = true;
-                        }
-                        this.paging.page = this.paging.page + 1
-                    }else{
-                        this.loading = false;
-                        vant.Toast.fail(res.msg || '加载订单失败');
                     }
                 },
                 getStatus(status){

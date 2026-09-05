@@ -424,6 +424,23 @@ public class OrderController {
         return R.success(stats);
     }
 
+    /**
+     * 平台订单全量统计：总订单数、待接单数、已完成数、已完成金额
+     * <p>与列表筛选条件一致（platformType/status），供平台订单页顶部统计卡片使用，翻页不重算。</p>
+     *
+     * @param platformType 平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER，可选）
+     * @param status       订单状态（可选）
+     * @return 统计结果
+     */
+    @GetMapping("/platform/statistics")
+    @RequireEmployee
+    @Operation(summary = "平台订单统计", description = "获取当前租户的平台订单统计数据，包含总订单数、待接单数、已完成数与已完成金额")
+    public R<Map<String, Object>> platformStatistics(
+            @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER，可选）") @RequestParam(required = false) String platformType,
+            @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
+        return R.success(orderService.getPlatformOrderStatistics(platformType, status));
+    }
+
 
     /**
      * 用户取消订单

@@ -567,9 +567,9 @@
               ReggieUI.error(res.msg || 'Cancellation failed')
             }
           } catch (err) {
-            if (err !== 'cancel') {
-              ReggieUI.error('Cancellation failed')
-            }
+            if (err && err.__cancelled) { return }
+            console.warn('[withdrawal] 取消提现失败:', err)
+            ReggieUI.error('取消失败')
           }
         }
       }

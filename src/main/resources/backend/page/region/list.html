@@ -33,7 +33,7 @@
         @action="onTableAction">
         <template slot="search-extra">
           <el-select v-model="input.name" placeholder="选择地区名称" class="el-select--narrow-xs" clearable filterable size="small"
-            :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="handleQuery" >
+            :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="handleQuery" @visible-change="onFilterDropdownVisible" >
             <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
           </el-select>
           <el-select v-model="input.level" placeholder="层级" clearable class="el-select--wide-xs" @change="onLevelChange">
@@ -95,7 +95,7 @@
             <el-option label="区/县(3级)" :value="3"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="上级地区：" v-if="formData.level !== 1">
+        <el-form-item label="上级地区：" v-if="formData.level !== 1" prop="parentId">
           <el-select v-model="formData.parentId" placeholder="请选择上级地区" style="width: 100%" filterable>
             <el-option v-for="p in parentOptions" :key="p.id" :label="p.name" :value="p.id"></el-option>
           </el-select>
@@ -145,9 +145,7 @@
             parentId: null, sort: 0, dialogVisible: false
           },
           // 修改点：地区表单校验规则（配合 el-form :rules + validate()）
-          regionRules: {
-            name: [{ required: true, whitespace: true, message: '请输入地区名称', trigger: 'blur' }]
-          },
+          // 注：regionRules 已改为 computed 动态生成（level 2/3 时上级地区必填），此处不再静态声明
           // 修改点：列配置（交给 <crud-table>，避免手写 <el-table-column> 重复）
           columns: [
             { prop: 'id', label: 'ID', width: 60, align: 'center' },
@@ -164,6 +162,16 @@
         this.fetchData()
       },
       computed: {
+        // 修改点：regionRules 动态化 — 层级为 2/3 级时上级地区必填（此前静态规则无此项，漏选直接提交空白父级）
+        regionRules() {
+          const rules = {
+            name: [{ required: true, whitespace: true, message: '请输入地区名称', trigger: 'blur' }]
+          }
+          if (this.formData.level !== 1) {
+            rules.parentId = [{ required: true, message: '请选择上级地区', trigger: 'change' }]
+          }
+          return rules
+        },
         // 修改点：4 张可点击统计卡片（总数/省份/城市/区县），点击按层级筛选数据
         statsCards() {
           var s = this.stats || {}
@@ -235,15 +243,22 @@
             if (res.code === 1) {
               this.tableData = res.data.records || []
               this.counts = res.data.total || 0
+            } else {
+              // 修改点：此前 else 静默，列表加载失败无任何反馈
+              ReggieUI.error((res && res.msg) || '获取地区列表失败')
             }
             if (reloadStats) {
               var statsRes = results[1]
               if (statsRes && statsRes.code === 1 && statsRes.data) {
                 this.stats = statsRes.data
+              } else if (statsRes) {
+                // 修改点：统计加载失败给轻提示（列表仍可用）
+                ReggieUI.warning((statsRes.msg) || '获取地区统计失败')
               }
             }
           } catch (err) {
-            console.warn('加载地区列表失败:', err)
+            // 修改点：此前仅 console.warn，无任何用户提示
+            ReggieUI.error('获取地区列表失败：' + (err || '网络异常'))
           } finally {
             this.loading = false
           }

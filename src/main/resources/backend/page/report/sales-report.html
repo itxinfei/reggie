@@ -245,26 +245,38 @@
             
             if (res.code === 1) {
               const data = res.data
-              this.report = {
-                totalRevenue: data.totalRevenue || 0,
-                totalOrders: data.totalOrders || 0,
-                avgOrderValue: data.avgDailyRevenue || data.avgWeeklyRevenue || data.avgMonthlyRevenue || 0,
-                completedCount: data.totalOrders || 0
-              }
-              
+
               // Prepare detail data
               this.detailData = []
               const sourceData = data.dailyData || data.weeklyData || data.monthlyData || []
+              let totalRevenue = 0
+              let totalOrderCount = 0
+              let totalCompletedCount = 0
               sourceData.forEach(item => {
+                const revenue = Number(item.revenue) || 0
+                const orderCount = Number(item.orderCount) || 0
+                const completedCount = Number(item.completedCount) || 0
+                totalRevenue += revenue
+                totalOrderCount += orderCount
+                totalCompletedCount += completedCount
                 this.detailData.push({
                   label: item.date || item.weekStart || (item.month + '月'),
-                  revenue: item.revenue || 0,
-                  orderCount: item.orderCount || 0,
-                  completedCount: item.completedCount || 0,
-                  avgOrderValue: item.orderCount > 0 ? (item.revenue / item.orderCount) : 0
+                  revenue: revenue,
+                  orderCount: orderCount,
+                  completedCount: completedCount,
+                  avgOrderValue: orderCount > 0 ? (revenue / orderCount) : 0
                 })
               })
-              
+
+              // 修改点：客单价 = 总营收 / 总订单数（此前误用后端 avgDailyRevenue=总营收/天数）；
+              // 完成订单数 = 明细 completedCount 求和（此前 totalOrders 含取消单）
+              this.report = {
+                totalRevenue: data.totalRevenue || 0,
+                totalOrders: data.totalOrders || 0,
+                avgOrderValue: totalOrderCount > 0 ? (totalRevenue / totalOrderCount) : 0,
+                completedCount: totalCompletedCount
+              }
+
               this.updateCharts()
             }
           } catch (err) {

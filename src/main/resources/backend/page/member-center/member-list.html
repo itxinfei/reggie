@@ -103,11 +103,10 @@
     </div>
 
     <!-- ===== 会员详情弹窗（2026-09-01：原 8.4.1 双栏右卡迁移为弹窗式详情） ===== -->
-    <crud-dialog :show-submit="true" :show-cancel="true"
+    <crud-dialog :show-submit="false" :show-cancel="true"
       title="会员详情"
       :visible.sync="detailVisible"
       size="md"
-      :show-submit="false"
       cancel-text="关 闭"
       :show-close="true"
       @close="detailVisible = false"

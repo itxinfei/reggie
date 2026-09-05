@@ -281,7 +281,7 @@
         <div v-if="availCoupons.length===0" class="mc-empty mc-coupon-empty">暂无可领取的优惠券</div>
         <div class="mc-coupon" v-for="c in availCoupons" :key="'avail-'+c.id">
           <div class="mc-coupon-left">
-            <div class="c-amount">￥{{ Number(c.discountAmount||0).toFixed(0) }}</div>
+            <div class="c-amount">￥{{ Number(c.discountAmount||0).toFixed(2) }}</div>
             <div class="c-type">{{ c.type==='FULL_REDUCTION' ? '满减' : c.type==='DISCOUNT' ? '折扣' : '新客' }}</div>
           </div>
           <div class="mc-coupon-right">
@@ -299,7 +299,7 @@
         <div v-if="myCoupons.length===0" class="mc-empty mc-coupon-empty">暂无优惠券</div>
         <div :class="['mc-coupon', c.status==='USED'||c.status==='EXPIRED' ? 'used' : '']" v-for="c in myCoupons" :key="'my-'+c.id">
           <div class="mc-coupon-left">
-            <div class="c-amount">￥{{ Number(c.amount||0).toFixed(0) }}</div>
+            <div class="c-amount">￥{{ Number(c.amount||0).toFixed(2) }}</div>
             <div class="c-type">{{ c.type||'通用' }}</div>
           </div>
           <div class="mc-coupon-right">
@@ -402,7 +402,8 @@
             // 等级列表(用于升级进度)
             try {
               var lvRes = await this.fetchLevels()
-              if (lvRes && lvRes.code === 1) this.allLevels = lvRes.data.records || []
+              // 修改点：C端端点 /api/member/member/my-levels 返回裸 List，非分页对象 {records}
+              if (lvRes && lvRes.code === 1) this.allLevels = Array.isArray(lvRes.data) ? lvRes.data : ((lvRes.data && lvRes.data.records) || [])
             } catch(e) { console.warn('[member-center] fetchLevels 失败:', e) }
             // 加载各tab数据
             await Promise.all([
@@ -420,8 +421,9 @@
           var memberId = this.memberInfo && this.memberInfo.member ? this.memberInfo.member.id : null
           if (!memberId) return
           try {
-            var phone = this.memberInfo.member.phone || ''
-            var res = await getMyPointsList({ page: 1, pageSize: 30, phone: phone })
+            // 修改点：去掉 phone 参数。C端端点 /api/member/member/my-points 按登录态定位会员，
+            // 原 /api/member/points/page 带 @RequireEmployee，C端会被拦截导致积分记录永远加载失败。
+            var res = await getMyPointsList({ page: 1, pageSize: 30 })
             if (res.code === 1) this.pointsData = res.data.records || []
           } catch(e) { console.warn('[member-center] loadPoints 失败:', e) }
         },
@@ -442,8 +444,9 @@
           var memberId = this.memberInfo && this.memberInfo.member ? this.memberInfo.member.id : null
           if (!memberId) return
           try {
-            var phone = this.memberInfo.member.phone || ''
-            var res = await getMyRechargeList({ page: 1, pageSize: 20, phone: phone })
+            // 修改点：去掉 phone 参数。C端端点 /api/member/member/my-recharges 按登录态定位会员，
+            // 原 /api/member/recharge/page 接受任意 phone 参数存在越权查询风险。
+            var res = await getMyRechargeList({ page: 1, pageSize: 20 })
             if (res.code === 1) this.rechargeData = res.data.records || []
           } catch(e) { console.warn('[member-center] loadRecharge 失败:', e) }
         },
@@ -460,7 +463,7 @@
           } catch(e) { vant.Toast.fail('领取失败') }
           this.claimLoading = false
         },
-        activateMember: function() { vant.Toast('请联系店铺开通会员') },
+        activateMember: function() { vant.Toast('会员需到店或联系店铺开通，线上暂未开放自助开通') },
         showRules: function() {
           vant.Dialog.alert({
             title: '会员规则',

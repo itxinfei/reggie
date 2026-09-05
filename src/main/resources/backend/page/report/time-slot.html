@@ -227,13 +227,22 @@
           loadHeatmap: function() {
             const self = this; if (!self.heatmapChart) return;
             reportTimeSlotHeatmap({ startDate: self.dateRange[0], endDate: self.dateRange[1] })
-              .then(function(res) { if (res.code === 1 && res.data) self.renderHeatmap(res.data); })
-              .catch(function(err) { console.warn('[时段分析] 加载热力图失败:', err) });
+              .then(function(res) {
+                if (res.code === 1 && res.data) {
+                  self.renderHeatmap(res.data);
+                } else {
+                  // 修改点：此前仅 console.warn 静默，失败无用户提示
+                  ReggieUI.error((res && res.msg) || '加载热力图失败');
+                }
+              })
+              .catch(function(err) { ReggieUI.error('加载热力图失败：' + (err || '网络异常')); });
           },
           renderHeatmap: function(data) {
             if (!this.heatmapChart) return;
-            const days = [];
-            const slots = [];
+            // 修改点：补齐坐标轴标签（后端仅返回 dayIdx/slotIdx/value 计数矩阵，此处前端按后端固定顺序构造 7天×5时段 标签）
+            // 与 ReportServiceImpl.SLOT_NAMES = {早市/午市/下午茶/晚市/夜市}、dayIdx 周一=0 对齐
+            const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+            const slots = ['早市(6-10)', '午市(10-14)', '下午茶(14-17)', '晚市(17-21)', '夜市(21-6)'];
             var heatData = (data.data || []).map(function(d) { return [d.slotIdx || 0, d.dayIdx || 0, d.value || 0]; });
             const maxVal = data.maxVal || 100;
             this.heatmapChart.setOption({

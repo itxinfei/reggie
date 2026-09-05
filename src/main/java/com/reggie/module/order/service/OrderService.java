@@ -155,5 +155,14 @@ public interface OrderService extends IService<Orders> {
      * @return 分页订单列表
      */
     Page<Orders> platformOrderPage(int page, int pageSize, String platformType, Integer status);
+
+    /**
+     * 平台订单全量统计（供平台订单页统计卡片使用，翻页不重算）
+     *
+     * @param platformType 平台类型（可选，与列表筛选保持一致）
+     * @param status       订单状态（可选，与列表筛选保持一致）
+     * @return totalOrders/pendingOrders/completedOrders/amount
+     */
+    Map<String, Object> getPlatformOrderStatistics(String platformType, Integer status);
 }
 

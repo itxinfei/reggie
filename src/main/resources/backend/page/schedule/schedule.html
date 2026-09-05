@@ -36,7 +36,7 @@
               value-format="yyyy-MM"
               placeholder="选择月份"
               size="small"
-              style="width:200px;margin-right:12px;"
+              style="width:220px;margin-right:12px;"
               @change="fetchScheduleData"
             ></el-date-picker>
             <el-button type="primary" size="small" @click="openDialog">
@@ -48,7 +48,7 @@
         <!-- 排班日历表格 -->
         <div class="schedule-legend">
           <span class="legend-item"><el-tag type="success" size="mini">早班</el-tag></span>
-          <span class="legend-item"><el-tag type="primary" size="mini">中班</el-tag></span>
+          <span class="legend-item"><el-tag type="info" size="mini">中班</el-tag></span>
           <span class="legend-item"><el-tag type="info" size="mini">晚班</el-tag></span>
           <span class="legend-item"><el-tag type="danger" size="mini">全天</el-tag></span>
           <span class="legend-item"><el-tag type="" size="mini">休息</el-tag></span>
@@ -162,7 +162,7 @@
   <script src="../../api/attendance.js"></script>
   <script>
     // ===== 班次元信息（全页唯一配色/文案来源，与图例保持一致）=====
-    const SHIFT_META = { morning: { label: '早班', tag: 'success' }, noon: { label: '中班', tag: 'primary' }, night: { label: '晚班', tag: 'info' }, full: { label: '全天', tag: 'danger' }, rest: { label: '休息', tag: '' } }
+    const SHIFT_META = { morning: { label: '早班', tag: 'success' }, noon: { label: '中班', tag: 'info' }, night: { label: '晚班', tag: 'info' }, full: { label: '全天', tag: 'danger' }, rest: { label: '休息', tag: '' } }
     const SHIFT_CODE2KEY = { 0: 'morning', 1: 'noon', 2: 'night', 3: 'full' }
     const SHIFT_KEY2CODE = { morning: 0, noon: 1, night: 2, full: 3 }
     new Vue({
@@ -381,7 +381,7 @@
           })
           self.shiftSummary = [
             { key: 'morning', label: '早班', value: sumM, tagType: 'success' },
-            { key: 'noon',    label: '中班', value: sumN, tagType: 'primary' },
+            { key: 'noon',    label: '中班', value: sumN, tagType: 'info' },
             { key: 'night',   label: '晚班', value: sumE, tagType: 'info' },
             { key: 'full',    label: '全天', value: sumF, tagType: 'danger' }
           ]

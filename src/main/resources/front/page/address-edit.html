@@ -284,12 +284,63 @@
                         this.cityId = null
                         this.districtId = null
                         this.streetId = null
+                        // 修改点：用区划 code 逐级反查 region id，恢复省/市/区 id（address_book 不持久化街道，无法反查，保持 null）
+                        await this.restoreRegionIds()
                     } else {
                         vant.Toast.fail && vant.Toast.fail(res.msg || '加载失败')
                     }
                 } finally {
                     if (toast) toast.clear()
                 }
+            },
+
+            // ---- 编辑回填：按省/市/区 code 逐级反查 region id ----
+            // 修改点：validateForm 强校验 streetId，而地址详情接口不返回 region id，必须按 code 重新装载 id
+            async restoreRegionIds() {
+                var f = this.form
+                // 从省级开始逐级定位：用当前已选 id 作为下一级的 parentId，code 精确匹配
+                var parentId = 0
+                if (f.provinceCode) {
+                    var provinces = await this.loadRegionChildren(parentId)
+                    var p = this.findByCode(provinces, f.provinceCode)
+                    if (p) {
+                        this.provinceId = p.id
+                        parentId = p.id
+                    }
+                }
+                if (f.cityCode && parentId) {
+                    var cities = await this.loadRegionChildren(parentId)
+                    var c = this.findByCode(cities, f.cityCode)
+                    if (c) {
+                        this.cityId = c.id
+                        parentId = c.id
+                    }
+                }
+                if (f.districtCode && parentId) {
+                    var districts = await this.loadRegionChildren(parentId)
+                    var dist = this.findByCode(districts, f.districtCode)
+                    if (dist) {
+                        this.districtId = dist.id
+                    }
+                }
+                // 街道/乡镇 id 无来源（address_book 未持久化 street 到数据库），保持 null；此时允许保存（后端只写省/市/区 code+name）
+            },
+
+            async loadRegionChildren(parentId) {
+                try {
+                    var res = await getRegionChildren(parentId)
+                    if (res.code === 1) return res.data || []
+                } catch (e) {
+                    console.warn('[address-edit] 加载地区子级失败:', e)
+                }
+                return []
+            },
+
+            findByCode(list, code) {
+                for (var i = 0; i < list.length; i++) {
+                    if (list[i] && list[i].code === code) return list[i]
+                }
+                return null
             },
 
             // ---- 打开选择器 ----
@@ -416,8 +467,11 @@
                     this.errors.phone = '手机号格式不正确'
                     ok = false
                 }
-                if (!this.streetId) {
-                    this.errors.region = '请选择完整的省/市/区/街道'
+                // 修改点：街道/乡镇不入库（AddressBook.streetCode/Name 为 @TableField(exist=false)），
+                // 编辑回填时无法反查 streetId，此前强校验导致编辑已有地址永远无法保存；
+                // 后端同样未对街道做必填校验，故只要求省/市/区完整（三者可逐级反查）
+                if (!this.provinceId || !this.cityId || !this.districtId) {
+                    this.errors.region = '请选择完整的省/市/区'
                     ok = false
                 }
                 if (!f.detail || !f.detail.trim()) {

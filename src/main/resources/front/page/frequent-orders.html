@@ -273,7 +273,7 @@
                             </div>
                         </div>
                         <div class="dish-price-row">
-                            <div class="dish-price">{{ item.price }}</div>
+                            <div class="dish-price">{{ item.price ? '¥' + Number(item.price).toFixed(2) : '¥0.00' }}</div>
                             <button class="reorder-btn"
                                     :disabled="submitting === item.key"
                                     @click="reorder(item)">
@@ -338,14 +338,15 @@
                     }
                 },
                 async loadOrderHistory() {
-                    const allItems = [];
                     const itemMap = new Map();
                     const categorySet = new Set(['全部']);
                     let page = 1;
                     let hasMore = true;
+                    // 每页 100（后端上限），最多翻 3 页，避免请求无限增长拖垮页面
+                    const MAX_PAGES = 3;
 
-                    while (hasMore) {
-                        const res = await orderPagingApi({ page, pageSize: 10 });
+                    while (hasMore && page <= MAX_PAGES) {
+                        const res = await orderPagingApi({ page, pageSize: 100 });
                         if (res.code !== 1 || !res.data || !res.data.records || res.data.records.length === 0) {
                             hasMore = false;
                             break;
@@ -354,8 +355,9 @@
                         for (const order of records) {
                             if (order.orderDetails) {
                                 for (const detail of order.orderDetails) {
-                                    const key = detail.dishId || detail.id;
-                                    const cat = detail.dishFlavor ? '套餐' : '菜品';
+                                    // 按「菜品/套餐 + 规格」聚合：setmealId 优先，否则 dishId，否则详情 id
+                                    const key = detail.setmealId || detail.dishId || detail.id;
+                                    const cat = detail.setmealId ? '套餐' : '菜品';
                                     categorySet.add(cat);
                                     if (itemMap.has(key)) {
                                         const existing = itemMap.get(key);

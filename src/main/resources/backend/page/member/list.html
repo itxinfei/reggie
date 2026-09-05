@@ -10,13 +10,6 @@
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
-  <style>
-    #member-app  .notAdmin::after{
-      border: 0 !important;
-
-    }
-
-  </style>
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -74,7 +67,7 @@
             size="small"
             class="btn-view"
             @click="addMemberHandle(row.id)"
-            :class="{notAdmin:!isAdmin}"
+            v-if="isAdmin"
           >编辑</el-button>
           <el-button
             type="text"
@@ -450,11 +443,13 @@
                 if (String(res.code) === '1') {
                   ReggieUI.success('账号状态更改成功！')
                   this.handleQuery()
+                } else {
+                  ReggieUI.error(res.msg || '账号状态更改失败')
                 }
               }).catch(err => {
                 ReggieUI.error('请求失败：' + err)
               })
-            })
+            }).catch((e) => { console.warn('[member/list.html] 用户取消调整账号状态:', e) })
           },
           // 导出员工数据
           exportEmployees(format) {

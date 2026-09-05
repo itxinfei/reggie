@@ -331,6 +331,7 @@
           }
         },
         submitAdjust: function() {
+          if (this.adjustLoading) { return } // 提交防重：请求期间锁定，防止连点重复调整积分
           const self = this
           this.$refs.adjustFormRef.validate(function(valid) {
             if (!valid) return
@@ -338,6 +339,7 @@
               ReggieUI.warning('请先查询并选择会员')
               return
             }
+            self.adjustLoading = true
             const delta = self.adjustForm.adjustType === 'IN' ? self.adjustForm.points : -self.adjustForm.points
             adjustPoints({
               memberId: self.adjustMember.id,
@@ -352,6 +354,7 @@
                 ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(function(e) { ReggieUI.error('请求失败：' + e) })
+              .finally(function() { self.adjustLoading = false })
           })
         },
         // 修改点：F9 性能 — 覆盖 ReggieListMixin 分页方法，翻页不重算全局统计

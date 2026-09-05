@@ -248,7 +248,7 @@
           return Number(value).toFixed(2)
         },
         getDiscountTypeTagType(type) {
-          const map = { 1: 'warning', 2: 'success', 3: 'primary' }
+          const map = { 1: 'warning', 2: 'success', 3: 'info' }
           return map[type] || ''
         },
         getDiscountTypeText(type) {
@@ -360,8 +360,14 @@
           })
         },
         async handleToggleStatus(row) {
+          // 修改点：补二次确认，防止误点状态切换（原直接调用接口无确认）
           try {
             const newStatus = row.status === 1 ? 0 : 1
+            await ReggieUI.confirm('确定要' + (newStatus === 1 ? '启用' : '禁用') + '该满减规则吗？', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            })
             var res = await updateFullReductionRule(Object.assign({}, row, { status: newStatus }))
             if (res.code === 1) {
               ReggieUI.success(newStatus === 1 ? '已启用' : '已禁用')
@@ -371,6 +377,8 @@
               ReggieUI.error(res.msg || '操作失败')
             }
           } catch (err) {
+            if (err && err.__cancelled) { return }
+            console.warn('[full-reduction] 启用/禁用失败:', err)
             ReggieUI.error('操作失败')
           }
         },
@@ -390,17 +398,22 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            if (err !== 'cancel') {
-              ReggieUI.error('删除失败')
-            }
+            if (err && err.__cancelled) { return }
+            console.warn('[full-reduction] 删除失败:', err)
+            ReggieUI.error('删除失败')
           }
         },
         async handleSubmit() {
           const self = this
+          if (self.submitLoading) return // 提交防重：防止连点重复提交
           const valid = await new Promise(function(resolve) {
             self.$refs.ruleForm.validate(function(v) { resolve(v) })
           })
           if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
+          // 条件字段兜底校验：discountType=2（打折）时最大优惠金额必填
+          if (self.formData.discountType === 2 && (self.formData.maxDiscountAmount === null || self.formData.maxDiscountAmount === undefined)) {
+            ReggieUI.warning('请填写最大优惠金额'); return
+          }
           self.submitLoading = true
           const apiCall = self.formData.id ? updateFullReductionRule(self.formData) : saveFullReductionRule(self.formData)
           apiCall.then(function(res) {

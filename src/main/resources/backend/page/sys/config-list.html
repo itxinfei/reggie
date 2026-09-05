@@ -172,23 +172,33 @@
       methods: {
         async init(reloadStats = true) {
           this.loading = true
-          const ls = this.lastSearch || {}
-          const params = { page: this.page, pageSize: this.pageSize }
-          const requests = [sysApi.configPage(params)]
-          if (reloadStats) { requests.push(this.loadConfigStats()) }
-          const results = await Promise.all(requests)
-          const listRes = results[0]
-          const statsRes = results[1]
-          if (listRes && listRes.code === 1) {
-            this.tableData = (listRes.data.records || []).map(function(item) {
-              return Object.assign({}, item, { _editing: false })
-            })
-            this.counts = listRes.data.total || 0
+          try {
+            const ls = this.lastSearch || {}
+            const params = { page: this.page, pageSize: this.pageSize }
+            const requests = [sysApi.configPage(params)]
+            if (reloadStats) { requests.push(this.loadConfigStats()) }
+            const results = await Promise.all(requests)
+            const listRes = results[0]
+            const statsRes = results[1]
+            if (listRes && listRes.code === 1) {
+              this.tableData = (listRes.data.records || []).map(function(item) {
+                return Object.assign({}, item, { _editing: false })
+              })
+              this.counts = listRes.data.total || 0
+            } else {
+              // 修改点：接口失败兜底提示（原无 else 分支静默）
+              ReggieUI.error((listRes && listRes.msg) || '加载配置列表失败')
+            }
+            if (reloadStats && statsRes && statsRes.code === 1) {
+              this.stats = Object.assign({}, this.stats, statsRes.data  || {})
+            }
+          } catch (err) {
+            if (err.message !== 'NOTLOGIN') {
+              ReggieUI.error('加载配置列表失败，请刷新重试')
+            }
+          } finally {
+            this.loading = false
           }
-          if (reloadStats && statsRes && statsRes.code === 1) {
-            this.stats = Object.assign({}, this.stats, statsRes.data  || {})
-          }
-          this.loading = false
         },
         async loadConfigStats() {
           try {

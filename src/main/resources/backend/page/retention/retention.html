@@ -859,7 +859,8 @@
         },
 
         statusLabel: function (status) {
-          const map = { ACTIVE: '活跃', DORMANT: '沉睡' };
+          // 修改点：补齐 CHURNED 映射（流失会员此前显示「未知」，statusTagType 已有 CHURNED→danger）
+          const map = { ACTIVE: '活跃', DORMANT: '沉睡', CHURNED: '流失' };
           return map[status] || '未知';
         },
 
@@ -894,25 +895,28 @@
 
         confirmSendCoupon: function () {
           const self = this
+          // 防重复提交守卫：连点不重复发放
+          if (self.couponLoading) return
           const memberId = self.couponTarget.memberId
           self.couponLoading = true
-          try {
-            sendCoupon(memberId)
-              .then(function () {
-                self.couponLoading = false
+          sendCoupon(memberId)
+            .then(function (res) {
+              // 修改点：检查后端 code，失败同样提示且不关弹窗（此前无条件提示成功）
+              if (res && String(res.code) === '1') {
                 self.couponDialogVisible = false
-                self.$message.success('已模拟刷新推荐列表');
+                self.$message.success('优惠券发放成功')
                 self.loadStats()
                 self.loadWarning()
-              })
-              .catch(function () {
-                self.couponLoading = false
-                self.$message.error('发放失败，请稍后重试')
-              })
-          } catch (e) {
-            self.couponLoading = false
-            self.$message.error('发放失败，请稍后重试')
-          }
+              } else {
+                self.$message.error((res && res.msg) || '发放失败，请稍后重试')
+              }
+            })
+            .catch(function (e) {
+              self.$message.error('发放失败，请稍后重试')
+            })
+            .finally(function () {
+              self.couponLoading = false
+            })
         },
 
         onMemberFilterChange: function () {

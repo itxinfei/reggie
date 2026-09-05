@@ -192,6 +192,7 @@
           :show-file-list="false"
           :on-success="handleComboAvatarSuccess"
           :on-change="onChange"
+          :on-error="handleComboAvatarError"
           ref="comboUpload"
         >
           <img v-if="comboForm.imageUrl" :src="comboForm.imageUrl" class="avatar" style="border-radius: var(--radius-sm);" alt="套餐图片">
@@ -762,14 +763,28 @@ new Vue({
 
     // ========== 图片上传 ==========
     handleComboAvatarSuccess(response) {
-      if (response.code === 0 && response.msg === '未登录') {
-        // 修正：iframe 内 window.top 会被 sandbox 拦截，改用 postMessage 通知顶层跳登录
-        if (window.self !== window.top) { try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch(e) {} }
-        else { window.location.href = '/backend/page/login/login.html' }
-      } else {
-        this.comboForm.imageUrl = `/common/download?name=${response.data}`
-        this.comboForm.image = response.data
+      // 后端 /common/upload 未登录时返回 { code: 0, msg: 'NOTLOGIN' }（HTTP 401，走 el-upload 的 on-error 而非此处）
+      // 此处兜底判断：业务失败也提示，避免静默拿到 data:null 仍拼接下载地址
+      if (!response || String(response.code) !== '1' || !response.data) {
+        if (response && response.msg === 'NOTLOGIN') {
+          // 修正：iframe 内 window.top 会被 sandbox 拦截，改用 postMessage 通知顶层跳登录
+          if (window.self !== window.top) { try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch(e) {} }
+          else { window.location.href = '/backend/page/login/login.html' }
+        } else {
+          ReggieUI.error((response && response.msg) || '图片上传失败，请重试')
+        }
+        return
       }
+      this.comboForm.imageUrl = `/common/download?name=${response.data}`
+      this.comboForm.image = response.data
+    },
+    // 修改点：el-upload 的 :on-error 回调 —— 上传 HTTP 非 2xx（含 401 未登录）统一由这里兜底
+    handleComboAvatarError(err) {
+      if (window.self !== window.top) { try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch(e) {} }
+      else { window.location.href = '/backend/page/login/login.html' }
+      var msg = (err && err.message) || '图片上传失败，请重试'
+      if (msg === 'Request failed with status code 401') { msg = '登录已过期，请重新登录' }
+      ReggieUI.error(msg)
     },
 
     onChange(file) {
@@ -783,6 +798,7 @@ new Vue({
         }
         if (!size) {
           ReggieUI.error('上传文件大小不能超过 2MB!')
+          this.$refs.comboUpload.clearFiles()
           return false
         }
         return file

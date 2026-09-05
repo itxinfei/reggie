@@ -327,6 +327,7 @@
           }
         },
         submitRecharge: function() {
+          if (this.rechargeLoading) { return } // 提交防重：请求期间锁定，防止连点重复充值
           const self = this
           this.$refs.rechargeFormRef.validate(function(valid) {
             if (!valid) return
@@ -334,6 +335,7 @@
               ReggieUI.warning('请先查询并选择会员')
               return
             }
+            self.rechargeLoading = true
             memberRecharge({
               memberId: self.rechargeMember.id,
               amount: self.rechargeForm.amount,
@@ -348,6 +350,7 @@
                 ReggieUI.error(res.msg || '操作失败')
               }
             }).catch(function(e) { ReggieUI.error('请求失败：' + e) })
+              .finally(function() { self.rechargeLoading = false })
           })
         },
         // 修改点：F9 性能 — 覆盖 ReggieListMixin 分页方法，翻页不重算全局统计
