@@ -30,24 +30,26 @@
                 </div>
             </div>
             <div class="divContent">
-                <!-- 修改点：修复:key使用item.id替代index -->
-                <div class="divItem" v-for="item in addressList" :key="item.id" @click="itemClick(item)">
-                    <div class="divAddress">
-                        <span :class="{spanCompany:item.label === '公司',spanHome:item.label === '家',spanSchool:item.label === '学校',spanNone:item.label === '无'}">{{item.label}}</span>
-                        {{ fullAddress(item) }}
+                <!-- 修改点：卡片三区块重构 —— 顶部标签+地址 / 中部收货人 / 底部操作栏（默认单选左 + 编辑右），替代原绝对定位编辑图标与裸 divSplit -->
+                <div class="divItem" :class="{itemDefault: item.isDefault === 1}" v-for="item in addressList" :key="item.id" @click="itemClick(item)">
+                    <div class="addrTop">
+                        <span class="addrTag" :class="{spanCompany:item.label === '公司',spanHome:item.label === '家',spanSchool:item.label === '学校',spanNone:item.label === '无'}">{{item.label}}</span>
+                        <span class="addrText">{{ fullAddress(item) }}</span>
                     </div>
-                    <div class="divUserPhone">
-                        <span>{{item.consignee}}</span>
-                        <span>{{item.sex === '0' ? '女士' : '先生'}}</span>
-                        <span>{{item.phone}}</span>
+                    <div class="addrContact">
+                        <span class="consignee">{{item.consignee}}</span>
+                        <span class="sexText">{{item.sex === '0' ? '女士' : '先生'}}</span>
+                        <span class="phone">{{item.phone}}</span>
                     </div>
-                    <!-- 修改点：位图 edit.png → 图标字体 ri-edit-line，消除模糊底图 -->
-                    <i class="ri-edit-line" @click.stop.prevent="toAddressEditPage(item)" alt="编辑地址"></i>
-                    <div class="divSplit"></div>
-                    <div class="divDefault" @click.stop="item.isDefault !== 1 && setDefaultAddress(item)">
-                        <!-- 修改点：位图 checked_true/checked_false.png → 图标字体，选中态金色圆点 / 未选中灰色圆环 -->
-                        <i class="ri-checkbox-circle-fill" v-if="item.isDefault === 1"></i>
-                        <i class="ri-checkbox-blank-circle-line" v-else></i>设为默认地址
+                    <div class="divActionBar">
+                        <!-- 修改点：默认地址行 —— 选中态金点+金色加粗文案 / 未选中灰环，文案随状态切换 -->
+                        <div class="divDefault" :class="{isDefault: item.isDefault === 1}" @click.stop="item.isDefault !== 1 && setDefaultAddress(item)">
+                            <i class="ri-checkbox-circle-fill" v-if="item.isDefault === 1"></i>
+                            <i class="ri-checkbox-blank-circle-line" v-else></i>
+                            <span class="defaultText">{{ item.isDefault === 1 ? '默认地址' : '设为默认地址' }}</span>
+                        </div>
+                        <!-- 修改点：编辑图标从绝对定位改入操作栏文档流，右侧不再被长地址遮挡 -->
+                        <i class="ri-edit-line" @click.stop.prevent="toAddressEditPage(item)" alt="编辑地址"></i>
                     </div>
                 </div>
                 <!-- 修改点：空状态提示 -->

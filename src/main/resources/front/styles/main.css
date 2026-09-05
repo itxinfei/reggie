@@ -48,7 +48,9 @@
 .top-bar .location {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  /* 修改点：flex-shrink:0 → 1 + min-width:0，允许窄屏收缩地址文字（span 已有 ellipsis），把宽度让给搜索框 */
+  flex-shrink: 1;
+  min-width: 0;
   cursor: pointer;
   max-width: 110rem;
 }
@@ -78,23 +80,54 @@
 
 .top-bar .search-box {
   flex: 1;
+  /* 修改点：min-width 保证搜索框在窄屏不被固定子元素挤压到不可用（固定元素合计约 200rem+），
+     同时移除低对比半透明背景，改用高不透明度白卡 + 深色文字，提升金色渐变上的可读性 */
+  min-width: 88rem;
   height: 32rem;
-  background: rgba(255,255,255,0.55);
+  background: rgba(255,255,255,0.85);
   border-radius: 16rem;
   display: flex;
   align-items: center;
   padding: 0 12rem;
   cursor: pointer;
-  transition: background 0.2s;
-  box-shadow: 0 1rem 4rem rgba(0,0,0,0.06);
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1rem 4rem rgba(0,0,0,0.10);
 }
 
 .top-bar .search-box:active {
-  background: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.95);
+}
+
+/* ================================================================
+   顶部导航 — 窄屏响应式
+   修改点：main.css 此前无任何 @media 查询。在 375px 及以下，
+   固定子元素（铃铛/AI/头像约 34+34+30rem）会挤占搜索框，导致搜索文字不可见。
+   窄屏规则：隐藏铃铛/AI 入口、收紧地址文字、收缩语音按钮，优先保障搜索框。
+   ================================================================ */
+@media screen and (max-width: 375px) {
+  /* 修改点：窄屏隐藏消息铃铛 + AI 入口（非核心功能），把空间让给搜索框 */
+  .top-bar .msg-bell,
+  .top-bar .ai-entry {
+    display: none;
+  }
+
+  /* 修改点：窄屏地址文字进一步收窄，保证搜索框有充足宽度 */
+  .top-bar .location {
+    max-width: 68rem;
+  }
+
+  .top-bar .location span {
+    font-size: 14rem;
+  }
+
+  /* 修改点：窄屏搜索框占位文字直接隐藏，只保留放大镜 + 语音按钮 */
+  .top-bar .search-box span {
+    display: none;
+  }
 }
 
 .top-bar .search-box i {
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   font-size: 15rem;
   margin-right: 5rem;
 }
@@ -114,8 +147,10 @@
 }
 
 .top-bar .search-box span {
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   font-size: 13rem;
+  /* 修改点：flex-shrink:0 防止占位文字在窄屏被压缩换行 */
+  flex-shrink: 0;
 }
 
 /* 顶部消息铃铛 + AI 入口（统一样式） */

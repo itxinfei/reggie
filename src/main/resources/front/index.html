@@ -242,7 +242,8 @@
         ref="detailsDialog"
       >
         <div class="divContainer">
-          <img :src="imgPath(detailsDialog.item.image)" @error="imgError" class="dialog-img">
+          <!-- 修改点：菜品图加点击预览（van-image-preview 大图），解决小图看不清问题 -->
+          <img :src="imgPath(detailsDialog.item.image)" @error="imgError" class="dialog-img" @click.stop="previewDishImage(imgPath(detailsDialog.item.image))">
           <div class="title">{{ detailsDialog.item.name }}</div>
           <div class="content">{{ detailsDialog.item.description }}</div>
           <!-- 评价展示 -->
@@ -298,7 +299,8 @@
         <div class="divContainer">
           <div class="title">{{ setMealDialog.item.name }}</div>
           <div class="item" v-for="(item,index) in setMealDialog.item.list" :key="index">
-            <img :src="imgPath(item.image)" @error="imgError" class="meal-img">
+            <!-- 修改点：套餐子项图加点击预览，与菜品详情一致 -->
+            <img :src="imgPath(item.image)" @error="imgError" class="meal-img" @click.stop="previewDishImage(imgPath(item.image))">
             <div class="divSubTitle">{{ item.name + '(' + item.copies + '份)' }}
               <div class="divPrice">
                 <span>￥</span><span>{{ Number(item.price || 0).toFixed(2) }}</span>
@@ -326,6 +328,14 @@
           <img src="./images/close.png"/>
         </div>
       </van-dialog>
+
+      <!-- ====== 菜品/套餐图片大图预览 ====== -->
+      <!-- 修改点：复用 my-evaluations.html 权威模式，detailsDialog/setMealDialog 内小图点击放大 -->
+      <van-image-preview
+        :show.sync="previewShow"
+        :images="previewImages"
+        :start-position="previewIndex"
+      ></van-image-preview>
 
     <!-- ====== 搜索浮层 ====== -->
     <div class="search-overlay" v-if="searchShow" @click.self="closeSearch">
@@ -531,6 +541,10 @@
               suggestionTimer: null,
               // 修改点：未读消息数量（消息铃铛角标）
               unreadMsgCount: 0,
+              // 修改点：菜品/套餐图片大图预览
+              previewShow: false,
+              previewImages: [],
+              previewIndex: 0,
             }
           },
           computed:{
@@ -601,6 +615,13 @@
             imgError(e){
               if (e.target.src.indexOf('/front/images/noImg.png') >= 0) return
               e.target.src = './images/noImg.png'
+            },
+            // 修改点：菜品/套餐图片大图预览（van-image-preview），复用 my-evaluations.html 权威模式
+            previewDishImage(url){
+              if (!url) return
+              this.previewImages = [url]
+              this.previewIndex = 0
+              this.previewShow = true
             },
             // 修改点：加载智能推荐菜品
             loadRecommendations(){

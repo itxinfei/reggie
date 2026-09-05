@@ -1,5 +1,8 @@
-/* ---- 地址管理页面样式 ---- */
-/* 修改点：使用全局CSS变量统一品牌色 */
+/* ---- 地址管理页面样式 v5 ---- */
+/* 修改点：卡片重构为三区块布局（标签+地址 / 收货人 / 操作栏），
+   移除绝对定位编辑图标与裸 divSplit，改用文档流操作栏；
+   --addr-tag-* 令牌自包含定义于 #address 作用域 —— 修复此前仅编辑页
+   加载 address-edit.css 才存在这些变量、列表页标签无背景的隐性 bug。 */
 
 /* 页面全局覆盖 */
 body.scrollable-page {
@@ -7,6 +10,25 @@ body.scrollable-page {
   background: transparent;
   max-width: none;
   height: auto;
+}
+
+/* ========== 地址页令牌（自包含，与 address-edit.css :root 同值） ========== */
+#address {
+  /* 标签四色（品牌金/家橙/学校绿/无灰）— 公司标签为品牌金色，避免蓝色违反品牌色 */
+  --addr-tag-company-gradient: linear-gradient(135deg, #fff5d6, #ffe89e);
+  --addr-tag-company-border: #f7c948;
+  --addr-tag-company-shadow: rgba(255, 178, 0, 0.18);
+  --addr-tag-company-fg: #a36d00;
+
+  --addr-tag-home-gradient: linear-gradient(135deg, #fff7e6, #ffedc8);
+  --addr-tag-home-border: #f0c060;
+  --addr-tag-home-shadow: rgba(255, 154, 0, 0.12);
+
+  --addr-tag-school-gradient: linear-gradient(135deg, #e6faf3, #ccf0e2);
+  --addr-tag-school-border: #7fd4b0;
+  --addr-tag-school-shadow: rgba(7, 193, 96, 0.12);
+
+  --addr-tag-none-gradient-end: #eee;
 }
 
 /* ========== 顶部标题栏 ========== */
@@ -59,16 +81,22 @@ body.scrollable-page {
 #address .divContent .divItem {
   min-height: 128rem;
   background: var(--bg-card);
-  border-radius: 12rem;
+  border-radius: var(--radius-lg);
   margin-top: 10rem;
   margin-left: 12rem;
   margin-right: 12rem;
-  padding: 14rem 48rem 14rem 16rem;
+  padding: 14rem 16rem;
   position: relative;
   box-shadow: 0 2rem 10rem rgba(0, 0, 0, 0.05);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   border-left: 3px solid transparent;
+}
+
+/* 修改点：默认地址卡片 —— 金色左边框常驻 + 轻微金色投影，一眼可辨 */
+#address .divContent .divItem.itemDefault {
+  border-left-color: var(--color-primary);
+  box-shadow: 0 2rem 12rem rgba(255, 194, 0, 0.14);
 }
 
 #address .divContent .divItem:active {
@@ -77,53 +105,17 @@ body.scrollable-page {
   border-left-color: var(--color-primary);
 }
 
-/* ---- 编辑按钮 ---- */
-/* 修改点：位图 edit.png → 图标字体 ri-edit-line，尺寸/配色随令牌，消除模糊底图 */
-#address .divContent .divItem .btnEdit,
-#address .divContent .divItem .ri-edit-line {
-  font-family: remixicon !important;
-  font-style: normal;
-  font-size: 20rem;
-  line-height: 1;
-  width: 24rem;
-  height: 24rem;
-  position: absolute;
-  top: 20rem;
-  right: 20rem;
-  cursor: pointer;
-  color: var(--color-text-hint);
-  transition: all 0.25s;
-}
-#address .divContent .divItem .btnEdit:active,
-#address .divContent .divItem .ri-edit-line:active {
-  opacity: 1;
-  transform: scale(1.15);
-  color: var(--color-primary);
+/* ---- 顶部：标签 + 地址 ---- */
+#address .divContent .divItem .addrTop {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
 }
 
-/* ---- 地址信息 ---- */
-#address .divContent .divItem .divAddress {
-  font-size: 14rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 400;
-  text-align: left;
-  color: var(--color-text-primary);
-  line-height: 22rem;
-  padding-top: 16rem;
-  /* 修改点：允许两行显示，省市区+详细地址可能较长 */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  width: calc(100% - 70rem);
-  max-width: 280rem;
-  min-height: 44rem;
-}
-
-/* ---- 标签通用样式 ---- */
-#address .divContent .divItem .divAddress span {
-  width: auto;
+/* 修改点：标签与地址文本分离为独立 class（addrTag/addrText），
+   替代原 .divAddress 内混排 —— 标签不再参与文本折行计算 */
+#address .divContent .divItem .addrTag {
+  flex-shrink: 0;
   min-width: 36rem;
   height: 22rem;
   font-size: 11rem;
@@ -132,92 +124,144 @@ body.scrollable-page {
   text-align: center;
   line-height: 22rem;
   padding: 0 8rem;
-  margin-right: 6rem;
+  margin-right: 8rem;
+  margin-top: 2rem;
   border-radius: 11rem;
 }
 
-/* 标签颜色 — 与编辑页统一（复用 address-edit.css 定义的 --addr-tag-* 令牌） */
-#address .divContent .divItem .divAddress .spanCompany {
+#address .divContent .divItem .addrText {
+  flex: 1;
+  min-width: 0;
+  font-size: 14rem;
+  font-family: var(--font-family-body);
+  font-weight: 400;
+  text-align: left;
+  color: var(--color-text-primary);
+  line-height: 22rem;
+  /* 修改点：允许两行显示，省市区+详细地址可能较长 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* 标签颜色 — 与编辑页统一（令牌自包含于 #address 作用域，见文件头） */
+#address .divContent .divItem .addrTag.spanCompany {
   background: var(--addr-tag-company-gradient);
-  /* 与地址编辑页 .tagCompany 深金棕文字保持一致 */
   color: var(--addr-tag-company-fg);
 }
-#address .divContent .divItem .divAddress .spanHome {
+#address .divContent .divItem .addrTag.spanHome {
   background: var(--addr-tag-home-gradient);
   color: var(--color-primary-dark);
 }
-#address .divContent .divItem .divAddress .spanSchool {
+#address .divContent .divItem .addrTag.spanSchool {
   background: var(--addr-tag-school-gradient);
   color: var(--color-success);
 }
-#address .divContent .divItem .divAddress .spanNone {
+#address .divContent .divItem .addrTag.spanNone {
   background: linear-gradient(135deg, var(--bg-hover), var(--addr-tag-none-gradient-end));
   color: var(--color-text-disabled);
 }
 
-/* ---- 收货人信息 ---- */
-#address .divContent .divItem .divUserPhone {
-  margin-top: 6rem;
-}
-
-#address .divContent .divItem .divUserPhone span {
-  height: 20rem;
-  font-size: 14rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 400;
-  text-align: left;
-  color: var(--color-text-hint);
+/* ---- 中部：收货人信息 ---- */
+#address .divContent .divItem .addrContact {
+  margin-top: 8rem;
+  display: flex;
+  align-items: center;
   line-height: 20rem;
-  margin-right: 10rem;
 }
 
-#address .divContent .divItem .divUserPhone span:first-child {
-  margin-right: 2rem;
+/* 修改点：收货人姓名加大加粗突出，性别弱化为辅助文字，电话用等宽数字字体 */
+#address .divContent .divItem .addrContact .consignee {
+  font-size: 15rem;
+  font-family: var(--font-family-title);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-right: 8rem;
+}
+
+#address .divContent .divItem .addrContact .sexText {
+  font-size: 13rem;
   color: var(--color-text-secondary);
+  margin-right: 8rem;
 }
 
-/* ---- 分割线 ---- */
-#address .divContent .divItem .divSplit {
-  height: 1px;
-  background: var(--bg-hover);
-  border: 0;
-  margin: 10rem 0 8rem;
+#address .divContent .divItem .addrContact .phone {
+  font-size: 14rem;
+  font-family: var(--font-family-number), var(--font-family-base);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.5rem;
 }
 
-/* ---- 默认地址行 ---- */
+/* ---- 底部：操作栏（默认单选 + 编辑） ---- */
+/* 修改点：操作栏 —— 上边框替代原 .divSplit，默认单选居左、编辑图标居右，
+   两者都在文档流中，长地址不再遮挡编辑入口 */
+#address .divContent .divItem .divActionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12rem;
+  padding-top: 12rem;
+  border-top: 1px solid var(--border-light);
+}
+
 #address .divContent .divItem .divDefault {
-  height: 20rem;
+  display: flex;
+  align-items: center;
   font-size: 12rem;
-  font-family: PingFangSC, PingFangSC-Regular;
-  font-weight: 400;
-  text-align: left;
   color: var(--color-text-hint);
-  line-height: 20rem;
   cursor: pointer;
   user-select: none;
   transition: color 0.2s;
 }
+/* 修改点：默认地址行 —— 选中态整行金色 + 文案加粗 */
+#address .divContent .divItem .divDefault.isDefault {
+  color: var(--color-primary);
+}
+#address .divContent .divItem .divDefault.isDefault .defaultText {
+  font-weight: 600;
+}
 #address .divContent .divItem .divDefault:active { color: var(--color-text-primary); }
 
-#address .divContent .divItem .divDefault img,
 #address .divContent .divItem .divDefault i {
   height: 20rem;
   width: 20rem;
   margin-right: 4rem;
-  vertical-align: bottom;
-}
-/* 修改点：位图 checked_*.png → 图标字体，选中态金色、未选中灰色 */
-#address .divContent .divItem .divDefault i {
   font-family: remixicon !important;
   font-style: normal;
   font-size: 20rem;
   line-height: 1;
 }
+/* 修改点：位图 checked_*.png → 图标字体，选中态金色、未选中灰色 */
 #address .divContent .divItem .divDefault .ri-checkbox-circle-fill {
   color: var(--color-primary);
 }
 #address .divContent .divItem .divDefault .ri-checkbox-blank-circle-line {
   color: var(--color-text-disabled);
+}
+
+/* ---- 编辑按钮 ---- */
+/* 修改点：编辑图标由绝对定位改入操作栏文档流；配色随令牌，消除模糊底图 */
+#address .divContent .divItem .ri-edit-line {
+  font-family: remixicon !important;
+  font-style: normal;
+  font-size: 18rem;
+  line-height: 1;
+  width: 24rem;
+  height: 24rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-hint);
+  border-radius: 50%;
+  transition: all 0.25s;
+}
+#address .divContent .divItem .ri-edit-line:active {
+  color: var(--color-primary);
+  background: rgba(255, 194, 0, 0.12);
+  transform: scale(1.1);
 }
 
 /* ========== 空状态 ========== */
@@ -248,14 +292,14 @@ body.scrollable-page {
 
 #address .emptyState .emptyText {
   font-size: 16rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: var(--font-family-body);
   color: var(--color-text-hint);
   margin-bottom: 12rem;
 }
 
 #address .emptyState .emptyHint {
   font-size: 14rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: var(--font-family-body);
   color: var(--color-primary);
   cursor: pointer;
   text-decoration: underline;
@@ -268,7 +312,7 @@ body.scrollable-page {
   background: var(--color-primary-gradient);
   border-radius: 21rem;
   font-size: 15rem;
-  font-family: PingFangSC, PingFangSC-Semibold;
+  font-family: var(--font-family-title);
   font-weight: 600;
   text-align: center;
   color: var(--color-text-primary);
@@ -297,11 +341,8 @@ body.scrollable-page {
   #address .divContent .divItem {
     margin-left: 6rem;
     margin-right: 6rem;
-    padding-left: 10rem;
-  }
-
-  #address .divContent .divItem .divAddress {
-    width: calc(100% - 60rem);
+    padding-left: 12rem;
+    padding-right: 12rem;
   }
 
   #address .divBottom {
@@ -320,12 +361,6 @@ body.scrollable-page {
     max-width: 440rem;
     margin-left: auto;
     margin-right: auto;
-  }
-
-  /* 修改点：桌面端卡片更宽时放开地址文本区 max-width，避免右侧大片留白（2026-09-01） */
-  #address .divContent .divItem .divAddress {
-    max-width: none;
-    width: calc(100% - 70rem);
   }
 
   #address .divBottom {
