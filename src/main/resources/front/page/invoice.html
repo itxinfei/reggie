@@ -92,9 +92,10 @@
         <van-field v-model="form.type" label="抬头类型" readonly is-link @click="typePickerShow = true" :placeholder="form.type === 1 ? '个人' : '企业'"></van-field>
         <van-field v-model="form.title" label="抬头名称" placeholder="个人填姓名，企业填公司名称" maxlength="50"></van-field>
         <van-field v-model="form.taxNumber" label="税号" placeholder="企业填写纳税人识别号（个人可留空）" maxlength="30"></van-field>
-        <van-button type="warning" plain block size="small" @click="saveTitle" :loading="saving">保存抬头</van-button>
+        <van-button type="primary" plain block size="small" @click="saveTitle" :loading="saving">保存抬头</van-button>
 
-        <van-button class="apply-btn" type="danger" block :disabled="!selectedTitleId" :loading="submitting" @click="apply">申请开票</van-button>
+        <!-- 修改点：主 CTA 语义色 danger红/warning橙 → primary金（index.css 品牌化为金底深字） -->
+        <van-button class="apply-btn" type="primary" block :disabled="!selectedTitleId" :loading="submitting" @click="apply">申请开票</van-button>
         <div class="tip">仅已完成订单可申请开票，提交后商家将在 3 个工作日内为您开具电子发票。</div>
       </div>
     </div>
@@ -111,7 +112,7 @@
         <van-field v-model="editForm.type" label="抬头类型" readonly is-link @click="editTypePickerShow = true" :placeholder="editForm.type === 1 ? '个人' : '企业'"></van-field>
         <van-field v-model="editForm.title" label="抬头名称" placeholder="个人填姓名，企业填公司名称" maxlength="50"></van-field>
         <van-field v-model="editForm.taxNumber" label="税号" placeholder="企业填写纳税人识别号（个人可留空）" maxlength="30"></van-field>
-        <van-button type="warning" block @click="saveEditTitle" :loading="editing">保存修改</van-button>
+        <van-button type="primary" block @click="saveEditTitle" :loading="editing">保存修改</van-button>
       </div>
     </van-popup>
 

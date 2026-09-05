@@ -12,6 +12,9 @@
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
         <link rel="stylesheet" href="../styles/index.css" />
+        <!-- 修改点：补充加载 remixicon.css + fallback —— 本页新增 ri-edit-line / ri-checkbox-* 图标字体，此前仅位图未加载字体 -->
+        <link rel="stylesheet" href="../styles/remixicon.css" />
+        <link rel="stylesheet" href="../styles/remixicon-fallback.css" />
         <!--本页面内容的样式-->
         <link rel="stylesheet" href="./../styles/address.css" />
     </head>
@@ -38,11 +41,13 @@
                         <span>{{item.sex === '0' ? '女士' : '先生'}}</span>
                         <span>{{item.phone}}</span>
                     </div>
-                    <img src="./../images/edit.png" @click.stop.prevent="toAddressEditPage(item)" class="btnEdit" alt="编辑地址"/>
+                    <!-- 修改点：位图 edit.png → 图标字体 ri-edit-line，消除模糊底图 -->
+                    <i class="ri-edit-line" @click.stop.prevent="toAddressEditPage(item)" alt="编辑地址"></i>
                     <div class="divSplit"></div>
                     <div class="divDefault" @click.stop="item.isDefault !== 1 && setDefaultAddress(item)">
-                        <img src="./../images/checked_true.png" v-if="item.isDefault === 1" alt="默认地址">
-                        <img src="./../images/checked_false.png" v-else alt="设为默认">设为默认地址
+                        <!-- 修改点：位图 checked_true/checked_false.png → 图标字体，选中态金色圆点 / 未选中灰色圆环 -->
+                        <i class="ri-checkbox-circle-fill" v-if="item.isDefault === 1"></i>
+                        <i class="ri-checkbox-blank-circle-line" v-else></i>设为默认地址
                     </div>
                 </div>
                 <!-- 修改点：空状态提示 -->

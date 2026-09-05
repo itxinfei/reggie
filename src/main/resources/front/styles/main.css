@@ -139,8 +139,13 @@
 }
 .top-bar .msg-bell .bell-icon,
 .top-bar .ai-entry .ai-icon {
+  /* 修改点：emoji → RemixIcon 图标后，用字体着色替代 emoji 渲染色；
+     颜色继承自头部文字（深色，金底上可读），remixicon.css 缺失时回退到 fallback 的 Unicode glyph */
+  font-family: remixicon;
   font-size: 17rem;
   line-height: 1;
+  font-style: normal;
+  color: inherit;
 }
 
 /* 消息未读角标 */

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
     <head>
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -10,6 +10,9 @@
         <script src="./../js/base.js"></script>
         <!-- 引入样式  -->
         <link rel="stylesheet" href="../styles/index.css" />
+        <!-- 修改点：补充加载 remixicon（no_wifi.png 位图 → ri-wifi-off-line 图标，随主题缩放不失真） -->
+        <link rel="stylesheet" href="../styles/remixicon.css" />
+        <link rel="stylesheet" href="../styles/remixicon-fallback.css" />
         <!--本页面内容的样式-->
         <link rel="stylesheet" href="./../styles/no-wify.css" />
     </head>
@@ -21,8 +24,9 @@
                 </div>
             </div>
             <div class="divContent">
-                <img src="./../images/no_wifi.png" alt="无网络"/>
+                <i class="ri-wifi-off-line wifi-icon" aria-hidden="true"></i>
                 <div class="divDesc">网络连接异常</div>
+                <div class="divSub">请检查网络连接后点击重试</div>
                 <div class="btnRefresh" @click="toPagePrev">点击刷新</div>
             </div>
         </div>

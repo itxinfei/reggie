@@ -40,22 +40,36 @@
   box-sizing: border-box;
 }
 
-#no_wifi .divContent img {
-  width: 239rem;
-  height: 130rem;
+/* 修改点：位图 no_wifi.png → ri-wifi-off-line 图标 */
+#no_wifi .divContent .wifi-icon {
+  display: block;
   margin-top: 0;
-  margin-bottom: 19rem;
+  margin-bottom: 8rem;
+  font-size: 120rem;
+  line-height: 1;
+  color: var(--color-text-disabled);
 }
 
 #no_wifi .divContent .divDesc {
-  height: 33rem;
+  height: auto;
   font-size: 24rem;
   font-family: var(--font-family-title);
   font-weight: 500;
   text-align: center;
   color: var(--color-text-primary);
   line-height: 33rem;
-  margin-bottom: 20rem;
+  margin-top: 16rem;
+  margin-bottom: 8rem;
+}
+
+/* 修改点：补充副文案，明确引导下一步操作（此前仅有主文案 + 按钮，信息密度低） */
+#no_wifi .divContent .divSub {
+  font-size: var(--font-size-base);
+  font-family: var(--font-family-body);
+  text-align: center;
+  color: var(--color-text-hint);
+  line-height: 1.5;
+  margin-bottom: 24rem;
 }
 
 #no_wifi .divContent .btnRefresh {
@@ -70,9 +84,10 @@
   color: var(--color-text-primary);
   line-height: 36rem;
   cursor: pointer;
-  transition: opacity var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 #no_wifi .divContent .btnRefresh:active {
+  transform: scale(0.95);
   opacity: 0.8;
 }

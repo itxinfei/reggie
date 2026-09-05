@@ -125,10 +125,17 @@
   border: 0;
 }
 
-#user .divLinks .item img {
-  width: 18rem;
-  height: 18rem;
-  margin-right: 5rem;
+/* 修改点：菜单位图 png → ri-* 矢量图标，图标统一用品牌金色 + 激活加深 */
+#user .divLinks .item .link-icon {
+  font-size: 18rem;
+  line-height: 1;
+  margin-right: 7rem;
+  color: var(--color-primary);
+  transition: color var(--transition-fast);
+}
+
+#user .divLinks .item:active .link-icon {
+  color: var(--color-primary-dark);
 }
 
 #user .divLinks .item span {

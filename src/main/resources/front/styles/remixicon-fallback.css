@@ -14,6 +14,9 @@
 .ri-check-line::before { content: "\2705"; }
 .ri-close-line::before { content: "\274C"; }
 .ri-edit-line::before { content: "\270F"; }
+/* 地址页默认地址选中图标：选中态实心金点 / 未选中空心灰环 */
+.ri-checkbox-circle-fill::before { content: "\2B24"; }
+.ri-checkbox-blank-circle-line::before { content: "\25EF"; }
 .ri-star-line::before { content: "\2B50"; }
 .ri-shopping-bag-line::before { content: "\1F6CD"; }
 .ri-map-pin-time-line::before { content: "\1F570"; }

@@ -44,6 +44,7 @@
 }
 
 #order .divBody {
+  position: relative;
   margin: 0 var(--spacing-md) var(--spacing-md);
   background: var(--bg-card);
   border-radius: var(--radius-md);
@@ -52,6 +53,18 @@
   height: calc(100% - var(--header-height) - 44rem);
   overflow-y: auto;
   box-shadow: var(--shadow-card);
+}
+
+/* 修改点：首屏加载骨架屏覆盖层（覆盖在空列表上，不阻断 van-list 渲染） */
+#order .divBody .list-skeleton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-card);
+  padding: var(--spacing-md);
+  z-index: 5;
 }
 
 /* 修改点：美团风格状态Tab筛选栏 */
@@ -169,7 +182,7 @@
   display: flex;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 8rem 0;
+  gap: 8rem 12rem;
   margin-bottom: 17rem;
   margin-top: var(--spacing-xl);
 }

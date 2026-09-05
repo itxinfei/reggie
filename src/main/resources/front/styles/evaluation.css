@@ -63,7 +63,8 @@
 }
 
 .eval-stars .star {
-  font-size: 14px;
+  /* 修改点：14px → 22px，与提交弹窗 .star-rating .star-item 星级尺寸统一，提升列表评分可读性 */
+  font-size: 22px;
   color: var(--color-text-disabled);
 }
 
@@ -362,10 +363,11 @@
 }
 
 /* 写评价入口栏 */
+/* 修改点：金底白字的"去评价"主按钮 → 描边态白底金边金字，与提交弹窗取消按钮同构，降低金底区域的金色面积占比 */
 .write-eval-bar {
   margin: 10px 12px;
   padding: 12px;
-  background: var(--color-primary-light);
+  background: var(--color-primary-tint);
   border: 1px solid rgba(255, 194, 0, 0.3);
   border-radius: 8px;
   display: flex;
@@ -378,11 +380,19 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--color-warning);
+  color: var(--color-text-primary);
   line-height: 20px;
 }
 .write-eval-bar .write-eval-info i {
   font-size: 18px;
+  color: var(--color-primary-dark);
+}
+/* 入口按钮：描边态（白底 + 金边 + 深金文字），点击反馈走 Vant 默认 plain 按压态 */
+.write-eval-bar .van-button--primary.van-button--plain {
+  background-color: var(--color-text-white) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary-dark) !important;
+  font-weight: 600;
 }
 
 /* ================================================================

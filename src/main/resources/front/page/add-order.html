@@ -4,7 +4,7 @@
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
-        <title>确认订单 - 确认订单</title>
+        <title>确认订单 - 瑞吉外卖</title>
         <link rel="icon" href="./../images/favico.ico">
         <!--不同屏幕尺寸根字体设置-->
         <script src="./../js/base.js"></script>
@@ -21,11 +21,12 @@
         <!-- 修改点：移除ElementUI v-loading，改用CSS加载遮罩 -->
         <div id="add_order" class="app" style="position:relative;">
             <div v-if="loading" class="loading-overlay">
+                <!-- 修改点：全局 .loading-overlay 为 absolute 定位，需定位父级限定作用范围 -->
                 <div class="loading-spinner"></div>
             </div>
             <div class="divHead">
                 <div class="divTitle">
-                    <i class="icon-back-arrow" @click="goBack"></i>瑞吉外卖
+                    <i class="icon-back-arrow" @click="goBack"></i>确认订单
                 </div>
             </div>
             <div class="divContent">

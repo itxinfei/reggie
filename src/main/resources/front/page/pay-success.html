@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
     <head>
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -11,6 +11,8 @@
         <!-- 引入样式  -->
         <link rel="stylesheet" href="../styles/vant.min.css" />
         <link rel="stylesheet" href="../styles/index.css" />
+        <!-- 修改点：补充加载 remixicon.css（此前仅加载 fallback，ri-share-line 等图标可能不渲染） -->
+        <link rel="stylesheet" href="../styles/remixicon.css" />
         <link rel="stylesheet" href="../styles/remixicon-fallback.css" />
         <!--本页面内容的样式-->
         <link rel="stylesheet" href="./../styles/pay-success.css" />
@@ -25,7 +27,8 @@
                 </div>
             </div>
             <div class="divContent">
-                <img src="./../images/success.png" alt="支付成功"/>
+                <!-- 修改点：位图 success.png → 语义绿 RemixIcon（对齐 --color-success，随主题缩放不失真） -->
+                <i class="ri-checkbox-circle-fill success-icon" aria-hidden="true"></i>
                 <div class="divSuccess">下单成功</div>
                 <div class="divDesc">预计{{finishTime}}到达</div>
                 <div class="divDesc1">后厨正在加紧制作中，请耐心等待~</div>

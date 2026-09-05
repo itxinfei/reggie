@@ -78,19 +78,27 @@ body.scrollable-page {
 }
 
 /* ---- 编辑按钮 ---- */
-#address .divContent .divItem .btnEdit {
-  width: 18rem;
-  height: 18rem;
+/* 修改点：位图 edit.png → 图标字体 ri-edit-line，尺寸/配色随令牌，消除模糊底图 */
+#address .divContent .divItem .btnEdit,
+#address .divContent .divItem .ri-edit-line {
+  font-family: remixicon !important;
+  font-style: normal;
+  font-size: 20rem;
+  line-height: 1;
+  width: 24rem;
+  height: 24rem;
   position: absolute;
   top: 20rem;
-  right: 24rem;
+  right: 20rem;
   cursor: pointer;
-  opacity: 0.45;
+  color: var(--color-text-hint);
   transition: all 0.25s;
 }
-#address .divContent .divItem .btnEdit:active {
+#address .divContent .divItem .btnEdit:active,
+#address .divContent .divItem .ri-edit-line:active {
   opacity: 1;
   transform: scale(1.15);
+  color: var(--color-primary);
 }
 
 /* ---- 地址信息 ---- */
@@ -191,11 +199,25 @@ body.scrollable-page {
 }
 #address .divContent .divItem .divDefault:active { color: var(--color-text-primary); }
 
-#address .divContent .divItem .divDefault img {
+#address .divContent .divItem .divDefault img,
+#address .divContent .divItem .divDefault i {
   height: 20rem;
   width: 20rem;
   margin-right: 4rem;
   vertical-align: bottom;
+}
+/* 修改点：位图 checked_*.png → 图标字体，选中态金色、未选中灰色 */
+#address .divContent .divItem .divDefault i {
+  font-family: remixicon !important;
+  font-style: normal;
+  font-size: 20rem;
+  line-height: 1;
+}
+#address .divContent .divItem .divDefault .ri-checkbox-circle-fill {
+  color: var(--color-primary);
+}
+#address .divContent .divItem .divDefault .ri-checkbox-blank-circle-line {
+  color: var(--color-text-disabled);
 }
 
 /* ========== 空状态 ========== */

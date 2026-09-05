@@ -61,19 +61,21 @@
 
     /* loading */
     .loading-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      /* 修改点：自建 loading 遮罩 → 复用全局 .loading-overlay（index.css）的 position:fixed 整屏覆盖，此前为局部绝对定位，列表下方空白区仍会露白 */
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(255,255,255,0.6);
       z-index: 999;
       display: flex; align-items: center; justify-content: center;
     }
     .loading-spinner {
+      /* 修改点：复用全局 .loading-spinner 的 loading-spin 动画（index.css），移除重复 keyframes */
       width: 28rem; height: 28rem;
       border: 3rem solid var(--border-light);
       border-top-color: var(--color-primary);
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: loading-spin 0.8s linear infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -93,7 +95,7 @@
       <div v-for="item in records" :key="item.id" class="inv-card" @click="goInvoice(item)">
         <div class="card-head">
           <span class="title-name">{{ item.title || '未填写抬头' }}</span>
-          <van-tag :type="tagType(item.status)" size="medium">{{ statusText(item.status) }}</van-tag>
+          <van-tag :style="'background:' + stateColor(item.status) + '; color:' + stateTextColor(item.status) + '; border:none;'" size="medium">{{ statusText(item.status) }}</van-tag>
         </div>
         <div class="row">
           <span class="label">订单号</span>
@@ -179,10 +181,22 @@
           return '未知'
         },
         // Vant 2 van-tag 合法类型：default/primary/success/danger/warning
+        // 修改点：stateColor 优先使用品牌令牌语义色（令牌绿/红由全局 --van-* 变量统一），Vant 内置色作为兜底
+        stateColor: function(s) {
+          if (s == 1) return 'rgba(255,179,0,0.1)' // 待开具：警告黄
+          if (s == 2) return 'rgba(7,193,96,0.1)'  // 已开具：成功绿
+          return 'var(--bg-input)'                  // 待申请/已作废：中性灰
+        },
         tagType: function(s) {
-          if (s == 1) return 'warning'
-          if (s == 2) return 'success'
+          if (s == 1) return 'default'
+          if (s == 2) return 'default'
           return 'default'
+        },
+        // 状态文字色：1 警告黄 / 2 成功绿 / 其余中性灰
+        stateTextColor: function(s) {
+          if (s == 1) return 'var(--color-warning)'
+          if (s == 2) return 'var(--color-success)'
+          return 'var(--color-text-hint)'
         },
         // 时间格式化（兼容后端 LocalDateTime 的 ISO 带 T 格式）
         fmtTime: function(val) {

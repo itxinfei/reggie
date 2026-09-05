@@ -94,7 +94,11 @@
 }
 .ai-container.dark-mode .ai-header {
     background: linear-gradient(135deg, var(--ai-dark-bg-elevated) 0%, var(--ai-dark-bg-deep) 100%);
+    /* 修改点：暗色头部深底 → 亮色文字，与亮色模式金底深字区分层级 */
+    color: var(--ai-dark-text);
 }
+.ai-container.dark-mode .ai-header .header-btn { color: var(--ai-dark-text); }
+.ai-container.dark-mode .ai-header .title { color: var(--ai-dark-text); }
 .ai-container.dark-mode .scene-tabs {
     background: var(--ai-dark-bg-elevated);
     border-bottom-color: var(--ai-dark-border);
@@ -202,7 +206,7 @@
 /* ========== 顶部栏 ========== */
 .ai-header {
     background: var(--color-primary-gradient);
-    color: var(--color-text-white);
+    color: var(--color-text-primary);
     padding: var(--spacing-md) var(--spacing-lg);
     display: flex;
     align-items: center;
@@ -252,7 +256,7 @@
 }
 .sidebar-header h3 { font-size: var(--font-size-lg); color: var(--color-text-primary); }
 .sidebar-header .new-chat-btn {
-    padding: 6px 14px; background: var(--color-primary); color: var(--color-text-white); border: none;
+    padding: 6px 14px; background: var(--color-primary); color: var(--color-text-primary); border: none;
     border-radius: var(--radius-lg); font-size: 13px; cursor: pointer;
 }
 .sidebar-list { flex: 1; overflow-y: auto; padding: var(--spacing-sm); }
@@ -318,7 +322,7 @@
     background: var(--bg-card); border: 1px solid var(--color-primary-dark); color: var(--color-primary-dark);
     cursor: pointer; white-space: nowrap; transition: all 0.2s;
 }
-.quick-tip:active { background: var(--color-primary); color: var(--color-text-white); }
+.quick-tip:active { background: var(--color-primary); color: var(--color-text-primary); }
 .quick-tip.profile-tag {
     background: var(--color-primary-tint); border-color: var(--color-primary-dark); color: var(--color-primary-dark);
 }
@@ -353,7 +357,7 @@
     font-size: 18px; flex-shrink: 0;
 }
 .chat-msg.assistant .chat-avatar { background: var(--color-primary-tint); }
-.chat-msg.user .chat-avatar { background: var(--color-primary); color: var(--color-text-white); }
+.chat-msg.user .chat-avatar { background: var(--color-primary); color: var(--color-text-primary); }
 .chat-bubble {
     padding: 10px 14px; border-radius: var(--radius-lg); font-size: var(--font-size-md);
     line-height: 1.7; word-break: break-word;
@@ -362,7 +366,7 @@
     background: var(--bg-page); border-top-left-radius: 4px;
 }
 .chat-msg.user .chat-bubble {
-    background: var(--color-primary); color: var(--color-text-white); border-top-right-radius: 4px;
+    background: var(--color-primary); color: var(--color-text-primary); border-top-right-radius: 4px;
 }
 
 /* 消息操作按钮（复制） */
@@ -414,7 +418,7 @@
 .dish-card .dish-price { font-size: var(--font-size-md); color: var(--color-price); font-weight: 600; margin-top: 4px; }
 .dish-card .add-btn {
     width: 28px; height: 28px; border-radius: var(--radius-round); background: var(--color-primary);
-    color: var(--color-text-white); border: none; font-size: var(--font-size-lg); cursor: pointer;
+    color: var(--color-text-primary); border: none; font-size: var(--font-size-lg); cursor: pointer;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 
@@ -505,7 +509,7 @@
 .send-btn {
     width: 40px; height: 40px; border-radius: var(--radius-round);
     background: var(--color-primary-gradient);
-    color: var(--color-text-white); border: none; font-size: 18px; cursor: pointer;
+    color: var(--color-text-primary); border: none; font-size: 18px; cursor: pointer;
     flex-shrink: 0; display: flex; align-items: center; justify-content: center;
     transition: all 0.2s; user-select: none;
 }

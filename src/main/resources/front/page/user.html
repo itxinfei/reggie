@@ -8,6 +8,9 @@
     <link rel="icon" href="./../images/favico.ico">
     <link rel="stylesheet" href="../styles/index.css" />
     <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <!-- 修改点：加载 remixicon 图标库，菜单位图 png → ri-* 矢量图标 -->
+    <link rel="stylesheet" href="../styles/remixicon.css" />
+    <link rel="stylesheet" href="../styles/remixicon-fallback.css" />
     <link rel="stylesheet" href="./../styles/user.css" />
     <style>
         /* 会员卡片 */
@@ -130,43 +133,43 @@
 
             <div class="divLinks">
                 <div class="item" @click="goMemberCenter">
-                    <img src="./../images/locations.png" alt="会员中心"/>
+                    <i class="ri-vip-crown-2-line link-icon" aria-hidden="true"></i>
                     <span>会员中心</span>
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toAddressPage">
-                    <img src="./../images/locations.png" alt="地址管理"/>
+                    <i class="ri-map-pin-line link-icon" aria-hidden="true"></i>
                     <span>地址管理</span>
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toMessagePage">
-                    <img src="./../images/orders.png" alt="消息中心"/>
+                    <i class="ri-notification-2-line link-icon" aria-hidden="true"></i>
                     <span>消息中心</span>
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toOrderPage">
-                    <img src="./../images/orders.png" alt="历史订单"/>
+                    <i class="ri-file-list-3-line link-icon" aria-hidden="true"></i>
                     <span>历史订单</span>
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toFrequentPage">
-                    <img src="./../images/orders.png" alt="常购清单"/>
+                    <i class="ri-shopping-basket-line link-icon" aria-hidden="true"></i>
                     <span>常购清单</span>
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toEvaluationPage">
-                    <img src="./../images/orders.png" alt="我的评价"/>
+                    <i class="ri-star-line link-icon" aria-hidden="true"></i>
                     <span>我的评价</span>
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toInvoicePage">
-                    <img src="./../images/orders.png" alt="我的发票"/>
+                    <i class="ri-receipt-line link-icon" aria-hidden="true"></i>
                     <span>我的发票</span>
                     <i class="icon-arrow-right"></i>
                 </div>

@@ -36,14 +36,14 @@
           </div>
           <!-- 修改点：消息铃铛入口 + 未读角标 -->
           <div class="msg-bell" @click="toMessagePage">
-            <span class="bell-icon">&#x1F514;</span>
+            <i class="bell-icon ri-notification-line" aria-hidden="true"></i>
             <span v-if="unreadMsgCount > 0" class="msg-badge">
               {{ unreadMsgCount > 99 ? '99+' : unreadMsgCount }}
             </span>
           </div>
           <!-- 修改点：AI点餐助手入口 -->
           <div class="ai-entry" @click="toAIAssistant">
-            <span class="ai-icon">&#x1F916;</span>
+            <i class="ai-icon ri-robot-line" aria-hidden="true"></i>
           </div>
           <div class="user-btn" @click="toUserPage">
             <img :src="userAvatar || './images/headPage.png'" />

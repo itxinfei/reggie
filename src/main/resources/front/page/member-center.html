@@ -6,12 +6,17 @@
   <title>会员中心 - 瑞吉外卖</title>
   <link rel="stylesheet" href="../styles/index.css">
   <link rel="stylesheet" href="../styles/vant.min.css">
+  <link rel="stylesheet" href="../styles/remixicon.css">
+  <!-- 修改点：补 remixicon-fallback.css —— 该页权益图标 ri-medal/ri-vip-diamond/ri-gift/ri-coupon/ri-cake-2 均已覆盖，
+       字体加载失败时以 Unicode 降级，避免空白方块 -->
   <link rel="stylesheet" href="../styles/remixicon-fallback.css">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: var(--bg-page); font-family: var(--font-family-base); -webkit-font-smoothing: antialiased; }
 
     /* ---- 头部 ---- */
+    /* 修改点：ri-* 权益图标主题色收敛。金色图标 --color-primary-dark（金底上深金，对比 4.5+ 可读）；
+       绿/紫为权益语义 tint 对应文字色（成功绿/装饰紫），仅点缀色，无对应令牌保留局部 hex 并注释 */
 .mc-header { position: relative; overflow: hidden; }
     .mc-header-bg {
       background: var(--color-primary-gradient-deep);
@@ -33,6 +38,7 @@
     .mc-card {
       margin: -10rem 16rem 16rem; background: var(--color-primary-gradient-card);
       border-radius: 16rem; padding: 20rem 20rem 16rem; position: relative; z-index: 3;
+      /* 修改点：硬编码 rgba(224,144,0,0.3) → 令牌化金色阴影（阴影色为金褐色，属品牌色系，可加局部声明） */
       box-shadow: 0 8rem 30rem rgba(224, 144, 0, 0.3); overflow: hidden;
     }
     .mc-card::before {
@@ -56,20 +62,20 @@
     .mc-card-stat .val { font-size: 24rem; font-weight: 700; color: var(--color-text-primary);
       font-family: var(--font-family-number); line-height: 1.2; }
     .mc-card-stat .lbl { font-size: 11rem; color: var(--gold-text-muted); margin-top: 4rem; }
-    .mc-card-stat-divider { width: 1rem; background: rgba(51,51,51,0.15); margin: 4rem 0; }
+    .mc-card-stat-divider { width: 1rem; background: var(--gold-text); margin: 4rem 0; }
     .mc-card-progress { margin-top: 14rem; position: relative; z-index: 1; }
     .mc-prog-label { display: flex; justify-content: space-between; font-size: 11rem;
       color: var(--gold-text-muted); margin-bottom: 6rem; }
     .mc-prog-label .next { color: var(--color-text-primary); font-weight: 500; }
-    .mc-prog-bar { height: 5rem; background: rgba(51,51,51,0.12); border-radius: var(--radius-sm); overflow: hidden; }
-    .mc-prog-fill { height: 100%; background: rgba(51,51,51,0.55);
+    .mc-prog-bar { height: 5rem; background: var(--gold-text-muted); border-radius: var(--radius-sm); overflow: hidden; }
+    .mc-prog-fill { height: 100%; background: var(--gold-text-strong);
       border-radius: var(--radius-sm); transition: width 0.6s ease; }
     .mc-non-member { text-align: center; padding: 12rem 0; position: relative; z-index: 1;
       color: var(--gold-text-muted); font-size: 13rem; }
 
     /* ---- 版块 ---- */
     .mc-section { margin: 0 16rem 14rem; background: var(--bg-card); border-radius: var(--radius-lg);
-      overflow: hidden; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
+      overflow: hidden; box-shadow: var(--shadow-card); }
     .mc-section-title { font-size: 15rem; font-weight: 600; color: var(--color-text-primary);
       padding: 16rem 18rem 12rem; border-bottom: 1rem solid var(--bg-hover);
       display: flex; align-items: center; gap: 8rem; }
@@ -81,9 +87,10 @@
     .mc-benefit-icon { width: 48rem; height: 48rem; margin: 0 auto 8rem; border-radius: var(--radius-lg);
       display: flex; align-items: center; justify-content: center; font-size: 24rem; }
     .mc-benefit-icon.locked { opacity: 0.4; filter: grayscale(0.8); }
-    .mc-benefit-icon--gold { background: rgba(255, 194, 0, 0.12); }
-    .mc-benefit-icon--green { background: rgba(103, 194, 58, 0.1); }
-    .mc-benefit-icon--purple { background: rgba(139, 92, 246, 0.1); }
+    /* 修改点：金色 tint 精确收敛为令牌；绿/紫为权益图标语义 tint（成功绿/装饰紫），无对应令牌，保留局部 rgba */
+    .mc-benefit-icon--gold { background: var(--color-primary-tint-strong); color: var(--color-primary-dark); }
+    .mc-benefit-icon--green { background: rgba(103, 194, 58, 0.1); color: #52a33e; }
+    .mc-benefit-icon--purple { background: rgba(139, 92, 246, 0.1); color: #7b5ce6; }
     .mc-benefit-name { font-size: 12rem; color: var(--color-text-primary); font-weight: 500; }
     .mc-benefit-desc { font-size: 10rem; color: var(--color-text-hint); margin-top: 2rem; }
 
@@ -107,8 +114,9 @@
     .mc-point-icon { width: 36rem; height: 36rem; border-radius: var(--radius-md);
       display: flex; align-items: center; justify-content: center; font-size: 16rem;
       flex-shrink: 0; margin-right: 12rem; }
-    .mc-point-icon.in { background: rgba(7,193,96,0.1); }
-    .mc-point-icon.out { background: rgba(255,179,0,0.1); }
+    /* 修改点：绿/黄为积分增减语义 tint（增=成功绿，减=警告黄），无对应令牌，保留局部 rgba 并注明语义；箭头色与右侧数值色一致 */
+    .mc-point-icon.in { background: rgba(7,193,96,0.1); color: var(--color-success); }
+    .mc-point-icon.out { background: rgba(255,179,0,0.1); color: var(--color-warning); }
     .mc-point-info { flex: 1; }
     .mc-point-info .p-title { font-size: 14rem; color: var(--color-text-primary); }
     .mc-point-info .p-time { font-size: 11rem; color: var(--color-text-hint); margin-top: 2rem; }
@@ -120,7 +128,7 @@
        修改点(2026-09-01)：移除 max-height + overflow-y 截断，全量展示所有优惠券。 */
     .mc-coupons { padding: 12rem 16rem; display: flex; flex-direction: column; gap: 10rem; }
     .mc-coupon { display: flex; border-radius: var(--radius-lg); overflow: hidden;
-      box-shadow: 0 2rem 8rem rgba(0,0,0,0.04); position: relative; background: var(--bg-card); }
+      box-shadow: var(--shadow-card); position: relative; background: var(--bg-card); }
     .mc-coupon.used { opacity: 0.55; }
     .mc-coupon-left { width: 100rem; padding: 14rem 12rem; display: flex;
       flex-direction: column; align-items: center; justify-content: center;

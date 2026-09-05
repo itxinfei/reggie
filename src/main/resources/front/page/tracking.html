@@ -119,10 +119,18 @@
             background: var(--bg-hover);
             flex-shrink: 0;
             z-index: 1;
+            transition: all var(--transition-fast);
         }
-        .timeline-item.done .timeline-dot,
-        .timeline-item.active .timeline-dot {
+        /* 已完成步骤：金色圆点 */
+        .timeline-item.done .timeline-dot {
             background: var(--color-primary);
+        }
+        /* 修改点：配送中当前步骤 → 金色圆点放大 + 柔和光环，与已完成 done 区分 */
+        .timeline-item.active .timeline-dot {
+            width: 14rem;
+            height: 14rem;
+            background: var(--color-primary);
+            box-shadow: 0 0 0 4rem var(--color-primary-tint);
         }
         .timeline-line {
             width: 2rem;
@@ -130,8 +138,8 @@
             background: var(--bg-hover);
             margin-top: 4rem;
         }
-        .timeline-item.done .timeline-line,
-        .timeline-item.active .timeline-line {
+        /* 修改点：仅已完成步骤的连接线为金色；active 步骤下方连接的是未完成步骤，保持灰色 */
+        .timeline-item.done .timeline-line {
             background: var(--color-primary);
         }
         .timeline-item:last-child .timeline-line {
@@ -147,8 +155,13 @@
             color: var(--color-text-secondary);
             line-height: 20rem;
         }
+        /* 未开始步骤：弱化为提示灰 */
+        .timeline-item:not(.done):not(.active) .timeline-title {
+            color: var(--color-text-hint);
+        }
+        /* 修改点：配送中当前步骤标题用深色加粗（金色由圆点表达，白底金字对比度不足，改深色保证可读性） */
         .timeline-item.active .timeline-title {
-            color: var(--color-primary);
+            color: var(--color-text-primary);
             font-weight: 600;
         }
         .timeline-time {
@@ -324,7 +337,7 @@
                 <div class="timeline-item"
                      v-for="(step, idx) in timelineSteps"
                      :key="step.status"
-                     :class="getStepClass(step.status)">
+                     :class="[getStepClass(step.status), step.status === currentStatus ? 'active' : '']">
                     <div class="timeline-dot-wrap">
                         <div class="timeline-dot"></div>
                         <div class="timeline-line"></div>
@@ -463,6 +476,11 @@
                     if (isNaN(d.getTime())) return '';
                     const pad = (n) => String(n).padStart(2, '0');
                     return pad(d.getHours()) + ':' + pad(d.getMinutes());
+                },
+                // 当前配送状态（供时间线区分 active 当前步骤）
+                currentStatus() {
+                    if (!this.trackingData) return '';
+                    return this.trackingData.status || '';
                 },
                 hasRiderInfo() {
                     if (!this.trackingData) return false;
