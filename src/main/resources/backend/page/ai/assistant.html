@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 经营分析助手 - 瑞吉外卖管理端</title>
+    <title>AI 经营分析助手 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
     <link rel="stylesheet" href="../../styles/ai-chat.css" />
@@ -439,7 +439,12 @@
                         cancelButtonText: '取消',
                         type: 'warning'
                     }).then(function() {
-                        aiBackendApi.deleteConversation(conv.conversationId).then(function() {
+                        aiBackendApi.deleteConversation(conv.conversationId).then(function(res) {
+                            // 修改点：此前乐观移除不检查后端响应，失败时列表已被误删；补 code 判断
+                            if (!res || res.code !== 1) {
+                                ReggieUI.error((res && res.msg) || '删除失败，请重试');
+                                return;
+                            }
                             // 从列表中移除
                             self.conversations = self.conversations.filter(function(c) {
                                 return c.conversationId !== conv.conversationId;

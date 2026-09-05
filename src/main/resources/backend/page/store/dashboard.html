@@ -4,7 +4,7 @@
     <meta charset="UTF-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>总部控制台 - 瑞吉外卖管理端</title>
+    <title>总部控制台 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
@@ -290,6 +290,9 @@
                 var ov = results[1];
                 if (ov && ov.code === 1 && ov.data) {
                     self.dashboard = ov.data;
+                } else {
+                    // 修改点：此前 overview 失败静默，补齐 else 与 summary 分支一致
+                    ReggieUI.error((ov && ov.msg) || '加载门店排行失败');
                 }
                 if (!self.currentStoreName && self.dashboard && self.dashboard.storeRanking) {
                     var hit = null;

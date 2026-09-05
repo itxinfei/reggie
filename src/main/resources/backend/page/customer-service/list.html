@@ -95,7 +95,8 @@
           <el-table-column prop="userName" label="用户" width="120" align="center"></el-table-column>
           <el-table-column prop="sessionType" label="类型" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
             <template slot-scope="{row}">
-              <el-tag :type="row.sessionType === 1 ? '' : 'success'" size="small">
+              <!-- 修改点：普通会话 el-tag type 由空字符串改为 info（Element UI 无空 type 样式，此前仅"订单"有样式） -->
+              <el-tag :type="row.sessionType === 1 ? 'info' : 'success'" size="small">
                 {{ row.sessionType === 1 ? '普通' : '订单' }}
               </el-tag>
             </template>

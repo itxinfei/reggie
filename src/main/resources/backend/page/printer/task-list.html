@@ -287,7 +287,8 @@
           const MAP = {
             'BILL': { label: '小票', type: 'success' },
             'KITCHEN': { label: '厨房', type: 'warning' },
-            'DELIVERY': { label: '配送', type: 'primary' },
+            // 修改点：primary 是非法 el-tag type（Element UI 仅支持 success/info/warning/danger），改为 info
+            'DELIVERY': { label: '配送', type: 'info' },
             'TEST': { label: '测试', type: 'info' }
           }
           return MAP[taskType] || { label: taskType || '-', type: 'info' }
@@ -295,7 +296,8 @@
         getStatusTag(status) {
           const MAP = {
             'PENDING': { label: '待打印', type: 'warning' },
-            'PULLED': { label: '打印中', type: 'primary' },
+            // 修改点：primary 是非法 el-tag type，改为 info
+            'PULLED': { label: '打印中', type: 'info' },
             'SUCCESS': { label: '成功', type: 'success' },
             'FAILED': { label: '失败', type: 'danger' },
             'CANCELLED': { label: '已取消', type: 'info' }
