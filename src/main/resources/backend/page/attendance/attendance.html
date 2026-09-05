@@ -268,7 +268,22 @@
           const self = this
           attendanceAbnormal({ weekStart: '' }).then(function (res) {
             if (res.data && res.data.abnormalList) {
-              self.abnormalList = res.data.abnormalList
+              // 修改点：后端仅返回 status/statusName 数值+文案，前端按后端取值域映射 tag type，
+              // 否则 el-tag 直接渲染数字 type（非法值渲染为裸样式）
+              var typeMap = { 0: 'danger', 2: 'warning', 3: 'warning', 4: 'info', 5: 'info', 1: 'success' };
+              self.abnormalList = res.data.abnormalList.map(function (it) {
+                var st = it.status != null ? String(it.status) : '';
+                return {
+                  id: it.id,
+                  employeeId: it.employeeId,
+                  name: it.employeeName || '未知',
+                  avatar: (it.employeeName || '?').substring(0, 1),
+                  date: it.date || '-',
+                  statusText: it.statusName || '未知',
+                  type: typeMap[st] || 'info',
+                  detail: self.buildAbnormalDetail(it)
+                };
+              });
             } else {
               self.abnormalList = []
             }
@@ -276,6 +291,12 @@
             console.warn('[attendance] 加载异常考勤失败')
             self.abnormalList = []
           })
+        },
+        buildAbnormalDetail: function (it) {
+          // 修改点：由后端 checkInTime/checkOutTime 拼接详情文案，替代此前引用前端不存在的字段
+          var t = it.checkInTime || it.checkOutTime;
+          var body = t ? ('打卡时间 ' + t) : '无打卡记录';
+          return it.statusName ? (it.statusName + ' · ' + body) : body;
         },
 
         // ===== 考勤日历 =====
