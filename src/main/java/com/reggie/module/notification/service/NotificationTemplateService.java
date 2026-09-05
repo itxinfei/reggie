@@ -24,9 +24,12 @@ public interface NotificationTemplateService extends IService<NotificationTempla
      * @param page     页码（从 1 开始）
      * @param pageSize 每页条数
      * @param bizType  业务类型（可空）
+     * @param channel  发送渠道：1短信 2APP推送 3短信+推送（可空）
+     * @param status   状态：1启用 0停用（可空）
+     * @param tenantId 租户ID
      * @return 分页结果
      */
-    Page<NotificationTemplate> pageTemplates(int page, int pageSize, String bizType, Long tenantId);
+    Page<NotificationTemplate> pageTemplates(int page, int pageSize, String bizType, Integer channel, Integer status, Long tenantId);
 
     /**
      * 模板列表查询

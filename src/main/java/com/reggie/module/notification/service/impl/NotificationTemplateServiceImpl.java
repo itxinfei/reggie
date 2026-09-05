@@ -35,11 +35,17 @@ public class NotificationTemplateServiceImpl
         implements NotificationTemplateService {
 
     @Override
-    public Page<NotificationTemplate> pageTemplates(int page, int pageSize, String bizType, Long tenantId) {
+    public Page<NotificationTemplate> pageTemplates(int page, int pageSize, String bizType, Integer channel, Integer status, Long tenantId) {
         Page<NotificationTemplate> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
         if (bizType != null && !bizType.isEmpty()) {
             wrapper.eq(NotificationTemplate::getBizType, bizType);
+        }
+        if (channel != null) {
+            wrapper.eq(NotificationTemplate::getChannel, channel);
+        }
+        if (status != null) {
+            wrapper.eq(NotificationTemplate::getStatus, status);
         }
         if (tenantId != null) {
             wrapper.eq(NotificationTemplate::getTenantId, tenantId);

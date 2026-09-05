@@ -80,10 +80,12 @@ public class NotificationController {
     public R<Page<NotificationTemplate>> templatePage(
                         @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
             @Parameter(description = "每页数量") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
-            @Parameter(description = "业务类型（可选）") @RequestParam(required = false) String bizType) {
+            @Parameter(description = "业务类型（可选）") @RequestParam(required = false) String bizType,
+            @Parameter(description = "发送渠道：1短信 2APP推送 3短信+推送（可选）") @RequestParam(required = false) Integer channel,
+            @Parameter(description = "状态：1启用 0停用（可选）") @RequestParam(required = false) Integer status) {
         Long tenantId = BaseContext.getCurrentTenantId();
         // 域4 改造：分页查询下沉到 Service，内置租户过滤
-        Page<NotificationTemplate> pageInfo = templateService.pageTemplates(page, pageSize, bizType, tenantId);
+        Page<NotificationTemplate> pageInfo = templateService.pageTemplates(page, pageSize, bizType, channel, status, tenantId);
         return R.success(pageInfo);
     }
 

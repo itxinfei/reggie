@@ -56,8 +56,10 @@ public class SysNotificationTemplateController {
     public R<Page<NotificationTemplate>> page(
             @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize,
-            @Parameter(description = "业务类型") String bizType) {
-        return R.success(templateService.pageTemplates(page, PageUtils.cap(pageSize), bizType, BaseContext.getCurrentTenantId()));
+            @Parameter(description = "业务类型") String bizType,
+            @Parameter(description = "发送渠道：1短信 2APP推送 3短信+推送") Integer channel,
+            @Parameter(description = "状态：1启用 0停用") Integer status) {
+        return R.success(templateService.pageTemplates(page, PageUtils.cap(pageSize), bizType, channel, status, BaseContext.getCurrentTenantId()));
     }
 
     /**
