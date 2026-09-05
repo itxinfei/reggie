@@ -313,12 +313,13 @@
         </el-form>
     </crud-dialog>
 
-    <!-- ========== 活动统计对话框 ========== -->
+    <!-- ========== 活动统计对话框（只读，仅有关闭按钮） ========== -->
     <crud-dialog
       title="活动效果统计"
       :visible.sync="statsDialogVisible"
       size="lg"
       :show-submit="false"
+      :show-cancel="true"
       cancel-text="关 闭"
       :close-on-click-modal="false"
       @close="statsDialogVisible = false"

@@ -149,7 +149,7 @@
     </div>
 
     <!-- 详情弹窗 -->
-    <crud-dialog title="日结详情" :visible.sync="detailVisible" size="md" :show-submit="false" cancel-text="关 闭">
+    <crud-dialog title="日结详情" :visible.sync="detailVisible" size="md" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
       <div v-if="currentDetail" class="settle-detail">
         <div class="dt-item">
           <span class="dt-label">结算日期</span>

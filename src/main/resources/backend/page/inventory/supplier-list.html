@@ -130,13 +130,14 @@
   </crud-dialog>
 
   <!-- ============================================================
-   组件5：crud-dialog — 采购记录弹窗（8.3.3 供应商历史采购，复用 purchaseOrder page 接口）
+   组件5：crud-dialog — 采购记录弹窗（8.3.3 供应商历史采购，复用 purchaseOrder page 接口；只读，仅有关闭按钮）
    ============================================================ -->
-  <crud-dialog :show-submit="true" :show-cancel="true"
-    :title="purchaseDialog.title"
+  <crud-dialog
+    title="采购记录"
     :visible.sync="purchaseDialog.visible"
     size="lg"
     :show-submit="false"
+    :show-cancel="true"
     cancel-text="关 闭"
   >
     <div v-if="purchaseList.length === 0" class="ds-table-empty">

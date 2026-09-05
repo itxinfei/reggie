@@ -97,13 +97,13 @@
     </el-card>
   </div>
 
-  <!-- 订单详情弹窗 -->
+  <!-- 订单详情弹窗（只读，仅有关闭按钮） -->
   <crud-dialog
     title="平台订单详情"
     :visible.sync="detailVisible"
     size="lg"
     :show-submit="false"
-    :show-cancel="false"
+    :show-cancel="true"
     cancel-text="关 闭"
     :close-on-click-modal="true"
   >

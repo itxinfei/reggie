@@ -300,12 +300,13 @@
         </el-form>
     </crud-dialog>
 
-    <!-- ===== 门店详情对话框（点击行 / 详情按钮打开，展示完整信息，避免列表列过多） ===== -->
-    <crud-dialog :show-submit="true" :show-cancel="true"
+    <!-- ===== 门店详情对话框（点击行 / 详情按钮打开，展示完整信息，避免列表列过多；只读，仅有关闭按钮） ===== -->
+    <crud-dialog
       title="门店详情"
       :visible.sync="detailDialogVisible"
       size="lg"
       :show-submit="false"
+      :show-cancel="true"
       cancel-text="关 闭"
       :close-on-click-modal="true"
       @close="detailData=null">
@@ -367,12 +368,13 @@
         </div>
     </crud-dialog>
 
-    <!-- ===== 数据同步对话框 ===== -->
-    <crud-dialog :show-submit="true" :show-cancel="true"
+    <!-- ===== 数据同步对话框（只读，仅有关闭按钮） ===== -->
+    <crud-dialog
       title="数据同步"
       :visible.sync="syncDialogVisible"
       size="md"
       :show-submit="false"
+      :show-cancel="true"
       cancel-text="关 闭"
       :close-on-click-modal="true"
       @close="syncResult=null"

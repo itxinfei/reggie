@@ -108,12 +108,13 @@
       </crud-table>
     </div>
 
-    <!-- 支付详情弹窗 -->
-    <crud-dialog :show-submit="true" :show-cancel="true"
+    <!-- 支付详情弹窗（只读，仅有关闭按钮） -->
+    <crud-dialog
       title="支付详情"
       :visible.sync="detailVisible"
       size="md"
       :show-submit="false"
+      :show-cancel="true"
       cancel-text="关 闭"
       :close-on-click-modal="true"
       @close="detailForm = {}"

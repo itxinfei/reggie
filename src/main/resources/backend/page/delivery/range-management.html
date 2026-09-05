@@ -296,7 +296,7 @@
       </el-form>
     </crud-dialog>
 
-    <!-- 阶梯规则对话框 -->
+    <!-- 阶梯规则对话框（只读，仅有关闭按钮） -->
     <crud-dialog title="配送费阶梯规则" :visible.sync="feeStepVisible" size="xl" show-close :show-submit="false" :show-cancel="true" cancel-text="关 闭">
       <div style="margin-bottom: 16px;">
         <el-button type="primary" size="small" icon="el-icon-plus" @click="handleAddFeeStep">新增阶梯</el-button>

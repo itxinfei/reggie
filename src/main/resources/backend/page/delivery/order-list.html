@@ -85,11 +85,12 @@
       </crud-table>
 
       <!-- 订单详情弹窗 -->
-      <crud-dialog :show-submit="true" :show-cancel="true"
+      <crud-dialog
         title="订单详情"
         :visible.sync="detailVisible"
         size="md"
         :show-submit="false"
+        :show-cancel="true"
         cancel-text="关 闭"
         :close-on-click-modal="true"
         @close="resetDetail"

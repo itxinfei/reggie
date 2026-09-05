@@ -94,8 +94,8 @@
       </crud-table>
     </div>
 
-    <!-- 任务详情弹窗 -->
-    <crud-dialog :show-cancel="true" :title="dialog.title" :visible.sync="dialog.visible" :show-submit="false" size="lg" cancel-text="关 闭" @close="cancel">
+    <!-- 任务详情弹窗（只读，仅有关闭按钮） -->
+    <crud-dialog :title="dialog.title" :visible.sync="dialog.visible" size="lg" :show-submit="false" :show-cancel="true" cancel-text="关 闭" @close="cancel">
       <div class="task-detail">
         <el-row :gutter="16" class="task-detail__row">
           <el-col :span="8"><span class="task-detail__label">任务ID：</span>{{ dialog.row.id }}</el-col>

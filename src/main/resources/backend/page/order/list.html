@@ -101,12 +101,13 @@
       </crud-table>
     </main>
 
-    <!-- 订单详情弹窗 -->
-    <crud-dialog :show-submit="true" :show-cancel="true"
+    <!-- 订单详情弹窗（只读，仅有关闭按钮） -->
+    <crud-dialog
       title="订单详情"
       :visible.sync="dialogVisible"
       size="xl"
       :show-submit="false"
+      :show-cancel="true"
       cancel-text="关 闭"
       :close-on-click-modal="true"
       @close="diaForm = {}"

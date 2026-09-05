@@ -123,7 +123,8 @@
       size="lg"
       custom-class="settlement-detail-dialog"
       :show-submit="false"
-      cancel-text="关闭"
+      :show-cancel="true"
+      cancel-text="关 闭"
       @close="detailVisible = false"
     >
       <el-row v-if="detail" :gutter="12" class="detail-body">

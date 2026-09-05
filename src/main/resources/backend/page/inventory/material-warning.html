@@ -239,13 +239,14 @@
       </el-form>
     </crud-dialog>
 
-    <!-- 补货建议弹窗 -->
-    <crud-dialog :show-submit="true" :show-cancel="true"
+    <!-- 补货建议弹窗（只读，仅有关闭按钮） -->
+    <crud-dialog
       title="补货建议"
       :visible.sync="suggestDialogVisible"
       size="lg"
       :show-submit="false"
-      submit-text="关 闭"
+      :show-cancel="true"
+      cancel-text="关 闭"
     >
       <div class="ds-info-box">
         基于近 <strong class="ds-text-primary">{{ suggestDays }}</strong> 天出库量计算日均消耗，补货周期默认 14 天。<br>
