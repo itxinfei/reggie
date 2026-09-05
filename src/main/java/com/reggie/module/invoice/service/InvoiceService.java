@@ -29,6 +29,29 @@ public interface InvoiceService extends IService<InvoiceRecord> {
     InvoiceRecord getInvoiceByOrder(Long orderId, Long userId, Long tenantId);
 
     /**
+     * 获取当前用户发票记录（我的发票，分页）
+     *
+     * @param page     分页对象（PageUtils.of 构造，pageSize 上限 100）
+     * @param userId   当前登录用户ID（归属过滤，防越权）
+     * @param tenantId 租户ID
+     * @return 分页发票记录
+     */
+    Page<InvoiceRecord> listUserRecords(Page<InvoiceRecord> page, Long userId, Long tenantId);
+
+    /**
+     * 更新发票抬头（用户端）
+     *
+     * @param id          抬头ID
+     * @param tenantId    租户ID
+     * @param title       抬头名称（必填，去空格后非空）
+     * @param taxNumber   税号（企业必填）
+     * @param companyName 公司名称（可选）
+     * @param type        类型：1=个人，2=企业
+     * @return 是否更新成功
+     */
+    boolean updateTitle(Long id, Long tenantId, String title, String taxNumber, String companyName, Integer type);
+
+    /**
      * 获取发票列表（后台，分页）
      *
      * @param page     分页对象（PageUtils.of/cap 构造，pageSize 上限 100）

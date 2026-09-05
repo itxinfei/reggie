@@ -19,12 +19,13 @@ CREATE TABLE invoice_title (
 );
 
 -- InvoiceRecord entity (@TableName("invoice_record"))
--- Columns: id, orderId, orderNo, titleId, title, taxNumber, type, amount, status,
+-- Columns: id, orderId, userId, orderNo, titleId, title, taxNumber, type, amount, status,
 --          invoiceNo, invoiceCode, invoiceUrl, applyTime, issueTime, tenantId, createTime, updateTime
--- userId 为 @TableField(exist=false)，不落库
+-- userId 为真实列（申请用户ID，用户端归属过滤），对应迁移 V20260905__invoice_user_id.sql
 CREATE TABLE invoice_record (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   order_id bigint NOT NULL COMMENT '关联订单ID',
+  user_id bigint NULL DEFAULT NULL COMMENT '申请用户ID（用户端归属列）',
   order_no varchar(32) NULL DEFAULT NULL COMMENT '订单号',
   title_id bigint NULL DEFAULT NULL COMMENT '发票抬头ID',
   title varchar(200) NULL DEFAULT NULL COMMENT '发票抬头（冗余）',

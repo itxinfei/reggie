@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 发票服务实现
@@ -72,6 +73,10 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         if (!tenantId.equals(order.getTenantId())) {
             throw new CustomException("无权操作该订单");
         }
+        // 修改点(2026-09-05)：IDOR 防护——订单归属校验，防止越权为他人订单申请开票
+        if (userId == null || !Objects.equals(order.getUserId(), userId)) {
+            throw new CustomException("无权操作该订单");
+        }
         // 检查是否已申请过
         LambdaQueryWrapper<InvoiceRecord> existQw = new LambdaQueryWrapper<>();
         existQw.eq(InvoiceRecord::getOrderId, orderId);
@@ -83,6 +88,7 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
 
         InvoiceRecord record = new InvoiceRecord();
         record.setOrderId(orderId);
+        record.setUserId(userId);
         record.setOrderNo(order.getNumber());
         record.setTitleId(titleId);
         record.setTitle(title);
@@ -99,10 +105,52 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
 
     @Override
     public InvoiceRecord getInvoiceByOrder(Long orderId, Long userId, Long tenantId) {
+        // 修改点(2026-09-05)：IDOR 防护——先校验订单归属，再查询发票记录，防止越权查看他人订单发票
+        Orders order = orderMapper.selectById(orderId);
+        if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+        if (userId == null || !Objects.equals(order.getUserId(), userId)) {
+            throw new CustomException("无权操作该订单");
+        }
         LambdaQueryWrapper<InvoiceRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(InvoiceRecord::getOrderId, orderId);
         qw.eq(InvoiceRecord::getTenantId, tenantId);
         return getOne(qw, false);
+    }
+
+    @Override
+    public Page<InvoiceRecord> listUserRecords(Page<InvoiceRecord> page, Long userId, Long tenantId) {
+        LambdaQueryWrapper<InvoiceRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(InvoiceRecord::getUserId, userId);
+        qw.eq(InvoiceRecord::getTenantId, tenantId);
+        qw.orderByDesc(InvoiceRecord::getCreateTime);
+        return page(page, qw);
+    }
+
+    @Override
+    public boolean updateTitle(Long id, Long tenantId, String title, String taxNumber, String companyName, Integer type) {
+        InvoiceTitle titleEntity = invoiceTitleMapper.selectById(id);
+        if (titleEntity == null || !tenantId.equals(titleEntity.getTenantId())) {
+            throw new CustomException("发票抬头不存在");
+        }
+        String trimmedTitle = title == null ? null : title.trim();
+        if (trimmedTitle == null || trimmedTitle.isEmpty()) {
+            throw new CustomException("请填写抬头名称");
+        }
+        Integer safeType = type != null ? type : titleEntity.getType();
+        if (safeType == null || safeType != 2) {
+            safeType = 1;
+        }
+        if (safeType == 2 && (taxNumber == null || taxNumber.trim().isEmpty())) {
+            throw new CustomException("企业抬头请填写税号");
+        }
+        titleEntity.setTitle(trimmedTitle);
+        titleEntity.setTaxNumber(taxNumber == null ? null : taxNumber.trim());
+        titleEntity.setCompanyName(companyName == null ? null : companyName.trim());
+        titleEntity.setType(safeType);
+        titleEntity.setUpdateTime(LocalDateTime.now());
+        return invoiceTitleMapper.updateById(titleEntity) > 0;
     }
 
     @Override

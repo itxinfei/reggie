@@ -46,3 +46,21 @@ function orderInvoiceApi(orderId) {
     'method': 'get'
   })
 }
+
+// 我的发票（分页）
+function invoiceMyPageApi(params) {
+  return $axios({
+    'url': '/invoice/my/page',
+    'method': 'get',
+    params
+  })
+}
+
+// 编辑发票抬头
+function invoiceTitleUpdateApi(id, data) {
+  return $axios({
+    'url': '/invoice/title/' + id,
+    'method': 'put',
+    data
+  })
+}

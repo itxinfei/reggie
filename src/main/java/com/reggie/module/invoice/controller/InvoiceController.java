@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.R;
+import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.common.utils.PageUtils;
 import com.reggie.module.invoice.model.InvoiceRecord;
@@ -16,6 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +57,34 @@ public class InvoiceController {
     public R<Void> deleteTitle(@Parameter(description = "发票抬头ID", required = true) @PathVariable Long id) {
         invoiceService.deleteTitle(id, currentTenantId(), currentUserId());
         return R.success(null);
+    }
+
+    @PutMapping("/title/{id}")
+    @Operation(summary = "编辑发票抬头")
+    public R<Void> updateTitle(@Parameter(description = "发票抬头ID", required = true) @PathVariable Long id,
+                               @Parameter(description = "发票抬头信息", required = true) @RequestBody InvoiceTitle title) {
+        invoiceService.updateTitle(id, currentTenantId(),
+                title.getTitle(), title.getTaxNumber(), title.getCompanyName(), title.getType());
+        return R.success(null);
+    }
+
+    // ==================== 我的发票（用户端） ====================
+
+    @GetMapping("/my/page")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "C端-我的发票记录", description = "获取当前登录用户的发票记录分页，按登录态自动定位用户，防止越权查询")
+    public R<Map<String, Object>> myInvoicePage(@Parameter(description = "页码，从1开始", required = true) @RequestParam(defaultValue = "1") @Min(1) int page,
+                                                @Parameter(description = "每页条数，最大50", required = true) @RequestParam(defaultValue = "10") @Min(1) @Max(50) int pageSize) {
+        Long tenantId = currentTenantId();
+        Long userId = currentUserId();
+        Page<InvoiceRecord> pageInfo = PageUtils.of(page, pageSize);
+        Page<InvoiceRecord> result = invoiceService.listUserRecords(pageInfo, userId, tenantId);
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("records", result.getRecords());
+        resp.put("total", result.getTotal());
+        resp.put("size", result.getSize());
+        resp.put("current", result.getCurrent());
+        return R.success(resp);
     }
 
     // ==================== 发票申请（用户端） ====================

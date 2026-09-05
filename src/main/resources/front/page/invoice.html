@@ -29,13 +29,20 @@
     /* 申请区 */
     .apply-wrap { background: var(--bg-card); border-radius: 12rem; padding: 18rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
     .section-title { font-size: 15rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: 12rem; }
+    /* 抬头项 */
     .title-item { display: flex; align-items: center; justify-content: space-between; padding: 12rem 4rem; border-bottom: 1rem solid var(--border-light); }
     .title-item .tax { font-size: 12rem; color: var(--color-text-hint); }
-    .title-item .del { color: var(--color-text-disabled); font-size: 18rem; padding: 4rem; }
+    .title-item .ops { display: flex; align-items: center; gap: 16rem; }
+    .title-item .icon-btn { color: var(--color-text-disabled); font-size: 18rem; padding: 4rem; }
+    .title-item .icon-btn.edit { color: var(--color-primary); }
     .empty-tip { text-align: center; color: var(--color-text-hint); font-size: 13rem; padding: 20rem 0 12rem; }
     .new-title-title { font-size: 14rem; font-weight: 600; color: var(--color-text-primary); margin: 18rem 0 4rem; }
     .apply-btn { margin-top: 20rem; }
     .tip { font-size: 12rem; color: var(--color-text-hint); margin-top: 10rem; line-height: 1.6; }
+
+    /* 编辑抬头弹窗 */
+    .edit-popup { padding: 20rem 16rem calc(20rem + env(safe-area-inset-bottom)); }
+    .edit-popup-title { font-size: 16rem; font-weight: 600; color: var(--color-text-primary); text-align: center; margin-bottom: 16rem; }
   </style>
 </head>
 <body>
@@ -73,7 +80,10 @@
               <span>{{ t.title }}</span>
               <span v-if="t.taxNumber" class="tax">（{{ t.taxNumber }}）</span>
             </van-radio>
-            <van-icon name="delete-o" class="del" role="button" aria-label="删除抬头" @click.stop="deleteTitle(t)"></van-icon>
+            <div class="ops">
+              <van-icon name="edit" class="icon-btn edit" role="button" aria-label="编辑抬头" @click.stop="openEditTitle(t)"></van-icon>
+              <van-icon name="delete-o" class="icon-btn" role="button" aria-label="删除抬头" @click.stop="deleteTitle(t)"></van-icon>
+            </div>
           </div>
         </van-radio-group>
         <div v-if="titles.length === 0" class="empty-tip">暂无发票抬头，请先在下方新增</div>
@@ -92,6 +102,22 @@
     <!-- 抬头类型选择 -->
     <van-popup v-model="typePickerShow" position="bottom" round>
       <van-picker show-toolbar :columns="typeColumns" @confirm="onTypeConfirm" @cancel="typePickerShow = false"></van-picker>
+    </van-popup>
+
+    <!-- 编辑抬头弹窗（底部滑出） -->
+    <van-popup v-model="editPopupShow" position="bottom" round :close-on-click-overlay="false">
+      <div class="edit-popup">
+        <div class="edit-popup-title">编辑抬头</div>
+        <van-field v-model="editForm.type" label="抬头类型" readonly is-link @click="editTypePickerShow = true" :placeholder="editForm.type === 1 ? '个人' : '企业'"></van-field>
+        <van-field v-model="editForm.title" label="抬头名称" placeholder="个人填姓名，企业填公司名称" maxlength="50"></van-field>
+        <van-field v-model="editForm.taxNumber" label="税号" placeholder="企业填写纳税人识别号（个人可留空）" maxlength="30"></van-field>
+        <van-button type="warning" block @click="saveEditTitle" :loading="editing">保存修改</van-button>
+      </div>
+    </van-popup>
+
+    <!-- 编辑弹窗内的抬头类型选择 -->
+    <van-popup v-model="editTypePickerShow" position="bottom" round>
+      <van-picker show-toolbar :columns="typeColumns" @confirm="onEditTypeConfirm" @cancel="editTypePickerShow = false"></van-picker>
     </van-popup>
   </div>
 
@@ -118,6 +144,11 @@
           // 新增抬头表单
           form: { type: 1, title: '', taxNumber: '' },
           typePickerShow: false,
+          // 编辑抬头弹窗
+          editPopupShow: false,
+          editForm: { id: null, type: 1, title: '', taxNumber: '' },
+          editTypePickerShow: false,
+          editing: false,
           typeColumns: [
             { text: '个人', value: 1 },
             { text: '企业', value: 2 }
@@ -212,6 +243,51 @@
         onTypeConfirm: function(picker) {
           this.form.type = picker.value
           this.typePickerShow = false
+        },
+        // 打开编辑抬头弹窗
+        openEditTitle: function(t) {
+          this.editForm = { id: t.id, type: t.type === 2 ? 2 : 1, title: t.title || '', taxNumber: t.taxNumber || '' }
+          this.editPopupShow = true
+        },
+        onEditTypeConfirm: function(picker) {
+          this.editForm.type = picker.value
+          this.editTypePickerShow = false
+        },
+        // 保存抬头编辑
+        saveEditTitle: function() {
+          var self = this
+          var title = (this.editForm.title || '').trim()
+          var taxNumber = (this.editForm.taxNumber || '').trim()
+          if (!this.editForm.id) {
+            vant.Toast.fail('参数错误，请重试')
+            return
+          }
+          if (!title) {
+            vant.Toast.fail('请填写抬头名称')
+            return
+          }
+          if (this.editForm.type === 2 && !taxNumber) {
+            vant.Toast.fail('企业抬头请填写税号')
+            return
+          }
+          this.editing = true
+          invoiceTitleUpdateApi(this.editForm.id, {
+            type: this.editForm.type,
+            title: title,
+            taxNumber: taxNumber
+          }).then(function(res) {
+            if (res.code === 1) {
+              vant.Toast.success('已保存')
+              self.editPopupShow = false
+              self.loadTitles()
+            } else {
+              vant.Toast.fail(res.msg || '保存失败')
+            }
+          }).catch(function(err) {
+            if (err.message !== 'NOTLOGIN') vant.Toast.fail('保存失败')
+          }).finally(function() {
+            self.editing = false
+          })
         },
         // 保存抬头
         saveTitle: function() {

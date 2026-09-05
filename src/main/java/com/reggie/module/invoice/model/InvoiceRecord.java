@@ -34,6 +34,9 @@ public class InvoiceRecord implements Serializable {
     @Schema(description = "关联订单ID")
     private Long orderId;
 
+    @Schema(description = "申请用户ID（用户端归属列，防止跨用户越权查询）")
+    private Long userId;
+
     @Schema(description = "订单号")
     private String orderNo;
 
@@ -72,10 +75,6 @@ public class InvoiceRecord implements Serializable {
 
     @Schema(description = "租户ID")
     private Long tenantId;
-
-    /** 申请用户ID（非库字段，仅请求入参传递用，落库不持久化） */
-    @TableField(exist = false)
-    private Long userId;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

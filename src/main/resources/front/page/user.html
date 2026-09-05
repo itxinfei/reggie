@@ -163,6 +163,12 @@
                     <span>我的评价</span>
                     <i class="icon-arrow-right"></i>
                 </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="toInvoicePage">
+                    <img src="./../images/orders.png" alt="我的发票"/>
+                    <span>我的发票</span>
+                    <i class="icon-arrow-right"></i>
+                </div>
             </div>
             <div class="divOrders" v-if="order[0]">
                 <div class="title">最新订单</div>
@@ -205,6 +211,7 @@
     <script src="./../api/order.js"></script>
     <script src="./../api/login.js"></script>
     <script src="./../api/member-center.js"></script>
+    <script src="./../api/invoice.js"></script>
     <script>
         new Vue({
             el:"#user",
@@ -283,6 +290,9 @@
                 },
                 toEvaluationPage: function(){
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/my-evaluations.html' })
+                },
+                toInvoicePage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/my-invoice.html' })
                 },
                 toMessagePage: function(){
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/message.html' })

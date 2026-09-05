@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <title>我的发票 - 瑞吉外卖</title>
+  <link rel="icon" href="./../images/favico.ico">
+  <script src="./../js/base.js"></script>
+  <link rel="stylesheet" href="../styles/index.css" />
+  <link rel="stylesheet" href="../styles/vant.min.css"/>
+  <style>
+    body { background: var(--bg-page); }
+
+    /* 头部：通用品牌头由 index.css 兜底（.divHead/.divTitle/.icon-back-arrow），此处仅补页面专属微调 */
+
+    /* 列表 */
+    .inv-list { padding: 16rem 16rem 24rem; }
+    .inv-card {
+      background: var(--bg-card);
+      border-radius: 12rem;
+      padding: 16rem 18rem;
+      margin-bottom: 16rem;
+      box-shadow: 0 2rem 10rem rgba(0,0,0,0.04);
+      transition: transform var(--transition-fast);
+    }
+    .inv-card:active { transform: scale(0.98); }
+    .inv-card .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10rem;
+    }
+    .inv-card .title-name {
+      font-size: 15rem;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      max-width: 60%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .inv-card .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4rem 0;
+      font-size: 13rem;
+      color: var(--color-text-secondary);
+    }
+    .inv-card .row .mono { font-family: var(--font-family-number, monospace); color: var(--color-text-primary); }
+    .inv-card .row .price { color: var(--color-primary); font-weight: 700; font-size: 15rem; font-family: var(--font-family-number, monospace); }
+    .inv-card .row .label { color: var(--color-text-hint); }
+
+    /* 分页 */
+    .pagination-wrap { margin-top: 8rem; }
+
+    /* 空状态 */
+    .empty-state { text-align: center; padding: 80rem 20rem; color: var(--color-text-hint); }
+    .empty-state .empty-img { width: 120rem; height: 120rem; margin-bottom: 12rem; opacity: 0.6; }
+    .empty-state .empty-text { font-size: 13rem; }
+
+    /* loading */
+    .loading-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.6);
+      z-index: 999;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .loading-spinner {
+      width: 28rem; height: 28rem;
+      border: 3rem solid var(--border-light);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="invoice-list-app">
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <div class="divHead">
+      <div class="divTitle">
+        <i class="icon-back-arrow" @click="goBack"></i>我的发票
+      </div>
+    </div>
+
+    <!-- 发票记录列表 -->
+    <div class="inv-list" v-if="records.length > 0">
+      <div v-for="item in records" :key="item.id" class="inv-card" @click="goInvoice(item)">
+        <div class="card-head">
+          <span class="title-name">{{ item.title || '未填写抬头' }}</span>
+          <van-tag :type="tagType(item.status)" size="medium">{{ statusText(item.status) }}</van-tag>
+        </div>
+        <div class="row">
+          <span class="label">订单号</span>
+          <span class="mono">{{ item.orderNo || '--' }}</span>
+        </div>
+        <div class="row">
+          <span class="label">申请时间</span>
+          <span>{{ fmtTime(item.applyTime) }}</span>
+        </div>
+        <div class="row">
+          <span class="label">开票金额</span>
+          <span class="price">￥{{ Number(item.amount || 0).toFixed(2) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 空状态 -->
+    <div class="empty-state" v-else-if="!loading">
+      <img src="./../images/no_order.png" class="empty-img" alt="暂无发票记录"/>
+      <p class="empty-text">暂无发票记录</p>
+    </div>
+
+    <!-- 分页 -->
+    <van-pagination
+        v-if="total > pageSize"
+        v-model="page"
+        :total-items="total"
+        :items-per-page="pageSize"
+        @change="onPageChange"
+        class="pagination-wrap"
+    ></van-pagination>
+  </div>
+
+  <script src="../../backend/plugins/vue/vue.js"></script>
+  <script src="./../js/vant.min.js"></script>
+  <script src="../../backend/plugins/axios/axios.min.js"></script>
+  <script src="./../js/request.js"></script>
+  <script src="./../api/main.js"></script>
+  <script src="./../js/common.js"></script>
+  <script src="./../api/invoice.js"></script>
+  <script>
+    new Vue({
+      el: '#invoice-list-app',
+      data: function() {
+        return {
+          loading: false,
+          records: [],
+          total: 0,
+          page: 1,
+          pageSize: 10
+        }
+      },
+      created: function() {
+        this.loadData()
+      },
+      methods: {
+        loadData: function() {
+          var self = this
+          this.loading = true
+          invoiceMyPageApi({ page: this.page, pageSize: this.pageSize }).then(function(res) {
+            if (res.code === 1) {
+              self.records = (res.data && res.data.records) || []
+              self.total = (res.data && res.data.total) || 0
+            } else {
+              vant.Toast.fail(res.msg || '加载发票记录失败')
+            }
+          }).catch(function(err) {
+            if (err.message !== 'NOTLOGIN') vant.Toast.fail('加载发票记录失败')
+          }).finally(function() {
+            self.loading = false
+          })
+        },
+        onPageChange: function(p) {
+          this.page = p
+          this.loadData()
+        },
+        // 状态文案
+        statusText: function(s) {
+          if (s == 0) return '待申请'
+          if (s == 1) return '已申请，待开具'
+          if (s == 2) return '已开具'
+          if (s == 3) return '已作废'
+          return '未知'
+        },
+        // Vant 2 van-tag 合法类型：default/primary/success/danger/warning
+        tagType: function(s) {
+          if (s == 1) return 'warning'
+          if (s == 2) return 'success'
+          return 'default'
+        },
+        // 时间格式化（兼容后端 LocalDateTime 的 ISO 带 T 格式）
+        fmtTime: function(val) {
+          if (!val) return '-'
+          var s = String(val)
+          return s.indexOf('T') > -1 ? s.replace('T', ' ').substring(0, 19) : s
+        },
+        // 跳转到对应订单的发票详情（携带订单号/金额，供开发票页回显）
+        goInvoice: function(item) {
+          var qs = 'orderId=' + encodeURIComponent(item.orderId || '')
+              + '&orderNo=' + encodeURIComponent(item.orderNo || '')
+              + '&amount=' + encodeURIComponent(item.amount != null ? item.amount : '')
+          window.requestAnimationFrame(function() {
+            window.location.href = '/front/page/invoice.html?' + qs
+          })
+        },
+        goBack: function() {
+          if (window.history.length > 1) {
+            history.go(-1)
+          } else {
+            window.location.href = '/front/page/user.html'
+          }
+        }
+      }
+    })
+  </script>
+</body>
+</html>
