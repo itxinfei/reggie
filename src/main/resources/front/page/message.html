@@ -167,7 +167,10 @@
 
                 formatTime: function(dateStr) {
                     if (!dateStr) return '';
-                    var d = new Date(dateStr);
+                    // 修改点：iOS Safari 无法解析「yyyy-MM-dd HH:mm:ss」空格分隔格式，
+                    // 补 -→/ 替换 + isNaN 回退（与 tracking.html/my-evaluations.html 一致）
+                    var d = new Date(String(dateStr).replace(/-/g, '/'));
+                    if (isNaN(d.getTime())) return dateStr;
                     var now = new Date();
                     var pad = function(n) { return String(n).padStart(2, '0'); };
 

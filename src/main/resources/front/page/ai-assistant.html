@@ -133,7 +133,9 @@
             <template v-for="(msg, idx) in messages">
                 <div :class="'chat-msg ' + msg.role" :key="msg.id || idx"
                      @contextmenu.prevent="showMsgMenu($event, msg)"
-                     @longpress="showMsgMenu($event, msg)">
+                     @touchstart="onMsgTouchStart($event, msg)"
+                     @touchend="onMsgTouchEnd"
+                     @touchmove="onMsgTouchMove">
                     <div class="chat-avatar">
                         <i v-if="msg.role === 'assistant'" class="ri-robot-line"></i>
                         <img v-else-if="userInfo && userAvatar" :src="userAvatar" alt="avatar" />
@@ -360,7 +362,11 @@
                 menuVisible: false,
                 menuX: 0,
                 menuY: 0,
-                menuTarget: null
+                menuTarget: null,
+                // 修改点：移动端长按计时器状态（见 onMsgTouchStart）
+                msgPressTimer: null,
+                msgPressT0: 0,
+                _msgPressEndHandler: null
             },
             computed: {
                 currentQuickTips: function() {
@@ -409,6 +415,9 @@
             },
             beforeDestroy: function() {
                 if (this._handleEscKey) document.removeEventListener('keydown', this._handleEscKey);
+                // 修改点：清理长按计时器与取消监听
+                if (this.msgPressTimer) clearTimeout(this.msgPressTimer);
+                if (this._msgPressEndHandler) document.removeEventListener('touchstart', this._msgPressEndHandler);
             },
             methods: {
                 // ==================== 网络检测 ====================
@@ -484,13 +493,53 @@
                 },
 
                 // ==================== 消息操作菜单 ====================
+                // 移动端长按计时器（长按 600ms 弹出菜单，滑动即取消）
+                msgPressTimer: null,
+                msgPressT0: 0,
+                // 修改点：移动端长按无法触发原生 contextmenu，
+                // 改用 touchstart 启动 600ms 计时器，touchend/touchmove 取消。
+                // 仅在触摸事件回调（含自定义属性）中执行 preventDefault，避免拦截页面滚动。
+                onMsgTouchStart: function(e, msg) {
+                    var self = this;
+                    if (e.touches && e.touches.length > 1) return; // 多指触摸（缩放手势）不处理
+                    if (this.msgPressTimer) clearTimeout(this.msgPressTimer);
+                    this.msgPressT0 = Date.now();
+                    this.msgPressTimer = setTimeout(function() {
+                        self.msgPressTimer = null;
+                        self.showMsgMenuFromTouch(msg, e);
+                    }, 600);
+                },
+                onMsgTouchMove: function() {
+                    if (this.msgPressTimer) { clearTimeout(this.msgPressTimer); this.msgPressTimer = null; }
+                },
+                onMsgTouchEnd: function() {
+                    if (this.msgPressTimer) { clearTimeout(this.msgPressTimer); this.msgPressTimer = null; }
+                },
+                // 由 touchstart 计时器触发（长按成功）；e 为触发长按的触摸事件
+                showMsgMenuFromTouch: function(msg, e) {
+                    var self = this;
+                    this.menuTarget = msg;
+                    this.menuVisible = true;
+                    var touch = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+                    var x = (touch && touch.clientX) || window.innerWidth / 2;
+                    var y = (touch && touch.clientY) || window.innerHeight / 2;
+                    this.menuX = Math.min(x, window.innerWidth - 160);
+                    this.menuY = Math.min(y, window.innerHeight - 140);
+                    // 延迟设置取消回调，避免本次 touchend 立即关闭菜单
+                    setTimeout(function() {
+                        self.msgPressT0 = Date.now();
+                        self._msgPressEndHandler = function(ev) {
+                            var isMenuTap = ev.target && ev.target.closest && ev.target.closest('.msg-context-menu');
+                            if (isMenuTap) return;
+                            self.menuVisible = false;
+                            document.removeEventListener('touchstart', self._msgPressEndHandler);
+                        };
+                        document.addEventListener('touchstart', self._msgPressEndHandler, { passive: true });
+                    }, 30);
+                },
                 showMsgMenu: function(e, msg) {
                     // 只在非移动端通过右键触发
                     if (e.type === 'contextmenu' && e.button !== 2) return;
-                    // 移动端长按
-                    if (e.type === 'longpress') {
-                        e.preventDefault();
-                    }
                     this.menuTarget = msg;
                     this.menuVisible = true;
                     var x = e.clientX || (e.touches && e.touches[0].clientX) || 100;

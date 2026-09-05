@@ -176,7 +176,7 @@
                 <div class="coupon-section" v-show="true">
                     <div class="title">
                         优惠券
-                        <span class="coupon-tip" v-if="selectedCoupon">（可减¥{{ selectedCoupon.discountAmount }}）</span>
+                        <span class="coupon-tip" v-if="selectedCoupon">（可减¥{{ Number(selectedCoupon.discountAmount || 0).toFixed(2) }}）</span>
                     </div>
                     <div class="coupon-list">
                         <div class="coupon-loading" v-if="couponLoading">加载中…</div>
@@ -189,8 +189,8 @@
                              :class="{active: selectedCoupon && selectedCoupon.id === coupon.id}"
                              @click="selectCoupon(coupon)">
                             <div class="coupon-left">
-                                <span class="coupon-amount">¥{{ Number(coupon.discountAmount).toFixed(2) }}</span>
-                                <span class="coupon-condition">满¥{{ Number(coupon.conditionAmount).toFixed(2) }}可用</span>
+                                <span class="coupon-amount">¥{{ Number(coupon.discountAmount || 0).toFixed(2) }}</span>
+                                <span class="coupon-condition">满¥{{ Number(coupon.conditionAmount || 0).toFixed(2) }}可用</span>
                             </div>
                             <div class="coupon-right">
                                 <div class="coupon-name">{{ coupon.templateName }}</div>
@@ -210,7 +210,7 @@
                 <div class="divNum">
                     <span>￥</span>
                     <span>{{ finalPrice.toFixed(2) }}</span>
-                    <span class="divDiscount" v-if="discountAmount > 0">已优惠¥{{ discountAmount }}</span>
+                    <span class="divDiscount" v-if="discountAmount > 0">已优惠¥{{ Number(discountAmount).toFixed(2) }}</span>
                 </div>
                 <div class="divPrice"></div>
                 <div :class="{btnSubmitActive: cartData && cartData.length > 0, btnSubmit:!cartData || cartData.length<1}" @click="goToPaySuccess">去支付</div>
@@ -446,7 +446,7 @@
                         if(this.couponLoading) return
                         this.couponLoading = true
                         try{
-                            var amount = Number(this.goodsPrice).toFixed(2)
+                            var amount = Number(this.goodsPrice || 0).toFixed(2)
                             const res = await getUsableCoupons(amount)
                             if(res.code === 1 && Array.isArray(res.data)){
                                 this.couponList = res.data

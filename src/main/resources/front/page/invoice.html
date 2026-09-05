@@ -66,7 +66,7 @@
         <div class="rec-row" v-if="record.invoiceNo">发票号码：<span class="mono">{{ record.invoiceNo }}</span></div>
         <div class="rec-row" v-if="record.invoiceCode">发票代码：<span class="mono">{{ record.invoiceCode }}</span></div>
         <div class="rec-row" v-if="record.title">抬头：{{ record.title }}</div>
-        <div class="rec-row" v-if="record.amount">开票金额：￥{{ Number(record.amount).toFixed(2) }}</div>
+        <div class="rec-row" v-if="record.amount">开票金额：￥{{ Number(record.amount || 0).toFixed(2) }}</div>
         <div class="rec-row" v-if="record.applyTime">申请时间：{{ fmtTime(record.applyTime) }}</div>
         <van-button v-if="record.status === 2 && record.invoiceUrl" class="view-btn" type="primary" plain block size="small" @click="viewPdf(record.invoiceUrl)">查看电子发票</van-button>
       </div>

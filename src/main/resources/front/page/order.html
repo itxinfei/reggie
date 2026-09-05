@@ -51,7 +51,7 @@
                             </div>
                         </div>
                         <div class="result">
-                            <span>共{{order.sumNum}} 件商品,实付</span><span class="price">￥{{ Number(order.amount).toFixed(2) }}</span>
+                            <span>共{{order.sumNum}} 件商品,实付</span><span class="price">￥{{ Number(order.amount || 0).toFixed(2) }}</span>
                         </div>
                         <div class="btn" v-if="order.status === 1">
                             <div class="btnCancel" @click="cancelOrder(order)">取消订单</div>

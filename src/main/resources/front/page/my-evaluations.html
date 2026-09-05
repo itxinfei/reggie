@@ -218,7 +218,10 @@
                             vant.Toast.fail((res && res.msg) || '删除失败');
                         }
                     }).catch(function(e) {
-                        // 用户取消或操作失败
+                        // 修改点：用户取消或删除失败——删除失败时给出明确提示，避免静默无反馈
+                        if (e && e.message !== '取消') {
+                            vant.Toast.fail((e && e.msg) || '操作失败，请重试');
+                        }
                     });
                 },
                 // 删除评价

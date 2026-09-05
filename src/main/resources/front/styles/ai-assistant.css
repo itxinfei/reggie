@@ -332,6 +332,11 @@
     display: flex; gap: var(--spacing-sm); max-width: 85%;
     animation: slideUp 0.3s ease;
     position: relative;
+    /* 修改点：移动端长按消息弹出操作菜单时，抑制长按选中/系统上下文菜单，
+       避免与本页自定义菜单叠加（桌面端右键菜单不受影响） */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
 }
 @keyframes slideUp {
     from { opacity: 0; transform: translateY(10px); }
@@ -553,6 +558,13 @@
     z-index: 2000;
     min-width: 120px;
     display: none;
+    /* 修改点：移动端点击菜单项后阻止触发 document 的 touchstart 关闭监听 */
+    touch-action: manipulation;
+}
+.msg-context-menu .menu-item {
+    /* 修改点：菜单项上的点击需穿透到 document touchstart 关闭逻辑，保持可点击 */
+    -webkit-user-select: none;
+    user-select: none;
 }
 .msg-context-menu.visible {
     display: block;
