@@ -53,7 +53,7 @@
 /* ---- 消息卡片 ---- */
 #messageApp .msg-card {
   background: var(--bg-card);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: 14rem var(--spacing-lg);
   margin-bottom: var(--spacing-sm);
   box-shadow: var(--shadow-card);
@@ -118,7 +118,7 @@
 #messageApp .msg-tag {
   display: inline-block;
   padding: 2px 6px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-size: 11rem;
   margin-left: var(--spacing-sm);
   flex-shrink: 0;
@@ -130,8 +130,8 @@
   background: var(--color-primary-tint);
   color: var(--color-primary-dark);
 }
-#messageApp .tag-popup { background: rgba(255, 179, 0, 0.1); color: var(--color-warning); }
-#messageApp .tag-sms { background: rgba(7, 193, 96, 0.1); color: var(--color-success); }
+#messageApp .tag-popup { background: var(--color-primary-dark-tint); color: var(--color-warning); }
+#messageApp .tag-sms { background: var(--color-success-tint); color: var(--color-success); }
 #messageApp .tag-coupon { background: rgba(243, 69, 70, 0.1); color: var(--color-price); }
 
 /* ---- 消息内容 ---- */
@@ -201,13 +201,13 @@
 
 #messageApp .detail-card {
   background: var(--bg-card);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   width: 85%;
   max-width: 500rem;
   max-height: 75vh;
   overflow-y: auto;
   padding: var(--spacing-xl);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px var(--mask-medium);
 }
 
 #messageApp .detail-title {
@@ -236,7 +236,7 @@
   padding: 10rem;
   background: var(--bg-input);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   font-size: var(--font-size-md);
   color: var(--color-text-secondary);
   cursor: pointer;

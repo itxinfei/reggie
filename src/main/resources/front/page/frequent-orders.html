@@ -7,9 +7,10 @@
     <title>常购清单 - 瑞吉外卖</title>
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js"></script>
-    <link rel="stylesheet" href="../styles/index.css" />
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/remixicon-fallback.css" />
+    <link rel="stylesheet" href="../styles/index.css" />
+    <link rel="stylesheet" href="../styles/remixicon.css" />
+    <script src="../js/icon-fallback.js"></script>
     <style>
         .frequent-container {
             height: calc(100vh - var(--header-height));
@@ -324,9 +325,8 @@
             },
             methods: {
                 goBack() {
-                    window.requestAnimationFrame(() => {
-                        window.history.go(-1);
-                    });
+                    // 修改点：统一走 common.js 的全局兜底
+                    goBack();
                 },
                 async initData() {
                     this.pageLoading = true;

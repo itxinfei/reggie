@@ -8,12 +8,14 @@
         <link rel="icon" href="./../images/favico.ico">
         <!--不同屏幕尺寸根字体设置-->
         <script src="./../js/base.js"></script>
-        <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css" />
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
+        <!-- 引入样式  -->
+        <link rel="stylesheet" href="../styles/index.css" />
         <!--本页面内容的样式-->
         <link rel="stylesheet" href="./../styles/order.css" />
+        <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
+        <link rel="stylesheet" href="../styles/tabbar.css" />
     </head>
     <body>
         <div id="order" class="app">
@@ -32,7 +34,7 @@
                     @click="switchTab(tab.value)"
                 >{{ tab.label }}</div>
             </div>
-            <div class="divBody" v-if="orderList.length > 0">
+            <div class="divBody has-tabbar" v-if="orderList.length > 0">
                 <van-list
                     v-model="loading"
                     :finished="finished"
@@ -54,6 +56,8 @@
                             <span>共{{order.sumNum}} 件商品，实付</span><span class="price">￥{{ Number(order.amount || 0).toFixed(2) }}</span>
                         </div>
                         <div class="btn" v-if="order.status === 1">
+                            <!-- 修改点：增加去支付入口，直接跳结算页重新发起支付 -->
+                            <div class="btnPay" @click="goToPay(order)">去支付</div>
                             <div class="btnCancel" @click="cancelOrder(order)">取消订单</div>
                         </div>
                         <div class="btn" v-if="order.status === 2 || order.status === 3">
@@ -74,13 +78,29 @@
                 <van-skeleton v-if="firstLoading" class="list-skeleton" :row="5" title :avatar />
             </div>
             <!-- 修改点：空状态增加引导按钮 -->
-            <div class="divNoData" v-else>
+            <div class="divNoData has-tabbar" v-else>
                 <div class="divContainer">
                     <img src="./../images/no_order.png" alt="暂无订单"/>
                     <div>暂无订单</div>
                     <div class="goShopBtn" @click="goHome">去逛逛</div>
                 </div>
             </div>
+
+            <!-- ====== 底部 Tab 导航（点餐 / 订单 / 我的） ====== -->
+            <van-tabbar v-model="activeTab" class="app-tabbar" @change="onTabChange">
+                <van-tabbar-item>
+                    <span>点餐</span>
+                    <i slot="icon" class="ri-restaurant-line"></i>
+                </van-tabbar-item>
+                <van-tabbar-item>
+                    <span>订单</span>
+                    <i slot="icon" class="ri-file-list-line"></i>
+                </van-tabbar-item>
+                <van-tabbar-item>
+                    <span>我的</span>
+                    <i slot="icon" class="ri-user-3-line"></i>
+                </van-tabbar-item>
+            </van-tabbar>
         </div>
         <!-- 开发环境版本，包含了有帮助的命令行警告 -->
         <script src="../../backend/plugins/vue/vue.js"></script>
@@ -119,7 +139,9 @@
                         { label: '已完成', value: 4 },
                         { label: '已取消', value: 5 },
                         { label: '已退款', value: 6 }
-                    ]
+                    ],
+                    // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
+                    activeTab: 1
                 }
             },
             computed:{},
@@ -135,20 +157,24 @@
             },
             methods:{
                 goBack(){
-                    // 修改点：用sessionStorage标志替代不可靠的document.referrer判断
-                    if(sessionStorage.getItem('orderFromPaySuccess')){
-                        sessionStorage.removeItem('orderFromPaySuccess')
-                        window.requestAnimationFrame(()=>{
-                            window.location.href = '/front/index.html'
-                        })   
-                    }else{
-                        history.go(-1)
-                    }
+                    // 修改点：统一走 common.js 的全局兜底
+                    goBack()
                 },
                 goHome(){
                     window.requestAnimationFrame(()=>{
                         window.location.href = '/front/index.html'
                     })
+                },
+                // 修改点：底部 Tab 切换（0=点餐 1=订单 2=我的）
+                onTabChange(active){
+                    if(active === 1){
+                        // 已在订单页：仅保持选中态，不重复跳转
+                        return
+                    }
+                    const urlMap = { 0: '/front/index.html', 2: '/front/page/user.html' }
+                    const url = urlMap[active]
+                    if(!url) return
+                    window.requestAnimationFrame(()=>{ window.location.href = url })
                 },
                 initData(){
                     this.getList()
@@ -284,6 +310,13 @@
                     } else {
                         vant.Toast.fail('该订单无配送追踪信息');
                     }
+                },
+                // 修改点：待付款订单去支付——跳结算页重新发起支付流程
+                goToPay(order){
+                    if(!order || !order.id) return
+                    window.requestAnimationFrame(()=>{
+                        window.location.href = '/front/page/add-order.html?reorderId=' + order.id
+                    })
                 },
                 // 修改点：取消订单
                 cancelOrder(order){

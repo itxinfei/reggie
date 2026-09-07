@@ -8,34 +8,34 @@
 :root {
   /* 表单错误状态浅红背景 */
   --addr-error-bg: #fff8f8;
-  --addr-error-shadow: rgba(233, 78, 60, 0.12);
+  --addr-error-shadow: var(--color-danger-tint);
   --addr-delete-active-bg: #fff0f0;
 
   /* 已选区域渐变结束色（金色浅） */
   --addr-region-filled-end: #fff3cc;
 
   /* 标签四色（品牌金/家橙/学校绿/无灰）— 公司标签改为品牌金色，避免蓝色违反品牌色 */
-  --addr-tag-company-gradient: linear-gradient(135deg, #fff5d6, #ffe89e);
-  --addr-tag-company-border: #f7c948;
-  --addr-tag-company-shadow: rgba(255, 178, 0, 0.18);
-  --addr-tag-company-fg: #a36d00;
+  --addr-tag-company-gradient: linear-gradient(135deg, var(--color-primary-light), var(--color-primary-light));
+  --addr-tag-company-border: var(--color-primary);
+  --addr-tag-company-shadow: var(--color-primary-dark-tint);
+  --addr-tag-company-fg: var(--color-primary-dark);
 
-  --addr-tag-home-gradient: linear-gradient(135deg, #fff7e6, #ffedc8);
-  --addr-tag-home-border: #f0c060;
-  --addr-tag-home-shadow: rgba(255, 154, 0, 0.12);
+  --addr-tag-home-gradient: linear-gradient(135deg, var(--color-primary-light), var(--color-primary-light));
+  --addr-tag-home-border: var(--color-primary);
+  --addr-tag-home-shadow: var(--color-primary-dark-tint);
 
   --addr-tag-school-gradient: linear-gradient(135deg, #e6faf3, #ccf0e2);
   --addr-tag-school-border: #7fd4b0;
-  --addr-tag-school-shadow: rgba(7, 193, 96, 0.12);
+  --addr-tag-school-shadow: var(--color-success-tint);
 
-  --addr-tag-none-gradient-end: #eee;
+  --addr-tag-none-gradient-end: var(--border-light);
 
   /* 禁用保存按钮渐变结束色 + 阴影 */
   --addr-save-disabled-end: #d5cc90;
   --addr-save-disabled-shadow: rgba(180, 160, 100, 0.15);
 
   /* 保存中旋转边框色 */
-  --addr-spinner-border: rgba(0,0,0,0.15);
+  --addr-spinner-border: var(--mask-medium);
 }
 
 /* 页面全局覆盖 — 避免使用内联样式 */
@@ -65,7 +65,7 @@ body.scrollable-page {
   background: var(--color-primary-gradient);
   position: relative;
   flex-shrink: 0;
-  box-shadow: 0 2rem 12rem rgba(255, 154, 0, 0.25);
+  box-shadow: 0 2rem 12rem var(--color-primary-dark-tint-lg);
   z-index: 10;
 }
 #address_edit .divHead .divTitle {
@@ -113,9 +113,9 @@ body.scrollable-page {
    ============================================ */
 #address_edit .divContent {
   background: var(--bg-card);
-  border-radius: 16rem;
+  border-radius: var(--radius-xl);
   padding: 4rem 0 12rem;
-  box-shadow: 0 2rem 16rem rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 2rem 16rem var(--mask-light), 0 0 0 1px rgba(0, 0, 0, 0.03);
 }
 
 /* ============================================
@@ -151,7 +151,7 @@ body.scrollable-page {
 /* ---- 表单行 ---- */
 #address_edit .divContent .formGroup .formRow {
   background: var(--bg-input);
-  border-radius: 10rem;
+  border-radius: var(--radius-lg);
   border: 1.5px solid transparent;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
@@ -160,7 +160,7 @@ body.scrollable-page {
 #address_edit .divContent .formGroup .formRow:focus-within {
   background: var(--bg-card);
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(255, 194, 0, 0.15);
+  box-shadow: 0 0 0 3px var(--color-primary-tint-md);
 }
 #address_edit .divContent .formGroup .formRow.formRowError {
   border-color: var(--color-danger);
@@ -251,7 +251,7 @@ body.scrollable-page {
   font-weight: 500;
   color: var(--color-text-secondary);
   background: var(--bg-input);
-  border-radius: 20rem;
+  border-radius: var(--radius-xl);
   border: 1.5px solid var(--bg-input);
   cursor: pointer;
   user-select: none;
@@ -271,7 +271,7 @@ body.scrollable-page {
   border-color: var(--color-primary-dark);
   color: var(--color-text-primary);
   font-weight: 600;
-  box-shadow: 0 3rem 10rem rgba(255, 154, 0, 0.25);
+  box-shadow: 0 3rem 10rem var(--color-primary-dark-tint-lg);
 }
 
 /* ============================================
@@ -296,7 +296,7 @@ body.scrollable-page {
   font-weight: 400;
   color: var(--color-text-disabled);
   background: var(--bg-input);
-  border-radius: 8rem;
+  border-radius: var(--radius-md);
   border: 1.5px solid transparent;
   cursor: pointer;
   overflow: hidden;
@@ -337,7 +337,7 @@ body.scrollable-page {
 /* 选中态 */
 #address_edit .divContent .formGroup .regionSlot.regionActive {
   border-color: var(--color-primary-dark);
-  box-shadow: 0 0 0 3px rgba(255, 154, 0, 0.12);
+  box-shadow: 0 0 0 3px var(--color-primary-dark-tint);
 }
 
 /* ============================================
@@ -353,7 +353,7 @@ body.scrollable-page {
   height: 36rem;
   line-height: 36rem;
   text-align: center;
-  border-radius: 18rem;
+  border-radius: var(--radius-xl);
   font-size: 13rem;
   font-weight: 400;
   color: var(--color-text-secondary);
@@ -397,13 +397,13 @@ body.scrollable-page {
   padding: 12rem 20rem;
   padding-bottom: max(12rem, env(safe-area-inset-bottom));
   background: var(--bg-card);
-  box-shadow: 0 -2rem 12rem rgba(0, 0, 0, 0.04);
+  box-shadow: 0 -2rem 12rem var(--border-hair);
 }
 /* 保存按钮 */
 #address_edit .divFooter .btnSave {
   height: 48rem;
   background: var(--color-primary-gradient);
-  border-radius: 24rem;
+  border-radius: var(--radius-xl);
   font-size: 16rem;
   font-weight: 600;
   color: var(--color-text-primary);
@@ -453,7 +453,7 @@ body.scrollable-page {
   color: var(--color-text-disabled);
   cursor: pointer;
   user-select: none;
-  border-radius: 22rem;
+  border-radius: var(--radius-xl);
   transition: all 0.25s;
   background: var(--bg-input);
 }
@@ -469,7 +469,7 @@ body.scrollable-page {
 #address_edit .pickerOverlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--mask-strong);
   z-index: 3000;
   display: flex;
   align-items: flex-end;
@@ -525,7 +525,8 @@ body.scrollable-page {
   cursor: pointer;
   min-width: 56rem;
   text-align: right;
-  padding: 4rem 0;
+  /* 修改点：扩展点击热区至 ≥44rem（纵向 4 → 12rem） */
+  padding: 12rem 0;
   user-select: none;
   transition: color 0.2s;
 }
@@ -586,7 +587,7 @@ body.scrollable-page {
    ============================================ */
 @media screen and (max-width: 360px) {
   #address_edit .divScroll { padding: 10rem 8rem 16rem; }
-  #address_edit .divContent { border-radius: 12rem; }
+  #address_edit .divContent { border-radius: var(--radius-lg); }
   #address_edit .divContent .formGroup { padding: 6rem 14rem; }
   #address_edit .divContent .formGroup .formLabel { font-size: 12rem; }
   #address_edit .divContent .formGroup .nativeInput { padding: 11rem 12rem; font-size: 14px; }
@@ -606,7 +607,7 @@ body.scrollable-page {
   #address_edit { align-items: center; background: var(--bg-card); }
   #address_edit .divHead { max-width: 520rem; }
   #address_edit .divScroll { max-width: 520rem; width: 100%; padding: 20rem 0 24rem; }
-  #address_edit .divContent { border-radius: 20rem; }
+  #address_edit .divContent { border-radius: var(--radius-xl); }
   #address_edit .divFooter { max-width: 520rem; width: 100%; margin: 0 auto; border-radius: 0 0 20rem 20rem; }
   #address_edit .pickerPanel { max-width: 520rem; margin: 0 auto; }
 }

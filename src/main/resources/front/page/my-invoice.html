@@ -6,8 +6,8 @@
   <title>我的发票 - 瑞吉外卖</title>
   <link rel="icon" href="./../images/favico.ico">
   <script src="./../js/base.js"></script>
-  <link rel="stylesheet" href="../styles/index.css" />
   <link rel="stylesheet" href="../styles/vant.min.css"/>
+  <link rel="stylesheet" href="../styles/index.css" />
   <style>
     body { background: var(--bg-page); }
 
@@ -78,7 +78,7 @@
     }
   </style>
 </head>
-<body>
+<body class="scrollable-page">
   <div id="invoice-list-app">
     <div v-if="loading" class="loading-overlay">
       <div class="loading-spinner"></div>

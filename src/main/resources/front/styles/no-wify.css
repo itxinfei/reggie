@@ -76,7 +76,7 @@
   width: 124rem;
   height: 36rem;
   background: var(--color-primary);
-  border-radius: 18rem;
+  border-radius: var(--radius-xl);
   font-size: 15rem;
   font-family: var(--font-family-title);
   font-weight: 500;

@@ -9,7 +9,7 @@
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px var(--border-hair);
 }
 
 .eval-header {
@@ -87,17 +87,17 @@
 }
 
 .status-tag.pending {
-  background: rgba(255, 179, 0, 0.1);
+  background: var(--color-primary-dark-tint);
   color: var(--color-warning);
 }
 
 .status-tag.approved {
-  background: rgba(7, 193, 96, 0.1);
+  background: var(--color-success-tint);
   color: var(--color-success);
 }
 
 .status-tag.rejected {
-  background: rgba(233, 78, 60, 0.1);
+  background: var(--color-danger-tint);
   color: var(--color-danger);
 }
 
@@ -244,7 +244,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--mask-strong);
 }
 .submit-dialog {
   position: relative;
@@ -254,7 +254,7 @@
   background: var(--bg-card);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 32px var(--mask-medium);
 }
 .submit-modal-header {
   position: relative;
@@ -278,7 +278,8 @@
   font-size: 18px;
   color: var(--color-text-hint);
   cursor: pointer;
-  padding: 4px;
+  /* 修改点：扩展点击热区至 ≥44px（4px → 13px） */
+  padding: 13px;
   line-height: 1;
 }
 .submit-modal-body {
@@ -352,7 +353,7 @@
 }
 .eval-textarea:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(255, 194, 0, 0.12);
+  box-shadow: 0 0 0 3px var(--color-primary-tint);
 }
 .eval-word-count {
   display: block;
@@ -368,7 +369,7 @@
   margin: 10px 12px;
   padding: 12px;
   background: var(--color-primary-tint);
-  border: 1px solid rgba(255, 194, 0, 0.3);
+  border: 1px solid var(--color-primary-tint-lg);
   border-radius: 8px;
   display: flex;
   align-items: center;

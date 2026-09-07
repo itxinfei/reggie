@@ -6,12 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0,user-scalable=no,minimal-ui">
     <title>个人中心 - 瑞吉外卖</title>
     <link rel="icon" href="./../images/favico.ico">
-    <link rel="stylesheet" href="../styles/index.css" />
     <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/index.css" />
     <!-- 修改点：加载 remixicon 图标库，菜单位图 png → ri-* 矢量图标 -->
     <link rel="stylesheet" href="../styles/remixicon.css" />
-    <link rel="stylesheet" href="../styles/remixicon-fallback.css" />
+    <script src="../js/icon-fallback.js"></script>
     <link rel="stylesheet" href="./../styles/user.css" />
+    <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
+    <link rel="stylesheet" href="../styles/tabbar.css" />
     <style>
         /* 会员卡片 */
         .member-card {
@@ -99,7 +101,7 @@
                 </div>
             </div>
         </div>
-        <div class="divContent">
+        <div class="divContent has-tabbar">
             <!-- 会员卡片 -->
             <div class="member-card" @click="goMemberCenter" v-if="memberInfo">
                 <div class="card-top">
@@ -204,6 +206,22 @@
                 {{ logoutLoading ? '退出中...' : '退出登录' }}
             </div>
         </div>
+
+        <!-- ====== 底部 Tab 导航（点餐 / 订单 / 我的） ====== -->
+        <van-tabbar v-model="activeTab" class="app-tabbar" @change="onTabChange">
+            <van-tabbar-item>
+                <span>点餐</span>
+                <i slot="icon" class="ri-restaurant-line"></i>
+            </van-tabbar-item>
+            <van-tabbar-item>
+                <span>订单</span>
+                <i slot="icon" class="ri-file-list-line"></i>
+            </van-tabbar-item>
+            <van-tabbar-item>
+                <span>我的</span>
+                <i slot="icon" class="ri-user-3-line"></i>
+            </van-tabbar-item>
+        </van-tabbar>
     </div>
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
@@ -227,6 +245,8 @@
                     // 修改点：初始为空数组，v-if="order[0]" 先渲染 false（隐藏卡片），
                     // 避免旧 dummy 对象在加载间隙闪现「xundefined」/「共0件,实付 ￥NaN」
                     order: [],
+                    // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
+                    activeTab: 2
                 }
             },
             computed:{
@@ -280,6 +300,17 @@
                     // 修改点：直接访问时 history 无前序页面，兜底回首页（与 my-invoice/invoice 一致）
                     if (window.history.length > 1) history.go(-1)
                     else window.location.href = '/front/index.html'
+                },
+                // 修改点：底部 Tab 切换（0=点餐 1=订单 2=我的）
+                onTabChange: function(active){
+                    if(active === 2){
+                        // 已在个人中心：仅保持选中态，不重复跳转
+                        return
+                    }
+                    var urlMap = { 0: '/front/index.html', 1: '/front/page/order.html' }
+                    var url = urlMap[active]
+                    if(!url) return
+                    window.requestAnimationFrame(function(){ window.location.href = url })
                 },
                 getStatus: function(status){ return getStatus(status) },
                 goMemberCenter: function(){

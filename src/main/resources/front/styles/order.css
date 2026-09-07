@@ -47,7 +47,7 @@
   position: relative;
   margin: 0 var(--spacing-md) var(--spacing-md);
   background: var(--bg-card);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding-left: var(--spacing-md);
   padding-right: var(--spacing-md);
   height: calc(100% - var(--header-height) - 44rem);
@@ -106,7 +106,7 @@
   width: 24rem;
   height: 3rem;
   background: var(--color-primary);
-  border-radius: 2rem;
+  border-radius: var(--radius-md);
 }
 
 #order .divBody .van-list .van-cell::after {
@@ -191,7 +191,7 @@
   width: 124rem;
   height: 36rem;
   border: 1px solid var(--color-text-disabled);
-  border-radius: 19rem;
+  border-radius: var(--radius-xl);
   font-size: var(--font-size-md);
   font-family: var(--font-family-body);
   font-weight: 500;
@@ -208,12 +208,36 @@
   border-color: var(--color-primary);
 }
 
+/* 修改点：去支付按钮 —— 品牌金主色，视觉权重最高 */
+#order .divBody .btn .btnPay {
+  width: 124rem;
+  height: 36rem;
+  border: none;
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-body);
+  font-weight: 500;
+  text-align: center;
+  color: var(--color-text-primary);
+  line-height: 36rem;
+  position: relative;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  background: var(--color-primary-gradient, var(--color-primary));
+  box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
+}
+
+#order .divBody .btn .btnPay:active {
+  transform: scale(0.97);
+  box-shadow: 0 1rem 4rem var(--color-primary-tint-md);
+}
+
 /* 修改点：取消订单按钮样式 */
 #order .divBody .btn .btnCancel {
   width: 124rem;
   height: 36rem;
   border: 1px solid var(--order-cancel-border);
-  border-radius: 19rem;
+  border-radius: var(--radius-xl);
   font-size: var(--font-size-md);
   font-family: var(--font-family-body);
   font-weight: 500;
@@ -236,7 +260,7 @@
   width: 124rem;
   height: 36rem;
   border: 1px solid var(--color-primary);
-  border-radius: 19rem;
+  border-radius: var(--radius-xl);
   font-size: var(--font-size-md);
   font-family: var(--font-family-body);
   font-weight: 500;
@@ -259,7 +283,7 @@
   width: 124rem;
   height: 36rem;
   border: 1px solid var(--color-text-disabled);
-  border-radius: 19rem;
+  border-radius: var(--radius-xl);
   font-size: var(--font-size-md);
   font-family: var(--font-family-body);
   font-weight: 500;
@@ -311,7 +335,7 @@
   padding: 0 32rem;
   margin-top: 16rem;
   background: var(--color-primary-gradient);
-  border-radius: 18rem;
+  border-radius: var(--radius-xl);
   font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text-primary);

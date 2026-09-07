@@ -14,7 +14,7 @@
         <link rel="stylesheet" href="../styles/index.css" />
         <!-- 修改点：补充加载 remixicon.css + fallback —— 本页新增 ri-edit-line / ri-checkbox-* 图标字体，此前仅位图未加载字体 -->
         <link rel="stylesheet" href="../styles/remixicon.css" />
-        <link rel="stylesheet" href="../styles/remixicon-fallback.css" />
+        <script src="../js/icon-fallback.js"></script>
         <!--本页面内容的样式-->
         <link rel="stylesheet" href="./../styles/address.css" />
     </head>
@@ -77,7 +77,8 @@
                 data(){
                     return {
                         addressList:[],
-                        loading: false // 修改点：新增加载状态
+                        loading: false, // 修改点：新增加载状态
+                        settingDefault: false // 修改点：设为默认地址防重锁
                     }
                 },
                 computed:{},
@@ -96,7 +97,8 @@
                         return parts.join(' ')
                     },
                     goBack(){
-                        history.go(-1)
+                        // 修改点：统一走 common.js 的全局兜底
+                        goBack()
                     },
                     toAddressEditPage(item){
                         window.requestAnimationFrame(()=>{
@@ -125,6 +127,9 @@
                     },
                     async setDefaultAddress(item){
                         if(!item || !item.id) return
+                        // 修改点：乐观更新防重锁，避免连点竞态
+                        if(this.settingDefault) return
+                        this.settingDefault = true
                         try {
                             this.addressList.forEach(a => { a.isDefault = 0 })
                             item.isDefault = 1
@@ -136,6 +141,8 @@
                         } catch(e) {
                             vant.Toast.fail('设置默认地址失败');
                             this.initData()
+                        } finally {
+                            this.settingDefault = false
                         }
                     },
                     itemClick(item){

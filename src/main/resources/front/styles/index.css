@@ -92,7 +92,49 @@
   --font-size-lg: 16rem;
   --font-size-xl: 18rem;
 
+  /* ---- 语义叠加层（2026-09-07 收敛 main.css 等处的硬编码 rgba，禁止再散写） ---- */
+  /* 价格红 / 危险色 / 品牌金的低透明底与投影 */
+  --color-price-tint:        rgba(243, 67, 70, 0.06);
+  --color-price-tint-strong: rgba(243, 67, 70, 0.2);
+  --color-price-shadow:      rgba(243, 67, 70, 0.45);
+  --color-danger-shadow:     rgba(233, 78, 60, 0.4);
+  --color-primary-shadow:    rgba(255, 209, 0, 0.35);
+  /* 白色表面（金底 / 深底上的白卡、搜索框） */
+  --surface-white-85: rgba(255, 255, 255, 0.85);
+  --surface-white-95: rgba(255, 255, 255, 0.95);
+  /* 深色表面上的文字（禁用态按钮等） */
+  --text-on-dark-60: rgba(255, 255, 255, 0.6);
+  /* 中性蒙层（圆形关闭按钮底 / 按下态） */
+  --mask-light:        rgba(0, 0, 0, 0.05);
+  --mask-light-active: rgba(0, 0, 0, 0.12);
+  /* 头像描边 / 图片容器极细边框 */
+  --avatar-ring: rgba(51, 51, 51, 0.18);
+  --border-hair: rgba(0, 0, 0, 0.04);
+
+  /* 中性蒙层（遮罩 / 按下态，按强度分档） */
+  --mask-medium: rgba(0, 0, 0, 0.15);
+  --mask-strong: rgba(0, 0, 0, 0.5);
+  /* 品牌金 / 深金的低透明底（标签、激活态、进度条），按浓度分档 */
+  --color-primary-tint-md:      rgba(255, 194, 0, 0.15);
+  --color-primary-tint-lg:      rgba(255, 194, 0, 0.25);
+  --color-primary-dark-tint:    rgba(255, 154, 0, 0.12);
+  --color-primary-dark-tint-lg: rgba(255, 154, 0, 0.25);
+  /* 成功绿 / 危险红的低透明底 */
+  --color-success-tint: rgba(7, 193, 96, 0.12);
+  --color-danger-tint:  rgba(233, 78, 60, 0.12);
+  /* 中性蒙层最浅档（卡片浅投影） */
+  --mask-soft: rgba(0, 0, 0, 0.08);
+  /* 成功绿 / 危险红的不透明浅底（标签、提示条幅） */
+  --color-success-bg: #f6ffed;
+  --color-danger-bg:  #fff2f0;
+  /* 白色表面更浅的两档（深底上的次级白面） */
+  --surface-white-50: rgba(255, 255, 255, 0.5);
+  --surface-white-25: rgba(255, 255, 255, 0.25);
+
   /* ---- 阴影 ---- */
+  --shadow-sm: 0 1rem 4rem rgba(0, 0, 0, 0.10);
+  --shadow-md: 0 2rem 12rem rgba(0, 0, 0, 0.06);
+  --shadow-cart-bar: 0 -2rem 10rem rgba(0, 0, 0, 0.3);
   --shadow-card: 0 2rem 10rem rgba(0, 0, 0, 0.05);
   --shadow-card-hover: 0 4rem 16rem rgba(0, 0, 0, 0.08);
 
@@ -323,10 +365,18 @@ i {
   line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
+  position: relative;
   transition: background 0.2s;
 }
 .icon-circle-close:active {
   background: var(--color-text-hint);
+}
+/* 修改点：扩展点击热区至 ≥44rem（视觉保持 20rem） */
+.icon-circle-close::after {
+  content: '';
+  position: absolute;
+  inset: -12rem;
+  border-radius: 50%;
 }
 
 .van-dialog {
@@ -456,4 +506,39 @@ i {
   background-color: var(--color-text-disabled) !important;
   border-color: var(--color-text-disabled) !important;
   color: var(--color-text-white) !important;
+}
+
+/* ================================================================
+   无障碍（a11y）基线 — 键盘焦点可见 + 减弱动效
+   ----------------------------------------------------------------
+   - 可聚焦交互元素在键盘导航（:focus-visible）时显示品牌深金描边，
+     鼠标点击（:focus）不触发，避免干扰；覆盖原生默认 outline。
+   - 尊重 prefers-reduced-motion，关闭非必要动画（入场/微光/弹跳等），
+     照顾前庭功能障碍用户。
+   ================================================================ */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible,
+.van-button:focus-visible,
+.btnSubmitActive:focus-visible,
+.tabbar-item:focus-visible,
+.agreementRow:focus-visible,
+.agreementCheckbox:focus-visible {
+  outline: 2px solid var(--color-primary-dark);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

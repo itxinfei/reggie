@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <title>会员中心 - 瑞吉外卖</title>
-  <link rel="stylesheet" href="../styles/index.css">
   <link rel="stylesheet" href="../styles/vant.min.css">
+  <link rel="stylesheet" href="../styles/index.css">
   <link rel="stylesheet" href="../styles/remixicon.css">
-  <!-- 修改点：补 remixicon-fallback.css —— 该页权益图标 ri-medal/ri-vip-diamond/ri-gift/ri-coupon/ri-cake-2 均已覆盖，
-       字体加载失败时以 Unicode 降级，避免空白方块 -->
-  <link rel="stylesheet" href="../styles/remixicon-fallback.css">
+  <!-- 修改点：emoji 兜底不再静态引入 —— fallback 在真字体之后加载会覆盖 ::before，导致权益图标渲染为彩色 emoji；
+       字体加载失败时改由 js/icon-fallback.js 动态注入 remixicon-fallback.css 降级，避免空白方块 -->
+  <script src="../js/icon-fallback.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: var(--bg-page); font-family: var(--font-family-base); -webkit-font-smoothing: antialiased; }
@@ -173,7 +173,7 @@
     .mc-bottom-spacer { height: 30rem; }
   </style>
 </head>
-<body>
+<body class="scrollable-page">
   <div id="member-center">
     <!-- 加载 -->
     <van-overlay :show="loading" :z-index="999">

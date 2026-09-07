@@ -1,0 +1,59 @@
+/* ================================================================
+   全局底部 Tab 导航（2026-09-07 新增）
+   ----------------------------------------------------------------
+   背景：此前 16 个页面没有任何全局导航，用户在「点餐 ↔ 订单 ↔ 我的」
+   之间只能靠顶部头像/返回箭头逐层进出，操作路径过长且容易迷路。
+
+   规范：
+   - 高度 50rem（rem 基准 = 设计稿 375px，故 50rem = 50px，与 Vant 默认一致）
+   - 底部安全区用 env(safe-area-inset-bottom) 适配 iPhone Home Indicator
+   - 选中态用 --color-primary-dark（深金）：亮金 --color-primary 在白底上
+     不满足 4.5:1 对比度，禁止直接用于文字
+   - 与首页购物车栏共存：购物车栏上移至 bottom:50rem（见 main.css .cart-bar）
+   ================================================================ */
+.app-tabbar {
+  height: calc(50rem + env(safe-area-inset-bottom, 0px)) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  border-top: 1px solid var(--border-light);
+  box-shadow: 0 -1rem 6rem rgba(0, 0, 0, 0.06);
+  z-index: 2000 !important;
+}
+
+.app-tabbar .van-tabbar-item {
+  color: var(--color-text-hint);
+  font-size: var(--font-size-sm);
+  line-height: 1.2;
+}
+
+.app-tabbar .van-tabbar-item__icon {
+  font-size: 20rem;
+  margin-bottom: 2rem;
+}
+
+.app-tabbar .van-tabbar-item__text {
+  font-size: var(--font-size-sm);
+}
+
+/* 修改点：选中态用深金而非亮金（亮金白底对比度不足） */
+.app-tabbar .van-tabbar-item--active {
+  color: var(--color-primary-dark) !important;
+  font-weight: 600;
+}
+
+/* 有 Tab 的页面：内容区底部留白，避免最后一条内容/按钮被 Tab 遮挡 */
+.has-tabbar {
+  padding-bottom: calc(50rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* 修改点：桌面端将固定 Tab 栏约束到 750px 居中列。
+   Vant .van-tabbar 默认 position:fixed; left:0; right:0 会拉满全宽，
+   与 index.css 的居中手机列（html max-width:750px）错位；用与 .cart-bar 相同的
+   max-width + 居中 translateX 收敛。 */
+@media (min-width: 751px) {
+  .app-tabbar {
+    max-width: 750px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+}

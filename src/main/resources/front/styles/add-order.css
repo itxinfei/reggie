@@ -48,7 +48,7 @@
 #add_order .divContent .divAddress {
   height: 120rem;
   background: var(--bg-card);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   position: relative;
   padding: 11rem var(--spacing-md) 0 var(--spacing-lg);
   box-shadow: var(--shadow-card);
@@ -121,11 +121,11 @@
 
 #add_order .divContent .order {
   background: var(--bg-card);
-  border-radius: 8rem;
+  border-radius: var(--radius-md);
   margin-top: 10rem;
   margin-bottom: 10rem;
   padding: 3rem 10rem 7rem 16rem;
-  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1rem 4rem var(--border-hair);
 }
 
 #add_order .divContent .order .title {
@@ -230,10 +230,10 @@
   height: 164rem;
   opacity: 1;
   background: var(--bg-card);
-  border-radius: 8rem;
+  border-radius: var(--radius-md);
   margin-top: 11rem;
   padding: 3rem 10rem 10rem 11rem;
-  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1rem 4rem var(--border-hair);
 }
 
 #add_order .divContent .note .title {
@@ -258,7 +258,7 @@
   height: 44rem;
   opacity: 1;
   background: var(--bg-cart-bar);
-  border-radius: 25rem;
+  border-radius: var(--radius-xl);
   box-shadow: 0 4rem 14rem 0rem rgba(0, 0, 0, 0.3);
   margin: 0 auto;
   margin-top: 10rem;
@@ -306,7 +306,7 @@
   width: 102rem;
   height: 36rem;
   opacity: 1;
-  border-radius: 18rem;
+  border-radius: var(--radius-xl);
   font-size: 15rem;
   font-family: PingFangSC, PingFangSC-Regular;
   font-weight: 500;
@@ -327,12 +327,18 @@
   background: var(--color-primary-gradient);
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 2rem 8rem rgba(255, 194, 0, 0.25);
+  box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
 }
 
 #add_order .divCart .btnSubmitActive:active {
   transform: scale(0.96);
-  box-shadow: 0 1rem 4rem rgba(255, 194, 0, 0.15);
+  box-shadow: 0 1rem 4rem var(--color-primary-tint-md);
+}
+/* 修改点：提交中禁用并弱化按钮，配合 goToPaySuccess 内的 loading 守卫防重复提交 */
+#add_order .divCart .btnSubmitActive.isLoading {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: progress;
 }
 
 #add_order .divCart .divGoodsNum {
@@ -361,10 +367,10 @@
 /* 修改点：支付方式选择 */
 #add_order .divContent .pay-method {
   background: var(--bg-card);
-  border-radius: 8rem;
+  border-radius: var(--radius-md);
   margin-top: 10rem;
   padding: 3rem 10rem 10rem 16rem;
-  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1rem 4rem var(--border-hair);
 }
 
 #add_order .divContent .pay-method .title {
@@ -388,7 +394,7 @@
   display: flex;
   align-items: center;
   height: 48rem;
-  border-radius: 8rem;
+  border-radius: var(--radius-md);
   padding: 0 12rem;
   cursor: pointer;
   border: 2px solid var(--bg-hover);
@@ -403,12 +409,13 @@
 #add_order .divContent .pay-method .pay-icon {
   width: 28rem;
   height: 28rem;
-  border-radius: 6rem;
+  border-radius: var(--radius-md);
   font-size: 14rem;
   font-weight: 600;
   text-align: center;
   line-height: 28rem;
-  color: var(--color-text-white);
+  /* 修改点：浅金底(#ffd54f)上白字对比度仅约 1.3:1，违反 WCAG；改为深字 */
+  color: var(--color-text-primary);
   margin-right: 10rem;
 }
 
@@ -436,11 +443,11 @@
 /* 修改点：优惠券选择 */
 #add_order .divContent .coupon-section {
   background: var(--bg-card);
-  border-radius: 8rem;
+  border-radius: var(--radius-md);
   margin-top: 10rem;
   margin-bottom: 10rem;
   padding: 3rem 10rem 10rem 16rem;
-  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1rem 4rem var(--border-hair);
 }
 
 #add_order .divContent .coupon-section .title {
@@ -470,7 +477,7 @@
   display: flex;
   align-items: center;
   height: 64rem;
-  border-radius: 8rem;
+  border-radius: var(--radius-md);
   border: 2px solid var(--bg-hover);
   padding: 0 12rem;
   cursor: pointer;
@@ -584,7 +591,8 @@
   color: var(--color-text-hint);
   cursor: pointer;
   font-weight: 400;
-  padding: 0 4rem;
+  /* 修改点：扩展点击热区至 ≥44rem（纵向 0 → 12rem） */
+  padding: 12rem 4rem;
   line-height: 1;
 }
 
@@ -601,7 +609,7 @@
   display: flex;
   align-items: center;
   height: 52rem;
-  border-radius: 8rem;
+  border-radius: var(--radius-md);
   padding: 0 14rem;
   cursor: pointer;
   border: 2px solid var(--bg-hover);
@@ -650,10 +658,10 @@
 /* 修改点：配送方式选择 */
 #add_order .divContent .delivery-mode {
   background: var(--bg-card);
-  border-radius: 8rem;
+  border-radius: var(--radius-md);
   margin-top: 10rem;
   padding: 0;
-  box-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1rem 4rem var(--border-hair);
   overflow: hidden;
 }
 #add_order .delivery-mode .mode-tabs {
@@ -685,7 +693,7 @@
   width: 40rem;
   height: 3rem;
   background: var(--color-primary);
-  border-radius: 2rem;
+  border-radius: var(--radius-md);
 }
 #add_order .delivery-mode .mode-tab i {
   margin-right: 4rem;
@@ -738,7 +746,7 @@
   text-align: center;
   padding: 10rem 6rem;
   border: 2px solid var(--bg-hover);
-  border-radius: 8rem;
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s;
   position: relative;

@@ -101,3 +101,13 @@ function getStatus(status) {
     return ORDER_STATUS_FALLBACK[String(status)] || '';
 }
 
+// ============ 统一返回兜底（全局） ============
+// 所有页面的 goBack 方法统一调用此函数，避免各页面自行处理 sessionStorage/referrer 判断不一致
+function goBack() {
+    if (history.length > 1) {
+        history.go(-1);
+    } else {
+        window.location.href = '/front/index.html';
+    }
+}
+

@@ -13,11 +13,16 @@
     <!--引入vant样式-->
     <link rel="stylesheet" href="styles/vant.min.css"/>
     <!--RemixIcon 图标（C端全站统一用 RemixIcon，禁止 emoji 作图标）-->
-    <link rel="stylesheet" href="styles/remixicon-fallback.css"/>
+    <!-- 修改点：改为加载 RemixIcon 真字体（v4.6.0）。原 fallback 用 emoji 兜底且在其后加载会覆盖真字体，
+         导致全站图标渲染为彩色 emoji；现 emoji 兜底改由 js/icon-fallback.js 在字体确认加载失败时动态注入 -->
+    <link rel="stylesheet" href="styles/remixicon.css"/>
+    <script src="js/icon-fallback.js"></script>
     <!-- 引入样式  -->
     <link rel="stylesheet" href="styles/index.css" />
     <!--本页面内容的样式-->
     <link rel="stylesheet" href="styles/main.css" />
+    <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
+    <link rel="stylesheet" href="styles/tabbar.css" />
   </head>
   <body>
     <div id="main" class="app">
@@ -337,6 +342,23 @@
         :start-position="previewIndex"
       ></van-image-preview>
 
+      <!-- ====== 底部 Tab 导航（点餐 / 订单 / 我的） ====== -->
+      <!-- 修改点：全站此前无任何全局导航，跨页只能靠顶部头像/返回箭头，路径过长 -->
+      <van-tabbar v-model="activeTab" class="app-tabbar" @change="onTabChange">
+        <van-tabbar-item>
+          <span>点餐</span>
+          <i slot="icon" class="ri-restaurant-line"></i>
+        </van-tabbar-item>
+        <van-tabbar-item>
+          <span>订单</span>
+          <i slot="icon" class="ri-file-list-line"></i>
+        </van-tabbar-item>
+        <van-tabbar-item>
+          <span>我的</span>
+          <i slot="icon" class="ri-user-3-line"></i>
+        </van-tabbar-item>
+      </van-tabbar>
+
     <!-- ====== 搜索浮层 ====== -->
     <div class="search-overlay" v-if="searchShow" @click.self="closeSearch">
       <div class="search-header">
@@ -545,6 +567,8 @@
               previewShow: false,
               previewImages: [],
               previewIndex: 0,
+              // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
+              activeTab: 0,
             }
           },
           computed:{
@@ -653,10 +677,9 @@
                 window.location.href = '/front/page/ai-assistant.html'
               })
             },
-            // 修改点：点击推荐菜品，打开详情
+            // 修改点：点击推荐菜品，走 dishDetails 加载评价数据
             recommendDishClick(dish){
-              this.detailsDialog.show = true
-              this.detailsDialog.item = dish
+              this.dishDetails(dish)
             },
             // 修改点：分类图标映射（RemixIcon 类名，禁止使用 emoji）
             getCategoryIcon(name){
@@ -1379,6 +1402,19 @@
             formatDate(dateStr) {
               if (!dateStr) return ''
               return dateStr.replace('T', ' ').substring(0, 19)
+            },
+            // 修改点：底部 Tab 切换（0=点餐 1=订单 2=我的）
+            onTabChange(active){
+              if(active === 0){
+                // 已在点餐页：仅保持选中态，不重复跳转
+                if(window.location.pathname.indexOf('index.html') > -1) return
+                window.requestAnimationFrame(()=>{ window.location.href = '/front/index.html' })
+                return
+              }
+              const urlMap = { 1: '/front/page/order.html', 2: '/front/page/user.html' }
+              const url = urlMap[active]
+              if(!url) return
+              window.requestAnimationFrame(()=>{ window.location.href = url })
             }
 
           }
