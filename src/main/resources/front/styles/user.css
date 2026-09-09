@@ -218,10 +218,10 @@
   background: var(--bg-hover);
 }
 
-/* 修改点：美团式菜品行——小图(56rem圆角缩略图) + 菜名自适应 + x数量，点整行或小图可全屏预览 */
+/* 修改点：美团式菜品行——小图(72rem圆角缩略图) + 菜名自适应 + x数量，点整行或小图可全屏预览 */
 #user .divOrders .dishList .item .dish-thumb {
-  width: 56rem;
-  height: 56rem;
+  width: 72rem;
+  height: 72rem;
   border-radius: var(--radius-md);
   object-fit: cover;
   flex-shrink: 0;
