@@ -10,8 +10,6 @@ const attendanceClockOut = (params) => $axios({ url: '/api/attendance/clockOut',
 const scheduleMonthly = (params) => $axios({ url: '/api/schedule/monthly', method: 'get', params })
 const scheduleToday = () => $axios({ url: '/api/schedule/today', method: 'get' })
 const scheduleSave = (data) => $axios({ url: '/api/schedule/save', method: 'post', data })
-const scheduleList = (params) => $axios({ url: '/api/schedule/list', method: 'get', params })
-const scheduleDelete = (id) => $axios({ url: '/api/schedule/' + id, method: 'delete' })
 
 // 员工选项（用于考勤/排班页面下拉选择）
 const employeeOptions = () => $axios({ url: '/employee/options', method: 'get' })
