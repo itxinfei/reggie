@@ -415,9 +415,11 @@ public class UserController {
 
     /**
      * 获取筛选下拉选项（用户姓名 + 手机号列表）
-     * <p>从数据库动态查询当前租户的所有C端用户，供前端下拉框使用</p>
+     * <p>从数据库动态查询当前租户的所有C端用户，供前端下拉框使用。
+     * 后台专用接口：需员工登录权限；手机号列表脱敏，防批量拉取裸手机号。</p>
      */
     @GetMapping("/options")
+    @RequireEmployee
     @Operation(summary = "筛选选项", description = "获取所有用户姓名和手机号，供搜索条件下拉框使用")
     public R<Map<String, List<String>>> options() {
         LambdaQueryWrapper<User> qw = new LambdaQueryWrapper<>();
@@ -430,7 +432,9 @@ public class UserController {
         Set<String> phoneSet = new HashSet<>();
         for (User u : list) {
             if (u.getName() != null && !u.getName().isEmpty()) { nameSet.add(u.getName()); }
-            if (u.getPhone() != null && !u.getPhone().isEmpty()) { phoneSet.add(u.getPhone()); }
+            if (u.getPhone() != null && !u.getPhone().isEmpty()) {
+                phoneSet.add(maskPhone(u.getPhone()));
+            }
         }
         Map<String, List<String>> result = new HashMap<>();
         result.put("names", new ArrayList<>(nameSet));

@@ -231,6 +231,7 @@
         <script src="./../api/main.js"></script>
         <script src="./../api/order.js"></script>
         <script src="./../api/coupon.js"></script>
+        <script src="./../api/payment.js"></script>
         <script>
             new Vue({
                 el:"#add_order",
@@ -252,6 +253,8 @@
                         loading:false,
                         // 支付方式 — 6=货到付款（权威枚举：2=微信，3=支付宝，6=货到付款）
                         payMethod: 6,
+                        // 修改点（P2-11）：订单列表「去支付」跳转携带的待付款订单 ID（reorderId）
+                        reorderId: null,
                         // 优惠券列表及选中项
                         couponList:[],
                         selectedCoupon:null,
@@ -361,6 +364,18 @@
                         window.location.href = '/front/page/login.html'
                         return
                     }
+                    // 修改点（P2-11）：解析订单列表「去支付」跳转携带的 reorderId（待付款订单 ID），
+                    // 提示用户直接重新发起支付；订单号透传 goToPaySuccess 供支付成功页回查结果
+                    const reorderId = this.getUrlParam('reorderId')
+                    if(reorderId){
+                        this.payMethod = 6
+                        this.reorderId = reorderId
+                        vant.Dialog.alert({
+                            title: '继续支付',
+                            message: '正在为订单#' + reorderId + '发起支付，请确认商品无误后点击"去支付"',
+                            confirmButtonText: '知道了'
+                        }).catch(()=>{})
+                    }
                     this.initData()
                 },
                 methods:{
@@ -371,6 +386,11 @@
                     // 修改点：图片加载失败兜底
                     imgError(e){
                         e.target.src = './../images/noImg.png'
+                    },
+                    // 修改点（P2-11）：解析 URL 查询参数（my-evaluations.html 权威写法）
+                    getUrlParam(name){
+                        var match = location.search.match(new RegExp('[?&]' + name + '=([^&]+)'))
+                        return match ? decodeURIComponent(match[1]) : ''
                     },
                     goBack(){
                         window.requestAnimationFrame(()=>{
@@ -547,12 +567,34 @@
                         }
                         try {
                             const res = await addOrderApi(params)
-                            if(res.code === 1){
+                            if(res.code !== 1){
+                                vant.Toast.fail(res.msg || '提交订单失败');
+                                return
+                            }
+                            // 修改点：微信/支付宝线上支付 → 下单后立即拉起支付（payMethod=2 微信/3 支付宝）
+                            // 支付成功页收订单号后由 pay-success.html 解析 reorderId 主动查询支付结果；
+                            // 货到付款(6) 保持原流程直接跳下单成功页。
+                            // 修改点（P2-11）：待付款订单「去支付」进入本页时优先复用既有订单号，
+                            // 不再生成新订单（否则每次跳转都会下重复单）。
+                            const orderId = this.reorderId || (res.data && res.data.id)
+                            if(this.payMethod === 2 || this.payMethod === 3){
+                                if(!orderId){
+                                    throw new Error('下单成功但缺少订单ID')
+                                }
+                                const payRes = await paymentCreateApi({
+                                    orderId: orderId,
+                                    channel: this.payMethod === 2 ? 'WECHAT' : 'ALIPAY'
+                                })
+                                if(payRes.code === 1 && payRes.data){
+                                    // 携带订单号跳转，供支付结果页回查
+                                    window.location.replace('/front/page/pay-success.html?reorderId=' + orderId)
+                                }else{
+                                    vant.Toast.fail((payRes.data && payRes.data.errorMsg) || payRes.msg || '支付发起失败');
+                                }
+                            }else{
                                 window.requestAnimationFrame(()=>{
                                     window.location.replace('/front/page/pay-success.html')
                                 })
-                            }else{
-                                vant.Toast.fail(res.msg || '提交订单失败');
                             }
                         } catch (err) {
                             // 异常兜底：网络错误/接口 500 时给出提示，按钮不再永卡「提交中」

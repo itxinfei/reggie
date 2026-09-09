@@ -47,19 +47,53 @@
         <script src="./../js/request.js"></script>
         <script src="./../js/common.js"></script>
         <script src="../js/vant.min.js"></script>
+        <!-- 修改点（P2-11）：支付结果回查依赖支付发起接口，加载 payment.js -->
+        <script src="./../api/payment.js"></script>
         <script>
         new Vue({
             el:"#pay_success",
             data(){
                 return {
-                    finishTime:''
+                    finishTime:'',
+                    // 修改点（P2-11）：订单列表「去支付」/下单后携带的订单 ID，用于回查支付结果
+                    reorderId: ''
                 }
             },
             computed:{},
             created(){
                 this.finishTime = getFinishTime()
+                // 修改点（P2-11）：解析 reorderId，主动查询该订单支付结果，避免用户停留在"下单成功"
+                // 页面而订单实际未支付（此前下单跳转后支付结果不可见，形成死循环）
+                var match = location.search.match(new RegExp('[?&]reorderId=([^&]+)'))
+                if(match){
+                    this.reorderId = decodeURIComponent(match[1])
+                    this.checkPayResult()
+                }
             },
             methods:{
+                // 修改点（P2-11）：根据订单号回查支付结果。查询成功/失败均为幂等操作，
+                // 结果通过 Toast 展示，不阻塞页面；错误静默（网络抖动）不影响主流程
+                async checkPayResult(){
+                    if(!this.reorderId) return
+                    try {
+                        const res = await paymentCreateApi({
+                            orderId: this.reorderId,
+                            channel: 'WECHAT'
+                        })
+                        if(res && res.code === 1 && res.data){
+                            const d = res.data
+                            if(d.success){
+                                vant.Toast.success('支付成功')
+                            }else{
+                                const msg = d.errorMsg || d.rawResponse || '支付未完成'
+                                vant.Toast.fail(msg)
+                            }
+                        }
+                    } catch (e) {
+                        // 网络异常：保持页面可用，用户可到订单列表查看
+                        console.error('支付结果回查失败:', e)
+                    }
+                },
                 goBack(){
                     window.requestAnimationFrame(()=>{
                         window.location.replace('/front/index.html')

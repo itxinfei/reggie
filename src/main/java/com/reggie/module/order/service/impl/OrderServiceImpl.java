@@ -128,6 +128,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     @Autowired(required = false)
     private StoreService storeService;
 
+    /** 用户优惠券服务（下单应用折扣 + 立即核销） */
+    @Autowired(required = false)
+    private com.reggie.module.member.service.CouponUserService couponUserService;
+
+    /** 会员服务（可用券以会员维度查询） */
+    @Autowired(required = false)
+    private com.reggie.module.member.service.MemberService memberService;
+
     /** 下单幂等锁过期时间（分钟） */
     private static final long IDEMPOTENCY_TTL_MINUTES = 30;
 
@@ -176,32 +184,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         StoreInfo storeInfo = (storeService != null) ? storeService.findByTenantId(currentTenantId) : null;
         boolean deliveryCheckEnabled = deliveryEnhancedService != null && storeInfo != null
                 && storeInfo.getIsDeliveryEnabled() != null && storeInfo.getIsDeliveryEnabled() == 1;
-        if (deliveryCheckEnabled) {
-            // 1. 起送价校验（totalAmount 此时尚未累计完成，先用购物车预估——菜品核价后再二次校验）
-            BigDecimal minAmount = storeInfo.getMinDeliveryAmount();
-            if (minAmount != null && minAmount.compareTo(BigDecimal.ZERO) > 0) {
-                // 此处先用购物车预览金额粗校验，后续服务端核价完成后精确二次校验
-            }
-            // 2. 配送范围 + 配送费（地址经纬度存在时才校验，避免无地图 Key 环境阻断下单）
-            BigDecimal addrLon = addressBook.getLongitude();
-            BigDecimal addrLat = addressBook.getLatitude();
-            BigDecimal storeLon = storeInfo.getLongitude();
-            BigDecimal storeLat = storeInfo.getLatitude();
-            if (addrLon != null && addrLat != null && storeLon != null && storeLat != null) {
-                BigDecimal distance = deliveryEnhancedService.calculateDistance(storeLon, storeLat, addrLon, addrLat);
-                // orderAmount 用 0 作为占位（配送费阶梯多数按距离计算，金额门槛在规则内处理）
-                java.util.Map<String, Object> feeResult = deliveryEnhancedService.calculateFee(
-                        addrLon, addrLat, distance, BigDecimal.ZERO, currentTenantId);
-                Boolean inRange = (Boolean) feeResult.get("inRange");
-                if (inRange != null && !inRange) {
-                    throw new CustomException("收货地址不在配送范围内");
-                }
-                Object feeObj = feeResult.get("fee");
-                if (feeObj instanceof BigDecimal) {
-                    deliveryFee = ((BigDecimal) feeObj).setScale(2, java.math.RoundingMode.HALF_UP);
-                }
-            }
-        }
 
         long orderId = IdWorker.getId();//订单号
 
@@ -278,16 +260,70 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
 
 
-        // 起送价精确校验（服务端核价完成后再判断，避免预估金额与实际不符）
+        // 起送价精确校验 + 配送费精确计算（服务端核价完成后再计算，免运门槛基于真实菜品金额）
         if (deliveryCheckEnabled) {
             BigDecimal minAmount = storeInfo.getMinDeliveryAmount();
             if (minAmount != null && minAmount.compareTo(BigDecimal.ZERO) > 0
                     && totalAmount.compareTo(minAmount) < 0) {
                 throw new CustomException("订单金额未达到起送价 " + minAmount + " 元，无法下单");
             }
+            // 配送范围 + 配送费（地址经纬度存在时才校验，避免无地图 Key 环境阻断下单）
+            BigDecimal addrLon = addressBook.getLongitude();
+            BigDecimal addrLat = addressBook.getLatitude();
+            BigDecimal storeLon = storeInfo.getLongitude();
+            BigDecimal storeLat = storeInfo.getLatitude();
+            if (addrLon != null && addrLat != null && storeLon != null && storeLat != null) {
+                BigDecimal distance = deliveryEnhancedService.calculateDistance(storeLon, storeLat, addrLon, addrLat);
+                // 修复免运门槛失效：传真实核价后 totalAmount，满额自动免配送费
+                java.util.Map<String, Object> feeResult = deliveryEnhancedService.calculateFee(
+                        addrLon, addrLat, distance, totalAmount, currentTenantId);
+                Boolean inRange = (Boolean) feeResult.get("inRange");
+                if (inRange != null && !inRange) {
+                    throw new CustomException("收货地址不在配送范围内");
+                }
+                Object feeObj = feeResult.get("fee");
+                if (feeObj instanceof BigDecimal) {
+                    deliveryFee = ((BigDecimal) feeObj).setScale(2, java.math.RoundingMode.HALF_UP);
+                }
+            }
         }
         // 配送费计入订单总额
         BigDecimal finalAmount = totalAmount.add(deliveryFee);
+
+        // 优惠券折扣：服务端校验归属/有效期/门槛，计算可抵扣金额并立即核销（防"选券不生效"）
+        BigDecimal couponDiscount = BigDecimal.ZERO;
+        Long usedCouponId = orders.getUsedCouponId();
+        boolean couponOk = false;
+        if (usedCouponId != null && couponUserService != null) {
+            try {
+                // 归属 + 未使用 + 未过期校验，并在同一事务内 CAS 核销（并发重复下单时第二个请求核销失败）
+                // coupon_user.member_id 为会员ID，先经 user→member 映射（与选券列表 availableCoupons 语义一致）
+                com.reggie.module.member.model.Member member = memberService != null
+                        ? memberService.getByUserId(userId) : null;
+                Long memberId = member != null ? member.getId() : userId;
+                couponOk = couponUserService.useCoupon(memberId, usedCouponId, orderId);
+                if (couponOk) {
+                    // 按订单菜品金额计算实际折扣（规则与选券列表 availableCoupons 一致）
+                    couponDiscount = computeCouponDiscount(memberId, usedCouponId, totalAmount);
+                    if (couponDiscount.compareTo(BigDecimal.ZERO) <= 0) {
+                        // 门槛不满足/折扣为0 → 撤销核销，视为未用券
+                        couponUserService.restoreCoupon(usedCouponId, orderId);
+                        couponOk = false;
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[优惠券] 订单{}核销失败，按未用券处理: {}", orderId, e.getMessage());
+            }
+            if (!couponOk) {
+                log.warn("[优惠券] 订单{}所选优惠券不可用（不属于该用户/已用/已过期/未达门槛），按未用券处理", orderId);
+                usedCouponId = null;
+            }
+        }
+        finalAmount = finalAmount.subtract(couponDiscount);
+        if (finalAmount.compareTo(BigDecimal.ZERO) < 0) {
+            finalAmount = BigDecimal.ZERO;
+        }
+        orders.setUsedCouponId(couponOk ? usedCouponId : null);
 
         orders.setId(orderId);
         orders.setOrderTime(LocalDateTime.now());
@@ -304,7 +340,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             orders.setStatus(Orders.STATUS_PENDING_PAY);
         }
         orders.setDeliveryFee(deliveryFee.compareTo(BigDecimal.ZERO) > 0 ? deliveryFee : null);
-        orders.setAmount(finalAmount.setScale(2, java.math.RoundingMode.HALF_UP));//总金额（菜品+配送费）
+        orders.setAmount(finalAmount.setScale(2, java.math.RoundingMode.HALF_UP));//总金额（菜品+配送费-优惠券）
         orders.setUserId(userId);
         orders.setNumber(String.valueOf(orderId));
         // 幂等性保护：如果请求未提供幂等令牌，自动生成一个
@@ -334,6 +370,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                     orders.setNumber(existing.getNumber());
                     orders.setAmount(existing.getAmount());
                     orders.setStatus(existing.getStatus());
+                    orders.setUsedCouponId(existing.getUsedCouponId());
                     return;
                 }
                 // 锁存在但订单未落库（并发处理中），拒绝重复提交
@@ -376,6 +413,32 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
     }
 
+    // ==================== 优惠券折扣 ====================
+
+    /**
+     * 计算优惠券针对订单菜品金额的实际可抵扣金额（规则与选券列表 availableCoupons 一致）：
+     * <ul>
+     *   <li>折扣券（DISCOUNT）：orderAmount × (1 - discountRate)</li>
+     *   <li>满减券/其他：min(discountAmount, orderAmount)</li>
+     * </ul>
+     * 先核销再算折扣，若门槛不满足返回 0 由调用方撤销核销。
+     */
+    private BigDecimal computeCouponDiscount(Long memberId, Long couponId, BigDecimal orderAmount) {
+        try {
+            List<com.reggie.module.member.model.CouponAvailableDTO> list =
+                    couponUserService.availableCoupons(memberId, orderAmount);
+            for (com.reggie.module.member.model.CouponAvailableDTO dto : list) {
+                if (Objects.equals(dto.getId(), couponId)) {
+                    BigDecimal discount = dto.getCurrentDiscount();
+                    return discount != null ? discount : BigDecimal.ZERO;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[优惠券] 计算折扣失败 couponId={}, 按0处理: {}", couponId, e.getMessage());
+        }
+        return BigDecimal.ZERO;
+    }
+
     // ==================== 堂食扫码下单 ====================
 
     /**
@@ -400,11 +463,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         // 修复堂食并发重复下单：用 Redis SETNX 原子抢占幂等令牌，防止同一桌台并发扫码重复下单
         // 修复 P0-3：幂等键去掉 UUID（原实现拼入随机值导致每次 key 不同，Redis SETNX 防重完全失效）
+        // 修复 P2-8：幂等键追加菜品明细签名。原实现 key 恒为 {userId}_{tableId}，30 分钟 TTL 内
+        // 同一用户+桌台的「加菜」（菜品不同）会被误判为重复提交而静默丢弃，导致加菜功能失效。
+        // 现改为 {userId}_{tableId}_{明细签名}：完全相同的提交（双击/重试）→ 返回已有订单；
+        // 菜品不同 → 视为加菜，正常创建新订单。
         Long eatInUserId = BaseContext.getCurrentId();
         String eatInIdemKey = (eatInUserId != null ? eatInUserId.toString() : "unknown")
-                + "_" + (tableId != null ? tableId.toString() : "unknown");
+                + "_" + (tableId != null ? tableId.toString() : "unknown")
+                + "_" + buildEatInDetailSignature(orderDetails);
         orders.setIdempotencyKey(eatInIdemKey);
-        String lockKey = "order:eatin:idem:" + tableId + ":" + (eatInUserId != null ? eatInUserId : "unknown");
+        String lockKey = "order:eatin:idem:" + eatInIdemKey;
         boolean eatInLockAcquired = false;
         if (redisTemplate != null) {
             Boolean ok = redisTemplate.opsForValue().setIfAbsent(lockKey, eatInIdemKey, IDEMPOTENCY_TTL_MINUTES, java.util.concurrent.TimeUnit.MINUTES);
@@ -722,7 +790,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             dtoPage.setRecords(orderDtoList);
             return dtoPage;
         }
-        return pageInfo;
+        // 空数据时同样返回 OrderDto 分页，保证前端拿到的始终是统一结构（含 orderDetails 字段）
+        Page<OrderDto> emptyPage = PageUtils.of(page, pageSize);
+        emptyPage.setTotal(0);
+        emptyPage.setRecords(Collections.emptyList());
+        return emptyPage;
     }
 
     /**
@@ -983,6 +1055,22 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     private String generateIdempotencyKey(Long userId) {
         return userId + "_" + System.currentTimeMillis() + "_"
             + java.util.UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    /**
+     * 构建堂食订单明细签名：按 dishId/setmealId + number 排序后拼接，取稳定 hash。
+     * 完全相同的明细列表（双击/重试）签名一致 → 幂等命中；菜品不同（加菜）签名不同 → 创建新订单。
+     * 使用 String.hashCode() 足够：仅用于幂等去重，非安全场景，碰撞概率可接受。
+     */
+    private String buildEatInDetailSignature(List<OrderDetail> orderDetails) {
+        List<String> parts = new ArrayList<>();
+        for (OrderDetail d : orderDetails) {
+            Long itemId = d.getDishId() != null ? d.getDishId() : d.getSetmealId();
+            Integer num = d.getNumber() != null ? d.getNumber() : 0;
+            parts.add(itemId + "x" + num);
+        }
+        Collections.sort(parts);
+        return String.valueOf(parts.toString().hashCode());
     }
 
     /**

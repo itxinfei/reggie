@@ -193,6 +193,11 @@ public class OrderController {
         if (currentTenantId == null || !Objects.equals(currentTenantId, orders.getTenantId())) {
             return R.error("订单不属于当前租户");
         }
+        // 用户端查询他人订单详情拦截（防 IDOR 越权，参照 userCancel 归属校验模式）
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId != null && !Objects.equals(currentUserId, orders.getUserId())) {
+            return R.error("无权操作此订单");
+        }
         orderService.backfillUserInfo(orders);
         OrderDto orderDto = new OrderDto();
         org.springframework.beans.BeanUtils.copyProperties(orders, orderDto);
@@ -325,6 +330,11 @@ public class OrderController {
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (existing == null || currentTenantId == null || !Objects.equals(currentTenantId, existing.getTenantId())) {
             return R.error("订单不存在或不属于当前租户");
+        }
+        // 用户端再来一单越权拦截：防止把他人订单商品加入自己购物车（防 IDOR）
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId != null && !Objects.equals(currentUserId, existing.getUserId())) {
+            return R.error("无权操作此订单");
         }
         orderService.again(dto.getId());
         return R.success("添加购物车成功");

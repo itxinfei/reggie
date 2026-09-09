@@ -87,10 +87,15 @@ public class MemberRewardServiceImpl extends ServiceImpl<MemberMapper, Member> i
             log.error("[会员权益] 订单" + order.getId() + " 积分发放失败: " + e.getMessage());
         }
 
-        // 2. 优惠券核销：仅当本单记录了使用的优惠券时核销
+        // 2. 优惠券核销：仅当本单记录了使用的优惠券时核销。
+        //    （下单时已同步核销，此处为幂等兜底：completed 订单如券仍为 unused 则补核销；
+        //    若已核销 useCoupon 返回 false，静默跳过）
         if (order.getUsedCouponId() != null) {
             try {
-                boolean ok = couponUserService.useCoupon(userId, order.getUsedCouponId(), order.getId());
+                // coupon_user.member_id 为会员ID，先经 user→member 映射（与下单核销语义一致）
+                Member member = memberService.getByUserId(userId);
+                Long memberId = member != null ? member.getId() : userId;
+                boolean ok = couponUserService.useCoupon(memberId, order.getUsedCouponId(), order.getId());
                 log.info("[会员权益] 订单{}核销优惠券{}结果={}", order.getId(), order.getUsedCouponId(), ok);
             } catch (Exception e) {
                 log.error("[会员权益] 订单" + order.getId() + " 优惠券核销失败: " + e.getMessage());

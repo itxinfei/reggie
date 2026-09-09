@@ -7,6 +7,8 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.event.OrderCancelledEvent;
 import com.reggie.common.event.OrderCompletedEvent;
+import com.reggie.enums.DiningTableStatus;
+import com.reggie.enums.OrderSource;
 import com.reggie.enums.OrderStatus;
 import com.reggie.module.dish.service.DishService;
 import com.reggie.module.member.service.MemberRewardService;
@@ -77,6 +79,10 @@ public class OrderStatusFlowServiceImpl
     /** 退款服务（已支付订单取消/拒单自动全额退款，资金闭环） */
     @Autowired
     private RefundService refundService;
+
+    /** 桌台服务（堂食订单完成/取消/拒单时释放桌台占用） */
+    @Autowired
+    private com.reggie.module.dining.service.DiningTableService diningTableService;
 
     // ==================== 状态流转入口 ====================
 
@@ -160,6 +166,9 @@ public class OrderStatusFlowServiceImpl
         } catch (Exception e) {
             log.error("[会员权益] 订单{}拒单后权益回退失败，需人工核查: {}", id, e.getMessage(), e);
         }
+
+        // 堂食订单拒单 → 释放桌台（主事务内同步执行，失败不阻塞主流程）
+        releaseTableIfEatIn(order);
     }
 
     /**
@@ -177,6 +186,8 @@ public class OrderStatusFlowServiceImpl
         // 注意：事件发布放在事务外由 Spring 保证（publishEvent 默认同步，
         // 事务提交前已发布，监听器 @Async 异步拾取），与原子状态更新的 ordering 由数据库 + 事件顺序保证
         eventPublisher.publishEvent(new OrderCompletedEvent(this, id, order.getTenantId()));
+        // 堂食订单完成 → 释放桌台（主事务内同步执行，失败不阻塞主流程）
+        releaseTableIfEatIn(order);
         log.info("订单已完成并触发后续事件: id={}, number={}", id, order.getNumber());
     }
 
@@ -244,8 +255,35 @@ public class OrderStatusFlowServiceImpl
             log.error("[会员权益] 订单{}取消后权益回退失败，需人工核查: {}", id, e.getMessage(), e);
         }
 
+        // 堂食订单取消 → 释放桌台（主事务内同步执行，失败不阻塞主流程）
+        releaseTableIfEatIn(order);
+
         // 发布订单取消事件（通知、推荐等模块异步响应）
         eventPublisher.publishEvent(new OrderCancelledEvent(this, id, order.getTenantId(), reason));
+    }
+
+    // ==================== 堂食桌台释放 ====================
+
+    /**
+     * 堂食订单释放桌台：订单完成/取消/拒单时，将桌台状态释放为空闲。
+     * <p>
+     * 以 try/catch 包裹，桌台释放失败不阻塞订单主流程（异常日志需人工核查）。
+     * 注意：{@link DiningTableService#changeStatus} 为 fail-closed（要求租户上下文），
+     * 必须在主事务内同步调用，不能放入 afterCommit 异步回调（那时 BaseContext 已被清理）。
+     * </p>
+     */
+    private void releaseTableIfEatIn(Orders order) {
+        if (order == null || order.getTableId() == null
+                || !Objects.equals(order.getSource(), OrderSource.EAT_IN.getValue())) {
+            return;
+        }
+        try {
+            diningTableService.changeStatus(order.getTableId(), DiningTableStatus.FREE.getValue());
+            log.info("[桌台释放] 订单{}释放桌台{}为空闲", order.getId(), order.getTableId());
+        } catch (Exception e) {
+            log.error("[桌台释放失败] 订单{}桌台{}释放异常，需人工核查: {}",
+                    order.getId(), order.getTableId(), e.getMessage(), e);
+        }
     }
 
     // ==================== 已支付订单自动退款（资金闭环） ====================
