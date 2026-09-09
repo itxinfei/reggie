@@ -183,9 +183,11 @@
                     <span>{{getStatus(order[0].status)}}</span>
                 </div>
                 <div class="dishList">
-                    <div v-for="(item,index) in order[0].orderDetails" :key="index" class="item">
-                        <span>{{item.name}}</span>
-                        <span>x{{item.number}}</span>
+                    <!-- 修改点：对齐美团订单卡片——菜品小图+名称+x数量，点击小图可全屏放大预览（van-image-preview） -->
+                    <div v-for="(item,index) in order[0].orderDetails" :key="index" class="item" @click="previewDishImage(imgPath(item.image), index)">
+                        <img v-if="item.image" :src="imgPath(item.image)" :alt="item.name || '菜品'" @error="imgError" class="dish-thumb" />
+                        <span class="dish-name">{{item.name}}</span>
+                        <span class="dish-count">x{{item.number}}</span>
                     </div>
                 </div>
                 <div class="result">
@@ -206,6 +208,10 @@
                 {{ logoutLoading ? '退出中...' : '退出登录' }}
             </div>
         </div>
+
+        <!-- ====== 最新订单菜品图大图预览（对齐美团订单卡片交互） ====== -->
+        <!-- 修改点：Vue2 下 van-* 禁自闭合，:show.sync 替代 v-model:show（my-evaluations.html 权威写法） -->
+        <van-image-preview :show.sync="previewShow" :images="previewImages" :start-position="previewIndex"></van-image-preview>
 
         <!-- ====== 底部 Tab 导航（点餐 / 订单 / 我的） ====== -->
         <van-tabbar v-model="activeTab" class="app-tabbar" @change="onTabChange">
@@ -246,7 +252,9 @@
                     // 避免旧 dummy 对象在加载间隙闪现「xundefined」/「共0件,实付 ￥NaN」
                     order: [],
                     // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
-                    activeTab: 2
+                    activeTab: 2,
+                    // 修改点：最新订单菜品图大图预览（van-image-preview）
+                    previewShow: false, previewImages: [], previewIndex: 0
                 }
             },
             computed:{
@@ -313,6 +321,24 @@
                     window.requestAnimationFrame(function(){ window.location.href = url })
                 },
                 getStatus: function(status){ return getStatus(status) },
+                // 修改点：注册 common.js 的全局 imgPath（Vue 模板中无法直接访问全局函数，index.html/add-order.html 同款）
+                imgPath: function(path){
+                    if (!path) return ''
+                    return '/common/download?name=' + path
+                },
+                // 修改点：图片加载失败兜底占位图
+                imgError: function(e){
+                    var src = e.target && e.target.src
+                    if (src && src.indexOf('noImg.png') >= 0) return
+                    e.target.src = './../images/noImg.png'
+                },
+                // 修改点：最新订单菜品图大图预览（van-image-preview，复用 my-evaluations.html 权威模式）
+                previewDishImage: function(url, index){
+                    if (!url) return
+                    this.previewImages = [url]
+                    this.previewIndex = index || 0
+                    this.previewShow = true
+                },
                 goMemberCenter: function(){
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/member-center.html' })
                 },
