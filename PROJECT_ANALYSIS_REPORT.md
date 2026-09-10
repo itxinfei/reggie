@@ -285,6 +285,6 @@ c61948cd style(front) 个人中心订单菜品缩略图放大
 | P0 | 删除 7.2 的 3 个假字体 + 14 张 0 引用图片（省 ~40KB，消除无效资源请求） | ✅ 已完成（commit `2f45f1d`） |
 | P1 | C 端 5 页补齐 remixicon 引用，统一图标渲染 | ✅ 已完成（commit `315500d`，17/17 页统一指向真实字体） |
 | P1 | PingFangSC 31MB 瘦身 | ✅ 已处理（commit `315500d`）——CFF 轮廓无法 woff2 子集化（fontmin 实测输出不变），改为移除 webfont + 系统字体栈兜底，首屏省 ~31MB |
-| P2 | 后台骨架屏从 1/76 提升至列表页全覆盖 | ⬜ 未处理（低优先，需逐页改造） |
-| P2 | 订单中心 13 项菜单分组折叠 | ⬜ 未处理（低优先，需改 index.html 菜单渲染结构） |
+| P2 | 后台骨架屏从 1/76 提升至列表页全覆盖 | ✅ 已完成 —— 56 个 crud-table 列表页内置纯 CSS 骨架屏，11 个非 crud-table 页面（attendance/cashier/customer-service/dashboard/food-spec/marketing/report-daily/retention/schedule/store-dashboard/urgency）补 .ds-skeleton 脉冲骨架 |
+| P2 | 订单中心 13 项菜单分组折叠 | ✅ 已完成 —— index.html 三级 menuList + 嵌套 el-submenu + breadcrumbs/goTo 递归改造 |
 | P3 | 登录页补 @media 响应式 | ✅ 已核实误报（backend/index.html + login.css 已含 3 个 @media，无需改动） |

@@ -83,7 +83,8 @@
 </head>
 <body>
 <a href="#main-content" class="skip-link">跳转到主内容</a>
-<div class="mk-root" id="marketing-app" v-loading="loading">
+<!-- 修改点：P2-1 骨架屏——移除根 v-loading 全屏转圈遮罩，加载态改由 Tab 内骨架屏呈现 -->
+<div class="mk-root" id="marketing-app">
     <div class="container" id="main-content" role="main" aria-label="页面主要内容">
         <!-- 页头 -->
         <header class="ds-page-header">
@@ -108,8 +109,18 @@
                         <el-button size="small" icon="el-icon-right" @click="goManage">进入完整管理</el-button>
                     </div>
 
+                    <!-- 修改点：P2-1 骨架屏——活动卡片加载态（脉冲骨架替代纯转圈），空态仅在非加载时显示 -->
+                    <div v-if="loading" class="mk-skeleton">
+                        <div class="ds-skeleton">
+                            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                        </div>
+                    </div>
                     <!-- 活动卡片列表 -->
-                    <div v-if="currentCards.length" class="activity-grid">
+                    <div v-else-if="currentCards.length" class="activity-grid">
                         <div class="activity-card" v-for="act in currentCards" :key="act.id">
                             <div class="ac-head">
                                 <span :class="['ac-icon', t.isTool ? 'is-tool' : '']"><i :class="t.icon" aria-hidden="true"></i></span>
@@ -125,7 +136,7 @@
                             </div>
                         </div>
                     </div>
-                    <!-- 空态 -->
+                    <!-- 空态（仅非加载时显示，加载态由骨架屏覆盖） -->
                     <div v-else class="empty-state">
                         <div class="empty-icon"><i class="ri-inbox-line" aria-hidden="true"></i></div>
                         <div class="empty-text">暂无{{ t.label }}</div>

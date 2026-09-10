@@ -88,9 +88,19 @@
           <el-button class="cs-filter__btn" @click="resetSessionFilter">重置</el-button>
         </div>
 
+        <!-- 修改点：P2-1 骨架屏——会话列表首次加载显示脉冲骨架（复用全局 .ds-skeleton-* 类），替代纯转圈 -->
+        <div v-if="sessionLoading && sessionPagedList.length === 0" class="cs-skeleton">
+          <div class="ds-skeleton">
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          </div>
+        </div>
         <!-- 修改点：:loading 不是 el-table 的合法 prop（加载态永远不显示），改为 v-loading 指令；
              :data 改为分页后的切片 sessionPagedList -->
-        <el-table v-loading="sessionLoading" :data="sessionPagedList" border stripe style="width:100%" size="medium" aria-label="会话列表">
+        <el-table v-else v-loading="sessionLoading" :data="sessionPagedList" border stripe style="width:100%" size="medium" aria-label="会话列表">
           <el-table-column prop="sessionNo" label="会话号" width="180" align="center"></el-table-column>
           <el-table-column prop="userName" label="用户" width="120" align="center"></el-table-column>
           <el-table-column prop="sessionType" label="类型" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
@@ -177,8 +187,18 @@
           <el-button class="cs-filter__btn" @click="resetComplaintFilter">重置</el-button>
         </div>
 
+        <!-- 修改点：P2-1 骨架屏——投诉列表首次加载显示脉冲骨架（复用全局 .ds-skeleton-* 类），替代纯转圈 -->
+        <div v-if="complaintLoading && complaintPagedList.length === 0" class="cs-skeleton">
+          <div class="ds-skeleton">
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          </div>
+        </div>
         <!-- 修改点：:loading -> v-loading（同上），:data 改为分页切片 complaintPagedList -->
-        <el-table v-loading="complaintLoading" :data="complaintPagedList" border stripe style="width:100%" size="medium" aria-label="投诉列表">
+        <el-table v-else v-loading="complaintLoading" :data="complaintPagedList" border stripe style="width:100%" size="medium" aria-label="投诉列表">
           <el-table-column prop="complaintNo" label="投诉号" width="170" align="center"></el-table-column>
           <el-table-column prop="userName" label="用户" width="100" align="center"></el-table-column>
           <el-table-column prop="userPhone" label="电话" width="130" align="center"></el-table-column>

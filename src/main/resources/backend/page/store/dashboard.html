@@ -117,7 +117,8 @@
 <body>
 <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
 <a href="#main-content" class="skip-link">跳转到主内容</a>
-<div class="store-dashboard" id="store-dash-app" v-loading="loading">
+<!-- 修改点：P2-1 骨架屏——移除根 v-loading 全屏转圈遮罩，加载态改由页面级骨架屏呈现 -->
+<div class="store-dashboard" id="store-dash-app">
     <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
@@ -129,6 +130,18 @@
           <el-button v-if="isStoreMode" size="small" icon="el-icon-back" @click="backToHeadquarters">返回总部控制台</el-button>
         </div>
       </header>
+
+        <!-- 修改点：P2-1 骨架屏——门店工作台首屏加载态（内容区脉冲骨架，替代纯转圈） -->
+        <div v-if="loading" class="store-dashboard-skeleton">
+          <div class="ds-skeleton">
+            <div class="ds-skeleton-title"></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          </div>
+        </div>
 
         <!-- ========== KPI 指标卡片（固定 4 个） ========== -->
         <stat-cards :cards="statsCards" :loading="loading"></stat-cards>

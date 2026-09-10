@@ -258,8 +258,16 @@
             </div>
 
             <div class="spec-panel__body">
-              <!-- 骨架屏：首次加载 -->
-              <el-skeleton v-if="groupLoading && groupList.length === 0" :rows="5" animated></el-skeleton>
+              <!-- 修改点：P2-1 骨架屏——规格组列表加载态（element-ui 无 Skeleton 组件，用全局 .ds-skeleton 脉冲骨架替代） -->
+              <div v-if="groupLoading && groupList.length === 0" class="spec-group-skeleton">
+                <div class="ds-skeleton">
+                  <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                  <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                  <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                  <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                  <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                </div>
+              </div>
               <!-- 空态 -->
               <div v-else-if="filteredGroups.length === 0" class="spec-empty-guide">
                 <i class="el-icon-menu" aria-hidden="true"></i>
@@ -355,8 +363,16 @@
                 <span>从左侧选择规格组后，在此维护该组下的规格选项</span>
               </div>
               <template v-else>
-                <!-- 骨架屏：首次加载 -->
-                <el-skeleton v-if="optionLoading && optionList.length === 0" :rows="5" animated></el-skeleton>
+                <!-- 修改点：P2-1 骨架屏——规格选项列表加载态（element-ui 无 Skeleton 组件，用全局 .ds-skeleton 脉冲骨架替代） -->
+                <div v-if="optionLoading && optionList.length === 0" class="spec-option-skeleton">
+                  <div class="ds-skeleton">
+                    <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                    <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                    <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                    <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                    <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                  </div>
+                </div>
                 <!-- 空态 -->
                 <div v-else-if="filteredOptions.length === 0" class="spec-empty-guide">
                   <i class="el-icon-plus" aria-hidden="true"></i>

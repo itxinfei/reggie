@@ -440,7 +440,14 @@
               </el-button>
             </span>
           </div>
-          <div v-if="currentMember" class="member-info">
+          <!-- 修改点：P2-1 骨架屏——会员信息加载态（识别中显示脉冲条，替代 el-input loading 转圈） -->
+          <div v-if="memberLoading" class="cashier-member-skeleton">
+            <div class="ds-skeleton">
+              <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+              <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            </div>
+          </div>
+          <div v-else-if="currentMember" class="member-info">
             <span class="member-name">{{ currentMember.name || currentMember.nickname }}</span>
             <span class="member-meta">积分 {{ currentMember.points }}</span>
             <span class="member-meta">余额 ¥{{ formatMoney(currentMember.balance) }}</span>
@@ -462,7 +469,14 @@
                 size="mini"
                 @click="clearCoupon">不使用优惠券</el-button>
             </div>
-            <div v-loading="couponLoading" class="coupon-list">
+            <!-- 修改点：P2-1 骨架屏——优惠券加载态（脉冲骨架替代纯转圈） -->
+            <div v-if="couponLoading" class="cashier-coupon-skeleton">
+              <div class="ds-skeleton">
+                <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+                <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+              </div>
+            </div>
+            <div v-else v-loading="couponLoading" class="coupon-list">
               <div
                 v-for="coupon in availableCoupons"
                 :key="coupon.id"

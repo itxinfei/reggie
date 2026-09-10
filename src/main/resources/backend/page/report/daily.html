@@ -243,6 +243,19 @@
         <div class="ds-page-header__actions"></div>
       </header>
 
+      <!-- 修改点：P2-1 骨架屏——日报加载态（图表/报表区域脉冲骨架，替代纯转圈） -->
+      <div v-if="loading" class="daily-skeleton">
+        <div class="ds-skeleton">
+          <div class="ds-skeleton-title"></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+        </div>
+      </div>
+      <template v-else>
+
       <!-- 统计卡片（统一组件） -->
       <stat-cards :cards="statsCards"></stat-cards>
 
@@ -359,6 +372,8 @@
           </div>
         </div>
       </div>
+
+      </template>
 
     </main>
 

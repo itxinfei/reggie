@@ -279,8 +279,18 @@
           <span class="filter-row__tip">共 {{ filteredOrders.length }} 单</span>
         </div>
 
+        <!-- 修改点：P2-1 骨架屏——催菜表格加载态（首次加载且无数据时显示脉冲骨架，替代纯转圈） -->
+        <div v-if="tableLoading && filteredOrders.length === 0" class="urgency-skeleton">
+          <div class="ds-skeleton">
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          </div>
+        </div>
         <el-table
-          v-if="filteredOrders.length > 0 || tableLoading"
+          v-else-if="filteredOrders.length > 0"
           v-loading="tableLoading"
           :data="filteredOrders"
           :row-class-name="tableRowClassName"

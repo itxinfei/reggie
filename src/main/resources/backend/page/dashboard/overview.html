@@ -413,7 +413,8 @@
 </head>
 <body>
   <a class="skip-link" href="#main-content">跳到主内容</a>
-  <div class="overview-container" id="dashboard-app" v-cloak v-loading="loading">
+  <!-- 修改点：P2-1 骨架屏——移除根 v-loading 全屏转圈遮罩，加载态改由页面级骨架屏呈现 -->
+  <div class="overview-container" id="dashboard-app" v-cloak>
     <div class="container" id="main-content" role="main" tabindex="-1">
 
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
@@ -425,8 +426,20 @@
         <div class="ds-page-header__actions"></div>
       </header>
 
+      <!-- 修改点：P2-1 骨架屏——工作台首屏加载态（待办台 + KPI 卡片区域脉冲骨架，替代纯转圈） -->
+      <div v-if="loading" class="overview-skeleton">
+        <div class="ds-skeleton">
+          <div class="ds-skeleton-title"></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+          <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
+        </div>
+      </div>
+
       <!-- ========== 首屏待办台（8.7.1：店长第一眼看到该做什么） ========== -->
-      <section class="todo-panel" aria-label="今日待办">
+      <section v-if="!loading" class="todo-panel" aria-label="今日待办">
         <div class="todo-panel__head">
           <h2 class="todo-panel__title"><i class="ri-todo-line" aria-hidden="true"></i> 今日待办</h2>
           <span class="todo-panel__count" v-if="todoTotal > 0">共 {{ todoTotal }} 项</span>
@@ -456,7 +469,7 @@
 
       <!-- ========== 库存预警提示 ========== -->
       <!-- 修改点：集成库存预警，显示低库存食材名称 -->
-      <div v-if="inventoryAlert && inventoryAlert.lowStockCount > 0" class="inventory-alert">
+      <div v-if="!loading && inventoryAlert && inventoryAlert.lowStockCount > 0" class="inventory-alert">
         <div style="display:flex;align-items:center;gap:12px;">
           <span style="font-size:var(--font-size-3xl);"><i class="ri-error-warning-line" aria-hidden="true"></i></span>
           <div>
@@ -1051,38 +1064,40 @@
         // 产生错误路径 /backend/page/dashboard/page/order/list.html 而 404（Whitelabel）。
         // 因此这里先完整 URL 匹配、再「仅路径(忽略 query)」匹配，命中即交给顶层 menuHandle
         // （iframe 的 src 相对顶层文档解析，路径正确）；都不命中才用 /backend/ 绝对前缀兜底。
+        // 修改点：递归遍历菜单树（支持订单中心三级分组菜单），
+        // 父级分组节点（无 url）不匹配，仅叶子（有 url）参与命中。
         goTo(url) {
           try {
             const path = String(url || '').split('?')[0];
             if (window.parent && window.parent !== window && typeof window.parent.menuHandle === 'function') {
               const menuList = window.parent.menuList;
               if (menuList && menuList.length) {
-                // 第一轮：完整 URL 精确匹配（无 query 的菜单项走这里）
-                for (let i = 0; i < menuList.length; i++) {
-                  const item = menuList[i];
-                  if (item.url === url) { window.parent.menuHandle(item, false); return; }
-                  if (item.children && item.children.length) {
-                    for (let j = 0; j < item.children.length; j++) {
-                      if (item.children[j].url === url) {
-                        window.parent.menuHandle(item.children[j], false);
-                        return;
+                // 递归匹配菜单树中的叶子节点；mode=0 完整 URL 精确匹配，mode=1 仅路径匹配
+                const matchLeaf = function(nodes, mode) {
+                  for (let i = 0; i < nodes.length; i++) {
+                    const node = nodes[i];
+                    if (node.url) {
+                      if ((mode === 0 && node.url === url) || (mode === 1 && node.url === path)) {
+                        return node;
                       }
                     }
+                    if (node.children && node.children.length) {
+                      const found = matchLeaf(node.children, mode);
+                      if (found) return found;
+                    }
                   }
-                }
+                  return null;
+                };
+                // 第一轮：完整 URL 精确匹配（无 query 的菜单项走这里）
+                const hit0 = matchLeaf(menuList, 0);
+                if (hit0) { window.parent.menuHandle(hit0, false); return; }
                 // 第二轮：仅按路径匹配（忽略 ?query），命中后带 query 整体交给 menuHandle，
                 // 由 iframe 的 src 相对顶层文档解析，避免相对 iframe 文档产生错误路径
-                for (let i = 0; i < menuList.length; i++) {
-                  const item = menuList[i];
-                  if (item.url === path) { window.parent.menuHandle({ ...item, url: url }, false); return; }
-                  if (item.children && item.children.length) {
-                    for (let j = 0; j < item.children.length; j++) {
-                      if (item.children[j].url === path) {
-                        window.parent.menuHandle({ ...item.children[j], url: url }, false);
-                        return;
-                      }
-                    }
-                  }
+                const hit1 = matchLeaf(menuList, 1);
+                if (hit1) {
+                  const leaf = { ...hit1, url: url };
+                  window.parent.menuHandle(leaf, false);
+                  return;
                 }
               }
             }

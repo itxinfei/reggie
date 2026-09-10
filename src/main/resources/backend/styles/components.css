@@ -68,6 +68,45 @@
   50% { opacity: 0.4; }
 }
 
+/* ========== 通用骨架屏（非 crud-table 页面复用，2026-09-10 P2-1） ==========
+   独立于 .crud-table-wrapper 作用域：仪表盘/工作台/列表型页面在各自容器内
+   v-if="xxxLoading" 直接插入，覆盖整块内容区（标题骨架 + N 行 × 列脉冲条）。
+   卡片容器自带 16px padding，骨架行与边框同距对齐。 */
+.ds-skeleton {
+  width: 100%;
+}
+.ds-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--el-border-lighter);
+}
+.ds-skeleton-row:last-child {
+  border-bottom: none;
+}
+.ds-skeleton-cell {
+  flex: 1;
+  min-width: 0;
+}
+.ds-skeleton-bar {
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--el-bg-lighter);
+  animation: ds-skeleton-pulse 1.2s ease-in-out infinite;
+}
+.ds-skeleton-line {
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--el-bg-lighter);
+  animation: ds-skeleton-pulse 1.2s ease-in-out infinite;
+}
+.ds-skeleton-title {
+  height: 18px;
+  width: 40%;
+  margin-bottom: 12px;
+}
+
 /* ========== 空状态（友好提示，引导用户操作） ========== */
 .crud-table-wrapper .ds-table-empty {
   padding: 48px 0 40px;
