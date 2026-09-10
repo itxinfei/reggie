@@ -155,7 +155,7 @@ c61948cd style(front) 个人中心订单菜品缩略图放大
 | 2 | **菜单"订单中心"下 13 个子项过密**，无分组/折叠，滚动查找效率低 | backend/index.html `menuList` | 低 | ✅ 已处理（commit `64cf072`）——交易管理/配送管理/打印管理三级折叠 |
 | 3 | 登录页无 `@media` 响应式，窄屏/小分辨率下布局可能溢出 | backend/login.html | 低 | ✅ 已核实：实际为 backend/index.html + login.css，已含 3 个 @media（800px/480px/reduced-motion），属误报 |
 | 4 | CSS 加载链路偏长：main.css @import 9 个文件，且后者又 @import 4 个，首屏多级依赖 | backend/styles/main.css | 低 | ⬜ 已核实收口（见 §8 P3-4）——浏览器同目录并发下载 @import（HTTP1.1 同主机 6 连接），14 文件合计 484KB gzip ~94KB 首屏 <100ms；清理 notification/list.html 的 3 条与 main.css 重复的 link |
-| 5 | 部分表格金额列右对齐、等宽数字已达标，但个别统计页仍存在数字混排 | 各统计页面 | 低 | ⬜ 未处理 |
+| 5 | 部分表格金额列右对齐、等宽数字已达标，但个别统计页仍存在数字混排 | 各统计页面 | 低 | ✅ 已核实：统计页（cost/overview、report/business-report、payment-analysis、time-slot、sales-report、dish-ranking）金额/数字列均走 crud-table `type:'money'/'number'`（design-system.css 统一 tabular-nums 等宽数字，2026-09-01 起全站统一居中），ECharts 图表配置均 `toFixed()` 格式化，无 HTML 表格数字混排遗留 |
 
 ### 4.2 C 端移动端
 
@@ -164,7 +164,7 @@ c61948cd style(front) 个人中心订单菜品缩略图放大
 | 1 | **C 端部分页未引 remixicon**：icon 渲染依赖系统兜底或缺失 | front/page/*.html | 中 | ✅ 已修复（commit `315500d`）17/17 页统一指向真实字体 |
 | 2 | **前端字体体积 31MB**：PingFangSC 三个字重各 ~10MB（Regular/Medium/Semibold），移动端首屏加载压力大 | front/fonts/ | 中 | ✅ 已处理（commit `315500d`）CFF 无法子集化，改为移除 + 系统字体栈兜底 |
 | 3 | **RemixIcon.ttf/.woff/.woff2 为 146 字节假文件**（内容是 "404 Not Found" HTML 占位），被 `remixicon.css` 的 @font-face 声明引用；实际渲染依赖 `plugins/remixicon` 兜底路径（commit `4b3e809e` 已修） | front/fonts/RemixIcon.* | 高（资源无效但已被兜底掩盖） | ✅ 已删除（commit `2f45f1d`） |
-| 4 | 首页统计卡片依赖缓存、异常时隐藏轮播——兜底策略正确，但可观测性不足 | front/page/index.html | 低 | ⬜ 未处理（低优先） |
+| 4 | 首页统计卡片依赖缓存、异常时隐藏轮播——兜底策略正确，但可观测性不足 | front/page/index.html | 低 | ✅ 已核实（设计如此）：商家信息卡片（月售/配送费/距离/起送）数据来自 `/restaurant/info`，`initData()` 以 `.catch(() => null)` 兜底 + 模板 `\|\| '默认值'`（L68-79），接口失败显示默认值而非 NaN/空白，渲染安全；可观测性需求低优先，按 dev-priorities-no-overengineering 保留 |
 | 5 | 图片素材 28 张中 14 张 0 引用（已列出清理，见 §7） | front/images/ | 低 | ✅ 已删除（commit `2f45f1d`） |
 
 ### 4.3 共性
@@ -289,3 +289,5 @@ c61948cd style(front) 个人中心订单菜品缩略图放大
 | P2 | 订单中心 13 项菜单分组折叠 | ✅ 已完成 —— index.html 三级 menuList + 嵌套 el-submenu + breadcrumbs/goTo 递归改造 |
 | P3 | 登录页补 @media 响应式 | ✅ 已核实误报（backend/index.html + login.css 已含 3 个 @media，无需改动） |
 | P3 | CSS 加载链路瘦身 | ✅ 已核实收口 —— 浏览器对同目录 @import 并行下载（HTTP1.1 同主机 6 连接），14 文件 484KB gzip ~94KB 首屏 <100ms，非阻塞渲染瓶颈；实际清理 notification/list.html 的 3 条与 main.css 重复的 link |
+| P3 | 统计页数字混排 | ✅ 已核实 —— 统计页金额/数字列均走 crud-table `type:'money'/'number'`（tabular-nums 等宽数字），ECharts 配置均 `toFixed()` 格式化，无 HTML 表格混排遗留 |
+| P3 | C 端首页统计卡片可观测性 | ✅ 已核实（设计如此）—— 商家信息卡片接口失败 `.catch(() => null)` + 模板 `\|\| '默认值'` 兜底，渲染安全；按 no-overengineering 保留 |
