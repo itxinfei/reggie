@@ -288,6 +288,37 @@ html, body {
   background-color: rgba(255, 194, 0, 0.08) !important;
 }
 
+/* ---------- 三级菜单（订单中心分组折叠，2026-09-10）----------
+   分组层：订单中心下「交易/配送/打印」用三级 el-submenu 折叠。
+   Element 每级内层 ul 自带 .el-menu--inline，间距与二级一致；
+   深度 1（二级分组的 el-menu-item 无 url 不渲染叶子）直接复用二级缩进 46px；
+   深度 2 叶子（分组下菜单项）额外缩进 20px，突出层级关系。 */
+.sidebar-container .el-menu--inline .el-submenu__title {
+  height: 36px !important;
+  line-height: 36px !important;
+  padding: 0 14px !important;
+  border-radius: 6px !important;
+  font-size: 12.5px !important;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55) !important;
+  background: transparent !important;
+  margin: 1px 0;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+.sidebar-container .el-menu--inline .el-submenu__title:hover {
+  color: var(--text-inverse) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+/* 分组层展开箭头（对齐 Element 默认箭头位置） */
+.sidebar-container .el-menu--inline .el-submenu__icon-arrow {
+  right: 8px;
+  font-size: 12px;
+}
+/* 分组内叶子：加深缩进以区分层级 */
+.sidebar-container .el-menu--inline .el-menu--inline .el-menu-item {
+  padding-left: 66px !important;
+}
+
 /* 子菜单展开/收起动画类 */
 .sidebar-container .el-menu--collapse {
   width: auto;
@@ -656,6 +687,11 @@ html, body {
   /* 隐藏折叠切换按钮 */
   .sidebar-toggle-btn {
     display: none;
+  }
+
+  /* 三级分组层（订单中心子分组）在移动端抽屉中缩进与桌面端一致 */
+  .sidebar-container .el-menu--inline .el-menu--inline .el-menu-item {
+    padding-left: 66px !important;
   }
 }
 

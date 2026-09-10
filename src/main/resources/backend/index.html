@@ -104,16 +104,29 @@
                     <i :class="item.icon"></i>
                     <span>{{item.name}}</span>
                   </template>
-                  <el-menu-item
-                    v-for="sub in item.children"
-                    :index="sub.id"
-                    :key="sub.id"
-                    @click="menuHandle(sub,false)"
-                    >
-                    <i :class="sub.icon"></i>
-                    <span slot="title">{{sub.name}}</span>
-                    </el-menu-item
-                  >
+                  <!-- 修改点：支持三级菜单 —— 二级 children 若仍含 children 则渲染为嵌套 el-submenu（分组折叠），
+                       否则为叶子 el-menu-item。订单中心 13 项已按 交易/配送/打印 分组。 -->
+                  <div v-for="sub in item.children" :key="sub.id">
+                    <el-submenu :index="sub.id" v-if="sub.children && sub.children.length>0">
+                      <template slot="title">
+                        <i :class="sub.icon"></i>
+                        <span>{{sub.name}}</span>
+                      </template>
+                      <el-menu-item
+                        v-for="leaf in sub.children"
+                        :index="leaf.id"
+                        :key="leaf.id"
+                        @click="menuHandle(leaf,false)"
+                        >
+                        <i :class="leaf.icon"></i>
+                        <span slot="title">{{leaf.name}}</span>
+                      </el-menu-item>
+                    </el-submenu>
+                    <el-menu-item v-else :index="sub.id" @click="menuHandle(sub,false)">
+                      <i :class="sub.icon"></i>
+                      <span slot="title">{{sub.name}}</span>
+                    </el-menu-item>
+                  </div>
                 </el-submenu>
                 <el-menu-item v-else :index="item.id" @click="menuHandle(item,false)">
                   <i :class="item.icon"></i>
@@ -233,19 +246,25 @@
                 { id: '2-4', name: '菜品规格', url: 'page/food/spec-management.html', icon: 'ri-list-check-2' },
               ]},
               { id: '3', name: '订单中心', icon: 'ri-file-list-3-line', children: [
-                { id: '3-1', name: '订单明细', url: 'page/order/list.html', icon: 'ri-file-list-3-line' },
-                { id: '3-2', name: '支付管理', url: 'page/payment/order-list.html', icon: 'ri-money-dollar-circle-line' },
-                { id: '3-3', name: '收银台', url: 'page/cashier/index.html', icon: 'ri-money-cny-circle-line' },
-                { id: '3-4', name: '收银日结', url: 'page/cashier/daily-settlement.html', icon: 'ri-calendar-check-line' },
-                { id: '3-5', name: '配送订单', url: 'page/delivery/order-list.html', icon: 'ri-map-pin-line' },
-                { id: '3-6', name: '配送范围', url: 'page/delivery/range-management.html', icon: 'ri-road-map-line' },
-                { id: '3-7', name: '平台接入配置', url: 'page/platform/config.html', icon: 'ri-settings-3-line' },
-                { id: '3-8', name: '平台订单', url: 'page/platform/order-list.html', icon: 'ri-list-check-2' },
-                { id: '3-9', name: '商品映射', url: 'page/platform/dish-mapping.html', icon: 'ri-price-tag-3-line' },
-                { id: '3-10', name: '打印终端', url: 'page/printer/terminal-list.html', icon: 'ri-printer-line' },
-                { id: '3-11', name: '打印任务', url: 'page/printer/task-list.html', icon: 'ri-file-history-line' },
-                { id: '3-12', name: '紧急催菜', url: 'page/urgency/urgency.html', icon: 'ri-alarm-warning-line' },
-                { id: '3-13', name: '未接单监控', url: 'page/order/pending-monitor.html', icon: 'ri-radar-line' },
+                { id: '3-1', name: '交易管理', icon: 'ri-exchange-funds-line', children: [
+                  { id: '3-1-1', name: '订单明细', url: 'page/order/list.html', icon: 'ri-file-list-3-line' },
+                  { id: '3-1-2', name: '支付管理', url: 'page/payment/order-list.html', icon: 'ri-money-dollar-circle-line' },
+                  { id: '3-1-3', name: '收银台', url: 'page/cashier/index.html', icon: 'ri-money-cny-circle-line' },
+                  { id: '3-1-4', name: '收银日结', url: 'page/cashier/daily-settlement.html', icon: 'ri-calendar-check-line' },
+                  { id: '3-1-5', name: '未接单监控', url: 'page/order/pending-monitor.html', icon: 'ri-radar-line' },
+                  { id: '3-1-6', name: '紧急催菜', url: 'page/urgency/urgency.html', icon: 'ri-alarm-warning-line' },
+                ]},
+                { id: '3-2', name: '配送管理', icon: 'ri-truck-line', children: [
+                  { id: '3-2-1', name: '配送订单', url: 'page/delivery/order-list.html', icon: 'ri-map-pin-line' },
+                  { id: '3-2-2', name: '配送范围', url: 'page/delivery/range-management.html', icon: 'ri-road-map-line' },
+                  { id: '3-2-3', name: '平台接入配置', url: 'page/platform/config.html', icon: 'ri-settings-3-line' },
+                  { id: '3-2-4', name: '平台订单', url: 'page/platform/order-list.html', icon: 'ri-list-check-2' },
+                  { id: '3-2-5', name: '商品映射', url: 'page/platform/dish-mapping.html', icon: 'ri-price-tag-3-line' },
+                ]},
+                { id: '3-3', name: '打印管理', icon: 'ri-printer-line', children: [
+                  { id: '3-3-1', name: '打印终端', url: 'page/printer/terminal-list.html', icon: 'ri-printer-line' },
+                  { id: '3-3-2', name: '打印任务', url: 'page/printer/task-list.html', icon: 'ri-file-history-line' },
+                ]},
               ]},
               { id: '4', name: '堂食管理', icon: 'ri-store-2-line', children: [
                 { id: '4-1', name: '桌台管理', url: 'page/dining/table-list.html', icon: 'ri-layout-grid-line' },
@@ -320,14 +339,31 @@
         computed: {
           breadcrumbs() {
             const crumbs = ['首页']
-            const currentItem = this.menuList.find(item =>
-              item.children && item.children.some(sub => sub.id === this.menuActived)
-            )
-            if (currentItem && currentItem.children) {
-              crumbs.push(currentItem.name)
-              const subItem = currentItem.children.find(sub => sub.id === this.menuActived)
-              if (subItem) {
-                crumbs.push(subItem.name)
+            // 修改点：递归遍历三级菜单树定位当前叶子（兼容订单中心 3-x-y 分组菜单），
+            // 逐级收集父级名称；活动 id 不在叶子时退回原来的「直接子级」匹配逻辑
+            const self = this
+            const walk = function(nodes, prefix) {
+              for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i]
+                if (node.id === self.menuActived) {
+                  if (node.url) crumbs.push.apply(crumbs, prefix.concat([node.name]))
+                  else crumbs.push.apply(crumbs, prefix)
+                  return true
+                }
+                if (node.children && node.children.length) {
+                  if (walk(node.children, prefix.concat([node.name]))) return true
+                }
+              }
+              return false
+            }
+            if (!walk(this.menuList, [])) {
+              const currentItem = this.menuList.find(item =>
+                item.children && item.children.some(sub => sub.id === this.menuActived)
+              )
+              if (currentItem && currentItem.children) {
+                crumbs.push(currentItem.name)
+                const subItem = currentItem.children.find(sub => sub.id === this.menuActived)
+                if (subItem) crumbs.push(subItem.name)
               }
             }
             return crumbs
@@ -380,20 +416,55 @@
             }
           },
           navigateToBreadcrumb(index) {
-            // index 0 = 首页, index 1 = 父菜单, index 2 = 当前子页面
+            // index 0 = 首页, index >= 1 = 各级父菜单（面包屑共 breadcrumbs.length 级，末级为当前页面不可点击）
             if (index === 0) {
               this.goHome()
-            } else if (index === 1) {
-              const currentItem = this.menuList.find(item =>
-                item.children && item.children.some(sub => sub.id === this.menuActived)
-              )
-              if (currentItem && currentItem.children && currentItem.children.length > 0) {
-                // 修改点：定位当前活跃子项，而非总是跳 children[0]（如"菜品管理"→点父级不再跳到"分类管理"）
-                const activeChild = currentItem.children.find(sub => sub.id === this.menuActived)
-                                    || currentItem.children[0]
-                this.menuHandle(activeChild, false)
+              return
+            }
+            const node = this.findBreadcrumbNode(this.menuList, index - 1)
+            // 修改点：仅「分组节点（含 children）」可点击跳转；叶子不可点击（末级由模板控制）
+            if (node && node.children && node.children.length > 0) {
+              // 定位当前活跃子项（递归下钻），而非总是跳 children[0]，避免跳转后菜单激活态错乱
+              const activeLeaf = this.findActiveLeaf(node)
+              if (activeLeaf) {
+                this.menuHandle(activeLeaf, false)
+              } else {
+                this.menuHandle(node.children[0], false)
               }
             }
+          },
+          // 递归定位面包屑第 depth 级节点（0 级 = 顶级菜单）
+          findBreadcrumbNode(nodes, depth) {
+            if (depth <= 0) {
+              for (let i = 0; i < nodes.length; i++) {
+                if (nodes[i].id === this.menuActived) return nodes[i]
+                if (nodes[i].children) {
+                  const found = this.findBreadcrumbNode(nodes[i].children, 0)
+                  if (found) return found
+                }
+              }
+              return null
+            }
+            for (let i = 0; i < nodes.length; i++) {
+              const node = nodes[i]
+              if (node.children) {
+                if (node.id === this.menuActived) return node
+                const found = this.findBreadcrumbNode(node.children, depth - 1)
+                if (found) return found
+              }
+            }
+            return null
+          },
+          // 递归下钻定位分组内的当前活跃叶子
+          findActiveLeaf(node) {
+            if (!node.children || !node.children.length) return node.url ? node : null
+            for (let i = 0; i < node.children.length; i++) {
+              const child = node.children[i]
+              if (child.id === this.menuActived && child.url) return child
+              const found = this.findActiveLeaf(child)
+              if (found) return found
+            }
+            return null
           },
           goBack() {
             if (this.navHistory.length > 0) {
