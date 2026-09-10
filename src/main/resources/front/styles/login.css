@@ -170,7 +170,7 @@ body.login-page {
   font-weight: 700;
   /* 修改点：硬编码 #5D3A00 → --login-text-medium */
   color: var(--login-text-medium);
-  font-family: PingFangSC-Semibold, Microsoft YaHei, sans-serif;
+  font-family: "PingFangSC-Semibold", Microsoft YaHei, sans-serif;
   letter-spacing: 3rem;
   margin-bottom: 4rem;
 }
@@ -178,7 +178,7 @@ body.login-page {
 #login .brandSlogan {
   font-size: 12rem;
   color: rgba(120, 70, 0, 0.45);
-  font-family: PingFangSC, Microsoft YaHei, sans-serif;
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
   letter-spacing: 2rem;
   font-weight: 400;
 }
@@ -190,7 +190,7 @@ body.login-page {
   /* 修改点：硬编码 #3a2a10 → --login-text-dark */
   color: var(--login-text-dark);
   text-align: center;
-  font-family: PingFangSC-Semibold, Microsoft YaHei, sans-serif;
+  font-family: "PingFangSC-Semibold", Microsoft YaHei, sans-serif;
   position: relative;
   z-index: 1;
   width: calc(100% - 28rem);
@@ -360,7 +360,7 @@ body.login-page {
 #login .inputHint {
   font-size: 12rem;
   color: var(--color-danger);
-  font-family: PingFangSC, Microsoft YaHei, sans-serif;
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
   padding: 4rem 0 0 2rem;
   line-height: 18rem;
   animation: fadeInUp 0.25s ease-out;
@@ -373,7 +373,7 @@ body.login-page {
   top: 50%;
   transform: translateY(-50%);
   font-size: 12rem;
-  font-family: PingFangSC, Microsoft YaHei, sans-serif;
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
   font-weight: 600;
   /* 修改点：金底白字对比度约1.7:1违规 → 金底深字，与 .btnActive 的 #4a3000 惯例统一 */
   color: var(--login-text-brand);
@@ -413,7 +413,7 @@ body.login-page {
 /* ---- 错误提示 ---- */
 #login .divMsg {
   font-size: 12rem;
-  font-family: PingFangSC, Microsoft YaHei, sans-serif;
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
   font-weight: 400;
   color: var(--color-danger);
   text-align: center;
@@ -445,7 +445,7 @@ body.login-page {
   border-radius: 25rem;
   border: 0;
   font-size: 17rem;
-  font-family: PingFangSC-Semibold, Microsoft YaHei, sans-serif;
+  font-family: "PingFangSC-Semibold", Microsoft YaHei, sans-serif;
   font-weight: 600;
   text-align: center;
   letter-spacing: 3rem;
@@ -605,7 +605,7 @@ body.login-page {
 /* 协议文字 — 浅色半透明风格 */
 #login .agreementText {
   font-size: 12rem;
-  font-family: PingFangSC, Microsoft YaHei, sans-serif;
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
   color: rgba(120, 80, 20, 0.65);
   line-height: 20rem;
   user-select: none;
@@ -699,7 +699,7 @@ body.login-page {
 
 .agreementDialog .modal-title {
   font-size: 17rem;
-  font-family: PingFangSC-Semibold, Microsoft YaHei, sans-serif;
+  font-family: "PingFangSC-Semibold", Microsoft YaHei, sans-serif;
   /* 修改点：硬编码 #5a3e10 → --login-text-medium */
   color: var(--login-text-medium);
   font-weight: 600;
@@ -729,7 +729,7 @@ body.login-page {
 
 /* 协议内容文字 */
 #login .agreementContent {
-  font-family: PingFangSC, Microsoft YaHei, sans-serif;
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
   color: var(--color-text-secondary);
   line-height: 1.8;
   font-size: 13rem;
@@ -786,7 +786,7 @@ body.login-page {
   border-radius: 20rem !important;
   padding: 10rem 40rem !important;
   font-size: 14rem !important;
-  font-family: PingFangSC, Microsoft YaHei, sans-serif !important;
+  font-family: "PingFangSC", Microsoft YaHei, sans-serif !important;
   font-weight: 600 !important;
   /* 修改点：硬编码 #4a3000 → --login-text-brand */
   color: var(--login-text-brand) !important;

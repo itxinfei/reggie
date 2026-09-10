@@ -81,8 +81,8 @@
 
   /* ---- 字体 ---- */
   --font-family-base: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft Yahei", sans-serif;
-  --font-family-title: PingFangSC, PingFangSC-Semibold;
-  --font-family-body: PingFangSC, PingFangSC-Regular;
+  --font-family-title: "PingFangSC", "PingFangSC-Semibold", -apple-system, "PingFang SC", "Microsoft Yahei", sans-serif;
+  --font-family-body: "PingFangSC", "PingFangSC-Regular", -apple-system, "PingFang SC", "Microsoft Yahei", sans-serif;
   --font-family-number: DIN, DIN-Medium;
 
   /* ---- 字号 ---- */
@@ -222,19 +222,11 @@ i {
   font-style: normal;
 }
 
-@font-face {
-  font-family: "PingFangSC-Regular";
-  src: url("../fonts/PingFangSC-Regular.ttf");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "PingFangSC-Semibold";
-  src: url("../fonts/PingFangSC-Semibold.ttf");
-  font-weight: normal;
-  font-style: normal;
-}
+/* 修改点：移除 3 个 PingFangSC webfont @font-face（约 31MB）——
+   这些字体为 CFF 轮廓、无法子集化，且 font-display:swap 下 Android 无系统 PingFangSC，
+   一直靠 Microsoft YaHei 渲染。改用系统字体栈兜底（Android→YaHei、iOS/macOS→系统 PingFang SC），
+   视觉差异极小，首屏加载省 ~10MB x N。CSS 家族名引用全部保留（含引号+回退栈）。
+   如需还原：git checkout -- styles/index.css 前版本。 */
 
 .app {
   height: 100%;
@@ -385,7 +377,7 @@ i {
 
 ::-webkit-input-placeholder {
   font-size: 13px;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: "PingFangSC", "PingFangSC-Regular";
   font-weight: 400;
   text-align: left;
   color: var(--color-text-hint);
@@ -394,7 +386,7 @@ i {
 :-moz-placeholder {
   /* Firefox 18- */
   font-size: 13px;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: "PingFangSC", "PingFangSC-Regular";
   font-weight: 400;
   text-align: left;
   color: var(--color-text-hint);
@@ -402,7 +394,7 @@ i {
 ::-moz-placeholder {
   /* Firefox 19+ */
   font-size: 13px;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: "PingFangSC", "PingFangSC-Regular";
   font-weight: 400;
   text-align: left;
   color: var(--color-text-hint);
@@ -410,7 +402,7 @@ i {
 
 :-ms-input-placeholder {
   font-size: 13px;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: "PingFangSC", "PingFangSC-Regular";
   font-weight: 400;
   text-align: left;
   color: var(--color-text-hint);

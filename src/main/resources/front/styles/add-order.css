@@ -81,7 +81,7 @@
   height: 17rem;
   opacity: 1;
   font-size: 12rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: "PingFangSC", "PingFangSC-Regular";
   font-weight: 400;
   text-align: left;
   color: var(--color-text-primary);
@@ -111,7 +111,7 @@
   height: 47rem;
   opacity: 1;
   font-size: 12rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: "PingFangSC", "PingFangSC-Regular";
   font-weight: 400;
   text-align: left;
   color: var(--color-text-primary);
@@ -133,7 +133,7 @@
   line-height: 56rem;
   opacity: 1;
   font-size: 16rem;
-  font-family: PingFangSC, PingFangSC-Semibold;
+  font-family: "PingFangSC", "PingFangSC-Semibold";
   font-weight: 600;
   text-align: left;
   color: var(--color-text-primary);
@@ -175,7 +175,7 @@
   height: 22rem;
   opacity: 1;
   font-size: 16rem;
-  font-family: PingFangSC, PingFangSC-Semibold;
+  font-family: "PingFangSC", "PingFangSC-Semibold";
   font-weight: 600;
   text-align: left;
   color: var(--color-text-primary);
@@ -196,7 +196,7 @@
   height: 20rem;
   opacity: 1;
   font-size: 14rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: "PingFangSC", "PingFangSC-Regular";
   font-weight: 400;
   text-align: left;
   color: var(--color-text-secondary);
@@ -240,7 +240,7 @@
   height: 56rem;
   opacity: 1;
   font-size: 16rem;
-  font-family: PingFangSC, PingFangSC-Semibold;
+  font-family: "PingFangSC", "PingFangSC-Semibold";
   font-weight: 600;
   text-align: left;
   color: var(--color-text-primary);
@@ -308,7 +308,7 @@
   opacity: 1;
   border-radius: var(--radius-xl);
   font-size: 15rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: "PingFangSC", "PingFangSC-Regular";
   font-weight: 500;
   text-align: center;
   line-height: 36rem;
@@ -349,7 +349,7 @@
   border-radius: 50%;
   text-align: center;
   font-size: 12rem;
-  font-family: PingFangSC, PingFangSC-Regular;
+  font-family: "PingFangSC", "PingFangSC-Regular";
   font-weight: 500;
   color: var(--color-text-white);
   line-height: 18rem;
@@ -377,7 +377,7 @@
   height: 44rem;
   line-height: 44rem;
   font-size: 16rem;
-  font-family: PingFangSC, PingFangSC-Semibold;
+  font-family: "PingFangSC", "PingFangSC-Semibold";
   font-weight: 600;
   color: var(--color-text-primary);
   border-bottom: 2px solid var(--bg-hover);
@@ -454,7 +454,7 @@
   height: 44rem;
   line-height: 44rem;
   font-size: 16rem;
-  font-family: PingFangSC, PingFangSC-Semibold;
+  font-family: "PingFangSC", "PingFangSC-Semibold";
   font-weight: 600;
   color: var(--color-text-primary);
   border-bottom: 2px solid var(--bg-hover);

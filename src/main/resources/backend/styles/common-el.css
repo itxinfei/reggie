@@ -2723,7 +2723,8 @@
 .el-message-box__message {
   margin: 0;
   font-size: 14px;
-  font-family: PingFangSC, PingFangSC-Regular;
+  /* 修改点：裸 PingFangSC 族名加引号 + 系统回退栈（webfont 已移除） */
+  font-family: "PingFangSC", "PingFangSC-Regular", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-weight: 400;
   text-align: left;
   color: var(--gray-666);
@@ -2745,7 +2746,8 @@
 
 .el-message-box__btns span {
   font-size: 14px;
-  font-family: PingFangSC, PingFangSC-Medium !important;
+  /* 修改点：裸 PingFangSC 族名加引号 + 系统回退栈（webfont 已移除） */
+  font-family: "PingFangSC", "PingFangSC-Medium", "PingFang SC", "Microsoft YaHei", sans-serif !important;
   font-weight: 500 !important;
   color: var(--gray-333) !important;
   width: 28px;

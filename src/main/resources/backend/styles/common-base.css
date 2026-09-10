@@ -123,26 +123,12 @@ input[type="number"] {
   font-style: normal;
 }
 
-@font-face {
-  font-family: "PingFangSC-Medium";
-  src: url("../../front/fonts/PingFangSC-Medium.ttf");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "PingFangSC-Regular";
-  src: url("../../front/fonts/PingFangSC-Regular.ttf");
-  font-weight: normal;
-  font-style: normal;
-}
-
-@font-face {
-  font-family: "PingFangSC-Semibold";
-  src: url("../../front/fonts/PingFangSC-Semibold.ttf");
-  font-weight: normal;
-  font-style: normal;
-}
+/* 修改点：移除 3 个 PingFangSC webfont @font-face（约 31MB）——
+   与 front 一致：字体为 CFF 轮廓、无法子集化，且后台 tokens.css 已统一
+   --font-family-base: 系统字体栈（-apple-system / "PingFang SC" / "Microsoft YaHei"）。
+   删除后 common-el.css 的引用自动 fallback 到系统 PingFang SC（iOS/macOS）或
+   Microsoft YaHei（Windows/Android），视觉差异极小，页面加载省 ~10MB x N。
+   如需还原：git checkout -- styles/common-base.css 前版本。 */
 @font-face {
   font-family: element-icons;
   src: url(fonts/element-icons.woff) format("woff"),
