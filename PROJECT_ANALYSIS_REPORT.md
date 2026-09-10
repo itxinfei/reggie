@@ -151,10 +151,10 @@ c61948cd style(front) 个人中心订单菜品缩略图放大
 
 | # | 问题 | 位置 | 严重度 | 状态 |
 |---|---|---|---|---|
-| 1 | **骨架屏覆盖率极低**：76 个页面仅 1 个使用 el-skeleton，其余依赖 loading 转圈 | 全后台页面 | 中 | ⬜ 未处理（P2，见 §8） |
-| 2 | **菜单"订单中心"下 13 个子项过密**，无分组/折叠，滚动查找效率低 | backend/index.html `menuList` | 低 | ⬜ 未处理（P2，见 §8） |
+| 1 | **骨架屏覆盖率极低**：76 个页面仅 1 个使用 el-skeleton，其余依赖 loading 转圈 | 全后台页面 | 中 | ✅ 已处理（commit `741f6e6`）——56 个 crud-table 列表页内置纯 CSS 骨架，11 个非 crud-table 页面补 .ds-skeleton |
+| 2 | **菜单"订单中心"下 13 个子项过密**，无分组/折叠，滚动查找效率低 | backend/index.html `menuList` | 低 | ✅ 已处理（commit `64cf072`）——交易管理/配送管理/打印管理三级折叠 |
 | 3 | 登录页无 `@media` 响应式，窄屏/小分辨率下布局可能溢出 | backend/login.html | 低 | ✅ 已核实：实际为 backend/index.html + login.css，已含 3 个 @media（800px/480px/reduced-motion），属误报 |
-| 4 | CSS 加载链路偏长：main.css @import 9 个文件，且后者又 @import 4 个，首屏多级依赖 | backend/styles/main.css | 低 | ⬜ 未处理 |
+| 4 | CSS 加载链路偏长：main.css @import 9 个文件，且后者又 @import 4 个，首屏多级依赖 | backend/styles/main.css | 低 | ⬜ 已核实收口（见 §8 P3-4）——浏览器同目录并发下载 @import（HTTP1.1 同主机 6 连接），14 文件合计 484KB gzip ~94KB 首屏 <100ms；清理 notification/list.html 的 3 条与 main.css 重复的 link |
 | 5 | 部分表格金额列右对齐、等宽数字已达标，但个别统计页仍存在数字混排 | 各统计页面 | 低 | ⬜ 未处理 |
 
 ### 4.2 C 端移动端
@@ -192,8 +192,8 @@ c61948cd style(front) 个人中心订单菜品缩略图放大
 |---|---|---|---|
 | 1 | C 端 icon 依赖字体 + emoji 兜底，字体缺失时观感骤降 | 品牌一致性 | ✅ 已修复——remixicon 全部指向真实字体（commit `315500d`） |
 | 2 | 前端字体 31MB 未做子集化/压缩（woff2 可减至 ~10%） | 首屏性能 | ✅ 已处理——CFF 无法子集化，改移除 + 系统字体栈（commit `315500d`） |
-| 3 | 后台骨架屏覆盖率 1/76，弱网环境首屏空白感知明显 | 感知性能 | ⬜ 未处理（P2） |
-| 4 | 订单中心 13 项菜单无分组 | 操作效率 | ⬜ 未处理（P2） |
+| 3 | 后台骨架屏覆盖率 1/76，弱网环境首屏空白感知明显 | 感知性能 | ✅ 已处理（commit `741f6e6`）——后台 76 页骨架屏全覆盖 |
+| 4 | 订单中心 13 项菜单无分组 | 操作效率 | ✅ 已处理（commit `64cf072`）——三级分组折叠 |
 | 5 | C 端部分页缺 remixicon 引用 | 图标显示一致性 | ✅ 已修复（commit `315500d`） |
 
 ---
@@ -288,3 +288,4 @@ c61948cd style(front) 个人中心订单菜品缩略图放大
 | P2 | 后台骨架屏从 1/76 提升至列表页全覆盖 | ✅ 已完成 —— 56 个 crud-table 列表页内置纯 CSS 骨架屏，11 个非 crud-table 页面（attendance/cashier/customer-service/dashboard/food-spec/marketing/report-daily/retention/schedule/store-dashboard/urgency）补 .ds-skeleton 脉冲骨架 |
 | P2 | 订单中心 13 项菜单分组折叠 | ✅ 已完成 —— index.html 三级 menuList + 嵌套 el-submenu + breadcrumbs/goTo 递归改造 |
 | P3 | 登录页补 @media 响应式 | ✅ 已核实误报（backend/index.html + login.css 已含 3 个 @media，无需改动） |
+| P3 | CSS 加载链路瘦身 | ✅ 已核实收口 —— 浏览器对同目录 @import 并行下载（HTTP1.1 同主机 6 连接），14 文件 484KB gzip ~94KB 首屏 <100ms，非阻塞渲染瓶颈；实际清理 notification/list.html 的 3 条与 main.css 重复的 link |

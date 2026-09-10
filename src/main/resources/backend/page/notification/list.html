@@ -7,12 +7,10 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
+  <!-- 修改点：P3-4 CSS 加载链路瘦身——移除与 main.css 重复的 page/components/design-system 引用（main.css 已 @import 全部），仅保留 main + tokens + stat-cards（stat-cards 为非工程化页面使用的独立构建产物，main.css 的 @import 与 link 会重复加载，但各 100 行内，命中浏览器缓存） -->
   <link rel="stylesheet" href="../../styles/main.css" />
-    <link rel="stylesheet" href="../../styles/page.css" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css" />
-    <link rel="stylesheet" href="../../styles/components.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/design-system.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: var(--font-family-base);
