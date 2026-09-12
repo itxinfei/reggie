@@ -3,6 +3,9 @@ package com.reggie.module.dining.controller;
 import com.reggie.common.BaseContext;
 import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.service.DiningTableService;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.OrderService;
+import com.reggie.enums.OrderStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,6 +37,9 @@ public class DiningTableControllerTest {
 
     @Autowired
     private DiningTableService diningTableService;
+
+    @Autowired
+    private OrderService orderService;
 
     @BeforeEach
     void setUp() {
@@ -145,5 +152,61 @@ public class DiningTableControllerTest {
                 .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
+    }
+
+    /** 分账：parts 超过 20 份应拒绝（CustomException → 422） */
+    @Test
+    void testSplitBill_partsExceedsLimit() throws Exception {
+        // 先建一个有效订单，确保 @Valid 通过，走到业务层的 parts 上限校验
+        Orders master = new Orders();
+        master.setId(2001L);
+        master.setNumber("ORD-LIMIT-TEST");
+        master.setStatus(OrderStatus.ORDERED.getValue());
+        master.setAmount(new BigDecimal("200.00"));
+        master.setTenantId(1L);
+        master.setTableId(1L);
+        master.setOrderTime(LocalDateTime.now());
+        orderService.save(master);
+
+        mockMvc.perform(post("/api/dining/table/splitBill")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"orderId\":2001,\"parts\":21}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.msg").value("分账份数不能超过20份"));
+    }
+
+    /** 分账：主订单金额归零，子订单金额正确均分 */
+    @Test
+    void testSplitBill_masterAmountZeroed() throws Exception {
+        // 创建主订单
+        Orders master = new Orders();
+        master.setId(1001L);
+        master.setNumber("ORD-TEST-001");
+        master.setStatus(OrderStatus.ORDERED.getValue());
+        master.setAmount(new BigDecimal("100.00"));
+        master.setTenantId(1L);
+        master.setTableId(1L);
+        master.setOrderTime(LocalDateTime.now());
+        orderService.save(master);
+
+        mockMvc.perform(post("/api/dining/table/splitBill")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"orderId\":1001,\"parts\":3}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 验证主订单金额归零、状态为 SPLIT
+        Orders masterAfter = orderService.getById(1001L);
+        assertNotNull(masterAfter);
+        assertEquals(0, masterAfter.getAmount().compareTo(BigDecimal.ZERO),
+                "分账后主订单金额应为 0");
+        assertEquals(Integer.valueOf(OrderStatus.SPLIT.getValue()), masterAfter.getStatus(),
+                "分账后主订单状态应为 SPLIT");
+        assertEquals(Integer.valueOf(3), masterAfter.getSplitCount(),
+                "分账后主订单 splitCount 应为 3");
     }
 }

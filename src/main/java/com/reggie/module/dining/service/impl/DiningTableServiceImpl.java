@@ -84,6 +84,11 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
                 new LinkedHashSet<>(Arrays.asList(DiningTableStatus.FREE.getValue())));
     }
 
+    /**
+     * 处理 change status。
+     * @param tableId 参数 tableId
+     * @param status 参数 status
+     */
     @Override
     public void changeStatus(Long tableId, String status) {
         // fail-closed：强制租户校验
@@ -123,11 +128,26 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
         }
     }
 
+    /**
+     * 分页查询 with area。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
     @Override
     public Page<DiningTable> pageWithArea(int page, int pageSize) {
         return pageWithArea(page, pageSize, null, null, null);
     }
 
+    /**
+     * 分页查询 with area。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param name 参数 name
+     * @param areaId 参数 areaId
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Override
     public Page<DiningTable> pageWithArea(int page, int pageSize, String name, Long areaId, String status) {
         LambdaQueryWrapper<DiningTable> qw = new LambdaQueryWrapper<>();
@@ -200,6 +220,10 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
         return stats;
     }
 
+    /**
+     * 处理 area stats。
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> areaStats() {
         Map<String, Object> result = new HashMap<>();
@@ -581,6 +605,9 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
         if (dto.getOrderId() == null || dto.getParts() == null || dto.getParts() <= 0) {
             throw new CustomException("订单ID和分账份数不能为空");
         }
+        if (dto.getParts() > 20) {
+            throw new CustomException("分账份数不能超过20份");
+        }
 
         // 1. 校验主订单
         Orders masterOrder = orderService.getById(dto.getOrderId());
@@ -636,11 +663,12 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
             subOrders.add(subOrder);
         }
 
-        // 5. 主订单状态改为已分账（SPLIT）
+        // 5. 主订单状态改为已分账（SPLIT），金额置 0 避免营收统计重复计入
         LambdaUpdateWrapper<Orders> masterUw = new LambdaUpdateWrapper<>();
         masterUw.eq(Orders::getId, masterOrder.getId())
                 .eq(Orders::getTenantId, tenantId)
                 .set(Orders::getStatus, OrderStatus.SPLIT.getValue())
+                .set(Orders::getAmount, BigDecimal.ZERO)
                 .set(Orders::getSplitCount, dto.getParts())
                 .set(Orders::getRemark,
                         (masterOrder.getRemark() != null ? masterOrder.getRemark() + "; " : "")

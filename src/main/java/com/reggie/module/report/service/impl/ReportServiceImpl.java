@@ -7,6 +7,7 @@ import com.reggie.module.category.model.Category;
 import com.reggie.module.dish.model.Dish;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
+import com.reggie.enums.OrderStatus;
 import com.reggie.module.export.util.ExportUtil;
 import com.reggie.module.report.service.ReportService;
 import com.reggie.module.category.service.CategoryService;
@@ -72,6 +73,12 @@ public class ReportServiceImpl implements ReportService {
     @Autowired
     private CategoryService categoryService;
 
+    /**
+     * 获取 daily report。
+     * @param date 参数 date
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getDailyReport(String date, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -113,6 +120,14 @@ public class ReportServiceImpl implements ReportService {
         return result;
     }
 
+    /**
+     * 获取 dish ranking。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param limit 参数 limit
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getDishRanking(String startDate, String endDate, int limit, Long tenantId) {
         List<Map<String, Object>> ranking = new ArrayList<>();
@@ -157,6 +172,13 @@ public class ReportServiceImpl implements ReportService {
         return ranking;
     }
 
+    /**
+     * 获取 time slot analysis。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getTimeSlotAnalysis(String startDate, String endDate, Long tenantId) {
         List<Map<String, Object>> slots = new ArrayList<>();
@@ -201,6 +223,13 @@ public class ReportServiceImpl implements ReportService {
         return slots;
     }
 
+    /**
+     * 获取 payment analysis。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getPaymentAnalysis(String startDate, String endDate, Long tenantId) {
         // 租户隔离
@@ -255,6 +284,14 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
+    /**
+     * 导出 daily report。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @param format 参数 format
+     * @return 返回结果
+     */
     @Override
     public byte[] exportDailyReport(String startDate, String endDate, Long tenantId, String format) {
         LocalDate start = LocalDate.parse(startDate);
@@ -370,6 +407,14 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
+    /**
+     * 新增 export record。
+     * @param dateRange 参数 dateRange
+     * @param format 参数 format
+     * @param fileName 参数 fileName
+     * @param fileSize 参数 fileSize
+     * @param status 参数 status
+     */
     @Override
     public void addExportRecord(String dateRange, String format, String fileName, long fileSize, String status) {
         Map<String, Object> record = new HashMap<>();
@@ -393,6 +438,10 @@ public class ReportServiceImpl implements ReportService {
                 dateRange, format, fileName, fileSize, status, BaseContext.getCurrentTenantId());
     }
 
+    /**
+     * 获取 export history。
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getExportHistory() {
         Long currentTenantId = BaseContext.getCurrentTenantId();
@@ -407,6 +456,9 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
+    /**
+     * 清空 export history。
+     */
     @Override
     public void clearExportHistory() {
         Long currentTenantId = BaseContext.getCurrentTenantId();
@@ -423,6 +475,14 @@ public class ReportServiceImpl implements ReportService {
         }
     }
 
+    /**
+     * 获取 repurchase rate。
+     * @param period 参数 period
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getRepurchaseRate(String period, String startDate, String endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -487,7 +547,8 @@ public class ReportServiceImpl implements ReportService {
     private String getWindowKey(LocalDateTime dateTime, String period) {
         switch (period) {
             case "week":
-                return dateTime.getYear() + "-W" + String.format("%02d", dateTime.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR));
+                return dateTime.getYear() + "-W" + String.format("%02d", dateTime.get(IsoFields
+                        .WEEK_OF_WEEK_BASED_YEAR));
             case "month":
                 return dateTime.getYear() + "-" + String.format("%02d", dateTime.getMonthValue());
             case "year":
@@ -504,7 +565,8 @@ public class ReportServiceImpl implements ReportService {
             // 按周生成
             LocalDate current = start;
             while (!current.isAfter(end)) {
-                String key = current.getYear() + "-W" + String.format("%02d", current.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR));
+                String key = current.getYear() + "-W" + String.format("%02d", current.get(IsoFields
+                        .WEEK_OF_WEEK_BASED_YEAR));
                 if (windows.isEmpty() || !windows.get(windows.size() - 1).equals(key)) {
                     windows.add(key);
                 }
@@ -533,6 +595,13 @@ public class ReportServiceImpl implements ReportService {
         return windows;
     }
 
+    /**
+     * 获取 category sales。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getCategorySales(String startDate, String endDate, Long tenantId) {
         List<Map<String, Object>> result = new ArrayList<>();
@@ -611,6 +680,14 @@ public class ReportServiceImpl implements ReportService {
         return result;
     }
 
+    /**
+     * 获取 dish trend。
+     * @param dishNames 参数 dishNames
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getDishTrend(List<String> dishNames, String startDate, String endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -723,6 +800,13 @@ public class ReportServiceImpl implements ReportService {
         return result;
     }
 
+    /**
+     * 获取 payment trend。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getPaymentTrend(String startDate, String endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -740,7 +824,7 @@ public class ReportServiceImpl implements ReportService {
             orderQw.between(Orders::getOrderTime,
                     LocalDate.parse(startDate).atStartOfDay(),
                     LocalDate.parse(endDate).atTime(LocalTime.MAX));
-            orderQw.select(Orders::getOrderTime, Orders::getPayMethod, Orders::getAmount);
+            orderQw.select(Orders::getOrderTime, Orders::getPayMethod, Orders::getAmount, Orders::getStatus);
             List<Orders> allOrders = orderService.list(orderQw);
 
             // 按日期分组：dateStr -> {2: wechat金额, 3: alipay金额, 1: 线下合计金额}
@@ -759,8 +843,10 @@ public class ReportServiceImpl implements ReportService {
             }
 
             // 累加金额（渠道映射：2=微信→wechat 列，3=支付宝→alipay 列，其余线下渠道 1现金/4银行卡/5储值/6货到付款 → balance 列）
+            // 排除已分账主订单（SPLIT），避免与子订单金额重复计入
             for (Orders o : allOrders) {
                 if (o.getOrderTime() == null) continue;
+                if (o.getStatus() != null && o.getStatus() == OrderStatus.SPLIT.getValue()) continue;
                 String dateKey = o.getOrderTime().toLocalDate().toString().substring(5);
                 Map<Integer, BigDecimal> payMap = dailyMap.get(dateKey);
                 if (payMap == null) continue;
@@ -796,6 +882,13 @@ public class ReportServiceImpl implements ReportService {
         return result;
     }
 
+    /**
+     * 获取 time slot heatmap。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getTimeSlotHeatmap(String startDate, String endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -857,6 +950,14 @@ public class ReportServiceImpl implements ReportService {
         return result;
     }
 
+    /**
+     * 获取 repurchase rate by dish。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param limit 参数 limit
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getRepurchaseRateByDish(String startDate, String endDate, int limit, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -948,6 +1049,13 @@ public class ReportServiceImpl implements ReportService {
         return result;
     }
 
+    /**
+     * 获取 cohort analysis。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getCohortAnalysis(String startDate, String endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -974,13 +1082,15 @@ public class ReportServiceImpl implements ReportService {
             Map<Long, LocalDateTime> userFirstOrderMap = new HashMap<>();
             for (Orders o : orders) {
                 if (o.getUserId() == null || o.getOrderTime() == null) continue;
-                userFirstOrderMap.merge(o.getUserId(), o.getOrderTime(), (old, newVal) -> old.isBefore(newVal) ? old : newVal);
+                userFirstOrderMap.merge(o.getUserId(), o.getOrderTime(), (old, newVal) -> old
+                        .isBefore(newVal) ? old : newVal);
             }
 
             // 3. 按首次消费月份分组
             Map<String, Set<Long>> cohortUserMap = new LinkedHashMap<>();
             for (Map.Entry<Long, LocalDateTime> entry : userFirstOrderMap.entrySet()) {
-                String cohortKey = entry.getValue().getYear() + "-" + String.format("%02d", entry.getValue().getMonthValue());
+                String cohortKey = entry.getValue().getYear() + "-" + String.format("%02d", entry.getValue()
+                        .getMonthValue());
                 cohortUserMap.computeIfAbsent(cohortKey, k -> new HashSet<>()).add(entry.getKey());
             }
 

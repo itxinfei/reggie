@@ -129,7 +129,8 @@ public class PaymentController {
             return R.error("订单金额异常");
         }
 
-        PaymentOrder paymentOrder = paymentOrderService.createPaymentOrder(dto.getOrderId(), dto.getChannel(), payAmount);
+        PaymentOrder paymentOrder = paymentOrderService.createPaymentOrder(dto.getOrderId(), dto.getChannel(),
+                payAmount);
 
         PaymentChannel paymentChannel = paymentChannelFactory.getChannel(dto.getChannel());
         PayRequest request = new PayRequest();
@@ -151,7 +152,8 @@ public class PaymentController {
     @RateLimit(maxRequestsPerSecond = 10, type = RateLimitType.IP)
     @Operation(summary = "支付回调通知", description = "接收支付渠道的异步通知，更新订单支付状态")
     public R<String> notify(
-                        @Parameter(description = "支付渠道：WECHAT-微信、ALIPAY-支付宝", required = true) @PathVariable String channel,
+                        @Parameter(description = "支付渠道：WECHAT-微信、ALIPAY-支付宝", required =
+                                true) @PathVariable String channel,
             @Parameter(description = "回调参数") @RequestBody Map<String, String> params) {
         // 回调场景用 getChannelNullable：未知/空渠道返回 200 + 业务错误码（而非抛异常触发 500），
         // 主动停止支付平台重试（平台对 5xx 会重试，对 2xx 业务失败码通常不重试）
@@ -235,6 +237,177 @@ public class PaymentController {
     @Operation(summary = "退款分析", description = "当前租户退款统计与退款原因TOP5")
     public R<Map<String, Object>> refundStats() {
         return R.success(refundRecordService.getRefundAnalysis(BaseContext.getCurrentTenantId()));
+    }
+
+    /**
+     * 查询待审核/已审核的售后申请列表（员工端）。
+     *
+     * @param status   售后状态筛选（pending/processing/success/rejected/fail，null=全部）
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @return 售后记录分页列表
+     */
+    @RequireEmployee
+    @GetMapping("/refund/user/list")
+    @Operation(summary = "售后申请列表", description = "查询用户的售后退款申请，支持按状态筛选")
+    public R<Page<RefundRecord>> userRefundList(
+            @Parameter(description = "售后状态") @RequestParam(required = false) String status,
+            @Parameter(description = "页码") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") int pageSize) {
+        Page<RefundRecord> pageInfo = PageUtils.of(page, pageSize);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<RefundRecord> qw = new LambdaQueryWrapper<>();
+        if (tenantId != null) {
+            qw.eq(RefundRecord::getTenantId, tenantId);
+        }
+        // 过滤掉对账痕迹（reason 以 [对账待办] 开头），只查真实售后单
+        qw.notLike(RefundRecord::getReason, "[对账待办]");
+        if (status != null && !status.isEmpty()) {
+            qw.eq(RefundRecord::getStatus, status);
+        }
+        qw.orderByDesc(RefundRecord::getCreatedTime);
+        return R.success(refundRecordService.page(pageInfo, qw));
+    }
+
+    /**
+     * 员工审核售后申请（通过/拒绝）。
+     * <p>
+     * 审核通过后标记为 PROCESSING，需再调用 {@code /payment/refund/user/execute} 触发渠道退款；
+     * 拒绝后标记为 REJECTED，记录拒绝原因，用户可重新申请。
+     * </p>
+     *
+     * @param refundId     售后记录ID
+     * @param approve      true=通过, false=拒绝
+     * @param rejectReason 拒绝原因（拒绝时必填）
+     * @return 审核结果
+     */
+    @RequireEmployee
+    @PostMapping("/refund/user/audit")
+    @Operation(summary = "审核售后申请", description = "审核通过/拒绝用户的售后退款申请")
+    public R<String> auditUserRefund(
+            @Parameter(description = "售后记录ID", required = true) @RequestParam Long refundId,
+            @Parameter(description = "是否通过", required = true) @RequestParam boolean approve,
+            @Parameter(description = "拒绝原因") @RequestParam(required = false) String rejectReason) {
+        try {
+            refundRecordService.auditUserRefund(refundId, approve, rejectReason);
+            return R.success(approve ? "审核通过" : "已拒绝");
+        } catch (CustomException e) {
+            return R.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 执行售后退款（审核通过后触发渠道退款）。
+     * <p>
+     * 从售后记录中查找关联支付单，复用退款流程（Redis 锁 + 渠道退款 + 本地落库）。
+     * 售后单必须处于 PROCESSING 状态（审核已通过）。
+     * </p>
+     *
+     * @param refundId 售后记录ID
+     * @return 退款结果
+     */
+    @RequireEmployee
+    @PostMapping("/refund/user/execute")
+    @Operation(summary = "执行售后退款", description = "审核通过后触发渠道退款，完成售后闭环")
+    public R<String> executeUserRefund(
+            @Parameter(description = "售后记录ID", required = true) @RequestParam Long refundId) {
+        RefundRecord record = refundRecordService.getById(refundId);
+        if (record == null) {
+            return R.error("售后记录不存在");
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null && !tenantId.equals(record.getTenantId())) {
+            return R.error("无权操作其他租户的售后记录");
+        }
+        if (!"processing".equals(record.getStatus())) {
+            return R.error("该售后单当前状态不支持退款执行（需先审核通过）");
+        }
+        // 查找关联订单对应的支付单
+        Orders order = orderService.getById(record.getOrderId());
+        if (order == null) {
+            return R.error("关联订单不存在");
+        }
+        // 查找该订单的已成功支付单
+        PaymentOrder paymentOrder = paymentOrderService.lambdaQuery()
+                .eq(PaymentOrder::getOrderId, order.getId())
+                .eq(PaymentOrder::getTenantId, tenantId)
+                .eq(PaymentOrder::getStatus, "SUCCESS")
+                .orderByDesc(PaymentOrder::getPaidTime)
+                .last("LIMIT 1")
+                .one();
+        if (paymentOrder == null) {
+            return R.error("未找到该订单的有效支付单，无法退款");
+        }
+        BigDecimal refundAmount = record.getAmount();
+        BigDecimal paymentAmount = paymentOrder.getAmount();
+        if (paymentAmount == null) {
+            return R.error("支付金额异常，无法退款");
+        }
+        BigDecimal alreadyRefunded = refundRecordService.sumRefundedAmount(paymentOrder.getId());
+        if (alreadyRefunded.add(refundAmount).compareTo(paymentAmount) > 0) {
+            return R.error("累计退款金额超过支付金额（已退：" + alreadyRefunded + "元，本次：" + refundAmount + "元）");
+        }
+
+        // 复用退款流程的核心部分：Redis 锁 → 渠道退款 → 本地落库
+        String refundLockKey = "payment:refund:lock:" + paymentOrder.getId();
+        String refundLockValue = tryRefundLock(refundLockKey);
+        try {
+            PaymentChannel channel = paymentChannelFactory.getChannel(paymentOrder.getChannel());
+            if (channel == null) {
+                return R.error("不支持的支付渠道: " + paymentOrder.getChannel());
+            }
+            RefundRequest refundRequest = new RefundRequest();
+            refundRequest.setChannelTradeNo(paymentOrder.getChannelTradeNo());
+            refundRequest.setAmount(refundAmount);
+            refundRequest.setReason(record.getReason());
+            refundRequest.setOutRequestNo(record.getRefundNo());
+            RefundResponse refundResponse;
+            try {
+                refundResponse = channel.refund(refundRequest);
+            } catch (Exception e) {
+                log.error("[售后退款] 渠道调用异常: refundId={}, error={}", refundId, e.getMessage(), e);
+                recordReconcileTraceSafely(paymentOrder.getId(), refundAmount,
+                        "[对账待办]售后退款渠道调用异常：" + e.getMessage());
+                return R.error("退款渠道调用失败，请稍后重试");
+            }
+            if (refundResponse == null || !refundResponse.isSuccess()) {
+                String errMsg = refundResponse != null ? refundResponse.getErrorMsg() : "无响应";
+                log.warn("[售后退款] 渠道退款被拒绝: refundId={}, error={}", refundId, errMsg);
+                recordReconcileTraceSafely(paymentOrder.getId(), refundAmount,
+                        "[对账待办]售后退款渠道被拒绝：" + errMsg);
+                return R.error("退款渠道拒绝: " + errMsg);
+            }
+            // 渠道退款成功 → 本地落库
+            try {
+                RefundRecord rr = refundRecordService.createRefund(paymentOrder.getId(), refundAmount,
+                        "[售后退款]" + record.getReason(), record.getRefundNo());
+                refundRecordService.markRefundSuccess(record.getRefundNo());
+                refundRecordService.markUserRefundSuccess(record.getRefundNo());
+                boolean isFull = alreadyRefunded.add(refundAmount).compareTo(paymentAmount) == 0;
+                if (isFull) {
+                    paymentOrderService.lambdaUpdate()
+                            .eq(PaymentOrder::getId, paymentOrder.getId())
+                            .set(PaymentOrder::getStatus, "REFUND")
+                            .update();
+                    orderService.lambdaUpdate()
+                            .eq(Orders::getId, order.getId())
+                            .set(Orders::getStatus, Orders.STATUS_REFUNDED)
+                            .update();
+                }
+            } catch (Exception e) {
+                log.error("[售后退款] 本地落库失败: refundId={}, error={}", refundId, e.getMessage(), e);
+                recordReconcileTraceSafely(paymentOrder.getId(), refundAmount,
+                        "[对账待办]售后退款本地落库失败：" + e.getMessage());
+                return R.success("退款已提交（渠道已处理），请核对退款记录");
+            }
+            clearDashboardCache();
+            log.info("[售后退款] 售后退款成功: refundId={}, orderId={}, amount={}", refundId, order.getId(), refundAmount);
+            return R.success("退款成功");
+        } finally {
+            if (refundLockValue != null) {
+                unlockRefundLock(refundLockKey, refundLockValue);
+            }
+        }
     }
 
     /**
@@ -353,7 +526,8 @@ public class PaymentController {
                     }
                     // 事务内二次累计退款校验（用 SELECT ... FOR UPDATE 锁定支付单行，阻塞并发退款）
                     // 先对 payment_order 行加排他锁，再查询累计退款——两阶段串行化防突破上限
-                    BigDecimal lockedAmount = paymentOrderMapper.selectPaymentAmountForUpdate(latest.getId(), STATUS_SUCCESS);
+                    BigDecimal lockedAmount = paymentOrderMapper.selectPaymentAmountForUpdate(latest.getId(),
+                            STATUS_SUCCESS);
                     // 行锁后读到的金额是权威值；为 null 属数据异常，fail-closed 拒绝而非跳过校验
                     if (lockedAmount == null) {
                         throw new CustomException("支付金额异常，退款失败");
@@ -372,7 +546,8 @@ public class PaymentController {
                     // 创建退款记录并标记成功（渠道已确认退款，修复原先记录永远停留在 PENDING 的问题）。
                     // refundNo 提前生成作为渠道幂等键 out_request_no，此处复用同一单号，
                     // 保证本地 refund_no 与渠道 out_request_no 一一对应可直接对账。
-                    RefundRecord record = refundRecordService.createRefund(latest.getId(), fRefundAmount, fReason, refundNo);
+                    RefundRecord record = refundRecordService.createRefund(latest.getId(), fRefundAmount, fReason,
+                            refundNo);
                     refundRecordService.markRefundSuccess(record.getRefundNo());
                     // 判断是否全额退款：累计已退 + 本次 == 支付金额
                     boolean isFull = refunded.add(fRefundAmount).compareTo(latestAmount) == 0;
@@ -394,7 +569,8 @@ public class PaymentController {
                         if (order != null) {
                             Integer curStatus = order.getStatus();
                             if (curStatus != null && Arrays.asList(
-                                    Orders.STATUS_ORDERED, Orders.STATUS_DELIVERING, Orders.STATUS_COMPLETED).contains(curStatus)) {
+                                    Orders.STATUS_ORDERED, Orders.STATUS_DELIVERING, Orders.STATUS_COMPLETED)
+                                            .contains(curStatus)) {
                                 // 修复 P2-5：CAS 乐观锁更新订单状态，防止并发退款覆盖
                                 LambdaUpdateWrapper<Orders> orderUpdateWrapper = new LambdaUpdateWrapper<>();
                                 orderUpdateWrapper.eq(Orders::getId, order.getId())
@@ -410,7 +586,8 @@ public class PaymentController {
                                     // 全额退款后回退会员权益（积分回退 + 优惠券恢复）
                                     try {
                                         memberRewardService.reverseRewards(latest.getOrderId(), latest.getTenantId());
-                                        log.info("[会员权益回退] 退款触发权益回退: orderId={}, tenantId={}", latest.getOrderId(), latest.getTenantId());
+                                        log.info("[会员权益回退] 退款触发权益回退: orderId={}, tenantId={}", latest.getOrderId(),
+                                                latest.getTenantId());
                                     } catch (Exception e) {
                                         log.error("[会员权益回退] 退款后权益回退失败，需人工核查: orderId={}", latest.getOrderId(), e);
                                     }
@@ -484,7 +661,8 @@ public class PaymentController {
             return;
         }
         try {
-            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                 new DefaultRedisScript<Long>(luaScript, Long.class),
                 Collections.singletonList(lockKey),
@@ -543,6 +721,17 @@ public class PaymentController {
         return R.success(po);
     }
 
+    /**
+     * 分页查询。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param orderId 参数 orderId
+     * @param channel 参数 channel
+     * @param status 参数 status
+     * @param beginTime 参数 beginTime
+     * @param endTime 参数 endTime
+     * @return 返回结果
+     */
     @RequireEmployee
     @GetMapping("/page")
     @Operation(summary = "分页查询支付订单", description = "分页查询支付订单列表，支持按订单ID、渠道、状态、时间范围筛选")
@@ -562,8 +751,10 @@ public class PaymentController {
             switch (status) {
                 case "待支付": case "PENDING":   qw.eq(PaymentOrder::getStatus, PaymentOrder.STATUS_PENDING); break;
                 case "成功":   case "SUCCESS":   qw.eq(PaymentOrder::getStatus, PaymentOrder.STATUS_SUCCESS); break;
-                case "失败":   case "FAIL": case "FAILED": qw.eq(PaymentOrder::getStatus, PaymentOrder.STATUS_FAIL); break;
-                case "已退款": case "REFUND": case "REFUNDED": qw.eq(PaymentOrder::getStatus, PaymentOrder.STATUS_REFUND); break;
+                case "失败":   case "FAIL": case "FAILED": qw.eq(PaymentOrder::getStatus, PaymentOrder
+                        .STATUS_FAIL); break;
+                case "已退款": case "REFUND": case "REFUNDED": qw.eq(PaymentOrder::getStatus, PaymentOrder
+                        .STATUS_REFUND); break;
                 default:                        qw.eq(PaymentOrder::getStatus, status); break;
             }
         }
