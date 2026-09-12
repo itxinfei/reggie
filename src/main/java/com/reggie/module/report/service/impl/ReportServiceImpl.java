@@ -310,102 +310,115 @@ public class ReportServiceImpl implements ReportService {
         try {
             BaseContext.setCurrentTenantId(tenantId);
 
-            // 收集日报数据
-            List<Map<String, Object>> dailyRows = new ArrayList<>();
+            // 收集日报数据并汇总（等价抽取）
+            List<Map<String, Object>> dailyRows = collectDailyRows(start, end, tenantId);
             BigDecimal totalRevenue = BigDecimal.ZERO;
             int totalOrders = 0, totalCompleted = 0, totalCancelled = 0;
-
-            for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
-                Map<String, Object> report = getDailyReport(date.toString(), tenantId);
-                Map<String, Object> row = new LinkedHashMap<>();
-                row.put("date", date.toString());
-                row.put("totalOrders", report.get("totalOrders") != null
-                        ? Integer.parseInt(report.get("totalOrders").toString()) : 0);
-                row.put("totalAmount", report.get("totalAmount") != null ? report.get("totalAmount").toString() : "0");
-                row.put("completedOrders", report.get("completedOrders") != null
-                        ? Integer.parseInt(report.get("completedOrders").toString()) : 0);
-                row.put("cancelledOrders", report.get("cancelledOrders") != null
-                        ? Integer.parseInt(report.get("cancelledOrders").toString()) : 0);
-                dailyRows.add(row);
-
+            for (Map<String, Object> row : dailyRows) {
                 totalOrders += (Integer) row.get("totalOrders");
                 totalCompleted += (Integer) row.get("completedOrders");
                 totalCancelled += (Integer) row.get("cancelledOrders");
                 totalRevenue = totalRevenue.add(new BigDecimal(row.get("totalAmount").toString()));
             }
 
-            byte[] result;
-            String fileName;
-
-            if (isExcel) {
-                // 生成 Excel
-                LinkedHashMap<String, String> columns = new LinkedHashMap<>();
-                columns.put("date", "日期");
-                columns.put("totalOrders", "订单数");
-                columns.put("totalAmount", "总金额(元)");
-                columns.put("completedOrders", "已完成");
-                columns.put("cancelledOrders", "已取消");
-
-                List<Map<String, Object>> excelRows = new ArrayList<>();
-                for (Map<String, Object> row : dailyRows) {
-                    Map<String, Object> excelRow = new LinkedHashMap<>();
-                    excelRow.put("date", row.get("date"));
-                    excelRow.put("totalOrders", row.get("totalOrders"));
-                    excelRow.put("totalAmount", row.get("totalAmount"));
-                    excelRow.put("completedOrders", row.get("completedOrders"));
-                    excelRow.put("cancelledOrders", row.get("cancelledOrders"));
-                    excelRows.add(excelRow);
-                }
-
-                result = ExportUtil.generateExcelBytes(columns, excelRows);
-                fileName = "report_" + startDate + "_" + endDate + ".xlsx";
-            } else {
-                // 生成 PDF
-                LinkedHashMap<String, String> columns = new LinkedHashMap<>();
-                columns.put("date", "日期");
-                columns.put("totalOrders", "订单数");
-                columns.put("totalAmount", "总金额");
-                columns.put("completedOrders", "已完成");
-                columns.put("cancelledOrders", "已取消");
-
-                Map<String, String> summary = new LinkedHashMap<>();
-                summary.put("日期范围", startDate + " ~ " + endDate);
-                summary.put("总订单数", String.valueOf(totalOrders));
-                summary.put("总营业额", "¥" + totalRevenue.toPlainString());
-                summary.put("已完成", String.valueOf(totalCompleted));
-                summary.put("已取消", String.valueOf(totalCancelled));
-
-                result = ExportUtil.generatePdfBytes(
-                        "瑞吉外卖 - 营业日报表",
-                        columns, dailyRows, summary
-                );
-                fileName = "report_" + startDate + "_" + endDate + ".pdf";
-            }
+            // 生成导出文件（Excel 或 PDF）（等价抽取）
+            byte[] result = isExcel
+                    ? buildDailyReportExcel(dailyRows)
+                    : buildDailyReportPdf(dailyRows, startDate, endDate, totalOrders, totalRevenue,
+                            totalCompleted, totalCancelled);
+            String fileName = "report_" + startDate + "_" + endDate + "." + (isExcel ? "xlsx" : "pdf");
 
             // 导出成功后记录历史
-            addExportRecord(
-                    startDate + " ~ " + endDate,
-                    isExcel ? "excel" : "pdf",
-                    fileName,
-                    result.length,
-                    "success"
-            );
+            addExportRecord(startDate + " ~ " + endDate, isExcel ? "excel" : "pdf", fileName, result.length,
+                    "success");
 
             return result;
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出日报失败: format={}", format, e);
-            addExportRecord(
-                    startDate + " ~ " + endDate,
-                    isExcel ? "excel" : "pdf",
-                    "report_" + startDate + "_" + endDate + "." + (isExcel ? "xlsx" : "pdf"),
-                    0,
-                    "failed"
-            );
+            addExportRecord(startDate + " ~ " + endDate, isExcel ? "excel" : "pdf",
+                    "report_" + startDate + "_" + endDate + "." + (isExcel ? "xlsx" : "pdf"), 0, "failed");
             throw new CustomException("经营报表导出失败: " + e.getMessage());
         } finally {
             BaseContext.setCurrentTenantId(originalTenantId);
         }
+    }
+
+    /**
+     * 逐日收集日报数据（等价抽取，降低方法长度）。
+     *
+     * @param start 开始日期
+     * @param end 结束日期
+     * @param tenantId 租户ID
+     * @return 每日一行数据
+     */
+    private List<Map<String, Object>> collectDailyRows(LocalDate start, LocalDate end, Long tenantId) {
+        List<Map<String, Object>> dailyRows = new ArrayList<>();
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+            Map<String, Object> report = getDailyReport(date.toString(), tenantId);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("date", date.toString());
+            row.put("totalOrders", report.get("totalOrders") != null
+                    ? Integer.parseInt(report.get("totalOrders").toString()) : 0);
+            row.put("totalAmount", report.get("totalAmount") != null ? report.get("totalAmount").toString() : "0");
+            row.put("completedOrders", report.get("completedOrders") != null
+                    ? Integer.parseInt(report.get("completedOrders").toString()) : 0);
+            row.put("cancelledOrders", report.get("cancelledOrders") != null
+                    ? Integer.parseInt(report.get("cancelledOrders").toString()) : 0);
+            dailyRows.add(row);
+        }
+        return dailyRows;
+    }
+
+    /**
+     * 生成 Excel 导出字节（等价抽取）。
+     *
+     * @param dailyRows 日报数据行
+     * @return Excel 字节
+     */
+    private byte[] buildDailyReportExcel(List<Map<String, Object>> dailyRows) {
+        LinkedHashMap<String, String> columns = new LinkedHashMap<>();
+        columns.put("date", "日期");
+        columns.put("totalOrders", "订单数");
+        columns.put("totalAmount", "总金额(元)");
+        columns.put("completedOrders", "已完成");
+        columns.put("cancelledOrders", "已取消");
+
+        List<Map<String, Object>> excelRows = new ArrayList<>();
+        for (Map<String, Object> row : dailyRows) {
+            Map<String, Object> excelRow = new LinkedHashMap<>();
+            excelRow.put("date", row.get("date"));
+            excelRow.put("totalOrders", row.get("totalOrders"));
+            excelRow.put("totalAmount", row.get("totalAmount"));
+            excelRow.put("completedOrders", row.get("completedOrders"));
+            excelRow.put("cancelledOrders", row.get("cancelledOrders"));
+            excelRows.add(excelRow);
+        }
+        return ExportUtil.generateExcelBytes(columns, excelRows);
+    }
+
+    /**
+     * 生成 PDF 导出字节（等价抽取）。
+     *
+     * @return PDF 字节
+     */
+    private byte[] buildDailyReportPdf(List<Map<String, Object>> dailyRows, String startDate, String endDate,
+            int totalOrders, BigDecimal totalRevenue, int totalCompleted, int totalCancelled) {
+        LinkedHashMap<String, String> columns = new LinkedHashMap<>();
+        columns.put("date", "日期");
+        columns.put("totalOrders", "订单数");
+        columns.put("totalAmount", "总金额");
+        columns.put("completedOrders", "已完成");
+        columns.put("cancelledOrders", "已取消");
+
+        Map<String, String> summary = new LinkedHashMap<>();
+        summary.put("日期范围", startDate + " ~ " + endDate);
+        summary.put("总订单数", String.valueOf(totalOrders));
+        summary.put("总营业额", "¥" + totalRevenue.toPlainString());
+        summary.put("已完成", String.valueOf(totalCompleted));
+        summary.put("已取消", String.valueOf(totalCancelled));
+
+        return ExportUtil.generatePdfBytes("瑞吉外卖 - 营业日报表", columns, dailyRows, summary);
     }
 
     /**

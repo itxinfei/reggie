@@ -83,23 +83,9 @@ public class OpenAICompatibleClient implements AIClient {
             conn.setConnectTimeout(timeoutSec * 1000);
             conn.setReadTimeout(timeoutSec * 1000);
 
-            // 构建请求体
-            Map<String, Object> requestBody = new LinkedHashMap<>();
-            requestBody.put("model", aiConfig.getModel());
-
-            List<Map<String, String>> msgList = new ArrayList<>();
-            for (AIMessage msg : messages) {
-                Map<String, String> m = new LinkedHashMap<>();
-                m.put("role", msg.getRole());
-                m.put("content", msg.getContent());
-                msgList.add(m);
-            }
-            requestBody.put("messages", msgList);
-            requestBody.put("max_tokens", maxTokens > 0 ? maxTokens : aiConfig.getMaxTokens());
-            requestBody.put("temperature", temperature >= 0 ? temperature : aiConfig.getTemperature());
-
-            String jsonBody = OBJECT_MAPPER.writeValueAsString(requestBody);
-            log.debug("AI请求: model={}, messages={}", aiConfig.getModel(), msgList.size());
+            // 构建并发送请求体（等价抽取）
+            String jsonBody = OBJECT_MAPPER.writeValueAsString(buildRequestBody(messages, maxTokens, temperature));
+            log.debug("AI请求: model={}, messages={}", aiConfig.getModel(), messages.size());
 
             try (OutputStream os = conn.getOutputStream()) {
                 os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
@@ -112,53 +98,9 @@ public class OpenAICompatibleClient implements AIClient {
                 try (InputStream is = conn.getInputStream()) {
                     root = OBJECT_MAPPER.readTree(is);
                 }
-                JsonNode choices = root.get("choices");
-                if (choices != null && choices.isArray() && choices.size() > 0) {
-                    // 防御性 null 检查：AI 服务可能返回非标准 JSON（缺 message 或 content 字段），
-                    // 直接 .get("message").get("content") 会因中间节点为 null 触发 NPE
-                    JsonNode choice0 = choices.get(0);
-                    JsonNode message = choice0 != null ? choice0.get("message") : null;
-                    JsonNode contentNode = message != null ? message.get("content") : null;
-                    String content = contentNode != null ? contentNode.asText() : "";
-                    int tokensUsed = root.has("usage")
-                            ? root.get("usage").path("total_tokens").asInt(0)
-                            : 0;
-
-                    log.info("AI响应成功: tokensUsed={}, contentLength={}", tokensUsed, content.length());
-                    return AIChatResponse.builder()
-                            .content(content)
-                            .model(aiConfig.getModel())
-                            .tokensUsed(tokensUsed)
-                            .build();
-                }
-                return AIChatResponse.builder()
-                        .content("AI返回了空响应")
-                        .model(aiConfig.getModel())
-                        .build();
-            } else {
-                String errorMsg;
-                try (InputStream es = conn.getErrorStream()) {
-                    if (es != null) {
-                        JsonNode errorBody = OBJECT_MAPPER.readTree(es);
-                        errorMsg = errorBody.has("error")
-                                ? errorBody.get("error").get("message").asText()
-                                : "HTTP " + responseCode;
-                    } else {
-                        errorMsg = "HTTP " + responseCode;
-                    }
-                } catch (IOException ioEx) {
-                    errorMsg = "HTTP " + responseCode;
-                    log.warn("AI错误响应读取失败", ioEx);
-                }
-                // 修改点：errorMsg 截断 200 字，防止 token 回显或超长响应体落盘
-                log.error("AI请求失败: code={}, error={}", responseCode,
-                        truncateError(errorMsg));
-
-                return AIChatResponse.builder()
-                        .content("AI服务暂时不可用，请稍后重试。")
-                        .model(aiConfig.getModel())
-                        .build();
+                return parseSuccessResponse(root);
             }
+            return buildErrorResponse(conn, responseCode);
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("AI请求异常", e);
@@ -171,6 +113,92 @@ public class OpenAICompatibleClient implements AIClient {
                 conn.disconnect();
             }
         }
+    }
+
+    /**
+     * 构建 OpenAI 兼容请求体（等价抽取，降低方法长度）。
+     *
+     * @param messages 消息列表
+     * @param maxTokens 最大 token
+     * @param temperature 温度
+     * @return 请求体
+     */
+    private Map<String, Object> buildRequestBody(List<AIMessage> messages, int maxTokens, double temperature) {
+        Map<String, Object> requestBody = new LinkedHashMap<>();
+        requestBody.put("model", aiConfig.getModel());
+
+        List<Map<String, String>> msgList = new ArrayList<>();
+        for (AIMessage msg : messages) {
+            Map<String, String> m = new LinkedHashMap<>();
+            m.put("role", msg.getRole());
+            m.put("content", msg.getContent());
+            msgList.add(m);
+        }
+        requestBody.put("messages", msgList);
+        requestBody.put("max_tokens", maxTokens > 0 ? maxTokens : aiConfig.getMaxTokens());
+        requestBody.put("temperature", temperature >= 0 ? temperature : aiConfig.getTemperature());
+        return requestBody;
+    }
+
+    /**
+     * 解析成功响应（等价抽取）。
+     *
+     * @param root 响应根节点
+     * @return AI 响应
+     */
+    private AIChatResponse parseSuccessResponse(JsonNode root) {
+        JsonNode choices = root.get("choices");
+        if (choices != null && choices.isArray() && choices.size() > 0) {
+            // 防御性 null 检查：AI 服务可能返回非标准 JSON（缺 message 或 content 字段），
+            // 直接 .get("message").get("content") 会因中间节点为 null 触发 NPE
+            JsonNode choice0 = choices.get(0);
+            JsonNode message = choice0 != null ? choice0.get("message") : null;
+            JsonNode contentNode = message != null ? message.get("content") : null;
+            String content = contentNode != null ? contentNode.asText() : "";
+            int tokensUsed = root.has("usage") ? root.get("usage").path("total_tokens").asInt(0) : 0;
+
+            log.info("AI响应成功: tokensUsed={}, contentLength={}", tokensUsed, content.length());
+            return AIChatResponse.builder()
+                    .content(content)
+                    .model(aiConfig.getModel())
+                    .tokensUsed(tokensUsed)
+                    .build();
+        }
+        return AIChatResponse.builder()
+                .content("AI返回了空响应")
+                .model(aiConfig.getModel())
+                .build();
+    }
+
+    /**
+     * 构建错误响应（等价抽取）。
+     *
+     * @param conn 连接
+     * @param responseCode 响应码
+     * @return AI 响应
+     */
+    private AIChatResponse buildErrorResponse(HttpURLConnection conn, int responseCode) {
+        String errorMsg;
+        try (InputStream es = conn.getErrorStream()) {
+            if (es != null) {
+                JsonNode errorBody = OBJECT_MAPPER.readTree(es);
+                errorMsg = errorBody.has("error")
+                        ? errorBody.get("error").get("message").asText()
+                        : "HTTP " + responseCode;
+            } else {
+                errorMsg = "HTTP " + responseCode;
+            }
+        } catch (IOException ioEx) {
+            errorMsg = "HTTP " + responseCode;
+            log.warn("AI错误响应读取失败", ioEx);
+        }
+        // 修改点：errorMsg 截断 200 字，防止 token 回显或超长响应体落盘
+        log.error("AI请求失败: code={}, error={}", responseCode, truncateError(errorMsg));
+
+        return AIChatResponse.builder()
+                .content("AI服务暂时不可用，请稍后重试。")
+                .model(aiConfig.getModel())
+                .build();
     }
 
     /**

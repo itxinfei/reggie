@@ -75,99 +75,117 @@ public class PlatformReconcileTaskServiceImpl extends ServiceImpl<PlatformReconc
         String lockKey = tenantId + ":" + platformType + ":" + date;
         Object lock = reconcileLock.computeIfAbsent(lockKey, k -> new Object());
         synchronized (lock) {
-            // 检查是否已存在该日期的对账任务
-            PlatformReconcileTask existing = getByDate(platformType, date);
-            if (existing != null) {
-                log.info("对账任务已存在: platformType={}, date={}", platformType, date);
-                return existing;
-            }
-
-            // 创建对账任务
-            PlatformReconcileTask task = new PlatformReconcileTask();
-            task.setTenantId(tenantId);
-            task.setPlatformType(platformType);
-            task.setReconcileDate(date);
-            task.setBeginTime(LocalDateTime.of(date, LocalTime.MIDNIGHT));
-            task.setEndTime(LocalDateTime.of(date, LocalTime.MIDNIGHT).plusDays(1));
-            task.setStatus(0); // 进行中
-            task.setCreateTime(LocalDateTime.now());
-
-            try {
-                // 插入对账任务。多实例并发时可能已被其他节点插入，UNIQUE 索引会抛
-                // DuplicateKeyException；此时视为"已存在"，返回对方创建的任务，避免向调用方抛 500。
-                try {
-                    save(task);
-                } catch (org.springframework.dao.DuplicateKeyException dke) {
-                    log.warn("对账任务并发创建被唯一键拒绝，返回已存在任务: platformType={}, date={}", platformType, date);
-                    return getByDate(platformType, date);
-                }
-
-                // 查询平台配置
-                PlatformConfig config = platformConfigService.getByPlatformType(platformType, tenantId);
-                if (config == null) {
-                    task.setStatus(2); // 失败
-                    task.setErrorMessage("平台配置不存在: " + platformType);
-                    updateById(task);
-                    return task;
-                }
-
-                // 拉取平台订单
-                String beginTime = task.getBeginTime().toString();
-                String endTime = task.getEndTime().toString();
-                List<PlatformOrder> platformOrders = platformSyncService.pullOrders(config, beginTime, endTime);
-
-                // 查询本地订单
-                LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
-                qw.eq(Orders::getTenantId, tenantId)
-                  .eq(Orders::getPlatformType, platformType)
-                  .between(Orders::getOrderTime, task.getBeginTime(), task.getEndTime());
-                List<Orders> localOrders = orderService.list(qw);
-
-                // 统计
-                Set<String> platformOrderIds = platformOrders.stream()
-                        .map(PlatformOrder::getPlatformOrderId)
-                        .collect(Collectors.toSet());
-                Set<String> localPlatformOrderIds = localOrders.stream()
-                        .map(Orders::getPlatformOrderId)
-                        .filter(id -> id != null)
-                        .collect(Collectors.toSet());
-
-                // 匹配统计
-                int matchCount = 0;
-                for (String orderId : localPlatformOrderIds) {
-                    if (platformOrderIds.contains(orderId)) {
-                        matchCount++;
-                    }
-                }
-
-                int missingLocalCount = platformOrderIds.size() - matchCount; // 平台有本地无
-                int missingPlatformCount = localPlatformOrderIds.size() - matchCount; // 本地有平台无
-
-                // 更新任务结果
-                task.setTotalPlatformCount(platformOrders.size());
-                task.setTotalLocalCount(localOrders.size());
-                task.setMatchCount(matchCount);
-                task.setMissingLocalCount(missingLocalCount);
-                task.setMissingPlatformCount(missingPlatformCount);
-                task.setStatus(1); // 完成
-                task.setUpdateTime(LocalDateTime.now());
-                updateById(task);
-
-                log.info("对账完成: platformType={}, date={}, 平台={}, 本地={}, 匹配={}, 差异(平台多)={}, 差异(本地多)={}",
-                        platformType, date, platformOrders.size(), localOrders.size(),
-                        matchCount, missingLocalCount, missingPlatformCount);
-
-            } catch (Exception e) {
-                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                log.error("对账失败: platformType={}, date={}", platformType, date, e);
-                task.setStatus(2); // 失败
-                task.setErrorMessage(e.getMessage());
-                task.setUpdateTime(LocalDateTime.now());
-                updateById(task);
-            }
-
-            return task;
+            return executeReconcile(tenantId, platformType, date);
         }
+    }
+
+    /**
+     * 执行对账核心逻辑（等价抽取，降低方法长度）。
+     *
+     * @param tenantId 租户ID
+     * @param platformType 平台类型
+     * @param date 对账日期
+     * @return 对账任务
+     */
+    private PlatformReconcileTask executeReconcile(Long tenantId, String platformType, LocalDate date) {
+        // 检查是否已存在该日期的对账任务
+        PlatformReconcileTask existing = getByDate(platformType, date);
+        if (existing != null) {
+            log.info("对账任务已存在: platformType={}, date={}", platformType, date);
+            return existing;
+        }
+
+        // 创建对账任务
+        PlatformReconcileTask task = new PlatformReconcileTask();
+        task.setTenantId(tenantId);
+        task.setPlatformType(platformType);
+        task.setReconcileDate(date);
+        task.setBeginTime(LocalDateTime.of(date, LocalTime.MIDNIGHT));
+        task.setEndTime(LocalDateTime.of(date, LocalTime.MIDNIGHT).plusDays(1));
+        task.setStatus(0); // 进行中
+        task.setCreateTime(LocalDateTime.now());
+
+        try {
+            // 插入对账任务。多实例并发时可能已被其他节点插入，UNIQUE 索引会抛
+            // DuplicateKeyException；此时视为"已存在"，返回对方创建的任务，避免向调用方抛 500。
+            try {
+                save(task);
+            } catch (org.springframework.dao.DuplicateKeyException dke) {
+                log.warn("对账任务并发创建被唯一键拒绝，返回已存在任务: platformType={}, date={}", platformType, date);
+                return getByDate(platformType, date);
+            }
+
+            // 查询平台配置
+            PlatformConfig config = platformConfigService.getByPlatformType(platformType, tenantId);
+            if (config == null) {
+                task.setStatus(2); // 失败
+                task.setErrorMessage("平台配置不存在: " + platformType);
+                updateById(task);
+                return task;
+            }
+
+            // 拉取平台订单
+            List<PlatformOrder> platformOrders = platformSyncService.pullOrders(config,
+                    task.getBeginTime().toString(), task.getEndTime().toString());
+
+            // 查询本地订单
+            LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
+            qw.eq(Orders::getTenantId, tenantId)
+              .eq(Orders::getPlatformType, platformType)
+              .between(Orders::getOrderTime, task.getBeginTime(), task.getEndTime());
+            List<Orders> localOrders = orderService.list(qw);
+
+            // 匹配统计并回填任务结果
+            applyReconcileStats(task, platformOrders, localOrders);
+            task.setUpdateTime(LocalDateTime.now());
+            updateById(task);
+
+            log.info("对账完成: platformType={}, date={}, 平台={}, 本地={}, 匹配={}, 差异(平台多)={}, 差异(本地多)={}",
+                    platformType, date, platformOrders.size(), localOrders.size(),
+                    task.getMatchCount(), task.getMissingLocalCount(), task.getMissingPlatformCount());
+
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("对账失败: platformType={}, date={}", platformType, date, e);
+            task.setStatus(2); // 失败
+            task.setErrorMessage(e.getMessage());
+            task.setUpdateTime(LocalDateTime.now());
+            updateById(task);
+        }
+
+        return task;
+    }
+
+    /**
+     * 统计平台/本地订单匹配情况并回填任务（等价抽取）。
+     *
+     * @param task 对账任务
+     * @param platformOrders 平台订单
+     * @param localOrders 本地订单
+     */
+    private void applyReconcileStats(PlatformReconcileTask task, List<PlatformOrder> platformOrders,
+            List<Orders> localOrders) {
+        Set<String> platformOrderIds = platformOrders.stream()
+                .map(PlatformOrder::getPlatformOrderId)
+                .collect(Collectors.toSet());
+        Set<String> localPlatformOrderIds = localOrders.stream()
+                .map(Orders::getPlatformOrderId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+
+        int matchCount = 0;
+        for (String orderId : localPlatformOrderIds) {
+            if (platformOrderIds.contains(orderId)) {
+                matchCount++;
+            }
+        }
+
+        task.setTotalPlatformCount(platformOrders.size());
+        task.setTotalLocalCount(localOrders.size());
+        task.setMatchCount(matchCount);
+        task.setMissingLocalCount(platformOrderIds.size() - matchCount); // 平台有本地无
+        task.setMissingPlatformCount(localPlatformOrderIds.size() - matchCount); // 本地有平台无
+        task.setStatus(1); // 完成
     }
 
     /**

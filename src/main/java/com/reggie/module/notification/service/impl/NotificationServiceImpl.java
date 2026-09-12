@@ -932,9 +932,43 @@ public class NotificationServiceImpl implements NotificationService {
             return null;
         }
 
-        // 分页查询当前租户用户（每页 1000，仅取 id/phone，避免大租户全量加载 OOM）
+        // 分页收集目标与映射（等价抽取，降低方法长度）
         List<String> targets = new ArrayList<>();
         Map<String, Long> userIdMap = new HashMap<>();
+        collectTargetsAndUserMap(channel, targets, userIdMap);
+
+        if (targets.isEmpty()) {
+            log.warn("没有有效的推送目标");
+            return null;
+        }
+
+        String content = renderTemplate(template.getContent(), params);
+        String title = template.getTitle() != null
+                ? renderTemplate(template.getTitle(), params) : null;
+
+        // 创建发送记录（独立提交，status=发送中，避免长事务持锁）
+        NotificationRecord record = buildRecord(template.getId(), bizType, channel,
+                targets, content, null);
+        record.setTargetType(3); // 3=全部用户
+        record.setStatus(1);
+        recordMapper.insert(record);
+
+        // 事务外执行发送（外部 HTTP 调用不应包裹在事务内）（等价抽取）
+        StringBuilder failReasons = new StringBuilder();
+        int[] counts = sendToTargets(targets, channel, template, title, content, params, userIdMap, failReasons);
+        updateRecordResult(record, counts[0], counts[1], failReasons.toString());
+        log.info("全量推送完成: 共{}目标, 成功{}, 失败{}", targets.size(), counts[0], counts[1]);
+        return record;
+    }
+
+    /**
+     * 分页收集推送目标与 phone/userId→userId 映射（等价抽取，避免大租户全量加载 OOM）。
+     *
+     * @param channel 渠道
+     * @param targets 输出：推送目标
+     * @param userIdMap 输出：phone/userId→userId 映射
+     */
+    private void collectTargetsAndUserMap(Integer channel, List<String> targets, Map<String, Long> userIdMap) {
         int pageSize = 1000;
         long pageNum = 1;
         while (true) {
@@ -978,28 +1012,18 @@ public class NotificationServiceImpl implements NotificationService {
             }
             pageNum++;
         }
+    }
 
-        if (targets.isEmpty()) {
-            log.warn("没有有效的推送目标");
-            return null;
-        }
-
-        String content = renderTemplate(template.getContent(), params);
-        String title = template.getTitle() != null
-                ? renderTemplate(template.getTitle(), params) : null;
-
-        // 创建发送记录（独立提交，status=发送中，避免长事务持锁）
-        NotificationRecord record = buildRecord(template.getId(), bizType, channel,
-                targets, content, null);
-        record.setTargetType(3); // 3=全部用户
-        record.setStatus(1);
-        recordMapper.insert(record);
-
-        // 事务外执行发送（外部 HTTP 调用不应包裹在事务内）
+    /**
+     * 逐目标发送并汇总成功/失败数（等价抽取）。
+     *
+     * @param failReasons 输出：失败原因
+     * @return [成功数, 失败数]
+     */
+    private int[] sendToTargets(List<String> targets, Integer channel, NotificationTemplate template, String title,
+            String content, Map<String, String> params, Map<String, Long> userIdMap, StringBuilder failReasons) {
         int successCount = 0;
         int failCount = 0;
-        StringBuilder failReasons = new StringBuilder();
-
         for (String target : targets) {
             try {
                 boolean ok = sendToTarget(target, channel, template, title, content, params);
@@ -1016,10 +1040,7 @@ public class NotificationServiceImpl implements NotificationService {
                 log.error("全量发送异常: target={}", target, e);
             }
         }
-
-        updateRecordResult(record, successCount, failCount, failReasons.toString());
-        log.info("全量推送完成: 共{}目标, 成功{}, 失败{}", targets.size(), successCount, failCount);
-        return record;
+        return new int[] { successCount, failCount };
     }
 }
 

@@ -373,55 +373,14 @@ public class PaymentController {
         String refundLockKey = "payment:refund:lock:" + paymentOrder.getId();
         String refundLockValue = tryRefundLock(refundLockKey);
         try {
-            PaymentChannel channel = paymentChannelFactory.getChannel(paymentOrder.getChannel());
-            if (channel == null) {
-                return R.error("不支持的支付渠道: " + paymentOrder.getChannel());
+            R<String> channelResult = doChannelRefund(paymentOrder, record, refundAmount, refundId);
+            if (channelResult != null) {
+                return channelResult;
             }
-            RefundRequest refundRequest = new RefundRequest();
-            refundRequest.setChannelTradeNo(paymentOrder.getChannelTradeNo());
-            refundRequest.setAmount(refundAmount);
-            refundRequest.setReason(record.getReason());
-            refundRequest.setOutRequestNo(record.getRefundNo());
-            RefundResponse refundResponse;
-            try {
-                refundResponse = channel.refund(refundRequest);
-            } catch (Exception e) {
-                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                log.error("[售后退款] 渠道调用异常: refundId={}, error={}", refundId, e.getMessage(), e);
-                recordReconcileTraceSafely(paymentOrder.getId(), refundAmount,
-                        "[对账待办]售后退款渠道调用异常：" + e.getMessage());
-                return R.error("退款渠道调用失败，请稍后重试");
-            }
-            if (refundResponse == null || !refundResponse.isSuccess()) {
-                String errMsg = refundResponse != null ? refundResponse.getErrorMsg() : "无响应";
-                log.warn("[售后退款] 渠道退款被拒绝: refundId={}, error={}", refundId, errMsg);
-                recordReconcileTraceSafely(paymentOrder.getId(), refundAmount,
-                        "[对账待办]售后退款渠道被拒绝：" + errMsg);
-                return R.error("退款渠道拒绝: " + errMsg);
-            }
-            // 渠道退款成功 → 本地落库
-            try {
-                RefundRecord rr = refundRecordService.createRefund(paymentOrder.getId(), refundAmount,
-                        "[售后退款]" + record.getReason(), record.getRefundNo());
-                refundRecordService.markRefundSuccess(record.getRefundNo());
-                refundRecordService.markUserRefundSuccess(record.getRefundNo());
-                boolean isFull = alreadyRefunded.add(refundAmount).compareTo(paymentAmount) == 0;
-                if (isFull) {
-                    paymentOrderService.lambdaUpdate()
-                            .eq(PaymentOrder::getId, paymentOrder.getId())
-                            .set(PaymentOrder::getStatus, "REFUND")
-                            .update();
-                    orderService.lambdaUpdate()
-                            .eq(Orders::getId, order.getId())
-                            .set(Orders::getStatus, Orders.STATUS_REFUNDED)
-                            .update();
-                }
-            } catch (Exception e) {
-                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                log.error("[售后退款] 本地落库失败: refundId={}, error={}", refundId, e.getMessage(), e);
-                recordReconcileTraceSafely(paymentOrder.getId(), refundAmount,
-                        "[对账待办]售后退款本地落库失败：" + e.getMessage());
-                return R.success("退款已提交（渠道已处理），请核对退款记录");
+            R<String> persistResult = persistUserRefund(paymentOrder, order, record, refundAmount,
+                    alreadyRefunded, paymentAmount);
+            if (persistResult != null) {
+                return persistResult;
             }
             clearDashboardCache();
             log.info("[售后退款] 售后退款成功: refundId={}, orderId={}, amount={}", refundId, order.getId(), refundAmount);
@@ -431,6 +390,75 @@ public class PaymentController {
                 unlockRefundLock(refundLockKey, refundLockValue);
             }
         }
+    }
+
+    /**
+     * 调用渠道退款，成功返回 null（继续落库），失败返回错误响应（等价抽取）。
+     *
+     * @return 失败时的响应或 null
+     */
+    private R<String> doChannelRefund(PaymentOrder paymentOrder, RefundRecord record, BigDecimal refundAmount,
+            Long refundId) {
+        PaymentChannel channel = paymentChannelFactory.getChannel(paymentOrder.getChannel());
+        if (channel == null) {
+            return R.error("不支持的支付渠道: " + paymentOrder.getChannel());
+        }
+        RefundRequest refundRequest = new RefundRequest();
+        refundRequest.setChannelTradeNo(paymentOrder.getChannelTradeNo());
+        refundRequest.setAmount(refundAmount);
+        refundRequest.setReason(record.getReason());
+        refundRequest.setOutRequestNo(record.getRefundNo());
+        RefundResponse refundResponse;
+        try {
+            refundResponse = channel.refund(refundRequest);
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("[售后退款] 渠道调用异常: refundId={}, error={}", refundId, e.getMessage(), e);
+            recordReconcileTraceSafely(paymentOrder.getId(), refundAmount,
+                    "[对账待办]售后退款渠道调用异常：" + e.getMessage());
+            return R.error("退款渠道调用失败，请稍后重试");
+        }
+        if (refundResponse == null || !refundResponse.isSuccess()) {
+            String errMsg = refundResponse != null ? refundResponse.getErrorMsg() : "无响应";
+            log.warn("[售后退款] 渠道退款被拒绝: refundId={}, error={}", refundId, errMsg);
+            recordReconcileTraceSafely(paymentOrder.getId(), refundAmount,
+                    "[对账待办]售后退款渠道被拒绝：" + errMsg);
+            return R.error("退款渠道拒绝: " + errMsg);
+        }
+        return null;
+    }
+
+    /**
+     * 渠道退款成功后的本地落库，成功返回 null（继续），失败返回提示响应（等价抽取）。
+     *
+     * @return 失败时的响应或 null
+     */
+    private R<String> persistUserRefund(PaymentOrder paymentOrder, Orders order, RefundRecord record,
+            BigDecimal refundAmount, BigDecimal alreadyRefunded, BigDecimal paymentAmount) {
+        try {
+            refundRecordService.createRefund(paymentOrder.getId(), refundAmount,
+                    "[售后退款]" + record.getReason(), record.getRefundNo());
+            refundRecordService.markRefundSuccess(record.getRefundNo());
+            refundRecordService.markUserRefundSuccess(record.getRefundNo());
+            boolean isFull = alreadyRefunded.add(refundAmount).compareTo(paymentAmount) == 0;
+            if (isFull) {
+                paymentOrderService.lambdaUpdate()
+                        .eq(PaymentOrder::getId, paymentOrder.getId())
+                        .set(PaymentOrder::getStatus, "REFUND")
+                        .update();
+                orderService.lambdaUpdate()
+                        .eq(Orders::getId, order.getId())
+                        .set(Orders::getStatus, Orders.STATUS_REFUNDED)
+                        .update();
+            }
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("[售后退款] 本地落库失败: refundId={}, error={}", record.getId(), e.getMessage(), e);
+            recordReconcileTraceSafely(paymentOrder.getId(), refundAmount,
+                    "[对账待办]售后退款本地落库失败：" + e.getMessage());
+            return R.success("退款已提交（渠道已处理），请核对退款记录");
+        }
+        return null;
     }
 
     /**

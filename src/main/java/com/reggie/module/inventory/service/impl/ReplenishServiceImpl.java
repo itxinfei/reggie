@@ -199,7 +199,30 @@ public class ReplenishServiceImpl implements ReplenishService {
         }
         List<StockRecord> outRecords = stockRecordService.list(outQw);
 
-        // 批量查询物料分类名
+        // 批量查询物料分类名（等价抽取）
+        Map<Long, String> categoryNameMap = loadCategoryNameMap(allMaterials);
+
+        // 计算补货建议（等价抽取）
+        List<Map<String, Object>> suggestList = buildSuggestList(allMaterials, days, tenantId, replenishCycle,
+                categoryNameMap);
+
+        // 排序：按紧急度等级降序（紧急在前），同等级按 estimatedDays 升序
+        sortByUrgency(suggestList);
+
+        // 写入 Redis 缓存
+        tryPutToCache(tenantId, days, replenishCycle, suggestList);
+
+        log.info("[智能补货] 补货建议计算完成，tenantId={}, 共{}种食材需补货", tenantId, suggestList.size());
+        return suggestList;
+    }
+
+    /**
+     * 批量加载物料分类名映射（等价抽取，降低方法长度）。
+     *
+     * @param allMaterials 食材列表
+     * @return 分类ID -> 分类名
+     */
+    private Map<Long, String> loadCategoryNameMap(List<Material> allMaterials) {
         Map<Long, String> categoryNameMap = new HashMap<Long, String>();
         Set<Long> categoryIds = allMaterials.stream()
                 .map(Material::getCategoryId)
@@ -213,8 +236,21 @@ public class ReplenishServiceImpl implements ReplenishService {
                 }
             }
         }
+        return categoryNameMap;
+    }
 
-        // 计算补货建议
+    /**
+     * 计算补货建议明细列表（等价抽取，降低方法长度）。
+     *
+     * @param allMaterials 食材列表
+     * @param days 统计天数
+     * @param tenantId 租户ID
+     * @param replenishCycle 补货周期
+     * @param categoryNameMap 分类名映射
+     * @return 补货建议列表
+     */
+    private List<Map<String, Object>> buildSuggestList(List<Material> allMaterials, int days, Long tenantId,
+            int replenishCycle, Map<Long, String> categoryNameMap) {
         List<Map<String, Object>> suggestList = new ArrayList<Map<String, Object>>();
         BigDecimal replenishCycleDays = new BigDecimal(replenishCycle);
 
@@ -259,14 +295,6 @@ public class ReplenishServiceImpl implements ReplenishService {
             item.put("replenishCycle", replenishCycle);
             suggestList.add(item);
         }
-
-        // 排序：按紧急度等级降序（紧急在前），同等级按 estimatedDays 升序
-        sortByUrgency(suggestList);
-
-        // 写入 Redis 缓存
-        tryPutToCache(tenantId, days, replenishCycle, suggestList);
-
-        log.info("[智能补货] 补货建议计算完成，tenantId={}, 共{}种食材需补货", tenantId, suggestList.size());
         return suggestList;
     }
 
