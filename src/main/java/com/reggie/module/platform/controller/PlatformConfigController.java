@@ -49,6 +49,13 @@ public class PlatformConfigController {
     @Operation(summary = "分页查询平台接入配置",
             description = "按启用状态筛选分页查询外卖平台（美团/饿了么/抖音）接入配置列表。"
                     + "返回的凭据已脱敏，不暴露真实密钥；需要真实密钥请走服务层内部调用。")
+    /**
+     * 查询列表。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param enabled 参数 enabled
+     * @return 返回结果
+     */
     @GetMapping("/list")
     @RequiresPermission("platform:manage")
     public R<IPage<PlatformConfig>> list(
@@ -67,6 +74,11 @@ public class PlatformConfigController {
      */
     @Operation(summary = "查询平台接入配置详情",
             description = "按主键查询单个平台接入配置，凭据字段已脱敏。")
+    /**
+     * 处理 detail。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/detail")
     @RequiresPermission("platform:manage")
     public R<PlatformConfig> detail(
@@ -82,9 +94,15 @@ public class PlatformConfigController {
     @Operation(summary = "新增平台接入配置",
             description = "新增外卖平台接入配置。约束：同一平台类型 + 同一门店只能存在一条配置，"
                     + "重复提交返回 code=0 并提示「该平台同一门店已存在接入配置」。")
+    /**
+     * 新增。
+     * @param config 参数 config
+     * @return 返回结果
+     */
     @PostMapping("/add")
     @RequiresPermission("platform:manage")
-    public R<PlatformConfig> add(@Parameter(description = "平台接入配置（平台类型、门店ID、密钥等）", required = true) @RequestBody PlatformConfig config) {
+    public R<PlatformConfig> add(@Parameter(description = "平台接入配置（平台类型、门店ID、密钥等）", required =
+            true) @RequestBody PlatformConfig config) {
         if (platformConfigService.existsByTypeAndShop(config.getPlatformType(), config.getShopId(), null)) {
             return R.error("该平台同一门店已存在接入配置");
         }
@@ -96,9 +114,15 @@ public class PlatformConfigController {
      */
     @Operation(summary = "更新平台接入配置",
             description = "按主键更新接入配置。缺少主键 ID 或「平台 + 门店」与其他记录冲突时返回失败。")
+    /**
+     * 更新。
+     * @param config 参数 config
+     * @return 返回结果
+     */
     @PostMapping("/update")
     @RequiresPermission("platform:manage")
-    public R<Boolean> update(@Parameter(description = "平台接入配置（含ID）", required = true) @RequestBody PlatformConfig config) {
+    public R<Boolean> update(@Parameter(description = "平台接入配置（含ID）", required =
+            true) @RequestBody PlatformConfig config) {
         if (config.getId() == null) {
             return R.error("缺少主键 ID");
         }
@@ -113,6 +137,11 @@ public class PlatformConfigController {
      */
     @Operation(summary = "删除平台接入配置",
             description = "逻辑删除接入配置（is_deleted 标记），不做物理删除，历史同步日志仍可追溯。")
+    /**
+     * 删除。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @PostMapping("/delete")
     @RequiresPermission("platform:manage")
     public R<Boolean> delete(
@@ -126,6 +155,12 @@ public class PlatformConfigController {
      */
     @Operation(summary = "启用或停用平台接入配置",
             description = "启用（enabled=1）或停用（enabled=0）接入配置；停用的平台不会被拉单、同步等定时任务扫描。")
+    /**
+     * 处理 toggle。
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 返回结果
+     */
     @PostMapping("/toggle")
     @RequiresPermission("platform:manage")
     public R<Boolean> toggle(
@@ -142,6 +177,10 @@ public class PlatformConfigController {
      */
     @Operation(summary = "平台接入配置统计",
             description = "统计接入配置总数、已启用数与已停用数，供后台统计卡片展示与快捷筛选。")
+    /**
+     * 处理 stats。
+     * @return 返回结果
+     */
     @GetMapping("/stats")
     @RequiresPermission("platform:manage")
     public R<Map<String, Object>> stats() {

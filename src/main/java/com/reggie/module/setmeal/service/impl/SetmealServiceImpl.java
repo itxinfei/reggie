@@ -82,6 +82,9 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
 
         // 二删：事务提交后再次清除缓存（双删策略）
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            /**
+             * 处理 after commit。
+             */
             @Override
             public void afterCommit() {
                 redisCacheUtil.doubleDeleteAllEntries("setmeal");
@@ -146,6 +149,9 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
         // 二删：事务提交后再次清除缓存（双删策略）
         Long setmealId = setmealDto.getId();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            /**
+             * 处理 after commit。
+             */
             @Override
             public void afterCommit() {
                 redisCacheUtil.doubleDelete("setmeal", setmealId);
@@ -191,6 +197,9 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
 
         // 二删：事务提交后再次清除缓存（双删策略）
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            /**
+             * 处理 after commit。
+             */
             @Override
             public void afterCommit() {
                 ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));
@@ -218,6 +227,9 @@ public class SetmealServiceImpl extends ServiceImpl<SetmealMapper, Setmeal> impl
 
         // 二删：事务提交后再次清除缓存（双删策略）
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            /**
+             * 处理 after commit。
+             */
             @Override
             public void afterCommit() {
                 ids.forEach(id -> redisCacheUtil.doubleDelete("setmeal", id));

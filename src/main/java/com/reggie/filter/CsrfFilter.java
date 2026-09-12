@@ -59,11 +59,21 @@ public class CsrfFilter implements Filter {
     /** 不需要CSRF校验的路径（引用 AuthConstants，保持单一来源） */
     private static final String[] EXCLUDE_URLS = AuthConstants.CSRF_EXCLUDE_URLS;
 
+    /**
+     * 初始化。
+     * @param filterConfig 参数 filterConfig
+     */
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
         log.info("CSRF防护过滤器初始化完成");
     }
 
+    /**
+     * 处理 do filter。
+     * @param servletRequest 参数 servletRequest
+     * @param servletResponse 参数 servletResponse
+     * @param filterChain 参数 filterChain
+     */
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
             throws IOException, ServletException {
@@ -135,6 +145,9 @@ public class CsrfFilter implements Filter {
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * 处理 destroy。
+     */
     @Override
     public void destroy() {
         log.info("CSRF防护过滤器销毁");

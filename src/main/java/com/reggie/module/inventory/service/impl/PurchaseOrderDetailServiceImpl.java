@@ -19,8 +19,14 @@ import java.util.List;
  */
 @Service
 @Transactional(rollbackFor = Exception.class)
-public class PurchaseOrderDetailServiceImpl extends ServiceImpl<PurchaseOrderDetailMapper, PurchaseOrderDetail> implements PurchaseOrderDetailService {
+public class PurchaseOrderDetailServiceImpl extends ServiceImpl<PurchaseOrderDetailMapper,
+        PurchaseOrderDetail> implements PurchaseOrderDetailService {
 
+    /**
+     * 查询列表 by order id。
+     * @param orderId 参数 orderId
+     * @return 返回结果
+     */
     @Override
     public List<PurchaseOrderDetail> listByOrderId(Long orderId) {
         return this.list(new LambdaQueryWrapper<PurchaseOrderDetail>()

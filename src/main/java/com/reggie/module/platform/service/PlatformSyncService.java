@@ -23,7 +23,8 @@ public interface PlatformSyncService {
      * @param endTime   结束时间（ISO 8601 格式）
      * @return 拉取的订单列表
      */
-    List<com.reggie.module.platform.adapter.PlatformOrder> pullOrders(PlatformConfig config, String beginTime, String endTime);
+    List<com.reggie.module.platform.adapter.PlatformOrder> pullOrders(PlatformConfig config, String beginTime,
+            String endTime);
 
     /**
      * 将拉取到的平台订单落库（幂等去重），tenant 取自当前上下文

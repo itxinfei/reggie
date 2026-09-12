@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.lang.NumberFormatException;
 
 /**
  * 美团外卖开放平台适配器（真实对接）
@@ -46,11 +47,22 @@ public class MeituanAdapter implements PlatformAdapter {
         this.restTemplate = new RestTemplate();
     }
 
+    /**
+     * 处理 platform type。
+     * @return 返回结果
+     */
     @Override
     public String platformType() {
         return PLATFORM_TYPE;
     }
 
+    /**
+     * 拉取 orders。
+     * @param cfg 参数 cfg
+     * @param beginTime 参数 beginTime
+     * @param endTime 参数 endTime
+     * @return 返回结果
+     */
     @Override
     public List<PlatformOrder> pullOrders(PlatformConfig cfg, String beginTime, String endTime) {
         try {
@@ -73,6 +85,7 @@ public class MeituanAdapter implements PlatformAdapter {
             }
             log.warn("[美团] 拉单响应异常: status={}", response.getStatusCode());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[美团] 拉单失败", e);
         }
         return Collections.emptyList();
@@ -120,12 +133,22 @@ public class MeituanAdapter implements PlatformAdapter {
         return items;
     }
 
+    /**
+     * 接单 order。
+     * @param cfg 参数 cfg
+     * @param platformOrderId 参数 platformOrderId
+     */
     @Override
     public void acceptOrder(PlatformConfig cfg, String platformOrderId) {
         callPost(cfg, BASE_URL + "/order/accept",
                 Collections.singletonMap("orderId", platformOrderId));
     }
 
+    /**
+     * 驳回 order。
+     * @param cfg 参数 cfg
+     * @param platformOrderId 参数 platformOrderId
+     */
     @Override
     public void rejectOrder(PlatformConfig cfg, String platformOrderId) {
         Map<String, Object> body = new java.util.HashMap<>();
@@ -134,34 +157,67 @@ public class MeituanAdapter implements PlatformAdapter {
         callPost(cfg, BASE_URL + "/order/reject", body);
     }
 
+    /**
+     * 处理 prepare order。
+     * @param cfg 参数 cfg
+     * @param platformOrderId 参数 platformOrderId
+     */
     @Override
     public void prepareOrder(PlatformConfig cfg, String platformOrderId) {
         callPost(cfg, BASE_URL + "/order/prepare",
                 Collections.singletonMap("orderId", platformOrderId));
     }
 
+    /**
+     * 完成 order。
+     * @param cfg 参数 cfg
+     * @param platformOrderId 参数 platformOrderId
+     */
     @Override
     public void completeOrder(PlatformConfig cfg, String platformOrderId) {
         callPost(cfg, BASE_URL + "/order/complete",
                 Collections.singletonMap("orderId", platformOrderId));
     }
 
+    /**
+     * 取消 order。
+     * @param cfg 参数 cfg
+     * @param platformOrderId 参数 platformOrderId
+     */
     @Override
     public void cancelOrder(PlatformConfig cfg, String platformOrderId) {
         callPost(cfg, BASE_URL + "/order/cancel",
                 Collections.singletonMap("orderId", platformOrderId));
     }
 
+    /**
+     * 同步 dish on shelf。
+     * @param cfg 参数 cfg
+     * @param dishId 参数 dishId
+     * @param platformDishId 参数 platformDishId
+     */
     @Override
     public void syncDishOnShelf(PlatformConfig cfg, Long dishId, String platformDishId) {
         callPost(cfg, BASE_URL + "/sku/up", Collections.singletonMap("skuId", platformDishId));
     }
 
+    /**
+     * 同步 dish off shelf。
+     * @param cfg 参数 cfg
+     * @param dishId 参数 dishId
+     * @param platformDishId 参数 platformDishId
+     */
     @Override
     public void syncDishOffShelf(PlatformConfig cfg, Long dishId, String platformDishId) {
         callPost(cfg, BASE_URL + "/sku/down", Collections.singletonMap("skuId", platformDishId));
     }
 
+    /**
+     * 同步 stock。
+     * @param cfg 参数 cfg
+     * @param platformDishId 参数 platformDishId
+     * @param remainQty 参数 remainQty
+     */
     @Override
     public void syncStock(PlatformConfig cfg, String platformDishId, int remainQty) {
         Map<String, Object> body = new java.util.HashMap<>();
@@ -170,11 +226,21 @@ public class MeituanAdapter implements PlatformAdapter {
         callPost(cfg, BASE_URL + "/sku/stock", body);
     }
 
+    /**
+     * 同步 business status。
+     * @param cfg 参数 cfg
+     * @param open 参数 open
+     */
     @Override
     public void syncBusinessStatus(PlatformConfig cfg, boolean open) {
         callPost(cfg, BASE_URL + "/shop/status", Collections.singletonMap("open", open));
     }
 
+    /**
+     * 处理 health check。
+     * @param cfg 参数 cfg
+     * @return 返回结果
+     */
     @Override
     public boolean healthCheck(PlatformConfig cfg) {
         try {
@@ -186,6 +252,7 @@ public class MeituanAdapter implements PlatformAdapter {
             restTemplate.getForObject(url, String.class);
             return true;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[美团] 健康检查失败", e);
             return false;
         }
@@ -201,6 +268,7 @@ public class MeituanAdapter implements PlatformAdapter {
             restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
             log.info("[美团] 调用成功: url={}", url);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[美团] 调用失败: url={}", url, e);
         }
     }
@@ -208,7 +276,7 @@ public class MeituanAdapter implements PlatformAdapter {
     private BigDecimal toDecimal(String s) {
         try {
             return new BigDecimal(s);
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             return BigDecimal.ZERO;
         }
     }
@@ -240,6 +308,7 @@ public class MeituanAdapter implements PlatformAdapter {
             }
             return sb.toString().toUpperCase();
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             throw new IllegalStateException("MD5 计算失败", e);
         }
     }

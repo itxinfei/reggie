@@ -26,16 +26,32 @@ public class AnthropicAdapter extends BaseModelAdapter {
     public static final String FORMAT_ID = "anthropic";
     private static final String ANTHROPIC_VERSION = "2023-06-01";
 
+    /**
+     * 获取 format id。
+     * @return 返回结果
+     */
     @Override
     public String getFormatId() {
         return FORMAT_ID;
     }
 
+    /**
+     * 获取 display name。
+     * @return 返回结果
+     */
     @Override
     public String getDisplayName() {
         return "Anthropic Messages API（Claude 系列）";
     }
 
+    /**
+     * 处理 do chat。
+     * @param messages 参数 messages
+     * @param maxTokens 参数 maxTokens
+     * @param temperature 参数 temperature
+     * @param config 参数 config
+     * @return 返回结果
+     */
     @Override
     protected AIChatResponse doChat(List<AIMessage> messages, int maxTokens,
                                      double temperature, AiProviderConfig config) {
@@ -107,6 +123,7 @@ public class AnthropicAdapter extends BaseModelAdapter {
                 return errorResponse(userMsg, config);
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("AI请求[{} / {}]未预期异常", config.getProviderCode(), FORMAT_ID, e);
             return errorResponse("Anthropic AI服务连接失败（" + config.getProviderName() + "）："
                     + e.getMessage(), config);
@@ -166,6 +183,7 @@ public class AnthropicAdapter extends BaseModelAdapter {
             }
             return errorBody;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             return errorBody;
         }
     }

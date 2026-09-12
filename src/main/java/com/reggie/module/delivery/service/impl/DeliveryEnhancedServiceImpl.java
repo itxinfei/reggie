@@ -41,6 +41,11 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
 
     // ==================== 配送范围管理 ====================
 
+    /**
+     * 获取 range rules。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<DeliveryRangeRule> getRangeRules(Long tenantId) {
         LambdaQueryWrapper<DeliveryRangeRule> qw = new LambdaQueryWrapper<>();
@@ -52,6 +57,11 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
         return rangeRuleMapper.selectList(qw);
     }
 
+    /**
+     * 获取 range rule by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     public DeliveryRangeRule getRangeRuleById(Long id) {
         Long currentTenantId = BaseContext.getCurrentTenantId();
@@ -64,6 +74,11 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
         return rangeRuleMapper.selectOne(qw);
     }
 
+    /**
+     * 保存 or update range rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateRangeRule(DeliveryRangeRule rule) {
@@ -88,6 +103,11 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
         }
     }
 
+    /**
+     * 删除 range rule。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteRangeRule(Long id) {
@@ -104,6 +124,12 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
 
     // ==================== 配送费阶梯管理 ====================
 
+    /**
+     * 获取 fee steps。
+     * @param ruleId 参数 ruleId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<DeliveryFeeStep> getFeeSteps(Long ruleId, Long tenantId) {
         LambdaQueryWrapper<DeliveryFeeStep> qw = new LambdaQueryWrapper<>();
@@ -117,6 +143,11 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
         return feeStepMapper.selectList(qw);
     }
 
+    /**
+     * 保存 or update fee step。
+     * @param step 参数 step
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateFeeStep(DeliveryFeeStep step) {
@@ -141,6 +172,11 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
         }
     }
 
+    /**
+     * 删除 fee step。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteFeeStep(Long id) {
@@ -155,6 +191,11 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
         return feeStepMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 批量处理 save fee steps。
+     * @param steps 参数 steps
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean batchSaveFeeSteps(List<DeliveryFeeStep> steps) {
@@ -169,6 +210,13 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
 
     // ==================== 配送范围校验 ====================
 
+    /**
+     * 判断 in range。
+     * @param ruleId 参数 ruleId
+     * @param longitude 参数 longitude
+     * @param latitude 参数 latitude
+     * @return 返回结果
+     */
     @Override
     public boolean isInRange(Long ruleId, BigDecimal longitude, BigDecimal latitude) {
         DeliveryRangeRule rule = rangeRuleMapper.selectById(ruleId);
@@ -188,6 +236,13 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
         return false;
     }
 
+    /**
+     * 查找 matching rule。
+     * @param longitude 参数 longitude
+     * @param latitude 参数 latitude
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Long findMatchingRule(BigDecimal longitude, BigDecimal latitude, Long tenantId) {
         List<DeliveryRangeRule> rules = getRangeRules(tenantId);
@@ -201,6 +256,13 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
 
     // ==================== 配送费计算 ====================
 
+    /**
+     * 计算 delivery fee。
+     * @param ruleId 参数 ruleId
+     * @param distance 参数 distance
+     * @param orderAmount 参数 orderAmount
+     * @return 返回结果
+     */
     @Override
     public BigDecimal calculateDeliveryFee(Long ruleId, BigDecimal distance, BigDecimal orderAmount) {
         if (ruleId == null) {
@@ -251,6 +313,15 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
         return fee.setScale(2, RoundingMode.HALF_UP);
     }
 
+    /**
+     * 计算 fee。
+     * @param longitude 参数 longitude
+     * @param latitude 参数 latitude
+     * @param distance 参数 distance
+     * @param orderAmount 参数 orderAmount
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> calculateFee(BigDecimal longitude, BigDecimal latitude, BigDecimal distance,
                                             BigDecimal orderAmount, Long tenantId) {
@@ -279,6 +350,14 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
         return result;
     }
 
+    /**
+     * 计算 distance。
+     * @param lon1 参数 lon1
+     * @param lat1 参数 lat1
+     * @param lon2 参数 lon2
+     * @param lat2 参数 lat2
+     * @return 返回结果
+     */
     @Override
     public BigDecimal calculateDistance(BigDecimal lon1, BigDecimal lat1, BigDecimal lon2, BigDecimal lat2) {
         // 防御性 null 检查：坐标参数来自用户输入或数据库，可能为 null
@@ -303,6 +382,11 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
 
     // ==================== 统计分析 ====================
 
+    /**
+     * 获取 delivery statistics。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getDeliveryStatistics(Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -337,6 +421,11 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
         return result;
     }
 
+    /**
+     * 获取 range coverage。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getRangeCoverage(Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -421,6 +510,7 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
 
             return inside;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("解析多边形坐标失败", e);
             return false;
         }
@@ -451,7 +541,8 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
                             && step.getIncrementFee() != null) {
                         BigDecimal extraDistance = distance.subtract(step.getStartDistance());
                         if (extraDistance.compareTo(BigDecimal.ZERO) > 0) {
-                            BigDecimal increments = extraDistance.divide(step.getIncrementDistance(), 0, RoundingMode.CEILING);
+                            BigDecimal increments = extraDistance.divide(step.getIncrementDistance(), 0, RoundingMode
+                                    .CEILING);
                             fee = fee.add(increments.multiply(step.getIncrementFee()));
                         }
                     }

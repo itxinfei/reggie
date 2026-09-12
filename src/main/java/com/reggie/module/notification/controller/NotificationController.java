@@ -85,7 +85,8 @@ public class NotificationController {
             @Parameter(description = "状态：1启用 0停用（可选）") @RequestParam(required = false) Integer status) {
         Long tenantId = BaseContext.getCurrentTenantId();
         // 域4 改造：分页查询下沉到 Service，内置租户过滤
-        Page<NotificationTemplate> pageInfo = templateService.pageTemplates(page, pageSize, bizType, channel, status, tenantId);
+        Page<NotificationTemplate> pageInfo = templateService.pageTemplates(page, pageSize, bizType, channel, status,
+                tenantId);
         return R.success(pageInfo);
     }
 
@@ -189,7 +190,8 @@ public class NotificationController {
     @RequiresPermission("notification:send")
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     public R<NotificationRecord> sendNotification(
-            @Parameter(description = "通知参数（bizType/channel/targets/params/sendTime）", required = true) @Valid @RequestBody SendNotificationDTO dto) {
+            @Parameter(description = "通知参数（bizType/channel/targets/params/sendTime）", required =
+                    true) @Valid @RequestBody SendNotificationDTO dto) {
         String bizType = dto.getBizType();
         Integer channel = dto.getChannel();
         List<String> targets = dto.getTargets();
@@ -205,6 +207,7 @@ public class NotificationController {
             try {
                 sendTime = java.time.LocalDateTime.parse(sendTimeStr);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("sendTime解析失败: {}", sendTimeStr, e);
             }
         }
@@ -238,7 +241,8 @@ public class NotificationController {
     @RequiresPermission("notification:send")
     @RateLimit(maxRequestsPerSecond = 3, type = RateLimitType.USER)
     public R<NotificationRecord> batchSend(
-            @Parameter(description = "发送参数（templateId/channel/targetType/targets/params/sendTime）", required = true) @Valid @RequestBody BatchSendNotificationDTO dto) {
+            @Parameter(description = "发送参数（templateId/channel/targetType/targets/params/sendTime）", required =
+                    true) @Valid @RequestBody BatchSendNotificationDTO dto) {
         Long templateId = dto.getTemplateId();
         Integer channel = dto.getChannel();
         Integer targetType = dto.getTargetType();
@@ -259,6 +263,7 @@ public class NotificationController {
             try {
                 sendTime = java.time.LocalDateTime.parse(sendTimeStr);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("sendTime解析失败: {}", sendTimeStr, e);
                 return R.error("定时发送时间格式非法");
             }
@@ -279,7 +284,8 @@ public class NotificationController {
     @RequiresPermission("notification:send")
     @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.GLOBAL)
     public R<NotificationRecord> sendToAllUsers(
-            @Parameter(description = "推送参数（bizType/channel/params）", required = true) @Valid @RequestBody SendToAllUsersDTO dto) {
+            @Parameter(description = "推送参数（bizType/channel/params）", required =
+                    true) @Valid @RequestBody SendToAllUsersDTO dto) {
         String bizType = dto.getBizType();
         Integer channel = dto.getChannel();
         Map<String, String> params = dto.getParams();
@@ -365,7 +371,8 @@ public class NotificationController {
     @PostMapping("/device/register")
     @Operation(summary = "注册设备Token", description = "注册/更新用户设备推送Token")
     public R<String> registerDevice(
-            @Parameter(description = "设备信息（platform/deviceToken）", required = true) @Valid @RequestBody RegisterDeviceDTO dto) {
+            @Parameter(description = "设备信息（platform/deviceToken）", required =
+                    true) @Valid @RequestBody RegisterDeviceDTO dto) {
         // 修改点：以登录会话身份为准绑定设备，杜绝伪造他人 userId 的越权注册（IDOR）
         Long sessionUserId = BaseContext.getCurrentId();
         if (sessionUserId == null) {
@@ -416,7 +423,8 @@ public class NotificationController {
     @RequiresPermission("notification:send")
     @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
     public R<NotificationRecord> sendSimpleMessage(
-            @Parameter(description = "消息参数（channel/targets/content/title）", required = true) @Valid @RequestBody SendSimpleMessageDTO dto) {
+            @Parameter(description = "消息参数（channel/targets/content/title）", required =
+                    true) @Valid @RequestBody SendSimpleMessageDTO dto) {
         Integer channel = dto.getChannel();
         List<String> targets = dto.getTargets();
         String content = dto.getContent();

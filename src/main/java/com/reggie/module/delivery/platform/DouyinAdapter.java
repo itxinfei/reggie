@@ -30,6 +30,10 @@ public class DouyinAdapter extends AbstractDeliveryPlatform {
     /** 平台标识 */
     private static final String KEY = "DOUYIN";
 
+    /**
+     * 处理 platform key。
+     * @return 返回结果
+     */
     @Override
     protected String platformKey() {
         return KEY;

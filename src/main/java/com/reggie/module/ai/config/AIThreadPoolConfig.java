@@ -24,6 +24,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 @EnableAsync
 public class AIThreadPoolConfig {
 
+    /**
+     * 处理 ai executor。
+     * @return 返回结果
+     */
     @Bean("aiExecutor")
     public Executor aiExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -39,6 +43,11 @@ public class AIThreadPoolConfig {
         // 传递ThreadLocal上下文，确保异步线程能获取BaseContext中的userId和tenantId
         // 修改点：AI对话在异步线程中执行多租户查询（如历史消息加载），必须传播租户上下文以保证租户隔离生效
         executor.setTaskDecorator(new TaskDecorator() {
+            /**
+             * 处理 decorate。
+             * @param runnable 参数 runnable
+             * @return 返回结果
+             */
             @Override
             public Runnable decorate(Runnable runnable) {
                 Long currentId = BaseContext.getCurrentId();

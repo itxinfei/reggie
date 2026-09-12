@@ -43,6 +43,12 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
 
     // ==================== 规格组管理 ====================
 
+    /**
+     * 获取 spec groups。
+     * @param tenantId 参数 tenantId
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Override
     public List<DishSpecGroup> getSpecGroups(Long tenantId, Integer status) {
         LambdaQueryWrapper<DishSpecGroup> qw = new LambdaQueryWrapper<>();
@@ -56,11 +62,21 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
         return specGroupMapper.selectList(qw);
     }
 
+    /**
+     * 获取 spec group by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     public DishSpecGroup getSpecGroupById(Long id) {
         return specGroupMapper.selectById(id);
     }
 
+    /**
+     * 保存 or update spec group。
+     * @param group 参数 group
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateSpecGroup(DishSpecGroup group) {
@@ -74,6 +90,11 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
         }
     }
 
+    /**
+     * 删除 spec group。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteSpecGroup(Long id) {
@@ -92,6 +113,13 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
 
     // ==================== 规格选项管理 ====================
 
+    /**
+     * 获取 spec options。
+     * @param groupId 参数 groupId
+     * @param tenantId 参数 tenantId
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Override
     public List<DishSpecOption> getSpecOptions(Long groupId, Long tenantId, Integer status) {
         LambdaQueryWrapper<DishSpecOption> qw = new LambdaQueryWrapper<>();
@@ -108,6 +136,11 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
         return specOptionMapper.selectList(qw);
     }
 
+    /**
+     * 保存 or update spec option。
+     * @param option 参数 option
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateSpecOption(DishSpecOption option) {
@@ -121,12 +154,22 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
         }
     }
 
+    /**
+     * 删除 spec option。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteSpecOption(Long id) {
         return specOptionMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 批量处理 save spec options。
+     * @param options 参数 options
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean batchSaveSpecOptions(List<DishSpecOption> options) {
@@ -141,6 +184,12 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
 
     // ==================== 菜品规格关联 ====================
 
+    /**
+     * 获取 dish spec groups。
+     * @param dishId 参数 dishId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getDishSpecGroups(Long dishId, Long tenantId) {
         // 1. 查询菜品关联的规格组
@@ -196,6 +245,13 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
         return result;
     }
 
+    /**
+     * 设置 dish spec groups。
+     * @param dishId 参数 dishId
+     * @param groupIds 参数 groupIds
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean setDishSpecGroups(Long dishId, List<Long> groupIds, Long tenantId) {
@@ -223,6 +279,11 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
         return true;
     }
 
+    /**
+     * 删除 dish spec relations。
+     * @param dishId 参数 dishId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteDishSpecRelations(Long dishId) {
@@ -233,6 +294,13 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
 
     // ==================== 规格价格计算 ====================
 
+    /**
+     * 计算 spec price。
+     * @param dishId 参数 dishId
+     * @param basePrice 参数 basePrice
+     * @param optionIds 参数 optionIds
+     * @return 返回结果
+     */
     @Override
     public BigDecimal calculateSpecPrice(Long dishId, BigDecimal basePrice, List<Long> optionIds) {
         if (optionIds == null || optionIds.isEmpty()) {
@@ -261,6 +329,12 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
         return totalPrice;
     }
 
+    /**
+     * 获取 dish spec detail。
+     * @param dishId 参数 dishId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getDishSpecDetail(Long dishId, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -274,6 +348,11 @@ public class DishSpecServiceImpl extends ServiceImpl<DishSpecGroupMapper, DishSp
 
     // ==================== 统计分析 ====================
 
+    /**
+     * 获取 spec statistics。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getSpecStatistics(Long tenantId) {
         Map<String, Object> result = new HashMap<>();

@@ -19,6 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(rollbackFor = Exception.class)
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
+    /**
+     * 注册。
+     * @param phone 参数 phone
+     * @return 返回结果
+     */
     @Override
     public User register(String phone) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -35,6 +40,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return user;
     }
 
+    /**
+     * 获取 by phone。
+     * @param phone 参数 phone
+     * @return 返回结果
+     */
     @Override
     public User getByPhone(String phone) {
         return this.list(new LambdaQueryWrapper<User>()
@@ -44,11 +54,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 .stream().findFirst().orElse(null);
     }
 
+    /**
+     * 获取 by phone for login。
+     * @param phone 参数 phone
+     * @return 返回结果
+     */
     @Override
     public User getByPhoneForLogin(String phone) {
         return this.baseMapper.selectByPhoneIgnoreTenant(phone);
     }
 
+    /**
+     * 更新 user base info。
+     * @param user 参数 user
+     */
     @Override
     public void updateUserBaseInfo(User user) {
         User updateEntity = new User();

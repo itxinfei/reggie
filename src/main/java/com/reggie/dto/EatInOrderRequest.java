@@ -30,6 +30,9 @@ public class EatInOrderRequest {
     @Size(max = 100, message = "订单明细不能超过100项")
     private List<OrderDetail> orderDetails;
 
+    /**
+     * OrderInfo。
+     */
     @Schema(description = "订单信息")
     @Data
     public static class OrderInfo {

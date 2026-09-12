@@ -104,13 +104,11 @@ public class LogMaskUtils {
             char c = json.charAt(i);
             if (c == '"' && (i == 0 || json.charAt(i - 1) != '\\')) {
                 if (inString) {
-                    // 字符串结束
-                    if (currentString.length() > 15) {
-                        sb.append("\"").append(currentString.substring(0, 6)).append("***")
-                          .append(currentString.substring(currentString.length() - 3)).append("\"");
-                    } else {
-                        sb.append("\"").append(currentString).append("\"");
-                    }
+                    // 字符串结束：长字符串脱敏（等价重构，用三元表达式消除嵌套）
+                    sb.append(currentString.length() > 15
+                            ? "\"" + currentString.substring(0, 6) + "***"
+                                    + currentString.substring(currentString.length() - 3) + "\""
+                            : "\"" + currentString + "\"");
                     currentString.setLength(0);
                     inString = false;
                 } else {

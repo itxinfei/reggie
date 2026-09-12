@@ -132,6 +132,7 @@ public class StockRefundCompensationTask {
                 compensateOrderStock(order.getId());
                 compensated++;
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[库存补偿] 订单ID={} 补偿失败: {}", order.getId(), e.getMessage(), e);
             }
         }
@@ -177,24 +178,24 @@ public class StockRefundCompensationTask {
             }
 
             // 套餐：回退套餐内所有菜品的库存
-            if (detail.getSetmealId() != null) {
-                LambdaQueryWrapper<SetmealDish> sdWrapper =
-                        new LambdaQueryWrapper<>();
-                sdWrapper.eq(SetmealDish::getSetmealId, detail.getSetmealId());
-                List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
-                for (SetmealDish sd : setmealDishes) {
-                    int copies = sd.getCopies() != null ? sd.getCopies() : 1;
-                    BigDecimal totalQty = qty.multiply(new BigDecimal(copies));
-                    // 套餐内菜品逐项幂等防重（Redis key 含 setmealDishId），部分失败重试时不重复 addStock（F2）
-                    String subKey = "sd:" + sd.getId();
-                    if (isCompensated(orderId, detail.getId(), subKey)) {
-                        successCount++;
-                    } else if (refundStockAtomic(sd.getDishId(), totalQty)) {
-                        markCompensated(orderId, detail.getId(), subKey);
-                        successCount++;
-                    } else {
-                        failCount++;
-                    }
+            if (detail.getSetmealId() == null) {
+                continue;
+            }
+            LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
+            sdWrapper.eq(SetmealDish::getSetmealId, detail.getSetmealId());
+            List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
+            for (SetmealDish sd : setmealDishes) {
+                int copies = sd.getCopies() != null ? sd.getCopies() : 1;
+                BigDecimal totalQty = qty.multiply(new BigDecimal(copies));
+                // 套餐内菜品逐项幂等防重（Redis key 含 setmealDishId），部分失败重试时不重复 addStock（F2）
+                String subKey = "sd:" + sd.getId();
+                if (isCompensated(orderId, detail.getId(), subKey)) {
+                    successCount++;
+                } else if (refundStockAtomic(sd.getDishId(), totalQty)) {
+                    markCompensated(orderId, detail.getId(), subKey);
+                    successCount++;
+                } else {
+                    failCount++;
                 }
             }
         }
@@ -231,11 +232,13 @@ public class StockRefundCompensationTask {
             try {
                 dishService.autoToggleSoldOut(dishId);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.debug("[库存补偿] 自动恢复起售检查失败: dishId={}", dishId);
             }
             log.info("[库存补偿] 菜品ID={} 回退{}份", dishId, qty);
             return true;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[库存补偿] 菜品ID={} 回退{}份失败: {}", dishId, qty, e.getMessage(), e);
             return false;
         }
@@ -260,6 +263,7 @@ public class StockRefundCompensationTask {
         try {
             return Boolean.TRUE.equals(redisTemplate.hasKey(compensateKey(orderId, detailId, subKey)));
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.debug("[库存补偿] 幂等检查异常，按未补偿处理: {}", e.getMessage());
             return false;
         }
@@ -274,6 +278,7 @@ public class StockRefundCompensationTask {
             redisTemplate.opsForValue().set(compensateKey(orderId, detailId, subKey), "1",
                     COMPENSATE_KEY_TTL_HOURS, TimeUnit.HOURS);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.debug("[库存补偿] 幂等标记异常: {}", e.getMessage());
         }
     }
@@ -307,13 +312,15 @@ public class StockRefundCompensationTask {
         }
         try {
             // Lua脚本：比对锁值后才删除，防止误删他人的锁
-            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                 new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
                 java.util.Collections.singletonList(lockKey),
                 lockValue
             );
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[库存补偿] 释放分布式锁失败: {}", lockKey, e);
         }
     }

@@ -44,6 +44,12 @@ public class FranchiseSettlementServiceImpl extends ServiceImpl<FranchiseSettlem
     @Autowired
     private OrderMapper orderMapper;
 
+    /**
+     * 生成 settlement。
+     * @param contractId 参数 contractId
+     * @param settlePeriod 参数 settlePeriod
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FranchiseSettlement generateSettlement(Long contractId, String settlePeriod) {
@@ -128,6 +134,10 @@ public class FranchiseSettlementServiceImpl extends ServiceImpl<FranchiseSettlem
         return contract.getCommissionAmount() != null ? contract.getCommissionAmount() : BigDecimal.ZERO;
     }
 
+    /**
+     * 确认 settlement。
+     * @param id 参数 id
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void confirmSettlement(Long id) {
@@ -148,6 +158,10 @@ public class FranchiseSettlementServiceImpl extends ServiceImpl<FranchiseSettlem
         log.info("[加盟分账] 确认结算单: id={}, period={}", id, st.getSettlePeriod());
     }
 
+    /**
+     * 设置 tle settlement。
+     * @param id 参数 id
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void settleSettlement(Long id) {
@@ -168,15 +182,26 @@ public class FranchiseSettlementServiceImpl extends ServiceImpl<FranchiseSettlem
         log.info("[加盟分账] 完成结算: id={}, period={}", id, st.getSettlePeriod());
     }
 
+    /**
+     * 分页查询 query。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param settlePeriod 参数 settlePeriod
+     * @param status 参数 status
+     * @param franchiseeId 参数 franchiseeId
+     * @return 返回结果
+     */
     @Override
-    public Page<FranchiseSettlement> pageQuery(int page, int pageSize, String settlePeriod, Integer status, Long franchiseeId) {
+    public Page<FranchiseSettlement> pageQuery(int page, int pageSize, String settlePeriod, Integer status,
+            Long franchiseeId) {
         Page<FranchiseSettlement> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<FranchiseSettlement> qw = new LambdaQueryWrapper<>();
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (currentTenantId != null) {
             qw.eq(FranchiseSettlement::getTenantId, currentTenantId);
         }
-        qw.eq(settlePeriod != null && !settlePeriod.trim().isEmpty(), FranchiseSettlement::getSettlePeriod, settlePeriod);
+        qw.eq(settlePeriod != null && !settlePeriod.trim().isEmpty(), FranchiseSettlement::getSettlePeriod,
+                settlePeriod);
         qw.eq(status != null, FranchiseSettlement::getStatus, status);
         qw.eq(franchiseeId != null, FranchiseSettlement::getFranchiseeId, franchiseeId);
         qw.orderByDesc(FranchiseSettlement::getCreateTime);
@@ -209,6 +234,11 @@ public class FranchiseSettlementServiceImpl extends ServiceImpl<FranchiseSettlem
         return Integer.parseInt(String.valueOf(value));
     }
 
+    /**
+     * 处理 stat settlements。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> statSettlements(Long tenantId) {
         return this.baseMapper.statSettlements(tenantId);

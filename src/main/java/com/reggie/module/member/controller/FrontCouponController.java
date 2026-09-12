@@ -74,6 +74,10 @@ public class FrontCouponController {
         return member;
     }
 
+    /**
+     * 处理 my coupons。
+     * @return 返回结果
+     */
     @GetMapping("/my")
     @Operation(summary = "我的优惠券", description = "查询当前登录用户已领取的全部优惠券")
     public R<List<CouponUser>> myCoupons() {
@@ -89,6 +93,10 @@ public class FrontCouponController {
         return R.success(list);
     }
 
+    /**
+     * 处理 available templates。
+     * @return 返回结果
+     */
     @GetMapping("/available")
     @Operation(summary = "可领券列表", description = "当前租户下启用且有剩余库存的优惠券模板")
     public R<List<CouponTemplate>> availableTemplates() {
@@ -102,6 +110,11 @@ public class FrontCouponController {
         return R.success(list);
     }
 
+    /**
+     * 处理 claim。
+     * @param templateId 参数 templateId
+     * @return 返回结果
+     */
     @PostMapping("/claim/{templateId}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "领取优惠券", description = "当前登录用户领取指定优惠券模板，从 session 绑定会员，不信任请求方传入的 memberId")
@@ -125,7 +138,8 @@ public class FrontCouponController {
      */
     @GetMapping("/usable")
     @Operation(summary = "下单可用券", description = "按订单金额筛出当前用户可抵扣的未使用优惠券")
-    public R<List<CouponAvailableDTO>> usableCoupons(@Parameter(description = "订单金额（元），不含运费与优惠", required = true) @RequestParam BigDecimal orderAmount) {
+    public R<List<CouponAvailableDTO>> usableCoupons(@Parameter(description = "订单金额（元），不含运费与优惠", required =
+            true) @RequestParam BigDecimal orderAmount) {
         Member member = currentMember();
         if (member == null) {
             return R.error("尚未开通会员，请先注册会员");
@@ -135,6 +149,10 @@ public class FrontCouponController {
         return R.success(items);
     }
 
+    /**
+     * 过期处理 d count。
+     * @return 返回结果
+     */
     @GetMapping("/check-expired")
     @Operation(summary = "检查过期", description = "返回当前用户已过期未清理的券数量（用于前端提示）")
     public R<Integer> expiredCount() {

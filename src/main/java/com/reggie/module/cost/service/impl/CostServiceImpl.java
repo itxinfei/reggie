@@ -47,6 +47,11 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
 
     // ==================== 菜品成本管理 ====================
 
+    /**
+     * 获取 dish cost list。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<DishCost> getDishCostList(Long tenantId) {
         LambdaQueryWrapper<DishCost> qw = new LambdaQueryWrapper<>();
@@ -57,6 +62,12 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         return dishCostMapper.selectList(qw);
     }
 
+    /**
+     * 获取 dish cost by dish id。
+     * @param dishId 参数 dishId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public DishCost getDishCostByDishId(Long dishId, Long tenantId) {
         LambdaQueryWrapper<DishCost> qw = new LambdaQueryWrapper<>();
@@ -67,6 +78,11 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         return dishCostMapper.selectOne(qw);
     }
 
+    /**
+     * 保存 or update dish cost。
+     * @param dishCost 参数 dishCost
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateDishCost(DishCost dishCost) {
@@ -97,12 +113,22 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         }
     }
 
+    /**
+     * 删除 dish cost。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteDishCost(Long id) {
         return dishCostMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 批量处理 update dish cost。
+     * @param dishCosts 参数 dishCosts
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean batchUpdateDishCost(List<DishCost> dishCosts) {
@@ -117,8 +143,17 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
 
     // ==================== 成本记录管理 ====================
 
+    /**
+     * 获取 cost record list。
+     * @param costType 参数 costType
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    public List<CostRecord> getCostRecordList(Integer costType, LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
+    public List<CostRecord> getCostRecordList(Integer costType, LocalDateTime startDate, LocalDateTime endDate,
+            Long tenantId) {
         LambdaQueryWrapper<CostRecord> qw = new LambdaQueryWrapper<>();
         if (costType != null) {
             qw.eq(CostRecord::getCostType, costType);
@@ -136,6 +171,11 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         return costRecordMapper.selectList(qw);
     }
 
+    /**
+     * 保存 cost record。
+     * @param costRecord 参数 costRecord
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveCostRecord(CostRecord costRecord) {
@@ -143,6 +183,11 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         return costRecordMapper.insert(costRecord) > 0;
     }
 
+    /**
+     * 删除 cost record。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteCostRecord(Long id) {
@@ -151,6 +196,12 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
 
     // ==================== 人工成本管理 ====================
 
+    /**
+     * 获取 labor cost list。
+     * @param costMonth 参数 costMonth
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<LaborCost> getLaborCostList(LocalDate costMonth, Long tenantId) {
         LambdaQueryWrapper<LaborCost> qw = new LambdaQueryWrapper<>();
@@ -164,14 +215,21 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         return laborCostMapper.selectList(qw);
     }
 
+    /**
+     * 保存 or update labor cost。
+     * @param laborCost 参数 laborCost
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateLaborCost(LaborCost laborCost) {
         // 计算总成本
         BigDecimal salary = laborCost.getSalary() != null ? laborCost.getSalary() : BigDecimal.ZERO;
-        BigDecimal socialInsurance = laborCost.getSocialInsurance() != null ? laborCost.getSocialInsurance() : BigDecimal.ZERO;
+        BigDecimal socialInsurance = laborCost.getSocialInsurance() != null ? laborCost
+                .getSocialInsurance() : BigDecimal.ZERO;
         BigDecimal housingFund = laborCost.getHousingFund() != null ? laborCost.getHousingFund() : BigDecimal.ZERO;
-        BigDecimal otherBenefits = laborCost.getOtherBenefits() != null ? laborCost.getOtherBenefits() : BigDecimal.ZERO;
+        BigDecimal otherBenefits = laborCost.getOtherBenefits() != null ? laborCost.getOtherBenefits() : BigDecimal
+                .ZERO;
         laborCost.setTotalCost(salary.add(socialInsurance).add(housingFund).add(otherBenefits));
 
         if (laborCost.getId() == null) {
@@ -184,12 +242,22 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         }
     }
 
+    /**
+     * 删除 labor cost。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteLaborCost(Long id) {
         return laborCostMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 批量处理 save labor cost。
+     * @param laborCosts 参数 laborCosts
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean batchSaveLaborCost(List<LaborCost> laborCosts) {
@@ -204,8 +272,17 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
 
     // ==================== 其他成本管理 ====================
 
+    /**
+     * 获取 other cost list。
+     * @param costType 参数 costType
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    public List<OtherCost> getOtherCostList(Integer costType, LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
+    public List<OtherCost> getOtherCostList(Integer costType, LocalDateTime startDate, LocalDateTime endDate,
+            Long tenantId) {
         LambdaQueryWrapper<OtherCost> qw = new LambdaQueryWrapper<>();
         if (costType != null) {
             qw.eq(OtherCost::getCostType, costType);
@@ -223,6 +300,11 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         return otherCostMapper.selectList(qw);
     }
 
+    /**
+     * 保存 or update other cost。
+     * @param otherCost 参数 otherCost
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateOtherCost(OtherCost otherCost) {
@@ -236,6 +318,11 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         }
     }
 
+    /**
+     * 删除 other cost。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteOtherCost(Long id) {
@@ -244,6 +331,13 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
 
     // ==================== 成本统计分析 ====================
 
+    /**
+     * 获取 cost summary。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getCostSummary(LocalDate startDate, LocalDate endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -284,7 +378,8 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         }
         List<LaborCost> laborCosts = laborCostMapper.selectList(laborQw);
         for (LaborCost laborCost : laborCosts) {
-            laborCostTotal = laborCostTotal.add(laborCost.getTotalCost() != null ? laborCost.getTotalCost() : BigDecimal.ZERO);
+            laborCostTotal = laborCostTotal.add(laborCost.getTotalCost() != null ? laborCost.getTotalCost() : BigDecimal
+                    .ZERO);
         }
 
         // 4. 查询其他成本
@@ -296,7 +391,8 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         }
         List<OtherCost> otherCosts = otherCostMapper.selectList(otherQw);
         for (OtherCost otherCost : otherCosts) {
-            otherCostTotal = otherCostTotal.add(otherCost.getAmount() != null ? otherCost.getAmount() : BigDecimal.ZERO);
+            otherCostTotal = otherCostTotal.add(otherCost.getAmount() != null ? otherCost.getAmount() : BigDecimal
+                    .ZERO);
         }
 
         // 5. 计算总成本
@@ -312,6 +408,13 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         return result;
     }
 
+    /**
+     * 获取 cost trend。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getCostTrend(LocalDate startDate, LocalDate endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -341,14 +444,15 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
 
             for (CostRecord record : costRecords) {
                 BigDecimal amount = record.getAmount();
-                if (amount != null) {
-                    if (record.getCostType() == 1) {
-                        dayMaterialCost = dayMaterialCost.add(amount);
-                    } else if (record.getCostType() == 2) {
-                        dayLaborCost = dayLaborCost.add(amount);
-                    } else if (record.getCostType() == 3) {
-                        dayOtherCost = dayOtherCost.add(amount);
-                    }
+                if (amount == null) {
+                    continue;
+                }
+                if (record.getCostType() == 1) {
+                    dayMaterialCost = dayMaterialCost.add(amount);
+                } else if (record.getCostType() == 2) {
+                    dayLaborCost = dayLaborCost.add(amount);
+                } else if (record.getCostType() == 3) {
+                    dayOtherCost = dayOtherCost.add(amount);
                 }
             }
 
@@ -369,6 +473,13 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         return result;
     }
 
+    /**
+     * 获取 cost structure。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getCostStructure(LocalDate startDate, LocalDate endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -386,7 +497,8 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
             Map<String, Object> materialItem = new HashMap<>();
             materialItem.put("name", "食材成本");
             materialItem.put("value", materialCost);
-            materialItem.put("rate", materialCost.divide(totalCost, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")));
+            materialItem.put("rate", materialCost.divide(totalCost, 4, RoundingMode.HALF_UP)
+                    .multiply(new BigDecimal("100")));
             structure.add(materialItem);
 
             Map<String, Object> laborItem = new HashMap<>();
@@ -408,6 +520,12 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         return result;
     }
 
+    /**
+     * 获取 dish cost ranking。
+     * @param limit 参数 limit
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getDishCostRanking(int limit, Long tenantId) {
         LambdaQueryWrapper<DishCost> qw = new LambdaQueryWrapper<>();
@@ -435,17 +553,31 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
         return ranking;
     }
 
+    /**
+     * 计算 profit rate。
+     * @param dishId 参数 dishId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public BigDecimal calculateProfitRate(Long dishId, Long tenantId) {
         DishCost dishCost = getDishCostByDishId(dishId, tenantId);
-        if (dishCost == null || dishCost.getSalePrice() == null || dishCost.getSalePrice().compareTo(BigDecimal.ZERO) <= 0) {
+        if (dishCost == null || dishCost.getSalePrice() == null || dishCost.getSalePrice().compareTo(BigDecimal
+                .ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
 
-        BigDecimal profit = dishCost.getSalePrice().subtract(dishCost.getTotalCost() != null ? dishCost.getTotalCost() : BigDecimal.ZERO);
+        BigDecimal profit = dishCost.getSalePrice().subtract(dishCost.getTotalCost() != null ? dishCost
+                .getTotalCost() : BigDecimal.ZERO);
         return profit.divide(dishCost.getSalePrice(), 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
     }
 
+    /**
+     * 获取 cost alert。
+     * @param threshold 参数 threshold
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getCostAlert(BigDecimal threshold, Long tenantId) {
         LambdaQueryWrapper<DishCost> qw = new LambdaQueryWrapper<>();

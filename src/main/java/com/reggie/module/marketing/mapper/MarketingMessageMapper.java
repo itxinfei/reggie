@@ -25,10 +25,12 @@ public interface MarketingMessageMapper extends BaseMapper<MarketingMessage> {
      * @param messages 消息列表
      */
     @Insert("<script>" +
-            "INSERT INTO marketing_message (tenant_id, campaign_id, user_id, push_type, title, content, status, create_time, is_deleted) " +
+            "INSERT INTO marketing_message (tenant_id, campaign_id, user_id, push_type, title, content, status, " +
+                    "create_time, is_deleted) " +
             "VALUES " +
             "<foreach collection='list' item='m' separator=','>" +
-            "(#{m.tenantId}, #{m.campaignId}, #{m.userId}, #{m.pushType}, #{m.title}, #{m.content}, #{m.status}, NOW(), 0)" +
+            "(#{m.tenantId}, #{m.campaignId}, #{m.userId}, #{m.pushType}, #{m.title}, #{m.content}, #{m.status}, " +
+                    "NOW(), 0)" +
             "</foreach>" +
             "</script>")
     void insertBatchList(@Param("list") List<MarketingMessage> messages);

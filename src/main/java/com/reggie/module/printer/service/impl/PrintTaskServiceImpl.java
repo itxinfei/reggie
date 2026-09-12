@@ -25,6 +25,11 @@ import java.util.Map;
 @Service
 public class PrintTaskServiceImpl extends ServiceImpl<PrintTaskMapper, PrintTask> implements PrintTaskService {
 
+    /**
+     * 处理 stat tasks。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> statTasks(Long tenantId) {
         LocalDateTime now = LocalDateTime.now();
@@ -41,6 +46,18 @@ public class PrintTaskServiceImpl extends ServiceImpl<PrintTaskMapper, PrintTask
         return result;
     }
 
+    /**
+     * 分页查询 query。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param tenantId 参数 tenantId
+     * @param orderId 参数 orderId
+     * @param taskType 参数 taskType
+     * @param status 参数 status
+     * @param beginTime 参数 beginTime
+     * @param endTime 参数 endTime
+     * @return 返回结果
+     */
     @Override
     public IPage<PrintTask> pageQuery(int page, int pageSize, Long tenantId, Long orderId, String taskType,
                                       String status, LocalDateTime beginTime, LocalDateTime endTime) {

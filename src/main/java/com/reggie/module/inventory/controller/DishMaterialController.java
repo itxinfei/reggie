@@ -33,27 +33,51 @@ public class DishMaterialController {
     @Autowired
     private DishMaterialService dishMaterialService;
 
+    /**
+     * 查询列表 by dish。
+     * @param dishId 参数 dishId
+     * @return 返回结果
+     */
     @GetMapping("/listByDish/{dishId}")
     @Operation(summary = "查询某菜品全部食材配方")
-    public R<List<DishMaterial>> listByDish(@Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
+    public R<List<DishMaterial>> listByDish(@Parameter(description = "菜品ID", required =
+            true) @PathVariable Long dishId) {
         List<DishMaterial> list = dishMaterialService.listByDishId(dishId);
         return R.success(list);
     }
 
+    /**
+     * 保存。
+     * @param dto 参数 dto
+     * @return 返回结果
+     */
     @PostMapping
     @Operation(summary = "保存食材关联")
-    public R<String> save(@Parameter(description = "食材关联信息", required = true) @Validated @RequestBody DishMaterialSaveDTO dto) {
+    public R<String> save(@Parameter(description = "食材关联信息", required =
+            true) @Validated @RequestBody DishMaterialSaveDTO dto) {
         dishMaterialService.saveMaterial(dto);
         return R.success("保存成功");
     }
 
+    /**
+     * 更新。
+     * @param id 参数 id
+     * @param dto 参数 dto
+     * @return 返回结果
+     */
     @PutMapping("/{id}")
     @Operation(summary = "更新食材关联")
-    public R<String> update(@Parameter(description = "食材关联ID", required = true) @PathVariable Long id, @Parameter(description = "食材关联信息", required = true) @Validated @RequestBody DishMaterialSaveDTO dto) {
+    public R<String> update(@Parameter(description = "食材关联ID", required = true) @PathVariable Long id,
+            @Parameter(description = "食材关联信息", required = true) @Validated @RequestBody DishMaterialSaveDTO dto) {
         dishMaterialService.updateMaterial(id, dto);
         return R.success("更新成功");
     }
 
+    /**
+     * 删除。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除食材关联")
     public R<String> delete(@Parameter(description = "食材关联ID", required = true) @PathVariable Long id) {
@@ -61,9 +85,15 @@ public class DishMaterialController {
         return R.success("删除成功");
     }
 
+    /**
+     * 批量处理 save。
+     * @param batchDTO 参数 batchDTO
+     * @return 返回结果
+     */
     @PostMapping("/batchSave")
     @Operation(summary = "批量保存某菜品的食材配方（先删后插）")
-    public R<String> batchSave(@Parameter(description = "批量食材配方信息（先删后插）", required = true) @Validated @RequestBody DishMaterialBatchDTO batchDTO) {
+    public R<String> batchSave(@Parameter(description = "批量食材配方信息（先删后插）", required =
+            true) @Validated @RequestBody DishMaterialBatchDTO batchDTO) {
         dishMaterialService.batchSave(batchDTO);
         return R.success("保存成功");
     }

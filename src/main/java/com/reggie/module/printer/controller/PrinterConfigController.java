@@ -70,7 +70,8 @@ public class PrinterConfigController {
     @Parameter(name = "brand", description = "品牌型号（可选，模糊查询）")
     @Parameter(name = "type", description = "连接类型（可选）：USB, TCP, CLOUD, BLUETOOTH")
     @Parameter(name = "status", description = "状态（可选）：1=启用, 0=停用")
-    public R<Page<PrinterConfig>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, String name,
+    public R<Page<PrinterConfig>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize, String name,
             @RequestParam(required = false) String brand,
             @RequestParam(required = false) String type,
             @Parameter(description = "状态")
@@ -117,7 +118,8 @@ public class PrinterConfigController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增配置", description = "创建新的打印机配置")
-    public R<String> save(@Parameter(description = "打印机配置信息（名称、类型、参数）", required = true) @RequestBody PrinterConfig printerConfig) {
+    public R<String> save(@Parameter(description = "打印机配置信息（名称、类型、参数）", required =
+            true) @RequestBody PrinterConfig printerConfig) {
         log.info("新增打印机配置: {}", printerConfig.getName());
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -137,7 +139,8 @@ public class PrinterConfigController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改配置", description = "更新打印机配置信息")
-    public R<String> update(@Parameter(description = "打印机配置信息（含ID）", required = true) @RequestBody PrinterConfig printerConfig) {
+    public R<String> update(@Parameter(description = "打印机配置信息（含ID）", required =
+            true) @RequestBody PrinterConfig printerConfig) {
         log.info("修改打印机配置: {}", printerConfig.getId());
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -166,6 +169,11 @@ public class PrinterConfigController {
         return R.success("修改打印机配置成功");
     }
 
+    /**
+     * 删除。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除配置", description = "根据ID删除打印机配置（先校验租户归属）")

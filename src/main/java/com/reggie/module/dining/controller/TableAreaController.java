@@ -60,7 +60,8 @@ public class TableAreaController {
     @Operation(summary = "分页查询", description = "分页查询桌台区域列表")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
-    public R<Page<TableArea>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize) {
+    public R<Page<TableArea>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize) {
         Page<TableArea> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<TableArea> qw = new LambdaQueryWrapper<>();
         qw.orderByAsc(TableArea::getSort);
@@ -114,6 +115,11 @@ public class TableAreaController {
         return R.success("修改区域成功");
     }
 
+    /**
+     * 删除。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除区域", description = "根据ID删除桌台区域（先校验租户归属）")

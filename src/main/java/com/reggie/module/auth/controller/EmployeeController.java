@@ -132,7 +132,8 @@ public class EmployeeController {
         //3、密码校验（支持MD5和BCrypt）
         String rawPassword = loginDTO.getPassword();
         String encodedPassword = emp.getPassword();
-        String passwordType = emp.getPasswordType() != null ? emp.getPasswordType() : SecurityConstants.PASSWORD_TYPE_MD5;
+        String passwordType = emp.getPasswordType() != null ? emp.getPasswordType() : SecurityConstants
+                .PASSWORD_TYPE_MD5;
 
         boolean passwordMatches = PasswordUtils.matches(rawPassword, encodedPassword, passwordType);
 
@@ -200,7 +201,8 @@ public class EmployeeController {
     @PostMapping("/forgot-password")
     @Operation(summary = "忘记密码", description = "通过用户名、手机号和短信验证码验证后重置密码")
     @RateLimit(maxRequestsPerSecond = 1)
-    public R<String> forgotPassword(HttpServletRequest request, @RequestBody Map<String, String> params, HttpSession session) {
+    public R<String> forgotPassword(HttpServletRequest request, @RequestBody Map<String, String> params,
+            HttpSession session) {
         String username = params.get("username");
         String phone = params.get("phone");
         String code = params.get("code");
@@ -365,14 +367,19 @@ public class EmployeeController {
         if (employee.getPhone() != null && !employee.getPhone().isEmpty()) {
             if (smsUtils != null && smsTemplateCode != null && !smsTemplateCode.isEmpty() && !smsMockMode) {
                 try {
-                    String smsParam = "{\"name\":\"" + employee.getName() + "\",\"password\":\"" + initialPassword + "\"}";
+                    String smsParam = "{\"name\":\"" + employee
+                            .getName() + "\",\"password\":\"" + initialPassword + "\"}";
                     smsUtils.sendMessage(smsSignName, smsTemplateCode, employee.getPhone(), smsParam);
-                    log.info("初始密码短信发送成功 - empId: {}, phone: {}", employee.getId(), LogMaskUtils.maskPhone(employee.getPhone()));
+                    log.info("初始密码短信发送成功 - empId: {}, phone: {}", employee.getId(), LogMaskUtils.maskPhone(employee
+                            .getPhone()));
                 } catch (Exception e) {
-                    log.error("初始密码短信发送失败 - empId: {}, phone: {}, error: {}", employee.getId(), LogMaskUtils.maskPhone(employee.getPhone()), e.getMessage(), e);
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+                    log.error("初始密码短信发送失败 - empId: {}, phone: {}, error: {}", employee.getId(), LogMaskUtils
+                            .maskPhone(employee.getPhone()), e.getMessage(), e);
                 }
             } else {
-                log.info("【开发环境/Mock模式】员工初始密码已生成 - 姓名：{}，手机号：{}", employee.getName(), LogMaskUtils.maskPhone(employee.getPhone()));
+                log.info("【开发环境/Mock模式】员工初始密码已生成 - 姓名：{}，手机号：{}", employee.getName(), LogMaskUtils.maskPhone(employee
+                        .getPhone()));
             }
         }
 
@@ -397,7 +404,9 @@ public class EmployeeController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "员工姓名（可选，模糊查询）")
     @Parameter(name = "status", description = "账号状态（可选，1=正常 ,0=禁用）")
-    public R<Page<Employee>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String name, @RequestParam(required = false) Integer status){
+    public R<Page<Employee>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String name, @RequestParam(required =
+            false) Integer status){
         log.debug("分页查询员工：page={}, pageSize={}, name={}", page, pageSize, name);
 
         //构造分页构造器
@@ -576,7 +585,8 @@ public class EmployeeController {
     @RequiresAdmin
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "批量修改员工状态", description = "批量更新员工启用/禁用状态，自动校验租户权限")
-    public R<String> updateStatusBatch(HttpServletRequest request, @Valid @RequestBody UpdateEmployeeStatusBatchDTO dto) {
+    public R<String> updateStatusBatch(HttpServletRequest request,
+            @Valid @RequestBody UpdateEmployeeStatusBatchDTO dto) {
         if (!isAdmin(request)) {
             return R.error("权限不足");
         }
@@ -712,7 +722,8 @@ public class EmployeeController {
         }
 
         // 校验旧密码
-        String passwordType = emp.getPasswordType() != null ? emp.getPasswordType() : SecurityConstants.PASSWORD_TYPE_MD5;
+        String passwordType = emp.getPasswordType() != null ? emp.getPasswordType() : SecurityConstants
+                .PASSWORD_TYPE_MD5;
         if (!PasswordUtils.matches(oldPassword, emp.getPassword(), passwordType)) {
             return R.error("旧密码错误");
         }

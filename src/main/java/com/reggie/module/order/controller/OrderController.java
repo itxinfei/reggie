@@ -228,9 +228,13 @@ public class OrderController {
     @Parameter(name = "beginTime", description = "开始时间（可选）")
     @Parameter(name = "endTime", description = "结束时间（可选）")
     @Parameter(name = "status", description = "订单状态（可选，1=待付款,2=待接单/处理中,3=已接单/派送中,4=已完成,5=已取消,6=已退款）")
-    public R<Page<Orders>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String number, @RequestParam(required = false) String beginTime, @RequestParam(required = false) String endTime, @RequestParam(required = false) Integer status) {
+    public R<Page<Orders>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String number,
+            @RequestParam(required = false) String beginTime, @RequestParam(required = false) String endTime,
+            @RequestParam(required = false) Integer status) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext
-        Page<Orders> pageInfo = orderService.orderPage(page, PageUtils.cap(pageSize), number, beginTime, endTime, status);
+        Page<Orders> pageInfo = orderService.orderPage(page, PageUtils.cap(pageSize), number, beginTime, endTime,
+                status);
         // 脱敏：列表页手机号脱敏，保护用户隐私
         if (pageInfo.getRecords() != null) {
             for (Orders order : pageInfo.getRecords()) {
@@ -253,9 +257,12 @@ public class OrderController {
     @RequireEmployee
     @Operation(summary = "平台订单分页查询", description = "后台分页查询外卖平台拉取的订单，支持按平台类型与状态筛选")
     public R<Page<Orders>> platformOrderPage(
-            @Parameter(description = "页码", required = true, example = "1") @RequestParam(defaultValue = "1") @Min(1) int page,
-            @Parameter(description = "每页数量", required = true, example = "10") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
-            @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER，可选）") @RequestParam(required = false) String platformType,
+            @Parameter(description = "页码", required = true, example = "1") @RequestParam(defaultValue =
+                    "1") @Min(1) int page,
+            @Parameter(description = "每页数量", required = true, example = "10") @RequestParam(defaultValue =
+                    "10") @Min(1) @Max(100) int pageSize,
+            @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER，可选）") @RequestParam(required =
+                    false) String platformType,
             @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext
         Page<Orders> pageInfo = orderService.platformOrderPage(page, PageUtils.cap(pageSize), platformType, status);
@@ -307,7 +314,8 @@ public class OrderController {
     @Parameter(name = "page", description = "页码", required = true)
     @Parameter(name = "pageSize", description = "每页数量", required = true)
     @Parameter(name = "status", description = "订单状态（可选：1待付款 2待接单/处理中 3已接单/派送中 4已完成 5已取消 6已退款，不传则查全部）")
-    public R<?> userPage(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
+    public R<?> userPage(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize,
                          @RequestParam(required = false) Integer status) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext
         return R.success(orderService.userPage(page, PageUtils.cap(pageSize), status));
@@ -446,7 +454,8 @@ public class OrderController {
     @RequireEmployee
     @Operation(summary = "平台订单统计", description = "获取当前租户的平台订单统计数据，包含总订单数、待接单数、已完成数与已完成金额")
     public R<Map<String, Object>> platformStatistics(
-            @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER，可选）") @RequestParam(required = false) String platformType,
+            @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER，可选）") @RequestParam(required =
+                    false) String platformType,
             @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
         return R.success(orderService.getPlatformOrderStatistics(platformType, status));
     }
@@ -545,6 +554,7 @@ public class OrderController {
                 dashboardService.clearOverviewCache(tenantId);
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("清除Dashboard缓存失败", e);
         }
     }

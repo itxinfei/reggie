@@ -47,10 +47,16 @@ public class FranchiseContractController {
     @Autowired
     private FranchiseContractService franchiseContractService;
 
+    /**
+     * 保存。
+     * @param contract 参数 contract
+     * @return 返回结果
+     */
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增加盟合同", description = "新增加盟合同，自动关联当前租户")
-    public R<FranchiseContract> save(@Parameter(description = "加盟合同信息（含抽成规则）", required = true) @Valid @RequestBody FranchiseContract contract) {
+    public R<FranchiseContract> save(@Parameter(description = "加盟合同信息（含抽成规则）", required =
+            true) @Valid @RequestBody FranchiseContract contract) {
         contract.setTenantId(BaseContext.getCurrentTenantId());
         if (contract.getSettleCycle() == null) {
             contract.setSettleCycle(FranchiseContract.SETTLE_CYCLE_MONTHLY);
@@ -62,10 +68,16 @@ public class FranchiseContractController {
         return R.success(contract);
     }
 
+    /**
+     * 更新。
+     * @param contract 参数 contract
+     * @return 返回结果
+     */
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改加盟合同", description = "更新合同与抽成规则，先校验租户归属")
-    public R<String> update(@Parameter(description = "加盟合同信息（含抽成规则）", required = true) @Valid @RequestBody FranchiseContract contract) {
+    public R<String> update(@Parameter(description = "加盟合同信息（含抽成规则）", required =
+            true) @Valid @RequestBody FranchiseContract contract) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");
@@ -91,6 +103,11 @@ public class FranchiseContractController {
         return R.success("修改成功");
     }
 
+    /**
+     * 删除。
+     * @param ids 参数 ids
+     * @return 返回结果
+     */
     @DeleteMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除加盟合同", description = "删除合同（逻辑删除），逐条校验租户归属")
@@ -112,6 +129,11 @@ public class FranchiseContractController {
         return R.success("删除成功");
     }
 
+    /**
+     * 获取 by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/{id}")
     @Operation(summary = "查询合同详情")
     public R<FranchiseContract> getById(@Parameter(description = "合同ID", required = true) @PathVariable Long id) {
@@ -126,6 +148,10 @@ public class FranchiseContractController {
         return R.success(contract);
     }
 
+    /**
+     * 查询列表。
+     * @return 返回结果
+     */
     @GetMapping("/list")
     @Operation(summary = "查询生效合同列表", description = "查询当前租户全部生效合同（供结算生成下拉选择）")
     public R<List<FranchiseContract>> list() {
@@ -135,6 +161,14 @@ public class FranchiseContractController {
         return R.success(franchiseContractService.list(qw));
     }
 
+    /**
+     * 分页查询。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param franchiseeId 参数 franchiseeId
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @GetMapping("/page")
     @Operation(summary = "合同分页查询", description = "支持按加盟商、状态筛选")
     public R<Page<FranchiseContract>> page(
@@ -152,6 +186,10 @@ public class FranchiseContractController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 处理 stats。
+     * @return 返回结果
+     */
     @GetMapping("/stats")
     @Operation(summary = "合同统计", description = "返回总数/生效/终止/关联加盟商数，按当前租户聚合")
     public R<Map<String, Object>> stats() {

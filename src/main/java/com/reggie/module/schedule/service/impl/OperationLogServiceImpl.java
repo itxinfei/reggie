@@ -25,8 +25,13 @@ import java.util.List;
 @Slf4j
 @Service
 @Transactional(rollbackFor = Exception.class)
-public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, OperationLog> implements OperationLogService {
+public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, OperationLog> implements
+        OperationLogService {
 
+    /**
+     * 处理 record log。
+     * @param operationLog 参数 operationLog
+     */
     @Override
     public void recordLog(OperationLog operationLog) {
         try {
@@ -46,10 +51,23 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
 
             save(operationLog);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("记录操作日志失败", e);
         }
     }
 
+    /**
+     * 分页查询 query。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param module 参数 module
+     * @param operationType 参数 operationType
+     * @param operatorName 参数 operatorName
+     * @param beginTime 参数 beginTime
+     * @param endTime 参数 endTime
+     * @param isSuccess 参数 isSuccess
+     * @return 返回结果
+     */
     @Override
     public Page<OperationLog> pageQuery(int page, int pageSize, String module,
                                          String operationType, String operatorName,
@@ -96,6 +114,12 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
         return result;
     }
 
+    /**
+     * 查找 by biz id。
+     * @param tableName 参数 tableName
+     * @param bizId 参数 bizId
+     * @return 返回结果
+     */
     @Override
     public List<OperationLog> findByBizId(String tableName, Long bizId) {
         LambdaQueryWrapper<OperationLog> wrapper = new LambdaQueryWrapper<>();
@@ -105,6 +129,11 @@ public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, Ope
         return this.list(wrapper);
     }
 
+    /**
+     * 处理 clean expired logs。
+     * @param retentionDays 参数 retentionDays
+     * @return 返回结果
+     */
     @Override
     public int cleanExpiredLogs(int retentionDays) {
         LocalDateTime expireTime = LocalDateTime.now().minusDays(retentionDays);

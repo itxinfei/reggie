@@ -31,7 +31,8 @@ import java.util.stream.Collectors;
  * @since 2026-08-11
  */
 @Service
-public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, FullReductionRule> implements MarketingService {
+public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, FullReductionRule> implements
+        MarketingService {
 
     @Autowired
     private FullReductionRuleMapper fullReductionRuleMapper;
@@ -44,6 +45,12 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
 
     // ==================== 满减规则管理 ====================
 
+    /**
+     * 获取 full reduction rules。
+     * @param campaignId 参数 campaignId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<FullReductionRule> getFullReductionRules(Long campaignId, Long tenantId) {
         LambdaQueryWrapper<FullReductionRule> qw = new LambdaQueryWrapper<>();
@@ -58,6 +65,11 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         return fullReductionRuleMapper.selectList(qw);
     }
 
+    /**
+     * 保存 or update full reduction rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateFullReductionRule(FullReductionRule rule) {
@@ -71,12 +83,22 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         }
     }
 
+    /**
+     * 删除 full reduction rule。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteFullReductionRule(Long id) {
         return fullReductionRuleMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 批量处理 save full reduction rules。
+     * @param rules 参数 rules
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean batchSaveFullReductionRules(List<FullReductionRule> rules) {
@@ -91,6 +113,12 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
 
     // ==================== 折扣规则管理 ====================
 
+    /**
+     * 获取 discount rules。
+     * @param campaignId 参数 campaignId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<DiscountRule> getDiscountRules(Long campaignId, Long tenantId) {
         LambdaQueryWrapper<DiscountRule> qw = new LambdaQueryWrapper<>();
@@ -105,6 +133,11 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         return discountRuleMapper.selectList(qw);
     }
 
+    /**
+     * 保存 or update discount rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateDiscountRule(DiscountRule rule) {
@@ -118,12 +151,22 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         }
     }
 
+    /**
+     * 删除 discount rule。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteDiscountRule(Long id) {
         return discountRuleMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 批量处理 save discount rules。
+     * @param rules 参数 rules
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean batchSaveDiscountRules(List<DiscountRule> rules) {
@@ -138,6 +181,14 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
 
     // ==================== 营销计算 ====================
 
+    /**
+     * 计算 full reduction。
+     * @param campaignId 参数 campaignId
+     * @param orderAmount 参数 orderAmount
+     * @param userId 参数 userId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public BigDecimal calculateFullReduction(Long campaignId, BigDecimal orderAmount, Long userId, Long tenantId) {
         // 1. 获取活动的满减规则
@@ -153,12 +204,10 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         for (FullReductionRule rule : rules) {
             // 检查是否满足最低消费
             if (rule.getMinAmount() == null || orderAmount.compareTo(rule.getMinAmount()) >= 0) {
-                // 检查用户使用次数
-                if (rule.getPerUserLimit() != null && rule.getPerUserLimit() > 0) {
-                    int usageCount = getUserUsageCount(campaignId, rule.getId(), userId, tenantId);
-                    if (usageCount >= rule.getPerUserLimit()) {
-                        continue;
-                    }
+                // 检查用户使用次数（等价重构：合并为单个条件，避免嵌套）
+                if (rule.getPerUserLimit() != null && rule.getPerUserLimit() > 0
+                        && getUserUsageCount(campaignId, rule.getId(), userId, tenantId) >= rule.getPerUserLimit()) {
+                    continue;
                 }
 
                 BigDecimal discount = BigDecimal.ZERO;
@@ -167,11 +216,11 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
                     discount = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
                 } else if (rule.getDiscountType() == FullReductionRule.TYPE_DISCOUNT) {
                     // 打折
-                    BigDecimal discountValue = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
+                    BigDecimal discountValue = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal
+                            .ZERO;
                     discount = orderAmount.multiply(BigDecimal.ONE.subtract(discountValue));
-                    if (rule.getMaxDiscountAmount() != null && discount.compareTo(rule.getMaxDiscountAmount()) > 0) {
-                        discount = rule.getMaxDiscountAmount();
-                    }
+                    BigDecimal maxDiscount = rule.getMaxDiscountAmount();
+                    discount = maxDiscount == null ? discount : discount.min(maxDiscount);
                 }
 
                 // 选择优惠最大的规则
@@ -185,8 +234,18 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         return bestDiscount;
     }
 
+    /**
+     * 计算 discount。
+     * @param campaignId 参数 campaignId
+     * @param orderAmount 参数 orderAmount
+     * @param dishIds 参数 dishIds
+     * @param userId 参数 userId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    public BigDecimal calculateDiscount(Long campaignId, BigDecimal orderAmount, List<Long> dishIds, Long userId, Long tenantId) {
+    public BigDecimal calculateDiscount(Long campaignId, BigDecimal orderAmount, List<Long> dishIds, Long userId,
+            Long tenantId) {
         // 1. 获取活动的折扣规则
         List<DiscountRule> rules = getDiscountRules(campaignId, tenantId);
         if (rules.isEmpty()) {
@@ -233,8 +292,17 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         return totalDiscount;
     }
 
+    /**
+     * 计算 best discount。
+     * @param orderAmount 参数 orderAmount
+     * @param dishIds 参数 dishIds
+     * @param userId 参数 userId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    public Map<String, Object> calculateBestDiscount(BigDecimal orderAmount, List<Long> dishIds, Long userId, Long tenantId) {
+    public Map<String, Object> calculateBestDiscount(BigDecimal orderAmount, List<Long> dishIds, Long userId,
+            Long tenantId) {
         Map<String, Object> result = new HashMap<>();
 
         // 查询所有进行中的营销活动
@@ -272,22 +340,20 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         for (FullReductionRule rule : allFrRules) {
             if (rule.getMinAmount() == null || orderAmount.compareTo(rule.getMinAmount()) >= 0) {
                 // 检查每人限用次数（从内存 Map 中获取，避免逐条数据库查询）
-                if (rule.getPerUserLimit() != null && rule.getPerUserLimit() > 0) {
-                    String usageKey = rule.getCampaignId() + "_" + rule.getId();
-                    int usageCount = usageCountMap.getOrDefault(usageKey, 0);
-                    if (usageCount >= rule.getPerUserLimit()) {
-                        continue;
-                    }
+                String usageKey = rule.getCampaignId() + "_" + rule.getId();
+                if (rule.getPerUserLimit() != null && rule.getPerUserLimit() > 0
+                        && usageCountMap.getOrDefault(usageKey, 0) >= rule.getPerUserLimit()) {
+                    continue;
                 }
                 BigDecimal discount = BigDecimal.ZERO;
                 if (rule.getDiscountType() == FullReductionRule.TYPE_REDUCE_AMOUNT) {
                     discount = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
                 } else if (rule.getDiscountType() == FullReductionRule.TYPE_DISCOUNT) {
-                    BigDecimal discountValue = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
+                    BigDecimal discountValue = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal
+                            .ZERO;
                     discount = orderAmount.multiply(BigDecimal.ONE.subtract(discountValue));
-                    if (rule.getMaxDiscountAmount() != null && discount.compareTo(rule.getMaxDiscountAmount()) > 0) {
-                        discount = rule.getMaxDiscountAmount();
-                    }
+                    BigDecimal maxDiscount = rule.getMaxDiscountAmount();
+                    discount = maxDiscount == null ? discount : discount.min(maxDiscount);
                 }
                 if (discount.compareTo(frDiscount) > 0) {
                     frDiscount = discount;
@@ -333,8 +399,17 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
 
     // ==================== 使用记录 ====================
 
+    /**
+     * 获取 usage records。
+     * @param campaignId 参数 campaignId
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    public List<CampaignUsageRecord> getUsageRecords(Long campaignId, LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
+    public List<CampaignUsageRecord> getUsageRecords(Long campaignId, LocalDateTime startDate, LocalDateTime endDate,
+            Long tenantId) {
         LambdaQueryWrapper<CampaignUsageRecord> qw = new LambdaQueryWrapper<>();
         if (campaignId != null) {
             qw.eq(CampaignUsageRecord::getCampaignId, campaignId);
@@ -352,6 +427,14 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         return usageRecordMapper.selectList(qw);
     }
 
+    /**
+     * 获取 user usage count。
+     * @param campaignId 参数 campaignId
+     * @param ruleId 参数 ruleId
+     * @param userId 参数 userId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public int getUserUsageCount(Long campaignId, Long ruleId, Long userId, Long tenantId) {
         LambdaQueryWrapper<CampaignUsageRecord> qw = new LambdaQueryWrapper<>();
@@ -366,6 +449,13 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
 
     // ==================== 统计分析 ====================
 
+    /**
+     * 获取 marketing statistics。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getMarketingStatistics(LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -379,8 +469,10 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         Set<Long> uniqueUsers = new HashSet<>();
 
         for (CampaignUsageRecord record : records) {
-            totalDiscount = totalDiscount.add(record.getDiscountAmount() != null ? record.getDiscountAmount() : BigDecimal.ZERO);
-            totalOrderAmount = totalOrderAmount.add(record.getOrderAmount() != null ? record.getOrderAmount() : BigDecimal.ZERO);
+            totalDiscount = totalDiscount.add(record.getDiscountAmount() != null ? record
+                    .getDiscountAmount() : BigDecimal.ZERO);
+            totalOrderAmount = totalOrderAmount.add(record.getOrderAmount() != null ? record
+                    .getOrderAmount() : BigDecimal.ZERO);
             if (record.getUserId() != null) {
                 uniqueUsers.add(record.getUserId());
             }
@@ -390,11 +482,18 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         result.put("totalOrderAmount", totalOrderAmount);
         result.put("totalUsageCount", totalUsageCount);
         result.put("uniqueUsers", uniqueUsers.size());
-        result.put("avgDiscount", totalUsageCount > 0 ? totalDiscount.divide(BigDecimal.valueOf(totalUsageCount), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        result.put("avgDiscount", totalUsageCount > 0 ? totalDiscount.divide(BigDecimal.valueOf(totalUsageCount), 2,
+                RoundingMode.HALF_UP) : BigDecimal.ZERO);
 
         return result;
     }
 
+    /**
+     * 获取 full reduction effect。
+     * @param campaignId 参数 campaignId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getFullReductionEffect(Long campaignId, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -410,18 +509,27 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         BigDecimal totalDiscount = BigDecimal.ZERO;
         BigDecimal totalOrderAmount = BigDecimal.ZERO;
         for (CampaignUsageRecord record : records) {
-            totalDiscount = totalDiscount.add(record.getDiscountAmount() != null ? record.getDiscountAmount() : BigDecimal.ZERO);
-            totalOrderAmount = totalOrderAmount.add(record.getOrderAmount() != null ? record.getOrderAmount() : BigDecimal.ZERO);
+            totalDiscount = totalDiscount.add(record.getDiscountAmount() != null ? record
+                    .getDiscountAmount() : BigDecimal.ZERO);
+            totalOrderAmount = totalOrderAmount.add(record.getOrderAmount() != null ? record
+                    .getOrderAmount() : BigDecimal.ZERO);
         }
 
         result.put("usageCount", records.size());
         result.put("totalDiscount", totalDiscount);
         result.put("totalOrderAmount", totalOrderAmount);
-        result.put("avgOrderAmount", records.size() > 0 ? totalOrderAmount.divide(BigDecimal.valueOf(records.size()), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        result.put("avgOrderAmount", records.size() > 0 ? totalOrderAmount.divide(BigDecimal.valueOf(records.size()), 2,
+                RoundingMode.HALF_UP) : BigDecimal.ZERO);
 
         return result;
     }
 
+    /**
+     * 获取 discount effect。
+     * @param campaignId 参数 campaignId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getDiscountEffect(Long campaignId, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -437,19 +545,29 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         BigDecimal totalDiscount = BigDecimal.ZERO;
         BigDecimal totalOrderAmount = BigDecimal.ZERO;
         for (CampaignUsageRecord record : records) {
-            totalDiscount = totalDiscount.add(record.getDiscountAmount() != null ? record.getDiscountAmount() : BigDecimal.ZERO);
-            totalOrderAmount = totalOrderAmount.add(record.getOrderAmount() != null ? record.getOrderAmount() : BigDecimal.ZERO);
+            totalDiscount = totalDiscount.add(record.getDiscountAmount() != null ? record
+                    .getDiscountAmount() : BigDecimal.ZERO);
+            totalOrderAmount = totalOrderAmount.add(record.getOrderAmount() != null ? record
+                    .getOrderAmount() : BigDecimal.ZERO);
         }
 
         result.put("usageCount", records.size());
         result.put("totalDiscount", totalDiscount);
         result.put("totalOrderAmount", totalOrderAmount);
         result.put("avgDiscountRate", totalOrderAmount.compareTo(BigDecimal.ZERO) > 0 ?
-                totalDiscount.divide(totalOrderAmount, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")) : BigDecimal.ZERO);
+                totalDiscount.divide(totalOrderAmount, 4, RoundingMode.HALF_UP)
+                        .multiply(new BigDecimal("100")) : BigDecimal.ZERO);
 
         return result;
     }
 
+    /**
+     * 获取 marketing trend。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getMarketingTrend(LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -495,7 +613,8 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
             } else {
                 BigDecimal dayDiscount = BigDecimal.ZERO;
                 for (CampaignUsageRecord record : dayRecords) {
-                    dayDiscount = dayDiscount.add(record.getDiscountAmount() != null ? record.getDiscountAmount() : BigDecimal.ZERO);
+                    dayDiscount = dayDiscount.add(record.getDiscountAmount() != null ? record
+                            .getDiscountAmount() : BigDecimal.ZERO);
                 }
                 discounts.add(dayDiscount);
                 counts.add(dayRecords.size());
@@ -511,6 +630,12 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
         return result;
     }
 
+    /**
+     * 获取 top activities。
+     * @param limit 参数 limit
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getTopActivities(int limit, Long tenantId) {
         // 统计每个活动的使用次数

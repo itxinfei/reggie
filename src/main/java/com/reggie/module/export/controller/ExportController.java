@@ -100,8 +100,10 @@ public class ExportController {
     @GetMapping("/orders/excel")
     @Operation(summary = "导出订单Excel", description = "导出订单数据为Excel文件，支持按日期范围和订单状态筛选")
     public ResponseEntity<?> exportOrdersExcel(
-                        @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
+                        @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern =
+                                "yyyy-MM-dd") LocalDate startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern =
+                    "yyyy-MM-dd") LocalDate endDate,
             @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
 
         try {
@@ -121,6 +123,7 @@ public class ExportController {
             byte[] bytes = ExportUtil.generateExcelBytes(columns, dataList);
             return buildFileResponse(bytes, "订单数据", "xlsx");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出订单Excel失败: startDate={}, endDate={}", startDate, endDate, e);
             return buildErrorResponse("订单Excel导出失败，请稍后重试");
         }
@@ -137,8 +140,10 @@ public class ExportController {
     @GetMapping("/orders/pdf")
     @Operation(summary = "导出订单PDF", description = "导出订单数据为PDF报表，支持按日期范围和订单状态筛选")
     public ResponseEntity<?> exportOrdersPdf(
-                        @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
+                        @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern =
+                                "yyyy-MM-dd") LocalDate startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern =
+                    "yyyy-MM-dd") LocalDate endDate,
             @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
 
         try {
@@ -167,6 +172,7 @@ public class ExportController {
             byte[] bytes = ExportUtil.generatePdfBytes("瑞吉外卖 - 订单数据报表", columns, dataList, summary);
             return buildFileResponse(bytes, "订单报表", "pdf");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出订单PDF失败: startDate={}, endDate={}", startDate, endDate, e);
             return buildErrorResponse("订单PDF导出失败，请稍后重试");
         }
@@ -199,6 +205,7 @@ public class ExportController {
             byte[] bytes = ExportUtil.generateExcelBytes(columns, dataList);
             return buildFileResponse(bytes, "菜品数据", "xlsx");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出菜品Excel失败: categoryId={}", categoryId, e);
             return buildErrorResponse("菜品Excel导出失败，请稍后重试");
         }
@@ -232,6 +239,7 @@ public class ExportController {
                     "瑞吉外卖 - 菜品数据报表", columns, dataList, summary);
             return buildFileResponse(bytes, "菜品报表", "pdf");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出菜品PDF失败: categoryId={}", categoryId, e);
             return buildErrorResponse("菜品PDF导出失败，请稍后重试");
         }
@@ -261,6 +269,7 @@ public class ExportController {
             byte[] bytes = ExportUtil.generateExcelBytes(columns, dataList);
             return buildFileResponse(bytes, "员工数据", "xlsx");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出员工Excel失败", e);
             return buildErrorResponse("员工Excel导出失败，请稍后重试");
         }
@@ -293,6 +302,7 @@ public class ExportController {
                     "瑞吉外卖 - 员工数据报表", columns, dataList, summary);
             return buildFileResponse(bytes, "员工报表", "pdf");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出员工PDF失败", e);
             return buildErrorResponse("员工PDF导出失败，请稍后重试");
         }
@@ -321,6 +331,7 @@ public class ExportController {
             byte[] bytes = ExportUtil.generateExcelBytes(columns, dataList);
             return buildFileResponse(bytes, "用户数据", "xlsx");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出用户Excel失败", e);
             return buildErrorResponse("用户Excel导出失败，请稍后重试");
         }
@@ -351,6 +362,7 @@ public class ExportController {
                     "瑞吉外卖 - 用户数据报表", columns, dataList, summary);
             return buildFileResponse(bytes, "用户报表", "pdf");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出用户PDF失败", e);
             return buildErrorResponse("用户PDF导出失败，请稍后重试");
         }

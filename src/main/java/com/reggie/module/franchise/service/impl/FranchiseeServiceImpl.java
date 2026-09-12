@@ -19,6 +19,11 @@ import java.util.Map;
 @Service
 public class FranchiseeServiceImpl extends ServiceImpl<FranchiseeMapper, Franchisee> implements FranchiseeService {
 
+    /**
+     * 处理 stat franchisees。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> statFranchisees(Long tenantId) {
         return this.baseMapper.statFranchisees(tenantId);

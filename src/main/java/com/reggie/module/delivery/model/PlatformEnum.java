@@ -27,6 +27,10 @@ public enum PlatformEnum {
         this.displayName = displayName;
     }
 
+    /**
+     * 获取 display name。
+     * @return 返回结果
+     */
     public String getDisplayName() {
         return displayName;
     }

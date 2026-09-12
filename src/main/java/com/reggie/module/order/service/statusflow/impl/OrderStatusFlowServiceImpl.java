@@ -86,6 +86,11 @@ public class OrderStatusFlowServiceImpl
 
     // ==================== 状态流转入口 ====================
 
+    /**
+     * 更新 status。
+     * @param status 参数 status
+     * @param id 参数 id
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStatus(Integer status, Long id) {
@@ -164,6 +169,7 @@ public class OrderStatusFlowServiceImpl
         try {
             memberRewardService.reverseRewards(id, order.getTenantId());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[会员权益] 订单{}拒单后权益回退失败，需人工核查: {}", id, e.getMessage(), e);
         }
 
@@ -252,6 +258,7 @@ public class OrderStatusFlowServiceImpl
         try {
             memberRewardService.reverseRewards(id, order.getTenantId());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[会员权益] 订单{}取消后权益回退失败，需人工核查: {}", id, e.getMessage(), e);
         }
 
@@ -281,6 +288,7 @@ public class OrderStatusFlowServiceImpl
             diningTableService.changeStatus(order.getTableId(), DiningTableStatus.FREE.getValue());
             log.info("[桌台释放] 订单{}释放桌台{}为空闲", order.getId(), order.getTableId());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[桌台释放失败] 订单{}桌台{}释放异常，需人工核查: {}",
                     order.getId(), order.getTableId(), e.getMessage(), e);
         }
@@ -315,12 +323,16 @@ public class OrderStatusFlowServiceImpl
     private void registerAutoRefund(Long id, String reason, Long tenantId) {
         final String fReason = (reason != null && !reason.trim().isEmpty()) ? reason : "订单取消自动退款";
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            /**
+             * 处理 after commit。
+             */
             @Override
             public void afterCommit() {
                 boolean refunded = false;
                 try {
                     refunded = refundService.refundByOrder(id, fReason);
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.error("【严重】订单取消后自动退款异常，需人工处理！orderId={}", id, e);
                 }
                 if (refunded) {
@@ -332,6 +344,7 @@ public class OrderStatusFlowServiceImpl
                             log.error("订单自动退款成功但库存回退部分失败，补偿任务将重试: orderId={}", id);
                         }
                     } catch (Exception e) {
+                        // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                         log.error("订单自动退款成功但库存回退异常，需人工核查: orderId={}", id, e);
                     }
                 }
@@ -495,6 +508,7 @@ public class OrderStatusFlowServiceImpl
             log.info("[库存回退] 菜品ID={} 回退{}份", dishId, qty);
             return true;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[库存回退失败] 菜品ID={} 回退{}份失败: {}", dishId, qty, e.getMessage(), e);
             return false;
         }

@@ -42,6 +42,11 @@ public class AsyncConfig {
         executor.setAwaitTerminationSeconds(30);
         // 传递ThreadLocal上下文，确保异步线程能获取BaseContext中的userId和tenantId
         executor.setTaskDecorator(new org.springframework.core.task.TaskDecorator() {
+            /**
+             * 处理 decorate。
+             * @param runnable 参数 runnable
+             * @return 返回结果
+             */
             @Override
             public Runnable decorate(Runnable runnable) {
                 Long currentId = com.reggie.common.BaseContext.getCurrentId();

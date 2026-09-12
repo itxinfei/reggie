@@ -55,6 +55,13 @@ public class PlatformOrderPersistServiceImpl implements PlatformOrderPersistServ
         this.printerService = printerService;
     }
 
+    /**
+     * 处理 exists。
+     * @param platformType 参数 platformType
+     * @param platformOrderId 参数 platformOrderId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public boolean exists(String platformType, String platformOrderId, Long tenantId) {
         if (StringUtils.isBlank(platformOrderId)) {
@@ -67,6 +74,14 @@ public class PlatformOrderPersistServiceImpl implements PlatformOrderPersistServ
         return count != null && count > 0;
     }
 
+    /**
+     * 处理 persist orders。
+     * @param platformType 参数 platformType
+     * @param platformShopId 参数 platformShopId
+     * @param tenantId 参数 tenantId
+     * @param platformOrders 参数 platformOrders
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int persistOrders(String platformType, String platformShopId, Long tenantId,
@@ -117,6 +132,7 @@ public class PlatformOrderPersistServiceImpl implements PlatformOrderPersistServ
             printerService.printOrder(order.getId(), "DELIVERY");
             printerService.printOrder(order.getId(), "KITCHEN");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台落库] 平台订单自动打印失败, orderId={}, platformOrderId={}",
                     order.getId(), order.getPlatformOrderId(), e);
         }
@@ -203,6 +219,7 @@ public class PlatformOrderPersistServiceImpl implements PlatformOrderPersistServ
             return LocalDateTime.parse(normalized,
                     java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[平台落库] 订单时间解析失败，使用当前时间: orderTime={}", orderTime);
             return LocalDateTime.now();
         }

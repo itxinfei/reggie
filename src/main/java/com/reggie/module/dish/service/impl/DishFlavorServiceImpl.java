@@ -21,6 +21,11 @@ import java.util.List;
 @Transactional(rollbackFor = Exception.class)
 public class DishFlavorServiceImpl extends ServiceImpl<DishFlavorMapper, DishFlavor> implements DishFlavorService {
 
+    /**
+     * 查询列表 by dish id。
+     * @param dishId 参数 dishId
+     * @return 返回结果
+     */
     @Override
     public List<DishFlavor> listByDishId(Long dishId) {
         return this.list(new LambdaQueryWrapper<DishFlavor>()

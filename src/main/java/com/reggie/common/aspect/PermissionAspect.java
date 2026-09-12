@@ -73,7 +73,18 @@ public class PermissionAspect {
 
     // 同时拦截方法级(@annotation)与类级(@within) @RequiresPermission，
     // 与下方 getAnnotation() 已支持类级读取保持一致，避免类级注解失效导致越权。
-    @Around("@annotation(com.reggie.common.annotation.RequiresPermission) || @within(com.reggie.common.annotation.RequiresPermission)")
+    /**
+     * 校验 permission。
+     * @param joinPoint 参数 joinPoint
+     * @return 返回结果
+     */
+    @Around("@annotation(com.reggie.common.annotation.RequiresPermission) || " +
+            "@within(com.reggie.common.annotation.RequiresPermission)")
+    /**
+     * 校验 permission。
+     * @param joinPoint 参数 joinPoint
+     * @return 返回结果
+     */
     public Object checkPermission(ProceedingJoinPoint joinPoint) throws Throwable {
         RequiresPermission annotation = getAnnotation(joinPoint);
         if (annotation == null) {
@@ -142,6 +153,7 @@ public class PermissionAspect {
             // 类级注解
             return joinPoint.getTarget().getClass().getAnnotation(RequiresPermission.class);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             return null;
         }
     }
@@ -169,6 +181,7 @@ public class PermissionAspect {
                     return new HashSet<>((List<String>) cached);
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[权限缓存] 读取缓存失败，降级查数据库：employeeId={}", employeeId, e);
             }
         }
@@ -182,6 +195,7 @@ public class PermissionAspect {
                 String cacheKey = PERMISSION_PREFIX + employeeId;
                 redisTemplate.opsForValue().set(cacheKey, permissions, CACHE_TTL_HOURS, TimeUnit.HOURS);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[权限缓存] 回填缓存失败：employeeId={}", employeeId, e);
             }
         }
@@ -225,6 +239,7 @@ public class PermissionAspect {
                     employeeId, roleIds, permKeys.size());
             return new HashSet<>(permKeys);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[权限加载] 数据库查询异常：employeeId={}, roleKey={}, error={}",
                     employeeId, roleKey, e.getMessage(), e);
             // 安全降级：异常时返回空集合，不放行任何权限
@@ -247,6 +262,7 @@ public class PermissionAspect {
             redisTemplate.delete(cacheKey);
             log.info("[权限缓存] 已清除员工权限缓存：employeeId={}", employeeId);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[权限缓存] 清除缓存失败：employeeId={}", employeeId, e);
         }
     }
@@ -287,6 +303,7 @@ public class PermissionAspect {
                 log.info("[权限缓存] 已清除全部员工权限缓存，共{}条", keys.size());
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[权限缓存] 清除全部员工权限缓存失败：{}", e.getMessage(), e);
         }
     }

@@ -60,6 +60,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
                 Member::setLevelName);
     }
 
+    /**
+     * 注册 by phone。
+     * @param phone 参数 phone
+     * @param name 参数 name
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Member registerByPhone(String phone, String name) {
@@ -88,6 +94,12 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         return member;
     }
 
+    /**
+     * 处理 deduct balance。
+     * @param memberId 参数 memberId
+     * @param amount 参数 amount
+     * @return 返回结果
+     */
     @Override
     public boolean deductBalance(Long memberId, BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -108,6 +120,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         return rows > 0;
     }
 
+    /**
+     * 新增 points。
+     * @param memberId 参数 memberId
+     * @param points 参数 points
+     * @param bizType 参数 bizType
+     * @param bizId 参数 bizId
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addPoints(Long memberId, int points, String bizType, Long bizId) {
@@ -182,6 +201,13 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         }
     }
 
+    /**
+     * 处理 deduct points。
+     * @param memberId 参数 memberId
+     * @param points 参数 points
+     * @param bizType 参数 bizType
+     * @param bizId 参数 bizId
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deductPoints(Long memberId, int points, String bizType, Long bizId) {
@@ -210,6 +236,11 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         pointsRecordService.save(record);
     }
 
+    /**
+     * 获取 by user id。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     public Member getByUserId(Long userId) {
         if (userId == null) {
@@ -222,11 +253,21 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
                 .one();
     }
 
+    /**
+     * 统计 by level。
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> countByLevel() {
         return memberMapper.countByLevel();
     }
 
+    /**
+     * 计算 discount。
+     * @param memberId 参数 memberId
+     * @param amount 参数 amount
+     * @return 返回结果
+     */
     @Override
     public BigDecimal calculateDiscount(Long memberId, BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {

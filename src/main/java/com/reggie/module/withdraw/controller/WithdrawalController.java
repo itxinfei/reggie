@@ -31,35 +31,73 @@ public class WithdrawalController {
     @Autowired
     private WithdrawalService withdrawalService;
 
+    /**
+     * 提交。
+     * @param request 参数 request
+     * @return 返回结果
+     */
     @PostMapping
     @Operation(summary = "用户提交提现申请")
-    public R<WithdrawalRequest> submit(@Parameter(description = "提现申请信息（金额、收款方式等）", required = true) @RequestBody WithdrawalRequest request) {
+    public R<WithdrawalRequest> submit(@Parameter(description = "提现申请信息（金额、收款方式等）", required =
+            true) @RequestBody WithdrawalRequest request) {
         return R.success(withdrawalService.submitWithdrawal(request));
     }
 
+    /**
+     * 审核通过。
+     * @param id 参数 id
+     * @param approveUserId 参数 approveUserId
+     * @return 返回结果
+     */
     @PutMapping("/{id}/approve")
     @Operation(summary = "同意提现")
     @Parameter(name = "id", description = "提现申请ID", required = true)
-    public R<WithdrawalRequest> approve(@PathVariable Long id, @Parameter(description = "审批人ID", required = true) @RequestParam Long approveUserId) {
+    public R<WithdrawalRequest> approve(@PathVariable Long id, @Parameter(description = "审批人ID", required =
+            true) @RequestParam Long approveUserId) {
         return R.success(withdrawalService.approveWithdrawal(id, approveUserId));
     }
 
+    /**
+     * 驳回。
+     * @param id 参数 id
+     * @param rejectReason 参数 rejectReason
+     * @param approveUserId 参数 approveUserId
+     * @return 返回结果
+     */
     @PutMapping("/{id}/reject")
     @Operation(summary = "拒绝提现")
     @Parameter(name = "id", description = "提现申请ID", required = true)
-    public R<WithdrawalRequest> reject(@PathVariable Long id, @Parameter(description = "拒绝原因", required = true) @RequestParam String rejectReason, @Parameter(description = "审批人ID", required = true) @RequestParam Long approveUserId) {
+    public R<WithdrawalRequest> reject(@PathVariable Long id, @Parameter(description = "拒绝原因", required =
+            true) @RequestParam String rejectReason, @Parameter(description = "审批人ID", required =
+            true) @RequestParam Long approveUserId) {
         return R.success(withdrawalService.rejectWithdrawal(id, rejectReason, approveUserId));
     }
 
+    /**
+     * 分页查询。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询提现申请")
     public R<Page<WithdrawalRequest>> page(
             @Parameter(description = "页码，从1开始", required = true) @RequestParam(defaultValue = "1") Integer page,
             @Parameter(description = "每页条数，最大100", required = true) @RequestParam(defaultValue = "10") Integer pageSize,
-            @Parameter(description = "状态（PENDING-待审核、APPROVED-已同意、REJECTED-已拒绝、CONFIRMED-已转账）") @RequestParam(required = false) String status) {
+            @Parameter(description = "状态（PENDING-待审核、APPROVED-已同意、REJECTED-已拒绝、CONFIRMED-已转账）") @RequestParam(required =
+                    false) String status) {
         return R.success(withdrawalService.listWithdrawals(page, pageSize, status));
     }
 
+    /**
+     * 确认。
+     * @param id 参数 id
+     * @param actualAmount 参数 actualAmount
+     * @param fee 参数 fee
+     * @param bankTraceNo 参数 bankTraceNo
+     * @return 返回结果
+     */
     @PostMapping("/{id}/confirm")
     @Operation(summary = "确认转账完成")
     @Parameter(name = "id", description = "提现申请ID", required = true)

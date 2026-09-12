@@ -77,6 +77,7 @@ public class WindowsSystemPrinterAdapter implements PrinterAdapter {
             log.error("打印失败：打印机={}, 错误={}", printerName, e.getMessage(), e);
             return false;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("打印异常：打印机={}, 错误={}", printerName, e.getMessage(), e);
             return false;
         }
@@ -119,6 +120,7 @@ public class WindowsSystemPrinterAdapter implements PrinterAdapter {
             return status;
 
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("查询打印机状态失败", e);
             status.setOnline(false);
             status.setDetail("查询失败: " + e.getMessage());
@@ -160,6 +162,7 @@ public class WindowsSystemPrinterAdapter implements PrinterAdapter {
             }
 
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("测试连接失败", e);
             return false;
         }
@@ -228,6 +231,7 @@ public class WindowsSystemPrinterAdapter implements PrinterAdapter {
             }
             baos.write("\n\n\n".getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("构建打印数据失败", e);
         }
 

@@ -69,6 +69,11 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
     @Autowired
     private DishFlavorService dishFlavorService;
 
+    /**
+     * 处理 analyze user preferences。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean analyzeUserPreferences(Long userId) {
@@ -99,6 +104,7 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
             log.info("[偏好分析] 用户{}偏好分析完成", userId);
             return true;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[偏好分析] 用户{}偏好分析失败: {}", userId, e.getMessage(), e);
             return false;
         }
@@ -140,14 +146,13 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
 
         // 统计品类
         for (Dish dish : dishMap.values()) {
-            if (dish.getCategoryId() != null) {
-                categoryCount.merge(dish.getCategoryId(), 1, Integer::sum);
-                if (!categoryNameMap.containsKey(dish.getCategoryId())) {
-                    Category cat = categoryMap.get(dish.getCategoryId());
-                    if (cat != null) {
-                        categoryNameMap.put(dish.getCategoryId(), cat.getName());
-                    }
-                }
+            if (dish.getCategoryId() == null) {
+                continue;
+            }
+            categoryCount.merge(dish.getCategoryId(), 1, Integer::sum);
+            Category cat = categoryMap.get(dish.getCategoryId());
+            if (!categoryNameMap.containsKey(dish.getCategoryId()) && cat != null) {
+                categoryNameMap.put(dish.getCategoryId(), cat.getName());
             }
         }
 
@@ -201,11 +206,12 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
         for (Dish dish : dishMap.values()) {
             List<DishFlavor> flavors = flavorMap.getOrDefault(dish.getId(), Collections.emptyList());
             for (DishFlavor flavor : flavors) {
-                if (flavor.getValue() != null && !flavor.getValue().isEmpty()) {
-                    String tasteKey = extractTasteKeyword(flavor.getValue());
-                    if (tasteKey != null) {
-                        flavorCount.merge(tasteKey, 1, Integer::sum);
-                    }
+                if (flavor.getValue() == null || flavor.getValue().isEmpty()) {
+                    continue;
+                }
+                String tasteKey = extractTasteKeyword(flavor.getValue());
+                if (tasteKey != null) {
+                    flavorCount.merge(tasteKey, 1, Integer::sum);
                 }
             }
 
@@ -260,6 +266,11 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
 
     // ==================== 价格偏好分析 ====================
 
+    /**
+     * 处理 analyze price preference。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     public String analyzePricePreference(Long userId) {
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minus(30, ChronoUnit.DAYS);
@@ -281,6 +292,11 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
 
     // ==================== 时段偏好分析 ====================
 
+    /**
+     * 处理 analyze time preference。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     public String analyzeTimePreference(Long userId) {
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minus(30, ChronoUnit.DAYS);
@@ -315,6 +331,11 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
 
     // ==================== 用户画像判断 ====================
 
+    /**
+     * 判断 churn warning user。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     public boolean isChurnWarningUser(Long userId) {
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minus(30, ChronoUnit.DAYS);
@@ -328,6 +349,11 @@ public class PreferenceAnalysisServiceImpl implements PreferenceAnalysisService 
         return browseCount > 0;
     }
 
+    /**
+     * 判断 high frequency user。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     public boolean isHighFrequencyUser(Long userId) {
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minus(30, ChronoUnit.DAYS);

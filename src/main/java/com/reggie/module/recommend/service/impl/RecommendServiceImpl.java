@@ -49,6 +49,7 @@ import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
  * 智能推荐引擎实现
@@ -157,12 +158,19 @@ public class RecommendServiceImpl implements RecommendService {
             int deleted = cacheMapper.deleteExpired();
             log.info("[推荐引擎] 初始化完成，清理过期缓存 {} 条", deleted);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[推荐引擎] 初始化跳过（可能是测试环境缺少数据表）", e);
         }
     }
 
     // ==================== 公开推荐接口 ====================
 
+    /**
+     * 处理 recommend dishes。
+     * @param userId 参数 userId
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> recommendDishes(Long userId, int limit) {
         if (userId == null || limit <= 0) {
@@ -215,6 +223,12 @@ public class RecommendServiceImpl implements RecommendService {
         return result;
     }
 
+    /**
+     * 处理 recommend setmeals。
+     * @param userId 参数 userId
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> recommendSetmeals(Long userId, int limit) {
         if (userId == null || limit <= 0) {
@@ -249,6 +263,12 @@ public class RecommendServiceImpl implements RecommendService {
         return buildSetmealResultList(setmealIds, limit);
     }
 
+    /**
+     * 处理 recommend new arrivals。
+     * @param userId 参数 userId
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> recommendNewArrivals(Long userId, int limit) {
         if (userId == null || limit <= 0) {
@@ -281,6 +301,12 @@ public class RecommendServiceImpl implements RecommendService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 处理 collaborative filtering。
+     * @param userId 参数 userId
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> collaborativeFiltering(Long userId, int limit) {
         if (userId == null || limit <= 0) {
@@ -326,6 +352,12 @@ public class RecommendServiceImpl implements RecommendService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 处理 content based recommend。
+     * @param userId 参数 userId
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> contentBasedRecommend(Long userId, int limit) {
         if (userId == null || limit <= 0) {
@@ -403,6 +435,12 @@ public class RecommendServiceImpl implements RecommendService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 处理 hot rank recommend。
+     * @param tenantId 参数 tenantId
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> hotRankRecommend(Long tenantId, int limit) {
         if (limit <= 0) {
@@ -471,6 +509,10 @@ public class RecommendServiceImpl implements RecommendService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 处理 record feedback。
+     * @param feedback 参数 feedback
+     */
     @Override
     public void recordFeedback(RecommendationFeedback feedback) {
         if (feedback == null || feedback.getUserId() == null) {
@@ -497,6 +539,10 @@ public class RecommendServiceImpl implements RecommendService {
         });
     }
 
+    /**
+     * 刷新 cache。
+     * @param userId 参数 userId
+     */
     @Override
     public void refreshCache(Long userId) {
         // 删除用户所有缓存，触发下次请求时重新计算
@@ -522,26 +568,48 @@ public class RecommendServiceImpl implements RecommendService {
     }
 
     // 域4 结构优化：概览统计方法已拆分至 RecommendationAnalyticsService
+    /**
+     * 计算 stats。
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> calculateStats() {
         return analyticsService.calculateStats();
     }
 
+    /**
+     * 获取 feedback stats。
+     * @param days 参数 days
+     * @return 返回结果
+     */
     @Override
     public Map<String, Integer> getFeedbackStats(int days) {
         return analyticsService.getFeedbackStats(days);
     }
 
+    /**
+     * 获取 preference distribution。
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getPreferenceDistribution() {
         return analyticsService.getPreferenceDistribution();
     }
 
+    /**
+     * 获取 algo compare。
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getAlgoCompare() {
         return analyticsService.getAlgoCompare();
     }
 
+    /**
+     * 获取 browse trend。
+     * @param days 参数 days
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getBrowseTrend(int days) {
         return analyticsService.getBrowseTrend(days);
@@ -626,6 +694,7 @@ public class RecommendServiceImpl implements RecommendService {
                     .collect(Collectors.toList());
 
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[推荐引擎] 混合推荐异常，回退热门排行", e);
             return hotRankRecommend(tenantId, limit);
         }
@@ -821,6 +890,7 @@ public class RecommendServiceImpl implements RecommendService {
 
             cacheMapper.insert(cache);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[推荐引擎] 缓存保存失败", e);
         }
     }
@@ -846,7 +916,7 @@ public class RecommendServiceImpl implements RecommendService {
     private List<Long> parseDishIds(String json) {
         try {
             return objectMapper.readValue(json, new TypeReference<List<Long>>() {});
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             log.warn("[推荐引擎] JSON解析失败", e);
             return Collections.emptyList();
         }

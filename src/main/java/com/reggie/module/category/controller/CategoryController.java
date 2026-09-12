@@ -57,7 +57,8 @@ public class CategoryController {
     @RateLimit(maxRequestsPerSecond = 10)
     @PostMapping
     @Operation(summary = "新增分类", description = "创建新的菜品或套餐分类，排序号不填则自动分配")
-    public R<String> save(@Parameter(description = "分类信息（名称、类型、排序）", required = true) @Valid @RequestBody Category category) {
+    public R<String> save(@Parameter(description = "分类信息（名称、类型、排序）", required =
+            true) @Valid @RequestBody Category category) {
         // 修改点：清除前端可能传入的id，由数据库自增
         category.setId(null);
         if (category.getName() != null) {
@@ -75,9 +76,12 @@ public class CategoryController {
     @RequireEmployee
         @GetMapping("/page")
     @Operation(summary = "分类分页查询", description = "分页查询分类列表，支持按类型、名称筛选，按排序字段升序排列")
-    public R<Page<Category>> page(@Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page, @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
-                                  @Parameter(description = "分类类型（1菜品 2套餐），可选") @RequestParam(required = false) String type,
-                                  @Parameter(description = "分类名称（模糊查询），可选") @RequestParam(required = false) String name) {
+    public R<Page<Category>> page(@Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
+                                  @Parameter(description = "分类类型（1菜品 2套餐），可选") @RequestParam(required =
+                                          false) String type,
+                                  @Parameter(description = "分类名称（模糊查询），可选") @RequestParam(required =
+                                          false) String name) {
         Page<Category> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Category> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(type != null && !type.isEmpty(), Category::getType, type);
@@ -136,7 +140,8 @@ public class CategoryController {
     @RateLimit(maxRequestsPerSecond = 10)
     @PutMapping
     @Operation(summary = "修改分类", description = "根据ID更新分类名称或排序，不允许修改分类类型")
-    public R<String> update(@Parameter(description = "分类信息（ID、名称、排序）", required = true) @Valid @RequestBody Category category) {
+    public R<String> update(@Parameter(description = "分类信息（ID、名称、排序）", required =
+            true) @Valid @RequestBody Category category) {
         log.info("修改分类：id={}, name={}, sort={}", category.getId(), category.getName(), category.getSort());
         // 安全：使用白名单字段更新，防止Mass Assignment攻击
         LambdaUpdateWrapper<Category> updateWrapper = new LambdaUpdateWrapper<>();

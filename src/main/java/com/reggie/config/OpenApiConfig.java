@@ -287,6 +287,10 @@ public class OpenApiConfig {
     @Bean
     public OpenApiCustomiser reggieOpenApiCustomiser() {
         return new OpenApiCustomiser() {
+            /**
+             * 处理 customise。
+             * @param openApi 参数 openApi
+             */
             @Override
             public void customise(OpenAPI openApi) {
                 addStandardResponses(openApi);
@@ -455,15 +459,15 @@ public class OpenApiConfig {
         Map<String, Integer> counts = new LinkedHashMap<String, Integer>();
         if (openApi.getPaths() != null) {
             for (PathItem item : openApi.getPaths().values()) {
-                for (Operation operation : item.readOperations()) {
+                item.readOperations().forEach(operation -> {
                     List<String> tags = operation.getTags();
                     if (tags == null || tags.isEmpty()) {
-                        continue;
+                        return;
                     }
                     String name = tags.get(0);
                     Integer count = counts.get(name);
                     counts.put(name, count == null ? 1 : count + 1);
-                }
+                });
             }
         }
 

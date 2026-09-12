@@ -16,18 +16,34 @@ public class UpdateEmployeeStatusBatchDTO {
     @NotNull(message = "状态不能为空")
     private Integer status;
 
+    /**
+     * 获取 ids。
+     * @return 返回结果
+     */
     public List<Long> getIds() {
         return ids;
     }
 
+    /**
+     * 设置 ids。
+     * @param ids 参数 ids
+     */
     public void setIds(List<Long> ids) {
         this.ids = ids;
     }
 
+    /**
+     * 获取 status。
+     * @return 返回结果
+     */
     public Integer getStatus() {
         return status;
     }
 
+    /**
+     * 设置 status。
+     * @param status 参数 status
+     */
     public void setStatus(Integer status) {
         this.status = status;
     }

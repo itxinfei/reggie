@@ -116,6 +116,11 @@ public class RetentionServiceImpl implements RetentionService {
 
     // ==================== Service 接口实现 ====================
 
+    /**
+     * 获取 retention overview。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getRetentionOverview(Long tenantId) {
         List<RetentionMember> members = loadMembers(tenantId);
@@ -170,6 +175,13 @@ public class RetentionServiceImpl implements RetentionService {
         return overview;
     }
 
+    /**
+     * 获取 member list。
+     * @param tenantId 参数 tenantId
+     * @param level 参数 level
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getMemberList(Long tenantId, String level, String status) {
         List<RetentionMember> members = loadMembers(tenantId);
@@ -205,12 +217,23 @@ public class RetentionServiceImpl implements RetentionService {
         return result;
     }
 
+    /**
+     * 获取 points ranking。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getPointsRanking(Long tenantId) {
         List<RetentionMember> members = loadMembers(tenantId);
 
         List<RetentionMember> sorted = new ArrayList<>(members);
         sorted.sort(new Comparator<RetentionMember>() {
+            /**
+             * 处理 compare。
+             * @param o1 参数 o1
+             * @param o2 参数 o2
+             * @return 返回结果
+             */
             @Override
             public int compare(RetentionMember o1, RetentionMember o2) {
                 // 防御性 null 检查：points 可能为 null（数据库中未设置的记录）
@@ -231,6 +254,11 @@ public class RetentionServiceImpl implements RetentionService {
         return result;
     }
 
+    /**
+     * 获取 churn warning。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getChurnWarning(Long tenantId) {
         // 优先从 Mapper 获取
@@ -245,6 +273,11 @@ public class RetentionServiceImpl implements RetentionService {
         return convertChurnWarningList(members);
     }
 
+    /**
+     * 获取 smart recommend。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getSmartRecommend(Long tenantId) {
         List<RetentionMember> members = loadMembers(tenantId);
@@ -265,6 +298,11 @@ public class RetentionServiceImpl implements RetentionService {
         return result;
     }
 
+    /**
+     * 发送 coupon。
+     * @param memberId 参数 memberId
+     * @return 返回结果
+     */
     @Override
     public R<Void> sendCoupon(Long memberId) {
         log.info("发送优惠券给会员: {}", memberId);
@@ -274,6 +312,11 @@ public class RetentionServiceImpl implements RetentionService {
         return r;
     }
 
+    /**
+     * 批量处理 send coupon。
+     * @param memberIds 参数 memberIds
+     * @return 返回结果
+     */
     @Override
     public R<Void> batchSendCoupon(List<Long> memberIds) {
         if (memberIds == null || memberIds.isEmpty()) {
@@ -523,12 +566,10 @@ public class RetentionServiceImpl implements RetentionService {
 
             BigDecimal avgSpent = BigDecimal.ZERO;
             if (count > 0) {
-                BigDecimal sumSpent = BigDecimal.ZERO;
-                for (RetentionMember m : levelMembers) {
-                    if (m.getTotalSpent() != null) {
-                        sumSpent = sumSpent.add(m.getTotalSpent());
-                    }
-                }
+                BigDecimal sumSpent = levelMembers.stream()
+                        .map(RetentionMember::getTotalSpent)
+                        .filter(java.util.Objects::nonNull)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
                 avgSpent = sumSpent.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP);
             }
 

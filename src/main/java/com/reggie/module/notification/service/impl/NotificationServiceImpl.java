@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
  * 消息通知服务实现
@@ -98,6 +99,14 @@ public class NotificationServiceImpl implements NotificationService {
     /** 阿里云短信区域 */
     private static final String SMS_REGION = "cn-hangzhou";
 
+    /**
+     * 发送 by biz type。
+     * @param bizType 参数 bizType
+     * @param targets 参数 targets
+     * @param channel 参数 channel
+     * @param params 参数 params
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NotificationRecord sendByBizType(String bizType, List<String> targets, Integer channel,
@@ -153,6 +162,7 @@ public class NotificationServiceImpl implements NotificationService {
                     failReasons.append("[").append(target).append("]发送失败; ");
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 failCount++;
                 failReasons.append("[").append(target).append("]异常:")
                         .append(e.getMessage()).append("; ");
@@ -165,6 +175,16 @@ public class NotificationServiceImpl implements NotificationService {
         return record;
     }
 
+    /**
+     * 批量处理 send。
+     * @param templateId 参数 templateId
+     * @param targets 参数 targets
+     * @param channel 参数 channel
+     * @param targetType 参数 targetType
+     * @param params 参数 params
+     * @param sendTime 参数 sendTime
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NotificationRecord batchSend(Long templateId, List<String> targets, Integer channel,
@@ -222,6 +242,7 @@ public class NotificationServiceImpl implements NotificationService {
                     failCount++;
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 failCount++;
                 failReasons.append("[").append(target).append("]").append(e.getMessage()).append("; ");
                 log.error("批量发送异常: target={}", target, e);
@@ -232,6 +253,14 @@ public class NotificationServiceImpl implements NotificationService {
         return record;
     }
 
+    /**
+     * 发送 sms。
+     * @param phone 参数 phone
+     * @param signName 参数 signName
+     * @param templateCode 参数 templateCode
+     * @param params 参数 params
+     * @return 返回结果
+     */
     @Override
     public boolean sendSms(String phone, String signName, String templateCode, String params) {
         if (phone == null || phone.trim().isEmpty()) {
@@ -276,11 +305,19 @@ public class NotificationServiceImpl implements NotificationService {
                 return false;
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("短信发送异常: phone={}", LogMaskUtils.maskPhone(phone), e);
             return false;
         }
     }
 
+    /**
+     * 发送 app push。
+     * @param userIds 参数 userIds
+     * @param title 参数 title
+     * @param content 参数 content
+     * @return 返回结果
+     */
     @Override
     public int sendAppPush(List<Long> userIds, String title, String content) {
         if (userIds == null || userIds.isEmpty()) {
@@ -326,6 +363,12 @@ public class NotificationServiceImpl implements NotificationService {
         return totalSuccess;
     }
 
+    /**
+     * 注册 device。
+     * @param userId 参数 userId
+     * @param platform 参数 platform
+     * @param deviceToken 参数 deviceToken
+     */
     @Override
     public void registerDevice(Long userId, String platform, String deviceToken) {
         if (userId == null || platform == null) {
@@ -382,7 +425,7 @@ public class NotificationServiceImpl implements NotificationService {
         }
         try {
             return objectMapper.writeValueAsString(params);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             log.error("JSON序列化失败", e);
             return "{}";
         }
@@ -427,6 +470,7 @@ public class NotificationServiceImpl implements NotificationService {
             log.warn("[APP推送] 无效的用户ID格式: {}", userIdStr);
             return false;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[APP推送] 异常: userIdStr={}", userIdStr, e);
             return false;
         }
@@ -472,7 +516,7 @@ public class NotificationServiceImpl implements NotificationService {
         record.setTargetType(1);
         try {
             record.setTargetValue(objectMapper.writeValueAsString(targets));
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             log.error("目标列表JSON序列化失败", e);
             record.setTargetValue("[]");
         }
@@ -512,7 +556,8 @@ public class NotificationServiceImpl implements NotificationService {
      * @param title   消息标题
      * @param content 消息内容
      */
-    private void syncToMarketingMessage(String target, Integer channel, String title, String content, Map<String, Long> userIdMap) {
+    private void syncToMarketingMessage(String target, Integer channel, String title, String content, Map<String,
+            Long> userIdMap) {
         try {
             Long userId = null;
             if (userIdMap != null) {
@@ -535,6 +580,7 @@ public class NotificationServiceImpl implements NotificationService {
             marketingMessageMapper.insert(msg);
             log.debug("消息中心同步成功: userId={}, target={}", userId, target);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("消息中心同步失败: target={}, channel={}", target, channel, e);
         }
     }
@@ -641,6 +687,7 @@ public class NotificationServiceImpl implements NotificationService {
                 return user != null ? user.getId() : null;
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("解析用户ID失败: target={}, channel={}", target, channel, e);
         }
         return null;
@@ -715,6 +762,7 @@ public class NotificationServiceImpl implements NotificationService {
                         objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[通知定时发送] 目标列表反序列化失败: recordId={}", record.getId(), e);
         }
         if (targets == null || targets.isEmpty()) {
@@ -751,6 +799,7 @@ public class NotificationServiceImpl implements NotificationService {
                     failReasons.append("[").append(target).append("]发送失败; ");
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 failCount++;
                 failReasons.append("[").append(target).append("]异常:")
                         .append(e.getMessage()).append("; ");
@@ -797,7 +846,7 @@ public class NotificationServiceImpl implements NotificationService {
         record.setTargetType(1);
         try {
             record.setTargetValue(objectMapper.writeValueAsString(targets));
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             record.setTargetValue("[]");
         }
         record.setTargetCount(targets.size());
@@ -834,6 +883,7 @@ public class NotificationServiceImpl implements NotificationService {
                     failReasons.append("[").append(target).append("]发送失败; ");
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 failCount++;
                 failReasons.append("[").append(target).append("]异常:")
                         .append(e.getMessage()).append("; ");
@@ -898,7 +948,7 @@ public class NotificationServiceImpl implements NotificationService {
             if (pageUsers == null || pageUsers.isEmpty()) {
                 break;
             }
-            for (User user : pageUsers) {
+            pageUsers.forEach(user -> {
                 // 构建 phone/userId→userId 映射（发送回执匹配用）
                 if (user.getPhone() != null) {
                     userIdMap.put(user.getPhone(), user.getId());
@@ -922,7 +972,7 @@ public class NotificationServiceImpl implements NotificationService {
                         targets.add(String.valueOf(user.getId()));
                     }
                 }
-            }
+            });
             if (pageUsers.size() < pageSize) {
                 break;
             }
@@ -960,6 +1010,7 @@ public class NotificationServiceImpl implements NotificationService {
                     failCount++;
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 failCount++;
                 failReasons.append("[").append(target).append("]").append(e.getMessage()).append("; ");
                 log.error("全量发送异常: target={}", target, e);

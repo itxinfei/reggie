@@ -11,10 +11,18 @@ public class OrderAgainDTO {
     @NotNull(message = "订单ID不能为空")
     private Long id;
 
+    /**
+     * 获取 id。
+     * @return 返回结果
+     */
     public Long getId() {
         return id;
     }
 
+    /**
+     * 设置 id。
+     * @param id 参数 id
+     */
     public void setId(Long id) {
         this.id = id;
     }

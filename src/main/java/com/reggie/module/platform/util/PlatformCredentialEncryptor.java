@@ -56,6 +56,11 @@ public final class PlatformCredentialEncryptor {
         return DEFAULT_KEY_BYTES;
     }
 
+    /**
+     * 处理 encrypt。
+     * @param plain 参数 plain
+     * @return 返回结果
+     */
     public static String encrypt(String plain) {
         if (plain == null || plain.isEmpty()) {
             return plain;
@@ -73,11 +78,17 @@ public final class PlatformCredentialEncryptor {
             System.arraycopy(encrypted, 0, combined, iv.length, encrypted.length);
             return Base64.getEncoder().encodeToString(combined);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台凭据] 加密失败", e);
             return null;
         }
     }
 
+    /**
+     * 处理 decrypt。
+     * @param encrypted 参数 encrypted
+     * @return 返回结果
+     */
     public static String decrypt(String encrypted) {
         if (encrypted == null || encrypted.isEmpty()) {
             return encrypted;
@@ -103,6 +114,7 @@ public final class PlatformCredentialEncryptor {
             byte[] decrypted = cipher.doFinal(enc);
             return new String(decrypted, StandardCharsets.UTF_8);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台凭据] 解密失败: prefix={}, error={}",
                     encrypted.substring(0, Math.min(20, encrypted.length())), e.getMessage());
             return null;

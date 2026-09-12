@@ -60,7 +60,8 @@ public class PurchaseOrderController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "status", description = "状态（可选）：PENDING-待审核, APPROVED-已审核, RECEIVED-已收货, CANCELLED-已取消")
     @Parameter(name = "supplierId", description = "供应商ID（可选）")
-    public R<Page<PurchaseOrder>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
+    public R<Page<PurchaseOrder>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize,
                                        @RequestParam(required = false) String status,
                                        @RequestParam(required = false) Long supplierId) {
         Page<PurchaseOrder> pageInfo = PageUtils.of(page, pageSize);
@@ -81,11 +82,17 @@ public class PurchaseOrderController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "创建采购单", description = "创建新的采购单并关联供应商")
-    public R<PurchaseOrder> create(@Parameter(description = "采购单创建信息（含供应商ID）", required = true) @Validated @RequestBody CreatePurchaseOrderDTO dto) {
+    public R<PurchaseOrder> create(@Parameter(description = "采购单创建信息（含供应商ID）", required =
+            true) @Validated @RequestBody CreatePurchaseOrderDTO dto) {
         PurchaseOrder po = purchaseOrderService.createOrder(dto.getSupplierId(), dto.getOperator(), dto.getRemark());
         return R.success(po);
     }
 
+    /**
+     * 获取。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/{id}")
     @Operation(summary = "查询采购单", description = "根据ID查询采购单详情")
     @Parameter(name = "id", description = "采购单ID", required = true)
@@ -118,7 +125,8 @@ public class PurchaseOrderController {
     @PostMapping("/addDetail")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "添加明细", description = "为采购单添加食材明细项")
-    public R<String> addDetail(@Parameter(description = "采购单明细信息（含采购单ID）", required = true) @Validated @RequestBody AddPurchaseDetailDTO dto) {
+    public R<String> addDetail(@Parameter(description = "采购单明细信息（含采购单ID）", required =
+            true) @Validated @RequestBody AddPurchaseDetailDTO dto) {
         purchaseOrderService.addDetail(dto.getOrderId(), dto.getMaterialId(), dto.getQty(), dto.getUnitPrice());
         return R.success("添加明细成功");
     }

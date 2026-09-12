@@ -282,13 +282,13 @@ public class ConversationContextService {
         for (AIMessage msg : oldMessages) {
             if ("user".equals(msg.getRole())) {
                 List<String> facts = extractKeyFacts(msg.getContent());
-                for (String fact : facts) {
+                facts.forEach(fact -> {
                     if (fact.startsWith("PREF:")) {
                         userPreferences.add(fact.substring(5));
                     } else if (fact.startsWith("ENTITY:")) {
                         entities.add(fact.substring(7));
                     }
-                }
+                });
                 if (msg.getContent() != null && msg.getContent().length() > 5) {
                     lastAction.setLength(0);
                     lastAction.append(msg.getContent(), 0, Math.min(30, msg.getContent().length()));

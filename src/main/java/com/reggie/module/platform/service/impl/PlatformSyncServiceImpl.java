@@ -72,6 +72,7 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
             try {
                 return executable.execute();
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 retryCount++;
                 if (retryCount > MAX_RETRY_COUNT) {
                     log.error("[平台重试] 已达最大重试次数，放弃: platformType={}, action={}, error={}",
@@ -99,6 +100,13 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
         T execute() throws Exception;
     }
 
+    /**
+     * 拉取 orders。
+     * @param config 参数 config
+     * @param beginTime 参数 beginTime
+     * @param endTime 参数 endTime
+     * @return 返回结果
+     */
     @Override
     public List<PlatformOrder> pullOrders(PlatformConfig config, String beginTime, String endTime) {
         return executeWithRetry(config.getPlatformType(), "PULL", () -> {
@@ -122,6 +130,7 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
                 saveSyncLog(config, tenantId, "PULL", "IN",
                         "count=" + orders.size() + ",inserted=" + inserted, null);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[平台同步] 拉单落库失败(已捕获，不影响拉取): platformType={}", config.getPlatformType(), e);
                 // 落库失败必须记 status=1 失败日志：否则对账表"全部成功"掩盖丢单，
                 // PlatformRetryTask 也无法按失败日志重试补拉
@@ -132,6 +141,12 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
         });
     }
 
+    /**
+     * 处理 persist orders。
+     * @param config 参数 config
+     * @param orders 参数 orders
+     * @return 返回结果
+     */
     @Override
     public int persistOrders(PlatformConfig config, List<PlatformOrder> orders) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -161,10 +176,17 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
             logEntity.setRequestBody(requestBody);
             syncLogMapper.insert(logEntity);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[平台同步] 写入同步日志失败(已忽略): {}", e.getMessage());
         }
     }
 
+    /**
+     * 推送 order status。
+     * @param config 参数 config
+     * @param platformOrderId 参数 platformOrderId
+     * @param action 参数 action
+     */
     @Override
     public void pushOrderStatus(PlatformConfig config, String platformOrderId, String action) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -210,6 +232,13 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
         }
     }
 
+    /**
+     * 同步 dish。
+     * @param config 参数 config
+     * @param dishId 参数 dishId
+     * @param platformDishId 参数 platformDishId
+     * @param action 参数 action
+     */
     @Override
     public void syncDish(PlatformConfig config, Long dishId, String platformDishId, String action) {
         executeWithRetry(config.getPlatformType(), "SYNC_DISH:" + action, () -> {
@@ -231,6 +260,12 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
         });
     }
 
+    /**
+     * 同步 stock。
+     * @param config 参数 config
+     * @param platformDishId 参数 platformDishId
+     * @param remainQty 参数 remainQty
+     */
     @Override
     public void syncStock(PlatformConfig config, String platformDishId, int remainQty) {
         executeWithRetry(config.getPlatformType(), "SYNC_STOCK", () -> {
@@ -246,6 +281,11 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
         });
     }
 
+    /**
+     * 同步 business status。
+     * @param config 参数 config
+     * @param open 参数 open
+     */
     @Override
     public void syncBusinessStatus(PlatformConfig config, boolean open) {
         executeWithRetry(config.getPlatformType(), "SYNC_BUSINESS_STATUS", () -> {
@@ -260,6 +300,11 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
         });
     }
 
+    /**
+     * 校验 health。
+     * @param config 参数 config
+     * @return 返回结果
+     */
     @Override
     public boolean checkHealth(PlatformConfig config) {
         try {
@@ -270,6 +315,7 @@ public class PlatformSyncServiceImpl implements PlatformSyncService {
             }
             return adapter.healthCheck(config);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台同步] 健康检查失败: platformType={}", config.getPlatformType(), e);
             return false;
         }

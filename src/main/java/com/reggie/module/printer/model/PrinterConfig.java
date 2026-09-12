@@ -81,6 +81,14 @@ public class PrinterConfig implements Serializable {
     private Integer isDeleted;
 
     // 兼容别名：测试代码和部分API使用 printType（单数），此处做映射
+    /**
+     * 设置 print type。
+     * @param printType 参数 printType
+     */
     public void setPrintType(String printType) { this.printTypes = printType; }
+    /**
+     * 获取 print type。
+     * @return 返回结果
+     */
     public String getPrintType() { return this.printTypes; }
 }

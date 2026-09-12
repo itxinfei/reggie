@@ -76,6 +76,7 @@ public class QRCodeUtil {
             // 4. 转换为Base64
             return bufferedImageToBase64(qrImage, "png");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("生成桌台二维码失败: tableId={}, tableName={}", tableId, tableName, e);
             throw new CustomException("生成二维码失败，请稍后重试");
         }
@@ -212,6 +213,7 @@ public class QRCodeUtil {
 
             return qrImage;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("添加Logo失败，返回原图", e);
             return qrImage;
         }

@@ -19,13 +19,24 @@ import java.util.List;
  * @since 2026-09-01
  */
 @Service
-public class PriceHistoryServiceImpl extends ServiceImpl<PriceHistoryMapper, PriceHistory> implements PriceHistoryService {
+public class PriceHistoryServiceImpl extends ServiceImpl<PriceHistoryMapper, PriceHistory> implements
+        PriceHistoryService {
 
     @Autowired
     private PriceHistoryMapper priceHistoryMapper;
 
+    /**
+     * 处理 record price change。
+     * @param materialId 参数 materialId
+     * @param oldPrice 参数 oldPrice
+     * @param newPrice 参数 newPrice
+     * @param changeReason 参数 changeReason
+     * @param operatorId 参数 operatorId
+     * @return 返回结果
+     */
     @Override
-    public PriceHistory recordPriceChange(Long materialId, java.math.BigDecimal oldPrice, java.math.BigDecimal newPrice, String changeReason, Long operatorId) {
+    public PriceHistory recordPriceChange(Long materialId, java.math.BigDecimal oldPrice, java.math.BigDecimal newPrice,
+            String changeReason, Long operatorId) {
         PriceHistory history = new PriceHistory();
         history.setTenantId(BaseContext.getCurrentTenantId());
         history.setMaterialId(materialId);
@@ -38,6 +49,11 @@ public class PriceHistoryServiceImpl extends ServiceImpl<PriceHistoryMapper, Pri
         return history;
     }
 
+    /**
+     * 查询列表 by material id。
+     * @param materialId 参数 materialId
+     * @return 返回结果
+     */
     @Override
     public List<PriceHistory> listByMaterialId(Long materialId) {
         LambdaQueryWrapper<PriceHistory> qw = new LambdaQueryWrapper<>();

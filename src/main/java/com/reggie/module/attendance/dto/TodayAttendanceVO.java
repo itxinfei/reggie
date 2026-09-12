@@ -40,6 +40,9 @@ public class TodayAttendanceVO implements Serializable {
     @Schema(description = "请假员工列表")
     private List<TodayEmployeeVO> leaveEmployees;
 
+    /**
+     * TodayEmployeeVO。
+     */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

@@ -36,6 +36,10 @@ public class RetentionController {
     @Autowired
     private RetentionService retentionService;
 
+    /**
+     * 获取 retention overview。
+     * @return 返回结果
+     */
     @GetMapping("/overview")
     @Operation(summary = "会员留存概览")
     public R<Map<String, Object>> getRetentionOverview() {
@@ -44,6 +48,12 @@ public class RetentionController {
         return R.success(overview);
     }
 
+    /**
+     * 获取 member list。
+     * @param level 参数 level
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @GetMapping("/list")
     @Operation(summary = "会员留存列表")
     public R<List<Map<String, Object>>> getMemberList(
@@ -54,6 +64,10 @@ public class RetentionController {
         return R.success(list);
     }
 
+    /**
+     * 获取 points ranking。
+     * @return 返回结果
+     */
     @GetMapping("/ranking")
     @Operation(summary = "积分排行榜")
     public R<List<Map<String, Object>>> getPointsRanking() {
@@ -62,6 +76,10 @@ public class RetentionController {
         return R.success(ranking);
     }
 
+    /**
+     * 获取 churn warning。
+     * @return 返回结果
+     */
     @GetMapping("/warning")
     @Operation(summary = "流失预警会员")
     public R<List<Map<String, Object>>> getChurnWarning() {
@@ -70,6 +88,10 @@ public class RetentionController {
         return R.success(warning);
     }
 
+    /**
+     * 获取 smart recommend。
+     * @return 返回结果
+     */
     @GetMapping("/recommend")
     @Operation(summary = "智能券推荐")
     public R<List<Map<String, Object>>> getSmartRecommend() {
@@ -78,6 +100,11 @@ public class RetentionController {
         return R.success(recommend);
     }
 
+    /**
+     * 发送 coupon。
+     * @param memberId 参数 memberId
+     * @return 返回结果
+     */
     @PostMapping("/send")
     @Operation(summary = "定向发券")
     public R<Void> sendCoupon(
@@ -86,6 +113,11 @@ public class RetentionController {
         return retentionService.sendCoupon(memberId);
     }
 
+    /**
+     * 批量处理 send coupon。
+     * @param memberIds 参数 memberIds
+     * @return 返回结果
+     */
     @PostMapping("/send-batch")
     @Operation(summary = "批量发券")
     public R<Void> batchSendCoupon(

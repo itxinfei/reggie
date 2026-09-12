@@ -90,7 +90,8 @@ public class AddressBookController {
      */
     @PutMapping
     @Operation(summary = "修改地址", description = "更新地址信息，自动校验租户权限")
-    public R<AddressBook> update(@Parameter(description = "地址信息（含ID）", required = true) @Valid @RequestBody AddressBook addressBook) {
+    public R<AddressBook> update(@Parameter(description = "地址信息（含ID）", required =
+            true) @Valid @RequestBody AddressBook addressBook) {
         // 租户校验：确保只能修改本租户的地址
         AddressBook existing = addressBookService.getById(addressBook.getId());
         Long currentTenantId = BaseContext.getCurrentTenantId();
@@ -103,9 +104,11 @@ public class AddressBookController {
                 .eq(AddressBook::getTenantId, currentTenantId);
         if (addressBook.getConsignee() != null) wrapper.set(AddressBook::getConsignee, addressBook.getConsignee());
         if (addressBook.getPhone() != null) wrapper.set(AddressBook::getPhone, addressBook.getPhone());
-        if (addressBook.getProvinceName() != null) wrapper.set(AddressBook::getProvinceName, addressBook.getProvinceName());
+        if (addressBook.getProvinceName() != null) wrapper.set(AddressBook::getProvinceName, addressBook
+                .getProvinceName());
         if (addressBook.getCityName() != null) wrapper.set(AddressBook::getCityName, addressBook.getCityName());
-        if (addressBook.getDistrictName() != null) wrapper.set(AddressBook::getDistrictName, addressBook.getDistrictName());
+        if (addressBook.getDistrictName() != null) wrapper.set(AddressBook::getDistrictName, addressBook
+                .getDistrictName());
         if (addressBook.getDetail() != null) wrapper.set(AddressBook::getDetail, addressBook.getDetail());
         if (addressBook.getLabel() != null) wrapper.set(AddressBook::getLabel, addressBook.getLabel());
         if (addressBook.getIsDefault() != null) wrapper.set(AddressBook::getIsDefault, addressBook.getIsDefault());
@@ -136,7 +139,8 @@ public class AddressBookController {
         Long currentTenantId = BaseContext.getCurrentTenantId();
         for (Long id : ids) {
             AddressBook addressBook = addressBookService.getById(id);
-            if (addressBook == null || (currentTenantId != null && !currentTenantId.equals(addressBook.getTenantId()))) {
+            if (addressBook == null || (currentTenantId != null && !currentTenantId.equals(addressBook
+                    .getTenantId()))) {
                 return R.error("地址ID " + id + " 不属于当前租户");
             }
         }

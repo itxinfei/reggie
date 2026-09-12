@@ -25,7 +25,8 @@ public interface TenantService extends IService<Tenant> {
      * @param verifyCode 验证码
      * @param session HttpSession（用于读取验证码）
      */
-    void registerWithAdmin(Tenant tenant, String username, String password, String phone, String verifyCode, HttpSession session);
+    void registerWithAdmin(Tenant tenant, String username, String password, String phone, String verifyCode,
+            HttpSession session);
 
     /**
      * 保存验证码

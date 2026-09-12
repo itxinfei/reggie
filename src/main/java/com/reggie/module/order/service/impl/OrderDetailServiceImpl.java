@@ -21,6 +21,11 @@ import java.util.List;
 @Transactional(rollbackFor = Exception.class)
 public class OrderDetailServiceImpl extends ServiceImpl<OrderDetailMapper, OrderDetail> implements OrderDetailService {
 
+    /**
+     * 查询列表 by order id。
+     * @param orderId 参数 orderId
+     * @return 返回结果
+     */
     @Override
     public List<OrderDetail> listByOrderId(Long orderId) {
         return this.list(new LambdaQueryWrapper<OrderDetail>()

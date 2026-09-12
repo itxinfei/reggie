@@ -27,6 +27,7 @@ public interface CategoryMapper extends BaseMapper<Category> {
     @Update("UPDATE category SET sort = sort + 1 " +
             "WHERE type = #{type} AND sort >= #{targetSort} " +
             "AND (id != #{excludeId} OR #{excludeId} IS NULL)")
-    int incrementSortByType(@Param("type") Integer type, @Param("targetSort") int targetSort, @Param("excludeId") Long excludeId);
+    int incrementSortByType(@Param("type") Integer type, @Param("targetSort") int targetSort,
+            @Param("excludeId") Long excludeId);
 }
 

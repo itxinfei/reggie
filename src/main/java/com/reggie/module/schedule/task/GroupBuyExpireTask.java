@@ -65,6 +65,7 @@ public class GroupBuyExpireTask {
         try {
             acquired = tryAcquire(LOCK_KEY, lockValue);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[拼团过期] 获取分布式锁异常，跳过本次执行: {}", e.getMessage(), e);
             return;
         }
@@ -78,6 +79,7 @@ public class GroupBuyExpireTask {
             processAllTenants();
             log.info("拼团过期关闭完成");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[拼团过期] 处理异常", e);
         } finally {
             tryReleaseLock(LOCK_KEY, lockValue);
@@ -100,6 +102,7 @@ public class GroupBuyExpireTask {
                 int closed = groupBuyService.autoCloseExpiredCampaigns();
                 log.info("[拼团过期] 租户{}关闭{}个活动", tenant.getId(), closed);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[拼团过期] 租户{}处理异常: {}", tenant.getId(), e.getMessage(), e);
             } finally {
                 if (originalTenantId != null) {
@@ -132,6 +135,7 @@ public class GroupBuyExpireTask {
             Thread.currentThread().interrupt();
             log.warn("[拼团过期] 获取锁被中断");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[拼团过期] 获取锁异常", e);
         }
         return false;
@@ -147,13 +151,15 @@ public class GroupBuyExpireTask {
         }
         try {
             // Lua 脚本：比对锁值后才删除，防止误删他人的锁；同时消除 get+delete 之间的竞态窗口
-            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                     new DefaultRedisScript<Long>(luaScript, Long.class),
                     Collections.singletonList(lockKey),
                     lockValue
             );
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[拼团过期] 释放锁失败: {}", e.getMessage(), e);
         }
     }

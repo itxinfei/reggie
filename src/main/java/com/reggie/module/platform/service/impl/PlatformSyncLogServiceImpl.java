@@ -20,8 +20,19 @@ import java.util.List;
  * @since 2026-08-24
  */
 @Service
-public class PlatformSyncLogServiceImpl extends ServiceImpl<PlatformSyncLogMapper, PlatformSyncLog> implements PlatformSyncLogService {
+public class PlatformSyncLogServiceImpl extends ServiceImpl<PlatformSyncLogMapper, PlatformSyncLog> implements
+        PlatformSyncLogService {
 
+    /**
+     * 分页查询。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param platformType 参数 platformType
+     * @param action 参数 action
+     * @param startTime 参数 startTime
+     * @param endTime 参数 endTime
+     * @return 返回结果
+     */
     @Override
     public Page<PlatformSyncLog> page(int page, int pageSize, String platformType, String action,
                                       LocalDateTime startTime, LocalDateTime endTime) {
@@ -35,6 +46,12 @@ public class PlatformSyncLogServiceImpl extends ServiceImpl<PlatformSyncLogMappe
         return page(PageUtils.of(page, pageSize), qw);
     }
 
+    /**
+     * 统计 failures in last hours。
+     * @param hours 参数 hours
+     * @param platformType 参数 platformType
+     * @return 返回结果
+     */
     @Override
     public long countFailuresInLastHours(int hours, String platformType) {
         LocalDateTime startTime = LocalDateTime.now().minusHours(hours);
@@ -48,6 +65,12 @@ public class PlatformSyncLogServiceImpl extends ServiceImpl<PlatformSyncLogMappe
         return count(qw);
     }
 
+    /**
+     * 获取 abnormal orders。
+     * @param platformType 参数 platformType
+     * @param maxRetryCount 参数 maxRetryCount
+     * @return 返回结果
+     */
     @Override
     public List<PlatformSyncLog> getAbnormalOrders(String platformType, int maxRetryCount) {
         LambdaQueryWrapper<PlatformSyncLog> qw = new LambdaQueryWrapper<>();

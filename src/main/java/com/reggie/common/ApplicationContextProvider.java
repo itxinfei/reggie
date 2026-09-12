@@ -20,6 +20,10 @@ public class ApplicationContextProvider implements ApplicationContextAware {
      */
     private static ApplicationContext applicationContext;
 
+    /**
+     * 设置 application context。
+     * @param context 参数 context
+     */
     @Override
     public void setApplicationContext(ApplicationContext context) throws BeansException {
         applicationContext = context;

@@ -98,11 +98,18 @@ public class MemberRewardServiceImpl extends ServiceImpl<MemberMapper, Member> i
                 boolean ok = couponUserService.useCoupon(memberId, order.getUsedCouponId(), order.getId());
                 log.info("[会员权益] 订单{}核销优惠券{}结果={}", order.getId(), order.getUsedCouponId(), ok);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[会员权益] 订单" + order.getId() + " 优惠券核销失败: " + e.getMessage());
             }
         }
     }
 
+    /**
+     * 处理 deduct stored balance。
+     * @param userId 参数 userId
+     * @param amount 参数 amount
+     * @return 返回结果
+     */
     @Override
     public boolean deductStoredBalance(Long userId, BigDecimal amount) {
         if (userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -158,6 +165,7 @@ public class MemberRewardServiceImpl extends ServiceImpl<MemberMapper, Member> i
                 log.info("[会员权益回退] 订单{}回退积分{}", orderId, granted.getPoints());
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[会员权益回退] 订单" + orderId + " 积分回退失败: " + e.getMessage());
         }
 
@@ -178,6 +186,7 @@ public class MemberRewardServiceImpl extends ServiceImpl<MemberMapper, Member> i
                 log.info("[会员权益回退] 订单{}恢复优惠券{}结果={}", orderId, usedCoupon.getId(), ok);
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[会员权益回退] 订单" + orderId + " 优惠券恢复失败: " + e.getMessage());
         }
     }

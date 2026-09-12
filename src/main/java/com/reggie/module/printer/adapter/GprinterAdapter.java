@@ -28,7 +28,8 @@ public class GprinterAdapter implements PrinterAdapter {
      */
     @Override
     public boolean print(PrintJob job, PrinterConfig config) {
-        log.info("GprinterAdapter printing to device: {} (IP: {}:{})", config.getDeviceId(), config.getIpAddress(), config.getPort());
+        log.info("GprinterAdapter printing to device: {} (IP: {}:{})", config.getDeviceId(), config.getIpAddress(),
+                config.getPort());
         for (PrintLine line : job.getLines()) {
             log.info("  [{}] {}", line.getType(), line.getText());
         }

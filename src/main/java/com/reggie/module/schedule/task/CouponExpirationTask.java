@@ -61,6 +61,7 @@ public class CouponExpirationTask {
         try {
             acquired = tryAcquire(lockKey(), lockValue);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[优惠券过期] 获取分布式锁异常，跳过本次执行: {}", e.getMessage(), e);
             return;
         }
@@ -74,6 +75,7 @@ public class CouponExpirationTask {
             processAllTenants();
             log.info("优惠券过期检查完成");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[优惠券过期] 处理异常", e);
         } finally {
             tryReleaseLock(lockKey(), lockValue);
@@ -96,6 +98,7 @@ public class CouponExpirationTask {
                 couponTemplateService.expireCoupons();
                 log.info("[优惠券过期] 租户{}处理完成", tenant.getId());
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[优惠券过期] 租户{}处理异常: {}", tenant.getId(), e.getMessage(), e);
             } finally {
                 if (originalTenantId != null) {
@@ -128,6 +131,7 @@ public class CouponExpirationTask {
             Thread.currentThread().interrupt();
             log.warn("[优惠券过期] 获取锁被中断");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[优惠券过期] 获取锁异常", e);
         }
         return false;
@@ -143,13 +147,15 @@ public class CouponExpirationTask {
         }
         try {
             // Lua 脚本：比对锁值后才删除，防止误删他人的锁；同时消除 get+delete 之间的竞态窗口
-            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                     new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
                     java.util.Collections.singletonList(lockKey),
                     lockValue
             );
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[优惠券过期] 释放锁失败: {}", e.getMessage(), e);
         }
     }

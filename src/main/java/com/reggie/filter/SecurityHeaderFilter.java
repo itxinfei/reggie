@@ -74,12 +74,21 @@ public class SecurityHeaderFilter extends OncePerRequestFilter {
     /** HSTS max-age: 1 年（秒） */
     private static final long HSTS_MAX_AGE_SECONDS = 31536000L;
 
+    /**
+     * 初始化 filter bean。
+     */
     @Override
     protected void initFilterBean() throws ServletException {
         super.initFilterBean();
         log.info("HTTP安全响应头过滤器初始化完成");
     }
 
+    /**
+     * 处理 do filter internal。
+     * @param request 参数 request
+     * @param response 参数 response
+     * @param filterChain 参数 filterChain
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,

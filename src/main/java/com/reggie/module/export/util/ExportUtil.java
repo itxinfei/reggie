@@ -245,6 +245,7 @@ public final class ExportUtil {
             }
             log.info("PDF导出成功: {}, 数据行数: {}", fileName, dataList.size());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("PDF导出失败: {}", fileName, e);
             throw new CustomException("PDF导出失败");
         }
@@ -307,53 +308,8 @@ public final class ExportUtil {
                 document.add(new Paragraph(" "));
             }
 
-            // 创建表格
-            List<String> headers = new ArrayList<>(columns.keySet());
-            List<String> headerNames = new ArrayList<>(columns.values());
-            int colCount = headers.size();
-            PdfPTable table = new PdfPTable(colCount);
-            table.setWidthPercentage(100);
-            table.setSpacingBefore(5);
-
-            // 设置列宽（平均分配）
-            float[] widths = new float[colCount];
-            for (int i = 0; i < colCount; i++) {
-                widths[i] = 1f;
-            }
-            table.setWidths(widths);
-
-            // 表头
-            PdfPCell headerCell;
-            for (String headerName : headerNames) {
-                headerCell = new PdfPCell(new Phrase(headerName, headerFont));
-                headerCell.setBackgroundColor(new BaseColor(65, 105, 225)); // 皇家蓝
-                headerCell.setHorizontalAlignment(Element.ALIGN_CENTER);
-                headerCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-                headerCell.setPadding(5);
-                headerCell.setPhrase(new Phrase(headerName,
-                        new com.itextpdf.text.Font(baseFont, 10, com.itextpdf.text.Font.BOLD, BaseColor.WHITE)));
-                table.addCell(headerCell);
-            }
-
-            // 数据行
-            for (int rowIdx = 0; rowIdx < dataList.size(); rowIdx++) {
-                Map<String, Object> row = dataList.get(rowIdx);
-                for (String header : headers) {
-                    Object value = row.get(header);
-                    String cellValue = formatCellValue(value);
-                    PdfPCell dataCell = new PdfPCell(new Phrase(cellValue, dataFont));
-                    dataCell.setPadding(4);
-                    dataCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
-
-                    // 交替行颜色
-                    if (rowIdx % 2 == 1) {
-                        dataCell.setBackgroundColor(new BaseColor(245, 245, 250));
-                    }
-                    table.addCell(dataCell);
-                }
-            }
-
-            document.add(table);
+            // 创建并填充表格（等价抽取）
+            document.add(buildPdfTable(columns, dataList, baseFont, headerFont, dataFont));
 
             // 页脚
             document.add(new Paragraph(" "));
@@ -365,9 +321,69 @@ public final class ExportUtil {
             return bos.toByteArray();
 
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("生成PDF失败", e);
             throw new CustomException("PDF导出失败");
         }
+    }
+
+    /**
+     * 构建 PDF 数据表格（等价抽取，降低方法长度）。
+     *
+     * @param columns 列 key->显示名
+     * @param dataList 数据行
+     * @param baseFont 基础字体
+     * @param headerFont 表头字体
+     * @param dataFont 数据字体
+     * @return 已填充的表格
+     */
+    private static PdfPTable buildPdfTable(LinkedHashMap<String, String> columns,
+                                           List<Map<String, Object>> dataList,
+                                           BaseFont baseFont, com.itextpdf.text.Font headerFont,
+                                           com.itextpdf.text.Font dataFont) throws com.itextpdf.text.DocumentException {
+        List<String> headers = new ArrayList<>(columns.keySet());
+        List<String> headerNames = new ArrayList<>(columns.values());
+        int colCount = headers.size();
+        PdfPTable table = new PdfPTable(colCount);
+        table.setWidthPercentage(100);
+        table.setSpacingBefore(5);
+
+        // 设置列宽（平均分配）
+        float[] widths = new float[colCount];
+        for (int i = 0; i < colCount; i++) {
+            widths[i] = 1f;
+        }
+        table.setWidths(widths);
+
+        // 表头
+        for (String headerName : headerNames) {
+            PdfPCell headerCell = new PdfPCell(new Phrase(headerName, headerFont));
+            headerCell.setBackgroundColor(new BaseColor(65, 105, 225)); // 皇家蓝
+            headerCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            headerCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            headerCell.setPadding(5);
+            headerCell.setPhrase(new Phrase(headerName,
+                    new com.itextpdf.text.Font(baseFont, 10, com.itextpdf.text.Font.BOLD, BaseColor.WHITE)));
+            table.addCell(headerCell);
+        }
+
+        // 数据行
+        for (int rowIdx = 0; rowIdx < dataList.size(); rowIdx++) {
+            Map<String, Object> row = dataList.get(rowIdx);
+            for (String header : headers) {
+                Object value = row.get(header);
+                String cellValue = formatCellValue(value);
+                PdfPCell dataCell = new PdfPCell(new Phrase(cellValue, dataFont));
+                dataCell.setPadding(4);
+                dataCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+                // 交替行颜色
+                if (rowIdx % 2 == 1) {
+                    dataCell.setBackgroundColor(new BaseColor(245, 245, 250));
+                }
+                table.addCell(dataCell);
+            }
+        }
+        return table;
     }
 
     // ==================== 响应头设置 ====================
@@ -379,9 +395,11 @@ public final class ExportUtil {
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setCharacterEncoding("UTF-8");
         try {
-            String encodedName = URLEncoder.encode(fileName + "_" + LocalDateTime.now().format(FILE_DATE_FMT) + ".xlsx", "UTF-8");
+            String encodedName = URLEncoder.encode(fileName + "_" + LocalDateTime.now().format(FILE_DATE_FMT) + ".xlsx",
+                    "UTF-8");
             response.setHeader("Content-Disposition", "attachment; filename=" + encodedName);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             response.setHeader("Content-Disposition", "attachment; filename=export.xlsx");
         }
     }
@@ -393,9 +411,11 @@ public final class ExportUtil {
         response.setContentType("application/pdf");
         response.setCharacterEncoding("UTF-8");
         try {
-            String encodedName = URLEncoder.encode(fileName + "_" + LocalDateTime.now().format(FILE_DATE_FMT) + ".pdf", "UTF-8");
+            String encodedName = URLEncoder.encode(fileName + "_" + LocalDateTime.now().format(FILE_DATE_FMT) + ".pdf",
+                    "UTF-8");
             response.setHeader("Content-Disposition", "attachment; filename=" + encodedName);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             response.setHeader("Content-Disposition", "attachment; filename=export.pdf");
         }
     }
@@ -444,6 +464,7 @@ public final class ExportUtil {
             log.warn("未找到任何中文字体，PDF中文内容可能无法正常显示");
             return BaseFont.createFont("Helvetica", BaseFont.WINANSI, BaseFont.NOT_EMBEDDED);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("无法加载任何PDF字体", e);
             throw new CustomException("PDF导出失败：字体加载异常");
         }

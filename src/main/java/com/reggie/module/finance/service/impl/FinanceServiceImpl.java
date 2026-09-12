@@ -39,7 +39,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 2026-08-11
  */
 @Service
-public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper, WithdrawalApplication> implements FinanceService {
+public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper, WithdrawalApplication> implements
+        FinanceService {
 
     @Autowired
     private WithdrawalApplicationMapper withdrawalMapper;
@@ -68,8 +69,17 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
 
     // ==================== Withdrawal Management ====================
 
+    /**
+     * 获取 withdrawal list。
+     * @param status 参数 status
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    public List<WithdrawalApplication> getWithdrawalList(Integer status, LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
+    public List<WithdrawalApplication> getWithdrawalList(Integer status, LocalDateTime startDate, LocalDateTime endDate,
+            Long tenantId) {
         LambdaQueryWrapper<WithdrawalApplication> qw = new LambdaQueryWrapper<>();
         if (status != null) {
             qw.eq(WithdrawalApplication::getStatus, status);
@@ -87,6 +97,11 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         return withdrawalMapper.selectList(qw);
     }
 
+    /**
+     * 获取 withdrawal by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     public WithdrawalApplication getWithdrawalById(Long id) {
         WithdrawalApplication application = withdrawalMapper.selectById(id);
@@ -104,6 +119,11 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         return application;
     }
 
+    /**
+     * 创建 withdrawal。
+     * @param application 参数 application
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean createWithdrawal(WithdrawalApplication application) {
@@ -114,6 +134,15 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         return withdrawalMapper.insert(application) > 0;
     }
 
+    /**
+     * 审核 withdrawal。
+     * @param id 参数 id
+     * @param status 参数 status
+     * @param reviewerId 参数 reviewerId
+     * @param reviewerName 参数 reviewerName
+     * @param remark 参数 remark
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean reviewWithdrawal(Long id, Integer status, Long reviewerId, String reviewerName, String remark) {
@@ -156,6 +185,12 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         return true;
     }
 
+    /**
+     * 处理 withdrawal payment。
+     * @param id 参数 id
+     * @param paymentNo 参数 paymentNo
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean processWithdrawalPayment(Long id, String paymentNo) {
@@ -192,6 +227,11 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         return true;
     }
 
+    /**
+     * 取消 withdrawal。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean cancelWithdrawal(Long id) {
@@ -211,12 +251,23 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
             throw new IllegalArgumentException("仅待审批状态的提现申请可取消");
         }
 
-        application.setStatus(WithdrawalApplication.STATUS_CANCELLED);
-        application.setUpdateTime(LocalDateTime.now());
-
-        return withdrawalMapper.updateById(application) > 0;
+        // CAS 并发防护：仅 PENDING 状态可取消，防止并发取消+审批竞态
+        int claimed = withdrawalMapper.update(null, new LambdaUpdateWrapper<WithdrawalApplication>()
+                .eq(WithdrawalApplication::getId, id)
+                .eq(WithdrawalApplication::getStatus, WithdrawalApplication.STATUS_PENDING)
+                .set(WithdrawalApplication::getStatus, WithdrawalApplication.STATUS_CANCELLED)
+                .set(WithdrawalApplication::getUpdateTime, LocalDateTime.now()));
+        if (claimed == 0) {
+            throw new IllegalArgumentException("提现申请状态已变更，无法取消");
+        }
+        return true;
     }
 
+    /**
+     * 删除 withdrawal。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteWithdrawal(Long id) {
@@ -225,8 +276,17 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
 
     // ==================== Reconciliation Management ====================
 
+    /**
+     * 获取 reconciliation list。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param platform 参数 platform
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    public List<ReconciliationStatement> getReconciliationList(LocalDate startDate, LocalDate endDate, String platform, Long tenantId) {
+    public List<ReconciliationStatement> getReconciliationList(LocalDate startDate, LocalDate endDate, String platform,
+            Long tenantId) {
         LambdaQueryWrapper<ReconciliationStatement> qw = new LambdaQueryWrapper<>();
         if (startDate != null) {
             qw.ge(ReconciliationStatement::getStatementDate, startDate);
@@ -244,6 +304,11 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         return reconciliationMapper.selectList(qw);
     }
 
+    /**
+     * 获取 reconciliation by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     public ReconciliationStatement getReconciliationById(Long id) {
         ReconciliationStatement statement = reconciliationMapper.selectById(id);
@@ -261,6 +326,13 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         return statement;
     }
 
+    /**
+     * 生成 reconciliation。
+     * @param date 参数 date
+     * @param platform 参数 platform
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ReconciliationStatement generateReconciliation(LocalDate date, String platform, Long tenantId) {
@@ -327,6 +399,13 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         }
     }
 
+    /**
+     * 确认 reconciliation。
+     * @param id 参数 id
+     * @param userId 参数 userId
+     * @param userName 参数 userName
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean confirmReconciliation(Long id, Long userId, String userName) {
@@ -346,10 +425,11 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         // Calculate difference
         // 防御性 null 检查：systemAmount/platformAmount 可能在数据库中为 null（历史数据）
         BigDecimal systemAmount = statement.getSystemAmount() != null ? statement.getSystemAmount() : BigDecimal.ZERO;
-        BigDecimal platformAmount = statement.getPlatformAmount() != null ? statement.getPlatformAmount() : BigDecimal.ZERO;
+        BigDecimal platformAmount = statement.getPlatformAmount() != null ? statement.getPlatformAmount() : BigDecimal
+                .ZERO;
         BigDecimal difference = systemAmount.subtract(platformAmount);
         statement.setDifferenceAmount(difference);
-        statement.setStatus(Math.abs(difference.doubleValue()) < 0.01 ?
+        statement.setStatus(difference.abs().compareTo(new BigDecimal("0.01")) < 0 ?
                 ReconciliationStatement.STATUS_RECONCILED : ReconciliationStatement.STATUS_DISCREPANCY);
         statement.setReconcileTime(LocalDateTime.now());
         statement.setReconcileUserId(userId);
@@ -359,6 +439,11 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         return reconciliationMapper.updateById(statement) > 0;
     }
 
+    /**
+     * 删除 reconciliation。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteReconciliation(Long id) {
@@ -379,6 +464,13 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
 
     // ==================== Profit Analysis ====================
 
+    /**
+     * 获取 profit analysis list。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<ProfitAnalysis> getProfitAnalysisList(LocalDate startDate, LocalDate endDate, Long tenantId) {
         LambdaQueryWrapper<ProfitAnalysis> qw = new LambdaQueryWrapper<>();
@@ -395,6 +487,12 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         return profitAnalysisMapper.selectList(qw);
     }
 
+    /**
+     * 获取 profit analysis by date。
+     * @param date 参数 date
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public ProfitAnalysis getProfitAnalysisByDate(LocalDate date, Long tenantId) {
         LambdaQueryWrapper<ProfitAnalysis> qw = new LambdaQueryWrapper<>();
@@ -405,6 +503,12 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         return profitAnalysisMapper.selectOne(qw);
     }
 
+    /**
+     * 生成 profit analysis。
+     * @param date 参数 date
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ProfitAnalysis generateProfitAnalysis(LocalDate date, Long tenantId) {
@@ -453,12 +557,14 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
             // Calculate profit
             BigDecimal grossProfit = totalRevenue.subtract(totalCost);
             BigDecimal grossProfitRate = totalRevenue.compareTo(BigDecimal.ZERO) > 0 ?
-                    grossProfit.divide(totalRevenue, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")) : BigDecimal.ZERO;
+                    grossProfit.divide(totalRevenue, 4, RoundingMode.HALF_UP)
+                            .multiply(new BigDecimal("100")) : BigDecimal.ZERO;
 
             BigDecimal operatingExpense = BigDecimal.ZERO; // Simplified
             BigDecimal netProfit = grossProfit.subtract(operatingExpense);
             BigDecimal netProfitRate = totalRevenue.compareTo(BigDecimal.ZERO) > 0 ?
-                    netProfit.divide(totalRevenue, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")) : BigDecimal.ZERO;
+                    netProfit.divide(totalRevenue, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")) : BigDecimal
+                            .ZERO;
 
             BigDecimal averageOrderValue = orderCount > 0 ?
                     totalRevenue.divide(BigDecimal.valueOf(orderCount), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
@@ -488,6 +594,13 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         }
     }
 
+    /**
+     * 获取 profit trend。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getProfitTrend(LocalDate startDate, LocalDate endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -522,6 +635,13 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         return result;
     }
 
+    /**
+     * 获取 profit structure。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getProfitStructure(LocalDate startDate, LocalDate endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -535,11 +655,16 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         BigDecimal totalProfit = BigDecimal.ZERO;
 
         for (ProfitAnalysis analysis : analyses) {
-            totalRevenue = totalRevenue.add(analysis.getTotalRevenue() != null ? analysis.getTotalRevenue() : BigDecimal.ZERO);
-            totalFoodCost = totalFoodCost.add(analysis.getFoodCost() != null ? analysis.getFoodCost() : BigDecimal.ZERO);
-            totalLaborCost = totalLaborCost.add(analysis.getLaborCost() != null ? analysis.getLaborCost() : BigDecimal.ZERO);
-            totalOtherCost = totalOtherCost.add(analysis.getOtherCost() != null ? analysis.getOtherCost() : BigDecimal.ZERO);
-            totalProfit = totalProfit.add(analysis.getGrossProfit() != null ? analysis.getGrossProfit() : BigDecimal.ZERO);
+            totalRevenue = totalRevenue.add(analysis.getTotalRevenue() != null ? analysis.getTotalRevenue() : BigDecimal
+                    .ZERO);
+            totalFoodCost = totalFoodCost.add(analysis.getFoodCost() != null ? analysis.getFoodCost() : BigDecimal
+                    .ZERO);
+            totalLaborCost = totalLaborCost.add(analysis.getLaborCost() != null ? analysis.getLaborCost() : BigDecimal
+                    .ZERO);
+            totalOtherCost = totalOtherCost.add(analysis.getOtherCost() != null ? analysis.getOtherCost() : BigDecimal
+                    .ZERO);
+            totalProfit = totalProfit.add(analysis.getGrossProfit() != null ? analysis.getGrossProfit() : BigDecimal
+                    .ZERO);
         }
 
         result.put("totalRevenue", totalRevenue);
@@ -553,6 +678,13 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
 
     // ==================== Statistics ====================
 
+    /**
+     * 获取 finance statistics。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getFinanceStatistics(LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -576,7 +708,8 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         int paidCount = 0;
 
         for (WithdrawalApplication withdrawal : withdrawals) {
-            totalWithdrawal = totalWithdrawal.add(withdrawal.getAmount() != null ? withdrawal.getAmount() : BigDecimal.ZERO);
+            totalWithdrawal = totalWithdrawal.add(withdrawal.getAmount() != null ? withdrawal.getAmount() : BigDecimal
+                    .ZERO);
             if (withdrawal.getStatus() == WithdrawalApplication.STATUS_PENDING) pendingCount++;
             if (withdrawal.getStatus() == WithdrawalApplication.STATUS_APPROVED) approvedCount++;
             if (withdrawal.getStatus() == WithdrawalApplication.STATUS_PAID) paidCount++;
@@ -591,6 +724,11 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         return result;
     }
 
+    /**
+     * 获取 withdrawal statistics。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getWithdrawalStatistics(Long tenantId) {
         Map<String, Object> result = new HashMap<>();

@@ -117,6 +117,7 @@ public abstract class AbstractDeliveryPlatform implements DeliveryPlatform {
                     body == null ? 0 : body.length(), action);
             return body;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[{}] 调用平台接口异常: action={}, error={}", platformKey(), action, e.getMessage(), e);
             return null;
         }
@@ -155,6 +156,7 @@ public abstract class AbstractDeliveryPlatform implements DeliveryPlatform {
             }
             return sb.toString().toUpperCase();
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             throw new IllegalStateException("MD5 计算失败", e);
         }
     }

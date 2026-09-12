@@ -31,10 +31,18 @@ public enum DishStatus {
         this.desc = desc;
     }
 
+    /**
+     * 获取 value。
+     * @return 返回结果
+     */
     public int getValue() {
         return value;
     }
 
+    /**
+     * 获取 desc。
+     * @return 返回结果
+     */
     public String getDesc() {
         return desc;
     }

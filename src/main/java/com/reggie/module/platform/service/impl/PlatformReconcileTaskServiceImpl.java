@@ -34,7 +34,8 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-public class PlatformReconcileTaskServiceImpl extends ServiceImpl<PlatformReconcileTaskMapper, PlatformReconcileTask> implements PlatformReconcileTaskService {
+public class PlatformReconcileTaskServiceImpl extends ServiceImpl<PlatformReconcileTaskMapper,
+        PlatformReconcileTask> implements PlatformReconcileTaskService {
 
     @Autowired
     private OrderService orderService;
@@ -56,6 +57,12 @@ public class PlatformReconcileTaskServiceImpl extends ServiceImpl<PlatformReconc
      */
     private final ConcurrentHashMap<String, Object> reconcileLock = new ConcurrentHashMap<>();
 
+    /**
+     * 对账。
+     * @param platformType 参数 platformType
+     * @param date 参数 date
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PlatformReconcileTask reconcile(String platformType, LocalDate date) {
@@ -151,6 +158,7 @@ public class PlatformReconcileTaskServiceImpl extends ServiceImpl<PlatformReconc
                         matchCount, missingLocalCount, missingPlatformCount);
 
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("对账失败: platformType={}, date={}", platformType, date, e);
                 task.setStatus(2); // 失败
                 task.setErrorMessage(e.getMessage());
@@ -162,6 +170,12 @@ public class PlatformReconcileTaskServiceImpl extends ServiceImpl<PlatformReconc
         }
     }
 
+    /**
+     * 获取 by date。
+     * @param platformType 参数 platformType
+     * @param date 参数 date
+     * @return 返回结果
+     */
     @Override
     public PlatformReconcileTask getByDate(String platformType, LocalDate date) {
         LambdaQueryWrapper<PlatformReconcileTask> qw = new LambdaQueryWrapper<>();

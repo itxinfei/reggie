@@ -111,7 +111,8 @@ public interface MarketingService extends IService<FullReductionRule> {
      * @param tenantId   租户ID
      * @return 优惠金额
      */
-    BigDecimal calculateDiscount(Long campaignId, BigDecimal orderAmount, List<Long> dishIds, Long userId, Long tenantId);
+    BigDecimal calculateDiscount(Long campaignId, BigDecimal orderAmount, List<Long> dishIds, Long userId,
+            Long tenantId);
 
     /**
      * 计算最优优惠
@@ -135,7 +136,8 @@ public interface MarketingService extends IService<FullReductionRule> {
      * @param tenantId   租户ID
      * @return 使用记录列表
      */
-    List<CampaignUsageRecord> getUsageRecords(Long campaignId, LocalDateTime startDate, LocalDateTime endDate, Long tenantId);
+    List<CampaignUsageRecord> getUsageRecords(Long campaignId, LocalDateTime startDate, LocalDateTime endDate,
+            Long tenantId);
 
     /**
      * 获取用户使用次数

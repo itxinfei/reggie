@@ -100,7 +100,8 @@ public interface RoleService extends IService<Role> {
      * @param status      新状态
      * @return 是否更新成功
      */
-    boolean updateTenantRole(Long id, String roleName, String roleKey, String description, Integer sort, Integer status);
+    boolean updateTenantRole(Long id, String roleName, String roleKey, String description, Integer sort,
+            Integer status);
 
     /**
      * 删除角色并校验租户归属（租户安全）

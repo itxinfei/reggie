@@ -26,7 +26,8 @@ public interface ReservationService extends IService<Reservation> {
      * @param remark       备注
      * @return 预订记录
      */
-    Reservation createReservation(String customerName, String phone, LocalDateTime reservedTime, Integer seatCount, Long tableId, String remark);
+    Reservation createReservation(String customerName, String phone, LocalDateTime reservedTime, Integer seatCount,
+            Long tableId, String remark);
 
     /**
      * 确认预订

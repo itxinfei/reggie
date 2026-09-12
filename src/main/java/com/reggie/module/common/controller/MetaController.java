@@ -133,10 +133,18 @@ public class MetaController {
             this.label = label;
         }
 
+        /**
+         * 获取 code。
+         * @return 返回结果
+         */
         public Object getCode() {
             return code;
         }
 
+        /**
+         * 获取 label。
+         * @return 返回结果
+         */
         public String getLabel() {
             return label;
         }

@@ -55,7 +55,8 @@ public class MaterialCategoryController {
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "分类名称（可选，模糊查询）")
-    public R<Page<MaterialCategory>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
+    public R<Page<MaterialCategory>> page(@RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
                                           @RequestParam(required = false) String name) {
         Page<MaterialCategory> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<MaterialCategory> qw = new LambdaQueryWrapper<>();
@@ -90,7 +91,8 @@ public class MaterialCategoryController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改分类", description = "更新食材分类信息")
-    public R<String> update(@Parameter(description = "食材分类信息（含ID）", required = true) @RequestBody MaterialCategory category) {
+    public R<String> update(@Parameter(description = "食材分类信息（含ID）", required =
+            true) @RequestBody MaterialCategory category) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");
@@ -108,6 +110,11 @@ public class MaterialCategoryController {
         return R.success("修改分类成功");
     }
 
+    /**
+     * 删除。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除分类", description = "根据ID删除食材分类（先校验租户归属）")

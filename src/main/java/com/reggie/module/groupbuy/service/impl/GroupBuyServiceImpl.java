@@ -6,14 +6,21 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.utils.PageUtils;
+import com.reggie.module.dish.service.DishService;
 import com.reggie.module.groupbuy.mapper.GroupBuyCampaignMapper;
 import com.reggie.module.groupbuy.mapper.GroupBuyParticipationMapper;
 import com.reggie.module.groupbuy.model.GroupBuyCampaign;
 import com.reggie.module.groupbuy.model.GroupBuyParticipation;
 import com.reggie.module.groupbuy.service.GroupBuyService;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.order.service.OrderService;
 import com.reggie.module.payment.model.PaymentOrder;
 import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.payment.service.RefundService;
+import com.reggie.module.setmeal.model.SetmealDish;
+import com.reggie.module.setmeal.service.SetmealDishService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -21,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,13 +40,26 @@ import java.util.List;
  */
 @Service
 @Slf4j
-public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, GroupBuyCampaign> implements GroupBuyService {
+public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, GroupBuyCampaign> implements
+        GroupBuyService {
 
     @Autowired
     private GroupBuyParticipationMapper participationMapper;
 
     @Autowired
     private RefundService refundService;
+
+    @Autowired
+    private OrderService orderService;
+
+    @Autowired
+    private OrderDetailService orderDetailService;
+
+    @Autowired
+    private DishService dishService;
+
+    @Autowired
+    private SetmealDishService setmealDishService;
 
     /**
      * 支付单服务（@Lazy 避免与 PaymentOrderServiceImpl 注入 GroupBuyService 形成循环依赖）。
@@ -48,6 +69,11 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
     @Lazy
     private PaymentOrderService paymentOrderService;
 
+    /**
+     * 创建 campaign。
+     * @param campaign 参数 campaign
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public GroupBuyCampaign createCampaign(GroupBuyCampaign campaign) {
@@ -64,6 +90,11 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         return campaign;
     }
 
+    /**
+     * 更新 campaign。
+     * @param campaign 参数 campaign
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public GroupBuyCampaign updateCampaign(GroupBuyCampaign campaign) {
@@ -95,6 +126,10 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         return exist;
     }
 
+    /**
+     * 删除 campaign。
+     * @param id 参数 id
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteCampaign(Long id) {
@@ -109,6 +144,13 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         removeById(id);
     }
 
+    /**
+     * 查询列表 campaigns。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param name 参数 name
+     * @return 返回结果
+     */
     @Override
     public Page<GroupBuyCampaign> listCampaigns(int page, int pageSize, String name) {
         Page<GroupBuyCampaign> pageRequest = PageUtils.of(page, pageSize);
@@ -121,6 +163,13 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         return result;
     }
 
+    /**
+     * 处理 join group buy。
+     * @param campaignId 参数 campaignId
+     * @param orderId 参数 orderId
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public GroupBuyParticipation joinGroupBuy(Long campaignId, Long orderId, Long userId) {
@@ -148,6 +197,11 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         return participation;
     }
 
+    /**
+     * 校验 group buy status。
+     * @param campaignId 参数 campaignId
+     * @return 返回结果
+     */
     @Override
     public boolean checkGroupBuyStatus(Long campaignId) {
         GroupBuyCampaign campaign = getById(campaignId);
@@ -158,6 +212,10 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         return count >= campaign.getMinMembers();
     }
 
+    /**
+     * 处理 mark participation paid。
+     * @param orderId 参数 orderId
+     */
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void markParticipationPaid(Long orderId) {
@@ -174,6 +232,10 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         participationMapper.updateById(participation);
     }
 
+    /**
+     * 处理 auto close expired campaigns。
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int autoCloseExpiredCampaigns() {
@@ -183,6 +245,10 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         return scanGroupFormedAndNotFormed();
     }
 
+    /**
+     * 扫描 group formed and not formed。
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int scanGroupFormedAndNotFormed() {
@@ -216,10 +282,14 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
     }
 
     /**
-     * 未成团场景：对已支付参与者的订单发起全额退款，幂等重试安全。
+     * 未成团场景：对已支付参与者的订单发起全额退款 + 库存回退，幂等重试安全。
      * <p>
      * refundByOrder 内部已判断订单是否可退（STATUS=6 REFUND 等直接返回 false）；
      * 此处 try-catch 包裹，单条失败不影响其它 campaign/订单。
+     * </p>
+     * <p>
+     * P0-4 修复：退款成功后，遍历该订单明细，对每个菜品/套餐执行库存回退（增加 stock），
+     * 并标记 order.stockRefunded = 1，幂等防重复回退。
      * </p>
      */
     private void refundNotFormedParticipants(GroupBuyCampaign campaign) {
@@ -232,12 +302,77 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         }
         for (GroupBuyParticipation p : participants) {
             try {
+                // 1. 退款（渠道退款 + 订单状态置为 6）
                 refundService.refundByOrder(p.getOrderId(), "拼团未成团自动退款");
+
+                // 2. 库存回退（幂等：stockRefunded=1 则跳过）
+                restoreStockForOrder(p.getOrderId());
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[拼团] 未成团退款失败: campaignId={}, orderId={}, error={}",
                         campaign.getId(), p.getOrderId(), e.getMessage());
             }
         }
+    }
+
+    /**
+     * 回退订单关联的菜品/套餐库存，幂等：仅 stockRefunded != 1 时执行。
+     * <p>
+     * 单品菜品：直接调 dishService.addStock(dishId, qty) 原子增加。
+     * 套餐：查 SetmealDish 关联列表，按 copies * number 逐个回退。
+     * 回退成功后标记 order.stockRefunded = 1。
+     * </p>
+     */
+    private void restoreStockForOrder(Long orderId) {
+        if (orderId == null) {
+            return;
+        }
+        Orders order = orderService.getById(orderId);
+        if (order == null) {
+            return;
+        }
+        // 幂等：已回退则跳过
+        if (order.getStockRefunded() != null && order.getStockRefunded() == 1) {
+            return;
+        }
+
+        // 查订单明细
+        LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
+        detailQw.eq(OrderDetail::getOrderId, orderId);
+        List<OrderDetail> details = orderDetailService.list(detailQw);
+        if (details == null || details.isEmpty()) {
+            return;
+        }
+
+        for (OrderDetail detail : details) {
+            int number = detail.getNumber() != null ? detail.getNumber() : 1;
+            BigDecimal qty = new BigDecimal(number);
+
+            // 单品菜品
+            if (detail.getDishId() != null) {
+                dishService.addStock(detail.getDishId(), qty);
+            }
+
+            // 套餐：回退套餐内每个菜品
+            if (detail.getSetmealId() != null) {
+                LambdaQueryWrapper<SetmealDish> sdQw = new LambdaQueryWrapper<>();
+                sdQw.eq(SetmealDish::getSetmealId, detail.getSetmealId());
+                List<SetmealDish> setmealDishes = setmealDishService.list(sdQw);
+                if (setmealDishes == null) {
+                    continue;
+                }
+                for (SetmealDish sd : setmealDishes) {
+                    int copies = sd.getCopies() != null ? sd.getCopies() : 1;
+                    BigDecimal dishQty = qty.multiply(new BigDecimal(copies));
+                    dishService.addStock(sd.getDishId(), dishQty);
+                }
+            }
+        }
+
+        // 标记库存已回退（addStock 幂等，未成功的菜品重新扫描时会重试）
+        order.setStockRefunded(1);
+        orderService.updateById(order);
+        log.info("[拼团] 库存回退完成: orderId={}", orderId);
     }
 
     /**
@@ -274,6 +409,7 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
                             campaign.getId(), p.getOrderId(), p.getId());
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[拼团自愈] 补偿 JOINED→PAID 失败，跳过: campaignId={}, orderId={}, err={}",
                         campaign.getId(), p.getOrderId(), e.getMessage());
             }

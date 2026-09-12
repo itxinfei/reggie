@@ -519,6 +519,7 @@ public class UrgencyServiceImpl implements UrgencyService {
             }
             return false;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[漏单预警] 告警去重失败(Redis异常): tenantId={}, orderId={}, level={}, error={}",
                     tenantId, orderId, level, e.getMessage());
             return false;
@@ -554,6 +555,7 @@ public class UrgencyServiceImpl implements UrgencyService {
                 }
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[漏单预警] 告警集合清理失败: tenantId={}, error={}", tenantId, e.getMessage());
         }
     }
@@ -600,6 +602,7 @@ public class UrgencyServiceImpl implements UrgencyService {
             notificationService.sendSimpleMessage(1, phones, "未接单告警", content);
             log.info("[漏单预警] 已通知店长: tenantId={}, phones={}", tenantId, phones);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[漏单预警] 通知店长失败: tenantId={}, error={}", tenantId, e.getMessage());
         }
     }

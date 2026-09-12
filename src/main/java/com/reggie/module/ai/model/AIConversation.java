@@ -37,7 +37,8 @@ public class AIConversation implements Serializable {
     @Schema(description = "会话标题（首条消息摘要）", example = "帮我推荐菜品")
     private String title;
 
-    @Schema(description = "AI场景：order_assistant=订单助手，dish_desc=菜品描述，business_analysis=经营分析，marketing=营销建议", example = "order_assistant")
+    @Schema(description = "AI场景：order_assistant=订单助手，dish_desc=菜品描述，business_analysis=经营分析，marketing=营销建议", example =
+            "order_assistant")
     private String scene;
 
     @Schema(description = "消息数量", example = "5")

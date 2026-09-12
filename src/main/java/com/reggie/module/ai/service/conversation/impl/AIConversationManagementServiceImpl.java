@@ -44,6 +44,13 @@ public class AIConversationManagementServiceImpl
     /** 单次对话携带的最大历史消息数 */
     private static final int MAX_HISTORY_MESSAGES = 20;
 
+    /**
+     * 获取 user conversations。
+     * @param userId 参数 userId
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
     @Override
     public List<AIConversation> getUserConversations(Long userId, int page, int pageSize) {
         LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
@@ -56,6 +63,11 @@ public class AIConversationManagementServiceImpl
         return pageObj.getRecords();
     }
 
+    /**
+     * 获取 conversation messages。
+     * @param conversationId 参数 conversationId
+     * @return 返回结果
+     */
     @Override
     public List<AIMessageRecord> getConversationMessages(String conversationId) {
         if (conversationId == null || conversationId.isEmpty()) {
@@ -81,6 +93,13 @@ public class AIConversationManagementServiceImpl
         return messageRecordMapper.selectList(wrapper);
     }
 
+    /**
+     * 创建 conversation。
+     * @param userId 参数 userId
+     * @param title 参数 title
+     * @param scene 参数 scene
+     * @return 返回结果
+     */
     @Override
     public AIConversation createConversation(Long userId, String title, String scene) {
         AIConversation conv = new AIConversation();
@@ -96,6 +115,11 @@ public class AIConversationManagementServiceImpl
         return conv;
     }
 
+    /**
+     * 删除 conversation。
+     * @param conversationId 参数 conversationId
+     * @param userId 参数 userId
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteConversation(String conversationId, Long userId) {
@@ -117,6 +141,12 @@ public class AIConversationManagementServiceImpl
         }
     }
 
+    /**
+     * 处理 record feedback。
+     * @param messageId 参数 messageId
+     * @param feedbackType 参数 feedbackType
+     * @param userId 参数 userId
+     */
     @Override
     public void recordFeedback(Long messageId, String feedbackType, Long userId) {
         if (messageId == null) return;
@@ -130,16 +160,33 @@ public class AIConversationManagementServiceImpl
         }
     }
 
+    /**
+     * 获取 context stats。
+     * @param conversationId 参数 conversationId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getContextStats(String conversationId) {
         return conversationContextService.getStats(conversationId);
     }
 
+    /**
+     * 重置 context。
+     * @param conversationId 参数 conversationId
+     */
     @Override
     public void resetContext(String conversationId) {
         conversationContextService.clearContext(conversationId);
     }
 
+    /**
+     * 搜索 conversations。
+     * @param userId 参数 userId
+     * @param keyword 参数 keyword
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
     @Override
     public List<AIConversation> searchConversations(Long userId, String keyword, int page, int pageSize) {
         LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
@@ -156,6 +203,11 @@ public class AIConversationManagementServiceImpl
         return pageObj.getRecords();
     }
 
+    /**
+     * 校验 conversation ownership。
+     * @param conversationId 参数 conversationId
+     * @return 返回结果
+     */
     @Override
     public Long validateConversationOwnership(String conversationId) {
         LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
@@ -200,6 +252,7 @@ public class AIConversationManagementServiceImpl
                     .set(AIConversation::getUpdateTime, LocalDateTime.now());
             conversationMapper.update(null, wrapper);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("更新消息计数失败: conversationId={}", conversationId, e);
         }
     }
@@ -224,6 +277,7 @@ public class AIConversationManagementServiceImpl
                 conversationMapper.updateById(conv);
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("更新对话标题失败: conversationId={}", conversationId, e);
         }
     }

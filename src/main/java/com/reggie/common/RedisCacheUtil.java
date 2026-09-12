@@ -58,6 +58,9 @@ public class RedisCacheUtil {
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    /**
+     * 初始化。
+     */
     @PostConstruct
     public void init() {
         if (redisTemplate == null) {
@@ -73,6 +76,9 @@ public class RedisCacheUtil {
         log.info("[缓存双删] 延时调度器初始化完成");
     }
 
+    /**
+     * 处理 destroy。
+     */
     @PreDestroy
     public void destroy() {
         if (scheduledExecutor != null && !scheduledExecutor.isShutdown()) {
@@ -140,6 +146,7 @@ public class RedisCacheUtil {
         try {
             redisTemplate.delete(redisKey);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[缓存] 删除 Key 失败：{}", redisKey, e);
         }
     }
@@ -180,6 +187,7 @@ public class RedisCacheUtil {
                 return deleted != null ? deleted.intValue() : 0;
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[缓存] 批量删除失败：{}", pattern, e);
         }
         return 0;
@@ -195,6 +203,7 @@ public class RedisCacheUtil {
                 redisTemplate.delete(redisKey);
                 log.debug("[缓存双删] 二删完成：{}", redisKey);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[缓存双删] 二删失败：{}", redisKey, e);
             }
         }, SECOND_DELETE_DELAY_MS, TimeUnit.MILLISECONDS);
@@ -210,6 +219,7 @@ public class RedisCacheUtil {
                 int count = deleteByPattern(pattern);
                 log.debug("[缓存双删] 二删完成：{}（{} 条）", cacheName, count);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[缓存双删] 二删失败：{}, cacheName={}", pattern, cacheName, e);
             }
         }, SECOND_DELETE_DELAY_MS, TimeUnit.MILLISECONDS);

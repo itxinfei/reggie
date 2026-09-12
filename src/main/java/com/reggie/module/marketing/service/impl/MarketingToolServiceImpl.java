@@ -46,6 +46,11 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
 
     // ==================== New Customer Discount ====================
 
+    /**
+     * 获取 new customer discounts。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<NewCustomerDiscount> getNewCustomerDiscounts(Long tenantId) {
         LambdaQueryWrapper<NewCustomerDiscount> qw = new LambdaQueryWrapper<>();
@@ -57,6 +62,11 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         return newCustomerDiscountMapper.selectList(qw);
     }
 
+    /**
+     * 保存 or update new customer discount。
+     * @param discount 参数 discount
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateNewCustomerDiscount(NewCustomerDiscount discount) {
@@ -70,12 +80,24 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         }
     }
 
+    /**
+     * 删除 new customer discount。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteNewCustomerDiscount(Long id) {
         return newCustomerDiscountMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 计算 new customer discount。
+     * @param userId 参数 userId
+     * @param orderAmount 参数 orderAmount
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public BigDecimal calculateNewCustomerDiscount(Long userId, BigDecimal orderAmount, Long tenantId) {
         // Check if user is new customer
@@ -112,10 +134,12 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
             if (discount.getDiscountType() == NewCustomerDiscount.TYPE_FIXED) {
                 discountAmount = discount.getDiscountValue() != null ? discount.getDiscountValue() : BigDecimal.ZERO;
             } else if (discount.getDiscountType() == NewCustomerDiscount.TYPE_PERCENTAGE) {
-                BigDecimal discountValue = discount.getDiscountValue() != null ? discount.getDiscountValue() : BigDecimal.ZERO;
+                BigDecimal discountValue = discount.getDiscountValue() != null ? discount
+                        .getDiscountValue() : BigDecimal.ZERO;
                 discountAmount = orderAmount.multiply(discountValue)
                         .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
-                if (discount.getMaxDiscountAmount() != null && discountAmount.compareTo(discount.getMaxDiscountAmount()) > 0) {
+                if (discount.getMaxDiscountAmount() != null && discountAmount.compareTo(discount
+                        .getMaxDiscountAmount()) > 0) {
                     discountAmount = discount.getMaxDiscountAmount();
                 }
             }
@@ -130,6 +154,11 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
 
     // ==================== Buy Get Free ====================
 
+    /**
+     * 获取 buy get free activities。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<BuyGetFree> getBuyGetFreeActivities(Long tenantId) {
         LambdaQueryWrapper<BuyGetFree> qw = new LambdaQueryWrapper<>();
@@ -141,6 +170,11 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         return buyGetFreeMapper.selectList(qw);
     }
 
+    /**
+     * 保存 or update buy get free。
+     * @param activity 参数 activity
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateBuyGetFree(BuyGetFree activity) {
@@ -155,12 +189,24 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         }
     }
 
+    /**
+     * 删除 buy get free。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteBuyGetFree(Long id) {
         return buyGetFreeMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 计算 buy get free gift。
+     * @param activityId 参数 activityId
+     * @param dishId 参数 dishId
+     * @param quantity 参数 quantity
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> calculateBuyGetFreeGift(Long activityId, Long dishId, int quantity) {
         Map<String, Object> result = new HashMap<>();
@@ -207,6 +253,11 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
 
     // ==================== Flash Sale ====================
 
+    /**
+     * 获取 flash sales。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<FlashSale> getFlashSales(Long tenantId) {
         LambdaQueryWrapper<FlashSale> qw = new LambdaQueryWrapper<>();
@@ -217,6 +268,11 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         return flashSaleMapper.selectList(qw);
     }
 
+    /**
+     * 保存 or update flash sale。
+     * @param flashSale 参数 flashSale
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateFlashSale(FlashSale flashSale) {
@@ -231,12 +287,22 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         }
     }
 
+    /**
+     * 删除 flash sale。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteFlashSale(Long id) {
         return flashSaleMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 获取 active flash sales。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<FlashSale> getActiveFlashSales(Long tenantId) {
         LambdaQueryWrapper<FlashSale> qw = new LambdaQueryWrapper<>();
@@ -288,7 +354,8 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         }
 
         // Check stock
-        int remaining = flashSale.getTotalQuantity() - (flashSale.getSoldQuantity() != null ? flashSale.getSoldQuantity() : 0);
+        int remaining = flashSale.getTotalQuantity() - (flashSale.getSoldQuantity() != null ? flashSale
+                .getSoldQuantity() : 0);
         if (remaining <= 0) {
             result.put("eligible", false);
             result.put("message", "Flash sale sold out");
@@ -305,7 +372,8 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
 
         // 防御性 null 检查：flashPrice/originalPrice 可能在数据库中为 null（历史数据或绕过校验）
         BigDecimal flashPrice = flashSale.getFlashPrice() != null ? flashSale.getFlashPrice() : BigDecimal.ZERO;
-        BigDecimal originalPrice = flashSale.getOriginalPrice() != null ? flashSale.getOriginalPrice() : BigDecimal.ZERO;
+        BigDecimal originalPrice = flashSale.getOriginalPrice() != null ? flashSale.getOriginalPrice() : BigDecimal
+                .ZERO;
         BigDecimal totalPrice = flashPrice.multiply(new BigDecimal(quantity));
         BigDecimal originalTotal = originalPrice.multiply(new BigDecimal(quantity));
         BigDecimal savings = originalTotal.subtract(totalPrice);
@@ -324,6 +392,11 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
 
     // ==================== Statistics ====================
 
+    /**
+     * 获取 marketing tool statistics。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getMarketingToolStatistics(Long tenantId) {
         Map<String, Object> result = new HashMap<>();

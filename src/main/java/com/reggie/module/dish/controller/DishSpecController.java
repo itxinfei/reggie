@@ -42,6 +42,11 @@ public class DishSpecController {
 
     // ==================== 规格组管理 ====================
 
+    /**
+     * 获取 spec groups。
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @GetMapping("/group/list")
     @Operation(summary = "获取规格组列表")
     public R<List<DishSpecGroup>> getSpecGroups(
@@ -51,6 +56,11 @@ public class DishSpecController {
         return R.success(groups);
     }
 
+    /**
+     * 获取 spec group by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/group/{id}")
     @Operation(summary = "获取规格组详情")
     public R<DishSpecGroup> getSpecGroupById(@Parameter(description = "规格组ID", required = true) @PathVariable Long id) {
@@ -58,26 +68,43 @@ public class DishSpecController {
         return R.success(group);
     }
 
+    /**
+     * 保存 spec group。
+     * @param group 参数 group
+     * @return 返回结果
+     */
     @PostMapping("/group")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存规格组")
-    public R<String> saveSpecGroup(@Parameter(description = "规格组信息", required = true) @RequestBody DishSpecGroup group) {
+    public R<String> saveSpecGroup(@Parameter(description = "规格组信息", required =
+            true) @RequestBody DishSpecGroup group) {
         Long tenantId = BaseContext.getCurrentTenantId();
         group.setTenantId(tenantId);
         boolean success = dishSpecService.saveOrUpdateSpecGroup(group);
         return success ? R.success("保存成功") : R.error("保存失败");
     }
 
+    /**
+     * 更新 spec group。
+     * @param group 参数 group
+     * @return 返回结果
+     */
     @PutMapping("/group")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新规格组")
-    public R<String> updateSpecGroup(@Parameter(description = "规格组信息", required = true) @RequestBody DishSpecGroup group) {
+    public R<String> updateSpecGroup(@Parameter(description = "规格组信息", required =
+            true) @RequestBody DishSpecGroup group) {
         Long tenantId = BaseContext.getCurrentTenantId();
         group.setTenantId(tenantId);
         boolean success = dishSpecService.saveOrUpdateSpecGroup(group);
         return success ? R.success("更新成功") : R.error("更新失败");
     }
 
+    /**
+     * 删除 spec group。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/group/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除规格组")
@@ -88,6 +115,12 @@ public class DishSpecController {
 
     // ==================== 规格选项管理 ====================
 
+    /**
+     * 获取 spec options。
+     * @param groupId 参数 groupId
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @GetMapping("/option/list")
     @Operation(summary = "获取规格选项列表")
     public R<List<DishSpecOption>> getSpecOptions(
@@ -98,26 +131,43 @@ public class DishSpecController {
         return R.success(options);
     }
 
+    /**
+     * 保存 spec option。
+     * @param option 参数 option
+     * @return 返回结果
+     */
     @PostMapping("/option")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存规格选项")
-    public R<String> saveSpecOption(@Parameter(description = "规格选项信息", required = true) @RequestBody DishSpecOption option) {
+    public R<String> saveSpecOption(@Parameter(description = "规格选项信息", required =
+            true) @RequestBody DishSpecOption option) {
         Long tenantId = BaseContext.getCurrentTenantId();
         option.setTenantId(tenantId);
         boolean success = dishSpecService.saveOrUpdateSpecOption(option);
         return success ? R.success("保存成功") : R.error("保存失败");
     }
 
+    /**
+     * 更新 spec option。
+     * @param option 参数 option
+     * @return 返回结果
+     */
     @PutMapping("/option")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新规格选项")
-    public R<String> updateSpecOption(@Parameter(description = "规格选项信息", required = true) @RequestBody DishSpecOption option) {
+    public R<String> updateSpecOption(@Parameter(description = "规格选项信息", required =
+            true) @RequestBody DishSpecOption option) {
         Long tenantId = BaseContext.getCurrentTenantId();
         option.setTenantId(tenantId);
         boolean success = dishSpecService.saveOrUpdateSpecOption(option);
         return success ? R.success("更新成功") : R.error("更新失败");
     }
 
+    /**
+     * 删除 spec option。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/option/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除规格选项")
@@ -126,10 +176,16 @@ public class DishSpecController {
         return success ? R.success("删除成功") : R.error("删除失败");
     }
 
+    /**
+     * 批量处理 save spec options。
+     * @param options 参数 options
+     * @return 返回结果
+     */
     @PostMapping("/option/batch")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量保存规格选项")
-    public R<String> batchSaveSpecOptions(@Parameter(description = "规格选项列表", required = true) @RequestBody List<DishSpecOption> options) {
+    public R<String> batchSaveSpecOptions(@Parameter(description = "规格选项列表", required =
+            true) @RequestBody List<DishSpecOption> options) {
         Long tenantId = BaseContext.getCurrentTenantId();
         for (DishSpecOption option : options) {
             option.setTenantId(tenantId);
@@ -140,14 +196,26 @@ public class DishSpecController {
 
     // ==================== 菜品规格关联 ====================
 
+    /**
+     * 获取 dish spec groups。
+     * @param dishId 参数 dishId
+     * @return 返回结果
+     */
     @GetMapping("/dish/{dishId}")
     @Operation(summary = "获取菜品规格组")
-    public R<List<Map<String, Object>>> getDishSpecGroups(@Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
+    public R<List<Map<String, Object>>> getDishSpecGroups(@Parameter(description = "菜品ID", required =
+            true) @PathVariable Long dishId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> groups = dishSpecService.getDishSpecGroups(dishId, tenantId);
         return R.success(groups);
     }
 
+    /**
+     * 设置 dish spec groups。
+     * @param dishId 参数 dishId
+     * @param groupIds 参数 groupIds
+     * @return 返回结果
+     */
     @PostMapping("/dish/{dishId}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "设置菜品规格关联")
@@ -159,16 +227,29 @@ public class DishSpecController {
         return success ? R.success("设置成功") : R.error("设置失败");
     }
 
+    /**
+     * 删除 dish spec relations。
+     * @param dishId 参数 dishId
+     * @return 返回结果
+     */
     @DeleteMapping("/dish/{dishId}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除菜品规格关联")
-    public R<String> deleteDishSpecRelations(@Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
+    public R<String> deleteDishSpecRelations(@Parameter(description = "菜品ID", required =
+            true) @PathVariable Long dishId) {
         boolean success = dishSpecService.deleteDishSpecRelations(dishId);
         return success ? R.success("删除成功") : R.error("删除失败");
     }
 
     // ==================== 规格价格计算 ====================
 
+    /**
+     * 计算 spec price。
+     * @param dishId 参数 dishId
+     * @param basePrice 参数 basePrice
+     * @param optionIds 参数 optionIds
+     * @return 返回结果
+     */
     @PostMapping("/price/calculate")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "计算规格价格")
@@ -180,9 +261,15 @@ public class DishSpecController {
         return R.success(price);
     }
 
+    /**
+     * 获取 dish spec detail。
+     * @param dishId 参数 dishId
+     * @return 返回结果
+     */
     @GetMapping("/detail/{dishId}")
     @Operation(summary = "获取菜品规格详情")
-    public R<Map<String, Object>> getDishSpecDetail(@Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
+    public R<Map<String, Object>> getDishSpecDetail(@Parameter(description = "菜品ID", required =
+            true) @PathVariable Long dishId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> detail = dishSpecService.getDishSpecDetail(dishId, tenantId);
         return R.success(detail);
@@ -190,6 +277,10 @@ public class DishSpecController {
 
     // ==================== 统计分析 ====================
 
+    /**
+     * 获取 spec statistics。
+     * @return 返回结果
+     */
     @GetMapping("/statistics")
     @Operation(summary = "获取规格统计")
     public R<Map<String, Object>> getSpecStatistics() {

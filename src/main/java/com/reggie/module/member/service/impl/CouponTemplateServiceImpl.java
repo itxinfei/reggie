@@ -38,7 +38,8 @@ import java.util.UUID;
  * @since 2026-07-09
  */
 @Service
-public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper, CouponTemplate> implements CouponTemplateService {
+public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper, CouponTemplate> implements
+        CouponTemplateService {
 
     /** 用户优惠券服务 */
     @Autowired
@@ -48,6 +49,12 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
     @Autowired
     private MemberService memberService;
 
+    /**
+     * 处理 claim coupon。
+     * @param memberId 参数 memberId
+     * @param templateId 参数 templateId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean claimCoupon(Long memberId, Long templateId) {
@@ -96,6 +103,9 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
         return true;
     }
 
+    /**
+     * 过期处理 coupons。
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void expireCoupons() {
@@ -109,6 +119,10 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
         couponUserService.updateBatchById(expiredList);
     }
 
+    /**
+     * 获取 stats。
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getStats() {
         // 修改点：后端聚合替代前端 pageSize=1000 拉全量；仅查询所需三列，租户条件由拦截器自动注入
@@ -144,6 +158,12 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
         return result;
     }
 
+    /**
+     * 批量处理 issue。
+     * @param templateId 参数 templateId
+     * @param memberIds 参数 memberIds
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> batchIssue(Long templateId, List<Long> memberIds) {
@@ -211,6 +231,12 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
         return result;
     }
 
+    /**
+     * 判断 sue by condition。
+     * @param templateId 参数 templateId
+     * @param condition 参数 condition
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> issueByCondition(Long templateId, Map<String, Object> condition) {
         if (condition == null || condition.isEmpty()) {
@@ -401,7 +427,8 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
      * </p>
      */
     @Override
-    public Page<ExpiringCouponVO> expiringCoupons(Page<ExpiringCouponVO> page, int days, Long templateId, String phone) {
+    public Page<ExpiringCouponVO> expiringCoupons(Page<ExpiringCouponVO> page, int days, Long templateId,
+            String phone) {
         LocalDateTime now = LocalDateTime.now();
         LambdaQueryWrapper<CouponUser> qw = new LambdaQueryWrapper<>();
         qw.eq(CouponUser::getStatus, CouponStatus.UNUSED.getValue());
@@ -725,7 +752,8 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
     @Override
     public boolean updateTenantCouponTemplate(Long id, String name, String type, BigDecimal conditionAmount,
                                               BigDecimal discountAmount, BigDecimal discountRate,
-                                              Integer totalCount, Integer remainCount, Integer validDays, Integer status) {
+                                              Integer totalCount, Integer remainCount, Integer validDays,
+                                                      Integer status) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在，无法更新优惠券模板");

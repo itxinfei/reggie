@@ -74,6 +74,11 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
 
     // ==================== 画像获取 ====================
 
+    /**
+     * 获取 or create profile。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     public UserProfile getOrCreateProfile(Long userId) {
         if (userId == null) return null;
@@ -100,6 +105,11 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
 
     // ==================== 画像摘要构建 ====================
 
+    /**
+     * 构建 profile summary。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     public String buildProfileSummary(Long userId) {
         if (userId == null) return "";
@@ -156,6 +166,10 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
     // 修改点：新增节流机制，减少不必要的画像刷新计算
     private static final long REFRESH_COOLDOWN_MS = 10 * 60 * 1000;
 
+    /**
+     * 刷新 profile。
+     * @param userId 参数 userId
+     */
     @Override
     public void refreshProfile(Long userId) {
         if (userId == null) return;
@@ -208,6 +222,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
             String pricePref = preferenceAnalysisService.analyzePricePreference(userId);
             profile.setPricePreference(pricePref);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("获取价格偏好失败: userId={}", userId, e);
         }
 
@@ -217,6 +232,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
             profile.setFrequentDishIds(frequentDishIds.stream()
                     .map(String::valueOf).collect(Collectors.joining(",")));
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("分析常点菜品失败: userId={}", userId, e);
         }
 
@@ -224,6 +240,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
         try {
             analyzeTasteFromFeedback(profile);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("分析口味偏好失败: userId={}", userId, e);
         }
 
@@ -232,6 +249,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
             profile.setPreferredDiningType(analyzePreferredDiningType(userId));
             profile.setPreferredTimeSlot(analyzePreferredTimeSlot(userId));
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("分析就餐偏好失败: userId={}", userId, e);
         }
     }
@@ -283,6 +301,21 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
     }
 
     /**
+     * 收集内容中命中的口味关键词（等价抽取，降低嵌套）。
+     *
+     * @param content 反馈内容
+     * @param keywords 关键词数组
+     * @param target 命中结果集合
+     */
+    private void collectKeywords(String content, String[] keywords, Set<String> target) {
+        for (String keyword : keywords) {
+            if (content.contains(keyword)) {
+                target.add(keyword);
+            }
+        }
+    }
+
+    /**
      * 从 AI 反馈分析口味偏好
      */
     private void analyzeTasteFromFeedback(UserProfile profile) {
@@ -302,20 +335,13 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
         String[] tasteKeywords = {"辣", "清淡", "甜", "酸", "麻", "鲜", "清淡", "重口", "素食", "海鲜"};
 
         for (AIMessageRecord feedback : feedbacks) {
-            if (feedback.getContent() != null) {
-                if ("good".equals(feedback.getFeedback())) {
-                    for (String keyword : tasteKeywords) {
-                        if (feedback.getContent().contains(keyword)) {
-                            goodTastes.add(keyword);
-                        }
-                    }
-                } else if ("bad".equals(feedback.getFeedback())) {
-                    for (String keyword : tasteKeywords) {
-                        if (feedback.getContent().contains(keyword)) {
-                            badTastes.add(keyword);
-                        }
-                    }
-                }
+            if (feedback.getContent() == null) {
+                continue;
+            }
+            if ("good".equals(feedback.getFeedback())) {
+                collectKeywords(feedback.getContent(), tasteKeywords, goodTastes);
+            } else if ("bad".equals(feedback.getFeedback())) {
+                collectKeywords(feedback.getContent(), tasteKeywords, badTastes);
             }
         }
 
@@ -340,6 +366,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
                         .map(UserPreferenceTag::getTagName).collect(Collectors.joining(",")));
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("获取品类偏好失败", e);
         }
     }
@@ -367,6 +394,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
                     .map(Map.Entry::getKey)
                     .orElse("delivery");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             return "delivery";
         }
     }
@@ -378,6 +406,7 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
         try {
             return preferenceAnalysisService.analyzeTimePreference(userId);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             return "lunch";
         }
     }

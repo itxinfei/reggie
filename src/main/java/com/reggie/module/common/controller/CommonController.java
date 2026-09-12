@@ -159,7 +159,8 @@ public class CommonController {
         String relativePath = subDir + fileName;
 
         // 打印调试信息
-        log.info("文件上传: originalFilename={}, size={} bytes, path={}", originalFilename, file.getSize(), basePath + relativePath);
+        log.info("文件上传: originalFilename={}, size={} bytes, path={}", originalFilename, file.getSize(),
+                basePath + relativePath);
         File dir = new File(basePath + subDir);
         if (!dir.exists()) {
             dir.mkdirs();
@@ -310,6 +311,7 @@ public class CommonController {
                 }
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("文件下载失败: {}", filePath, e);
             try {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "文件不存在");
@@ -325,8 +327,10 @@ public class CommonController {
     private void sendPlaceholderImage(HttpServletResponse response) throws IOException {
         String svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"200\" height=\"200\" viewBox=\"0 0 200 200\">" +
                 "<rect width=\"200\" height=\"200\" fill=\"#f0f0f0\"/>" +
-                "<text x=\"100\" y=\"90\" font-family=\"Arial\" font-size=\"14\" fill=\"#999\" text-anchor=\"middle\">No Image</text>" +
-                "<text x=\"100\" y=\"115\" font-family=\"Arial\" font-size=\"12\" fill=\"#bbb\" text-anchor=\"middle\">&#x1F5BC;</text>" +
+                "<text x=\"100\" y=\"90\" font-family=\"Arial\" font-size=\"14\" fill=\"#999\" " +
+                        "text-anchor=\"middle\">No Image</text>" +
+                "<text x=\"100\" y=\"115\" font-family=\"Arial\" font-size=\"12\" fill=\"#bbb\" " +
+                        "text-anchor=\"middle\">&#x1F5BC;</text>" +
                 "</svg>";
         response.setContentType("image/svg+xml");
         response.getWriter().write(svg);

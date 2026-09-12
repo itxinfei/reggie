@@ -32,7 +32,18 @@ public class AdminGuardAspect {
 
     // 同时拦截方法级(@annotation)与类级(@within) @RequiresAdmin。
     // 仅写 @annotation 会导致类级注解的 Controller 不被命中，非管理员可越权操作系统管理接口(P0 漏洞)。
-    @Around("@annotation(com.reggie.common.annotation.RequiresAdmin) || @within(com.reggie.common.annotation.RequiresAdmin)")
+    /**
+     * 校验 admin。
+     * @param joinPoint 参数 joinPoint
+     * @return 返回结果
+     */
+    @Around("@annotation(com.reggie.common.annotation.RequiresAdmin) || " +
+            "@within(com.reggie.common.annotation.RequiresAdmin)")
+    /**
+     * 校验 admin。
+     * @param joinPoint 参数 joinPoint
+     * @return 返回结果
+     */
     public Object checkAdmin(ProceedingJoinPoint joinPoint) throws Throwable {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes == null) {

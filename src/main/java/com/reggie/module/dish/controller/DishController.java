@@ -122,7 +122,8 @@ public class DishController {
     @Parameter(name = "status", description = "售卖状态（可选，'0'=停售 ,'1'=启售）")
     @Parameter(name = "categoryId", description = "菜品分类ID（可选）")
     @Parameter(name = "code", description = "商品码（可选，模糊查询）")
-    public R<Page<DishDto>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String name,
+    public R<Page<DishDto>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String name,
                                   @RequestParam(required = false) String status,
                                   @RequestParam(required = false) Long categoryId,
                                   @Parameter(description = "商品码（可选，模糊查询）")
@@ -155,7 +156,8 @@ public class DishController {
 
         List<Dish> records = pageInfo.getRecords();
         if (!records.isEmpty()) {
-            List<Long> categoryIds = records.stream().map(Dish::getCategoryId).filter(Objects::nonNull).collect(Collectors.toList());
+            List<Long> categoryIds = records.stream().map(Dish::getCategoryId).filter(Objects::nonNull)
+                    .collect(Collectors.toList());
             Map<Long, String> categoryMap = categoryIds.isEmpty() ? Collections.emptyMap() :
                 categoryService.listByIds(categoryIds).stream()
                     .collect(Collectors.toMap(Category::getId, Category::getName));
@@ -219,6 +221,11 @@ public class DishController {
         return R.success("修改菜品成功");
     }
 
+    /**
+     * 删除。
+     * @param ids 参数 ids
+     * @return 返回结果
+     */
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @DeleteMapping
@@ -318,7 +325,8 @@ public class DishController {
         }
 
         //批量查询分类名称
-        List<Long> categoryIds = list.stream().map(Dish::getCategoryId).filter(Objects::nonNull).collect(Collectors.toList());
+        List<Long> categoryIds = list.stream().map(Dish::getCategoryId).filter(Objects::nonNull).collect(Collectors
+                .toList());
         Map<Long, String> categoryMap = categoryIds.isEmpty() ? Collections.emptyMap() :
             categoryService.listByIds(categoryIds).stream()
                 .collect(Collectors.toMap(Category::getId, Category::getName));

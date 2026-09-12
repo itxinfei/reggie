@@ -22,12 +22,14 @@ public interface GroupBuyCampaignMapper extends BaseMapper<GroupBuyCampaign> {
     /**
      * 统计指定活动当前已参团人数
      */
-    @Select("SELECT COUNT(*) FROM group_buy_participation WHERE group_buy_id = #{campaignId} AND status IN ('JOINED','PAID')")
+    @Select("SELECT COUNT(*) FROM group_buy_participation WHERE group_buy_id = #{campaignId} AND status IN " +
+            "('JOINED','PAID')")
     int countParticipants(@Param("campaignId") Long campaignId);
 
     /**
      * 查询进行中的拼团活动
      */
-    @Select("SELECT * FROM group_buy_campaign WHERE status = 'OPEN' AND start_time <= #{now} AND end_time >= #{now} AND is_deleted = 0")
+    @Select("SELECT * FROM group_buy_campaign WHERE status = 'OPEN' AND start_time <= #{now} AND end_time >= #{now} " +
+            "AND is_deleted = 0")
     java.util.List<GroupBuyCampaign> selectActiveCampaigns(@Param("now") LocalDateTime now);
 }

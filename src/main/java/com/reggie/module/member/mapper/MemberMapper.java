@@ -67,7 +67,8 @@ public interface MemberMapper extends BaseMapper<Member> {
      */
     @Update("UPDATE member SET balance = balance + #{amount} + IFNULL(#{giftAmount}, 0), update_time = NOW() " +
             "WHERE id = #{id}")
-    int addBalance(@Param("id") Long id, @Param("amount") BigDecimal amount, @Param("giftAmount") BigDecimal giftAmount);
+    int addBalance(@Param("id") Long id, @Param("amount") BigDecimal amount,
+            @Param("giftAmount") BigDecimal giftAmount);
 
     /**
      * 按会员等级统计会员数量：返回 level_id -> 数量 的明细

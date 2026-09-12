@@ -32,18 +32,35 @@ public class GroupBuyController {
     @Autowired
     private GroupBuyService groupBuyService;
 
+    /**
+     * 创建。
+     * @param campaign 参数 campaign
+     * @return 返回结果
+     */
     @PostMapping
     @Operation(summary = "创建拼团活动")
-    public R<GroupBuyCampaign> create(@Parameter(description = "拼团活动信息", required = true) @RequestBody GroupBuyCampaign campaign) {
+    public R<GroupBuyCampaign> create(@Parameter(description = "拼团活动信息", required =
+            true) @RequestBody GroupBuyCampaign campaign) {
         return R.success(groupBuyService.createCampaign(campaign));
     }
 
+    /**
+     * 更新。
+     * @param campaign 参数 campaign
+     * @return 返回结果
+     */
     @PutMapping
     @Operation(summary = "更新拼团活动")
-    public R<GroupBuyCampaign> update(@Parameter(description = "拼团活动信息", required = true) @RequestBody GroupBuyCampaign campaign) {
+    public R<GroupBuyCampaign> update(@Parameter(description = "拼团活动信息", required =
+            true) @RequestBody GroupBuyCampaign campaign) {
         return R.success(groupBuyService.updateCampaign(campaign));
     }
 
+    /**
+     * 删除。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除拼团活动")
     @Parameter(name = "id", description = "拼团活动ID", required = true)
@@ -52,6 +69,13 @@ public class GroupBuyController {
         return R.success("删除成功");
     }
 
+    /**
+     * 分页查询。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param name 参数 name
+     * @return 返回结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询拼团活动")
     public R<Page<GroupBuyCampaign>> page(
@@ -61,6 +85,13 @@ public class GroupBuyController {
         return R.success(groupBuyService.listCampaigns(page, pageSize, name));
     }
 
+    /**
+     * 处理 join。
+     * @param campaignId 参数 campaignId
+     * @param orderId 参数 orderId
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @PostMapping("/{campaignId}/join")
     @Operation(summary = "用户加入拼团")
     @Parameter(name = "campaignId", description = "拼团活动ID", required = true)
@@ -71,6 +102,11 @@ public class GroupBuyController {
         return R.success(groupBuyService.joinGroupBuy(campaignId, orderId, userId));
     }
 
+    /**
+     * 校验。
+     * @param campaignId 参数 campaignId
+     * @return 返回结果
+     */
     @GetMapping("/{campaignId}/check")
     @Operation(summary = "检查拼团是否成团")
     @Parameter(name = "campaignId", description = "拼团活动ID", required = true)
@@ -82,6 +118,11 @@ public class GroupBuyController {
         return R.success(result);
     }
 
+    /**
+     * 处理 mark paid。
+     * @param orderId 参数 orderId
+     * @return 返回结果
+     */
     @PostMapping("/participation/{orderId}/pay")
     @Operation(summary = "标记拼团参与已支付")
     @Parameter(name = "orderId", description = "订单ID", required = true)
@@ -90,6 +131,10 @@ public class GroupBuyController {
         return R.success("标记成功");
     }
 
+    /**
+     * 处理 auto close。
+     * @return 返回结果
+     */
     @PostMapping("/auto-close")
     @Operation(summary = "定时关闭过期拼团活动")
     public R<Integer> autoClose() {

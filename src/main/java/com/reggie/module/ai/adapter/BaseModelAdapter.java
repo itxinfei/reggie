@@ -39,6 +39,14 @@ public abstract class BaseModelAdapter implements AiModelAdapter {
 
     // ==================== 模板方法 ====================
 
+    /**
+     * 处理 chat。
+     * @param messages 参数 messages
+     * @param maxTokens 参数 maxTokens
+     * @param temperature 参数 temperature
+     * @param config 参数 config
+     * @return 返回结果
+     */
     @Override
     public AIChatResponse chat(java.util.List<com.reggie.module.ai.model.AIMessage> messages,
                                 int maxTokens, double temperature, AiProviderConfig config) {
@@ -121,6 +129,7 @@ public abstract class BaseModelAdapter implements AiModelAdapter {
             }
             return readStream(es);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             return "HTTP " + getResponseCode(conn);
         }
     }
@@ -152,6 +161,7 @@ public abstract class BaseModelAdapter implements AiModelAdapter {
         try {
             return conn.getResponseCode();
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             return -1;
         }
     }

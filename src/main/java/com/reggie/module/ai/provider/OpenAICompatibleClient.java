@@ -160,6 +160,7 @@ public class OpenAICompatibleClient implements AIClient {
                         .build();
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("AI请求异常", e);
             return AIChatResponse.builder()
                     .content("AI服务暂时不可用，请稍后重试。")

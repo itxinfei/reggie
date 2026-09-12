@@ -31,6 +31,10 @@ public class SchedulingConfig implements SchedulingConfigurer {
      */
     private ScheduledExecutorService scheduler;
 
+    /**
+     * 处理 configure tasks。
+     * @param taskRegistrar 参数 taskRegistrar
+     */
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
         this.scheduler = Executors.newScheduledThreadPool(3, r -> {

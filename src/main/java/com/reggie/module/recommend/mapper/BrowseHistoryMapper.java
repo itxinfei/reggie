@@ -35,7 +35,8 @@ public interface BrowseHistoryMapper extends BaseMapper<BrowseHistory> {
      * @return 浏览记录列表
      */
     @InterceptorIgnore(tenantLine = "true")
-    @Select("SELECT * FROM user_browse_history WHERE user_id = #{userId} AND is_deleted = 0 ORDER BY create_time DESC LIMIT #{limit}")
+    @Select("SELECT * FROM user_browse_history WHERE user_id = #{userId} AND is_deleted = 0 ORDER BY create_time " +
+            "DESC LIMIT #{limit}")
     List<BrowseHistory> findRecentByUserId(@Param("userId") Long userId, @Param("limit") int limit);
 
     /**

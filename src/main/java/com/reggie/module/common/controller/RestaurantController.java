@@ -47,11 +47,13 @@ public class RestaurantController {
             Long tenantId = BaseContext.getCurrentTenantId();
             if (tenantId != null && storeService != null) {
                 StoreInfo storeInfo = storeService.findByTenantId(tenantId);
-                if (storeInfo != null && storeInfo.getBusinessHours() != null && !storeInfo.getBusinessHours().isEmpty()) {
+                if (storeInfo != null && storeInfo.getBusinessHours() != null && !storeInfo.getBusinessHours()
+                        .isEmpty()) {
                     businessHours = storeInfo.getBusinessHours();
                 }
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("读取营业时间失败，使用默认值", e);
         }
 

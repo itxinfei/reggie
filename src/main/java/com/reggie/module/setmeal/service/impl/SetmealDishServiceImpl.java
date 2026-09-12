@@ -19,6 +19,11 @@ import java.util.List;
 @Service
 public class SetmealDishServiceImpl extends ServiceImpl<SetmealDishMapper, SetmealDish> implements SetmealDishService {
 
+    /**
+     * 查询列表 by setmeal id。
+     * @param setmealId 参数 setmealId
+     * @return 返回结果
+     */
     @Override
     public List<SetmealDish> listBySetmealId(Long setmealId) {
         return this.list(new LambdaQueryWrapper<SetmealDish>()

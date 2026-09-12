@@ -125,6 +125,11 @@ public class RateLimitAspect {
      * 限流异常，用于区分 Redis 连接异常
      */
     public static class RateLimitExceededException extends RuntimeException {
+        /**
+         * 处理 super。
+         * @param message 参数 message
+         * @return 返回结果
+         */
         public RateLimitExceededException(String message) { super(message); }
     }
 

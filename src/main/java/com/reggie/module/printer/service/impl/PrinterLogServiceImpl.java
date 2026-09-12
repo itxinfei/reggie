@@ -22,6 +22,11 @@ import java.util.List;
 @Transactional(rollbackFor = Exception.class)
 public class PrinterLogServiceImpl extends ServiceImpl<PrinterLogMapper, PrinterLog> implements PrinterLogService {
 
+    /**
+     * 查询列表 by order id。
+     * @param orderId 参数 orderId
+     * @return 返回结果
+     */
     @Override
     public List<PrinterLog> listByOrderId(Long orderId) {
         // 修改点：删除冗余的手动 eq(tenantId)，由 TenantLineInnerInterceptor 统一处理
@@ -30,6 +35,14 @@ public class PrinterLogServiceImpl extends ServiceImpl<PrinterLogMapper, Printer
                 .orderByDesc(PrinterLog::getCreatedTime));
     }
 
+    /**
+     * 分页查询 query。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param printerId 参数 printerId
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Override
     public Page<PrinterLog> pageQuery(int page, int pageSize, Long printerId, Integer status) {
         // 修改点：删除冗余的手动 eq(tenantId)，由 TenantLineInnerInterceptor 统一处理

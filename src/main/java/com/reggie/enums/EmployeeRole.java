@@ -31,10 +31,20 @@ public enum EmployeeRole {
         this.desc = desc;
     }
 
+    /**
+     * 判断 admin。
+     * @param role 参数 role
+     * @return 返回结果
+     */
     public static boolean isAdmin(Integer role) {
         return role != null && role == ADMIN.getValue();
     }
 
+    /**
+     * 判断 staff。
+     * @param role 参数 role
+     * @return 返回结果
+     */
     public static boolean isStaff(Integer role) {
         return role != null && role == STAFF.getValue();
     }

@@ -29,7 +29,8 @@ public interface CashierService extends IService<CashierRecord> {
      * @param tenantId   租户ID
      * @return 收银记录列表
      */
-    List<CashierRecord> getCashierRecordList(Integer payType, LocalDateTime startDate, LocalDateTime endDate, Long tenantId);
+    List<CashierRecord> getCashierRecordList(Integer payType, LocalDateTime startDate, LocalDateTime endDate,
+            Long tenantId);
 
     /**
      * 根据订单ID获取收银记录

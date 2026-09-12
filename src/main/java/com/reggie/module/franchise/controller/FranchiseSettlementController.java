@@ -39,6 +39,12 @@ public class FranchiseSettlementController {
     @Autowired
     private FranchiseSettlementService franchiseSettlementService;
 
+    /**
+     * 生成。
+     * @param contractId 参数 contractId
+     * @param settlePeriod 参数 settlePeriod
+     * @return 返回结果
+     */
     @PostMapping("/generate")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "生成结算单", description = "按合同与周期（如 2026-08）聚合已完成订单生成分账结算单，幂等")
@@ -48,6 +54,11 @@ public class FranchiseSettlementController {
         return R.success(franchiseSettlementService.generateSettlement(contractId, settlePeriod));
     }
 
+    /**
+     * 确认。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @PutMapping("/confirm/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "确认结算单", description = "待确认 → 已确认（总部核对营业额与抽成后确认）")
@@ -56,6 +67,11 @@ public class FranchiseSettlementController {
         return R.success("确认成功");
     }
 
+    /**
+     * 设置 tle。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @PutMapping("/settle/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "完成结算", description = "已确认 → 已结算（完成抽成划转）")
@@ -64,6 +80,11 @@ public class FranchiseSettlementController {
         return R.success("结算成功");
     }
 
+    /**
+     * 获取 by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/{id}")
     @Operation(summary = "查询结算单详情")
     public R<FranchiseSettlement> getById(@Parameter(description = "结算单ID", required = true) @PathVariable Long id) {
@@ -78,6 +99,15 @@ public class FranchiseSettlementController {
         return R.success(settlement);
     }
 
+    /**
+     * 分页查询。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param settlePeriod 参数 settlePeriod
+     * @param status 参数 status
+     * @param franchiseeId 参数 franchiseeId
+     * @return 返回结果
+     */
     @GetMapping("/page")
     @Operation(summary = "结算单分页查询", description = "支持按周期/状态/加盟商筛选")
     public R<Page<FranchiseSettlement>> page(
@@ -89,6 +119,10 @@ public class FranchiseSettlementController {
         return R.success(franchiseSettlementService.pageQuery(page, pageSize, settlePeriod, status, franchiseeId));
     }
 
+    /**
+     * 处理 stats。
+     * @return 返回结果
+     */
     @GetMapping("/stats")
     @Operation(summary = "结算单统计", description = "返回总数/待确认/已确认/已结算，按当前租户聚合")
     public R<java.util.Map<String, Object>> stats() {

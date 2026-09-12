@@ -72,6 +72,11 @@ public class TenantAspect {
      */
     @Around("execution(* com.reggie.module..service.impl.*ServiceImpl.*(..)) "
             + "&& !execution(* com.reggie.module.tenant.service.impl.TenantServiceImpl.listActiveTenants(..))")
+    /**
+     * 校验 tenant context。
+     * @param pjp 参数 pjp
+     * @return 返回结果
+     */
     public Object checkTenantContext(ProceedingJoinPoint pjp) throws Throwable {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {

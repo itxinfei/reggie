@@ -79,6 +79,7 @@ public class PlatformReconcileTask {
                 try {
                     reconcileTenant(yesterday);
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.error("租户 {} 对账失败: {}", tenant.getId(), e.getMessage());
                 } finally {
                     if (originalTenantId != null) {
@@ -109,6 +110,7 @@ public class PlatformReconcileTask {
                 reconcileTaskService.reconcile(config.getPlatformType(), yesterday);
                 log.info("对账完成: platformType={}", config.getPlatformType());
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("对账失败: platformType={}", config.getPlatformType(), e);
             }
         }
@@ -136,6 +138,7 @@ public class PlatformReconcileTask {
                     .setIfAbsent(lockKey, lockValue, ttlMs, TimeUnit.MILLISECONDS);
             return Boolean.TRUE.equals(success) ? lockValue : null;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台对账] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
             return null;
         }
@@ -151,13 +154,15 @@ public class PlatformReconcileTask {
             return;
         }
         try {
-            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                 new DefaultRedisScript<Long>(luaScript, Long.class),
                 Collections.singletonList(lockKey),
                 lockValue
             );
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台对账] 释放分布式锁失败: {}", lockKey, e);
         }
     }

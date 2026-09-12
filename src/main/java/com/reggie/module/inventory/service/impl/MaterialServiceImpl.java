@@ -59,12 +59,22 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
     @Autowired
     private SupplierService supplierService;
 
+    /**
+     * 分页查询 with category。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
     @Override
     public Page<Material> pageWithCategory(int page, int pageSize) {
         Page<Material> pageInfo = PageUtils.of(page, pageSize);
         return page(pageInfo);
     }
 
+    /**
+     * 校验 warning。
+     * @return 返回结果
+     */
     @Override
     public List<Material> checkWarning() {
         LambdaQueryWrapper<Material> qw = new LambdaQueryWrapper<>();
@@ -92,6 +102,11 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         return result;
     }
 
+    /**
+     * 分页查询。
+     * @param pageInfo 参数 pageInfo
+     * @return 返回结果
+     */
     public Page<Material> page(Page<Material> pageInfo) {
         Page<Material> result = super.page(pageInfo);
         List<Material> records = result.getRecords();
@@ -101,6 +116,11 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         return result;
     }
 
+    /**
+     * 查询列表。
+     * @param queryWrapper 参数 queryWrapper
+     * @return 返回结果
+     */
     @Override
     public List<Material> list(Wrapper<Material> queryWrapper) {
         List<Material> list = super.list(queryWrapper);
@@ -368,12 +388,13 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
         // 若无法确定供应商，尝试取第一条有效食材的供应商
         if (supplierId == null) {
             for (BatchRestockDTO.RestockItem item : items) {
-                if (item.getMaterialId() != null) {
-                    Material m = getById(item.getMaterialId());
-                    if (m != null && m.getSupplierId() != null) {
-                        supplierId = m.getSupplierId();
-                        break;
-                    }
+                if (item.getMaterialId() == null) {
+                    continue;
+                }
+                Material m = getById(item.getMaterialId());
+                if (m != null && m.getSupplierId() != null) {
+                    supplierId = m.getSupplierId();
+                    break;
                 }
             }
             if (supplierId == null) {

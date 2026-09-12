@@ -31,12 +31,21 @@ import java.util.stream.Collectors;
 public class DishMaterialServiceImpl extends ServiceImpl<DishMaterialMapper, DishMaterial>
         implements DishMaterialService {
 
+    /**
+     * 查询列表 by dish id。
+     * @param dishId 参数 dishId
+     * @return 返回结果
+     */
     @Override
     public List<DishMaterial> listByDishId(Long dishId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         return baseMapper.listByDishId(dishId, tenantId);
     }
 
+    /**
+     * 保存 material。
+     * @param dto 参数 dto
+     */
     @Override
     public void saveMaterial(DishMaterialSaveDTO dto) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -62,6 +71,11 @@ public class DishMaterialServiceImpl extends ServiceImpl<DishMaterialMapper, Dis
                 dto.getDishId(), dto.getMaterialId(), dto.getUsageQty());
     }
 
+    /**
+     * 更新 material。
+     * @param id 参数 id
+     * @param dto 参数 dto
+     */
     @Override
     public void updateMaterial(Long id, DishMaterialSaveDTO dto) {
         DishMaterial material = getById(id);
@@ -92,6 +106,10 @@ public class DishMaterialServiceImpl extends ServiceImpl<DishMaterialMapper, Dis
         log.info("更新菜品食材关联，id={}", id);
     }
 
+    /**
+     * 删除 material。
+     * @param id 参数 id
+     */
     @Override
     public void deleteMaterial(Long id) {
         DishMaterial material = getById(id);
@@ -106,6 +124,10 @@ public class DishMaterialServiceImpl extends ServiceImpl<DishMaterialMapper, Dis
         log.info("删除菜品食材关联，id={}", id);
     }
 
+    /**
+     * 批量处理 save。
+     * @param batchDTO 参数 batchDTO
+     */
     @Override
     public void batchSave(DishMaterialBatchDTO batchDTO) {
         Long tenantId = BaseContext.getCurrentTenantId();

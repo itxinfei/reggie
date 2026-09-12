@@ -61,8 +61,10 @@ public class PlatformOrderPullController {
     @RequireEmployee
     @GetMapping("/pull")
     @Operation(summary = "从外卖平台拉单并落库")
-    public R<Map<String, Object>> pull(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
-                                       @Parameter(description = "回溯时间窗（分钟），默认30", required = true) @RequestParam(defaultValue = "30") int minutes) {
+    public R<Map<String, Object>> pull(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required =
+            true) @RequestParam String platformType,
+                                       @Parameter(description = "回溯时间窗（分钟），默认30", required =
+                                               true) @RequestParam(defaultValue = "30") int minutes) {
         if (BaseContext.getCurrentTenantId() == null) {
             return R.error("缺少租户上下文");
         }
@@ -94,9 +96,11 @@ public class PlatformOrderPullController {
     @RequireEmployee
     @PostMapping("/pushStatus")
     @Operation(summary = "回传订单状态到外卖平台")
-    public R<Void> pushStatus(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
+    public R<Void> pushStatus(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required =
+            true) @RequestParam String platformType,
                               @Parameter(description = "平台订单号", required = true) @RequestParam String platformOrderId,
-                              @Parameter(description = "动作（accept-接单/reject-拒单/prepare-出餐/complete-完成/cancel-取消）", required = true) @RequestParam String action) {
+                              @Parameter(description = "动作（accept-接单/reject-拒单/prepare-出餐/complete-完成/cancel-取消）",
+                                      required = true) @RequestParam String action) {
         if (BaseContext.getCurrentTenantId() == null) {
             return R.error("缺少租户上下文");
         }
@@ -110,6 +114,7 @@ public class PlatformOrderPullController {
         } catch (CustomException e) {
             return R.error(e.getMessage());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台回传] 状态回传失败: platformType={}, orderId={}, action={}",
                     platformType, platformOrderId, action, e);
             return R.error("状态回传失败：" + e.getMessage());

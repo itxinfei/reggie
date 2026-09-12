@@ -22,6 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(rollbackFor = Exception.class)
 public class EmployeeServiceImpl extends ServiceImpl<EmployeeMapper, Employee> implements EmployeeService {
 
+    /**
+     * 获取 by username。
+     * @param username 参数 username
+     * @return 返回结果
+     */
     @Override
     public Employee getByUsername(String username) {
         return this.list(new LambdaQueryWrapper<Employee>()
@@ -31,6 +36,12 @@ public class EmployeeServiceImpl extends ServiceImpl<EmployeeMapper, Employee> i
                 .stream().findFirst().orElse(null);
     }
 
+    /**
+     * 登录。
+     * @param username 参数 username
+     * @param password 参数 password
+     * @return 返回结果
+     */
     @Override
     public Employee login(String username, String password) {
         Employee employee = this.getByUsername(username);

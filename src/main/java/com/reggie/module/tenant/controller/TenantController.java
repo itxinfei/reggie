@@ -85,6 +85,7 @@ public class TenantController {
             log.warn("租户注册失败：{}", e.getMessage(), e);
             return R.error("注册失败：" + e.getMessage());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("租户注册异常", e);
             return R.error("注册失败，请稍后重试");
         }

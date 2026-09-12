@@ -28,6 +28,15 @@ public class NotificationRecordServiceImpl
         extends ServiceImpl<NotificationRecordMapper, NotificationRecord>
         implements NotificationRecordService {
 
+    /**
+     * 分页查询 records。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param bizType 参数 bizType
+     * @param status 参数 status
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Page<NotificationRecord> pageRecords(int page, int pageSize, String bizType,
                                                  Integer status, Long tenantId) {
@@ -47,11 +56,24 @@ public class NotificationRecordServiceImpl
         return pageInfo;
     }
 
+    /**
+     * 处理 stat between。
+     * @param start 参数 start
+     * @param end 参数 end
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> statBetween(LocalDateTime start, LocalDateTime end, Long tenantId) {
         return this.baseMapper.statBetween(start, end, tenantId);
     }
 
+    /**
+     * 获取 record with tenant check。
+     * @param id 参数 id
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getRecordWithTenantCheck(Long id, Long tenantId) {
         NotificationRecord record = this.getById(id);

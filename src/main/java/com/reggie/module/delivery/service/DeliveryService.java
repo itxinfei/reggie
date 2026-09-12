@@ -35,7 +35,8 @@ public interface DeliveryService {
      * @param endDate   结束日期
      * @return 分页订单列表
      */
-    Page<DeliveryOrder> pageOrders(int page, int pageSize, String platform, String status, String startDate, String endDate);
+    Page<DeliveryOrder> pageOrders(int page, int pageSize, String platform, String status, String startDate,
+            String endDate);
 
     /**
      * 接受第三方平台订单（PENDING → ACCEPTED）

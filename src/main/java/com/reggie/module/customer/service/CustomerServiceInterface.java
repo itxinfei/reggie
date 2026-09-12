@@ -151,7 +151,8 @@ public interface CustomerServiceInterface extends IService<CsSession> {
      * @param compensationAmount Compensation amount
      * @return Success or not
      */
-    boolean handleComplaint(Long id, Long handlerId, String handlerName, String handleResult, BigDecimal compensationAmount);
+    boolean handleComplaint(Long id, Long handlerId, String handlerName, String handleResult,
+            BigDecimal compensationAmount);
 
     /**
      * Close complaint

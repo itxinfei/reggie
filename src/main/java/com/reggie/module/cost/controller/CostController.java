@@ -46,6 +46,10 @@ public class CostController {
 
     // ==================== 菜品成本管理 ====================
 
+    /**
+     * 获取 dish cost list。
+     * @return 返回结果
+     */
     @GetMapping("/dish/list")
     @Operation(summary = "获取菜品成本列表")
     public R<List<DishCost>> getDishCostList() {
@@ -54,14 +58,25 @@ public class CostController {
         return R.success(list);
     }
 
+    /**
+     * 获取 dish cost by dish id。
+     * @param dishId 参数 dishId
+     * @return 返回结果
+     */
     @GetMapping("/dish/{dishId}")
     @Operation(summary = "根据菜品ID获取成本")
-    public R<DishCost> getDishCostByDishId(@Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
+    public R<DishCost> getDishCostByDishId(@Parameter(description = "菜品ID", required =
+            true) @PathVariable Long dishId) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         DishCost dishCost = costService.getDishCostByDishId(dishId, tenantId);
         return R.success(dishCost);
     }
 
+    /**
+     * 保存 dish cost。
+     * @param dishCost 参数 dishCost
+     * @return 返回结果
+     */
     @PostMapping("/dish")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存菜品成本")
@@ -72,16 +87,27 @@ public class CostController {
         return success ? R.success("保存成功") : R.error("保存失败");
     }
 
+    /**
+     * 更新 dish cost。
+     * @param dishCost 参数 dishCost
+     * @return 返回结果
+     */
     @PutMapping("/dish")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新菜品成本")
-    public R<String> updateDishCost(@Parameter(description = "菜品成本信息", required = true) @RequestBody DishCost dishCost) {
+    public R<String> updateDishCost(@Parameter(description = "菜品成本信息", required =
+            true) @RequestBody DishCost dishCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         dishCost.setTenantId(tenantId);
         boolean success = costService.saveOrUpdateDishCost(dishCost);
         return success ? R.success("更新成功") : R.error("更新失败");
     }
 
+    /**
+     * 删除 dish cost。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/dish/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除菜品成本")
@@ -90,10 +116,16 @@ public class CostController {
         return success ? R.success("删除成功") : R.error("删除失败");
     }
 
+    /**
+     * 批量处理 update dish cost。
+     * @param dishCosts 参数 dishCosts
+     * @return 返回结果
+     */
     @PostMapping("/dish/batch")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量更新菜品成本")
-    public R<String> batchUpdateDishCost(@Parameter(description = "菜品成本列表", required = true) @RequestBody List<DishCost> dishCosts) {
+    public R<String> batchUpdateDishCost(@Parameter(description = "菜品成本列表", required =
+            true) @RequestBody List<DishCost> dishCosts) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         for (DishCost dishCost : dishCosts) {
             dishCost.setTenantId(tenantId);
@@ -104,21 +136,36 @@ public class CostController {
 
     // ==================== 成本记录管理 ====================
 
+    /**
+     * 获取 cost record list。
+     * @param costType 参数 costType
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @GetMapping("/record/list")
     @Operation(summary = "获取成本记录列表")
     public R<List<CostRecord>> getCostRecordList(
                         @Parameter(description = "成本类型") @RequestParam(required = false) Integer costType,
-            @Parameter(description = "开始日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "结束日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+            @Parameter(description = "开始日期") @RequestParam(required = false) @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期") @RequestParam(required = false) @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         List<CostRecord> list = costService.getCostRecordList(costType, startDate, endDate, tenantId);
         return R.success(list);
     }
 
+    /**
+     * 保存 cost record。
+     * @param costRecord 参数 costRecord
+     * @return 返回结果
+     */
     @PostMapping("/record")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存成本记录")
-    public R<String> saveCostRecord(@Parameter(description = "成本记录信息", required = true) @RequestBody CostRecord costRecord) {
+    public R<String> saveCostRecord(@Parameter(description = "成本记录信息", required =
+            true) @RequestBody CostRecord costRecord) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         costRecord.setTenantId(tenantId);
         costRecord.setCreateUser(com.reggie.common.BaseContext.getCurrentId());
@@ -126,6 +173,11 @@ public class CostController {
         return success ? R.success("保存成功") : R.error("保存失败");
     }
 
+    /**
+     * 删除 cost record。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/record/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除成本记录")
@@ -136,35 +188,58 @@ public class CostController {
 
     // ==================== 人工成本管理 ====================
 
+    /**
+     * 获取 labor cost list。
+     * @param costMonth 参数 costMonth
+     * @return 返回结果
+     */
     @GetMapping("/labor/list")
     @Operation(summary = "获取人工成本列表")
     public R<List<LaborCost>> getLaborCostList(
-                        @Parameter(description = "成本月份") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") LocalDate costMonth) {
+                        @Parameter(description = "成本月份") @RequestParam(required = false) @DateTimeFormat(pattern =
+                                "yyyy-MM") LocalDate costMonth) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         List<LaborCost> list = costService.getLaborCostList(costMonth, tenantId);
         return R.success(list);
     }
 
+    /**
+     * 保存 labor cost。
+     * @param laborCost 参数 laborCost
+     * @return 返回结果
+     */
     @PostMapping("/labor")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存人工成本")
-    public R<String> saveLaborCost(@Parameter(description = "人工成本信息", required = true) @RequestBody LaborCost laborCost) {
+    public R<String> saveLaborCost(@Parameter(description = "人工成本信息", required =
+            true) @RequestBody LaborCost laborCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         laborCost.setTenantId(tenantId);
         boolean success = costService.saveOrUpdateLaborCost(laborCost);
         return success ? R.success("保存成功") : R.error("保存失败");
     }
 
+    /**
+     * 更新 labor cost。
+     * @param laborCost 参数 laborCost
+     * @return 返回结果
+     */
     @PutMapping("/labor")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新人工成本")
-    public R<String> updateLaborCost(@Parameter(description = "人工成本信息", required = true) @RequestBody LaborCost laborCost) {
+    public R<String> updateLaborCost(@Parameter(description = "人工成本信息", required =
+            true) @RequestBody LaborCost laborCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         laborCost.setTenantId(tenantId);
         boolean success = costService.saveOrUpdateLaborCost(laborCost);
         return success ? R.success("更新成功") : R.error("更新失败");
     }
 
+    /**
+     * 删除 labor cost。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/labor/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除人工成本")
@@ -173,10 +248,16 @@ public class CostController {
         return success ? R.success("删除成功") : R.error("删除失败");
     }
 
+    /**
+     * 批量处理 save labor cost。
+     * @param laborCosts 参数 laborCosts
+     * @return 返回结果
+     */
     @PostMapping("/labor/batch")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量保存人工成本")
-    public R<String> batchSaveLaborCost(@Parameter(description = "人工成本列表", required = true) @RequestBody List<LaborCost> laborCosts) {
+    public R<String> batchSaveLaborCost(@Parameter(description = "人工成本列表", required =
+            true) @RequestBody List<LaborCost> laborCosts) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         for (LaborCost laborCost : laborCosts) {
             laborCost.setTenantId(tenantId);
@@ -187,37 +268,63 @@ public class CostController {
 
     // ==================== 其他成本管理 ====================
 
+    /**
+     * 获取 other cost list。
+     * @param costType 参数 costType
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @GetMapping("/other/list")
     @Operation(summary = "获取其他成本列表")
     public R<List<OtherCost>> getOtherCostList(
                         @Parameter(description = "成本类型") @RequestParam(required = false) Integer costType,
-            @Parameter(description = "开始日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "结束日期") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+            @Parameter(description = "开始日期") @RequestParam(required = false) @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期") @RequestParam(required = false) @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         List<OtherCost> list = costService.getOtherCostList(costType, startDate, endDate, tenantId);
         return R.success(list);
     }
 
+    /**
+     * 保存 other cost。
+     * @param otherCost 参数 otherCost
+     * @return 返回结果
+     */
     @PostMapping("/other")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存其他成本")
-    public R<String> saveOtherCost(@Parameter(description = "其他成本信息", required = true) @RequestBody OtherCost otherCost) {
+    public R<String> saveOtherCost(@Parameter(description = "其他成本信息", required =
+            true) @RequestBody OtherCost otherCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         otherCost.setTenantId(tenantId);
         boolean success = costService.saveOrUpdateOtherCost(otherCost);
         return success ? R.success("保存成功") : R.error("保存失败");
     }
 
+    /**
+     * 更新 other cost。
+     * @param otherCost 参数 otherCost
+     * @return 返回结果
+     */
     @PutMapping("/other")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新其他成本")
-    public R<String> updateOtherCost(@Parameter(description = "其他成本信息", required = true) @RequestBody OtherCost otherCost) {
+    public R<String> updateOtherCost(@Parameter(description = "其他成本信息", required =
+            true) @RequestBody OtherCost otherCost) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         otherCost.setTenantId(tenantId);
         boolean success = costService.saveOrUpdateOtherCost(otherCost);
         return success ? R.success("更新成功") : R.error("更新失败");
     }
 
+    /**
+     * 删除 other cost。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/other/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除其他成本")
@@ -228,36 +335,62 @@ public class CostController {
 
     // ==================== 成本统计分析 ====================
 
+    /**
+     * 获取 cost summary。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @GetMapping("/summary")
     @Operation(summary = "获取成本汇总统计")
     public R<Map<String, Object>> getCostSummary(
-                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern =
+                                "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         Map<String, Object> summary = costService.getCostSummary(startDate, endDate, tenantId);
         return R.success(summary);
     }
 
+    /**
+     * 获取 cost trend。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @GetMapping("/trend")
     @Operation(summary = "获取成本趋势分析")
     public R<Map<String, Object>> getCostTrend(
-                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern =
+                                "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         Map<String, Object> trend = costService.getCostTrend(startDate, endDate, tenantId);
         return R.success(trend);
     }
 
+    /**
+     * 获取 cost structure。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @GetMapping("/structure")
     @Operation(summary = "获取成本结构分析")
     public R<Map<String, Object>> getCostStructure(
-                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern =
+                                "yyyy-MM-dd") LocalDate startDate,
             @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         Map<String, Object> structure = costService.getCostStructure(startDate, endDate, tenantId);
         return R.success(structure);
     }
 
+    /**
+     * 获取 dish cost ranking。
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
     @GetMapping("/dish/ranking")
     @Operation(summary = "获取菜品成本排行")
     public R<List<Map<String, Object>>> getDishCostRanking(
@@ -267,14 +400,25 @@ public class CostController {
         return R.success(ranking);
     }
 
+    /**
+     * 计算 profit rate。
+     * @param dishId 参数 dishId
+     * @return 返回结果
+     */
     @GetMapping("/dish/profit-rate/{dishId}")
     @Operation(summary = "计算菜品毛利率")
-    public R<BigDecimal> calculateProfitRate(@Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
+    public R<BigDecimal> calculateProfitRate(@Parameter(description = "菜品ID", required =
+            true) @PathVariable Long dishId) {
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         BigDecimal profitRate = costService.calculateProfitRate(dishId, tenantId);
         return R.success(profitRate);
     }
 
+    /**
+     * 获取 cost alert。
+     * @param threshold 参数 threshold
+     * @return 返回结果
+     */
     @GetMapping("/alert")
     @Operation(summary = "获取成本预警列表")
     public R<List<Map<String, Object>>> getCostAlert(

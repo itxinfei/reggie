@@ -44,6 +44,12 @@ public class CustomerServiceController {
 
     // ==================== Session Management ====================
 
+    /**
+     * 创建 session。
+     * @param sessionType 参数 sessionType
+     * @param orderId 参数 orderId
+     * @return 返回结果
+     */
     @PostMapping("/session/create")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "创建客服会话")
@@ -57,6 +63,11 @@ public class CustomerServiceController {
         return R.success(session);
     }
 
+    /**
+     * 获取 session list。
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @GetMapping("/session/list")
     @Operation(summary = "查询会话列表")
     public R<List<CsSession>> getSessionList(
@@ -66,6 +77,11 @@ public class CustomerServiceController {
         return R.success(list);
     }
 
+    /**
+     * 获取 session by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/session/{id}")
     @Operation(summary = "查询会话详情")
     public R<CsSession> getSessionById(@Parameter(description = "客服会话ID", required = true) @PathVariable Long id) {
@@ -73,6 +89,13 @@ public class CustomerServiceController {
         return R.success(session);
     }
 
+    /**
+     * 分配 agent。
+     * @param id 参数 id
+     * @param agentId 参数 agentId
+     * @param agentName 参数 agentName
+     * @return 返回结果
+     */
     @PostMapping("/session/{id}/assign")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "分配客服")
@@ -84,6 +107,13 @@ public class CustomerServiceController {
         return success ? R.success("Agent assigned") : R.error("Assignment failed");
     }
 
+    /**
+     * 关闭 session。
+     * @param id 参数 id
+     * @param rating 参数 rating
+     * @param feedback 参数 feedback
+     * @return 返回结果
+     */
     @PostMapping("/session/{id}/close")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "关闭会话")
@@ -97,29 +127,52 @@ public class CustomerServiceController {
 
     // ==================== Message Management ====================
 
+    /**
+     * 发送 message。
+     * @param sessionId 参数 sessionId
+     * @param senderType 参数 senderType
+     * @param messageType 参数 messageType
+     * @param content 参数 content
+     * @param imageUrl 参数 imageUrl
+     * @return 返回结果
+     */
     @PostMapping("/message/send")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "发送消息")
     public R<CsMessage> sendMessage(
                         @Parameter(description = "客服会话ID", required = true) @RequestParam Long sessionId,
             @Parameter(description = "发送方类型：1-用户 2-客服", required = true) @RequestParam Integer senderType,
-            @Parameter(description = "消息类型：1-文本 2-图片", required = false) @RequestParam(defaultValue = "1") Integer messageType,
+            @Parameter(description = "消息类型：1-文本 2-图片", required = false) @RequestParam(defaultValue =
+                    "1") Integer messageType,
             @Parameter(description = "消息内容", required = true) @RequestParam String content,
             @Parameter(description = "图片URL（可选）") @RequestParam(required = false) String imageUrl) {
         Long senderId = BaseContext.getCurrentId();
         String senderName = senderType == 1 ? "User" : "Agent";
         Long tenantId = BaseContext.getCurrentTenantId();
-        CsMessage message = customerService.sendMessage(sessionId, senderType, senderId, senderName, messageType, content, imageUrl, tenantId);
+        CsMessage message = customerService.sendMessage(sessionId, senderType, senderId, senderName, messageType,
+                content, imageUrl, tenantId);
         return R.success(message);
     }
 
+    /**
+     * 获取 session messages。
+     * @param sessionId 参数 sessionId
+     * @return 返回结果
+     */
     @GetMapping("/message/list/{sessionId}")
     @Operation(summary = "查询会话消息")
-    public R<List<CsMessage>> getSessionMessages(@Parameter(description = "客服会话ID", required = true) @PathVariable Long sessionId) {
+    public R<List<CsMessage>> getSessionMessages(@Parameter(description = "客服会话ID", required =
+            true) @PathVariable Long sessionId) {
         List<CsMessage> messages = customerService.getSessionMessages(sessionId);
         return R.success(messages);
     }
 
+    /**
+     * 获取 unread message count。
+     * @param sessionId 参数 sessionId
+     * @param userType 参数 userType
+     * @return 返回结果
+     */
     @GetMapping("/message/unread/{sessionId}")
     @Operation(summary = "查询未读消息数")
     public R<Integer> getUnreadMessageCount(
@@ -129,6 +182,12 @@ public class CustomerServiceController {
         return R.success(count);
     }
 
+    /**
+     * 处理 mark messages as read。
+     * @param sessionId 参数 sessionId
+     * @param userType 参数 userType
+     * @return 返回结果
+     */
     @PostMapping("/message/read/{sessionId}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "标记消息已读")
@@ -141,10 +200,16 @@ public class CustomerServiceController {
 
     // ==================== Complaint Management ====================
 
+    /**
+     * 创建 complaint。
+     * @param complaint 参数 complaint
+     * @return 返回结果
+     */
     @PostMapping("/complaint/create")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "创建投诉")
-    public R<Complaint> createComplaint(@Parameter(description = "投诉信息", required = true) @Valid @RequestBody Complaint complaint) {
+    public R<Complaint> createComplaint(@Parameter(description = "投诉信息", required =
+            true) @Valid @RequestBody Complaint complaint) {
         Long userId = BaseContext.getCurrentId();
         Long tenantId = BaseContext.getCurrentTenantId();
         complaint.setUserId(userId);
@@ -153,6 +218,12 @@ public class CustomerServiceController {
         return R.success(created);
     }
 
+    /**
+     * 获取 complaint list。
+     * @param status 参数 status
+     * @param type 参数 type
+     * @return 返回结果
+     */
     @GetMapping("/complaint/list")
     @Operation(summary = "查询投诉列表")
     public R<List<Complaint>> getComplaintList(
@@ -163,6 +234,11 @@ public class CustomerServiceController {
         return R.success(list);
     }
 
+    /**
+     * 获取 complaint by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/complaint/{id}")
     @Operation(summary = "查询投诉详情")
     public R<Complaint> getComplaintById(@Parameter(description = "投诉ID", required = true) @PathVariable Long id) {
@@ -170,6 +246,13 @@ public class CustomerServiceController {
         return R.success(complaint);
     }
 
+    /**
+     * 处理 complaint。
+     * @param id 参数 id
+     * @param handleResult 参数 handleResult
+     * @param compensationAmount 参数 compensationAmount
+     * @return 返回结果
+     */
     @PostMapping("/complaint/{id}/handle")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "处理投诉")
@@ -183,6 +266,11 @@ public class CustomerServiceController {
         return success ? R.success("Complaint handled") : R.error("Handle failed");
     }
 
+    /**
+     * 关闭 complaint。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @PostMapping("/complaint/{id}/close")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "关闭投诉")
@@ -191,6 +279,13 @@ public class CustomerServiceController {
         return success ? R.success("Complaint closed") : R.error("Close failed");
     }
 
+    /**
+     * 处理 rate complaint。
+     * @param id 参数 id
+     * @param satisfaction 参数 satisfaction
+     * @param feedback 参数 feedback
+     * @return 返回结果
+     */
     @PostMapping("/complaint/{id}/rate")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "评价投诉处理")
@@ -204,32 +299,57 @@ public class CustomerServiceController {
 
     // ==================== Statistics ====================
 
+    /**
+     * 获取 customer service statistics。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @GetMapping("/statistics")
     @Operation(summary = "客服服务统计")
     public R<Map<String, Object>> getCustomerServiceStatistics(
-                        @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+                        @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern =
+                                "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = customerService.getCustomerServiceStatistics(startDate, endDate, tenantId);
         return R.success(statistics);
     }
 
+    /**
+     * 获取 complaint statistics。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @GetMapping("/complaint/statistics")
     @Operation(summary = "投诉统计")
     public R<Map<String, Object>> getComplaintStatistics(
-                        @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+                        @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern =
+                                "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = customerService.getComplaintStatistics(startDate, endDate, tenantId);
         return R.success(statistics);
     }
 
+    /**
+     * 获取 agent workload。
+     * @param agentId 参数 agentId
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @GetMapping("/agent/{agentId}/workload")
     @Operation(summary = "客服工作量统计")
     public R<Map<String, Object>> getAgentWorkload(
             @Parameter(description = "客服ID", required = true) @PathVariable Long agentId,
-            @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+            @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Map<String, Object> workload = customerService.getAgentWorkload(agentId, startDate, endDate);
         return R.success(workload);
     }

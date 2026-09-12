@@ -93,11 +93,15 @@ public class AiProviderManager implements AIClient {
     /** 最近一次重新加载的时间戳，用于避免高频 reload */
     private volatile long lastReloadTime = 0L;
 
+    /**
+     * 初始化。
+     */
     @PostConstruct
     public void init() {
         try {
             reloadConfig();
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("AI供应商配置加载失败（可能是测试环境缺少数据表），已跳过。错误", e);
             this.activeConfig = null;
         }
@@ -173,6 +177,13 @@ public class AiProviderManager implements AIClient {
 
     // ==================== AIClient 接口实现 ====================
 
+    /**
+     * 处理 chat。
+     * @param messages 参数 messages
+     * @param maxTokens 参数 maxTokens
+     * @param temperature 参数 temperature
+     * @return 返回结果
+     */
     @Override
     public AIChatResponse chat(List<AIMessage> messages, int maxTokens, double temperature) {
         AiProviderConfig config = getActiveConfig();
@@ -283,6 +294,7 @@ public class AiProviderManager implements AIClient {
             try {
                 return adapter.chatStream(messages, maxTokens, temperature, config, callback);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("真流式失败，降级为分块流式: provider={}", config.getProviderCode(), e);
             }
         }
@@ -314,12 +326,20 @@ public class AiProviderManager implements AIClient {
         return result;
     }
 
+    /**
+     * 获取 provider name。
+     * @return 返回结果
+     */
     @Override
     public String getProviderName() {
         AiProviderConfig config = getActiveConfig();
         return config != null ? config.getProviderCode() : aiConfig.getProvider();
     }
 
+    /**
+     * 获取 default model。
+     * @return 返回结果
+     */
     @Override
     public String getDefaultModel() {
         AiProviderConfig config = getActiveConfig();

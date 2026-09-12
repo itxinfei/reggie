@@ -40,6 +40,15 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
 
     // ==================== Session Management ====================
 
+    /**
+     * 创建 session。
+     * @param userId 参数 userId
+     * @param userName 参数 userName
+     * @param sessionType 参数 sessionType
+     * @param orderId 参数 orderId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CsSession createSession(Long userId, String userName, Integer sessionType, Long orderId, Long tenantId) {
@@ -58,6 +67,12 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         return session;
     }
 
+    /**
+     * 获取 session list。
+     * @param status 参数 status
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<CsSession> getSessionList(Integer status, Long tenantId) {
         LambdaQueryWrapper<CsSession> qw = new LambdaQueryWrapper<>();
@@ -71,11 +86,23 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         return sessionMapper.selectList(qw);
     }
 
+    /**
+     * 获取 session by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     public CsSession getSessionById(Long id) {
         return sessionMapper.selectById(id);
     }
 
+    /**
+     * 分配 agent。
+     * @param sessionId 参数 sessionId
+     * @param agentId 参数 agentId
+     * @param agentName 参数 agentName
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean assignAgent(Long sessionId, Long agentId, String agentName) {
@@ -93,6 +120,13 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         return sessionMapper.updateById(session) > 0;
     }
 
+    /**
+     * 关闭 session。
+     * @param sessionId 参数 sessionId
+     * @param rating 参数 rating
+     * @param feedback 参数 feedback
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean closeSession(Long sessionId, Integer rating, String feedback) {
@@ -112,6 +146,18 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
 
     // ==================== Message Management ====================
 
+    /**
+     * 发送 message。
+     * @param sessionId 参数 sessionId
+     * @param senderType 参数 senderType
+     * @param senderId 参数 senderId
+     * @param senderName 参数 senderName
+     * @param messageType 参数 messageType
+     * @param content 参数 content
+     * @param imageUrl 参数 imageUrl
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CsMessage sendMessage(Long sessionId, Integer senderType, Long senderId, String senderName,
@@ -132,6 +178,11 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         return message;
     }
 
+    /**
+     * 获取 session messages。
+     * @param sessionId 参数 sessionId
+     * @return 返回结果
+     */
     @Override
     public List<CsMessage> getSessionMessages(Long sessionId) {
         LambdaQueryWrapper<CsMessage> qw = new LambdaQueryWrapper<>();
@@ -140,6 +191,12 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         return messageMapper.selectList(qw);
     }
 
+    /**
+     * 获取 unread message count。
+     * @param sessionId 参数 sessionId
+     * @param userType 参数 userType
+     * @return 返回结果
+     */
     @Override
     public int getUnreadMessageCount(Long sessionId, Integer userType) {
         LambdaQueryWrapper<CsMessage> qw = new LambdaQueryWrapper<>();
@@ -154,6 +211,12 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         return messageMapper.selectCount(qw).intValue();
     }
 
+    /**
+     * 处理 mark messages as read。
+     * @param sessionId 参数 sessionId
+     * @param userType 参数 userType
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean markMessagesAsRead(Long sessionId, Integer userType) {
@@ -173,6 +236,11 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
 
     // ==================== Complaint Management ====================
 
+    /**
+     * 创建 complaint。
+     * @param complaint 参数 complaint
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Complaint createComplaint(Complaint complaint) {
@@ -185,6 +253,13 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         return complaint;
     }
 
+    /**
+     * 获取 complaint list。
+     * @param status 参数 status
+     * @param type 参数 type
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Complaint> getComplaintList(Integer status, Integer type, Long tenantId) {
         LambdaQueryWrapper<Complaint> qw = new LambdaQueryWrapper<>();
@@ -201,14 +276,29 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         return complaintMapper.selectList(qw);
     }
 
+    /**
+     * 获取 complaint by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     public Complaint getComplaintById(Long id) {
         return complaintMapper.selectById(id);
     }
 
+    /**
+     * 处理 complaint。
+     * @param id 参数 id
+     * @param handlerId 参数 handlerId
+     * @param handlerName 参数 handlerName
+     * @param handleResult 参数 handleResult
+     * @param compensationAmount 参数 compensationAmount
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean handleComplaint(Long id, Long handlerId, String handlerName, String handleResult, BigDecimal compensationAmount) {
+    public boolean handleComplaint(Long id, Long handlerId, String handlerName, String handleResult,
+            BigDecimal compensationAmount) {
         Complaint complaint = complaintMapper.selectById(id);
         if (complaint == null) {
             return false;
@@ -225,6 +315,11 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         return complaintMapper.updateById(complaint) > 0;
     }
 
+    /**
+     * 关闭 complaint。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean closeComplaint(Long id) {
@@ -239,6 +334,13 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         return complaintMapper.updateById(complaint) > 0;
     }
 
+    /**
+     * 处理 rate complaint。
+     * @param id 参数 id
+     * @param satisfaction 参数 satisfaction
+     * @param feedback 参数 feedback
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean rateComplaint(Long id, Integer satisfaction, String feedback) {
@@ -256,8 +358,16 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
 
     // ==================== Statistics ====================
 
+    /**
+     * 获取 customer service statistics。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    public Map<String, Object> getCustomerServiceStatistics(LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
+    public Map<String, Object> getCustomerServiceStatistics(LocalDateTime startDate, LocalDateTime endDate,
+            Long tenantId) {
         Map<String, Object> result = new HashMap<>();
 
         LambdaQueryWrapper<CsSession> sessionQw = new LambdaQueryWrapper<>();
@@ -292,18 +402,21 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
             }
 
             if (session.getFirstResponseTime() != null && session.getCreateTime() != null) {
-                long responseTime = java.time.Duration.between(session.getCreateTime(), session.getFirstResponseTime()).toMinutes();
+                long responseTime = java.time.Duration.between(session.getCreateTime(), session.getFirstResponseTime())
+                        .toMinutes();
                 totalResponseTime += responseTime;
                 responseCount++;
             }
         }
 
         BigDecimal avgResponseTime = responseCount > 0 ?
-                new BigDecimal(totalResponseTime).divide(new BigDecimal(responseCount), 1, java.math.RoundingMode.HALF_UP) :
+                new BigDecimal(totalResponseTime).divide(new BigDecimal(responseCount), 1, java.math.RoundingMode
+                        .HALF_UP) :
                 BigDecimal.ZERO;
 
         BigDecimal avgSatisfaction = ratingCount > 0 ?
-                new BigDecimal(totalSatisfaction).divide(new BigDecimal(ratingCount), 1, java.math.RoundingMode.HALF_UP) :
+                new BigDecimal(totalSatisfaction).divide(new BigDecimal(ratingCount), 1, java.math.RoundingMode
+                        .HALF_UP) :
                 BigDecimal.ZERO;
 
         result.put("totalSessions", totalSessions);
@@ -315,6 +428,13 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         return result;
     }
 
+    /**
+     * 获取 complaint statistics。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getComplaintStatistics(LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -373,6 +493,13 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         return result;
     }
 
+    /**
+     * 获取 agent workload。
+     * @param agentId 参数 agentId
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getAgentWorkload(Long agentId, LocalDateTime startDate, LocalDateTime endDate) {
         Map<String, Object> result = new HashMap<>();
@@ -403,7 +530,8 @@ public class CustomerServiceServiceImpl extends ServiceImpl<CsSessionMapper, CsS
         }
 
         BigDecimal avgSatisfaction = ratingCount > 0 ?
-                new BigDecimal(totalSatisfaction).divide(new BigDecimal(ratingCount), 1, java.math.RoundingMode.HALF_UP) :
+                new BigDecimal(totalSatisfaction).divide(new BigDecimal(ratingCount), 1, java.math.RoundingMode
+                        .HALF_UP) :
                 BigDecimal.ZERO;
 
         result.put("agentId", agentId);

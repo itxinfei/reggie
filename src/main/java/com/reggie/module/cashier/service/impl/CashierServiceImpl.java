@@ -93,8 +93,17 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
 
     // ==================== 收银记录管理 ====================
 
+    /**
+     * 获取 cashier record list。
+     * @param payType 参数 payType
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    public List<CashierRecord> getCashierRecordList(Integer payType, LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
+    public List<CashierRecord> getCashierRecordList(Integer payType, LocalDateTime startDate, LocalDateTime endDate,
+            Long tenantId) {
         LambdaQueryWrapper<CashierRecord> qw = new LambdaQueryWrapper<>();
         if (payType != null) {
             qw.eq(CashierRecord::getPayType, payType);
@@ -112,6 +121,12 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         return cashierRecordMapper.selectList(qw);
     }
 
+    /**
+     * 获取 cashier record by order id。
+     * @param orderId 参数 orderId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public CashierRecord getCashierRecordByOrderId(Long orderId, Long tenantId) {
         LambdaQueryWrapper<CashierRecord> qw = new LambdaQueryWrapper<>();
@@ -122,6 +137,11 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         return cashierRecordMapper.selectOne(qw);
     }
 
+    /**
+     * 保存 cashier record。
+     * @param cashierRecord 参数 cashierRecord
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveCashierRecord(CashierRecord cashierRecord) {
@@ -129,6 +149,20 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         return cashierRecordMapper.insert(cashierRecord) > 0;
     }
 
+    /**
+     * 处理 cash payment。
+     * @param orderId 参数 orderId
+     * @param orderNumber 参数 orderNumber
+     * @param amount 参数 amount
+     * @param actualAmount 参数 actualAmount
+     * @param payType 参数 payType
+     * @param cashierId 参数 cashierId
+     * @param cashierName 参数 cashierName
+     * @param usedCouponId 参数 usedCouponId
+     * @param memberUserId 参数 memberUserId
+     * @param remark 参数 remark
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CashierRecord cashPayment(Long orderId, String orderNumber, BigDecimal amount, BigDecimal actualAmount,
@@ -185,6 +219,57 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         }
 
         // 2. 加载订单并以服务端金额为准（防前端篡改应收金额）
+        Orders order = loadAndValidateOrder(orderId, amount);
+        BigDecimal orderAmount = order.getAmount();
+
+        // 2. 计算优惠券抵扣（服务端按券规则重算，不信任前端传入的折后金额）
+        BigDecimal couponDiscount = resolveCouponDiscount(usedCouponId, memberUserId, orderAmount);
+        // 应付金额（扣券后），不应为负
+        BigDecimal payable = orderAmount.subtract(couponDiscount);
+        if (payable.compareTo(BigDecimal.ZERO) < 0) {
+            payable = BigDecimal.ZERO;
+        }
+
+        // 3. 校验实收金额：非现金必须与应付一致；现金可多收（找零）
+        validateActualAmount(payType, actualAmount, payable);
+
+        // 4. 会员储值支付：真实扣减会员余额（余额不足则回滚）
+        deductStoredBalanceIfNeeded(payType, memberUserId, payable);
+
+        // 5. 计算找零（仅现金收银有找零）
+        BigDecimal changeAmount = BigDecimal.ZERO;
+        if (payType == 1 && actualAmount.compareTo(payable) > 0) {
+            changeAmount = actualAmount.subtract(payable);
+        }
+
+        // 6-7. 创建并保存收银记录（金额以服务端计算为准）
+        CashierRecord cashierRecord = buildCashierRecord(orderId, orderNumber, payType, orderAmount,
+                actualAmount, changeAmount, cashierId, cashierName, remark);
+        cashierRecordMapper.insert(cashierRecord);
+
+        // 8. 更新订单状态为已支付（待接单），支付方式按真实选择记录
+        markOrderPaid(orderId, order, payType, usedCouponId, memberUserId);
+
+        // 9. 创建支付记录（金额以服务端为准）
+        saveSuccessPaymentOrder(orderId, channel, orderAmount);
+
+        // P0-5：收款成功后打印收银小票（打印失败不影响收银结果，静默降级）
+        printBillQuietly(orderId);
+
+        // 6. 会员权益（积分+优惠券核销）统一在订单完成（status=4）时由 OrderCompletedEvent 触发，
+        //    避免收银支付与订单完成事件重复发放。此处不再发放。
+
+        return cashierRecord;
+    }
+
+    /**
+     * 加载订单并校验服务端金额（等价抽取，降低方法长度）。
+     *
+     * @param orderId 订单ID
+     * @param amount 前端传入应收金额
+     * @return 订单
+     */
+    private Orders loadAndValidateOrder(Long orderId, BigDecimal amount) {
         Orders order = orderService.getById(orderId);
         if (order == null) {
             throw new IllegalArgumentException("收银失败：订单不存在或已失效");
@@ -197,8 +282,18 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         if (orderAmount.compareTo(amount) != 0) {
             throw new IllegalArgumentException("收银失败：订单金额与系统不一致，请刷新后重试");
         }
+        return order;
+    }
 
-        // 2. 计算优惠券抵扣（服务端按券规则重算，不信任前端传入的折后金额）
+    /**
+     * 服务端重算优惠券抵扣金额（等价抽取，降低方法长度）。
+     *
+     * @param usedCouponId 使用的优惠券ID
+     * @param memberUserId 会员用户ID
+     * @param orderAmount 订单金额
+     * @return 抵扣金额
+     */
+    private BigDecimal resolveCouponDiscount(Long usedCouponId, Long memberUserId, BigDecimal orderAmount) {
         BigDecimal couponDiscount = BigDecimal.ZERO;
         if (usedCouponId != null && memberUserId != null) {
             List<CouponAvailableDTO> usable = couponUserService.availableCoupons(memberUserId, orderAmount);
@@ -209,16 +304,17 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
                 }
             }
         }
-        if (couponDiscount == null) {
-            couponDiscount = BigDecimal.ZERO;
-        }
-        // 应付金额（扣券后），不应为负
-        BigDecimal payable = orderAmount.subtract(couponDiscount);
-        if (payable.compareTo(BigDecimal.ZERO) < 0) {
-            payable = BigDecimal.ZERO;
-        }
+        return couponDiscount == null ? BigDecimal.ZERO : couponDiscount;
+    }
 
-        // 3. 校验实收金额：非现金必须与应付一致；现金可多收（找零）
+    /**
+     * 校验实收金额（现金可多收，非现金须一致）（等价抽取）。
+     *
+     * @param payType 支付方式
+     * @param actualAmount 实收金额
+     * @param payable 应付金额
+     */
+    private void validateActualAmount(Integer payType, BigDecimal actualAmount, BigDecimal payable) {
         if (payType == 1) {
             if (actualAmount.compareTo(payable) < 0) {
                 throw new IllegalArgumentException("收银失败：现金实收金额低于应付金额");
@@ -228,25 +324,36 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
                 throw new IllegalArgumentException("收银失败：实收金额与应付金额不一致");
             }
         }
+    }
 
-        // 4. 会员储值支付：真实扣减会员余额（余额不足则回滚）
-        if (payType == 5) {
-            if (memberUserId == null) {
-                throw new IllegalArgumentException("收银失败：储值支付需先识别会员");
-            }
-            boolean deducted = memberRewardService.deductStoredBalance(memberUserId, payable);
-            if (!deducted) {
-                throw new IllegalArgumentException("收银失败：会员储值余额不足");
-            }
+    /**
+     * 储值支付时扣减会员余额（等价抽取）。
+     *
+     * @param payType 支付方式
+     * @param memberUserId 会员用户ID
+     * @param payable 应付金额
+     */
+    private void deductStoredBalanceIfNeeded(Integer payType, Long memberUserId, BigDecimal payable) {
+        if (payType != 5) {
+            return;
         }
-
-        // 5. 计算找零（仅现金收银有找零）
-        BigDecimal changeAmount = BigDecimal.ZERO;
-        if (payType == 1 && actualAmount.compareTo(payable) > 0) {
-            changeAmount = actualAmount.subtract(payable);
+        if (memberUserId == null) {
+            throw new IllegalArgumentException("收银失败：储值支付需先识别会员");
         }
+        boolean deducted = memberRewardService.deductStoredBalance(memberUserId, payable);
+        if (!deducted) {
+            throw new IllegalArgumentException("收银失败：会员储值余额不足");
+        }
+    }
 
-        // 6. 创建收银记录（金额以服务端计算为准）
+    /**
+     * 构建收银记录（金额以服务端计算为准）（等价抽取）。
+     *
+     * @return 收银记录
+     */
+    private CashierRecord buildCashierRecord(Long orderId, String orderNumber, Integer payType, BigDecimal orderAmount,
+                                             BigDecimal actualAmount, BigDecimal changeAmount, Long cashierId,
+                                             String cashierName, String remark) {
         CashierRecord cashierRecord = new CashierRecord();
         cashierRecord.setOrderId(orderId);
         cashierRecord.setOrderNumber(orderNumber);
@@ -261,23 +368,33 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         cashierRecord.setTenantId(BaseContext.getCurrentTenantId());
         cashierRecord.setCreateTime(LocalDateTime.now());
         cashierRecord.setCreateUser(cashierId);
+        return cashierRecord;
+    }
 
-        // 7. 保存收银记录
-        cashierRecordMapper.insert(cashierRecord);
-
-        // 8. 更新订单状态为已支付（待接单），支付方式按真实选择记录
-        order.setStatus(Orders.STATUS_ORDERED); // 待接单
-        order.setPayMethod(payType); // 如实记录支付方式
-        order.setCheckoutTime(LocalDateTime.now());
-        if (usedCouponId != null) {
-            order.setUsedCouponId(usedCouponId);
+    /**
+     * CAS 更新订单为已支付（待接单）（等价抽取）。
+     */
+    private void markOrderPaid(Long orderId, Orders order, Integer payType, Long usedCouponId, Long memberUserId) {
+        // CAS 状态机：仅 PENDING_PAY 状态的订单可收银，防止并发绕过状态机
+        boolean updated = orderService.lambdaUpdate()
+                .eq(Orders::getId, orderId)
+                .eq(Orders::getTenantId, order.getTenantId())
+                .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
+                .set(Orders::getStatus, Orders.STATUS_ORDERED)
+                .set(Orders::getPayMethod, payType)
+                .set(Orders::getCheckoutTime, LocalDateTime.now())
+                .set(usedCouponId != null, Orders::getUsedCouponId, usedCouponId)
+                .set(memberUserId != null, Orders::getUserId, memberUserId)
+                .update();
+        if (!updated) {
+            throw new CustomException("订单状态已变更，请刷新后重试");
         }
-        if (memberUserId != null) {
-            order.setUserId(memberUserId);
-        }
-        orderService.updateById(order);
+    }
 
-        // 9. 创建支付记录（金额以服务端为准）
+    /**
+     * 创建成功支付记录（金额以服务端为准）（等价抽取）。
+     */
+    private void saveSuccessPaymentOrder(Long orderId, String channel, BigDecimal orderAmount) {
         PaymentOrder paymentOrder = new PaymentOrder();
         paymentOrder.setOrderId(orderId);
         paymentOrder.setTenantId(BaseContext.getCurrentTenantId());
@@ -289,22 +406,28 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         paymentOrder.setCreatedTime(LocalDateTime.now());
         paymentOrder.setUpdateTime(LocalDateTime.now());
         paymentOrderService.save(paymentOrder);
-
-        // P0-5：收款成功后打印收银小票（打印失败不影响收银结果，静默降级）
-        if (printerService != null) {
-            try {
-                printerService.printOrder(orderId, "BILL");
-            } catch (Exception e) {
-                log.warn("收银小票打印失败，orderId={}", orderId);
-            }
-        }
-
-        // 6. 会员权益（积分+优惠券核销）统一在订单完成（status=4）时由 OrderCompletedEvent 触发，
-        //    避免收银支付与订单完成事件重复发放。此处不再发放。
-
-        return cashierRecord;
     }
 
+    /**
+     * 打印收银小票（失败静默降级）（等价抽取）。
+     */
+    private void printBillQuietly(Long orderId) {
+        if (printerService == null) {
+            return;
+        }
+        try {
+            printerService.printOrder(orderId, "BILL");
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.warn("收银小票打印失败，orderId={}", orderId);
+        }
+    }
+
+    /**
+     * 删除 cashier record。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteCashierRecord(Long id) {
@@ -313,6 +436,13 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
 
     // ==================== 日结管理 ====================
 
+    /**
+     * 获取 daily settlement list。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<DailySettlement> getDailySettlementList(LocalDate startDate, LocalDate endDate, Long tenantId) {
         LambdaQueryWrapper<DailySettlement> qw = new LambdaQueryWrapper<>();
@@ -329,6 +459,12 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         return dailySettlementMapper.selectList(qw);
     }
 
+    /**
+     * 获取 daily settlement by date。
+     * @param settlementDate 参数 settlementDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public DailySettlement getDailySettlementByDate(LocalDate settlementDate, Long tenantId) {
         LambdaQueryWrapper<DailySettlement> qw = new LambdaQueryWrapper<>();
@@ -339,9 +475,18 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         return dailySettlementMapper.selectOne(qw);
     }
 
+    /**
+     * 处理 execute daily settlement。
+     * @param settlementDate 参数 settlementDate
+     * @param userId 参数 userId
+     * @param userName 参数 userName
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public DailySettlement executeDailySettlement(LocalDate settlementDate, Long userId, String userName, Long tenantId) {
+    public DailySettlement executeDailySettlement(LocalDate settlementDate, Long userId, String userName,
+            Long tenantId) {
         // 按 tenantId+date 串行化日结请求，防止并发重复日结（TOCTOU）
         String lockKey = (tenantId != null ? tenantId.toString() : "0") + ":" + settlementDate.toString();
         Object lock = settlementLock.computeIfAbsent(lockKey, k -> new Object());
@@ -460,6 +605,12 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         }
     }
 
+    /**
+     * 取消 daily settlement。
+     * @param settlementDate 参数 settlementDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean cancelDailySettlement(LocalDate settlementDate, Long tenantId) {
@@ -476,6 +627,11 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         return dailySettlementMapper.updateById(settlement) > 0;
     }
 
+    /**
+     * 删除 daily settlement。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteDailySettlement(Long id) {
@@ -484,6 +640,13 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
 
     // ==================== 统计分析 ====================
 
+    /**
+     * 获取 cashier statistics。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getCashierStatistics(LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -507,11 +670,19 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
 
         result.put("totalAmount", totalAmount);
         result.put("totalCount", totalCount);
-        result.put("avgAmount", totalCount > 0 ? totalAmount.divide(BigDecimal.valueOf(totalCount), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        result.put("avgAmount", totalCount > 0 ? totalAmount.divide(BigDecimal.valueOf(totalCount), 2, RoundingMode
+                .HALF_UP) : BigDecimal.ZERO);
 
         return result;
     }
 
+    /**
+     * 获取 payment type statistics。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getPaymentTypeStatistics(LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -554,6 +725,13 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         return result;
     }
 
+    /**
+     * 获取 cashier trend。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getCashierTrend(LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -597,6 +775,13 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         return result;
     }
 
+    /**
+     * 获取 daily settlement summary。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getDailySettlementSummary(LocalDate startDate, LocalDate endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -619,18 +804,23 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         int totalOrders = 0;
 
         for (DailySettlement settlement : settlements) {
-            totalRevenue = totalRevenue.add(settlement.getTotalRevenue() != null ? settlement.getTotalRevenue() : BigDecimal.ZERO);
-            totalRefund = totalRefund.add(settlement.getRefundAmount() != null ? settlement.getRefundAmount() : BigDecimal.ZERO);
-            totalNetIncome = totalNetIncome.add(settlement.getNetIncome() != null ? settlement.getNetIncome() : BigDecimal.ZERO);
+            totalRevenue = totalRevenue.add(settlement.getTotalRevenue() != null ? settlement
+                    .getTotalRevenue() : BigDecimal.ZERO);
+            totalRefund = totalRefund.add(settlement.getRefundAmount() != null ? settlement
+                    .getRefundAmount() : BigDecimal.ZERO);
+            totalNetIncome = totalNetIncome.add(settlement.getNetIncome() != null ? settlement
+                    .getNetIncome() : BigDecimal.ZERO);
             totalCost = totalCost.add(settlement.getTotalCost() != null ? settlement.getTotalCost() : BigDecimal.ZERO);
-            totalGrossProfit = totalGrossProfit.add(settlement.getGrossProfit() != null ? settlement.getGrossProfit() : BigDecimal.ZERO);
+            totalGrossProfit = totalGrossProfit.add(settlement.getGrossProfit() != null ? settlement
+                    .getGrossProfit() : BigDecimal.ZERO);
             totalOrders += settlement.getOrderCount() != null ? settlement.getOrderCount() : 0;
         }
 
         // 计算平均毛利率
         BigDecimal avgProfitRate = BigDecimal.ZERO;
         if (totalNetIncome.compareTo(BigDecimal.ZERO) > 0) {
-            avgProfitRate = totalGrossProfit.divide(totalNetIncome, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
+            avgProfitRate = totalGrossProfit.divide(totalNetIncome, 4, RoundingMode.HALF_UP)
+                    .multiply(new BigDecimal("100"));
         }
 
         result.put("totalRevenue", totalRevenue);
@@ -692,6 +882,7 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
             String key = CASHIER_IDEMPOTENCY_KEY_PREFIX + (tenantId != null ? tenantId : 0) + ":" + orderId;
             stringRedisTemplate.delete(key);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("释放收银幂等锁失败（TTL兜底自动过期）：orderId={}", orderId);
         }
     }

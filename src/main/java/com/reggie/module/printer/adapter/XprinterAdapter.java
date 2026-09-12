@@ -28,7 +28,8 @@ public class XprinterAdapter implements PrinterAdapter {
      */
     @Override
     public boolean print(PrintJob job, PrinterConfig config) {
-        log.info("XprinterAdapter printing to device: {} (IP: {}:{})", config.getDeviceId(), config.getIpAddress(), config.getPort());
+        log.info("XprinterAdapter printing to device: {} (IP: {}:{})", config.getDeviceId(), config.getIpAddress(),
+                config.getPort());
         for (PrintLine line : job.getLines()) {
             log.info("  [{}] {}", line.getType(), line.getText());
         }

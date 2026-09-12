@@ -135,6 +135,7 @@ public class UserController {
                 try {
                     SMSUtils.sendMessage(smsSignName, smsTemplateCode, phone, codeStr);
                 } catch (Exception e){
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.error("短信发送失败，phone={}, error={}", LogMaskUtils.maskPhone(phone), e.getMessage(), e);
                     // 短信发送失败时清除Session中的验证码，避免无效验证码残留
                     session.removeAttribute("smsCode_" + phone);
@@ -197,7 +198,8 @@ public class UserController {
             user.setPhone(phone);
             user.setStatus(1);
             // 设置租户ID，确保新用户关联到当前租户
-            user.setTenantId(BaseContext.getCurrentTenantId() != null ? BaseContext.getCurrentTenantId() : DEFAULT_TENANT_ID);
+            user.setTenantId(BaseContext.getCurrentTenantId() != null ? BaseContext
+                    .getCurrentTenantId() : DEFAULT_TENANT_ID);
             userService.save(user);
         } else if (user.getTenantId() == null) {
             // 兼容历史脏数据：登录查询是跨租户的，若用户 tenant_id 为 null（旧版注册遗漏），

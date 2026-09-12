@@ -92,6 +92,7 @@ public class PlatformRetryTask {
                 try {
                     retryTenant();
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.error("[平台重试] 租户 {} 扫描失败: {}", tenant.getId(), e.getMessage());
                 } finally {
                     if (originalTenantId != null) {
@@ -126,6 +127,7 @@ public class PlatformRetryTask {
             try {
                 retryLogEntry(logEntry);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[平台重试] 重试失败: id={}, action={}, error={}",
                         logEntry.getId(), logEntry.getAction(), e.getMessage());
             }
@@ -224,6 +226,7 @@ public class PlatformRetryTask {
             log.info("[平台重试] 清理旧成功日志完成: threshold={}, 删除={}, 成功={}",
                     threshold, count, removed);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台重试] 清理旧日志失败", e);
         } finally {
             unlock("platform:lock:clean-logs", lockValue);
@@ -252,6 +255,7 @@ public class PlatformRetryTask {
                     .setIfAbsent(lockKey, lockValue, ttlMs, TimeUnit.MILLISECONDS);
             return Boolean.TRUE.equals(success) ? lockValue : null;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台重试] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
             return null;
         }
@@ -267,13 +271,15 @@ public class PlatformRetryTask {
             return;
         }
         try {
-            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                 new DefaultRedisScript<Long>(luaScript, Long.class),
                 Collections.singletonList(lockKey),
                 lockValue
             );
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台重试] 释放分布式锁失败: {}", lockKey, e);
         }
     }

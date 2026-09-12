@@ -46,6 +46,10 @@ public class OrderCompletedListener {
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    /**
+     * 处理 on order completed。
+     * @param event 参数 event
+     */
     @Async("recommendExecutor")
     @EventListener
     public void onOrderCompleted(OrderCompletedEvent event) {
@@ -60,6 +64,7 @@ public class OrderCompletedListener {
             memberRewardService.grantReward(order);
             log.info("[会员权益] 订单{}完成后权益发放成功", event.getOrderId());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             Long orderId = event.getOrderId();
             log.error("[会员权益] 订单{}完成后权益发放失败，已加入待对账队列: {}", orderId, e.getMessage(), e);
             enqueuePendingReward(orderId, e);

@@ -23,6 +23,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 @Configuration
 public class EventListenerThreadPoolConfig {
 
+    /**
+     * 处理 event listener executor。
+     * @return 返回结果
+     */
     @Bean("eventListenerExecutor")
     public Executor eventListenerExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();

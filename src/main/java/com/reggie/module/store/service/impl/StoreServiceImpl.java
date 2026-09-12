@@ -85,6 +85,14 @@ public class StoreServiceImpl implements StoreService {
     @Autowired
     private UserMapper userMapper;
 
+    /**
+     * 创建 store。
+     * @param storeInfo 参数 storeInfo
+     * @param tenant 参数 tenant
+     * @param username 参数 username
+     * @param password 参数 password
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public StoreInfo createStore(StoreInfo storeInfo, Tenant tenant,
@@ -127,6 +135,11 @@ public class StoreServiceImpl implements StoreService {
     }
 
     // 修改点：使用白名单 DTO + UpdateWrapper 替代 Map + updateById()，防止 mass assignment 攻击
+    /**
+     * 更新 store。
+     * @param tenantId 参数 tenantId
+     * @param updateDTO 参数 updateDTO
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateStore(Long tenantId, UpdateStoreDTO updateDTO) {
@@ -143,7 +156,7 @@ public class StoreServiceImpl implements StoreService {
                 && !currentTenantId.equals(existingStore.getParentTenantId())
                 && !currentTenantId.equals(tenantId)) {
             log.warn("[门店管理] 无权编辑其他门店: tenantId={}, currentTenantId={}", tenantId, currentTenantId);
-            return;
+            throw new CustomException("无权操作该门店");
         }
 
         // 使用 UpdateWrapper，仅更新白名单字段（passwordType 等敏感字段不可被覆盖）
@@ -208,6 +221,10 @@ public class StoreServiceImpl implements StoreService {
         log.info("[门店管理] 编辑门店成功: tenantId={}", tenantId);
     }
 
+    /**
+     * 查询列表 all stores。
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> listAllStores() {
         List<StoreInfo> stores = storeInfoMapper.selectList(null);
@@ -256,6 +273,11 @@ public class StoreServiceImpl implements StoreService {
     }
 
     // 修改点：新增分页搜索方法
+    /**
+     * 搜索 stores。
+     * @param dto 参数 dto
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> searchStores(StoreSearchDTO dto) {
         Page<Map<String, Object>> page = PageUtils.of(dto.getPage(), dto.getPageSize());
@@ -279,17 +301,32 @@ public class StoreServiceImpl implements StoreService {
     }
 
     // 修改点：新增详情方法
+    /**
+     * 获取 store detail。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getStoreDetail(Long tenantId) {
         return storeInfoMapper.searchStoreDetail(tenantId);
     }
 
+    /**
+     * 查询列表 branch stores。
+     * @param parentTenantId 参数 parentTenantId
+     * @return 返回结果
+     */
     @Override
     public List<StoreInfo> listBranchStores(Long parentTenantId) {
         if (parentTenantId == null) return Collections.emptyList();
         return storeInfoMapper.findByParentTenantId(parentTenantId);
     }
 
+    /**
+     * 处理 switch store。
+     * @param targetTenantId 参数 targetTenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> switchStore(Long targetTenantId) {
         if (targetTenantId == null) return Collections.emptyMap();
@@ -348,6 +385,11 @@ public class StoreServiceImpl implements StoreService {
         return result;
     }
 
+    /**
+     * 获取 today summary。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getTodaySummary(Long tenantId) {
         if (tenantId == null) tenantId = BaseContext.getCurrentTenantId();
@@ -389,6 +431,11 @@ public class StoreServiceImpl implements StoreService {
         return summary;
     }
 
+    /**
+     * 获取 yesterday summary。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public StoreDailySummary getYesterdaySummary(Long tenantId) {
         if (tenantId == null) tenantId = BaseContext.getCurrentTenantId();
@@ -401,6 +448,11 @@ public class StoreServiceImpl implements StoreService {
         return summaryMapper.selectOne(wrapper);
     }
 
+    /**
+     * 更新 store status。
+     * @param tenantId 参数 tenantId
+     * @param status 参数 status
+     */
     @Override
     public void updateStoreStatus(Long tenantId, Integer status) {
         Tenant tenant = tenantService.getById(tenantId);
@@ -410,7 +462,8 @@ public class StoreServiceImpl implements StoreService {
         // 租户权限校验：防止跨租户越权修改门店状态
         Long currentTenantId = BaseContext.getCurrentTenantId();
         StoreInfo existingStore = storeInfoMapper.findByTenantId(tenantId);
-        if (currentTenantId != null && existingStore != null && !currentTenantId.equals(existingStore.getParentTenantId()) && !currentTenantId.equals(tenantId)) {
+        if (currentTenantId != null && existingStore != null && !currentTenantId.equals(existingStore
+                .getParentTenantId()) && !currentTenantId.equals(tenantId)) {
             log.warn("[门店管理] 无权修改其他门店状态: tenantId={}, currentTenantId={}", tenantId, currentTenantId);
             return;
         }
@@ -422,6 +475,12 @@ public class StoreServiceImpl implements StoreService {
     }
 
     // 修改点：新增批量更新状态方法
+    /**
+     * 批量处理 update store status。
+     * @param tenantIds 参数 tenantIds
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int batchUpdateStoreStatus(List<Long> tenantIds, Integer status) {
@@ -433,9 +492,10 @@ public class StoreServiceImpl implements StoreService {
                 if (tenant == null) continue;
                 // 租户权限校验：防止跨租户批量修改状态
                 StoreInfo existingStore = storeInfoMapper.findByTenantId(tenantId);
-                if (currentTenantId != null && existingStore != null && !currentTenantId.equals(existingStore.getParentTenantId()) && !currentTenantId.equals(tenantId)) {
-                    log.warn("[门店管理] 批量更新跳过无权门店: tenantId={}, currentTenantId={}", tenantId, currentTenantId);
-                    continue;
+                if (currentTenantId != null && existingStore != null && !currentTenantId.equals(existingStore
+                        .getParentTenantId()) && !currentTenantId.equals(tenantId)) {
+                    log.warn("[门店管理] 批量更新拒绝无权门店: tenantId={}, currentTenantId={}", tenantId, currentTenantId);
+                    throw new CustomException("无权操作门店: " + tenantId);
                 }
                 // 使用 UpdateWrapper 仅更新 status 字段，防止 mass assignment
                 UpdateWrapper<Tenant> wrapper = new UpdateWrapper<>();
@@ -443,6 +503,7 @@ public class StoreServiceImpl implements StoreService {
                 tenantService.update(wrapper);
                 successCount++;
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[门店管理] 批量更新状态失败: tenantId={}, error={}", tenantId, e.getMessage(), e);
             }
         }
@@ -451,6 +512,13 @@ public class StoreServiceImpl implements StoreService {
     }
 
     // 修改点：新增导出方法
+    /**
+     * 导出 stores。
+     * @param keyword 参数 keyword
+     * @param storeType 参数 storeType
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> exportStores(String keyword, Integer storeType, Integer status) {
         // fail-closed：租户缺失时拒绝导出。若透传 null 给 XML 的 si.tenant_id = #{tenantId}，
@@ -462,6 +530,10 @@ public class StoreServiceImpl implements StoreService {
         return storeInfoMapper.exportStores(keyword, storeType, status, tenantId);
     }
 
+    /**
+     * 获取 aggregated dashboard。
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getAggregatedDashboard() {
         Map<String, Object> dashboard = new LinkedHashMap<>();
@@ -547,6 +619,10 @@ public class StoreServiceImpl implements StoreService {
         return dashboard;
     }
 
+    /**
+     * 获取 store stats。
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getStoreStats() {
         // 单条 SQL 聚合统计，替代前端 listAllStores 拉全量 + filter，消除 N+1 与全量内存计算
@@ -568,6 +644,11 @@ public class StoreServiceImpl implements StoreService {
         return summaryMapper.selectOne(wrapper);
     }
 
+    /**
+     * 查找 by tenant id。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public StoreInfo findByTenantId(Long tenantId) {
         return storeInfoMapper.findByTenantId(tenantId);

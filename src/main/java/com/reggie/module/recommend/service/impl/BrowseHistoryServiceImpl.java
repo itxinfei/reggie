@@ -28,6 +28,15 @@ public class BrowseHistoryServiceImpl extends ServiceImpl<BrowseHistoryMapper, B
     @Autowired
     private BrowseHistoryMapper browseHistoryMapper;
 
+    /**
+     * 处理 record browse。
+     * @param userId 参数 userId
+     * @param targetType 参数 targetType
+     * @param targetId 参数 targetId
+     * @param targetName 参数 targetName
+     * @param duration 参数 duration
+     * @param actionType 参数 actionType
+     */
     @Override
     public void recordBrowse(Long userId, Integer targetType, Long targetId,
                               String targetName, Integer duration, Integer actionType) {
@@ -46,11 +55,23 @@ public class BrowseHistoryServiceImpl extends ServiceImpl<BrowseHistoryMapper, B
                 getActionName(actionType), targetName);
     }
 
+    /**
+     * 获取 recent history。
+     * @param userId 参数 userId
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
     @Override
     public List<BrowseHistory> getRecentHistory(Long userId, int limit) {
         return browseHistoryMapper.findRecentByUserId(userId, limit);
     }
 
+    /**
+     * 获取 top categories。
+     * @param userId 参数 userId
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getTopCategories(Long userId, int limit) {
         return browseHistoryMapper.findTopViewedDishes(userId, limit);

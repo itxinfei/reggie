@@ -77,7 +77,8 @@ public class CouponTemplateController {
     @Parameter(name = "name", description = "优惠券名称（可选，模糊查询）")
     @Parameter(name = "type", description = "优惠券类型（可选，FULL_REDUCTION/DISCOUNT/NEW_MEMBER）")
     @Parameter(name = "status", description = "状态（可选，0禁用 1启用）")
-    public R<Page<CouponTemplate>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, String name, String type, Integer status) {
+    public R<Page<CouponTemplate>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize, String name, String type, Integer status) {
         Page<CouponTemplate> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<CouponTemplate> qw = new LambdaQueryWrapper<>();
         qw.like(name != null && !name.isEmpty(), CouponTemplate::getName, name);
@@ -103,7 +104,8 @@ public class CouponTemplateController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增优惠券", description = "创建新的优惠券模板，校验名称/类型/金额合法性")
-    public R<String> save(@Parameter(description = "优惠券模板信息（名称、类型、金额等）", required = true) @Valid @RequestBody CouponTemplateSaveDTO dto) {
+    public R<String> save(@Parameter(description = "优惠券模板信息（名称、类型、金额等）", required =
+            true) @Valid @RequestBody CouponTemplateSaveDTO dto) {
         CouponTemplate template = new CouponTemplate();
         template.setType(dto.getType());
         template.setConditionAmount(dto.getConditionAmount());
@@ -133,7 +135,8 @@ public class CouponTemplateController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改优惠券", description = "更新优惠券模板信息，校验名称/类型/金额合法性")
-    public R<String> update(@Parameter(description = "优惠券模板信息（含ID）", required = true) @Valid @RequestBody CouponTemplateUpdateDTO dto) {
+    public R<String> update(@Parameter(description = "优惠券模板信息（含ID）", required =
+            true) @Valid @RequestBody CouponTemplateUpdateDTO dto) {
         CouponTemplate template = new CouponTemplate();
         template.setId(dto.getId());
         template.setType(dto.getType());
@@ -154,6 +157,11 @@ public class CouponTemplateController {
         return R.success("修改优惠券成功");
     }
 
+    /**
+     * 删除。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/{id}")
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
@@ -182,7 +190,8 @@ public class CouponTemplateController {
         // 租户归属校验：禁止越权查看其他租户模板
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (currentTenantId != null && !currentTenantId.equals(template.getTenantId())) {
-            log.warn("[优惠券模板] 跨租户越权拦截: id={}, templateTenant={}, curTenant={}", id, template.getTenantId(), currentTenantId);
+            log.warn("[优惠券模板] 跨租户越权拦截: id={}, templateTenant={}, curTenant={}", id, template.getTenantId(),
+                    currentTenantId);
             return R.error("无权查看其他租户的优惠券模板");
         }
         return R.success(template);
@@ -207,7 +216,8 @@ public class CouponTemplateController {
     @PostMapping("/claim")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "领取优惠券", description = "会员领取优惠券模板")
-    public R<String> claim(@Parameter(description = "领券请求（会员ID、模板ID）", required = true) @Valid @RequestBody ClaimCouponDTO dto) {
+    public R<String> claim(@Parameter(description = "领券请求（会员ID、模板ID）", required =
+            true) @Valid @RequestBody ClaimCouponDTO dto) {
         boolean ok = couponTemplateService.claimCoupon(dto.getMemberId(), dto.getTemplateId());
         if (ok) {
             return R.success("领取成功");
@@ -224,7 +234,8 @@ public class CouponTemplateController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量定向发券", description = "按会员ID列表批量发放优惠券，返回成功/失败/已领过的统计")
-    public R<Map<String, Object>> batchIssue(@Parameter(description = "批量发券请求（模板ID、会员ID列表）", required = true) @Valid @RequestBody IssueByMembersDTO dto) {
+    public R<Map<String, Object>> batchIssue(@Parameter(description = "批量发券请求（模板ID、会员ID列表）", required =
+            true) @Valid @RequestBody IssueByMembersDTO dto) {
         log.info("批量定向发券: templateId={}, memberIds.size={}", dto.getTemplateId(), dto.getMemberIds().size());
         Map<String, Object> result = couponTemplateService.batchIssue(dto.getTemplateId(), dto.getMemberIds());
         return R.success(result);
@@ -238,8 +249,15 @@ public class CouponTemplateController {
     @PostMapping("/issue-by-condition")
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "条件定向发券", description = "按条件筛选会员后批量发放优惠券，条件支持 levelId/minPoints/maxPoints/minConsumption/maxConsumption/newMemberDays")
-    public R<Map<String, Object>> issueByCondition(@Parameter(description = "条件发券请求（模板ID、筛选条件）", required = true) @Valid @RequestBody IssueByConditionDTO dto) {
+    @Operation(summary = "条件定向发券", description =
+            "按条件筛选会员后批量发放优惠券，条件支持 levelId/minPoints/maxPoints/minConsumption/maxConsumption/newMemberDays")
+    /**
+     * 判断 sue by condition。
+     * @param dto 参数 dto
+     * @return 返回结果
+     */
+    public R<Map<String, Object>> issueByCondition(@Parameter(description = "条件发券请求（模板ID、筛选条件）", required =
+            true) @Valid @RequestBody IssueByConditionDTO dto) {
         log.info("条件定向发券: templateId={}, condition={}", dto.getTemplateId(), dto.getCondition());
         Map<String, Object> result = couponTemplateService.issueByCondition(dto.getTemplateId(), dto.getCondition());
         return R.success(result);
@@ -258,11 +276,15 @@ public class CouponTemplateController {
     @Parameter(name = "templateId", description = "优惠券模板ID", required = true)
     public R<com.baomidou.mybatisplus.extension.plugins.pagination.Page<IssuedMemberVO>> issuedMembers(
             @PathVariable Long templateId,
-            @Parameter(description = "页码", required = true, example = "1") @RequestParam(defaultValue = "1") @Min(1) int page,
-            @Parameter(description = "每页数量", required = true, example = "10") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize) {
+            @Parameter(description = "页码", required = true, example = "1") @RequestParam(defaultValue =
+                    "1") @Min(1) int page,
+            @Parameter(description = "每页数量", required = true, example = "10") @RequestParam(defaultValue =
+                    "10") @Min(1) @Max(100) int pageSize) {
         log.info("查询投放明细: templateId={}, page={}, pageSize={}", templateId, page, pageSize);
-        com.baomidou.mybatisplus.extension.plugins.pagination.Page<IssuedMemberVO> pageInfo = PageUtils.of(page, pageSize);
-        com.baomidou.mybatisplus.extension.plugins.pagination.Page<IssuedMemberVO> result = couponTemplateService.issuedMembers(pageInfo, templateId);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<IssuedMemberVO> pageInfo = PageUtils.of(page,
+                pageSize);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<IssuedMemberVO> result = couponTemplateService
+                .issuedMembers(pageInfo, templateId);
         return R.success(result);
     }
 
@@ -303,13 +325,17 @@ public class CouponTemplateController {
             @RequestParam(defaultValue = "7") int days,
             Long templateId,
             String phone,
-            @Parameter(description = "页码", required = true, example = "1") @RequestParam(defaultValue = "1") @Min(1) int page,
-            @Parameter(description = "每页数量", required = true, example = "10") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize) {
-        log.info("查询即将到期预警: days={}, templateId={}, phone={}, page={}", days, templateId, phone != null ? LogMaskUtils.maskPhone(phone) : "", page);
+            @Parameter(description = "页码", required = true, example = "1") @RequestParam(defaultValue =
+                    "1") @Min(1) int page,
+            @Parameter(description = "每页数量", required = true, example = "10") @RequestParam(defaultValue =
+                    "10") @Min(1) @Max(100) int pageSize) {
+        log.info("查询即将到期预警: days={}, templateId={}, phone={}, page={}", days, templateId, phone != null ? LogMaskUtils
+                .maskPhone(phone) : "", page);
         if (days <= 0 || days > 90) {
             return R.error("预警天数必须在1~90之间");
         }
-        com.baomidou.mybatisplus.extension.plugins.pagination.Page<ExpiringCouponVO> pageInfo = PageUtils.of(page, pageSize);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<ExpiringCouponVO> pageInfo = PageUtils.of(page,
+                pageSize);
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<ExpiringCouponVO> result =
                 couponTemplateService.expiringCoupons(pageInfo, days, templateId, phone);
         return R.success(result);
@@ -326,10 +352,14 @@ public class CouponTemplateController {
     public R<com.baomidou.mybatisplus.extension.plugins.pagination.Page<ExpiringCouponVO>> expired(
             Long templateId,
             String phone,
-            @Parameter(description = "页码", required = true, example = "1") @RequestParam(defaultValue = "1") @Min(1) int page,
-            @Parameter(description = "每页数量", required = true, example = "10") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize) {
-        log.info("查询已过期明细: templateId={}, phone={}, page={}", templateId, phone != null ? LogMaskUtils.maskPhone(phone) : "", page);
-        com.baomidou.mybatisplus.extension.plugins.pagination.Page<ExpiringCouponVO> pageInfo = PageUtils.of(page, pageSize);
+            @Parameter(description = "页码", required = true, example = "1") @RequestParam(defaultValue =
+                    "1") @Min(1) int page,
+            @Parameter(description = "每页数量", required = true, example = "10") @RequestParam(defaultValue =
+                    "10") @Min(1) @Max(100) int pageSize) {
+        log.info("查询已过期明细: templateId={}, phone={}, page={}", templateId, phone != null ? LogMaskUtils
+                .maskPhone(phone) : "", page);
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<ExpiringCouponVO> pageInfo = PageUtils.of(page,
+                pageSize);
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<ExpiringCouponVO> result =
                 couponTemplateService.expiredCoupons(pageInfo, templateId, phone);
         return R.success(result);
@@ -381,7 +411,8 @@ public class CouponTemplateController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量延期", description = "批量延长即将到期优惠券的过期时间（仅限unused状态）")
-    public R<Map<String, Object>> batchExtend(@Parameter(description = "批量延期请求（优惠券用户ID列表、延期天数）", required = true) @Valid @RequestBody BatchExtendCouponDTO dto) {
+    public R<Map<String, Object>> batchExtend(@Parameter(description = "批量延期请求（优惠券用户ID列表、延期天数）", required =
+            true) @Valid @RequestBody BatchExtendCouponDTO dto) {
         log.info("批量延期优惠券: couponUserIds.size={}, extendDays={}",
                 dto.getCouponUserIds().size(), dto.getExtendDays());
         Map<String, Object> result = couponTemplateService.batchExtend(

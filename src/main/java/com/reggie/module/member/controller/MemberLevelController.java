@@ -102,7 +102,8 @@ public class MemberLevelController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增等级", description = "创建新的会员等级")
-    public R<String> save(@Parameter(description = "会员等级信息（名称、门槛、权益）", required = true) @RequestBody MemberLevel memberLevel) {
+    public R<String> save(@Parameter(description = "会员等级信息（名称、门槛、权益）", required =
+            true) @RequestBody MemberLevel memberLevel) {
         log.info("新增会员等级: {}", memberLevel.getName());
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -124,7 +125,8 @@ public class MemberLevelController {
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改等级", description = "更新会员等级信息")
-    public R<String> update(@Parameter(description = "会员等级信息（含ID）", required = true) @RequestBody MemberLevel memberLevel) {
+    public R<String> update(@Parameter(description = "会员等级信息（含ID）", required =
+            true) @RequestBody MemberLevel memberLevel) {
         log.info("修改会员等级: {}", memberLevel.getId());
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -148,6 +150,11 @@ public class MemberLevelController {
         return R.success("修改会员等级成功");
     }
 
+    /**
+     * 删除。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除等级", description = "根据ID删除会员等级，先校验租户归属与引用计数")

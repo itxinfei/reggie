@@ -54,6 +54,11 @@ public class PrinterServiceImpl implements PrinterService {
     @Autowired
     private PrintTaskMapper printTaskMapper;
 
+    /**
+     * 打印 order。
+     * @param orderId 参数 orderId
+     * @param printType 参数 printType
+     */
     @Override
     public void printOrder(Long orderId, String printType) {
         Orders order = orderService.getById(orderId);

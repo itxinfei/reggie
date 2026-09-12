@@ -32,10 +32,20 @@ public final class SpringUtils {
 
     // ==================== Bean Retrieval ====================
 
+    /**
+     * 获取 bean。
+     * @param clazz 参数 clazz
+     * @return 返回结果
+     */
     public static <T> T getBean(Class<T> clazz) {
         return ApplicationContextProvider.getBean(clazz);
     }
 
+    /**
+     * 获取 bean。
+     * @param beanName 参数 beanName
+     * @return 返回结果
+     */
     public static Object getBean(String beanName) {
         return ApplicationContextProvider.getBean(beanName);
     }
@@ -59,11 +69,19 @@ public final class SpringUtils {
 
     // ==================== Current Request / Response ====================
 
+    /**
+     * 获取 current request。
+     * @return 返回结果
+     */
     public static HttpServletRequest getCurrentRequest() {
         ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         return attrs != null ? attrs.getRequest() : null;
     }
 
+    /**
+     * 获取 current response。
+     * @return 返回结果
+     */
     public static HttpServletResponse getCurrentResponse() {
         ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         return attrs != null ? attrs.getResponse() : null;
@@ -124,6 +142,10 @@ public final class SpringUtils {
         return ip;
     }
 
+    /**
+     * 获取 headers。
+     * @return 返回结果
+     */
     public static Map<String, String> getHeaders() {
         HttpServletRequest request = getCurrentRequest();
         Map<String, String> result = new HashMap<>();
@@ -140,20 +162,43 @@ public final class SpringUtils {
 
     // ==================== Config Properties ====================
 
+    /**
+     * 获取 property。
+     * @param key 参数 key
+     * @return 返回结果
+     */
     public static String getProperty(String key) {
         return getEnvironment().getProperty(key);
     }
 
+    /**
+     * 获取 property。
+     * @param key 参数 key
+     * @param defaultValue 参数 defaultValue
+     * @return 返回结果
+     */
     public static String getProperty(String key, String defaultValue) {
         return getEnvironment().getProperty(key, defaultValue);
     }
 
+    /**
+     * 获取 property。
+     * @param key 参数 key
+     * @param clazz 参数 clazz
+     * @return 返回结果
+     */
     public static <T> T getProperty(String key, Class<T> clazz) {
         return getEnvironment().getProperty(key, clazz);
     }
 
     // ==================== Path Matching ====================
 
+    /**
+     * 处理 match path。
+     * @param pattern 参数 pattern
+     * @param path 参数 path
+     * @return 返回结果
+     */
     public static boolean matchPath(String pattern, String path) {
         if (pattern == null || path == null) {
             return false;
@@ -163,6 +208,11 @@ public final class SpringUtils {
 
     // ==================== Profile ====================
 
+    /**
+     * 判断 profile active。
+     * @param profile 参数 profile
+     * @return 返回结果
+     */
     public static boolean isProfileActive(String profile) {
         Environment env = getEnvironment();
         for (String active : env.getActiveProfiles()) {
@@ -173,6 +223,10 @@ public final class SpringUtils {
         return false;
     }
 
+    /**
+     * 获取 active profiles。
+     * @return 返回结果
+     */
     public static String[] getActiveProfiles() {
         return getEnvironment().getActiveProfiles();
     }

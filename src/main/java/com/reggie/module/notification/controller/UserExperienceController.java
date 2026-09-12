@@ -34,6 +34,14 @@ public class UserExperienceController {
 
     // ==================== WebSocket Management ====================
 
+    /**
+     * 发送 order notification。
+     * @param orderId 参数 orderId
+     * @param orderNumber 参数 orderNumber
+     * @param type 参数 type
+     * @param message 参数 message
+     * @return 返回结果
+     */
     @PostMapping("/notification/order")
     @Operation(summary = "发送下单通知")
     public R<String> sendOrderNotification(
@@ -45,6 +53,14 @@ public class UserExperienceController {
         return R.success("Notification sent");
     }
 
+    /**
+     * 发送 kitchen notification。
+     * @param orderId 参数 orderId
+     * @param orderNumber 参数 orderNumber
+     * @param items 参数 items
+     * @param type 参数 type
+     * @return 返回结果
+     */
     @PostMapping("/notification/kitchen")
     @Operation(summary = "发送后厨通知")
     public R<String> sendKitchenNotification(
@@ -56,6 +72,13 @@ public class UserExperienceController {
         return R.success("Kitchen notification sent");
     }
 
+    /**
+     * 发送 system notification。
+     * @param type 参数 type
+     * @param title 参数 title
+     * @param message 参数 message
+     * @return 返回结果
+     */
     @PostMapping("/notification/system")
     @Operation(summary = "发送系统通知")
     public R<String> sendSystemNotification(
@@ -68,6 +91,12 @@ public class UserExperienceController {
 
     // ==================== Voice Broadcast ====================
 
+    /**
+     * 获取 new order voice。
+     * @param orderNumber 参数 orderNumber
+     * @param amount 参数 amount
+     * @return 返回结果
+     */
     @GetMapping("/voice/new-order")
     @Operation(summary = "新订单语音播报")
     public R<Map<String, Object>> getNewOrderVoice(
@@ -77,6 +106,12 @@ public class UserExperienceController {
         return R.success(voiceData);
     }
 
+    /**
+     * 获取 order reminder voice。
+     * @param orderNumber 参数 orderNumber
+     * @param minutes 参数 minutes
+     * @return 返回结果
+     */
     @GetMapping("/voice/order-reminder")
     @Operation(summary = "催单语音播报")
     public R<Map<String, Object>> getOrderReminderVoice(
@@ -86,6 +121,12 @@ public class UserExperienceController {
         return R.success(voiceData);
     }
 
+    /**
+     * 获取 payment received voice。
+     * @param orderNumber 参数 orderNumber
+     * @param amount 参数 amount
+     * @return 返回结果
+     */
     @GetMapping("/voice/payment-received")
     @Operation(summary = "收款到账语音播报")
     public R<Map<String, Object>> getPaymentReceivedVoice(
@@ -95,6 +136,12 @@ public class UserExperienceController {
         return R.success(voiceData);
     }
 
+    /**
+     * 获取 queue call voice。
+     * @param queueNumber 参数 queueNumber
+     * @param tableName 参数 tableName
+     * @return 返回结果
+     */
     @GetMapping("/voice/queue-call")
     @Operation(summary = "叫号语音播报")
     public R<Map<String, Object>> getQueueCallVoice(

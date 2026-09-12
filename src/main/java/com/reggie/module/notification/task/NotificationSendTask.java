@@ -57,6 +57,7 @@ public class NotificationSendTask {
             try {
                 processTenant(tenant.getId());
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[通知定时发送] 租户处理异常: tenantId={}", tenant.getId(), e);
             }
         }

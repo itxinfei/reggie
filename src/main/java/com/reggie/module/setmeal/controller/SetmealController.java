@@ -102,7 +102,9 @@ public class SetmealController {
     @Parameter(name = "name", description = "套餐名称（可选，模糊查询）")
     @Parameter(name = "status", description = "售卖状态（可选，'0'=停售 ,'1'=启售）")
     @Parameter(name = "code", description = "套餐编码（可选，模糊查询）")
-    public R<Page<SetmealDto>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String name, @RequestParam(required = false) String status,
+    public R<Page<SetmealDto>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String name, @RequestParam(required =
+            false) String status,
                                     @RequestParam(required = false) String code){
         //分页构造器对象
         Page<Setmeal> pageInfo = PageUtils.of(page,pageSize);
@@ -287,7 +289,8 @@ public class SetmealController {
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(setmeal.getCategoryId() != null,Setmeal::getCategoryId,setmeal.getCategoryId());
         queryWrapper.eq(setmeal.getStatus() != null,Setmeal::getStatus,setmeal.getStatus());
-        queryWrapper.like(setmeal.getName() != null && !setmeal.getName().trim().isEmpty(), Setmeal::getName, setmeal.getName());
+        queryWrapper.like(setmeal.getName() != null && !setmeal.getName().trim().isEmpty(), Setmeal::getName, setmeal
+                .getName());
         queryWrapper.orderByDesc(Setmeal::getUpdateTime);
 
         // 多租户过滤：MyBatis-Plus TenantLineInnerInterceptor 已自动处理

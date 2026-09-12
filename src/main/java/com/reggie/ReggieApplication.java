@@ -25,6 +25,10 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableScheduling
 @EnableAsync
 public class ReggieApplication {
+    /**
+     * 处理 main。
+     * @param args 参数 args
+     */
     public static void main(String[] args) {
         SpringApplication.run(ReggieApplication.class, args);
         log.info("瑞吉外卖--项目启动成功...");

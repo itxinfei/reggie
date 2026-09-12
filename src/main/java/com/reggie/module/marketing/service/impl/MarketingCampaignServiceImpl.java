@@ -74,8 +74,18 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
     @Autowired
     private UserMapper userMapper;
 
+    /**
+     * 分页查询 campaigns。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param name 参数 name
+     * @param status 参数 status
+     * @param campaignType 参数 campaignType
+     * @return 返回结果
+     */
     @Override
-    public Page<MarketingCampaign> pageCampaigns(int page, int pageSize, String name, Integer status, Integer campaignType) {
+    public Page<MarketingCampaign> pageCampaigns(int page, int pageSize, String name, Integer status,
+            Integer campaignType) {
         Long tenantId = BaseContext.getCurrentTenantId();
 
         // 修改点：使用新Mapper方法，附带pushCount真实统计
@@ -145,6 +155,11 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         return null;
     }
 
+    /**
+     * 批量处理 delete campaigns。
+     * @param ids 参数 ids
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int batchDeleteCampaigns(List<Long> ids) {
@@ -156,6 +171,11 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         return count;
     }
 
+    /**
+     * 处理 match campaigns for user。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     public List<MarketingCampaign> matchCampaignsForUser(Long userId) {
         if (userId == null) return Collections.emptyList();
@@ -182,6 +202,13 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 推送 marketing message。
+     * @param campaignId 参数 campaignId
+     * @param userId 参数 userId
+     * @param pushType 参数 pushType
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean pushMarketingMessage(Long campaignId, Long userId, Integer pushType) {
@@ -221,6 +248,11 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         return true;
     }
 
+    /**
+     * 获取 unread messages。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getUnreadMessages(Long userId) {
         if (userId == null) return Collections.emptyList();
@@ -242,6 +274,10 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 处理 mark message read。
+     * @param messageId 参数 messageId
+     */
     @Override
     public void markMessageRead(Long messageId) {
         if (messageId == null) return;
@@ -253,6 +289,13 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         }
     }
 
+    /**
+     * 获取 messages。
+     * @param userId 参数 userId
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
     @Override
     public Page<Map<String, Object>> getMessages(Long userId, int page, int pageSize) {
         if (userId == null) return PageUtils.of(PageUtils.DEFAULT_PAGE, PageUtils.DEFAULT_PAGE_SIZE);
@@ -281,6 +324,11 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         return resultPage;
     }
 
+    /**
+     * 获取 unread count。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     public int getUnreadCount(Long userId) {
         if (userId == null) return 0;
@@ -290,6 +338,11 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         return messageMapper.selectCount(wrapper).intValue();
     }
 
+    /**
+     * 处理 auto dispatch coupons。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int autoDispatchCoupons(Long userId) {
@@ -323,6 +376,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
 
                 dispatched++;
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[自动发券] 活动{}发放失败", campaign.getId(), e);
             }
         }
@@ -471,6 +525,12 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         return result;
     }
 
+    /**
+     * 批量处理 push messages。
+     * @param campaignId 参数 campaignId
+     * @param pushType 参数 pushType
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int batchPushMessages(Long campaignId, Integer pushType) {
@@ -545,6 +605,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
                     messagesToInsert.add(message);
                     pushed++;
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.warn("[批量推送] 用户匹配失败", e);
                 }
             }
@@ -585,6 +646,10 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
 
     // ==================== 修改点：真实推送预览 ====================
 
+    /**
+     * 获取 campaign stats。
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getCampaignStats() {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -603,12 +668,23 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         return stats;
     }
 
+    /**
+     * 获取 push count by campaign id。
+     * @param campaignId 参数 campaignId
+     * @return 返回结果
+     */
     @Override
     public int getPushCountByCampaignId(Long campaignId) {
         if (campaignId == null) return 0;
         return campaignMapper.countPushByCampaignId(campaignId);
     }
 
+    /**
+     * 获取 push preview。
+     * @param campaignId 参数 campaignId
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getPushPreview(Long campaignId, int limit) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -687,6 +763,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
 
             log.info("[推送预览] 活动{}匹配用户: preview={}, estimate={}", campaignId, preview.size(), estimate);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[推送预览] 查询异常", e);
             result.put("preview", preview);
             result.put("estimate", 0);

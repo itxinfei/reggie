@@ -43,6 +43,9 @@ public class GeoUtils {
     /** Key 是否可用（启动时检测一次，避免每次调用都判空） */
     private volatile boolean keyAvailable = false;
 
+    /**
+     * 初始化。
+     */
     @PostConstruct
     public void init() {
         this.keyAvailable = StrUtil.isNotBlank(amapKey);
@@ -94,6 +97,7 @@ public class GeoUtils {
                     new BigDecimal(lngLat[1]).setScale(6, BigDecimal.ROUND_HALF_UP)
             };
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[Geo] 地理编码异常，address={}, 原因={}", fullAddress, e.getMessage());
             return null;
         }

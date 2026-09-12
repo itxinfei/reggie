@@ -43,9 +43,19 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     @Autowired
     private MaterialMapper materialMapper;
 
+    /**
+     * 处理 stock in。
+     * @param materialId 参数 materialId
+     * @param qty 参数 qty
+     * @param unitPrice 参数 unitPrice
+     * @param bizId 参数 bizId
+     * @param remark 参数 remark
+     * @param operator 参数 operator
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void stockIn(Long materialId, BigDecimal qty, BigDecimal unitPrice, Long bizId, String remark, String operator) {
+    public void stockIn(Long materialId, BigDecimal qty, BigDecimal unitPrice, Long bizId, String remark,
+            String operator) {
         if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             throw new CustomException("入库数量必须大于0");
         }
@@ -69,6 +79,14 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         save(record);
     }
 
+    /**
+     * 处理 stock out。
+     * @param materialId 参数 materialId
+     * @param qty 参数 qty
+     * @param bizId 参数 bizId
+     * @param remark 参数 remark
+     * @param operator 参数 operator
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void stockOut(Long materialId, BigDecimal qty, Long bizId, String remark, String operator) {
@@ -94,6 +112,13 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         save(record);
     }
 
+    /**
+     * 分页查询 by material。
+     * @param materialId 参数 materialId
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
     @Override
     public Page<StockRecord> pageByMaterial(Long materialId, int page, int pageSize) {
         Page<StockRecord> pageInfo = PageUtils.of(page, pageSize);
@@ -108,6 +133,11 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         return result;
     }
 
+    /**
+     * 分页查询。
+     * @param pageInfo 参数 pageInfo
+     * @return 返回结果
+     */
     public Page<StockRecord> page(Page<StockRecord> pageInfo) {
         Page<StockRecord> result = super.page(pageInfo);
         List<StockRecord> records = result.getRecords();
@@ -131,6 +161,11 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         return result;
     }
 
+    /**
+     * 查询列表。
+     * @param queryWrapper 参数 queryWrapper
+     * @return 返回结果
+     */
     @Override
     public List<StockRecord> list(Wrapper<StockRecord> queryWrapper) {
         List<StockRecord> list = super.list(queryWrapper);

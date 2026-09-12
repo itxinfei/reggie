@@ -70,7 +70,8 @@ public class DeliveryController {
     @GetMapping("/orders/{id}")
     @RequireEmployee
     @Operation(summary = "查询外卖订单详情", description = "根据主键ID查询配送订单完整信息")
-    public R<DeliveryOrder> getOrderDetail(@Parameter(description = "配送订单主键ID", required = true) @PathVariable Long id) {
+    public R<DeliveryOrder> getOrderDetail(@Parameter(description = "配送订单主键ID", required =
+            true) @PathVariable Long id) {
         DeliveryOrder order = deliveryService.getById(String.valueOf(id));
         if (order == null) {
             return R.error("订单不存在");
@@ -98,7 +99,8 @@ public class DeliveryController {
             @Parameter(description = "状态（可选）") @RequestParam(required = false) String status,
             @Parameter(description = "开始日期（可选）") @RequestParam(required = false) String startDate,
             @Parameter(description = "结束日期（可选）") @RequestParam(required = false) String endDate) {
-        Page<DeliveryOrder> pageInfo = deliveryService.pageOrders(page, PageUtils.cap(pageSize), platform, status, startDate, endDate);
+        Page<DeliveryOrder> pageInfo = deliveryService.pageOrders(page, PageUtils.cap(pageSize), platform, status,
+                startDate, endDate);
         return R.success(pageInfo);
     }
 
@@ -113,7 +115,8 @@ public class DeliveryController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "接单", description = "确认接单外卖订单（PENDING → ACCEPTED）")
-    public R<String> acceptOrder(@Parameter(description = "接单请求（平台、平台订单号）", required = true) @Valid @RequestBody AcceptOrderDTO dto) {
+    public R<String> acceptOrder(@Parameter(description = "接单请求（平台、平台订单号）", required =
+            true) @Valid @RequestBody AcceptOrderDTO dto) {
         boolean result = deliveryService.acceptOrder(dto.getPlatform(), dto.getPlatformOrderId());
         return result ? R.success("接单成功") : R.error("接单失败");
     }
@@ -131,7 +134,8 @@ public class DeliveryController {
     @Operation(summary = "更新配送状态", description = "更新配送订单状态，支持完整生命周期：接单->取餐->配送->送达->取消")
     public R<String> updateStatus(
             @Parameter(description = "订单ID", required = true) @RequestParam @NotNull(message = "订单ID不能为空") Long id,
-            @Parameter(description = "目标状态", required = true) @RequestParam @NotBlank(message = "目标状态不能为空") String status,
+            @Parameter(description = "目标状态", required = true) @RequestParam @NotBlank(message =
+                    "目标状态不能为空") String status,
             @Parameter(description = "备注（可选）") @RequestParam(required = false) String remark) {
         boolean result = deliveryService.updateOrderStatus(id, status, remark);
         return result ? R.success("状态更新成功") : R.error("状态更新失败");
@@ -182,7 +186,8 @@ public class DeliveryController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "同步菜品", description = "同步菜单到外卖平台")
-    public R<String> syncMenu(@Parameter(description = "菜品同步请求（平台、菜品列表）", required = true) @Valid @RequestBody SyncMenuDTO dto) {
+    public R<String> syncMenu(@Parameter(description = "菜品同步请求（平台、菜品列表）", required =
+            true) @Valid @RequestBody SyncMenuDTO dto) {
         boolean result = deliveryService.syncMenu(dto.getPlatform(), dto.getDishes());
         return result ? R.success("菜单同步成功") : R.error("菜单同步失败");
     }
@@ -196,7 +201,8 @@ public class DeliveryController {
     @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "同步库存", description = "同步库存到外卖平台")
-    public R<String> syncStock(@Parameter(description = "库存同步请求（平台、库存列表）", required = true) @Valid @RequestBody SyncStockDTO dto) {
+    public R<String> syncStock(@Parameter(description = "库存同步请求（平台、库存列表）", required =
+            true) @Valid @RequestBody SyncStockDTO dto) {
         boolean result = deliveryService.syncStock(dto.getPlatform(), dto.getStock());
         return result ? R.success("库存同步成功") : R.error("库存同步失败");
     }
@@ -212,7 +218,8 @@ public class DeliveryController {
      */
     @GetMapping("/tracking/{orderId}")
     @Operation(summary = "查询配送追踪", description = "根据平台订单号查询配送订单详情，供前端追踪页面使用")
-    public R<Map<String, Object>> tracking(@Parameter(description = "平台订单号", required = true) @PathVariable String orderId) {
+    public R<Map<String, Object>> tracking(@Parameter(description = "平台订单号", required =
+            true) @PathVariable String orderId) {
         DeliveryOrder order = deliveryService.getByPlatformOrderId(orderId);
         if (order == null) {
             return R.error("配送订单不存在");
@@ -238,11 +245,10 @@ public class DeliveryController {
             DeliveryTimeRecord record = deliveryTrackingService.getDeliveryTimeByOrderId(order.getOrderId());
             if (record != null) {
                 data.put("riderName", record.getRiderName());
-                if (record.getRiderId() != null) {
-                    Rider rider = deliveryTrackingService.getById(record.getRiderId());
-                    if (rider != null) {
-                        data.put("riderPhone", rider.getPhone());
-                    }
+                Rider rider = record.getRiderId() == null ? null
+                        : deliveryTrackingService.getById(record.getRiderId());
+                if (rider != null) {
+                    data.put("riderPhone", rider.getPhone());
                 }
             }
         }

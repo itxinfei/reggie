@@ -47,10 +47,18 @@ public class MybatisPlusConfig {
         "permission", "role_permission", "region"
     ));
 
+    /**
+     * 处理 mybatis plus interceptor。
+     * @return 返回结果
+     */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor(){
         MybatisPlusInterceptor mybatisPlusInterceptor = new MybatisPlusInterceptor();
         mybatisPlusInterceptor.addInnerInterceptor(new TenantLineInnerInterceptor(new TenantLineHandler() {
+            /**
+             * 获取 tenant id。
+             * @return 返回结果
+             */
             @Override
             public Expression getTenantId() {
                 Long tenantId = BaseContext.getCurrentTenantId();
@@ -62,11 +70,20 @@ public class MybatisPlusConfig {
                 return new LongValue(tenantId);
             }
 
+            /**
+             * 获取 tenant id column。
+             * @return 返回结果
+             */
             @Override
             public String getTenantIdColumn() {
                 return "tenant_id";
             }
 
+            /**
+             * 处理 ignore table。
+             * @param tableName 参数 tableName
+             * @return 返回结果
+             */
             @Override
             public boolean ignoreTable(String tableName) {
                 // 仅忽略无 tenant_id 列的表，不跳过所有过滤

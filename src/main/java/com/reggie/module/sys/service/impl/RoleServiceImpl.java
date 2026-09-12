@@ -37,6 +37,11 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
 
     @Autowired
     private EmployeeRoleRelationMapper employeeRoleRelationMapper;
+    /**
+     * 获取 by role key。
+     * @param roleKey 参数 roleKey
+     * @return 返回结果
+     */
     @Override
     public Role getByRoleKey(String roleKey) {
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
@@ -46,11 +51,21 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         return this.getOne(wrapper);
     }
 
+    /**
+     * 查询列表 enabled by tenant id。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Role> listEnabledByTenantId(Long tenantId) {
         return roleMapper.listEnabledByTenantId(tenantId);
     }
 
+    /**
+     * 分配 permissions。
+     * @param roleId 参数 roleId
+     * @param permissionIds 参数 permissionIds
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void assignPermissions(Long roleId, List<Long> permissionIds) {
@@ -73,6 +88,11 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
                 permissionIds != null ? permissionIds.size() : 0);
     }
 
+    /**
+     * 获取 permission ids。
+     * @param roleId 参数 roleId
+     * @return 返回结果
+     */
     @Override
     public List<Long> getPermissionIds(Long roleId) {
         LambdaQueryWrapper<RolePermission> wrapper = new LambdaQueryWrapper<>();
@@ -84,6 +104,11 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 分配 users to role。
+     * @param roleId 参数 roleId
+     * @param employeeIds 参数 employeeIds
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void assignUsersToRole(Long roleId, List<Long> employeeIds) {
@@ -111,6 +136,11 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
                 employeeIds != null ? employeeIds.size() : 0);
     }
 
+    /**
+     * 获取 role user ids。
+     * @param roleId 参数 roleId
+     * @return 返回结果
+     */
     @Override
     public List<Long> getRoleUserIds(Long roleId) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -126,6 +156,12 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 获取 employee role ids。
+     * @param employeeId 参数 employeeId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Long> getEmployeeRoleIds(Long employeeId, Long tenantId) {
         LambdaQueryWrapper<EmployeeRoleRelation> wrapper = new LambdaQueryWrapper<>();
@@ -140,6 +176,11 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 获取 role options。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getRoleOptions(Long tenantId) {
         List<Role> roles = listEnabledByTenantId(tenantId);
@@ -152,11 +193,20 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
         }).collect(Collectors.toList());
     }
 
+    /**
+     * 处理 stat roles。
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> statRoles() {
         return roleMapper.statRoles();
     }
 
+    /**
+     * 删除 role by cascade。
+     * @param roleId 参数 roleId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteRoleByCascade(Long roleId) {

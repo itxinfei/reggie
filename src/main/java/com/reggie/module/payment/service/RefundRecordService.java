@@ -110,4 +110,35 @@ public interface RefundRecordService extends IService<RefundRecord> {
      * @param reason         原始退款原因
      */
     void recordReconcileTrace(Long paymentOrderId, BigDecimal amount, String reason);
+
+    /**
+     * 查询待审核的售后申请列表（员工端）。
+     *
+     * @param status 售后状态（null=查全部，"pending"=待审核，"success"=已退款等）
+     * @param tenantId 租户ID
+     * @return 售后记录列表
+     */
+    List<RefundRecord> listUserRefunds(String status, Long tenantId);
+
+    /**
+     * 员工审核售后申请：通过/拒绝。
+     * <p>
+     * 通过（approve=true）：将售后单标记为 PROCESSING，由调用方触发渠道退款；
+     * 拒绝（approve=false）：将售后单标记为 REJECTED，记录拒绝原因。
+     * </p>
+     *
+     * @param refundId 售后记录ID
+     * @param approve  是否通过
+     * @param rejectReason 拒绝原因（拒绝时必填）
+     * @return 更新后的售后记录
+     */
+    RefundRecord auditUserRefund(Long refundId, boolean approve, String rejectReason);
+
+    /**
+     * 标记售后退款为已退款成功（渠道退款成功后调用）。
+     * 同时将关联订单状态置为已退款。
+     *
+     * @param refundNo 售后退款单号
+     */
+    void markUserRefundSuccess(String refundNo);
 }

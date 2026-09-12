@@ -42,6 +42,13 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
     private CostService costService;
     // ==================== Food Cost Report ====================
 
+    /**
+     * 获取 food cost report。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getFoodCostReport(String startDate, String endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -72,6 +79,13 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         return result;
     }
 
+    /**
+     * 获取 food cost trend。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getFoodCostTrend(String startDate, String endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -94,7 +108,8 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         // 一次性查询整个日期范围的成本趋势（按天返回），避免每天调用 getCostSummary
         Map<String, Object> costTrend = costService.getCostTrend(start, end, tenantId);
         List<String> trendDates = (List<String>) costTrend.getOrDefault("dates", new ArrayList<>());
-        List<BigDecimal> trendMaterialCosts = (List<BigDecimal>) costTrend.getOrDefault("materialCosts", new ArrayList<>());
+        List<BigDecimal> trendMaterialCosts = (List<BigDecimal>) costTrend.getOrDefault("materialCosts",
+                new ArrayList<>());
         // 构建 date -> materialCost 映射
         Map<String, BigDecimal> dailyCostMap = new HashMap<>();
         for (int i = 0; i < trendDates.size(); i++) {
@@ -148,6 +163,14 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         return result;
     }
 
+    /**
+     * 获取 food cost ranking。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param limit 参数 limit
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getFoodCostRanking(String startDate, String endDate, int limit, Long tenantId) {
         // Use dish cost ranking from cost service
@@ -156,6 +179,13 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
 
     // ==================== Enhanced Sales Report ====================
 
+    /**
+     * 获取 weekly report。
+     * @param year 参数 year
+     * @param week 参数 week
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getWeeklyReport(int year, int week, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -196,6 +226,13 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         return result;
     }
 
+    /**
+     * 获取 monthly report。
+     * @param year 参数 year
+     * @param month 参数 month
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getMonthlyReport(int year, int month, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -238,6 +275,12 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         return result;
     }
 
+    /**
+     * 获取 yearly report。
+     * @param year 参数 year
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getYearlyReport(int year, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -273,6 +316,15 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         return result;
     }
 
+    /**
+     * 获取 sales comparison。
+     * @param period1Start 参数 period1Start
+     * @param period1End 参数 period1End
+     * @param period2Start 参数 period2Start
+     * @param period2End 参数 period2End
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getSalesComparison(String period1Start, String period1End,
                                                    String period2Start, String period2End, Long tenantId) {
@@ -311,6 +363,14 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         return result;
     }
 
+    /**
+     * 获取 sales trend。
+     * @param period 参数 period
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getSalesTrend(String period, String startDate, String endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -362,8 +422,18 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         return result;
     }
 
+    /**
+     * 获取 top selling items。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param type 参数 type
+     * @param limit 参数 limit
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    public List<Map<String, Object>> getTopSellingItems(String startDate, String endDate, String type, int limit, Long tenantId) {
+    public List<Map<String, Object>> getTopSellingItems(String startDate, String endDate, String type, int limit,
+            Long tenantId) {
         List<Map<String, Object>> result = new ArrayList<>();
 
         // Query order details
@@ -425,6 +495,13 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         return result;
     }
 
+    /**
+     * 获取 sales by time period。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getSalesByTimePeriod(String startDate, String endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -456,12 +533,13 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
             int periodOrders = 0;
 
             for (Orders order : orders) {
-                if (order.getOrderTime() != null) {
-                    int hour = order.getOrderTime().getHour();
-                    if (hour >= startHour && hour < endHour) {
-                        periodRevenue = periodRevenue.add(order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO);
-                        periodOrders++;
-                    }
+                if (order.getOrderTime() == null) {
+                    continue;
+                }
+                int hour = order.getOrderTime().getHour();
+                if (hour >= startHour && hour < endHour) {
+                    periodRevenue = periodRevenue.add(order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO);
+                    periodOrders++;
                 }
             }
 
@@ -477,6 +555,13 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         return result;
     }
 
+    /**
+     * 获取 customer analysis。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getCustomerAnalysis(String startDate, String endDate, Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -531,6 +616,12 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
         return result;
     }
 
+    /**
+     * 获取 revenue forecast。
+     * @param days 参数 days
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getRevenueForecast(int days, Long tenantId) {
         Map<String, Object> result = new HashMap<>();

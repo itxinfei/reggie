@@ -79,6 +79,7 @@ public final class AiKeyEncryptor {
             System.arraycopy(encrypted, 0, combined, iv.length, encrypted.length);
             return Base64.getEncoder().encodeToString(combined);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[AI密钥] 加密失败", e);
             return null;
         }
@@ -118,6 +119,7 @@ public final class AiKeyEncryptor {
             byte[] decrypted = cipher.doFinal(encrypted);
             return new String(decrypted, StandardCharsets.UTF_8);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[AI密钥] 解密失败: prefix={}, error={}",
                     encryptedApiKey.substring(0, Math.min(20, encryptedApiKey.length())), e.getMessage());
             return null;

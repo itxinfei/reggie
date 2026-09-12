@@ -22,6 +22,10 @@ import java.util.List;
 @Transactional(rollbackFor = Exception.class)
 public class AddressBookServiceImpl extends ServiceImpl<AddressBookMapper, AddressBook> implements AddressBookService {
 
+    /**
+     * 查询列表 by current user。
+     * @return 返回结果
+     */
     @Override
     public List<AddressBook> listByCurrentUser() {
         Long userId = BaseContext.getCurrentId();
@@ -32,6 +36,10 @@ public class AddressBookServiceImpl extends ServiceImpl<AddressBookMapper, Addre
                 .orderByDesc(AddressBook::getCreateTime));
     }
 
+    /**
+     * 设置 default。
+     * @param id 参数 id
+     */
     @Override
     public void setDefault(Long id) {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -59,6 +67,11 @@ public class AddressBookServiceImpl extends ServiceImpl<AddressBookMapper, Addre
         this.update(setWrapper);
     }
 
+    /**
+     * 获取 by id current。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     public AddressBook getByIdCurrent(Long id) {
         Long userId = BaseContext.getCurrentId();

@@ -47,10 +47,16 @@ public class FranchiseeController {
     @Autowired
     private FranchiseeService franchiseeService;
 
+    /**
+     * 保存。
+     * @param franchisee 参数 franchisee
+     * @return 返回结果
+     */
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增加盟商", description = "新增加盟商，自动关联当前租户")
-    public R<Franchisee> save(@Parameter(description = "加盟商信息", required = true) @Valid @RequestBody Franchisee franchisee) {
+    public R<Franchisee> save(@Parameter(description = "加盟商信息", required =
+            true) @Valid @RequestBody Franchisee franchisee) {
         franchisee.setTenantId(BaseContext.getCurrentTenantId());
         if (franchisee.getStatus() == null) {
             franchisee.setStatus(Franchisee.STATUS_ENABLED);
@@ -59,10 +65,16 @@ public class FranchiseeController {
         return R.success(franchisee);
     }
 
+    /**
+     * 更新。
+     * @param franchisee 参数 franchisee
+     * @return 返回结果
+     */
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改加盟商", description = "更新加盟商信息，仅限本租户")
-    public R<String> update(@Parameter(description = "加盟商信息", required = true) @Valid @RequestBody Franchisee franchisee) {
+    public R<String> update(@Parameter(description = "加盟商信息", required =
+            true) @Valid @RequestBody Franchisee franchisee) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");
@@ -84,6 +96,11 @@ public class FranchiseeController {
         return R.success("修改成功");
     }
 
+    /**
+     * 删除。
+     * @param ids 参数 ids
+     * @return 返回结果
+     */
     @DeleteMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除加盟商", description = "删除加盟商（逻辑删除），逐条校验租户归属")
@@ -105,6 +122,11 @@ public class FranchiseeController {
         return R.success("删除成功");
     }
 
+    /**
+     * 获取 by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/{id}")
     @Operation(summary = "查询加盟商详情")
     public R<Franchisee> getById(@Parameter(description = "加盟商ID", required = true) @PathVariable Long id) {
@@ -119,6 +141,10 @@ public class FranchiseeController {
         return R.success(franchisee);
     }
 
+    /**
+     * 查询列表。
+     * @return 返回结果
+     */
     @GetMapping("/list")
     @Operation(summary = "查询加盟商列表", description = "查询当前租户全部启用加盟商")
     public R<List<Franchisee>> list() {
@@ -128,6 +154,14 @@ public class FranchiseeController {
         return R.success(franchiseeService.list(qw));
     }
 
+    /**
+     * 分页查询。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param name 参数 name
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @GetMapping("/page")
     @Operation(summary = "加盟商分页查询", description = "支持按名称、状态筛选")
     public R<Page<Franchisee>> page(
@@ -145,6 +179,10 @@ public class FranchiseeController {
         return R.success(pageInfo);
     }
 
+    /**
+     * 处理 stats。
+     * @return 返回结果
+     */
     @GetMapping("/stats")
     @RequiresPermission("franchise:manage")
     @Operation(summary = "加盟商统计", description = "返回总数/启用/禁用/关联合同数，按当前租户聚合")

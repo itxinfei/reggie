@@ -34,8 +34,19 @@ public class NotificationTemplateServiceImpl
         extends ServiceImpl<NotificationTemplateMapper, NotificationTemplate>
         implements NotificationTemplateService {
 
+    /**
+     * 分页查询 templates。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param bizType 参数 bizType
+     * @param channel 参数 channel
+     * @param status 参数 status
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    public Page<NotificationTemplate> pageTemplates(int page, int pageSize, String bizType, Integer channel, Integer status, Long tenantId) {
+    public Page<NotificationTemplate> pageTemplates(int page, int pageSize, String bizType, Integer channel,
+            Integer status, Long tenantId) {
         Page<NotificationTemplate> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
         if (bizType != null && !bizType.isEmpty()) {
@@ -54,6 +65,11 @@ public class NotificationTemplateServiceImpl
         return this.page(pageInfo, wrapper);
     }
 
+    /**
+     * 查询列表 templates。
+     * @param bizType 参数 bizType
+     * @return 返回结果
+     */
     @Override
     public List<NotificationTemplate> listTemplates(String bizType) {
         LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();
@@ -64,11 +80,20 @@ public class NotificationTemplateServiceImpl
         return this.list(wrapper);
     }
 
+    /**
+     * 获取 template。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     public NotificationTemplate getTemplate(Long id) {
         return this.getById(id);
     }
 
+    /**
+     * 新增 template。
+     * @param template 参数 template
+     */
     @Override
     public void addTemplate(NotificationTemplate template) {
         template.setCreateTime(LocalDateTime.now());
@@ -78,6 +103,10 @@ public class NotificationTemplateServiceImpl
         log.info("[通知模板] 新增模板：id={}, name={}", template.getId(), template.getTemplateName());
     }
 
+    /**
+     * 更新 template。
+     * @param template 参数 template
+     */
     @Override
     public void updateTemplate(NotificationTemplate template) {
         NotificationTemplate exist = this.getById(template.getId());
@@ -93,6 +122,11 @@ public class NotificationTemplateServiceImpl
         log.info("[通知模板] 更新模板：id={}", template.getId());
     }
 
+    /**
+     * 处理 toggle status。
+     * @param id 参数 id
+     * @param status 参数 status
+     */
     @Override
     public void toggleStatus(Long id, Integer status) {
         NotificationTemplate exist = this.getById(id);
@@ -111,6 +145,10 @@ public class NotificationTemplateServiceImpl
         log.info("[通知模板] 切换模板状态：id={}, status={}", id, status);
     }
 
+    /**
+     * 删除 template。
+     * @param id 参数 id
+     */
     @Override
     public void removeTemplate(Long id) {
         NotificationTemplate exist = this.getById(id);
@@ -129,6 +167,12 @@ public class NotificationTemplateServiceImpl
         log.info("[通知模板] 逻辑删除模板：id={}", id);
     }
 
+    /**
+     * 获取 template with tenant check。
+     * @param id 参数 id
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getTemplateWithTenantCheck(Long id, Long tenantId) {
         NotificationTemplate template = this.getById(id);
@@ -150,6 +194,11 @@ public class NotificationTemplateServiceImpl
         return result;
     }
 
+    /**
+     * 新增 template with tenant。
+     * @param template 参数 template
+     * @param tenantId 参数 tenantId
+     */
     @Override
     public void addTemplateWithTenant(NotificationTemplate template, Long tenantId) {
         if (tenantId != null) {
@@ -160,6 +209,12 @@ public class NotificationTemplateServiceImpl
                 template.getId(), template.getTemplateName(), tenantId);
     }
 
+    /**
+     * 更新 template with tenant。
+     * @param template 参数 template
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> updateTemplateWithTenant(NotificationTemplate template, Long tenantId) {
         NotificationTemplate existing = this.getById(template.getId());
@@ -183,6 +238,13 @@ public class NotificationTemplateServiceImpl
         return result;
     }
 
+    /**
+     * 处理 toggle status with tenant。
+     * @param id 参数 id
+     * @param status 参数 status
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> toggleStatusWithTenant(Long id, Integer status, Long tenantId) {
         NotificationTemplate template = this.getById(id);
@@ -209,6 +271,12 @@ public class NotificationTemplateServiceImpl
         return result;
     }
 
+    /**
+     * 删除 template with tenant。
+     * @param id 参数 id
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> removeTemplateWithTenant(Long id, Long tenantId) {
         NotificationTemplate template = this.getById(id);
@@ -235,6 +303,12 @@ public class NotificationTemplateServiceImpl
         return result;
     }
 
+    /**
+     * 查找 by biz type and tenant。
+     * @param bizType 参数 bizType
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public NotificationTemplate findByBizTypeAndTenant(String bizType, Long tenantId) {
         LambdaQueryWrapper<NotificationTemplate> wrapper = new LambdaQueryWrapper<>();

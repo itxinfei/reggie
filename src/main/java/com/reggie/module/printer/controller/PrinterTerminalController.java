@@ -50,11 +50,14 @@ public class PrinterTerminalController {
     @GetMapping("/page")
     @Operation(summary = "打印终端分页")
     public R<IPage<PrintTerminal>> page(@RequestParam(defaultValue = "1") @Parameter(description = "页码") int page,
-                                        @RequestParam(defaultValue = "10") @Parameter(description = "每页条数") int pageSize,
+                                        @RequestParam(defaultValue = "10") @Parameter(description =
+                                                "每页条数") int pageSize,
                                         @RequestParam(required = false) @Parameter(description = "终端名称") String name,
                                         @RequestParam(required = false) @Parameter(description = "终端编码") String code,
-                                        @RequestParam(required = false) @Parameter(description = "门店编码") String storeCode,
-                                        @RequestParam(required = false) @Parameter(description = "状态 0/1") Integer status,
+                                        @RequestParam(required = false) @Parameter(description =
+                                                "门店编码") String storeCode,
+                                        @RequestParam(required = false) @Parameter(description =
+                                                "状态 0/1") Integer status,
                                         HttpServletRequest request) {
         return R.success(printTerminalService.pageQuery(page, pageSize, resolveTenantId(request),
                 name, code, storeCode, status));

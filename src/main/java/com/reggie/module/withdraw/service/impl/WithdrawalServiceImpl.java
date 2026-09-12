@@ -27,7 +27,8 @@ import java.time.LocalDateTime;
  * @since 2026-09-01
  */
 @Service
-public class WithdrawalServiceImpl extends ServiceImpl<WithdrawalRequestMapper, WithdrawalRequest> implements WithdrawalService {
+public class WithdrawalServiceImpl extends ServiceImpl<WithdrawalRequestMapper, WithdrawalRequest> implements
+        WithdrawalService {
 
     @Autowired
     private WithdrawalRecordMapper withdrawalRecordMapper;
@@ -36,6 +37,11 @@ public class WithdrawalServiceImpl extends ServiceImpl<WithdrawalRequestMapper, 
     @Autowired
     private MemberService memberService;
 
+    /**
+     * 提交 withdrawal。
+     * @param request 参数 request
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public WithdrawalRequest submitWithdrawal(WithdrawalRequest request) {
@@ -50,6 +56,12 @@ public class WithdrawalServiceImpl extends ServiceImpl<WithdrawalRequestMapper, 
         return request;
     }
 
+    /**
+     * 审核通过 withdrawal。
+     * @param id 参数 id
+     * @param approveUserId 参数 approveUserId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public WithdrawalRequest approveWithdrawal(Long id, Long approveUserId) {
@@ -91,6 +103,13 @@ public class WithdrawalServiceImpl extends ServiceImpl<WithdrawalRequestMapper, 
         return getById(id);
     }
 
+    /**
+     * 驳回 withdrawal。
+     * @param id 参数 id
+     * @param rejectReason 参数 rejectReason
+     * @param approveUserId 参数 approveUserId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public WithdrawalRequest rejectWithdrawal(Long id, String rejectReason, Long approveUserId) {
@@ -113,6 +132,13 @@ public class WithdrawalServiceImpl extends ServiceImpl<WithdrawalRequestMapper, 
         return exist;
     }
 
+    /**
+     * 查询列表 withdrawals。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Override
     public Page<WithdrawalRequest> listWithdrawals(int page, int pageSize, String status) {
         Page<WithdrawalRequest> pageRequest = PageUtils.of(page, pageSize);
@@ -124,6 +150,14 @@ public class WithdrawalServiceImpl extends ServiceImpl<WithdrawalRequestMapper, 
         return page(pageRequest, qw);
     }
 
+    /**
+     * 确认 transfer。
+     * @param id 参数 id
+     * @param actualAmount 参数 actualAmount
+     * @param fee 参数 fee
+     * @param bankTraceNo 参数 bankTraceNo
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public WithdrawalRecord confirmTransfer(Long id, BigDecimal actualAmount, BigDecimal fee, String bankTraceNo) {

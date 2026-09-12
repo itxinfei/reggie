@@ -62,6 +62,12 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     // ==================== 本周汇总 ====================
 
+    /**
+     * 获取 week summary。
+     * @param tenantId 参数 tenantId
+     * @param weekStart 参数 weekStart
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getWeekSummary(Long tenantId, String weekStart) {
         log.info("获取本周考勤汇总 - tenantId={}, weekStart={}", tenantId, weekStart);
@@ -111,7 +117,8 @@ public class AttendanceServiceImpl implements AttendanceService {
         vo.setAvgWorkHours(avgWorkHours != null ? avgWorkHours.setScale(2, RoundingMode.HALF_UP).doubleValue() : 0.0);
 
         if (employeeTotal != null && employeeTotal > 0) {
-            double rate = (double) (normalCount + lateCount + earlyLeaveCount + businessTripCount) / employeeTotal * 100;
+            double rate =
+                    (double) (normalCount + lateCount + earlyLeaveCount + businessTripCount) / employeeTotal * 100;
             vo.setAttendanceRate(Math.round(rate * 100.0) / 100.0);
         } else {
             vo.setAttendanceRate(0.0);
@@ -136,6 +143,13 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     // ==================== 考勤日历 ====================
 
+    /**
+     * 获取 attendance calendar。
+     * @param employeeId 参数 employeeId
+     * @param month 参数 month
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getAttendanceCalendar(Long employeeId, String month, Long tenantId) {
         log.info("获取员工考勤日历 - employeeId={}, month={}, tenantId={}", employeeId, month, tenantId);
@@ -222,6 +236,11 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     // ==================== 今日考勤 ====================
 
+    /**
+     * 获取 today attendance。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getTodayAttendance(Long tenantId) {
         log.info("获取今日考勤 - tenantId={}", tenantId);
@@ -265,6 +284,11 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     // ==================== 打卡 ====================
 
+    /**
+     * 处理 clock in。
+     * @param employeeId 参数 employeeId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public R<Void> clockIn(Long employeeId) {
@@ -318,6 +342,11 @@ public class AttendanceServiceImpl implements AttendanceService {
         return r;
     }
 
+    /**
+     * 处理 clock out。
+     * @param employeeId 参数 employeeId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public R<Void> clockOut(Long employeeId) {
@@ -370,6 +399,12 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     // ==================== 异常统计 ====================
 
+    /**
+     * 获取 abnormal stats。
+     * @param tenantId 参数 tenantId
+     * @param weekStart 参数 weekStart
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getAbnormalStats(Long tenantId, String weekStart) {
         log.info("统计异常考勤 - tenantId={}, weekStart={}", tenantId, weekStart);

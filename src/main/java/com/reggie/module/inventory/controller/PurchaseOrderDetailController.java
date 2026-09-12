@@ -32,6 +32,11 @@ public class PurchaseOrderDetailController {
     @Autowired
     private PurchaseOrderDetailService purchaseOrderDetailService;
 
+    /**
+     * 查询列表 by order id。
+     * @param orderId 参数 orderId
+     * @return 返回结果
+     */
     @GetMapping("/list/{orderId}")
     @Operation(summary = "根据采购单id查询明细", description = "查询指定采购单的所有明细项")
     @Parameter(name = "orderId", description = "采购单ID", required = true)

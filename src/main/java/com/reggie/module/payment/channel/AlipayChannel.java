@@ -47,7 +47,8 @@ public class AlipayChannel implements PaymentChannel {
      */
     @Override
     public PayResponse createOrder(PayRequest request) {
-        log.info("Alipay createOrder: tradeNo={}, amount={}, subject={}", request.getTradeNo(), request.getAmount(), request.getSubject());
+        log.info("Alipay createOrder: tradeNo={}, amount={}, subject={}", request.getTradeNo(), request.getAmount(),
+                request.getSubject());
         PayResponse response = new PayResponse();
         response.setSuccess(true);
         response.setChannelTradeNo(TRADE_NO_PREFIX + UUID.randomUUID().toString().replace("-", ""));
@@ -79,7 +80,8 @@ public class AlipayChannel implements PaymentChannel {
      */
     @Override
     public RefundResponse refund(RefundRequest request) {
-        log.info("Alipay refund: channelTradeNo={}, amount={}, reason={}", request.getChannelTradeNo(), request.getAmount(), request.getReason());
+        log.info("Alipay refund: channelTradeNo={}, amount={}, reason={}", request.getChannelTradeNo(), request
+                .getAmount(), request.getReason());
         RefundResponse response = new RefundResponse();
         response.setSuccess(true);
         response.setRefundChannelTradeNo(REFUND_PREFIX + UUID.randomUUID().toString().replace("-", ""));
@@ -184,6 +186,7 @@ public class AlipayChannel implements PaymentChannel {
             }
             return ok;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("Alipay 回调签名校验异常: {}", e.getMessage(), e);
             return false;
         }

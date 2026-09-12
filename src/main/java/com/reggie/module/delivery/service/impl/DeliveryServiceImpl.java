@@ -81,6 +81,11 @@ public class DeliveryServiceImpl implements DeliveryService {
         // DELIVERED 和 CANCELLED 是终态，不允许再流转
     }
 
+    /**
+     * 获取 by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     public DeliveryOrder getById(String id) {
         // 修复 IDOR：按 id + tenantId 条件查询，防止跨租户访问
@@ -94,6 +99,11 @@ public class DeliveryServiceImpl implements DeliveryService {
         return deliveryOrderMapper.selectOne(qw);
     }
 
+    /**
+     * 获取 by platform order id。
+     * @param platformOrderId 参数 platformOrderId
+     * @return 返回结果
+     */
     @Override
     public DeliveryOrder getByPlatformOrderId(String platformOrderId) {
         LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
@@ -102,8 +112,19 @@ public class DeliveryServiceImpl implements DeliveryService {
         return deliveryOrderMapper.selectOne(qw);
     }
 
+    /**
+     * 分页查询 orders。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param platform 参数 platform
+     * @param status 参数 status
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @Override
-    public Page<DeliveryOrder> pageOrders(int page, int pageSize, String platform, String status, String startDate, String endDate) {
+    public Page<DeliveryOrder> pageOrders(int page, int pageSize, String platform, String status, String startDate,
+            String endDate) {
         Page<DeliveryOrder> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<DeliveryOrder> qw = new LambdaQueryWrapper<>();
         qw.eq(DeliveryOrder::getTenantId, BaseContext.getCurrentTenantId());
@@ -125,6 +146,12 @@ public class DeliveryServiceImpl implements DeliveryService {
         return pageInfo;
     }
 
+    /**
+     * 接单 order。
+     * @param platform 参数 platform
+     * @param platformOrderId 参数 platformOrderId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean acceptOrder(String platform, String platformOrderId) {
@@ -174,6 +201,13 @@ public class DeliveryServiceImpl implements DeliveryService {
         return success;
     }
 
+    /**
+     * 更新 order status。
+     * @param id 参数 id
+     * @param status 参数 status
+     * @param remark 参数 remark
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateOrderStatus(Long id, String status, String remark) {
@@ -232,6 +266,11 @@ public class DeliveryServiceImpl implements DeliveryService {
         return true;
     }
 
+    /**
+     * 获取 filter options。
+     * @param platform 参数 platform
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getFilterOptions(String platform) {
         Map<String, Object> result = new HashMap<>();
@@ -259,6 +298,13 @@ public class DeliveryServiceImpl implements DeliveryService {
         return result;
     }
 
+    /**
+     * 获取 delivery stats。
+     * @param platform 参数 platform
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getDeliveryStats(String platform, String startDate, String endDate) {
         // fail-closed：强制租户校验
@@ -291,7 +337,8 @@ public class DeliveryServiceImpl implements DeliveryService {
 
         // #71 使用聚合 SQL 替代全量 selectList + 内存遍历，防止 OOM
         String endDateParam = endDate != null ? LocalDate.parse(endDate).atTime(LocalTime.MAX).toString() : null;
-        List<Map<String, Object>> aggRows = deliveryOrderMapper.selectStatsByStatus(tenantId, platform, startDate, endDateParam);
+        List<Map<String, Object>> aggRows = deliveryOrderMapper.selectStatsByStatus(tenantId, platform, startDate,
+                endDateParam);
 
         long pendingCount = 0, acceptedCount = 0, pickingCount = 0;
         long deliveringCount = 0, completedCount = 0, cancelledCount = 0;
@@ -324,6 +371,12 @@ public class DeliveryServiceImpl implements DeliveryService {
         return stats;
     }
 
+    /**
+     * 同步 menu。
+     * @param platform 参数 platform
+     * @param dishes 参数 dishes
+     * @return 返回结果
+     */
     @Override
     public boolean syncMenu(String platform, List<Map<String, Object>> dishes) {
         DeliveryPlatform dp = factory.getPlatform(platform);
@@ -331,6 +384,12 @@ public class DeliveryServiceImpl implements DeliveryService {
         return dp.syncMenu(dishes);
     }
 
+    /**
+     * 同步 stock。
+     * @param platform 参数 platform
+     * @param stock 参数 stock
+     * @return 返回结果
+     */
     @Override
     public boolean syncStock(String platform, Map<Long, Integer> stock) {
         DeliveryPlatform dp = factory.getPlatform(platform);
@@ -338,6 +397,12 @@ public class DeliveryServiceImpl implements DeliveryService {
         return dp.syncStock(stock);
     }
 
+    /**
+     * 处理 callback。
+     * @param platform 参数 platform
+     * @param params 参数 params
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String handleCallback(String platform, Map<String, String> params) {
@@ -425,7 +490,8 @@ public class DeliveryServiceImpl implements DeliveryService {
      * 处理新订单回调：如果本地无记录则插入，已存在则跳过（幂等）
      * #9 tenantId 从回调参数获取，不依赖 BaseContext
      */
-    private String handleNewOrderCallback(DeliveryOrder existOrder, String platform, Map<String, String> params, Long tenantId) {
+    private String handleNewOrderCallback(DeliveryOrder existOrder, String platform, Map<String, String> params,
+            Long tenantId) {
         if (existOrder != null) {
             log.info("订单已存在（幂等跳过）: platformOrderId={}", params.get("platformOrderId"));
             return "success";
@@ -452,7 +518,8 @@ public class DeliveryServiceImpl implements DeliveryService {
         newOrder.setUpdateTime(LocalDateTime.now());
 
         deliveryOrderMapper.insert(newOrder);
-        log.info("新订单入库: platform={}, platformOrderId={}, tenantId={}", platform, newOrder.getPlatformOrderId(), tenantId);
+        log.info("新订单入库: platform={}, platformOrderId={}, tenantId={}", platform, newOrder.getPlatformOrderId(),
+                tenantId);
         return "success";
     }
 

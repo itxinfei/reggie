@@ -59,9 +59,11 @@ public class PlatformSyncController {
      */
     @PostMapping("/syncDish")
     @Operation(summary = "同步菜品上/下架到外卖平台")
-    public R<Void> syncDish(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
+    public R<Void> syncDish(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required =
+            true) @RequestParam String platformType,
                             @Parameter(description = "本系统菜品ID", required = true) @RequestParam Long dishId,
-                            @Parameter(description = "动作（on_shelf-上架/off_shelf-下架）", required = true) @RequestParam String action) {
+                            @Parameter(description = "动作（on_shelf-上架/off_shelf-下架）", required =
+                                    true) @RequestParam String action) {
         PlatformConfig config = resolveConfig(platformType);
         List<DishPlatformMapping> mappings = mappingService.listByDishIdAndPlatformType(dishId, platformType);
         DishPlatformMapping mapping = (mappings != null && !mappings.isEmpty()) ? mappings.get(0) : null;
@@ -74,6 +76,7 @@ public class PlatformSyncController {
         } catch (CustomException e) {
             return R.error(e.getMessage());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台同步] 菜品同步失败: dishId={}, action={}", dishId, action, e);
             return R.error("菜品同步失败：" + e.getMessage());
         }
@@ -88,7 +91,8 @@ public class PlatformSyncController {
      */
     @PostMapping("/syncStock")
     @Operation(summary = "同步库存到外卖平台")
-    public R<Void> syncStock(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
+    public R<Void> syncStock(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required =
+            true) @RequestParam String platformType,
                              @Parameter(description = "平台菜品ID", required = true) @RequestParam String platformDishId,
                              @Parameter(description = "剩余可售数量", required = true) @RequestParam int remainQty) {
         PlatformConfig config = resolveConfig(platformType);
@@ -98,6 +102,7 @@ public class PlatformSyncController {
         } catch (CustomException e) {
             return R.error(e.getMessage());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台同步] 库存同步失败: platformDishId={}", platformDishId, e);
             return R.error("库存同步失败：" + e.getMessage());
         }
@@ -111,8 +116,10 @@ public class PlatformSyncController {
      */
     @PostMapping("/syncBusiness")
     @Operation(summary = "同步营业状态到外卖平台")
-    public R<Void> syncBusiness(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required = true) @RequestParam String platformType,
-                                @Parameter(description = "是否营业（true-营业/false-休息）", required = true) @RequestParam boolean open) {
+    public R<Void> syncBusiness(@Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN）", required =
+            true) @RequestParam String platformType,
+                                @Parameter(description = "是否营业（true-营业/false-休息）", required =
+                                        true) @RequestParam boolean open) {
         PlatformConfig config = resolveConfig(platformType);
         try {
             syncService.syncBusinessStatus(config, open);
@@ -120,6 +127,7 @@ public class PlatformSyncController {
         } catch (CustomException e) {
             return R.error(e.getMessage());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台同步] 营业状态同步失败: platformType={}, open={}", platformType, open, e);
             return R.error("营业状态同步失败：" + e.getMessage());
         }

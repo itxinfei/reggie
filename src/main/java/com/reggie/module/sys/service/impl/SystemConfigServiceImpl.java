@@ -25,33 +25,73 @@ import com.reggie.common.CustomException;
  */
 @Service
 @Transactional(rollbackFor = Exception.class)
-public class SystemConfigServiceImpl extends com.baomidou.mybatisplus.extension.service.impl.ServiceImpl<SystemConfigMapper, SystemConfig>
+public class SystemConfigServiceImpl extends com.baomidou.mybatisplus.extension.service.impl
+        .ServiceImpl<SystemConfigMapper, SystemConfig>
         implements SystemConfigService {
 
     @Autowired
     private SystemConfigMapper systemConfigMapper;
 
+    /**
+     * 获取 config。
+     * @param configKey 参数 configKey
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    @Cacheable(value = "systemConfig", key = "'config:' + #configKey + ':' + (#tenantId != null ? #tenantId : 'global')")
+    @Cacheable(value = "systemConfig", key =
+            "'config:' + #configKey + ':' + (#tenantId != null ? #tenantId : 'global')")
+    /**
+     * 获取 config。
+     * @param configKey 参数 configKey
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     public String getConfig(String configKey, Long tenantId) {
         SystemConfig config = systemConfigMapper.findByConfigKey(configKey, tenantId);
         return config != null ? config.getConfigValue() : null;
     }
 
+    /**
+     * 获取 config。
+     * @param configKey 参数 configKey
+     * @return 返回结果
+     */
     @Override
     public String getConfig(String configKey) {
         Long tenantId = BaseContext.getCurrentTenantId();
         return getConfig(configKey, tenantId);
     }
 
+    /**
+     * 获取 config or default。
+     * @param configKey 参数 configKey
+     * @param defaultValue 参数 defaultValue
+     * @return 返回结果
+     */
     @Override
     public String getConfigOrDefault(String configKey, String defaultValue) {
         String value = getConfig(configKey);
         return value != null ? value : defaultValue;
     }
 
+    /**
+     * 设置 config。
+     * @param tenantId 参数 tenantId
+     * @param configKey 参数 configKey
+     * @param configValue 参数 configValue
+     * @return 返回结果
+     */
     @Override
-    @CacheEvict(value = "systemConfig", key = "'config:' + #configKey + ':' + (#tenantId != null ? #tenantId : 'global')")
+    @CacheEvict(value = "systemConfig", key =
+            "'config:' + #configKey + ':' + (#tenantId != null ? #tenantId : 'global')")
+    /**
+     * 设置 config。
+     * @param tenantId 参数 tenantId
+     * @param configKey 参数 configKey
+     * @param configValue 参数 configValue
+     * @return 返回结果
+     */
     public boolean setConfig(Long tenantId, String configKey, String configValue) {
         LambdaQueryWrapper<SystemConfig> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SystemConfig::getConfigKey, configKey)
@@ -75,17 +115,34 @@ public class SystemConfigServiceImpl extends com.baomidou.mybatisplus.extension.
         }
     }
 
+    /**
+     * 设置 global config。
+     * @param configKey 参数 configKey
+     * @param configValue 参数 configValue
+     * @return 返回结果
+     */
     @Override
     @CacheEvict(value = "systemConfig", key = "'config:' + #configKey + ':global'")
     public boolean setGlobalConfig(String configKey, String configValue) {
         return setConfig(null, configKey, configValue);
     }
 
+    /**
+     * 查询列表 by tenant id。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<SystemConfig> listByTenantId(Long tenantId) {
         return systemConfigMapper.listByTenantId(tenantId);
     }
 
+    /**
+     * 获取 configs。
+     * @param keys 参数 keys
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, String> getConfigs(List<String> keys, Long tenantId) {
         if (keys == null || keys.isEmpty()) {
@@ -107,7 +164,14 @@ public class SystemConfigServiceImpl extends com.baomidou.mybatisplus.extension.
      * 若当前租户已存在同 key 配置，则拒绝创建（避免跨租户覆盖）。</p>
      */
     @Override
-    @CacheEvict(value = "systemConfig", key = "'config:' + #configKey + ':' + T(com.reggie.common.BaseContext).getCurrentTenantId()")
+    @CacheEvict(value = "systemConfig", key =
+            "'config:' + #configKey + ':' + T(com.reggie.common.BaseContext).getCurrentTenantId()")
+    /**
+     * 新增 tenant config。
+     * @param configKey 参数 configKey
+     * @param configValue 参数 configValue
+     * @return 返回结果
+     */
     public boolean addTenantConfig(String configKey, String configValue) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -136,7 +200,15 @@ public class SystemConfigServiceImpl extends com.baomidou.mybatisplus.extension.
      * 避免前端通过全实体覆盖 tenantId / configKey / id 等敏感字段。</p>
      */
     @Override
-    @CacheEvict(value = "systemConfig", key = "'config:' + #configKey + ':' + T(com.reggie.common.BaseContext).getCurrentTenantId()")
+    @CacheEvict(value = "systemConfig", key =
+            "'config:' + #configKey + ':' + T(com.reggie.common.BaseContext).getCurrentTenantId()")
+    /**
+     * 更新 tenant config。
+     * @param id 参数 id
+     * @param configKey 参数 configKey
+     * @param configValue 参数 configValue
+     * @return 返回结果
+     */
     public boolean updateTenantConfig(Long id, String configKey, String configValue) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {

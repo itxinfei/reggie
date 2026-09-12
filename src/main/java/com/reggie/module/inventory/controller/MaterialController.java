@@ -69,7 +69,8 @@ public class MaterialController {
     @Parameter(name = "name", description = "食材名称（可选，模糊查询）")
     @Parameter(name = "categoryId", description = "分类ID（可选）")
     @Parameter(name = "status", description = "状态（可选）：0-禁用，1-启用")
-    public R<Page<Material>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
+    public R<Page<Material>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize,
                                    @RequestParam(required = false) String name,
                                    @RequestParam(required = false) Long categoryId,
                                    @Parameter(description = "状态（可选）：0-禁用，1-启用")
@@ -144,6 +145,11 @@ public class MaterialController {
         return R.success("修改食材成功");
     }
 
+    /**
+     * 删除。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除食材", description = "根据ID删除食材（先校验租户归属）")
@@ -246,7 +252,8 @@ public class MaterialController {
     @PostMapping("/batch-restock")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量补货", description = "批量补货：创建采购单并自动入库")
-    public R<Long> batchRestock(@Parameter(description = "批量补货信息", required = true) @Validated @RequestBody BatchRestockDTO dto) {
+    public R<Long> batchRestock(@Parameter(description = "批量补货信息", required =
+            true) @Validated @RequestBody BatchRestockDTO dto) {
         Long orderId = materialService.batchRestock(dto);
         return R.success(orderId);
     }

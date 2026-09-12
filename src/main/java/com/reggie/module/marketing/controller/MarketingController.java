@@ -69,6 +69,11 @@ public class MarketingController {
 
     // ==================== Full Reduction Rule Management ====================
 
+    /**
+     * 获取 full reduction rules。
+     * @param campaignId 参数 campaignId
+     * @return 返回结果
+     */
     @GetMapping("/full-reduction/list")
     @Operation(summary = "查询满减规则列表")
     public R<List<FullReductionRule>> getFullReductionRules(
@@ -78,38 +83,62 @@ public class MarketingController {
         return R.success(rules);
     }
 
+    /**
+     * 保存 full reduction rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
     @PostMapping("/full-reduction")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增满减规则")
-    public R<String> saveFullReductionRule(@Parameter(description = "满减规则信息", required = true) @Valid @RequestBody FullReductionRule rule) {
+    public R<String> saveFullReductionRule(@Parameter(description = "满减规则信息", required =
+            true) @Valid @RequestBody FullReductionRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = marketingService.saveOrUpdateFullReductionRule(rule);
         return success ? R.success("Saved successfully") : R.error("Save failed");
     }
 
+    /**
+     * 更新 full reduction rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
     @PutMapping("/full-reduction")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改满减规则")
-    public R<String> updateFullReductionRule(@Parameter(description = "满减规则信息（含ID）", required = true) @Valid @RequestBody FullReductionRule rule) {
+    public R<String> updateFullReductionRule(@Parameter(description = "满减规则信息（含ID）", required =
+            true) @Valid @RequestBody FullReductionRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = marketingService.saveOrUpdateFullReductionRule(rule);
         return success ? R.success("Updated successfully") : R.error("Update failed");
     }
 
+    /**
+     * 删除 full reduction rule。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/full-reduction/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除满减规则")
-    public R<String> deleteFullReductionRule(@Parameter(description = "满减规则ID", required = true) @PathVariable Long id) {
+    public R<String> deleteFullReductionRule(@Parameter(description = "满减规则ID", required =
+            true) @PathVariable Long id) {
         boolean success = marketingService.deleteFullReductionRule(id);
         return success ? R.success("Deleted successfully") : R.error("Delete failed");
     }
 
+    /**
+     * 批量处理 save full reduction rules。
+     * @param rules 参数 rules
+     * @return 返回结果
+     */
     @PostMapping("/full-reduction/batch")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量新增满减规则")
-    public R<String> batchSaveFullReductionRules(@Parameter(description = "满减规则列表", required = true) @Valid @RequestBody List<FullReductionRule> rules) {
+    public R<String> batchSaveFullReductionRules(@Parameter(description = "满减规则列表", required =
+            true) @Valid @RequestBody List<FullReductionRule> rules) {
         Long tenantId = BaseContext.getCurrentTenantId();
         for (FullReductionRule rule : rules) {
             rule.setTenantId(tenantId);
@@ -120,6 +149,11 @@ public class MarketingController {
 
     // ==================== Discount Rule Management ====================
 
+    /**
+     * 获取 discount rules。
+     * @param campaignId 参数 campaignId
+     * @return 返回结果
+     */
     @GetMapping("/discount/list")
     @Operation(summary = "查询折扣规则列表")
     public R<List<DiscountRule>> getDiscountRules(
@@ -129,26 +163,43 @@ public class MarketingController {
         return R.success(rules);
     }
 
+    /**
+     * 保存 discount rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
     @PostMapping("/discount")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增折扣规则")
-    public R<String> saveDiscountRule(@Parameter(description = "折扣规则信息", required = true) @Valid @RequestBody DiscountRule rule) {
+    public R<String> saveDiscountRule(@Parameter(description = "折扣规则信息", required =
+            true) @Valid @RequestBody DiscountRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = marketingService.saveOrUpdateDiscountRule(rule);
         return success ? R.success("Saved successfully") : R.error("Save failed");
     }
 
+    /**
+     * 更新 discount rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
     @PutMapping("/discount")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改折扣规则")
-    public R<String> updateDiscountRule(@Parameter(description = "折扣规则信息（含ID）", required = true) @Valid @RequestBody DiscountRule rule) {
+    public R<String> updateDiscountRule(@Parameter(description = "折扣规则信息（含ID）", required =
+            true) @Valid @RequestBody DiscountRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = marketingService.saveOrUpdateDiscountRule(rule);
         return success ? R.success("Updated successfully") : R.error("Update failed");
     }
 
+    /**
+     * 删除 discount rule。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/discount/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除折扣规则")
@@ -157,10 +208,16 @@ public class MarketingController {
         return success ? R.success("Deleted successfully") : R.error("Delete failed");
     }
 
+    /**
+     * 批量处理 save discount rules。
+     * @param rules 参数 rules
+     * @return 返回结果
+     */
     @PostMapping("/discount/batch")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量新增折扣规则")
-    public R<String> batchSaveDiscountRules(@Parameter(description = "折扣规则列表", required = true) @Valid @RequestBody List<DiscountRule> rules) {
+    public R<String> batchSaveDiscountRules(@Parameter(description = "折扣规则列表", required =
+            true) @Valid @RequestBody List<DiscountRule> rules) {
         Long tenantId = BaseContext.getCurrentTenantId();
         for (DiscountRule rule : rules) {
             rule.setTenantId(tenantId);
@@ -171,6 +228,12 @@ public class MarketingController {
 
     // ==================== Marketing Calculation ====================
 
+    /**
+     * 计算 full reduction。
+     * @param campaignId 参数 campaignId
+     * @param orderAmount 参数 orderAmount
+     * @return 返回结果
+     */
     @PostMapping("/calculate/full-reduction")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "计算满减优惠金额")
@@ -183,6 +246,13 @@ public class MarketingController {
         return R.success(discount);
     }
 
+    /**
+     * 计算 discount。
+     * @param campaignId 参数 campaignId
+     * @param orderAmount 参数 orderAmount
+     * @param dishIds 参数 dishIds
+     * @return 返回结果
+     */
     @PostMapping("/calculate/discount")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "计算折扣优惠金额")
@@ -196,6 +266,12 @@ public class MarketingController {
         return R.success(discount);
     }
 
+    /**
+     * 计算 best discount。
+     * @param orderAmount 参数 orderAmount
+     * @param dishIds 参数 dishIds
+     * @return 返回结果
+     */
     @PostMapping("/calculate/best")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "计算最优优惠")
@@ -210,17 +286,32 @@ public class MarketingController {
 
     // ==================== Usage Records ====================
 
+    /**
+     * 获取 usage records。
+     * @param campaignId 参数 campaignId
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @GetMapping("/usage/list")
     @Operation(summary = "查询活动使用记录")
     public R<List<CampaignUsageRecord>> getUsageRecords(
             @Parameter(description = "活动ID（可选）") @RequestParam(required = false) Long campaignId,
-            @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+            @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<CampaignUsageRecord> records = marketingService.getUsageRecords(campaignId, startDate, endDate, tenantId);
         return R.success(records);
     }
 
+    /**
+     * 获取 user usage count。
+     * @param campaignId 参数 campaignId
+     * @param ruleId 参数 ruleId
+     * @return 返回结果
+     */
     @GetMapping("/usage/count")
     @Operation(summary = "查询用户使用次数")
     public R<Integer> getUserUsageCount(
@@ -234,42 +325,75 @@ public class MarketingController {
 
     // ==================== Statistics ====================
 
+    /**
+     * 获取 marketing statistics。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @GetMapping("/statistics")
     @Operation(summary = "营销统计")
     public R<Map<String, Object>> getMarketingStatistics(
-            @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+            @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = marketingService.getMarketingStatistics(startDate, endDate, tenantId);
         return R.success(statistics);
     }
 
+    /**
+     * 获取 full reduction effect。
+     * @param campaignId 参数 campaignId
+     * @return 返回结果
+     */
     @GetMapping("/effect/full-reduction/{campaignId}")
     @Operation(summary = "满减活动效果")
-    public R<Map<String, Object>> getFullReductionEffect(@Parameter(description = "活动ID", required = true) @PathVariable Long campaignId) {
+    public R<Map<String, Object>> getFullReductionEffect(@Parameter(description = "活动ID", required =
+            true) @PathVariable Long campaignId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> effect = marketingService.getFullReductionEffect(campaignId, tenantId);
         return R.success(effect);
     }
 
+    /**
+     * 获取 discount effect。
+     * @param campaignId 参数 campaignId
+     * @return 返回结果
+     */
     @GetMapping("/effect/discount/{campaignId}")
     @Operation(summary = "折扣活动效果")
-    public R<Map<String, Object>> getDiscountEffect(@Parameter(description = "活动ID", required = true) @PathVariable Long campaignId) {
+    public R<Map<String, Object>> getDiscountEffect(@Parameter(description = "活动ID", required =
+            true) @PathVariable Long campaignId) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> effect = marketingService.getDiscountEffect(campaignId, tenantId);
         return R.success(effect);
     }
 
+    /**
+     * 获取 marketing trend。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @GetMapping("/trend")
     @Operation(summary = "营销趋势")
     public R<Map<String, Object>> getMarketingTrend(
-            @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+            @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
+            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern =
+                    "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> trend = marketingService.getMarketingTrend(startDate, endDate, tenantId);
         return R.success(trend);
     }
 
+    /**
+     * 获取 top activities。
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
     @GetMapping("/top")
     @Operation(summary = "热门活动排行")
     public R<List<Map<String, Object>>> getTopActivities(
@@ -281,6 +405,15 @@ public class MarketingController {
 
     // ==================== Campaign CRUD & Delivery（营销活动投放） ====================
 
+    /**
+     * 分页查询 campaigns。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param name 参数 name
+     * @param status 参数 status
+     * @param campaignType 参数 campaignType
+     * @return 返回结果
+     */
     @GetMapping("/campaigns/page")
     @Operation(summary = "分页查询营销活动", description = "分页查询营销活动列表，支持按名称、状态、活动类型筛选")
     public R<Page<MarketingCampaign>> pageCampaigns(
@@ -289,10 +422,16 @@ public class MarketingController {
             @Parameter(description = "活动名称（可选）") @RequestParam(required = false) String name,
             @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status,
             @Parameter(description = "活动类型（可选）") @RequestParam(required = false) Integer campaignType) {
-        Page<MarketingCampaign> result = marketingCampaignService.pageCampaigns(page, PageUtils.cap(pageSize), name, status, campaignType);
+        Page<MarketingCampaign> result = marketingCampaignService.pageCampaigns(page, PageUtils.cap(pageSize), name,
+                status, campaignType);
         return R.success(result);
     }
 
+    /**
+     * 创建 campaign。
+     * @param campaign 参数 campaign
+     * @return 返回结果
+     */
     @PostMapping("/campaigns")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "创建营销活动", description = "创建新的营销活动，初始状态为草稿")
@@ -310,6 +449,11 @@ public class MarketingController {
         return R.success(campaign);
     }
 
+    /**
+     * 更新 campaign。
+     * @param campaign 参数 campaign
+     * @return 返回结果
+     */
     @PutMapping("/campaigns")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新营销活动", description = "更新营销活动信息")
@@ -343,6 +487,11 @@ public class MarketingController {
         return R.success(exist);
     }
 
+    /**
+     * 批量处理 delete campaigns。
+     * @param dto 参数 dto
+     * @return 返回结果
+     */
     @PostMapping("/campaigns/batch-delete")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量删除营销活动", description = "批量删除指定的营销活动")
@@ -372,6 +521,11 @@ public class MarketingController {
         return R.success("成功删除 " + deleted + " 个活动");
     }
 
+    /**
+     * 删除 campaign。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/campaigns/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除营销活动", description = "删除指定的营销活动")
@@ -393,6 +547,11 @@ public class MarketingController {
         return R.success("删除成功");
     }
 
+    /**
+     * 获取 campaign。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/campaigns/{id}")
     @Operation(summary = "查询营销活动", description = "根据ID查询单个营销活动详情")
     public R<MarketingCampaign> getCampaign(
@@ -401,6 +560,11 @@ public class MarketingController {
         return R.success(campaign);
     }
 
+    /**
+     * 处理 publish campaign。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @PutMapping("/campaigns/{id}/publish")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "发布营销活动", description = "将草稿状态的活动发布为进行中状态")
@@ -423,6 +587,11 @@ public class MarketingController {
         return R.success("活动已发布");
     }
 
+    /**
+     * 处理 pause campaign。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @PutMapping("/campaigns/{id}/pause")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "暂停营销活动", description = "暂停（结束）指定的营销活动")
@@ -444,6 +613,13 @@ public class MarketingController {
         return R.success("活动已暂停");
     }
 
+    /**
+     * 推送 message。
+     * @param campaignId 参数 campaignId
+     * @param userId 参数 userId
+     * @param pushType 参数 pushType
+     * @return 返回结果
+     */
     @PostMapping("/push/{campaignId}/{userId}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "推送营销消息", description = "向指定用户推送营销活动消息")
@@ -455,6 +631,11 @@ public class MarketingController {
         return success ? R.success("推送成功") : R.error("推送失败");
     }
 
+    /**
+     * 处理 auto dispatch coupons。
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @PostMapping("/auto-dispatch-coupons")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "自动发放优惠券", description = "根据用户画像自动为当前用户发放匹配的优惠券")
@@ -464,6 +645,12 @@ public class MarketingController {
         return R.success("已发放" + count + "张优惠券");
     }
 
+    /**
+     * 推送 preview。
+     * @param campaignId 参数 campaignId
+     * @param limit 参数 limit
+     * @return 返回结果
+     */
     @GetMapping("/push-preview/{campaignId}")
     @Operation(summary = "推送预览", description = "查看匹配该活动的真实用户列表预览")
     public R<Map<String, Object>> pushPreview(
@@ -473,6 +660,12 @@ public class MarketingController {
         return R.success(result);
     }
 
+    /**
+     * 批量处理 push。
+     * @param campaignId 参数 campaignId
+     * @param dto 参数 dto
+     * @return 返回结果
+     */
     @PostMapping("/batch-push/{campaignId}")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量推送营销消息", description = "根据活动目标人群自动匹配用户并批量推送营销消息")
@@ -484,6 +677,10 @@ public class MarketingController {
         return R.success("已向" + count + "位用户推送营销消息");
     }
 
+    /**
+     * 处理 campaign options。
+     * @return 返回结果
+     */
     @GetMapping("/campaigns/options")
     @Operation(summary = "筛选选项", description = "获取所有营销活动名称，供搜索条件下拉框使用")
     public R<Map<String, List<String>>> campaignOptions() {
@@ -497,6 +694,10 @@ public class MarketingController {
         return R.success(result);
     }
 
+    /**
+     * 处理 campaign stats。
+     * @return 返回结果
+     */
     @GetMapping("/campaigns/stats")
     @Operation(summary = "营销活动统计", description = "获取营销活动全局统计数据")
     public R<Map<String, Object>> campaignStats() {
@@ -504,6 +705,11 @@ public class MarketingController {
         return R.success(stats);
     }
 
+    /**
+     * 推送 count。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/campaigns/{id}/push-count")
     @Operation(summary = "活动推送次数", description = "获取指定营销活动的推送次数统计")
     public R<Integer> pushCount(

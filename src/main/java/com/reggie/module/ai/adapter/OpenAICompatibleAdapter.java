@@ -7,6 +7,7 @@ import com.reggie.module.ai.model.AiProviderConfig;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -29,16 +30,32 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
 
     public static final String FORMAT_ID = "openai";
 
+    /**
+     * 获取 format id。
+     * @return 返回结果
+     */
     @Override
     public String getFormatId() {
         return FORMAT_ID;
     }
 
+    /**
+     * 获取 display name。
+     * @return 返回结果
+     */
     @Override
     public String getDisplayName() {
         return "OpenAI兼容格式（GPT / DeepSeek / Qwen / GLM / Kimi 等）";
     }
 
+    /**
+     * 处理 do chat。
+     * @param messages 参数 messages
+     * @param maxTokens 参数 maxTokens
+     * @param temperature 参数 temperature
+     * @param config 参数 config
+     * @return 返回结果
+     */
     @Override
     protected AIChatResponse doChat(List<AIMessage> messages, int maxTokens,
                                      double temperature, AiProviderConfig config) {
@@ -116,24 +133,9 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             // 优先解析 choices[0].message.content（标准 OpenAI 格式）
             JsonNode choices = root.get("choices");
             if (choices != null && choices.isArray() && choices.size() > 0) {
-                JsonNode messageNode = choices.get(0).get("message");
-                if (messageNode != null) {
-                    String content = messageNode.path("content").asText("");
-                    int tokensUsed = root.has("usage")
-                            ? root.path("usage").path("total_tokens").asInt(0) : 0;
-
-                    // 思考模型（如 stepfun step-3.7-flash、DeepSeek-R1）content 可能为空，
-                    // 实际文本放在 reasoning_content 字段中
-                    if (content.isEmpty()) {
-                        String rc = messageNode.path("reasoning_content").asText("");
-                        if (!rc.isEmpty()) {
-                            content = rc;
-                        }
-                    }
-
-                    log.info("AI响应[{} / {}]: tokensUsed={}, contentLength={}",
-                            config.getProviderCode(), FORMAT_ID, tokensUsed, content.length());
-                    return successResponse(content, config.getModelName(), tokensUsed);
+                AIChatResponse messageResponse = parseMessageContent(choices.get(0).get("message"), root, config);
+                if (messageResponse != null) {
+                    return messageResponse;
                 }
 
                 // 兼容部分模型直接返回 choices[0].text（文本补全格式）
@@ -170,16 +172,30 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                     + "）：服务器返回了非 JSON 格式的响应。请检查「" + config.getBaseUrl()
                     + "」是否为正确的 API 基础地址。", config);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("AI响应[{} / {}]解析异常", config.getProviderCode(), FORMAT_ID, e);
             return errorResponse("AI服务返回异常（" + config.getProviderName() + "）：" + e.getMessage(), config);
         }
     }
 
+    /**
+     * 处理 supports streaming。
+     * @return 返回结果
+     */
     @Override
     public boolean supportsStreaming() {
         return true;
     }
 
+    /**
+     * 处理 chat stream。
+     * @param messages 参数 messages
+     * @param maxTokens 参数 maxTokens
+     * @param temperature 参数 temperature
+     * @param config 参数 config
+     * @param callback 参数 callback
+     * @return 返回结果
+     */
     @Override
     public String chatStream(List<AIMessage> messages, int maxTokens, double temperature,
                              AiProviderConfig config, StreamCallback callback) throws Exception {
@@ -224,39 +240,7 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             }
 
             // 逐行读取 SSE 流（JDK 1.8 兼容：分开 try-with-resources）
-            InputStream is = conn.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-            try {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    line = line.trim();
-                    if (line.isEmpty() || line.startsWith(":")) continue;
-
-                    if (line.startsWith("data: ")) {
-                        String data = line.substring(6);
-                        if ("[DONE]".equals(data)) continue;
-
-                        try {
-                            JsonNode root = getObjectMapper().readTree(data);
-                            JsonNode choices = root.get("choices");
-                            if (choices != null && choices.isArray() && choices.size() > 0) {
-                                JsonNode delta = choices.get(0).get("delta");
-                                if (delta != null) {
-                                    String token = delta.path("content").asText("");
-                                    if (!token.isEmpty()) {
-                                        fullContent.append(token);
-                                        callback.onToken(token, false);
-                                    }
-                                }
-                            }
-                        } catch (Exception e) {
-                            log.debug("SSE行解析跳过: {}", truncate(line, 100));
-                        }
-                    }
-                }
-            } finally {
-                reader.close();
-            }
+            readSseStream(conn, fullContent, callback);
 
             if (fullContent.length() > 0) {
                 log.info("AI流式响应[{} / {}]: totalLength={}",
@@ -267,6 +251,7 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             callback.onToken("模型返回了空响应", true);
             return null;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("AI流式请求[{}]异常", config.getProviderCode(), e);
             callback.onToken("流式输出异常：" + e.getMessage(), true);
             return null;
@@ -274,6 +259,97 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             if (conn != null) {
                 conn.disconnect();
             }
+        }
+    }
+
+    /**
+     * 解析 choices[0].message 内容（优先 content，兼容推理模型的 reasoning_content）。
+     *
+     * @param messageNode choices[0].message 节点
+     * @param root 响应根节点（用于取 usage）
+     * @param config 供应商配置
+     * @return 解析成功返回响应，message 为空返回 null
+     */
+    private AIChatResponse parseMessageContent(JsonNode messageNode, JsonNode root, AiProviderConfig config) {
+        if (messageNode == null) {
+            return null;
+        }
+        String content = messageNode.path("content").asText("");
+        int tokensUsed = root.has("usage") ? root.path("usage").path("total_tokens").asInt(0) : 0;
+
+        // 思考模型（如 stepfun step-3.7-flash、DeepSeek-R1）content 可能为空，
+        // 实际文本放在 reasoning_content 字段中
+        if (content.isEmpty()) {
+            String rc = messageNode.path("reasoning_content").asText("");
+            if (!rc.isEmpty()) {
+                content = rc;
+            }
+        }
+
+        log.info("AI响应[{} / {}]: tokensUsed={}, contentLength={}",
+                config.getProviderCode(), FORMAT_ID, tokensUsed, content.length());
+        return successResponse(content, config.getModelName(), tokensUsed);
+    }
+
+    /**
+     * 读取 SSE 响应流并逐行处理（等价抽取，降低嵌套层级）。
+     *
+     * @param conn 已建立的连接
+     * @param fullContent 已累积的完整内容
+     * @param callback 流式回调
+     * @throws IOException 读取流失败
+     */
+    private void readSseStream(HttpURLConnection conn, StringBuilder fullContent, StreamCallback callback)
+            throws IOException {
+        InputStream is = conn.getInputStream();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+        try {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith(":")) {
+                    continue;
+                }
+                if (!line.startsWith("data: ")) {
+                    continue;
+                }
+                String data = line.substring(6);
+                if (!"[DONE]".equals(data)) {
+                    handleSseDelta(data, fullContent, callback);
+                }
+            }
+        } finally {
+            reader.close();
+        }
+    }
+
+    /**
+     * 解析单条 SSE data 并回吐 token（等价抽取，降低嵌套层级）。
+     *
+     * @param data SSE data 内容
+     * @param fullContent 已累积的完整内容
+     * @param callback 流式回调
+     */
+    private void handleSseDelta(String data, StringBuilder fullContent, StreamCallback callback) {
+        try {
+            JsonNode root = getObjectMapper().readTree(data);
+            JsonNode choices = root.get("choices");
+            if (choices == null || !choices.isArray() || choices.size() == 0) {
+                return;
+            }
+            JsonNode delta = choices.get(0).get("delta");
+            if (delta == null) {
+                return;
+            }
+            String token = delta.path("content").asText("");
+            if (token.isEmpty()) {
+                return;
+            }
+            fullContent.append(token);
+            callback.onToken(token, false);
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.debug("SSE行解析跳过: {}", truncate(data, 100));
         }
     }
 }

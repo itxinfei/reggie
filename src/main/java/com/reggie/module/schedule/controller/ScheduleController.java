@@ -28,6 +28,11 @@ public class ScheduleController {
     @Autowired
     private WorkScheduleService workScheduleService;
 
+    /**
+     * 处理 monthly。
+     * @param month 参数 month
+     * @return 返回结果
+     */
     @GetMapping("/monthly")
     @RequireEmployee
     @Operation(summary = "本月排班表", description = "获取当前租户所有员工本月排班表")
@@ -38,21 +43,35 @@ public class ScheduleController {
         return R.success(schedules);
     }
 
+    /**
+     * 处理 employee schedule。
+     * @param employeeId 参数 employeeId
+     * @param month 参数 month
+     * @return 返回结果
+     */
     @GetMapping("/employee/{employeeId}")
     @RequireEmployee
     @Operation(summary = "员工排班", description = "获取某员工某月的排班详情")
     @Parameter(name = "employeeId", description = "员工ID", required = true)
     public R<List<Map<String, Object>>> employeeSchedule(@PathVariable Long employeeId,
-                                                         @Parameter(description = "月份，格式 yyyy-MM", example = "2026-08") @RequestParam(required = false) String month) {
+                                                         @Parameter(description = "月份，格式 yyyy-MM", example =
+                                                                 "2026-08") @RequestParam(required =
+                                                                 false) String month) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> schedules = workScheduleService.getEmployeeSchedule(employeeId, month, tenantId);
         return R.success(schedules);
     }
 
+    /**
+     * 保存 schedule。
+     * @param dto 参数 dto
+     * @return 返回结果
+     */
     @PostMapping("/save")
     @RequireEmployee
     @Operation(summary = "保存排班", description = "保存或更新员工的某日排班信息")
-    public R<Void> saveSchedule(@Parameter(description = "排班信息（员工ID、日期、班次、起止时间）", required = true) @Valid @RequestBody SaveScheduleDTO dto) {
+    public R<Void> saveSchedule(@Parameter(description = "排班信息（员工ID、日期、班次、起止时间）", required =
+            true) @Valid @RequestBody SaveScheduleDTO dto) {
         Long employeeId = dto.getEmployeeId();
         String date = dto.getDate();
         int shift = dto.getShift() != null ? dto.getShift() : 0;
@@ -62,6 +81,10 @@ public class ScheduleController {
         return workScheduleService.saveSchedule(employeeId, date, shift, shiftStart, shiftEnd);
     }
 
+    /**
+     * 处理 today。
+     * @return 返回结果
+     */
     @GetMapping("/today")
     @RequireEmployee
     @Operation(summary = "今日排班", description = "获取当前租户所有员工的今日排班")

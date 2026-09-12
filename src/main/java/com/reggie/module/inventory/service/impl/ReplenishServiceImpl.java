@@ -86,11 +86,17 @@ public class ReplenishServiceImpl implements ReplenishService {
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    /**
+     * 获取 replenish dashboard。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getReplenishDashboard(Long tenantId) {
         log.info("[智能补货] 获取补货看板数据，tenantId={}", tenantId);
 
-        List<Map<String, Object>> suggestions = getSmartReplenishSuggest(tenantId, DEFAULT_DAYS, DEFAULT_REPLENISH_CYCLE);
+        List<Map<String, Object>> suggestions = getSmartReplenishSuggest(tenantId, DEFAULT_DAYS,
+                DEFAULT_REPLENISH_CYCLE);
 
         Map<String, Object> dashboard = new HashMap<String, Object>();
 
@@ -144,6 +150,13 @@ public class ReplenishServiceImpl implements ReplenishService {
         return dashboard;
     }
 
+    /**
+     * 获取 smart replenish suggest。
+     * @param tenantId 参数 tenantId
+     * @param days 参数 days
+     * @param replenishCycle 参数 replenishCycle
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getSmartReplenishSuggest(Long tenantId, int days, int replenishCycle) {
         log.info("[智能补货] 获取补货建议，tenantId={}, days={}, replenishCycle={}", tenantId, days, replenishCycle);
@@ -257,6 +270,13 @@ public class ReplenishServiceImpl implements ReplenishService {
         return suggestList;
     }
 
+    /**
+     * 计算 weighted daily usage。
+     * @param materialId 参数 materialId
+     * @param days 参数 days
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public BigDecimal calcWeightedDailyUsage(Long materialId, int days, Long tenantId) {
         if (days <= 0) {
@@ -329,6 +349,12 @@ public class ReplenishServiceImpl implements ReplenishService {
         return weightedDailyUsage;
     }
 
+    /**
+     * 计算 estimated days。
+     * @param stockQty 参数 stockQty
+     * @param dailyUsage 参数 dailyUsage
+     * @return 返回结果
+     */
     @Override
     public int calcEstimatedDays(BigDecimal stockQty, BigDecimal dailyUsage) {
         if (stockQty == null) {
@@ -342,6 +368,11 @@ public class ReplenishServiceImpl implements ReplenishService {
         return result.intValue();
     }
 
+    /**
+     * 计算 urgency。
+     * @param estimatedDays 参数 estimatedDays
+     * @return 返回结果
+     */
     @Override
     public String calcUrgency(int estimatedDays) {
         if (estimatedDays <= 1) {
@@ -390,6 +421,7 @@ public class ReplenishServiceImpl implements ReplenishService {
             }
             return null;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[智能补货] Redis 读取缓存失败，降级为直接计算：{}", e.getMessage());
             return null;
         }
@@ -417,6 +449,7 @@ public class ReplenishServiceImpl implements ReplenishService {
         } catch (JsonProcessingException e) {
             log.warn("[智能补货] JSON 序列化失败，跳过缓存：{}", e.getMessage());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[智能补货] Redis 写入缓存失败，降级：{}", e.getMessage());
         }
     }
@@ -434,17 +467,11 @@ public class ReplenishServiceImpl implements ReplenishService {
                 int urgencyA = parseUrgencyLevel((String) a.get("urgency"));
                 int urgencyB = parseUrgencyLevel((String) b.get("urgency"));
 
-                boolean shouldSwap = false;
-                if (urgencyB > urgencyA) {
-                    shouldSwap = true;
-                } else if (urgencyB == urgencyA) {
-                    // 同等级按 estimatedDays 升序（断货风险大的在前）
-                    int daysA = (Integer) a.get("estimatedDays");
-                    int daysB = (Integer) b.get("estimatedDays");
-                    if (daysB < daysA) {
-                        shouldSwap = true;
-                    }
-                }
+                // 同等级按 estimatedDays 升序（断货风险大的在前）——等价重构，用布尔表达式消除嵌套
+                boolean sameUrgency = urgencyB == urgencyA;
+                int daysA = sameUrgency ? (Integer) a.get("estimatedDays") : 0;
+                int daysB = sameUrgency ? (Integer) b.get("estimatedDays") : 0;
+                boolean shouldSwap = urgencyB > urgencyA || (sameUrgency && daysB < daysA);
 
                 if (shouldSwap) {
                     Map<String, Object> tmp = list.get(j);

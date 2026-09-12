@@ -57,7 +57,8 @@ public class SupplierController {
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "name", description = "供应商名称（可选，模糊查询）")
     @Parameter(name = "status", description = "状态（可选）：0-禁用，1-启用")
-    public R<Page<Supplier>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
+    public R<Page<Supplier>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize,
                                    @RequestParam(required = false) String name,
                                    @RequestParam(required = false) Integer status) {
         Page<Supplier> pageInfo = PageUtils.of(page, pageSize);
@@ -117,6 +118,11 @@ public class SupplierController {
         return R.success("修改供应商成功");
     }
 
+    /**
+     * 删除。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除供应商", description = "根据ID删除供应商（先校验租户归属）")

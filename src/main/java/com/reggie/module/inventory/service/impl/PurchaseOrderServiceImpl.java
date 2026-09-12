@@ -37,7 +37,8 @@ import java.util.stream.Collectors;
  * @since 2026-07-09
  */
 @Service
-public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, PurchaseOrder> implements PurchaseOrderService {
+public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, PurchaseOrder> implements
+        PurchaseOrderService {
 
     /** 采购单明细服务 */
     @Autowired
@@ -59,6 +60,13 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
     @Autowired
     private PurchaseOrderDetailMapper purchaseOrderDetailMapper;
 
+    /**
+     * 创建 order。
+     * @param supplierId 参数 supplierId
+     * @param operator 参数 operator
+     * @param remark 参数 remark
+     * @return 返回结果
+     */
     @Override
     public PurchaseOrder createOrder(Long supplierId, String operator, String remark) {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -106,6 +114,13 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         throw new CustomException("采购单号生成冲突，请重试");
     }
 
+    /**
+     * 新增 detail。
+     * @param orderId 参数 orderId
+     * @param materialId 参数 materialId
+     * @param qty 参数 qty
+     * @param unitPrice 参数 unitPrice
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addDetail(Long orderId, Long materialId, BigDecimal qty, BigDecimal unitPrice) {
@@ -131,7 +146,8 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         detail.setMaterialId(materialId);
         detail.setQty(qty);
         detail.setUnitPrice(unitPrice);
-        detail.setAmount(unitPrice != null ? unitPrice.multiply(qty).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        detail.setAmount(unitPrice != null ? unitPrice.multiply(qty).setScale(2, RoundingMode.HALF_UP) : BigDecimal
+                .ZERO);
         detail.setReceivedQty(BigDecimal.ZERO);
         detailService.save(detail);
         // 修改点：添加明细后实时重算采购单总金额，保证草稿期列表金额与明细合计一致（此前仅收货时重算）
@@ -156,6 +172,10 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
             .setScale(2, RoundingMode.HALF_UP);
     }
 
+    /**
+     * 处理 receive order。
+     * @param orderId 参数 orderId
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void receiveOrder(Long orderId) {
@@ -168,7 +188,8 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         if (currentTenantId != null && !currentTenantId.equals(po.getTenantId())) {
             throw new CustomException("无权操作其他租户的采购单");
         }
-        if (!PurchaseOrderStatus.ORDERED.getValue().equals(po.getStatus()) && !PurchaseOrderStatus.PARTIAL.getValue().equals(po.getStatus())) {
+        if (!PurchaseOrderStatus.ORDERED.getValue().equals(po.getStatus()) && !PurchaseOrderStatus.PARTIAL.getValue()
+                .equals(po.getStatus())) {
             throw new CustomException("采购单状态不允许收货");
         }
 
@@ -183,7 +204,8 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
                 // 首次收货成功——按未收数量入库（已收数量从内存快照取，CAS 保证仅一个线程入库）
                 // 防御性 null 检查：qty/receivedQty 可能在数据库中为 null（历史数据）
                 BigDecimal qty = detail.getQty() != null ? detail.getQty() : BigDecimal.ZERO;
-                BigDecimal alreadyReceived = detail.getReceivedQty() != null ? detail.getReceivedQty() : BigDecimal.ZERO;
+                BigDecimal alreadyReceived = detail.getReceivedQty() != null ? detail.getReceivedQty() : BigDecimal
+                        .ZERO;
                 BigDecimal toReceive = qty.subtract(alreadyReceived);
                 if (toReceive.compareTo(BigDecimal.ZERO) > 0) {
                     stockRecordService.stockIn(detail.getMaterialId(), toReceive,
@@ -202,7 +224,8 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         // 返回 0 表示已被他人收货完成或状态已变更，抛异常回滚整个事务（含库存入库）
         LambdaUpdateWrapper<PurchaseOrder> casUpdate = new LambdaUpdateWrapper<>();
         casUpdate.eq(PurchaseOrder::getId, orderId)
-            .in(PurchaseOrder::getStatus, PurchaseOrderStatus.ORDERED.getValue(), PurchaseOrderStatus.PARTIAL.getValue())
+            .in(PurchaseOrder::getStatus, PurchaseOrderStatus.ORDERED.getValue(), PurchaseOrderStatus.PARTIAL
+                    .getValue())
             .set(PurchaseOrder::getStatus, PurchaseOrderStatus.RECEIVED.getValue())
             .set(PurchaseOrder::getTotalAmount, totalAmount);
         int updated = baseMapper.update(null, casUpdate);
@@ -211,6 +234,11 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         }
     }
 
+    /**
+     * 查询列表。
+     * @param queryWrapper 参数 queryWrapper
+     * @return 返回结果
+     */
     public List<PurchaseOrder> list(Wrapper<PurchaseOrder> queryWrapper) {
         List<PurchaseOrder> list = super.list(queryWrapper);
         if (!org.springframework.util.CollectionUtils.isEmpty(list)) {
@@ -233,6 +261,11 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         return result;
     }
 
+    /**
+     * 获取 details by order id。
+     * @param orderId 参数 orderId
+     * @return 返回结果
+     */
     @Override
     public List<PurchaseOrderDetail> getDetailsByOrderId(Long orderId) {
         List<PurchaseOrderDetail> details = detailService.list(
@@ -267,6 +300,10 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
                 PurchaseOrderDetail::setMaterialName);
     }
 
+    /**
+     * 审核通过 order。
+     * @param orderId 参数 orderId
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void approveOrder(Long orderId) {
@@ -290,6 +327,10 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         }
     }
 
+    /**
+     * 取消 order。
+     * @param orderId 参数 orderId
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Long orderId) {
@@ -302,7 +343,8 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         if (currentTenantId != null && !currentTenantId.equals(po.getTenantId())) {
             throw new CustomException("无权操作其他租户的采购单");
         }
-        if (PurchaseOrderStatus.RECEIVED.getValue().equals(po.getStatus()) || PurchaseOrderStatus.CANCELLED.getValue().equals(po.getStatus())) {
+        if (PurchaseOrderStatus.RECEIVED.getValue().equals(po.getStatus()) || PurchaseOrderStatus.CANCELLED.getValue()
+                .equals(po.getStatus())) {
             throw new CustomException("采购单状态不允许取消");
         }
         po.setStatus(PurchaseOrderStatus.CANCELLED.getValue());

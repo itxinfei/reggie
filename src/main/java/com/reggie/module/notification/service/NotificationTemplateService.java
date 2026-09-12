@@ -29,7 +29,8 @@ public interface NotificationTemplateService extends IService<NotificationTempla
      * @param tenantId 租户ID
      * @return 分页结果
      */
-    Page<NotificationTemplate> pageTemplates(int page, int pageSize, String bizType, Integer channel, Integer status, Long tenantId);
+    Page<NotificationTemplate> pageTemplates(int page, int pageSize, String bizType, Integer channel, Integer status,
+            Long tenantId);
 
     /**
      * 模板列表查询

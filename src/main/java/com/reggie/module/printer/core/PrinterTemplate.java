@@ -63,7 +63,8 @@ public class PrinterTemplate {
         lines.add(new PrintLine("=== 收银小票 ===", 3, true, PrintLine.Align.CENTER, PrintLine.LineType.TEXT));
         lines.add(new PrintLine("店铺名称: Reggie Takeout", 0, false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
         lines.add(new PrintLine("订单号: " + order.getNumber(), 0, false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
-        lines.add(new PrintLine("日期: " + (order.getOrderTime() != null ? order.getOrderTime().format(DTF) : ""), 0, false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
+        lines.add(new PrintLine("日期: " + (order.getOrderTime() != null ? order.getOrderTime().format(DTF) : ""), 0,
+                false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
         lines.add(new PrintLine("", 0, false, PrintLine.Align.LEFT, PrintLine.LineType.DIVIDER));
         lines.add(new PrintLine("--- 菜品明细 ---", 0, true, PrintLine.Align.CENTER, PrintLine.LineType.TEXT));
 
@@ -109,7 +110,8 @@ public class PrinterTemplate {
 
         if (order.getRemark() != null && !order.getRemark().isEmpty()) {
             lines.add(new PrintLine("", 0, false, PrintLine.Align.LEFT, PrintLine.LineType.DIVIDER));
-            lines.add(new PrintLine("备注: " + order.getRemark(), 0, false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
+            lines.add(new PrintLine("备注: " + order.getRemark(), 0, false, PrintLine.Align.LEFT, PrintLine.LineType
+                    .TEXT));
         }
 
         job.setLines(lines);

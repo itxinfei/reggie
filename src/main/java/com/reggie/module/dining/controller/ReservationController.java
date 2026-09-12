@@ -79,7 +79,8 @@ public class ReservationController {
     @Parameter(name = "customerName", description = "客户姓名（可选，模糊搜索）")
     @Parameter(name = "phone", description = "手机号（可选，模糊搜索）")
     @Parameter(name = "reservedDate", description = "预订日期（可选，格式yyyy-MM-dd）")
-    public R<Page<Reservation>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
+    public R<Page<Reservation>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize,
                                      @RequestParam(required = false) String status,
                                      @RequestParam(required = false) String customerName,
                                      @Parameter(description = "手机号（可选，模糊搜索）")
@@ -113,11 +114,12 @@ public class ReservationController {
             if (!tableIds.isEmpty()) {
                 List<DiningTable> tables = diningTableService.listByIds(tableIds);
                 Map<Long, String> tableNameMap = new HashMap<>();
-                for (DiningTable t : tables) {
-                    if (t != null && t.getId() != null) {
-                        tableNameMap.put(t.getId(), t.getName() != null ? t.getName() : "");
+                tables.forEach(t -> {
+                    if (t == null || t.getId() == null) {
+                        return;
                     }
-                }
+                    tableNameMap.put(t.getId(), t.getName() != null ? t.getName() : "");
+                });
                 for (Reservation r : records) {
                     r.setTableName(tableNameMap.get(r.getTableId()));
                 }
@@ -134,7 +136,8 @@ public class ReservationController {
     @PostMapping
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "新增预订", description = "创建新的预订记录，支持指定桌台和人数")
-    public R<Reservation> create(@Parameter(description = "预订请求（客户姓名、手机号、预订时间、人数、桌台ID、备注）", required = true) @Valid @RequestBody CreateReservationDTO dto) {
+    public R<Reservation> create(@Parameter(description = "预订请求（客户姓名、手机号、预订时间、人数、桌台ID、备注）", required =
+            true) @Valid @RequestBody CreateReservationDTO dto) {
         log.info("新增预订: customerName={}, phone={}", dto.getCustomerName(),
             LogMaskUtils.maskPhone(dto.getPhone()));
         Reservation r = reservationService.createReservation(

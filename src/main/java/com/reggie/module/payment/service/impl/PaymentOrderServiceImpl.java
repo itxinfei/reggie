@@ -1,15 +1,21 @@
 package com.reggie.module.payment.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.module.dish.service.DishService;
+import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.payment.mapper.PaymentOrderMapper;
 import com.reggie.module.payment.model.PaymentOrder;
 import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.payment.service.RefundService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.groupbuy.service.GroupBuyService;
+import com.reggie.module.setmeal.model.SetmealDish;
+import com.reggie.module.setmeal.service.SetmealDishService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -23,7 +29,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -40,7 +48,8 @@ import static com.reggie.module.payment.model.PaymentOrder.STATUS_SUCCESS;
  */
 @Slf4j
 @Service
-public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, PaymentOrder> implements PaymentOrderService {
+public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, PaymentOrder> implements
+        PaymentOrderService {
 
     /** 订单服务 */
     @Autowired
@@ -55,6 +64,18 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     @Lazy
     private RefundService refundService;
 
+    /** 订单明细服务（支付失败回退库存） */
+    @Autowired
+    private OrderDetailService orderDetailService;
+
+    /** 菜品服务（支付失败回退库存） */
+    @Autowired
+    private DishService dishService;
+
+    /** 套餐菜品关联服务（支付失败回退套餐内菜品库存） */
+    @Autowired
+    private SetmealDishService setmealDishService;
+
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
@@ -63,6 +84,23 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
      */
     private static final long LOCK_TTL_MS = 30 * 1000L; // 30秒
 
+    /**
+     * 补偿任务 Redis 幂等 key 前缀（与 {@code StockRefundCompensationTask.compensateKey} 保持一致）
+     */
+    private static final String STOCK_REFUND_KEY_PREFIX = "stock:refund:";
+
+    /**
+     * 补偿任务 Redis 幂等 key TTL（小时），略大于 24h 补偿窗口
+     */
+    private static final long STOCK_REFUND_KEY_TTL_HOURS = 25;
+
+    /**
+     * 创建 payment order。
+     * @param orderId 参数 orderId
+     * @param channel 参数 channel
+     * @param amount 参数 amount
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PaymentOrder createPaymentOrder(Long orderId, String channel, BigDecimal amount) {
@@ -110,7 +148,8 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
             po.setAmount(amount);
             po.setStatus(STATUS_PENDING);
             save(po);
-            log.info("创建支付订单: tradeNo={}, orderId={}, channel={}, amount={}", po.getTradeNo(), orderId, channel, amount);
+            log.info("创建支付订单: tradeNo={}, orderId={}, channel={}, amount={}", po.getTradeNo(), orderId, channel,
+                    amount);
             return po;
         } finally {
             if (lockValue != null) {
@@ -138,6 +177,7 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
                     .setIfAbsent(lockKey, lockValue, LOCK_TTL_MS, TimeUnit.MILLISECONDS);
             return Boolean.TRUE.equals(success) ? lockValue : null;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("支付创建获取分布式锁失败，降级 DB 兜底: {}", lockKey, e);
             return null;
         }
@@ -153,22 +193,34 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
             return;
         }
         try {
-            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                 new DefaultRedisScript<Long>(luaScript, Long.class),
                 Collections.singletonList(lockKey),
                 lockValue
             );
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("支付创建释放分布式锁失败: {}", lockKey, e);
         }
     }
 
+    /**
+     * 查询 by trade no ignore tenant。
+     * @param tradeNo 参数 tradeNo
+     * @return 返回结果
+     */
     @Override
     public PaymentOrder selectByTradeNoIgnoreTenant(String tradeNo) {
         return baseMapper.selectByTradeNoIgnoreTenant(tradeNo);
     }
 
+    /**
+     * 处理 payment success。
+     * @param tradeNo 参数 tradeNo
+     * @param channelTradeNo 参数 channelTradeNo
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void handlePaymentSuccess(String tradeNo, String channelTradeNo) {
@@ -207,6 +259,7 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
                         try {
                             groupBuyService.markParticipationPaid(po.getOrderId());
                         } catch (Exception ex) {
+                            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                             log.warn("拼团参与标记支付失败，跳过: orderId={}, err={}",
                                     po.getOrderId(), ex.getMessage());
                         }
@@ -236,6 +289,11 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
         }
     }
 
+    /**
+     * 处理 payment fail。
+     * @param tradeNo 参数 tradeNo
+     * @param errorMsg 参数 errorMsg
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void handlePaymentFail(String tradeNo, String errorMsg) {
@@ -258,22 +316,35 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
         try {
             // 仅当订单为待付款时才联动取消，避免覆盖已配送/已完成订单（状态机校验）
             Orders order = orderService.getById(po.getOrderId());
-            if (order != null && order.getStatus() != null) {
-                if (Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
-                    boolean updated = orderService.lambdaUpdate()
-                            .eq(Orders::getId, order.getId())
-                            .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
-                            .set(Orders::getStatus, Orders.STATUS_CANCELLED)
-                            .update();
-                    if (updated) {
-                        log.warn("支付失败联动取消订单: orderId={}, reason={}", po.getOrderId(), errorMsg);
-                    } else {
-                        log.warn("支付失败但订单状态已被他人变更，跳过联动取消: orderId={}", po.getOrderId());
-                    }
-                } else {
-                    log.warn("支付失败但订单状态非待付款，跳过联动取消: orderId={}, currentStatus={}",
-                            po.getOrderId(), order.getStatus());
-                }
+            if (order == null || order.getStatus() == null) {
+                return;
+            }
+            if (!Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
+                log.warn("支付失败但订单状态非待付款，跳过联动取消: orderId={}, currentStatus={}",
+                        po.getOrderId(), order.getStatus());
+                return;
+            }
+            boolean updated = orderService.lambdaUpdate()
+                    .eq(Orders::getId, order.getId())
+                    .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
+                    .set(Orders::getStatus, Orders.STATUS_CANCELLED)
+                    .update();
+            if (!updated) {
+                log.warn("支付失败但订单状态已被他人变更，跳过联动取消: orderId={}", po.getOrderId());
+                return;
+            }
+            log.warn("支付失败联动取消订单: orderId={}, reason={}", po.getOrderId(), errorMsg);
+            // P0-3 修复：支付失败已扣库存必须回退，防止库存泄漏
+            boolean refundOk = refundStockByOrderId(order.getId());
+            if (refundOk) {
+                markStockRefunded(order.getId(), order.getTenantId());
+                // MEDIUM-3 修复：写入补偿任务的 Redis 幂等 key，防止补偿任务重复 addStock
+                // handlePaymentFail 的 markStockRefunded（DB CAS）与补偿任务的 Redis 幂等 key 是两套独立机制，
+                // 若 markStockRefunded 因事务回滚未持久化，补偿任务会扫描到 stockRefunded=0 再次补偿
+                markCompensatedForOrder(order.getId());
+                log.info("[库存回退] 支付失败订单库存已回退: orderId={}", po.getOrderId());
+            } else {
+                log.error("[库存回退] 支付失败订单库存回退部分失败，补偿任务将重试: orderId={}", po.getOrderId());
             }
         } finally {
             if (originalTenantId != null) {
@@ -295,6 +366,9 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
      */
     private void registerAutoRefundOnCancelled(Long orderId, Long tenantId) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            /**
+             * 处理 after commit。
+             */
             @Override
             public void afterCommit() {
                 try {
@@ -305,11 +379,144 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
                         log.warn("订单已取消但支付成功，自动退款未完成（幂等跳过或已留对账待办）: orderId={}", orderId);
                     }
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.error("【严重】订单已取消但支付成功，自动退款异常，需人工处理！orderId={}, tenantId={}",
                             orderId, tenantId, e);
                 }
             }
         });
+    }
+
+    /**
+     * 标记库存已回退（与 OrderStatusFlowServiceImpl.markStockRefunded 一致）
+     */
+    private void markStockRefunded(Long orderId, Long tenantId) {
+        orderService.lambdaUpdate()
+                .eq(Orders::getId, orderId)
+                .eq(Orders::getStatus, Orders.STATUS_CANCELLED)
+                .eq(Orders::getStockRefunded, 0)
+                .set(Orders::getStockRefunded, 1)
+                .update();
+    }
+
+    /**
+     * 根据订单ID回退库存（与 OrderStatusFlowServiceImpl.refundStockByOrderId 逻辑一致）
+     * 查询订单明细，逐项回退菜品/套餐库存。
+     * @return 是否全部回退成功
+     */
+    private boolean refundStockByOrderId(Long orderId) {
+        LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderDetail::getOrderId, orderId);
+        List<OrderDetail> details = orderDetailService.list(wrapper);
+        if (details == null || details.isEmpty()) {
+            return true;
+        }
+        boolean allSuccess = true;
+        for (OrderDetail detail : details) {
+            int number = detail.getNumber() != null ? detail.getNumber() : 1;
+            BigDecimal qty = new BigDecimal(number);
+            if (!refundStockForItem(detail.getDishId(), detail.getSetmealId(), qty)) {
+                allSuccess = false;
+            }
+        }
+        return allSuccess;
+    }
+
+    /**
+     * 回退单个订单明细项的库存（单品/套餐）
+     */
+    private boolean refundStockForItem(Long dishId, Long setmealId, BigDecimal quantity) {
+        boolean success = true;
+        if (dishId != null) {
+            if (!refundStockAtomic(dishId, quantity)) {
+                success = false;
+            }
+        }
+        if (setmealId != null) {
+            LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
+            sdWrapper.eq(SetmealDish::getSetmealId, setmealId);
+            List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
+            for (SetmealDish sd : setmealDishes) {
+                int copies = sd.getCopies() != null ? sd.getCopies() : 1;
+                if (!refundStockAtomic(sd.getDishId(), quantity.multiply(new BigDecimal(copies)))) {
+                    success = false;
+                }
+            }
+        }
+        return success;
+    }
+
+    /**
+     * 原子增加菜品库存（boolean 版本，失败时记录日志但不抛异常）
+     */
+    private boolean refundStockAtomic(Long dishId, BigDecimal qty) {
+        if (dishId == null || qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
+            return true;
+        }
+        try {
+            dishService.addStock(dishId, qty);
+            dishService.autoToggleSoldOut(dishId);
+            log.info("[库存回退] 菜品ID={} 回退{}份", dishId, qty);
+            return true;
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("[库存回退失败] 菜品ID={} 回退{}份失败: {}", dishId, qty, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 写入补偿任务的 Redis 幂等 key，防止 {@code StockRefundCompensationTask} 重复 addStock。
+     * <p>
+     * handlePaymentFail 的 {@code markStockRefunded}（DB CAS stockRefunded 0→1）与补偿任务的 Redis 幂等 key
+     * 是两套独立的幂等机制，互不可见。若 DB 标记因事务回滚等原因未持久化，补偿任务会扫描到 stockRefunded=0 再次回退库存。
+     * 本方法在 DB 标记成功后，同步写入补偿任务的 Redis key，让补偿任务的 {@code isCompensated} 检查能识别已补偿过。
+     * </p>
+     * <p>
+     * 仅标记有实际库存回退的明细项（DishId/SetmealId 非空），与补偿任务的 {@code compensateOrderStock} 逻辑对齐。
+     * key 格式：stock:refund:{orderId}:{detailId}:{subKey}，TTL 25h，与 StockRefundCompensationTask 一致。
+     * </p>
+     */
+    private void markCompensatedForOrder(Long orderId) {
+        if (redisTemplate == null) {
+            return;
+        }
+        LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderDetail::getOrderId, orderId);
+        List<OrderDetail> details = orderDetailService.list(wrapper);
+        if (details == null || details.isEmpty()) {
+            return;
+        }
+        for (OrderDetail detail : details) {
+            // 单品菜品
+            if (detail.getDishId() != null) {
+                String subKey = "dish:" + detail.getDishId();
+                setCompensateKey(orderId, detail.getId(), subKey);
+            }
+            // 套餐：标记套餐内所有菜品子项
+            if (detail.getSetmealId() != null) {
+                LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
+                sdWrapper.eq(SetmealDish::getSetmealId, detail.getSetmealId());
+                List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
+                for (SetmealDish sd : setmealDishes) {
+                    String subKey = "sd:" + sd.getId();
+                    setCompensateKey(orderId, detail.getId(), subKey);
+                }
+            }
+        }
+    }
+
+    /**
+     * 设置补偿幂等 Redis key（TTL 25h）
+     */
+    private void setCompensateKey(Long orderId, Long detailId, String subKey) {
+        try {
+            String key = STOCK_REFUND_KEY_PREFIX + orderId + ":" + detailId + ":" + subKey;
+            redisTemplate.opsForValue().set(key, "1", STOCK_REFUND_KEY_TTL_HOURS, TimeUnit.HOURS);
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.debug("[库存回退] 写入补偿幂等 key 异常（不影响主流程）: {}", e.getMessage());
+        }
     }
 
     private String generateTradeNo() {

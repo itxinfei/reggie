@@ -129,6 +129,11 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         return (long) timeout * 1000L + 30000L;
     }
 
+    /**
+     * 处理 chat stream。
+     * @param request 参数 request
+     * @return 返回结果
+     */
     @Override
     public SseEmitter chatStream(AIChatRequest request) {
         final Long userId = request.getUserId();
@@ -162,6 +167,11 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 final List<AIRecommendedDish>[] parsedDishes = new List[]{null};
 
                 StreamCallback callback = new StreamCallback() {
+                    /**
+                     * 处理 on token。
+                     * @param token 参数 token
+                     * @param isLast 参数 isLast
+                     */
                     @Override
                     public void onToken(String token, boolean isLast) {
                         try {
@@ -193,6 +203,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                                         String dishJson = OBJECT_MAPPER.writeValueAsString(dishes);
                                         emitter.send(SseEmitter.event().name("dishes").data(dishJson));
                                     } catch (Exception e) {
+                                        // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                                         log.warn("序列化推荐菜品失败", e);
                                     }
                                 }
@@ -212,6 +223,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                                 emitter.send(SseEmitter.event().name("message").data(chunkData));
                             }
                         } catch (Exception e) {
+                            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                             log.warn("SSE token推送失败: conversationId={}", conversationId, e);
                         }
                     }
@@ -230,6 +242,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                     }
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("SSE流式对话异常: conversationId={}", conversationId, e);
                 try {
                     Map<String, Object> errorData = new HashMap<>();
@@ -237,6 +250,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                     emitter.send(SseEmitter.event().name("error").data(errorData));
                     emitter.complete();
                 } catch (Exception ex) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     emitter.completeWithError(ex);
                 }
             }
@@ -245,6 +259,13 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         return emitter;
     }
 
+    /**
+     * 处理 order assistant stream。
+     * @param userMessage 参数 userMessage
+     * @param userId 参数 userId
+     * @param conversationId 参数 conversationId
+     * @return 返回结果
+     */
     @Override
     public SseEmitter orderAssistantStream(String userMessage, Long userId, String conversationId) {
         Map<String, Object> context = buildOrderContext(userId);
@@ -268,6 +289,11 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
     // ==================== 非流式对话 ====================
 
+    /**
+     * 处理 chat。
+     * @param request 参数 request
+     * @return 返回结果
+     */
     @Override
     public AIChatResponse chat(AIChatRequest request) {
         saveUserMessage(request);
@@ -279,6 +305,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                     // 修改点：使用节流刷新替代每次全量刷新
                     userProfileService.refreshIfNeeded(request.getUserId());
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.warn("异步刷新用户画像失败: userId={}", request.getUserId(), e);
                 }
             }, aiExecutor);
@@ -294,7 +321,8 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         AIChatResponse response = aiProviderManager.chat(messages, maxTokens, temperature);
 
         if ("order_assistant".equals(request.getScene()) && response != null && response.getContent() != null) {
-            List<AIRecommendedDish> dishes = parseRecommendedDishes(response.getContent(), BaseContext.getCurrentTenantId());
+            List<AIRecommendedDish> dishes = parseRecommendedDishes(response.getContent(), BaseContext
+                    .getCurrentTenantId());
             response.setDishes(dishes);
             // 清理content中的JSON部分，只保留人类可读的文本
             response.setContent(cleanJsonFromContent(response.getContent()));
@@ -319,6 +347,13 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         return result;
     }
 
+    /**
+     * 处理 order assistant。
+     * @param userMessage 参数 userMessage
+     * @param userId 参数 userId
+     * @param conversationId 参数 conversationId
+     * @return 返回结果
+     */
     @Override
     public AIChatResponse orderAssistant(String userMessage, Long userId, String conversationId) {
         // 修改点：异步刷新用户画像（不阻塞对话）
@@ -328,6 +363,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                     // 修改点：使用节流刷新替代每次全量刷新
                     userProfileService.refreshIfNeeded(userId);
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.warn("异步刷新用户画像失败: userId={}", userId, e);
                 }
             }, aiExecutor);
@@ -352,6 +388,13 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         return chat(request);
     }
 
+    /**
+     * 生成 dish description。
+     * @param dishName 参数 dishName
+     * @param categoryName 参数 categoryName
+     * @param ingredients 参数 ingredients
+     * @return 返回结果
+     */
     @Override
     public String generateDishDescription(String dishName, String categoryName, String ingredients) {
         String prompt = String.format(
@@ -371,6 +414,12 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         return response != null ? response.getContent() : null;
     }
 
+    /**
+     * 处理 analyze business。
+     * @param question 参数 question
+     * @param dataJson 参数 dataJson
+     * @return 返回结果
+     */
     @Override
     public String analyzeBusiness(String question, String dataJson) {
         String prompt = "以下是门店经营数据（JSON格式）：\n" + dataJson + "\n\n"
@@ -388,27 +437,57 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
     // ==================== 对话管理（委托给 conversationManagementService） ====================
 
+    /**
+     * 获取 user conversations。
+     * @param userId 参数 userId
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
     @Override
     public List<AIConversation> getUserConversations(Long userId, int page, int pageSize) {
         return conversationManagementService.getUserConversations(userId, page, pageSize);
     }
 
+    /**
+     * 获取 conversation messages。
+     * @param conversationId 参数 conversationId
+     * @return 返回结果
+     */
     @Override
     public List<AIMessageRecord> getConversationMessages(String conversationId) {
         return conversationManagementService.getConversationMessages(conversationId);
     }
 
+    /**
+     * 创建 conversation。
+     * @param userId 参数 userId
+     * @param title 参数 title
+     * @param scene 参数 scene
+     * @return 返回结果
+     */
     @Override
     public AIConversation createConversation(Long userId, String title, String scene) {
         return conversationManagementService.createConversation(userId, title, scene);
     }
 
+    /**
+     * 删除 conversation。
+     * @param conversationId 参数 conversationId
+     * @param userId 参数 userId
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteConversation(String conversationId, Long userId) {
         conversationManagementService.deleteConversation(conversationId, userId);
     }
 
+    /**
+     * 处理 record feedback。
+     * @param messageId 参数 messageId
+     * @param feedbackType 参数 feedbackType
+     * @param userId 参数 userId
+     */
     @Override
     public void recordFeedback(Long messageId, String feedbackType, Long userId) {
         conversationManagementService.recordFeedback(messageId, feedbackType, userId);
@@ -435,19 +514,21 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             if (ctxMessages.isEmpty()) {
                 // 缓存未命中，从 DB 加载并重建上下文
                 try {
-                    List<AIMessageRecord> dbHistory = conversationManagementService.getConversationMessages(request.getConversationId());
+                    List<AIMessageRecord> dbHistory = conversationManagementService.getConversationMessages(request
+                            .getConversationId());
                     List<AIMessage> historyMessages = new ArrayList<>();
-                    for (AIMessageRecord record : dbHistory) {
+                    dbHistory.forEach(record -> {
                         if (record.getContent() != null) {
                             historyMessages.add(AIMessage.builder()
                                     .role(record.getRole())
                                     .content(record.getContent())
                                     .build());
                         }
-                    }
+                    });
                     conversationContextService.rebuild(request.getConversationId(), historyMessages);
                     ctxMessages = conversationContextService.getContext(request.getConversationId());
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.warn("加载对话历史失败: conversationId={}", request.getConversationId(), e);
                 }
             }
@@ -464,6 +545,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                             .build());
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("注入用户画像失败: userId={}", request.getUserId(), e);
             }
         }
@@ -475,6 +557,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 String contextPrompt = "以下是当前可用数据（仅使用真实存在的数据，不要编造）：\n" + contextJson;
                 messages.add(AIMessage.builder().role("system").content(contextPrompt).build());
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("序列化上下文数据失败", e);
             }
         }
@@ -526,6 +609,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 context.put("preferences", preferences);
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("获取用户偏好失败: userId={}", userId, e);
         }
 
@@ -539,48 +623,75 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         List<AIRecommendedDish> result = new ArrayList<>();
         try {
             String jsonStr = extractJson(aiContent);
-            if (jsonStr != null) {
-                JsonNode root = OBJECT_MAPPER.readTree(jsonStr);
-                if (root.isArray()) {
-                    // 修改点：先收集所有dishId，批量查询，消除N+1问题
-                    List<Long> dishIds = new ArrayList<>();
-                    Map<Long, String> dishReasonMap = new HashMap<>();
-                    for (JsonNode node : root) {
-                        Long dishId = node.has("dishId") ? node.get("dishId").asLong() : null;
-                        String reason = node.has("reason") ? node.get("reason").asText() : "";
-                        if (dishId != null) {
-                            dishIds.add(dishId);
-                            dishReasonMap.put(dishId, reason);
-                        }
-                    }
-                    if (!dishIds.isEmpty()) {
-                        LambdaQueryWrapper<Dish> dishWrapper = new LambdaQueryWrapper<>();
-                        dishWrapper.in(Dish::getId, dishIds);
-                        if (tenantId != null) {
-                            dishWrapper.eq(Dish::getTenantId, tenantId);
-                        }
-                        Map<Long, Dish> dishMap = dishMapper.selectList(dishWrapper).stream()
-                                .collect(Collectors.toMap(Dish::getId, Function.identity()));
-                        for (Long dishId : dishIds) {
-                            Dish dish = dishMap.get(dishId);
-                            if (dish != null) {
-                                result.add(AIRecommendedDish.builder()
-                                        .dishId(dish.getId())
-                                        .name(dish.getName())
-                                        .price(dish.getPrice())
-                                        .image(dish.getImage())
-                                        .reason(dishReasonMap.getOrDefault(dishId, ""))
-                                        .score(0.9)
-                                        .build());
-                            }
-                        }
-                    }
-                }
+            if (jsonStr == null) {
+                return result;
+            }
+            JsonNode root = OBJECT_MAPPER.readTree(jsonStr);
+            if (!root.isArray()) {
+                return result;
+            }
+            // 修改点：先收集所有dishId，批量查询，消除N+1问题
+            List<Long> dishIds = new ArrayList<>();
+            Map<Long, String> dishReasonMap = new HashMap<>();
+            collectDishIds(root, dishIds, dishReasonMap);
+            if (!dishIds.isEmpty()) {
+                buildRecommendedDishes(dishIds, dishReasonMap, tenantId, result);
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.debug("解析AI推荐菜品失败（Mock模式下正常）", e);
         }
         return result;
+    }
+
+    /**
+     * 收集 AI 返回的菜品 ID 与推荐理由（等价抽取，降低嵌套）。
+     *
+     * @param root JSON 数组节点
+     * @param dishIds 输出：菜品 ID 列表
+     * @param dishReasonMap 输出：菜品 ID -> 推荐理由
+     */
+    private void collectDishIds(JsonNode root, List<Long> dishIds, Map<Long, String> dishReasonMap) {
+        for (JsonNode node : root) {
+            Long dishId = node.has("dishId") ? node.get("dishId").asLong() : null;
+            String reason = node.has("reason") ? node.get("reason").asText() : "";
+            if (dishId != null) {
+                dishIds.add(dishId);
+                dishReasonMap.put(dishId, reason);
+            }
+        }
+    }
+
+    /**
+     * 按菜品 ID 批量查询并构建推荐结果（等价抽取，降低嵌套）。
+     *
+     * @param dishIds 菜品 ID 列表
+     * @param dishReasonMap 菜品 ID -> 推荐理由
+     * @param tenantId 租户 ID
+     * @param result 输出：推荐结果列表
+     */
+    private void buildRecommendedDishes(List<Long> dishIds, Map<Long, String> dishReasonMap,
+            Long tenantId, List<AIRecommendedDish> result) {
+        LambdaQueryWrapper<Dish> dishWrapper = new LambdaQueryWrapper<>();
+        dishWrapper.in(Dish::getId, dishIds);
+        if (tenantId != null) {
+            dishWrapper.eq(Dish::getTenantId, tenantId);
+        }
+        Map<Long, Dish> dishMap = dishMapper.selectList(dishWrapper).stream()
+                .collect(Collectors.toMap(Dish::getId, Function.identity()));
+        for (Long dishId : dishIds) {
+            Dish dish = dishMap.get(dishId);
+            if (dish != null) {
+                result.add(AIRecommendedDish.builder()
+                        .dishId(dish.getId())
+                        .name(dish.getName())
+                        .price(dish.getPrice())
+                        .image(dish.getImage())
+                        .reason(dishReasonMap.getOrDefault(dishId, ""))
+                        .score(0.9)
+                        .build());
+            }
+        }
     }
 
     /**
@@ -746,6 +857,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             updateMessageCount(request.getConversationId());
             return record.getId();
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("保存用户消息失败: conversationId={}", request.getConversationId(), e);
             return null;
         }
@@ -799,6 +911,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                     }
                     record.setDishIds(OBJECT_MAPPER.writeValueAsString(dishIdList));
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.warn("序列化推荐菜品ID失败: conversationId={}", conversationId, e);
                 }
             }
@@ -812,6 +925,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             updateMessageCount(conversationId);
             return record.getId();
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("保存AI回复消息失败: conversationId={}", conversationId, e);
             return null;
         }
@@ -829,6 +943,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                     .set(AIConversation::getUpdateTime, LocalDateTime.now());
             conversationMapper.update(null, wrapper);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("更新消息计数失败: conversationId={}", conversationId, e);
         }
     }
@@ -853,25 +968,48 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 conversationMapper.updateById(conv);
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("更新对话标题失败: conversationId={}", conversationId, e);
         }
     }
 
+    /**
+     * 获取 context stats。
+     * @param conversationId 参数 conversationId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getContextStats(String conversationId) {
         return conversationManagementService.getContextStats(conversationId);
     }
 
+    /**
+     * 重置 context。
+     * @param conversationId 参数 conversationId
+     */
     @Override
     public void resetContext(String conversationId) {
         conversationManagementService.resetContext(conversationId);
     }
 
+    /**
+     * 搜索 conversations。
+     * @param userId 参数 userId
+     * @param keyword 参数 keyword
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
     @Override
     public List<AIConversation> searchConversations(Long userId, String keyword, int page, int pageSize) {
         return conversationManagementService.searchConversations(userId, keyword, page, pageSize);
     }
 
+    /**
+     * 校验 conversation ownership。
+     * @param conversationId 参数 conversationId
+     * @return 返回结果
+     */
     @Override
     public Long validateConversationOwnership(String conversationId) {
         return conversationManagementService.validateConversationOwnership(conversationId);

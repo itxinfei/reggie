@@ -50,17 +50,33 @@ public class TraceIdFilter implements Filter {
     /** MDC key */
     private static final String MDC_TRACE_ID_KEY = "traceId";
 
+    /**
+     * 初始化。
+     * @param filterConfig 参数 filterConfig
+     */
     @Override
     public void init(FilterConfig filterConfig) {
         // no-op
     }
 
+    /**
+     * 处理 do filter。
+     * @param request 参数 request
+     * @param response 参数 response
+     * @param filterChain 参数 filterChain
+     */
     @Override
     public void doFilter(ServletRequest request, ServletResponse response,
                          FilterChain filterChain) throws IOException, ServletException {
         doFilterInternal((HttpServletRequest) request, (HttpServletResponse) response, filterChain);
     }
 
+    /**
+     * 处理 do filter internal。
+     * @param request 参数 request
+     * @param response 参数 response
+     * @param filterChain 参数 filterChain
+     */
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain)
@@ -84,6 +100,9 @@ public class TraceIdFilter implements Filter {
         }
     }
 
+    /**
+     * 处理 destroy。
+     */
     @Override
     public void destroy() {
         // no-op

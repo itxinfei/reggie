@@ -70,6 +70,7 @@ public class PlatformPullTask {
                         syncService.pullOrders(config, beginTime, endTime);
                         log.info("[平台拉单] 完成拉单: platformType={}", config.getPlatformType());
                     } catch (Exception e) {
+                        // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                         log.error("[平台拉单] 失败: platformType={}, shopId={}",
                                 config.getPlatformType(), config.getShopId(), e);
                     }

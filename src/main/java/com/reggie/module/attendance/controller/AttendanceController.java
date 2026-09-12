@@ -26,6 +26,11 @@ public class AttendanceController {
     @Autowired
     private AttendanceService attendanceService;
 
+    /**
+     * 处理 week summary。
+     * @param weekStart 参数 weekStart
+     * @return 返回结果
+     */
     @GetMapping("/week-summary")
     @RequireEmployee
     @Operation(summary = "本周考勤汇总", description = "获取本周总出勤人数/缺勤人数/迟到人数/平均工时等汇总数据")
@@ -36,17 +41,28 @@ public class AttendanceController {
         return R.success(summary);
     }
 
+    /**
+     * 处理 calendar。
+     * @param employeeId 参数 employeeId
+     * @param month 参数 month
+     * @return 返回结果
+     */
     @GetMapping("/calendar/{employeeId}")
     @RequireEmployee
     @Operation(summary = "考勤日历", description = "获取某员工某月的每日考勤状态日历")
     @Parameter(name = "employeeId", description = "员工ID", required = true)
     public R<Map<String, Object>> calendar(@PathVariable Long employeeId,
-                                           @Parameter(description = "月份，格式 yyyy-MM", example = "2026-08") @RequestParam(required = false) String month) {
+                                           @Parameter(description = "月份，格式 yyyy-MM", example =
+                                                   "2026-08") @RequestParam(required = false) String month) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> calendar = attendanceService.getAttendanceCalendar(employeeId, month, tenantId);
         return R.success(calendar);
     }
 
+    /**
+     * 处理 today。
+     * @return 返回结果
+     */
     @GetMapping("/today")
     @RequireEmployee
     @Operation(summary = "今日考勤", description = "获取今日已到岗/未到岗/请假员工列表及汇总")
@@ -56,6 +72,11 @@ public class AttendanceController {
         return R.success(today);
     }
 
+    /**
+     * 处理 clock in。
+     * @param request 参数 request
+     * @return 返回结果
+     */
     @PostMapping("/clockIn")
     @RequireEmployee
     @Operation(summary = "签到打卡", description = "员工签到打卡，自动判断是否迟到")
@@ -68,6 +89,11 @@ public class AttendanceController {
         return attendanceService.clockIn(employeeId);
     }
 
+    /**
+     * 处理 clock out。
+     * @param request 参数 request
+     * @return 返回结果
+     */
     @PostMapping("/clockOut")
     @RequireEmployee
     @Operation(summary = "签退打卡", description = "员工签退打卡，自动判断是否早退")
@@ -80,6 +106,11 @@ public class AttendanceController {
         return attendanceService.clockOut(employeeId);
     }
 
+    /**
+     * 处理 abnormal。
+     * @param weekStart 参数 weekStart
+     * @return 返回结果
+     */
     @GetMapping("/abnormal")
     @RequireEmployee
     @Operation(summary = "异常考勤统计", description = "获取本周迟到/早退/缺勤等异常考勤记录")

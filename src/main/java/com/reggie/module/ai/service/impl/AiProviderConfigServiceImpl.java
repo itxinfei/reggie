@@ -32,6 +32,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.io.IOException;
 
 /**
  * AI供应商配置服务实现
@@ -42,7 +43,8 @@ import java.util.Set;
  */
 @Slf4j
 @Service
-public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMapper, AiProviderConfig> implements AiProviderConfigService {
+public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMapper, AiProviderConfig> implements
+        AiProviderConfigService {
 
     @Autowired
     private AiProviderManager aiProviderManager;
@@ -55,6 +57,10 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
     // ==================== API Key 加密（AES-256-GCM）====================
     // ==================== 查询 ====================
 
+    /**
+     * 获取 active provider。
+     * @return 返回结果
+     */
     @Override
     public AiProviderConfig getActiveProvider() {
         LambdaQueryWrapper<AiProviderConfig> wrapper = new LambdaQueryWrapper<>();
@@ -70,6 +76,10 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
         return config;
     }
 
+    /**
+     * 查询列表 enabled。
+     * @return 返回结果
+     */
     @Override
     public List<AiProviderConfig> listEnabled() {
         LambdaQueryWrapper<AiProviderConfig> wrapper = new LambdaQueryWrapper<>();
@@ -94,6 +104,11 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
 
     // ==================== 切换 ====================
 
+    /**
+     * 处理 activate provider。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean activateProvider(Long id) {
@@ -135,6 +150,11 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
 
     // ==================== 测试连通性 ====================
 
+    /**
+     * 处理 test provider。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     public String testProvider(Long id) {
         AiProviderConfig config = this.getById(id);
@@ -223,6 +243,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             updateTestResult(config, "fail");
             return "FAIL: 无法连接到服务器，请检查 baseUrl 是否正确";
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             updateTestResult(config, "fail");
             return "FAIL: 连接测试异常，请检查配置后重试";
         } finally {
@@ -275,6 +296,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                 return "FAIL: HTTP " + code + "，请检查模型和配置";
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             updateTestResult(config, "fail");
             return "FAIL: 连接测试异常，请检查配置后重试";
         } finally {
@@ -344,6 +366,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             updateTestResult(config, "fail");
             return "FAIL: 无法连接到服务器，请检查 baseUrl 是否正确";
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             updateTestResult(config, "fail");
             return "FAIL: 连接测试异常，请检查配置后重试";
         } finally {
@@ -355,6 +378,11 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
 
     // ==================== 修改点：Upsert 逻辑 ====================
 
+    /**
+     * 保存 or update by code。
+     * @param config 参数 config
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AiProviderConfig saveOrUpdateByCode(AiProviderConfig config) {
@@ -389,7 +417,8 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                 config.setApiKey(encrypted);
             }
             this.updateById(config);
-            log.info("供应商已更新（upsert）: code={}, id={}, name={}", providerCode, existing.getId(), config.getProviderName());
+            log.info("供应商已更新（upsert）: code={}, id={}, name={}", providerCode, existing.getId(), config
+                    .getProviderName());
         } else {
             config.setId(null);
             config.setProviderCode(providerCode);
@@ -428,7 +457,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
         URL url;
         try {
             url = new URL(baseUrl);
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.warn("[SSRF防护] baseUrl 格式非法: {}", baseUrl);
             return false;
         }
@@ -453,6 +482,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                 return false;
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[SSRF防护] baseUrl 域名解析失败: host={}", host);
             return false;
         }
@@ -464,11 +494,22 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
 
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
 
+    /**
+     * 处理 encrypt api key。
+     * @param plainApiKey 参数 plainApiKey
+     * @return 返回结果
+     */
     @Override
     public String encryptApiKey(String plainApiKey) {
         return AiKeyEncryptor.encrypt(plainApiKey);
     }
 
+    /**
+     * 处理 fetch model list。
+     * @param baseUrl 参数 baseUrl
+     * @param apiKey 参数 apiKey
+     * @return 返回结果
+     */
     @Override
     public List<String> fetchModelList(String baseUrl, String apiKey) {
         if (baseUrl == null || baseUrl.trim().isEmpty()) {
@@ -513,6 +554,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                         java.lang.reflect.Method m = conn.getClass().getMethod("getConnectedAddress");
                         connectedAddr = (InetAddress) m.invoke(conn);
                     } catch (Exception e) {
+                        // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                         log.debug("fetchModelList: 无法获取连接地址", e);
                     }
                     if (connectedAddr != null
@@ -553,6 +595,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             log.debug("fetchModelList: 获取到 {} 个模型, baseUrl={}", result.size(), normalizedUrl);
             return result;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("fetchModelList: 未预期异常, baseUrl={}", baseUrl, e);
             return Collections.emptyList();
         } finally {
@@ -634,6 +677,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             }
 
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("解析模型列表响应失败", e);
         }
         return models;
@@ -648,6 +692,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             config.setLastTestResult(result);
             this.updateById(config);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("更新测试结果失败: providerCode={}", config.getProviderCode(), e);
         }
     }

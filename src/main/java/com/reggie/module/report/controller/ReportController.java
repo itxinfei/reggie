@@ -51,7 +51,8 @@ public class ReportController {
      */
     @GetMapping("/daily")
     @Operation(summary = "日报表", description = "获取指定日期的经营日报表数据，包含营业额、订单数、客单价等核心指标")
-    public R<Map<String, Object>> dailyReport(@Parameter(description = "日期，格式：yyyy-MM-dd", required = true, example = "2026-07-08") @RequestParam String date) {
+    public R<Map<String, Object>> dailyReport(@Parameter(description = "日期，格式：yyyy-MM-dd", required = true, example =
+            "2026-07-08") @RequestParam String date) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> data = reportService.getDailyReport(date, tenantId);
         return R.success(data);
@@ -67,9 +68,12 @@ public class ReportController {
     @GetMapping("/dish-ranking")
     @Operation(summary = "菜品排行", description = "获取指定时间段的菜品销售排行，支持限制返回数量")
     public R<List<Map<String, Object>>> dishRanking(
-            @Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true, example = "2026-07-01") @RequestParam String startDate,
-            @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true, example = "2026-07-08") @RequestParam String endDate,
-            @Parameter(description = "返回前N条排行", required = false, example = "10") @RequestParam(defaultValue = "10") int limit) {
+            @Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true, example =
+                    "2026-07-01") @RequestParam String startDate,
+            @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true, example =
+                    "2026-07-08") @RequestParam String endDate,
+            @Parameter(description = "返回前N条排行", required = false, example = "10") @RequestParam(defaultValue =
+                    "10") int limit) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> data = reportService.getDishRanking(startDate, endDate, limit, tenantId);
         return R.success(data);
@@ -84,8 +88,10 @@ public class ReportController {
     @GetMapping("/time-slot")
     @Operation(summary = "时段分析", description = "获取指定时间段的营业时段分析，识别高峰时段")
     public R<List<Map<String, Object>>> timeSlotAnalysis(
-            @Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true, example = "2026-07-01") @RequestParam String startDate,
-            @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true, example = "2026-07-08") @RequestParam String endDate) {
+            @Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true, example =
+                    "2026-07-01") @RequestParam String startDate,
+            @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true, example =
+                    "2026-07-08") @RequestParam String endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<Map<String, Object>> data = reportService.getTimeSlotAnalysis(startDate, endDate, tenantId);
         return R.success(data);
@@ -100,8 +106,10 @@ public class ReportController {
     @GetMapping("/payment")
     @Operation(summary = "支付方式分析", description = "获取指定时间段的支付方式统计，分析微信/支付宝等支付渠道占比")
     public R<Map<String, Object>> paymentAnalysis(
-            @Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true, example = "2026-07-01") @RequestParam String startDate,
-            @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true, example = "2026-07-08") @RequestParam String endDate) {
+            @Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true, example =
+                    "2026-07-01") @RequestParam String startDate,
+            @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true, example =
+                    "2026-07-08") @RequestParam String endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> data = reportService.getPaymentAnalysis(startDate, endDate, tenantId);
         return R.success(data);
@@ -134,9 +142,12 @@ public class ReportController {
      */
     @GetMapping("/dish-trend")
     @Operation(summary = "菜品销量趋势", description = "获取指定菜品在日期范围内的每日销量趋势，数据来源：order_detail + orders 真实统计")
-    public R<Map<String, Object>> dishTrend(@Parameter(description = "菜品名称列表，逗号分隔", required = true) @RequestParam String names,
-                                              @Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true) @RequestParam String startDate,
-                                              @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true) @RequestParam String endDate) {
+    public R<Map<String, Object>> dishTrend(@Parameter(description = "菜品名称列表，逗号分隔", required =
+            true) @RequestParam String names,
+                                              @Parameter(description = "开始日期，格式：yyyy-MM-dd", required =
+                                                      true) @RequestParam String startDate,
+                                              @Parameter(description = "结束日期，格式：yyyy-MM-dd", required =
+                                                      true) @RequestParam String endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         String[] nameArr = names.split(",");
         List<String> dishNameList = new ArrayList<>();
@@ -156,8 +167,10 @@ public class ReportController {
      */
     @GetMapping("/payment/trend")
     @Operation(summary = "支付金额趋势", description = "获取各支付渠道每日金额趋势，数据来源：orders 表真实统计")
-    public R<Map<String, Object>> paymentTrend(@Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true) @RequestParam String startDate,
-                                                @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true) @RequestParam String endDate) {
+    public R<Map<String, Object>> paymentTrend(@Parameter(description = "开始日期，格式：yyyy-MM-dd", required =
+            true) @RequestParam String startDate,
+                                                @Parameter(description = "结束日期，格式：yyyy-MM-dd", required =
+                                                        true) @RequestParam String endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> data = reportService.getPaymentTrend(startDate, endDate, tenantId);
         return R.success(data);
@@ -171,8 +184,10 @@ public class ReportController {
      */
     @GetMapping("/time-slot/heatmap")
     @Operation(summary = "时段热力图", description = "获取工作日×时段的客流量热力图数据，数据来源：orders 表真实统计")
-    public R<Map<String, Object>> timeSlotHeatmap(@Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true) @RequestParam String startDate,
-                                                    @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true) @RequestParam String endDate) {
+    public R<Map<String, Object>> timeSlotHeatmap(@Parameter(description = "开始日期，格式：yyyy-MM-dd", required =
+            true) @RequestParam String startDate,
+                                                    @Parameter(description = "结束日期，格式：yyyy-MM-dd", required =
+                                                            true) @RequestParam String endDate) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> data = reportService.getTimeSlotHeatmap(startDate, endDate, tenantId);
         return R.success(data);
@@ -209,7 +224,8 @@ public class ReportController {
     public R<Map<String, Object>> repurchaseRateByDish(
             @Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true) @RequestParam String startDate,
             @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true) @RequestParam String endDate,
-            @Parameter(description = "返回前N条排行", required = false, example = "10") @RequestParam(defaultValue = "10") int limit) {
+            @Parameter(description = "返回前N条排行", required = false, example = "10") @RequestParam(defaultValue =
+                    "10") int limit) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> data = reportService.getRepurchaseRateByDish(startDate, endDate, limit, tenantId);
         return R.success(data);
@@ -241,9 +257,12 @@ public class ReportController {
     @GetMapping("/export")
     @Operation(summary = "导出报表", description = "导出指定时间段的营业报表，支持Excel和PDF两种格式")
     public ResponseEntity<?> exportReport(
-            @Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true, example = "2026-07-01") @RequestParam String startDate,
-            @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true, example = "2026-07-08") @RequestParam String endDate,
-            @Parameter(description = "导出格式：excel 或 pdf", required = false, example = "excel") @RequestParam(defaultValue = "excel") String format) {
+            @Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true, example =
+                    "2026-07-01") @RequestParam String startDate,
+            @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true, example =
+                    "2026-07-08") @RequestParam String endDate,
+            @Parameter(description = "导出格式：excel 或 pdf", required = false, example =
+                    "excel") @RequestParam(defaultValue = "excel") String format) {
 
         try {
             Long tenantId = BaseContext.getCurrentTenantId();
@@ -263,6 +282,7 @@ public class ReportController {
                             + URLEncoder.encode(safeName, "UTF-8").replace("+", "%20"));
             return new ResponseEntity<>(data, headers, HttpStatus.OK);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("报表导出失败: startDate={}, endDate={}, format={}", startDate, endDate, format, e);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);

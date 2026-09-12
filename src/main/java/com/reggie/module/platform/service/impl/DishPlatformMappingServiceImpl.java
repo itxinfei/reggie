@@ -18,8 +18,14 @@ import java.util.List;
  */
 @Slf4j
 @Service
-public class DishPlatformMappingServiceImpl extends ServiceImpl<DishPlatformMappingMapper, DishPlatformMapping> implements DishPlatformMappingService {
+public class DishPlatformMappingServiceImpl extends ServiceImpl<DishPlatformMappingMapper,
+        DishPlatformMapping> implements DishPlatformMappingService {
 
+    /**
+     * 查询列表 by dish id。
+     * @param dishId 参数 dishId
+     * @return 返回结果
+     */
     @Override
     public List<DishPlatformMapping> listByDishId(Long dishId) {
         LambdaQueryWrapper<DishPlatformMapping> wrapper = new LambdaQueryWrapper<>();
@@ -29,6 +35,11 @@ public class DishPlatformMappingServiceImpl extends ServiceImpl<DishPlatformMapp
         return this.list(wrapper);
     }
 
+    /**
+     * 查询列表 by platform type。
+     * @param platformType 参数 platformType
+     * @return 返回结果
+     */
     @Override
     public List<DishPlatformMapping> listByPlatformType(String platformType) {
         LambdaQueryWrapper<DishPlatformMapping> wrapper = new LambdaQueryWrapper<>();
@@ -38,6 +49,12 @@ public class DishPlatformMappingServiceImpl extends ServiceImpl<DishPlatformMapp
         return this.list(wrapper);
     }
 
+    /**
+     * 查询列表 by dish id and platform type。
+     * @param dishId 参数 dishId
+     * @param platformType 参数 platformType
+     * @return 返回结果
+     */
     @Override
     public List<DishPlatformMapping> listByDishIdAndPlatformType(Long dishId, String platformType) {
         LambdaQueryWrapper<DishPlatformMapping> wrapper = new LambdaQueryWrapper<>();
@@ -47,6 +64,13 @@ public class DishPlatformMappingServiceImpl extends ServiceImpl<DishPlatformMapp
         return this.list(wrapper);
     }
 
+    /**
+     * 获取 by platform dish id。
+     * @param platformType 参数 platformType
+     * @param platformShopId 参数 platformShopId
+     * @param platformDishId 参数 platformDishId
+     * @return 返回结果
+     */
     @Override
     public DishPlatformMapping getByPlatformDishId(String platformType, String platformShopId, String platformDishId) {
         LambdaQueryWrapper<DishPlatformMapping> wrapper = new LambdaQueryWrapper<>();

@@ -23,8 +23,17 @@ import java.time.LocalDateTime;
  * @since 2026-09-01
  */
 @Service
-public class SupplierSettlementServiceImpl extends ServiceImpl<SupplierSettlementMapper, SupplierSettlement> implements SupplierSettlementService {
+public class SupplierSettlementServiceImpl extends ServiceImpl<SupplierSettlementMapper, SupplierSettlement> implements
+        SupplierSettlementService {
 
+    /**
+     * 分页查询 settlements。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param supplierId 参数 supplierId
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Override
     public Page<SupplierSettlement> pageSettlements(int page, int pageSize, Long supplierId, String status) {
         Page<SupplierSettlement> pageRequest = PageUtils.of(page, pageSize);
@@ -40,6 +49,11 @@ public class SupplierSettlementServiceImpl extends ServiceImpl<SupplierSettlemen
         return result;
     }
 
+    /**
+     * 创建 settlement。
+     * @param settlement 参数 settlement
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SupplierSettlement createSettlement(SupplierSettlement settlement) {
@@ -49,13 +63,20 @@ public class SupplierSettlementServiceImpl extends ServiceImpl<SupplierSettlemen
         }
         settlement.setTenantId(tenantId);
         settlement.setStatus("PENDING");
-        settlement.setPaidAmount(settlement.getPaidAmount() == null ? java.math.BigDecimal.ZERO : settlement.getPaidAmount());
+        settlement.setPaidAmount(settlement.getPaidAmount() == null ? java.math.BigDecimal.ZERO : settlement
+                .getPaidAmount());
         settlement.setCreateTime(LocalDateTime.now());
         settlement.setUpdateTime(LocalDateTime.now());
         save(settlement);
         return settlement;
     }
 
+    /**
+     * 支付 settlement。
+     * @param id 参数 id
+     * @param payAmount 参数 payAmount
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SupplierSettlement paySettlement(Long id, BigDecimal payAmount) {
@@ -73,7 +94,8 @@ public class SupplierSettlementServiceImpl extends ServiceImpl<SupplierSettlemen
         if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new CustomException("付款金额必须大于0");
         }
-        BigDecimal paid = (settlement.getPaidAmount() == null ? BigDecimal.ZERO : settlement.getPaidAmount()).add(payAmount);
+        BigDecimal paid = (settlement.getPaidAmount() == null ? BigDecimal.ZERO : settlement.getPaidAmount())
+                .add(payAmount);
         settlement.setPaidAmount(paid);
         if (paid.compareTo(settlement.getTotalAmount()) >= 0) {
             settlement.setStatus("PAID");

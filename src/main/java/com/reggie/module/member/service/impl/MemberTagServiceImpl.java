@@ -41,6 +41,12 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
     @Autowired
     private OrderMapper orderMapper;
 
+    /**
+     * 查询列表 by member id。
+     * @param tenantId 参数 tenantId
+     * @param memberId 参数 memberId
+     * @return 返回结果
+     */
     @Override
     public List<MemberTag> listByMemberId(Long tenantId, Long memberId) {
         LambdaQueryWrapper<MemberTag> qw = new LambdaQueryWrapper<>();
@@ -50,6 +56,11 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
         return this.list(qw);
     }
 
+    /**
+     * 统计 by biz tag。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Long> countByBizTag(Long tenantId) {
         List<Map<String, Object>> result = this.baseMapper.countByBizTag(tenantId);
@@ -66,6 +77,15 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
         return countMap;
     }
 
+    /**
+     * 新增 tag。
+     * @param tenantId 参数 tenantId
+     * @param memberId 参数 memberId
+     * @param tagName 参数 tagName
+     * @param bizTag 参数 bizTag
+     * @param tagColor 参数 tagColor
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean addTag(Long tenantId, Long memberId, String tagName, String bizTag, String tagColor) {
@@ -81,6 +101,13 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
         return this.save(memberTag);
     }
 
+    /**
+     * 批量处理 remove tags。
+     * @param tenantId 参数 tenantId
+     * @param memberId 参数 memberId
+     * @param tagIds 参数 tagIds
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean batchRemoveTags(Long tenantId, Long memberId, List<Long> tagIds) {
@@ -94,6 +121,11 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
         return this.remove(qw);
     }
 
+    /**
+     * 处理 auto generate tags。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int autoGenerateTags(Long tenantId) {
@@ -158,58 +190,82 @@ public class MemberTagServiceImpl extends ServiceImpl<MemberTagMapper, MemberTag
 
         // 3. 遍历会员，使用预查询的数据生成标签
         for (Member member : members) {
-            Long memberId = member.getId();
             Long userId = member.getUserId();
-            if (userId == null) continue;
-
+            if (userId == null) {
+                continue;
+            }
             List<Orders> recentOrders = recentOrdersByUser.getOrDefault(userId, Collections.emptyList());
             List<Orders> allOrders = allOrdersByUser.getOrDefault(userId, Collections.emptyList());
             BigDecimal totalConsumption = totalConsumptionByUser.getOrDefault(userId, BigDecimal.ZERO);
-            long recentOrderCount = recentOrders.stream()
-                    .filter(o -> o.getOrderTime() != null && o.getOrderTime().isAfter(thirtyDaysAgo))
-                    .count();
-
-            // 注册7天内无消费 → NEW_USER
-            if (member.getCreatedTime() != null &&
-                    member.getCreatedTime().plusDays(7).isAfter(now) &&
-                    allOrders.isEmpty()) {
-                if (addTagIfNotExist(tenantId, memberId, "新用户", MemberBizTag.NEW_USER.getValue(), "#909399")) {
-                    generatedCount++;
-                }
-            }
-
-            // 近90天无消费 → LAPSED
-            boolean hasRecentOrder = recentOrders.stream()
-                    .anyMatch(o -> o.getOrderTime() != null && o.getOrderTime().isAfter(ninetyDaysAgo));
-            if (!hasRecentOrder && !allOrders.isEmpty()) {
-                if (addTagIfNotExist(tenantId, memberId, "流失预警", MemberBizTag.LAPSED.getValue(), "#E6A23C")) {
-                    generatedCount++;
-                }
-            }
-
-            // 总消费 > 500 元 → HIGH_VALUE
-            if (totalConsumption.compareTo(new BigDecimal("500")) > 0) {
-                if (addTagIfNotExist(tenantId, memberId, "高价值客户", MemberBizTag.HIGH_VALUE.getValue(), "#F56C6C")) {
-                    generatedCount++;
-                }
-            }
-
-            // 近30天订单数 > 5 → HIGHLY_ACTIVE
-            if (recentOrderCount > 5) {
-                if (addTagIfNotExist(tenantId, memberId, "高活跃", MemberBizTag.HIGHLY_ACTIVE.getValue(), "#409EFF")) {
-                    generatedCount++;
-                }
-            }
-
-            // 积分余额 > 2000 → FOODIE
-            if (member.getPoints() != null && member.getPoints() > 2000) {
-                if (addTagIfNotExist(tenantId, memberId, "美食家", MemberBizTag.FOODIE.getValue(), "#67C23A")) {
-                    generatedCount++;
-                }
-            }
+            generatedCount += generateTagsForMember(tenantId, member, recentOrders, allOrders,
+                    totalConsumption, thirtyDaysAgo, ninetyDaysAgo, now);
         }
 
         log.info("自动生成会员标签完成，共生成{}个标签", generatedCount);
+        return generatedCount;
+    }
+
+    /**
+     * 为单个会员生成标签，返回新增标签数（等价抽取，降低方法长度）。
+     *
+     * @param tenantId 租户ID
+     * @param member 会员
+     * @param recentOrders 近90天订单
+     * @param allOrders 全部有效订单
+     * @param totalConsumption 总消费
+     * @param thirtyDaysAgo 30天前
+     * @param ninetyDaysAgo 90天前
+     * @param now 当前时间
+     * @return 新增标签数
+     */
+    private int generateTagsForMember(Long tenantId, Member member, List<Orders> recentOrders,
+            List<Orders> allOrders, BigDecimal totalConsumption, LocalDateTime thirtyDaysAgo,
+            LocalDateTime ninetyDaysAgo, LocalDateTime now) {
+        int generatedCount = 0;
+        Long memberId = member.getId();
+        long recentOrderCount = recentOrders.stream()
+                .filter(o -> o.getOrderTime() != null && o.getOrderTime().isAfter(thirtyDaysAgo))
+                .count();
+
+        // 注册7天内无消费 → NEW_USER
+        if (member.getCreatedTime() != null &&
+                member.getCreatedTime().plusDays(7).isAfter(now) &&
+                allOrders.isEmpty()) {
+            if (addTagIfNotExist(tenantId, memberId, "新用户", MemberBizTag.NEW_USER.getValue(), "#909399")) {
+                generatedCount++;
+            }
+        }
+
+        // 近90天无消费 → LAPSED
+        boolean hasRecentOrder = recentOrders.stream()
+                .anyMatch(o -> o.getOrderTime() != null && o.getOrderTime().isAfter(ninetyDaysAgo));
+        if (!hasRecentOrder && !allOrders.isEmpty()) {
+            if (addTagIfNotExist(tenantId, memberId, "流失预警", MemberBizTag.LAPSED.getValue(), "#E6A23C")) {
+                generatedCount++;
+            }
+        }
+
+        // 总消费 > 500 元 → HIGH_VALUE
+        if (totalConsumption.compareTo(new BigDecimal("500")) > 0) {
+            if (addTagIfNotExist(tenantId, memberId, "高价值客户", MemberBizTag.HIGH_VALUE.getValue(), "#F56C6C")) {
+                generatedCount++;
+            }
+        }
+
+        // 近30天订单数 > 5 → HIGHLY_ACTIVE
+        if (recentOrderCount > 5) {
+            if (addTagIfNotExist(tenantId, memberId, "高活跃", MemberBizTag.HIGHLY_ACTIVE.getValue(), "#409EFF")) {
+                generatedCount++;
+            }
+        }
+
+        // 积分余额 > 2000 → FOODIE
+        if (member.getPoints() != null && member.getPoints() > 2000) {
+            if (addTagIfNotExist(tenantId, memberId, "美食家", MemberBizTag.FOODIE.getValue(), "#67C23A")) {
+                generatedCount++;
+            }
+        }
+
         return generatedCount;
     }
 

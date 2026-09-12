@@ -191,7 +191,8 @@ public class RecommendController {
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "记录浏览行为", description = "记录用户浏览菜品的行为，用于推荐算法")
     public R<String> recordBrowse(
-            @Parameter(description = "浏览信息（targetType/targetId/targetName/duration/actionType）", required = true) @Valid @RequestBody RecordBrowseDTO dto,
+            @Parameter(description = "浏览信息（targetType/targetId/targetName/duration/actionType）", required =
+                    true) @Valid @RequestBody RecordBrowseDTO dto,
             HttpSession session) {
         Long userId = getUserId(session);
         if (userId == null) {

@@ -393,6 +393,7 @@ public class ReportServiceImpl implements ReportService {
 
             return result;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出日报失败: format={}", format, e);
             addExportRecord(
                     startDate + " ~ " + endDate,
@@ -727,59 +728,8 @@ public class ReportServiceImpl implements ReportService {
             orderQw.select(Orders::getId);
             List<Orders> allOrders = orderService.list(orderQw);
 
-            // 一次性查询整个日期范围内的订单详情
-            List<Long> allOrderIds;
-            if (!allOrders.isEmpty()) {
-                allOrderIds = allOrders.stream().map(Orders::getId).collect(Collectors.toList());
-                LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
-                detailQw.in(OrderDetail::getOrderId, allOrderIds);
-                detailQw.select(OrderDetail::getName, OrderDetail::getNumber);
-                List<OrderDetail> allDetails = orderDetailService.list(detailQw);
-
-                // 构建 orderId -> Order 的日期映射，用于确定每笔订单所属日期
-                Map<Long, String> orderIdToDateKey = new HashMap<>();
-                for (Orders order : allOrders) {
-                    if (order.getOrderTime() != null) {
-                        String dayKey = order.getOrderTime().toLocalDate().toString().substring(5);
-                        orderIdToDateKey.put(order.getId(), dayKey);
-                    }
-                }
-
-                // 按 dateKey -> dishName 聚合销量: (dateKey, dishName) -> totalNumber
-                Map<String, Map<String, Integer>> dateDishCountMap = new HashMap<>();
-                for (OrderDetail detail : allDetails) {
-                    if (detail.getName() == null) continue;
-                    Long orderId = detail.getOrderId();
-                    String dayKey = orderIdToDateKey.get(orderId);
-                    if (dayKey == null) continue;
-                    int qty = detail.getNumber() != null ? detail.getNumber() : 0;
-                    dateDishCountMap
-                            .computeIfAbsent(dayKey, k -> new HashMap<>())
-                            .merge(detail.getName(), qty, Integer::sum);
-                }
-
-                // 填充各菜品每天的销量
-                for (String dateKey : dateKeys) {
-                    Map<String, Integer> dayCountMap = dateDishCountMap.get(dateKey);
-                    if (dayCountMap == null) {
-                        for (String name : dishNames) {
-                            dishDataMap.get(name.trim()).add(0);
-                        }
-                    } else {
-                        for (String name : dishNames) {
-                            String key = name.trim();
-                            dishDataMap.get(key).add(dayCountMap.getOrDefault(key, 0));
-                        }
-                    }
-                }
-            } else {
-                // 整个范围无订单，所有日期所有菜品均为0
-                for (String dateKey : dateKeys) {
-                    for (String name : dishNames) {
-                        dishDataMap.get(name.trim()).add(0);
-                    }
-                }
-            }
+            // 聚合每个菜品每天的销量（等价抽取，降低方法长度）
+            fillDishData(dishNames, dateKeys, allOrders, dishDataMap);
 
             dates.addAll(dateKeys);
 
@@ -798,6 +748,66 @@ public class ReportServiceImpl implements ReportService {
         result.put("dates", dates);
         result.put("series", series);
         return result;
+    }
+
+    /**
+     * 聚合每个菜品每天的销量并填充到 dishDataMap（等价抽取，降低方法长度）。
+     *
+     * @param dishNames 菜品名
+     * @param dateKeys 日期键（MM-DD）
+     * @param allOrders 日期范围内的订单
+     * @param dishDataMap 输出：菜品名 -> 每日销量列表
+     */
+    private void fillDishData(List<String> dishNames, List<String> dateKeys, List<Orders> allOrders,
+            Map<String, List<Integer>> dishDataMap) {
+        if (allOrders.isEmpty()) {
+            // 整个范围无订单，所有日期所有菜品均为0
+            for (String dateKey : dateKeys) {
+                dishNames.forEach(name -> dishDataMap.get(name.trim()).add(0));
+            }
+            return;
+        }
+
+        List<Long> allOrderIds = allOrders.stream().map(Orders::getId).collect(Collectors.toList());
+        LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
+        detailQw.in(OrderDetail::getOrderId, allOrderIds);
+        detailQw.select(OrderDetail::getName, OrderDetail::getNumber);
+        List<OrderDetail> allDetails = orderDetailService.list(detailQw);
+
+        // 构建 orderId -> 日期映射，用于确定每笔订单所属日期
+        Map<Long, String> orderIdToDateKey = new HashMap<>();
+        for (Orders order : allOrders) {
+            if (order.getOrderTime() != null) {
+                orderIdToDateKey.put(order.getId(), order.getOrderTime().toLocalDate().toString().substring(5));
+            }
+        }
+
+        // 按 dateKey -> dishName 聚合销量: (dateKey, dishName) -> totalNumber
+        Map<String, Map<String, Integer>> dateDishCountMap = new HashMap<>();
+        for (OrderDetail detail : allDetails) {
+            if (detail.getName() == null) {
+                continue;
+            }
+            String dayKey = orderIdToDateKey.get(detail.getOrderId());
+            if (dayKey == null) {
+                continue;
+            }
+            int qty = detail.getNumber() != null ? detail.getNumber() : 0;
+            dateDishCountMap.computeIfAbsent(dayKey, k -> new HashMap<>()).merge(detail.getName(), qty, Integer::sum);
+        }
+
+        // 填充各菜品每天的销量
+        for (String dateKey : dateKeys) {
+            Map<String, Integer> dayCountMap = dateDishCountMap.get(dateKey);
+            if (dayCountMap == null) {
+                dishNames.forEach(name -> dishDataMap.get(name.trim()).add(0));
+            } else {
+                dishNames.forEach(name -> {
+                    String key = name.trim();
+                    dishDataMap.get(key).add(dayCountMap.getOrDefault(key, 0));
+                });
+            }
+        }
     }
 
     /**

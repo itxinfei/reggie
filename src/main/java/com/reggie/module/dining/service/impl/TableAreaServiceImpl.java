@@ -21,6 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(rollbackFor = Exception.class)
 public class TableAreaServiceImpl extends ServiceImpl<TableAreaMapper, TableArea> implements TableAreaService {
 
+    /**
+     * 分页查询 query。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
     @Override
     public Page<TableArea> pageQuery(int page, int pageSize) {
         Page<TableArea> pageRequest = PageUtils.of(page, pageSize);
@@ -30,6 +36,11 @@ public class TableAreaServiceImpl extends ServiceImpl<TableAreaMapper, TableArea
                         .orderByAsc(TableArea::getSort));
     }
 
+    /**
+     * 获取 by name。
+     * @param name 参数 name
+     * @return 返回结果
+     */
     @Override
     public TableArea getByName(String name) {
         return this.list(new LambdaQueryWrapper<TableArea>()

@@ -40,6 +40,12 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             {"08:00", "20:00"}
     };
 
+    /**
+     * 获取 monthly schedule。
+     * @param tenantId 参数 tenantId
+     * @param month 参数 month
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getMonthlySchedule(Long tenantId, String month) {
         log.info("获取本月排班表 - tenantId={}, month={}", tenantId, month);
@@ -99,6 +105,13 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         return result;
     }
 
+    /**
+     * 获取 employee schedule。
+     * @param employeeId 参数 employeeId
+     * @param month 参数 month
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getEmployeeSchedule(Long employeeId, String month, Long tenantId) {
         log.info("获取员工排班 - employeeId={}, month={}, tenantId={}", employeeId, month, tenantId);
@@ -136,6 +149,15 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         return result;
     }
 
+    /**
+     * 保存 schedule。
+     * @param employeeId 参数 employeeId
+     * @param date 参数 date
+     * @param shift 参数 shift
+     * @param shiftStart 参数 shiftStart
+     * @param shiftEnd 参数 shiftEnd
+     * @return 返回结果
+     */
     @Override
     public R<Void> saveSchedule(Long employeeId, String date, int shift, String shiftStart, String shiftEnd) {
         log.info("保存排班 - employeeId={}, date={}, shift={}, shiftStart={}, shiftEnd={}",
@@ -156,6 +178,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             LocalTime.parse(shiftStart);
             LocalTime.parse(shiftEnd);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             return R.error("班次时间格式不正确，请使用 HH:mm 格式");
         }
 
@@ -163,6 +186,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         try {
             LocalDate.parse(date, DATE_FMT);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             return R.error("日期格式不正确，请使用 yyyy-MM-dd 格式");
         }
 
@@ -182,6 +206,11 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         return r;
     }
 
+    /**
+     * 获取 today schedule。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getTodaySchedule(Long tenantId) {
         log.info("获取今日排班 - tenantId={}", tenantId);

@@ -121,6 +121,7 @@ public class DashboardController {
             Map<String, Object> data = dashboardService.getSystemHealth();
             return R.success(data);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[Dashboard] 系统健康状态获取异常", e);
             // fail-closed：健康检查失败必须返回非成功状态码。
             // 若返回 success，探活方（K8s/LB/监控）会误判节点健康而不摘除故障实例。
@@ -147,30 +148,35 @@ public class DashboardController {
         try {
             result.put("overview", dashboardService.getOverview(tenantId));
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[Dashboard] 概览数据获取异常", e);
             result.put("overview", errorPlaceholder("概览", e));
         }
         try {
             result.put("trend", dashboardService.getTrend(tenantId));
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[Dashboard] 趋势数据获取异常", e);
             result.put("trend", new ArrayList<>());
         }
         try {
             result.put("orderStatus", dashboardService.getOrderStatusDistribution(tenantId));
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[Dashboard] 订单状态分布获取异常", e);
             result.put("orderStatus", errorPlaceholder("订单状态", e));
         }
         try {
             result.put("hotDishes", dashboardService.getHotDishes(tenantId, hotDishLimit));
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[Dashboard] 热销菜品获取异常", e);
             result.put("hotDishes", new ArrayList<>());
         }
         try {
             result.put("health", dashboardService.getSystemHealth());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[Dashboard] 系统健康获取异常", e);
             result.put("health", healthErrorPlaceholder(e));
         }

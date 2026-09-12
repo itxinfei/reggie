@@ -86,8 +86,10 @@ public interface PaymentOrderMapper extends BaseMapper<PaymentOrder> {
      * @return 已退款总额
      */
     @InterceptorIgnore(tenantLine = "true")
-    @Select("SELECT COALESCE(SUM(amount),0) FROM refund_record WHERE payment_order_id = #{paymentOrderId} AND status = #{successCode} AND is_deleted = 0")
-    BigDecimal sumRefundedAmount(@Param("paymentOrderId") Long paymentOrderId, @Param("successCode") String successCode);
+    @Select("SELECT COALESCE(SUM(amount),0) FROM refund_record WHERE payment_order_id = #{paymentOrderId} AND status " +
+            "= #{successCode} AND is_deleted = 0")
+    BigDecimal sumRefundedAmount(@Param("paymentOrderId") Long paymentOrderId,
+            @Param("successCode") String successCode);
 
     /**
      * 原子行锁查询：在事务内锁定支付单行，防止并发退款时各自读到过期数据。
@@ -100,6 +102,8 @@ public interface PaymentOrderMapper extends BaseMapper<PaymentOrder> {
      * @return 支付金额（null 表示行不存在或状态不匹配）
      */
     @InterceptorIgnore(tenantLine = "true")
-    @Select("SELECT amount FROM payment_order WHERE id = #{paymentOrderId} AND status = #{successCode} AND is_deleted = 0 FOR UPDATE")
-    BigDecimal selectPaymentAmountForUpdate(@Param("paymentOrderId") Long paymentOrderId, @Param("successCode") String successCode);
+    @Select("SELECT amount FROM payment_order WHERE id = #{paymentOrderId} AND status = #{successCode} AND " +
+            "is_deleted = 0 FOR UPDATE")
+    BigDecimal selectPaymentAmountForUpdate(@Param("paymentOrderId") Long paymentOrderId,
+            @Param("successCode") String successCode);
 }

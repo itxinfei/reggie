@@ -52,6 +52,10 @@ public class InventoryStatsServiceImpl implements InventoryStatsService {
     @Autowired
     private StockRecordMapper stockRecordMapper;
 
+    /**
+     * 处理 overview。
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> overview() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -89,7 +93,8 @@ public class InventoryStatsServiceImpl implements InventoryStatsService {
         // 今日出入库
         long todayInCount = stockRecordMapper.countByTypeBetween(todayStart, todayEnd, StockRecordType.IN.getValue());
         long todayOutCount = stockRecordMapper.countByTypeBetween(todayStart, todayEnd, StockRecordType.OUT.getValue());
-        BigDecimal todayInAmount = stockRecordMapper.sumAmountByTypeBetween(todayStart, todayEnd, StockRecordType.IN.getValue());
+        BigDecimal todayInAmount = stockRecordMapper.sumAmountByTypeBetween(todayStart, todayEnd, StockRecordType.IN
+                .getValue());
 
         result.put("totalMaterials", totalMaterials);
         result.put("activeMaterials", activeMaterials);
@@ -109,6 +114,10 @@ public class InventoryStatsServiceImpl implements InventoryStatsService {
         return result;
     }
 
+    /**
+     * 处理 purchase trend。
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> purchaseTrend() {
         List<Map<String, Object>> trend = new ArrayList<>();
@@ -120,11 +129,13 @@ public class InventoryStatsServiceImpl implements InventoryStatsService {
             LocalDateTime ds = LocalDateTime.of(date, LocalTime.MIN);
             LocalDateTime de = LocalDateTime.of(date, LocalTime.MAX);
             BigDecimal dayAmount = poList.stream()
-                    .filter(po -> po.getCreatedTime() != null && !po.getCreatedTime().isBefore(ds) && !po.getCreatedTime().isAfter(de))
+                    .filter(po -> po.getCreatedTime() != null && !po.getCreatedTime().isBefore(ds) && !po
+                            .getCreatedTime().isAfter(de))
                     .map(po -> po.getTotalAmount() != null ? po.getTotalAmount() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             long dayCount = poList.stream()
-                    .filter(po -> po.getCreatedTime() != null && !po.getCreatedTime().isBefore(ds) && !po.getCreatedTime().isAfter(de))
+                    .filter(po -> po.getCreatedTime() != null && !po.getCreatedTime().isBefore(ds) && !po
+                            .getCreatedTime().isAfter(de))
                     .count();
             Map<String, Object> day = new LinkedHashMap<>();
             day.put("date", date.toString().substring(5));
@@ -135,6 +146,10 @@ public class InventoryStatsServiceImpl implements InventoryStatsService {
         return trend;
     }
 
+    /**
+     * 处理 stock trend。
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> stockTrend() {
         List<Map<String, Object>> trend = new ArrayList<>();

@@ -103,6 +103,7 @@ public class DashboardServiceImpl implements DashboardService {
                     return result;
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[Dashboard] Redis读取异常，降级查询MySQL", e);
             }
         }
@@ -113,6 +114,7 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             overview = computeOverview(tenantId);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[Dashboard] 计算概览异常", e);
             // 异常时不缓存，避免错误数据长时间生效
             return fallbackErrorResult("概览数据查询失败");
@@ -126,6 +128,7 @@ public class DashboardServiceImpl implements DashboardService {
                 redisTemplate.expire(cacheKey, TTL_OVERVIEW, TimeUnit.MINUTES);
                 log.info("[Dashboard] 概览数据已缓存至Redis key={}", cacheKey);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[Dashboard] Redis回填失败", e);
             }
         }
@@ -152,7 +155,8 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDateTime yesterdayStart = todayStart.minusDays(1);
 
         // 通过 DashboardMapper 聚合销售概览和订单概览（单次查询完成所有聚合，无需 Java 层逐行计算）
-        Map<String, Object> salesMap = dashboardMapper.getSalesOverview(tenantId, todayStart, todayEnd, yesterdayStart, weekStart, monthStart);
+        Map<String, Object> salesMap = dashboardMapper.getSalesOverview(tenantId, todayStart, todayEnd, yesterdayStart,
+                weekStart, monthStart);
         Map<String, Object> orderMap = dashboardMapper.getOrderOverview(tenantId, todayStart, todayEnd, weekStart);
 
         // 解析销售数据
@@ -174,6 +178,7 @@ public class DashboardServiceImpl implements DashboardService {
             // 通过用户服务获取今日注册用户，保持与原有逻辑一致
             // LambdaQueryWrapper 已由原有代码路径处理，此处保持向后兼容
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[Dashboard] 查询今日用户数异常", e);
         }
 
@@ -182,6 +187,7 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             activeEmployees = (int) employeeService.count();
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[Dashboard] 查询有效员工数异常", e);
         }
 
@@ -229,6 +235,7 @@ public class DashboardServiceImpl implements DashboardService {
                     return result;
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[Dashboard] Redis读取异常，降级查询MySQL", e);
             }
         }
@@ -239,6 +246,7 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             trend = computeTrend(tenantId);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[Dashboard] 计算趋势异常", e);
             // 异常时不缓存，避免错误数据长时间生效，下次请求可重新计算
             return new ArrayList<>();
@@ -250,6 +258,7 @@ public class DashboardServiceImpl implements DashboardService {
                 redisTemplate.opsForValue().set(cacheKey, trend, TTL_TREND, TimeUnit.MINUTES);
                 log.info("[Dashboard] 趋势数据已缓存至Redis key={}", cacheKey);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[Dashboard] Redis回填失败", e);
             }
         }
@@ -336,6 +345,7 @@ public class DashboardServiceImpl implements DashboardService {
                     return result;
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[Dashboard] Redis读取异常，降级查询MySQL", e);
             }
         }
@@ -346,6 +356,7 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             distribution = computeOrderStatusDistribution(tenantId);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[Dashboard] 计算订单状态分布异常", e);
             // 异常时不缓存，避免错误数据长时间生效
             Map<String, Object> errorResult = new LinkedHashMap<>();
@@ -366,6 +377,7 @@ public class DashboardServiceImpl implements DashboardService {
                 redisTemplate.expire(cacheKey, TTL_ORDER_STATUS, TimeUnit.MINUTES);
                 log.info("[Dashboard] 订单状态分布已缓存至Redis key={}", cacheKey);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[Dashboard] Redis回填失败", e);
             }
         }
@@ -439,6 +451,7 @@ public class DashboardServiceImpl implements DashboardService {
                     return result;
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[Dashboard] Redis ZSet读取异常，降级查询MySQL", e);
             }
         }
@@ -449,6 +462,7 @@ public class DashboardServiceImpl implements DashboardService {
         try {
             hotDishes = computeHotDishes(tenantId);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[Dashboard] 计算热销菜品异常", e);
             hotDishes = new ArrayList<>();
         }
@@ -464,7 +478,8 @@ public class DashboardServiceImpl implements DashboardService {
                 final List<Map<String, Object>> finalHotDishes = hotDishes;
 
                 // 使用Pipeline批量写入，减少网络往返
-                List<Object> results = redisTemplate.executePipelined((org.springframework.data.redis.core.RedisCallback<Object>) connection -> {
+                List<Object> results = redisTemplate.executePipelined((org.springframework.data.redis.core
+                        .RedisCallback<Object>) connection -> {
                     for (Map<String, Object> dish : finalHotDishes) {
                         String name = String.valueOf(dish.get("name"));
                         Object countObj = dish.get("count");
@@ -472,7 +487,8 @@ public class DashboardServiceImpl implements DashboardService {
                                 : countObj instanceof Long ? ((Long) countObj).doubleValue() : 0;
                         connection.zAdd(tempKey.getBytes(), score, name.getBytes());
                     }
-                    connection.expire(tempKey.getBytes(), java.util.concurrent.TimeUnit.MINUTES.toSeconds(TTL_HOT_DISHES));
+                    connection.expire(tempKey.getBytes(), java.util.concurrent.TimeUnit.MINUTES
+                            .toSeconds(TTL_HOT_DISHES));
                     return null;
                 });
 
@@ -482,6 +498,7 @@ public class DashboardServiceImpl implements DashboardService {
 
                 log.info("[Dashboard] 热销菜品已缓存至Redis ZSet key={}", cacheKey);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[Dashboard] Redis ZSet回填失败", e);
             }
         }
@@ -536,6 +553,7 @@ public class DashboardServiceImpl implements DashboardService {
                 redisOk = "ok".equals(checkVal);
                 redisInfo = redisOk ? "正常" : "读写异常";
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("Dashboard Redis 健康检查异常：{}", e.getMessage(), e);
                 redisInfo = "异常: " + e.getMessage();
             }
@@ -550,6 +568,7 @@ public class DashboardServiceImpl implements DashboardService {
             dbOk = userCount >= 0;
             health.put("dbInfo", "正常 (" + userCount + " 用户)");
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("Dashboard 数据库健康检查异常：{}", e.getMessage(), e);
             health.put("dbInfo", "异常: " + e.getMessage());
         }
@@ -594,6 +613,7 @@ public class DashboardServiceImpl implements DashboardService {
             log.info("[Dashboard] 已清除缓存 overviewKey={}, statusKey={}, trendKey={}, hotDishesKey={}",
                     overviewKey, statusKey, trendKey, hotDishesKey);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[Dashboard] 清除缓存失败", e);
         }
     }

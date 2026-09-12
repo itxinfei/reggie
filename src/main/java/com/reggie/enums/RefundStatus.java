@@ -13,9 +13,14 @@ import java.util.Arrays;
 public enum RefundStatus {
 
     /**
-     * 退款中
+     * 退款中 / 待审核（售后申请初始状态）
      */
     PENDING("pending", "退款中"),
+
+    /**
+     * 审核通过，退款处理中（售后审核通过后、渠道退款完成前）
+     */
+    PROCESSING("processing", "退款处理中"),
 
     /**
      * 退款成功
@@ -25,7 +30,12 @@ public enum RefundStatus {
     /**
      * 退款失败
      */
-    FAIL("fail", "退款失败");
+    FAIL("fail", "退款失败"),
+
+    /**
+     * 售后审核被拒绝
+     */
+    REJECTED("rejected", "审核拒绝");
 
     private final String code;
     private final String desc;

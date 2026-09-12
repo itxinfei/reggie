@@ -66,8 +66,11 @@ public class RechargeRecordController {
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "phone", description = "会员手机号（可选，精确查询）")
-    public R<Map<String, Object>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, String phone,
-                                       @Parameter(description = "支付方式（WECHAT/ALIPAY/CASH/BALANCE 等，可选）") @RequestParam(required = false) String paymentMethod) {
+    public R<Map<String, Object>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize, String phone,
+                                       @Parameter(description =
+                                               "支付方式（WECHAT/ALIPAY/CASH/BALANCE 等，可选）") @RequestParam(required =
+                                               false) String paymentMethod) {
         Page<RechargeRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<RechargeRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(paymentMethod != null && !paymentMethod.isEmpty(), RechargeRecord::getPaymentMethod, paymentMethod);
@@ -168,7 +171,8 @@ public class RechargeRecordController {
         LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
         List<RechargeRecord> todayRecords = allRecords.stream()
-                .filter(r -> r.getCreatedTime() != null && !r.getCreatedTime().isBefore(todayStart) && !r.getCreatedTime().isAfter(todayEnd))
+                .filter(r -> r.getCreatedTime() != null && !r.getCreatedTime().isBefore(todayStart) && !r
+                        .getCreatedTime().isAfter(todayEnd))
                 .collect(Collectors.toList());
         BigDecimal todayAmount = todayRecords.stream()
                 .map(r -> r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO)
@@ -192,7 +196,8 @@ public class RechargeRecordController {
         Map<String, BigDecimal> paymentMap = allRecords.stream()
                 .collect(Collectors.groupingBy(
                         r -> r.getPaymentMethod() != null ? r.getPaymentMethod() : "未知",
-                        Collectors.reducing(BigDecimal.ZERO, r -> r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO, BigDecimal::add)
+                        Collectors.reducing(BigDecimal.ZERO, r -> r.getAmount() != null ? r.getAmount() : BigDecimal
+                                .ZERO, BigDecimal::add)
                 ));
         List<Map<String, Object>> paymentDistribution = new ArrayList<>();
         paymentMap.forEach((k, v) -> {
@@ -209,7 +214,8 @@ public class RechargeRecordController {
             LocalDateTime ms = LocalDateTime.of(monthDate.withDayOfMonth(1), LocalTime.MIN);
             LocalDateTime me = LocalDateTime.of(monthDate.withDayOfMonth(monthDate.lengthOfMonth()), LocalTime.MAX);
             BigDecimal monthTotal = allRecords.stream()
-                    .filter(r -> r.getCreatedTime() != null && !r.getCreatedTime().isBefore(ms) && !r.getCreatedTime().isAfter(me))
+                    .filter(r -> r.getCreatedTime() != null && !r.getCreatedTime().isBefore(ms) && !r.getCreatedTime()
+                            .isAfter(me))
                     .map(r -> r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             Map<String, Object> item = new LinkedHashMap<>();

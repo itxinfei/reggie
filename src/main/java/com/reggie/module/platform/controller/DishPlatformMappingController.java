@@ -33,6 +33,15 @@ public class DishPlatformMappingController {
 
     private final DishPlatformMappingService mappingService;
 
+    /**
+     * 分页查询。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param dishId 参数 dishId
+     * @param platformType 参数 platformType
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Operation(summary = "分页查询映射列表")
     @GetMapping("/page")
     public R<IPage<DishPlatformMapping>> page(
@@ -58,6 +67,10 @@ public class DishPlatformMappingController {
         return R.success(result);
     }
 
+    /**
+     * 处理 stats。
+     * @return 返回结果
+     */
     @Operation(summary = "菜品平台映射统计（总数/已上架/已下架/覆盖平台数）")
     @GetMapping("/stats")
     public R<Map<String, Object>> stats() {
@@ -80,33 +93,62 @@ public class DishPlatformMappingController {
         return R.success(result);
     }
 
+    /**
+     * 查询列表 by dish id。
+     * @param dishId 参数 dishId
+     * @return 返回结果
+     */
     @Operation(summary = "按菜品ID查询映射")
     @GetMapping("/dish/{dishId}")
-    public R<List<DishPlatformMapping>> listByDishId(@Parameter(description = "菜品ID", required = true) @PathVariable @NotNull Long dishId) {
+    public R<List<DishPlatformMapping>> listByDishId(@Parameter(description = "菜品ID", required =
+            true) @PathVariable @NotNull Long dishId) {
         return R.success(mappingService.listByDishId(dishId));
     }
 
+    /**
+     * 查询列表 by platform type。
+     * @param platformType 参数 platformType
+     * @return 返回结果
+     */
     @Operation(summary = "按平台类型查询映射")
     @GetMapping("/platform/{platformType}")
-    public R<List<DishPlatformMapping>> listByPlatformType(@Parameter(description = "平台类型（如 meituan、eleme）", required = true) @PathVariable String platformType) {
+    public R<List<DishPlatformMapping>> listByPlatformType(@Parameter(description = "平台类型（如 meituan、eleme）", required =
+            true) @PathVariable String platformType) {
         return R.success(mappingService.listByPlatformType(platformType));
     }
 
+    /**
+     * 新增。
+     * @param mapping 参数 mapping
+     * @return 返回结果
+     */
     @Operation(summary = "新增映射")
     @PostMapping
-    public R<DishPlatformMapping> add(@Parameter(description = "映射信息（菜品ID、平台类型、平台菜品ID）", required = true) @RequestBody DishPlatformMapping mapping) {
+    public R<DishPlatformMapping> add(@Parameter(description = "映射信息（菜品ID、平台类型、平台菜品ID）", required =
+            true) @RequestBody DishPlatformMapping mapping) {
         mapping.setIsDeleted(0);
         mapping.setStatus(1);
         mappingService.save(mapping);
         return R.success(mapping);
     }
 
+    /**
+     * 更新。
+     * @param mapping 参数 mapping
+     * @return 返回结果
+     */
     @Operation(summary = "更新映射")
     @PutMapping
-    public R<Boolean> update(@Parameter(description = "映射信息（含ID）", required = true) @RequestBody DishPlatformMapping mapping) {
+    public R<Boolean> update(@Parameter(description = "映射信息（含ID）", required =
+            true) @RequestBody DishPlatformMapping mapping) {
         return R.success(mappingService.updateById(mapping));
     }
 
+    /**
+     * 删除。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Operation(summary = "删除映射")
     @DeleteMapping("/{id}")
     public R<Boolean> delete(@Parameter(description = "映射ID", required = true) @PathVariable Long id) {

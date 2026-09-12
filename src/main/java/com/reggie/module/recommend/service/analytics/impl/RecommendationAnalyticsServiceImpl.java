@@ -56,6 +56,10 @@ public class RecommendationAnalyticsServiceImpl implements RecommendationAnalyti
     @Autowired
     private OrderService orderService;
 
+    /**
+     * 计算 stats。
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> calculateStats() {
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -121,6 +125,7 @@ public class RecommendationAnalyticsServiceImpl implements RecommendationAnalyti
             stats.put("cachedUsers", cachedUsers);
             stats.put("totalOrderUsers", totalOrderUsers);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[推荐引擎] 统计数据计算异常", e);
             stats.put("hybridRate", 0);
             stats.put("clickRate", 0);
@@ -131,6 +136,11 @@ public class RecommendationAnalyticsServiceImpl implements RecommendationAnalyti
         return stats;
     }
 
+    /**
+     * 获取 feedback stats。
+     * @param days 参数 days
+     * @return 返回结果
+     */
     @Override
     public Map<String, Integer> getFeedbackStats(int days) {
         Map<String, Integer> stats = new LinkedHashMap<>();
@@ -168,11 +178,16 @@ public class RecommendationAnalyticsServiceImpl implements RecommendationAnalyti
             }
             log.debug("[推荐引擎] 反馈分布统计: days={}, stats={}", days, stats);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[推荐引擎] 反馈分布统计异常", e);
         }
         return stats;
     }
 
+    /**
+     * 获取 preference distribution。
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getPreferenceDistribution() {
         try {
@@ -182,11 +197,16 @@ public class RecommendationAnalyticsServiceImpl implements RecommendationAnalyti
                 return result;
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[推荐引擎] 偏好分布查询异常", e);
         }
         return Collections.emptyList();
     }
 
+    /**
+     * 获取 algo compare。
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getAlgoCompare() {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -232,11 +252,17 @@ public class RecommendationAnalyticsServiceImpl implements RecommendationAnalyti
 
             log.debug("[推荐引擎] 算法效果对比: ct={}, cv={}", ctList, cvList);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[推荐引擎] 算法对比查询异常", e);
         }
         return result;
     }
 
+    /**
+     * 获取 browse trend。
+     * @param days 参数 days
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getBrowseTrend(int days) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -246,7 +272,8 @@ public class RecommendationAnalyticsServiceImpl implements RecommendationAnalyti
 
         try {
             String startTime = LocalDateTime.now().minusDays(days).toString();
-            List<Map<String, Object>> rows = browseHistoryMapper.countDailyTrend(startTime, BaseContext.getCurrentTenantId());
+            List<Map<String, Object>> rows = browseHistoryMapper.countDailyTrend(startTime, BaseContext
+                    .getCurrentTenantId());
 
             Map<String, Map<String, Object>> dateMap = new LinkedHashMap<>();
             for (Map<String, Object> row : rows) {
@@ -272,6 +299,7 @@ public class RecommendationAnalyticsServiceImpl implements RecommendationAnalyti
 
             log.debug("[推荐引擎] 浏览趋势: dates size={}, browse={}, cart={}", dates.size(), browseCount, cartCount);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[推荐引擎] 浏览趋势查询异常", e);
             for (int i = days - 1; i >= 0; i--) {
                 java.time.LocalDate d = java.time.LocalDate.now().minusDays(i);

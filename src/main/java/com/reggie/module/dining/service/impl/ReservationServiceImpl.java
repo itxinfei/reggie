@@ -30,8 +30,19 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
     @Autowired
     private DiningTableService diningTableService;
 
+    /**
+     * 创建 reservation。
+     * @param customerName 参数 customerName
+     * @param phone 参数 phone
+     * @param reservedTime 参数 reservedTime
+     * @param seatCount 参数 seatCount
+     * @param tableId 参数 tableId
+     * @param remark 参数 remark
+     * @return 返回结果
+     */
     @Override
-    public Reservation createReservation(String customerName, String phone, LocalDateTime reservedTime, Integer seatCount, Long tableId, String remark) {
+    public Reservation createReservation(String customerName, String phone, LocalDateTime reservedTime,
+            Integer seatCount, Long tableId, String remark) {
         Long currentTenantId = BaseContext.getCurrentTenantId();
         // 修复 P2-3：时间冲突检测——同一桌台同一时间窗口（±1小时）已被预订则拒绝
         if (tableId != null && reservedTime != null) {
@@ -62,6 +73,10 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         return r;
     }
 
+    /**
+     * 确认 reservation。
+     * @param id 参数 id
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void confirmReservation(Long id) {
@@ -80,6 +95,10 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         updateById(r);
     }
 
+    /**
+     * 取消 reservation。
+     * @param id 参数 id
+     */
     @Override
     public void cancelReservation(Long id) {
         Reservation r = getById(id);
@@ -94,6 +113,10 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         updateById(r);
     }
 
+    /**
+     * 处理 arrive。
+     * @param id 参数 id
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void arrive(Long id) {
@@ -111,6 +134,7 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
             try {
                 diningTableService.changeStatus(r.getTableId(), DiningTableStatus.OCCUPIED.getValue());
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[预订到店] 桌台状态变更失败: tableId={}, error={}", r.getTableId(), e.getMessage(), e);
             }
         }

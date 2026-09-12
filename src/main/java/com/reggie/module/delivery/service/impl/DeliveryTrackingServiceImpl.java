@@ -44,6 +44,12 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
 
     // ==================== Rider Management ====================
 
+    /**
+     * 获取 rider list。
+     * @param status 参数 status
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public List<Rider> getRiderList(Integer status, Long tenantId) {
         LambdaQueryWrapper<Rider> qw = new LambdaQueryWrapper<>();
@@ -57,6 +63,11 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         return riderMapper.selectList(qw);
     }
 
+    /**
+     * 获取 rider by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     public Rider getRiderById(Long id) {
         Long currentTenantId = BaseContext.getCurrentTenantId();
@@ -69,6 +80,11 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         return riderMapper.selectOne(qw);
     }
 
+    /**
+     * 保存 or update rider。
+     * @param rider 参数 rider
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateRider(Rider rider) {
@@ -97,6 +113,11 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         }
     }
 
+    /**
+     * 删除 rider。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteRider(Long id) {
@@ -111,6 +132,12 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         return riderMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 更新 rider status。
+     * @param id 参数 id
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateRiderStatus(Long id, Integer status) {
@@ -130,6 +157,15 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
 
     // ==================== Location Tracking ====================
 
+    /**
+     * 更新 rider location。
+     * @param riderId 参数 riderId
+     * @param longitude 参数 longitude
+     * @param latitude 参数 latitude
+     * @param speed 参数 speed
+     * @param direction 参数 direction
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateRiderLocation(Long riderId, BigDecimal longitude, BigDecimal latitude,
@@ -164,8 +200,16 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         return locationRecordMapper.insert(record) > 0;
     }
 
+    /**
+     * 获取 rider location history。
+     * @param riderId 参数 riderId
+     * @param startTime 参数 startTime
+     * @param endTime 参数 endTime
+     * @return 返回结果
+     */
     @Override
-    public List<RiderLocationRecord> getRiderLocationHistory(Long riderId, LocalDateTime startTime, LocalDateTime endTime) {
+    public List<RiderLocationRecord> getRiderLocationHistory(Long riderId, LocalDateTime startTime,
+            LocalDateTime endTime) {
         LambdaQueryWrapper<RiderLocationRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(RiderLocationRecord::getRiderId, riderId);
         Long currentTenantId = BaseContext.getCurrentTenantId();
@@ -182,6 +226,11 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         return locationRecordMapper.selectList(qw);
     }
 
+    /**
+     * 获取 order delivery tracking。
+     * @param orderId 参数 orderId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getOrderDeliveryTracking(Long orderId) {
         Map<String, Object> result = new HashMap<>();
@@ -234,6 +283,11 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         return result;
     }
 
+    /**
+     * 获取 rider current location。
+     * @param riderId 参数 riderId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getRiderCurrentLocation(Long riderId) {
         Map<String, Object> result = new HashMap<>();
@@ -264,6 +318,11 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
 
     // ==================== Delivery Time Management ====================
 
+    /**
+     * 创建 delivery time record。
+     * @param record 参数 record
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean createDeliveryTimeRecord(DeliveryTimeRecord record) {
@@ -273,6 +332,11 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         return timeRecordMapper.insert(record) > 0;
     }
 
+    /**
+     * 更新 delivery time record。
+     * @param record 参数 record
+     * @return 返回结果
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateDeliveryTimeRecord(DeliveryTimeRecord record) {
@@ -280,6 +344,11 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         return timeRecordMapper.updateById(record) > 0;
     }
 
+    /**
+     * 获取 delivery time by order id。
+     * @param orderId 参数 orderId
+     * @return 返回结果
+     */
     @Override
     public DeliveryTimeRecord getDeliveryTimeByOrderId(Long orderId) {
         LambdaQueryWrapper<DeliveryTimeRecord> qw = new LambdaQueryWrapper<>();
@@ -287,6 +356,12 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         return timeRecordMapper.selectOne(qw);
     }
 
+    /**
+     * 处理 estimate delivery time。
+     * @param distance 参数 distance
+     * @param riderId 参数 riderId
+     * @return 返回结果
+     */
     @Override
     public int estimateDeliveryTime(BigDecimal distance, Long riderId) {
         // Base time: 10 minutes
@@ -309,8 +384,16 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         return ((baseTime + 4) / 5) * 5;
     }
 
+    /**
+     * 获取 delivery time statistics。
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
-    public Map<String, Object> getDeliveryTimeStatistics(LocalDateTime startDate, LocalDateTime endDate, Long tenantId) {
+    public Map<String, Object> getDeliveryTimeStatistics(LocalDateTime startDate, LocalDateTime endDate,
+            Long tenantId) {
         Map<String, Object> result = new HashMap<>();
 
         LambdaQueryWrapper<DeliveryTimeRecord> qw = new LambdaQueryWrapper<>();
@@ -366,6 +449,13 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
 
     // ==================== Statistics ====================
 
+    /**
+     * 获取 rider statistics。
+     * @param riderId 参数 riderId
+     * @param startDate 参数 startDate
+     * @param endDate 参数 endDate
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getRiderStatistics(Long riderId, LocalDateTime startDate, LocalDateTime endDate) {
         Map<String, Object> result = new HashMap<>();
@@ -411,6 +501,11 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         return result;
     }
 
+    /**
+     * 获取 delivery overview。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> getDeliveryOverview(Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -485,7 +580,8 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
         }
     }
 
-    private void addTimelineItem(List<Map<String, Object>> timeline, String type, String description, LocalDateTime time) {
+    private void addTimelineItem(List<Map<String, Object>> timeline, String type, String description,
+            LocalDateTime time) {
         Map<String, Object> item = new HashMap<>();
         item.put("type", type);
         item.put("description", description);

@@ -35,6 +35,10 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
     @Autowired
     private OrderMapper orderMapper;
 
+    /**
+     * 保存 title。
+     * @param title 参数 title
+     */
     @Override
     public void saveTitle(InvoiceTitle title) {
         title.setTenantId(BaseContext.getCurrentTenantId());
@@ -42,6 +46,12 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         invoiceTitleMapper.insert(title);
     }
 
+    /**
+     * 查询列表 titles。
+     * @param tenantId 参数 tenantId
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     public List<InvoiceTitle> listTitles(Long tenantId, Long userId) {
         // 发票抬头按租户隔离，userId 用于前端筛选（可选）
@@ -51,6 +61,13 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         return invoiceTitleMapper.selectList(qw);
     }
 
+    /**
+     * 删除 title。
+     * @param id 参数 id
+     * @param tenantId 参数 tenantId
+     * @param userId 参数 userId
+     * @return 返回结果
+     */
     @Override
     public boolean deleteTitle(Long id, Long tenantId, Long userId) {
         InvoiceTitle title = invoiceTitleMapper.selectById(id);
@@ -60,8 +77,20 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         return invoiceTitleMapper.deleteById(id) > 0;
     }
 
+    /**
+     * 申请 invoice。
+     * @param orderId 参数 orderId
+     * @param userId 参数 userId
+     * @param tenantId 参数 tenantId
+     * @param titleId 参数 titleId
+     * @param title 参数 title
+     * @param taxNumber 参数 taxNumber
+     * @param type 参数 type
+     * @return 返回结果
+     */
     @Override
-    public InvoiceRecord applyInvoice(Long orderId, Long userId, Long tenantId, Long titleId, String title, String taxNumber, Integer type) {
+    public InvoiceRecord applyInvoice(Long orderId, Long userId, Long tenantId, Long titleId, String title,
+            String taxNumber, Integer type) {
         // 校验订单存在且已完成
         Orders order = orderMapper.selectById(orderId);
         if (order == null) {
@@ -103,6 +132,13 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         return record;
     }
 
+    /**
+     * 获取 invoice by order。
+     * @param orderId 参数 orderId
+     * @param userId 参数 userId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public InvoiceRecord getInvoiceByOrder(Long orderId, Long userId, Long tenantId) {
         // 修改点(2026-09-05)：IDOR 防护——先校验订单归属，再查询发票记录，防止越权查看他人订单发票
@@ -119,6 +155,13 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         return getOne(qw, false);
     }
 
+    /**
+     * 查询列表 user records。
+     * @param page 参数 page
+     * @param userId 参数 userId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Page<InvoiceRecord> listUserRecords(Page<InvoiceRecord> page, Long userId, Long tenantId) {
         LambdaQueryWrapper<InvoiceRecord> qw = new LambdaQueryWrapper<>();
@@ -128,8 +171,19 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         return page(page, qw);
     }
 
+    /**
+     * 更新 title。
+     * @param id 参数 id
+     * @param tenantId 参数 tenantId
+     * @param title 参数 title
+     * @param taxNumber 参数 taxNumber
+     * @param companyName 参数 companyName
+     * @param type 参数 type
+     * @return 返回结果
+     */
     @Override
-    public boolean updateTitle(Long id, Long tenantId, String title, String taxNumber, String companyName, Integer type) {
+    public boolean updateTitle(Long id, Long tenantId, String title, String taxNumber, String companyName,
+            Integer type) {
         InvoiceTitle titleEntity = invoiceTitleMapper.selectById(id);
         if (titleEntity == null || !tenantId.equals(titleEntity.getTenantId())) {
             throw new CustomException("发票抬头不存在");
@@ -153,6 +207,13 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         return invoiceTitleMapper.updateById(titleEntity) > 0;
     }
 
+    /**
+     * 查询列表 records。
+     * @param page 参数 page
+     * @param status 参数 status
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Page<InvoiceRecord> listRecords(Page<InvoiceRecord> page, Integer status, Long tenantId) {
         LambdaQueryWrapper<InvoiceRecord> qw = new LambdaQueryWrapper<>();
@@ -164,6 +225,11 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         return page(page, qw);
     }
 
+    /**
+     * 查询列表 stats。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Integer> listStats(Long tenantId) {
         // 按状态分别 count（索引命中，避免全量加载行数据），统计卡全量不随分页/筛选变化
@@ -191,6 +257,15 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         return qw;
     }
 
+    /**
+     * 判断 sue invoice。
+     * @param recordId 参数 recordId
+     * @param invoiceNo 参数 invoiceNo
+     * @param invoiceCode 参数 invoiceCode
+     * @param invoiceUrl 参数 invoiceUrl
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public boolean issueInvoice(Long recordId, String invoiceNo, String invoiceCode, String invoiceUrl, Long tenantId) {
         InvoiceRecord record = getById(recordId);
@@ -208,6 +283,12 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         return updateById(record);
     }
 
+    /**
+     * 处理 void invoice。
+     * @param recordId 参数 recordId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public boolean voidInvoice(Long recordId, Long tenantId) {
         InvoiceRecord record = getById(recordId);

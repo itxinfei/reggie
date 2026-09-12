@@ -23,16 +23,28 @@ import java.util.List;
  */
 @Slf4j
 @Service
-public class PlatformConfigServiceImpl extends ServiceImpl<PlatformConfigMapper, PlatformConfig> implements PlatformConfigService {
+public class PlatformConfigServiceImpl extends ServiceImpl<PlatformConfigMapper, PlatformConfig> implements
+        PlatformConfigService {
 
     /** 凭据脱敏展示前缀 */
     private static final String MASK = "***已加密***";
 
+    /**
+     * 分页查询 masked。
+     * @param page 参数 page
+     * @return 返回结果
+     */
     @Override
     public IPage<PlatformConfig> pageMasked(IPage<PlatformConfig> page) {
         return pageMasked(page, null);
     }
 
+    /**
+     * 分页查询 masked。
+     * @param page 参数 page
+     * @param enabled 参数 enabled
+     * @return 返回结果
+     */
     @Override
     public IPage<PlatformConfig> pageMasked(IPage<PlatformConfig> page, Integer enabled) {
         LambdaQueryWrapper<PlatformConfig> wrapper = new LambdaQueryWrapper<>();
@@ -46,6 +58,11 @@ public class PlatformConfigServiceImpl extends ServiceImpl<PlatformConfigMapper,
         return result;
     }
 
+    /**
+     * 获取 masked by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @Override
     public PlatformConfig getMaskedById(Long id) {
         PlatformConfig config = this.getById(id);
@@ -55,6 +72,11 @@ public class PlatformConfigServiceImpl extends ServiceImpl<PlatformConfigMapper,
         return config;
     }
 
+    /**
+     * 新增 config。
+     * @param config 参数 config
+     * @return 返回结果
+     */
     @Override
     public PlatformConfig addConfig(PlatformConfig config) {
         if (config.getTenantId() == null) {
@@ -74,6 +96,11 @@ public class PlatformConfigServiceImpl extends ServiceImpl<PlatformConfigMapper,
         return config;
     }
 
+    /**
+     * 更新 config。
+     * @param config 参数 config
+     * @return 返回结果
+     */
     @Override
     public boolean updateConfig(PlatformConfig config) {
         PlatformConfig exist = this.getById(config.getId());
@@ -100,6 +127,12 @@ public class PlatformConfigServiceImpl extends ServiceImpl<PlatformConfigMapper,
         return this.updateById(exist);
     }
 
+    /**
+     * 设置 enabled。
+     * @param id 参数 id
+     * @param enabled 参数 enabled
+     * @return 返回结果
+     */
     @Override
     public boolean setEnabled(Long id, Integer enabled) {
         PlatformConfig config = new PlatformConfig();
@@ -109,6 +142,13 @@ public class PlatformConfigServiceImpl extends ServiceImpl<PlatformConfigMapper,
         return this.updateById(config);
     }
 
+    /**
+     * 处理 exists by type and shop。
+     * @param platformType 参数 platformType
+     * @param shopId 参数 shopId
+     * @param exceptId 参数 exceptId
+     * @return 返回结果
+     */
     @Override
     public boolean existsByTypeAndShop(String platformType, String shopId, Long exceptId) {
         LambdaQueryWrapper<PlatformConfig> wrapper = new LambdaQueryWrapper<>();
@@ -121,6 +161,10 @@ public class PlatformConfigServiceImpl extends ServiceImpl<PlatformConfigMapper,
         return this.count(wrapper) > 0;
     }
 
+    /**
+     * 查询列表 enabled configs。
+     * @return 返回结果
+     */
     @Override
     public List<PlatformConfig> listEnabledConfigs() {
         LambdaQueryWrapper<PlatformConfig> wrapper = new LambdaQueryWrapper<>();
@@ -130,6 +174,12 @@ public class PlatformConfigServiceImpl extends ServiceImpl<PlatformConfigMapper,
         return this.list(wrapper);
     }
 
+    /**
+     * 获取 by platform type。
+     * @param platformType 参数 platformType
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public PlatformConfig getByPlatformType(String platformType, Long tenantId) {
         LambdaQueryWrapper<PlatformConfig> wrapper = new LambdaQueryWrapper<>();

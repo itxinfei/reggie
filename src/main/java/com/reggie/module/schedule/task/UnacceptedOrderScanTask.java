@@ -70,6 +70,7 @@ public class UnacceptedOrderScanTask {
                 try {
                     totalAlerted += urgencyService.scanUnacceptedAndAlert(tenant.getId());
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.error("[漏单预警] 租户 {} 扫描失败: error={}", tenant.getId(), e.getMessage());
                 } finally {
                     BaseContext.remove();
@@ -98,6 +99,7 @@ public class UnacceptedOrderScanTask {
                     .setIfAbsent(lockKey, lockValue, ttlMs, TimeUnit.MILLISECONDS);
             return Boolean.TRUE.equals(success) ? lockValue : null;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[漏单预警] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
             return null;
         }
@@ -111,12 +113,14 @@ public class UnacceptedOrderScanTask {
             return;
         }
         try {
-            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                     new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
                     java.util.Collections.singletonList(lockKey),
                     lockValue);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[漏单预警] 释放分布式锁失败: {}", lockKey, e);
         }
     }

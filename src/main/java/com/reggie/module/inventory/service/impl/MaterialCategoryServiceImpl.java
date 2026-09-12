@@ -27,7 +27,8 @@ import java.util.stream.Collectors;
  */
 @Service
 @Transactional(rollbackFor = Exception.class)
-public class MaterialCategoryServiceImpl extends ServiceImpl<MaterialCategoryMapper, MaterialCategory> implements MaterialCategoryService {
+public class MaterialCategoryServiceImpl extends ServiceImpl<MaterialCategoryMapper, MaterialCategory> implements
+        MaterialCategoryService {
 
     /** 食材服务：用于统计每个分类下的食材数量 */
     @Autowired
@@ -63,8 +64,10 @@ public class MaterialCategoryServiceImpl extends ServiceImpl<MaterialCategoryMap
      * 分页查询（兼容旧调用）：委托给重写后的 page(E, Wrapper)，同样回填 materialCount。
      */
     @Override
-    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialCategory> pageQuery(int page, int pageSize) {
-        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialCategory> pageRequest = PageUtils.of(page, pageSize);
+    public com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialCategory> pageQuery(int page,
+            int pageSize) {
+        com.baomidou.mybatisplus.extension.plugins.pagination.Page<MaterialCategory> pageRequest = PageUtils.of(page,
+                pageSize);
         return this.page(pageRequest,
                 new LambdaQueryWrapper<MaterialCategory>()
                         // 修改点：删除冗余的手动 eq(tenantId)，由 TenantLineInnerInterceptor 统一处理

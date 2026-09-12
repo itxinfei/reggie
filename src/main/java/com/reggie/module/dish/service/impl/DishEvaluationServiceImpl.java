@@ -114,6 +114,17 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         return pageObj;
     }
 
+    /**
+     * 处理 admin page。
+     * @param tenantId 参数 tenantId
+     * @param dishName 参数 dishName
+     * @param status 参数 status
+     * @param starRating 参数 starRating
+     * @param replyStatus 参数 replyStatus
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
     @Override
     public Page<DishEvaluation> adminPage(Long tenantId, String dishName, Integer status,
                                            Integer starRating, Integer replyStatus, Integer page, Integer pageSize) {

@@ -109,7 +109,8 @@ public interface ReportEnhancedService {
      * @param tenantId  Tenant ID
      * @return Top selling items
      */
-    List<Map<String, Object>> getTopSellingItems(String startDate, String endDate, String type, int limit, Long tenantId);
+    List<Map<String, Object>> getTopSellingItems(String startDate, String endDate, String type, int limit,
+            Long tenantId);
 
     /**
      * Get sales by time period

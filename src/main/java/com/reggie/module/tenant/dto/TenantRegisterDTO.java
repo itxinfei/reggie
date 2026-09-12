@@ -23,34 +23,66 @@ public class TenantRegisterDTO {
     @Size(max = 20, message = "门店电话不能超过20个字符")
     private String phone;
 
+    /**
+     * 获取 shop name。
+     * @return 返回结果
+     */
     public String getShopName() {
         return shopName;
     }
 
+    /**
+     * 设置 shop name。
+     * @param shopName 参数 shopName
+     */
     public void setShopName(String shopName) {
         this.shopName = shopName;
     }
 
+    /**
+     * 获取 address。
+     * @return 返回结果
+     */
     public String getAddress() {
         return address;
     }
 
+    /**
+     * 设置 address。
+     * @param address 参数 address
+     */
     public void setAddress(String address) {
         this.address = address;
     }
 
+    /**
+     * 获取 contact。
+     * @return 返回结果
+     */
     public String getContact() {
         return contact;
     }
 
+    /**
+     * 设置 contact。
+     * @param contact 参数 contact
+     */
     public void setContact(String contact) {
         this.contact = contact;
     }
 
+    /**
+     * 获取 phone。
+     * @return 返回结果
+     */
     public String getPhone() {
         return phone;
     }
 
+    /**
+     * 设置 phone。
+     * @param phone 参数 phone
+     */
     public void setPhone(String phone) {
         this.phone = phone;
     }

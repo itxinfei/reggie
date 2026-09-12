@@ -36,7 +36,8 @@ public class WechatPayChannel implements PaymentChannel {
      */
     @Override
     public PayResponse createOrder(PayRequest request) {
-        log.info("WechatPay createOrder: tradeNo={}, amount={}, subject={}", request.getTradeNo(), request.getAmount(), request.getSubject());
+        log.info("WechatPay createOrder: tradeNo={}, amount={}, subject={}", request.getTradeNo(), request.getAmount(),
+                request.getSubject());
         PayResponse response = new PayResponse();
         response.setSuccess(true);
         response.setChannelTradeNo("WECHAT_" + UUID.randomUUID().toString().replace("-", ""));
@@ -68,7 +69,8 @@ public class WechatPayChannel implements PaymentChannel {
      */
     @Override
     public RefundResponse refund(RefundRequest request) {
-        log.info("WechatPay refund: channelTradeNo={}, amount={}, reason={}", request.getChannelTradeNo(), request.getAmount(), request.getReason());
+        log.info("WechatPay refund: channelTradeNo={}, amount={}, reason={}", request.getChannelTradeNo(), request
+                .getAmount(), request.getReason());
         RefundResponse response = new RefundResponse();
         response.setSuccess(true);
         response.setRefundChannelTradeNo("WECHAT_REFUND_" + UUID.randomUUID().toString().replace("-", ""));
@@ -178,6 +180,7 @@ public class WechatPayChannel implements PaymentChannel {
             }
             return ok;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("WechatPay 回调签名校验异常: {}", e.getMessage(), e);
             return false;
         }

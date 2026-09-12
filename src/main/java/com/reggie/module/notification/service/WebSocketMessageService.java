@@ -108,7 +108,8 @@ public class WebSocketMessageService {
      * Get unread notification count
      */
     public int getUnreadCount(Long tenantId) {
-        List<Map<String, Object>> notifications = tenantNotifications.getOrDefault(tenantId, new CopyOnWriteArrayList<>());
+        List<Map<String, Object>> notifications = tenantNotifications.getOrDefault(tenantId,
+                new CopyOnWriteArrayList<>());
         return (int) notifications.stream().filter(n -> Boolean.FALSE.equals(n.get("read"))).count();
     }
 
@@ -116,7 +117,8 @@ public class WebSocketMessageService {
      * Mark notification as read
      */
     public void markAsRead(Long tenantId, int index) {
-        List<Map<String, Object>> notifications = tenantNotifications.getOrDefault(tenantId, new CopyOnWriteArrayList<>());
+        List<Map<String, Object>> notifications = tenantNotifications.getOrDefault(tenantId,
+                new CopyOnWriteArrayList<>());
         if (index >= 0 && index < notifications.size()) {
             notifications.get(index).put("read", true);
         }

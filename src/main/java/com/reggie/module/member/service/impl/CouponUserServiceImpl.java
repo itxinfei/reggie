@@ -41,6 +41,13 @@ public class CouponUserServiceImpl extends ServiceImpl<CouponUserMapper, CouponU
     @Autowired
     private CouponTemplateService couponTemplateService;
 
+    /**
+     * 处理 use coupon。
+     * @param userId 参数 userId
+     * @param couponId 参数 couponId
+     * @param orderId 参数 orderId
+     * @return 返回结果
+     */
     @Override
     public boolean useCoupon(Long userId, Long couponId, Long orderId) {
         if (userId == null || couponId == null || orderId == null) {
@@ -76,6 +83,12 @@ public class CouponUserServiceImpl extends ServiceImpl<CouponUserMapper, CouponU
         return update(updateWrapper);
     }
 
+    /**
+     * 处理 available coupons。
+     * @param userId 参数 userId
+     * @param orderAmount 参数 orderAmount
+     * @return 返回结果
+     */
     @Override
     public List<CouponAvailableDTO> availableCoupons(Long userId, BigDecimal orderAmount) {
         List<CouponAvailableDTO> result = new ArrayList<>();
@@ -155,6 +168,12 @@ public class CouponUserServiceImpl extends ServiceImpl<CouponUserMapper, CouponU
         return discountAmount.compareTo(orderAmount) > 0 ? orderAmount : discountAmount;
     }
 
+    /**
+     * 处理 restore coupon。
+     * @param couponId 参数 couponId
+     * @param orderId 参数 orderId
+     * @return 返回结果
+     */
     @Override
     public boolean restoreCoupon(Long couponId, Long orderId) {
         if (couponId == null || orderId == null) {

@@ -69,8 +69,10 @@ public class PointsRecordController {
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "phone", description = "会员手机号（可选，精确查询）")
-    public R<Map<String, Object>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, String phone,
-                                       @Parameter(description = "积分类型（earn-获取/consume-消耗，可选）") @RequestParam(required = false) String type) {
+    public R<Map<String, Object>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize, String phone,
+                                       @Parameter(description = "积分类型（earn-获取/consume-消耗，可选）") @RequestParam(required =
+                                               false) String type) {
         Page<PointsRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<PointsRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(type != null && !type.isEmpty(), PointsRecord::getType, type);
@@ -155,7 +157,8 @@ public class PointsRecordController {
     @PostMapping("/adjust")
     @RequireEmployee
     @Operation(summary = "积分调整", description = "运营手动调整会员积分：正数发放、负数扣减，并写入积分流水")
-    public R<String> adjust(@Parameter(description = "积分调整参数（会员ID、积分变动数、说明）", required = true) @Validated @RequestBody AdjustPointsDTO dto) {
+    public R<String> adjust(@Parameter(description = "积分调整参数（会员ID、积分变动数、说明）", required =
+            true) @Validated @RequestBody AdjustPointsDTO dto) {
         if (dto.getPoints() == null || dto.getPoints() == 0) {
             return R.error("积分变动数不能为0");
         }
@@ -209,10 +212,12 @@ public class PointsRecordController {
         todayQw.between(PointsRecord::getCreatedTime, todayStart, todayEnd);
         List<PointsRecord> todayRecords = pointsRecordService.list(todayQw);
         long todayAcquired = todayRecords.stream()
-                .filter(r -> "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN".equalsIgnoreCase(r.getType()))
+                .filter(r -> "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN"
+                        .equalsIgnoreCase(r.getType()))
                 .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
         long todayConsumed = todayRecords.stream()
-                .filter(r -> "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT".equalsIgnoreCase(r.getType()))
+                .filter(r -> "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT"
+                        .equalsIgnoreCase(r.getType()))
                 .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
 
         // 3. 本月获取/消耗积分
@@ -224,10 +229,12 @@ public class PointsRecordController {
         monthQw.between(PointsRecord::getCreatedTime, monthStart, monthEnd);
         List<PointsRecord> monthRecords = pointsRecordService.list(monthQw);
         long monthAcquired = monthRecords.stream()
-                .filter(r -> "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN".equalsIgnoreCase(r.getType()))
+                .filter(r -> "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN"
+                        .equalsIgnoreCase(r.getType()))
                 .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
         long monthConsumed = monthRecords.stream()
-                .filter(r -> "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT".equalsIgnoreCase(r.getType()))
+                .filter(r -> "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT"
+                        .equalsIgnoreCase(r.getType()))
                 .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
 
         // 4. 累计获取/消耗积分（全历史）
@@ -235,10 +242,12 @@ public class PointsRecordController {
         if (tenantId != null) allQw.eq(PointsRecord::getTenantId, tenantId);
         List<PointsRecord> allRecords = pointsRecordService.list(allQw);
         long totalAcquired = allRecords.stream()
-                .filter(r -> "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN".equalsIgnoreCase(r.getType()))
+                .filter(r -> "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN"
+                        .equalsIgnoreCase(r.getType()))
                 .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
         long totalConsumed = allRecords.stream()
-                .filter(r -> "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT".equalsIgnoreCase(r.getType()))
+                .filter(r -> "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT"
+                        .equalsIgnoreCase(r.getType()))
                 .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
 
         // 5. 近30天每日积分趋势
@@ -251,7 +260,8 @@ public class PointsRecordController {
                     .filter(r -> {
                         if (r.getCreatedTime() == null) return false;
                         boolean inRange = !r.getCreatedTime().isBefore(ds) && !r.getCreatedTime().isAfter(de);
-                        boolean isAcquire = "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN".equalsIgnoreCase(r.getType());
+                        boolean isAcquire = "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r
+                                .getType()) || "IN".equalsIgnoreCase(r.getType());
                         return inRange && isAcquire;
                     })
                     .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
@@ -259,7 +269,8 @@ public class PointsRecordController {
                     .filter(r -> {
                         if (r.getCreatedTime() == null) return false;
                         boolean inRange = !r.getCreatedTime().isBefore(ds) && !r.getCreatedTime().isAfter(de);
-                        boolean isConsume = "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT".equalsIgnoreCase(r.getType());
+                        boolean isConsume = "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r
+                                .getType()) || "OUT".equalsIgnoreCase(r.getType());
                         return inRange && isConsume;
                     })
                     .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();

@@ -51,6 +51,12 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    /**
+     * 处理 take number。
+     * @param seatCount 参数 seatCount
+     * @param phone 参数 phone
+     * @return 返回结果
+     */
     @Override
     public QueueRecord takeNumber(Integer seatCount, String phone) {
         String lockKey = QUEUE_LOCK_KEY_PREFIX + seatCount;
@@ -119,6 +125,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
             Thread.currentThread().interrupt();
             log.warn("[排队取号] 获取锁被中断: {}", lockKey);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[排队取号] 获取锁异常: {}, error={}", lockKey, e.getMessage(), e);
         }
         return false;
@@ -134,17 +141,24 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
         }
         try {
             // Lua 脚本：比对锁值后才删除，防止误删他人的锁；同时消除 get+delete 之间的竞态窗口
-            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                     new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
                     java.util.Collections.singletonList(lockKey),
                     lockValue
             );
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[排队取号] 释放锁失败: {}, error={}", lockKey, e.getMessage(), e);
         }
     }
 
+    /**
+     * 处理 call next。
+     * @param seatCount 参数 seatCount
+     * @return 返回结果
+     */
     @Override
     public QueueRecord callNext(Integer seatCount) {
         int maxRetry = 50;
@@ -181,6 +195,10 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
         return null;
     }
 
+    /**
+     * 取消 queue。
+     * @param id 参数 id
+     */
     @Override
     public void cancelQueue(Long id) {
         // 安全加固：先按租户校验归属，再执行 CAS 更新，防止攻击者遍历 ID 取消其他租户排队记录

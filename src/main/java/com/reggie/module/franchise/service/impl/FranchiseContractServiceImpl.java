@@ -17,8 +17,14 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-public class FranchiseContractServiceImpl extends ServiceImpl<FranchiseContractMapper, FranchiseContract> implements FranchiseContractService {
+public class FranchiseContractServiceImpl extends ServiceImpl<FranchiseContractMapper, FranchiseContract> implements
+        FranchiseContractService {
 
+    /**
+     * 处理 stat contracts。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> statContracts(Long tenantId) {
         return this.baseMapper.statContracts(tenantId);

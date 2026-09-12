@@ -52,6 +52,11 @@ public class PrintTerminalServiceImpl extends ServiceImpl<PrintTerminalMapper, P
     @Autowired
     private StoreInfoMapper storeInfoMapper;
 
+    /**
+     * 注册。
+     * @param dto 参数 dto
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> register(AgentRegisterDTO dto) {
         StoreInfo store = storeInfoMapper.findByStoreCode(dto.getStoreCode());
@@ -80,7 +85,8 @@ public class PrintTerminalServiceImpl extends ServiceImpl<PrintTerminalMapper, P
             terminal.setUpdateTime(LocalDateTime.now());
             // 代理端无会话，BaseMapper.insert 会被租户拦截器覆盖 tenant_id=-1，必须走自定义 INSERT
             printTerminalMapper.insertIgnoreTenant(terminal);
-            log.info("[打印代理] 新终端注册: code={}, storeCode={}, name={}", dto.getTerminalCode(), dto.getStoreCode(), dto.getName());
+            log.info("[打印代理] 新终端注册: code={}, storeCode={}, name={}", dto.getTerminalCode(), dto.getStoreCode(), dto
+                    .getName());
             return buildRegisterResult(terminal);
         }
 
@@ -103,6 +109,14 @@ public class PrintTerminalServiceImpl extends ServiceImpl<PrintTerminalMapper, P
         return buildRegisterResult(exist);
     }
 
+    /**
+     * 处理 heartbeat。
+     * @param terminalCode 参数 terminalCode
+     * @param token 参数 token
+     * @param printerName 参数 printerName
+     * @param version 参数 version
+     * @return 返回结果
+     */
     @Override
     public List<PrintTask> heartbeat(String terminalCode, String token, String printerName, String version) {
         PrintTerminal terminal = authTerminal(terminalCode, token);
@@ -126,6 +140,15 @@ public class PrintTerminalServiceImpl extends ServiceImpl<PrintTerminalMapper, P
         return tasks;
     }
 
+    /**
+     * 处理 callback。
+     * @param taskId 参数 taskId
+     * @param terminalCode 参数 terminalCode
+     * @param token 参数 token
+     * @param success 参数 success
+     * @param errorMsg 参数 errorMsg
+     * @return 返回结果
+     */
     @Override
     public boolean callback(Long taskId, String terminalCode, String token, boolean success, String errorMsg) {
         PrintTerminal terminal = authTerminal(terminalCode, token);
@@ -145,6 +168,12 @@ public class PrintTerminalServiceImpl extends ServiceImpl<PrintTerminalMapper, P
         return rows > 0;
     }
 
+    /**
+     * 处理 test print。
+     * @param terminalId 参数 terminalId
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public boolean testPrint(Long terminalId, Long tenantId) {
         PrintTerminal terminal = printTerminalMapper.findByIdIgnoreTenant(terminalId);
@@ -175,12 +204,28 @@ public class PrintTerminalServiceImpl extends ServiceImpl<PrintTerminalMapper, P
         return true;
     }
 
+    /**
+     * 分页查询 query。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param tenantId 参数 tenantId
+     * @param name 参数 name
+     * @param code 参数 code
+     * @param storeCode 参数 storeCode
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Override
     public IPage<PrintTerminal> pageQuery(int page, int pageSize, Long tenantId, String name, String code,
                                           String storeCode, Integer status) {
         return printTerminalMapper.listPage(PageUtils.of(page, pageSize), tenantId, name, code, storeCode, status);
     }
 
+    /**
+     * 处理 stat terminals。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> statTerminals(Long tenantId) {
         Map<String, Object> result = new HashMap<>();
@@ -192,6 +237,13 @@ public class PrintTerminalServiceImpl extends ServiceImpl<PrintTerminalMapper, P
         return result;
     }
 
+    /**
+     * 更新 status。
+     * @param id 参数 id
+     * @param status 参数 status
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public boolean updateStatus(Long id, Integer status, Long tenantId) {
         PrintTerminal terminal = printTerminalMapper.findByIdIgnoreTenant(id);
@@ -207,6 +259,12 @@ public class PrintTerminalServiceImpl extends ServiceImpl<PrintTerminalMapper, P
         return printTerminalMapper.updateIgnoreTenant(terminal) > 0;
     }
 
+    /**
+     * 删除 terminal。
+     * @param id 参数 id
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public boolean deleteTerminal(Long id, Long tenantId) {
         PrintTerminal terminal = printTerminalMapper.findByIdIgnoreTenant(id);

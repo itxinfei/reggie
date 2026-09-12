@@ -70,8 +70,55 @@ public class ShoppingCartController {
         Long dishId = shoppingCart.getDishId();
         Long currentTenantId = BaseContext.getCurrentTenantId();
 
-        // 从服务端获取菜品/套餐真实价格（防止客户端篡改）；
-        // 幽灵菜品拦截：不存在/已停售/跨租户的菜品或套餐一律拒绝加购，禁止保留客户端金额入库
+        // 从服务端获取菜品/套餐真实价格（防止客户端篡改）；幽灵菜品拦截（等价抽取）
+        applyServerSideDishInfo(shoppingCart, dishId, currentTenantId);
+
+        LambdaQueryWrapper<ShoppingCart> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ShoppingCart::getUserId, currentId);
+        if (dishId != null) {
+            //添加到购物车的是菜品
+            queryWrapper.eq(ShoppingCart::getDishId, dishId);
+        } else {
+            //添加到购物车的是套餐
+            queryWrapper.eq(ShoppingCart::getSetmealId, shoppingCart.getSetmealId());
+        }
+        // 口味（规格）相同的才合并数量；不同口味的同一菜品是不同购物车项
+        if (shoppingCart.getDishFlavor() != null && !shoppingCart.getDishFlavor().isEmpty()) {
+            queryWrapper.eq(ShoppingCart::getDishFlavor, shoppingCart.getDishFlavor());
+        }
+
+        //查询当前菜品或者套餐是否在购物车中
+        ShoppingCart cartServiceOne = shoppingCartService.getOne(queryWrapper);
+
+        if (cartServiceOne != null) {
+            // 原子加 1 后重新查询最新数据（避免本地对象与 DB 不一致）
+            shoppingCartService.addQuantityAtomically(cartServiceOne.getId(), 1);
+            cartServiceOne = shoppingCartService.getById(cartServiceOne.getId());
+        } else {
+            //如果不存在，则添加到购物车，数量默认就是一
+            shoppingCart.setNumber(1);
+            shoppingCart.setCreateTime(LocalDateTime.now());
+            try {
+                shoppingCartService.save(shoppingCart);
+                // 插入成功：返回新购物车项（此前遗漏赋值导致 R.success(null)，前端拿不到 data）
+                cartServiceOne = shoppingCart;
+            } catch (DuplicateKeyException e) {
+                // 并发唯一索引冲突：改为原子累加数量，避免重复购物车项（等价抽取）
+                cartServiceOne = mergeExistingOnDuplicateKey(shoppingCart, currentId, dishId);
+            }
+        }
+
+        return R.success(cartServiceOne);
+    }
+
+    /**
+     * 从服务端校验并回填菜品/套餐信息（幽灵菜品拦截，防止客户端篡改金额）（等价抽取）。
+     *
+     * @param shoppingCart 购物车项
+     * @param dishId 菜品ID（可能为空）
+     * @param currentTenantId 当前租户ID
+     */
+    private void applyServerSideDishInfo(ShoppingCart shoppingCart, Long dishId, Long currentTenantId) {
         if (dishId != null) {
             Dish dish = dishService.getById(dishId);
             if (dish == null) {
@@ -86,7 +133,9 @@ public class ShoppingCartController {
             shoppingCart.setName(dish.getName());
             shoppingCart.setImage(dish.getImage());
             shoppingCart.setAmount(dish.getPrice());
-        } else if (shoppingCart.getSetmealId() != null) {
+            return;
+        }
+        if (shoppingCart.getSetmealId() != null) {
             Setmeal setmeal = setmealService.getById(shoppingCart.getSetmealId());
             if (setmeal == null) {
                 throw new CustomException("套餐不存在，无法加入购物车");
@@ -100,72 +149,37 @@ public class ShoppingCartController {
             shoppingCart.setName(setmeal.getName());
             shoppingCart.setImage(setmeal.getImage());
             shoppingCart.setAmount(setmeal.getPrice());
+            return;
+        }
+        throw new CustomException("缺少菜品或套餐ID，无法加入购物车");
+    }
+
+    /**
+     * 唯一索引冲突时的兜底：查出已存在项并原子累加数量（等价抽取）。
+     *
+     * @param shoppingCart 待插入项
+     * @param currentId 当前用户ID
+     * @param dishId 菜品ID（可能为空）
+     * @return 合并后的购物车项
+     */
+    private ShoppingCart mergeExistingOnDuplicateKey(ShoppingCart shoppingCart, Long currentId, Long dishId) {
+        LambdaQueryWrapper<ShoppingCart> dupQuery = new LambdaQueryWrapper<>();
+        dupQuery.eq(ShoppingCart::getUserId, currentId);
+        if (dishId != null) {
+            dupQuery.eq(ShoppingCart::getDishId, dishId);
         } else {
-            throw new CustomException("缺少菜品或套餐ID，无法加入购物车");
+            dupQuery.eq(ShoppingCart::getSetmealId, shoppingCart.getSetmealId());
         }
-
-        LambdaQueryWrapper<ShoppingCart> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(ShoppingCart::getUserId,currentId);
-
-        if(dishId != null){
-            //添加到购物车的是菜品
-            queryWrapper.eq(ShoppingCart::getDishId,dishId);
-
-        }else{
-            //添加到购物车的是套餐
-            queryWrapper.eq(ShoppingCart::getSetmealId,shoppingCart.getSetmealId());
-        }
-        // 口味（规格）相同的才合并数量；不同口味的同一菜品是不同购物车项
         if (shoppingCart.getDishFlavor() != null && !shoppingCart.getDishFlavor().isEmpty()) {
-            queryWrapper.eq(ShoppingCart::getDishFlavor, shoppingCart.getDishFlavor());
+            dupQuery.eq(ShoppingCart::getDishFlavor, shoppingCart.getDishFlavor());
         }
-
-        //查询当前菜品或者套餐是否在购物车中
-        //SQL:select * from shopping_cart where user_id = ? and dish_id/setmeal_id = ?
-        ShoppingCart cartServiceOne = shoppingCartService.getOne(queryWrapper);
-
-        if(cartServiceOne != null){
-            // 原子加 1 后重新查询最新数据（避免本地对象与 DB 不一致）
-            int updated = shoppingCartService.addQuantityAtomically(cartServiceOne.getId(), 1);
-            if (updated > 0) {
-                cartServiceOne = shoppingCartService.getById(cartServiceOne.getId());
-            } else {
-                // 并发冲突，重新查询
-                cartServiceOne = shoppingCartService.getById(cartServiceOne.getId());
-            }
-        }else{
-            //如果不存在，则添加到购物车，数量默认就是一
-            shoppingCart.setNumber(1);
-            shoppingCart.setCreateTime(LocalDateTime.now());
-            try {
-                shoppingCartService.save(shoppingCart);
-                // 插入成功：返回新购物车项（此前遗漏赋值导致 R.success(null)，前端拿不到 data）
-                cartServiceOne = shoppingCart;
-            } catch (DuplicateKeyException e) {
-                // 并发下另一请求已插入同 (tenant,user,dish/setmeal,flavor) 记录：
-                // 唯一索引 uk_cart_tenant_user_dish 冲突 → 改为原子累加数量，避免两条重复购物车项
-                LambdaQueryWrapper<ShoppingCart> dupQuery = new LambdaQueryWrapper<>();
-                dupQuery.eq(ShoppingCart::getUserId, currentId);
-                if (dishId != null) {
-                    dupQuery.eq(ShoppingCart::getDishId, dishId);
-                } else {
-                    dupQuery.eq(ShoppingCart::getSetmealId, shoppingCart.getSetmealId());
-                }
-                if (shoppingCart.getDishFlavor() != null && !shoppingCart.getDishFlavor().isEmpty()) {
-                    dupQuery.eq(ShoppingCart::getDishFlavor, shoppingCart.getDishFlavor());
-                }
-                ShoppingCart existed = shoppingCartService.getOne(dupQuery);
-                if (existed != null) {
-                    shoppingCartService.addQuantityAtomically(existed.getId(), 1);
-                    cartServiceOne = shoppingCartService.getById(existed.getId());
-                } else {
-                    // 极罕见：索引冲突但查不到（记录被并发删除），返回原始项
-                    cartServiceOne = shoppingCart;
-                }
-            }
+        ShoppingCart existed = shoppingCartService.getOne(dupQuery);
+        if (existed == null) {
+            // 极罕见：索引冲突但查不到（记录被并发删除），返回原始项
+            return shoppingCart;
         }
-
-        return R.success(cartServiceOne);
+        shoppingCartService.addQuantityAtomically(existed.getId(), 1);
+        return shoppingCartService.getById(existed.getId());
     }
 
     /**

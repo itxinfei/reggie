@@ -45,7 +45,8 @@ public class TenantServiceImpl extends ServiceImpl<TenantMapper, Tenant> impleme
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void registerWithAdmin(Tenant tenant, String username, String password, String phone, String verifyCode, HttpSession session) {
+    public void registerWithAdmin(Tenant tenant, String username, String password, String phone, String verifyCode,
+            HttpSession session) {
         // 1. 校验验证码
         if (phone == null || verifyCode == null || verifyCode.isEmpty()) {
             throw new CustomException("请先获取短信验证码");

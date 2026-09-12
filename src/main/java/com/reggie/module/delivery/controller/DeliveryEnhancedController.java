@@ -42,6 +42,10 @@ public class DeliveryEnhancedController {
 
     // ==================== 配送范围管理 ====================
 
+    /**
+     * 获取 range rules。
+     * @return 返回结果
+     */
     @GetMapping("/range/list")
     @Operation(summary = "获取配送范围规则列表")
     public R<List<DeliveryRangeRule>> getRangeRules() {
@@ -50,33 +54,56 @@ public class DeliveryEnhancedController {
         return R.success(rules);
     }
 
+    /**
+     * 获取 range rule by id。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/range/{id}")
     @Operation(summary = "获取配送范围规则详情")
-    public R<DeliveryRangeRule> getRangeRuleById(@Parameter(description = "配送范围规则ID", required = true) @PathVariable Long id) {
+    public R<DeliveryRangeRule> getRangeRuleById(@Parameter(description = "配送范围规则ID", required =
+            true) @PathVariable Long id) {
         DeliveryRangeRule rule = deliveryEnhancedService.getRangeRuleById(id);
         return R.success(rule);
     }
 
+    /**
+     * 保存 range rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
     @PostMapping("/range")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存配送范围规则")
-    public R<String> saveRangeRule(@Parameter(description = "配送范围规则信息", required = true) @RequestBody DeliveryRangeRule rule) {
+    public R<String> saveRangeRule(@Parameter(description = "配送范围规则信息", required =
+            true) @RequestBody DeliveryRangeRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = deliveryEnhancedService.saveOrUpdateRangeRule(rule);
         return success ? R.success("保存成功") : R.error("保存失败");
     }
 
+    /**
+     * 更新 range rule。
+     * @param rule 参数 rule
+     * @return 返回结果
+     */
     @PutMapping("/range")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新配送范围规则")
-    public R<String> updateRangeRule(@Parameter(description = "配送范围规则信息（含ID）", required = true) @RequestBody DeliveryRangeRule rule) {
+    public R<String> updateRangeRule(@Parameter(description = "配送范围规则信息（含ID）", required =
+            true) @RequestBody DeliveryRangeRule rule) {
         Long tenantId = BaseContext.getCurrentTenantId();
         rule.setTenantId(tenantId);
         boolean success = deliveryEnhancedService.saveOrUpdateRangeRule(rule);
         return success ? R.success("更新成功") : R.error("更新失败");
     }
 
+    /**
+     * 删除 range rule。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/range/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除配送范围规则")
@@ -87,6 +114,11 @@ public class DeliveryEnhancedController {
 
     // ==================== 配送费阶梯管理 ====================
 
+    /**
+     * 获取 fee steps。
+     * @param ruleId 参数 ruleId
+     * @return 返回结果
+     */
     @GetMapping("/fee-step/list")
     @Operation(summary = "获取配送费阶梯规则列表")
     public R<List<DeliveryFeeStep>> getFeeSteps(
@@ -96,26 +128,43 @@ public class DeliveryEnhancedController {
         return R.success(steps);
     }
 
+    /**
+     * 保存 fee step。
+     * @param step 参数 step
+     * @return 返回结果
+     */
     @PostMapping("/fee-step")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "保存配送费阶梯规则")
-    public R<String> saveFeeStep(@Parameter(description = "配送费阶梯规则信息", required = true) @RequestBody DeliveryFeeStep step) {
+    public R<String> saveFeeStep(@Parameter(description = "配送费阶梯规则信息", required =
+            true) @RequestBody DeliveryFeeStep step) {
         Long tenantId = BaseContext.getCurrentTenantId();
         step.setTenantId(tenantId);
         boolean success = deliveryEnhancedService.saveOrUpdateFeeStep(step);
         return success ? R.success("保存成功") : R.error("保存失败");
     }
 
+    /**
+     * 更新 fee step。
+     * @param step 参数 step
+     * @return 返回结果
+     */
     @PutMapping("/fee-step")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "更新配送费阶梯规则")
-    public R<String> updateFeeStep(@Parameter(description = "配送费阶梯规则信息（含ID）", required = true) @RequestBody DeliveryFeeStep step) {
+    public R<String> updateFeeStep(@Parameter(description = "配送费阶梯规则信息（含ID）", required =
+            true) @RequestBody DeliveryFeeStep step) {
         Long tenantId = BaseContext.getCurrentTenantId();
         step.setTenantId(tenantId);
         boolean success = deliveryEnhancedService.saveOrUpdateFeeStep(step);
         return success ? R.success("更新成功") : R.error("更新失败");
     }
 
+    /**
+     * 删除 fee step。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/fee-step/{id}")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "删除配送费阶梯规则")
@@ -124,10 +173,16 @@ public class DeliveryEnhancedController {
         return success ? R.success("删除成功") : R.error("删除失败");
     }
 
+    /**
+     * 批量处理 save fee steps。
+     * @param steps 参数 steps
+     * @return 返回结果
+     */
     @PostMapping("/fee-step/batch")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量保存配送费阶梯规则")
-    public R<String> batchSaveFeeSteps(@Parameter(description = "配送费阶梯规则列表", required = true) @RequestBody List<DeliveryFeeStep> steps) {
+    public R<String> batchSaveFeeSteps(@Parameter(description = "配送费阶梯规则列表", required =
+            true) @RequestBody List<DeliveryFeeStep> steps) {
         Long tenantId = BaseContext.getCurrentTenantId();
         for (DeliveryFeeStep step : steps) {
             step.setTenantId(tenantId);
@@ -138,6 +193,13 @@ public class DeliveryEnhancedController {
 
     // ==================== 配送范围校验 ====================
 
+    /**
+     * 判断 in range。
+     * @param ruleId 参数 ruleId
+     * @param longitude 参数 longitude
+     * @param latitude 参数 latitude
+     * @return 返回结果
+     */
     @PostMapping("/range/check")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "校验地址是否在配送范围内")
@@ -149,6 +211,12 @@ public class DeliveryEnhancedController {
         return R.success(inRange);
     }
 
+    /**
+     * 查找 matching rule。
+     * @param longitude 参数 longitude
+     * @param latitude 参数 latitude
+     * @return 返回结果
+     */
     @PostMapping("/range/find")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "查找匹配的配送范围规则")
@@ -162,6 +230,13 @@ public class DeliveryEnhancedController {
 
     // ==================== 配送费计算 ====================
 
+    /**
+     * 计算 delivery fee。
+     * @param ruleId 参数 ruleId
+     * @param distance 参数 distance
+     * @param orderAmount 参数 orderAmount
+     * @return 返回结果
+     */
     @PostMapping("/fee/calculate")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "计算配送费")
@@ -173,6 +248,14 @@ public class DeliveryEnhancedController {
         return R.success(fee);
     }
 
+    /**
+     * 计算 fee。
+     * @param longitude 参数 longitude
+     * @param latitude 参数 latitude
+     * @param distance 参数 distance
+     * @param orderAmount 参数 orderAmount
+     * @return 返回结果
+     */
     @PostMapping("/fee/auto-calculate")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "自动计算配送费")
@@ -182,10 +265,19 @@ public class DeliveryEnhancedController {
             @Parameter(description = "距离（米）") @RequestParam BigDecimal distance,
             @Parameter(description = "订单金额") @RequestParam BigDecimal orderAmount) {
         Long tenantId = BaseContext.getCurrentTenantId();
-        Map<String, Object> result = deliveryEnhancedService.calculateFee(longitude, latitude, distance, orderAmount, tenantId);
+        Map<String, Object> result = deliveryEnhancedService.calculateFee(longitude, latitude, distance, orderAmount,
+                tenantId);
         return R.success(result);
     }
 
+    /**
+     * 计算 distance。
+     * @param lon1 参数 lon1
+     * @param lat1 参数 lat1
+     * @param lon2 参数 lon2
+     * @param lat2 参数 lat2
+     * @return 返回结果
+     */
     @PostMapping("/distance/calculate")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "计算两点间距离")
@@ -200,6 +292,10 @@ public class DeliveryEnhancedController {
 
     // ==================== 统计分析 ====================
 
+    /**
+     * 获取 delivery statistics。
+     * @return 返回结果
+     */
     @GetMapping("/statistics")
     @Operation(summary = "获取配送统计")
     public R<Map<String, Object>> getDeliveryStatistics() {
@@ -208,6 +304,10 @@ public class DeliveryEnhancedController {
         return R.success(statistics);
     }
 
+    /**
+     * 获取 range coverage。
+     * @return 返回结果
+     */
     @GetMapping("/coverage")
     @Operation(summary = "获取配送范围覆盖分析")
     public R<Map<String, Object>> getRangeCoverage() {

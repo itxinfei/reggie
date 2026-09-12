@@ -21,10 +21,18 @@ public class OrderDomainEvent extends ApplicationEvent {
         this.tenantId = tenantId;
     }
 
+    /**
+     * 获取 order id。
+     * @return 返回结果
+     */
     public Long getOrderId() {
         return orderId;
     }
 
+    /**
+     * 获取 tenant id。
+     * @return 返回结果
+     */
     public Long getTenantId() {
         return tenantId;
     }

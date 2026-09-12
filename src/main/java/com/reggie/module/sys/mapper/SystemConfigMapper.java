@@ -37,7 +37,8 @@ public interface SystemConfigMapper extends BaseMapper<SystemConfig> {
      * @param tenantId 租户ID
      * @return 系统配置列表
      */
-    @Select("SELECT * FROM system_config WHERE tenant_id = #{tenantId} OR tenant_id IS NULL ORDER BY config_type ASC, id ASC")
+    @Select("SELECT * FROM system_config WHERE tenant_id = #{tenantId} OR tenant_id IS NULL ORDER BY config_type " +
+            "ASC, id ASC")
     List<SystemConfig> listByTenantId(@Param("tenantId") Long tenantId);
 }
 

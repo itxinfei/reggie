@@ -84,7 +84,8 @@ public class SupplierServiceImpl extends ServiceImpl<SupplierMapper, Supplier> i
             if (sid == null) {
                 continue;
             }
-            amountMap.merge(sid, order.getTotalAmount() == null ? BigDecimal.ZERO : order.getTotalAmount(), BigDecimal::add);
+            amountMap.merge(sid, order.getTotalAmount() == null ? BigDecimal.ZERO : order.getTotalAmount(),
+                    BigDecimal::add);
             countMap.merge(sid, 1, Integer::sum);
         }
         for (Supplier supplier : suppliers) {

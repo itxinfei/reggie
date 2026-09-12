@@ -317,7 +317,13 @@ public class StoreController {
     @PostMapping("/sync/dishes")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "同步菜品", description = "将指定菜品从源门店同步到目标门店")
-    @Parameter(name = "body", description = "同步数据（sourceTenantId, targetTenantId, dishIds, operatorId）", required = true)
+    @Parameter(name = "body", description = "同步数据（sourceTenantId, targetTenantId, dishIds, operatorId）", required =
+            true)
+    /**
+     * 同步 dishes。
+     * @param dto 参数 dto
+     * @return 返回结果
+     */
     public R<Map<String, Object>> syncDishes(@Valid @RequestBody SyncDishesDTO dto) {
         Map<String, Object> result = storeSyncService.syncDishes(
                 dto.getSourceTenantId(), dto.getTargetTenantId(), dto.getDishIds(), dto.getOperatorId());
@@ -347,7 +353,13 @@ public class StoreController {
     @PostMapping("/sync/setmeals")
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "同步套餐", description = "将套餐从源门店同步到目标门店")
-    @Parameter(name = "body", description = "同步数据（sourceTenantId, targetTenantId, setmealIds, operatorId）", required = true)
+    @Parameter(name = "body", description = "同步数据（sourceTenantId, targetTenantId, setmealIds, operatorId）", required =
+            true)
+    /**
+     * 同步 setmeals。
+     * @param dto 参数 dto
+     * @return 返回结果
+     */
     public R<Map<String, Object>> syncSetmeals(@Valid @RequestBody SyncSetmealsDTO dto) {
         Map<String, Object> result = storeSyncService.syncSetmeals(
                 dto.getSourceTenantId(), dto.getTargetTenantId(), dto.getSetmealIds(), dto.getOperatorId());

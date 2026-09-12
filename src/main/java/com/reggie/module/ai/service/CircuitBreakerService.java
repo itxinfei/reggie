@@ -89,6 +89,7 @@ public class CircuitBreakerService {
             onSuccess(providerCode, state);
             return result;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             onFailure(providerCode, state);
             return fallback.apply(providerCode, e.getMessage());
         }
@@ -241,11 +242,17 @@ public class CircuitBreakerService {
 
     // ==================== 函数式接口 ====================
 
+    /**
+     * SupplierWithException。
+     */
     @FunctionalInterface
     public interface SupplierWithException<T> {
         T get() throws Exception;
     }
 
+    /**
+     * Fallback。
+     */
     @FunctionalInterface
     public interface Fallback<T> {
         T apply(String providerCode, String reason);
@@ -253,6 +260,9 @@ public class CircuitBreakerService {
 
     // ==================== 生命周期 ====================
 
+    /**
+     * 初始化。
+     */
     @PostConstruct
     public void init() {
         log.info("熔断降级服务初始化完成: windowSize={}, errorThreshold={}, cooldown={}s",

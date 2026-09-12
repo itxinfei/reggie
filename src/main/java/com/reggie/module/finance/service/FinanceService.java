@@ -29,7 +29,8 @@ public interface FinanceService extends IService<WithdrawalApplication> {
      * @param tenantId  Tenant ID
      * @return Withdrawal application list
      */
-    List<WithdrawalApplication> getWithdrawalList(Integer status, LocalDateTime startDate, LocalDateTime endDate, Long tenantId);
+    List<WithdrawalApplication> getWithdrawalList(Integer status, LocalDateTime startDate, LocalDateTime endDate,
+            Long tenantId);
 
     /**
      * Get withdrawal application by ID
@@ -95,7 +96,8 @@ public interface FinanceService extends IService<WithdrawalApplication> {
      * @param tenantId  Tenant ID
      * @return Reconciliation statement list
      */
-    List<ReconciliationStatement> getReconciliationList(LocalDate startDate, LocalDate endDate, String platform, Long tenantId);
+    List<ReconciliationStatement> getReconciliationList(LocalDate startDate, LocalDate endDate, String platform,
+            Long tenantId);
 
     /**
      * Get reconciliation statement by ID

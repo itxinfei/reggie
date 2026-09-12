@@ -16,6 +16,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 /**
  * <p>
@@ -51,6 +52,11 @@ public class OperationLogAspect {
     @Around("@annotation(org.springframework.web.bind.annotation.PostMapping) " +
             "|| @annotation(org.springframework.web.bind.annotation.PutMapping) " +
             "|| @annotation(org.springframework.web.bind.annotation.DeleteMapping)")
+    /**
+     * 处理 log operation。
+     * @param joinPoint 参数 joinPoint
+     * @return 返回结果
+     */
     public Object logOperation(ProceedingJoinPoint joinPoint) throws Throwable {
         long startTime = System.currentTimeMillis();
         boolean success = false;
@@ -68,6 +74,7 @@ public class OperationLogAspect {
             success = true;
             return result;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             errorMsg = truncateErrorMsg(e.getMessage());
             throw e;
         } finally {
@@ -78,6 +85,7 @@ public class OperationLogAspect {
                     operationLogService.recordLog(opLog);
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("记录操作日志失败", e);
             }
         }
@@ -168,6 +176,7 @@ public class OperationLogAspect {
 
             return opLog;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("构建操作日志对象失败", e);
             return null;
         }
@@ -190,7 +199,7 @@ public class OperationLogAspect {
         }
         try {
             return OBJECT_MAPPER.writeValueAsString(arg);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             log.warn("序列化请求参数失败: {}", arg.getClass().getSimpleName());
             return null;
         }

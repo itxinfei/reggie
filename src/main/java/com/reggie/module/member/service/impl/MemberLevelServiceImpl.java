@@ -18,6 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(rollbackFor = Exception.class)
 public class MemberLevelServiceImpl extends ServiceImpl<MemberLevelMapper, MemberLevel> implements MemberLevelService {
 
+    /**
+     * 获取 default level。
+     * @return 返回结果
+     */
     @Override
     public MemberLevel getDefaultLevel() {
         LambdaQueryWrapper<MemberLevel> qw = new LambdaQueryWrapper<>();
@@ -26,6 +30,11 @@ public class MemberLevelServiceImpl extends ServiceImpl<MemberLevelMapper, Membe
         return getOne(qw);
     }
 
+    /**
+     * 查找 level by points。
+     * @param points 参数 points
+     * @return 返回结果
+     */
     @Override
     public MemberLevel findLevelByPoints(Long points) {
         LambdaQueryWrapper<MemberLevel> qw = new LambdaQueryWrapper<>();

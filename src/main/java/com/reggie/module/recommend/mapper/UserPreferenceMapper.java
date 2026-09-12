@@ -27,7 +27,8 @@ public interface UserPreferenceMapper extends BaseMapper<UserPreferenceTag> {
      * @param tagType 标签类型
      * @return 偏好标签列表（按权重降序）
      */
-    @Select("SELECT * FROM user_preference_tag WHERE user_id = #{userId} AND tag_type = #{tagType} ORDER BY tag_value DESC")
+    @Select("SELECT * FROM user_preference_tag WHERE user_id = #{userId} AND tag_type = #{tagType} ORDER BY " +
+            "tag_value DESC")
     List<UserPreferenceTag> findByUserAndType(@Param("userId") Long userId, @Param("tagType") Integer tagType);
 
     /**

@@ -81,6 +81,12 @@ public class RefundServiceImpl implements RefundService {
     /** 分布式锁过期时间（毫秒）：覆盖一次渠道退款 HTTP 调用耗时 */
     private static final long LOCK_TTL_MS = 30 * 1000L; // 30秒
 
+    /**
+     * 退款 by order。
+     * @param orderId 参数 orderId
+     * @param reason 参数 reason
+     * @return 返回结果
+     */
     @Override
     public boolean refundByOrder(Long orderId, String reason) {
         if (orderId == null) {
@@ -148,6 +154,7 @@ public class RefundServiceImpl implements RefundService {
             try {
                 refundResponse = paymentChannel.refund(refundRequest);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("【严重】订单取消自动退款渠道调用异常，需人工处理！orderId={}, paymentOrderId={}, amount={}",
                         orderId, paymentOrderId, refundAmount, e);
                 // 渠道调用异常（钱未出）——留对账待办痕迹，供 RefundReconcileTask 扫描告警人工退款，
@@ -176,7 +183,8 @@ public class RefundServiceImpl implements RefundService {
                         throw new CustomException("支付单状态已变更，退款失败");
                     }
                     // 事务内二次累计退款校验（SELECT ... FOR UPDATE 锁支付单行，阻塞并发退款）
-                    BigDecimal lockedAmount = paymentOrderMapper.selectPaymentAmountForUpdate(latest.getId(), STATUS_SUCCESS);
+                    BigDecimal lockedAmount = paymentOrderMapper.selectPaymentAmountForUpdate(latest.getId(),
+                            STATUS_SUCCESS);
                     BigDecimal latestAmount = latest.getAmount();
                     if (lockedAmount == null || latestAmount == null) {
                         throw new CustomException("支付金额异常，退款失败");
@@ -190,7 +198,8 @@ public class RefundServiceImpl implements RefundService {
                     }
                     // 创建退款记录并标记成功（渠道已确认退款）。refundNo 提前生成作为渠道幂等键，
                     // 此处复用同一单号，保证本地记录与渠道 out_request_no 一一对应。
-                    RefundRecord record = refundRecordService.createRefund(latest.getId(), fRefundAmount, fReason, refundNo);
+                    RefundRecord record = refundRecordService.createRefund(latest.getId(), fRefundAmount, fReason,
+                            refundNo);
                     refundRecordService.markRefundSuccess(record.getRefundNo());
                     // 全额退款时：支付单 SUCCESS -> REFUND + 业务订单联动为已退款(6)
                     boolean isFull = refunded.add(fRefundAmount).compareTo(latestAmount) == 0;
@@ -206,35 +215,7 @@ public class RefundServiceImpl implements RefundService {
                         }
                         Orders order = orderService.getById(latest.getOrderId());
                         if (order != null) {
-                            Integer curStatus = order.getStatus();
-                            if (curStatus != null && Arrays.asList(
-                                    Orders.STATUS_ORDERED, Orders.STATUS_DELIVERING, Orders.STATUS_COMPLETED).contains(curStatus)) {
-                                LambdaUpdateWrapper<Orders> orderUpdateWrapper = new LambdaUpdateWrapper<>();
-                                orderUpdateWrapper.eq(Orders::getId, order.getId())
-                                        .eq(Orders::getStatus, curStatus);
-                                Orders updateEntity = new Orders();
-                                updateEntity.setStatus(Orders.STATUS_REFUNDED);
-                                updateEntity.setUpdateTime(LocalDateTime.now());
-                                if (orderService.update(updateEntity, orderUpdateWrapper)) {
-                                    try {
-                                        memberRewardService.reverseRewards(latest.getOrderId(), latest.getTenantId());
-                                        log.info("[会员权益回退] 自动退款触发权益回退: orderId={}, tenantId={}",
-                                                latest.getOrderId(), latest.getTenantId());
-                                    } catch (Exception e) {
-                                        log.error("[会员权益回退] 自动退款后权益回退失败，需人工核查: orderId={}",
-                                                latest.getOrderId(), e);
-                                    }
-                                    log.info("自动退款成功联动更新订单: orderId={}, orderStatus=已退款", latest.getOrderId());
-                                } else {
-                                    log.warn("订单状态已变更，跳过联动退款更新: orderId={}, expectedStatus={}",
-                                            latest.getOrderId(), curStatus);
-                                }
-                            } else if (curStatus != null && Objects.equals(curStatus, Orders.STATUS_REFUNDED)) {
-                                log.info("订单已为已退款状态，幂等跳过联动更新: orderId={}", latest.getOrderId());
-                            } else {
-                                log.warn("订单状态不允许退款流转，跳过联动更新: orderId={}, currentStatus={}",
-                                        latest.getOrderId(), curStatus);
-                            }
+                            updateOrderOnFullRefund(order, latest);
                         }
                     }
                     return null;
@@ -247,6 +228,7 @@ public class RefundServiceImpl implements RefundService {
                 try {
                     refundRecordService.recordReconcileTrace(fPaymentOrderId, fRefundAmount, fReason);
                 } catch (Exception traceEx) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.error("【严重】渠道退款成功但本地落库失败，对账痕迹持久化也失败: orderId={}, paymentOrderId={}, refundAmount={}",
                             orderId, fPaymentOrderId, fRefundAmount, traceEx);
                 }
@@ -255,12 +237,48 @@ public class RefundServiceImpl implements RefundService {
                         orderId, fPaymentOrderId, fRefundAmount, e);
                 return false;
             }
-            log.info("订单自动退款成功: orderId={}, paymentOrderId={}, refundAmount={}", orderId, fPaymentOrderId, fRefundAmount);
+            log.info("订单自动退款成功: orderId={}, paymentOrderId={}, refundAmount={}", orderId, fPaymentOrderId,
+                    fRefundAmount);
             return true;
         } finally {
             if (lockValue != null) {
                 unlock(lockKey, lockValue);
             }
+        }
+    }
+
+    /**
+     * 全额退款时联动更新业务订单状态并回退会员权益（等价抽取，降低嵌套）。
+     *
+     * @param order 关联业务订单
+     * @param latest 支付单
+     */
+    private void updateOrderOnFullRefund(Orders order, PaymentOrder latest) {
+        Integer curStatus = order.getStatus();
+        if (curStatus != null && Arrays.asList(
+                Orders.STATUS_ORDERED, Orders.STATUS_DELIVERING, Orders.STATUS_COMPLETED).contains(curStatus)) {
+            LambdaUpdateWrapper<Orders> orderUpdateWrapper = new LambdaUpdateWrapper<>();
+            orderUpdateWrapper.eq(Orders::getId, order.getId()).eq(Orders::getStatus, curStatus);
+            Orders updateEntity = new Orders();
+            updateEntity.setStatus(Orders.STATUS_REFUNDED);
+            updateEntity.setUpdateTime(LocalDateTime.now());
+            if (!orderService.update(updateEntity, orderUpdateWrapper)) {
+                log.warn("订单状态已变更，跳过联动退款更新: orderId={}, expectedStatus={}", latest.getOrderId(), curStatus);
+                return;
+            }
+            try {
+                memberRewardService.reverseRewards(latest.getOrderId(), latest.getTenantId());
+                log.info("[会员权益回退] 自动退款触发权益回退: orderId={}, tenantId={}",
+                        latest.getOrderId(), latest.getTenantId());
+            } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+                log.error("[会员权益回退] 自动退款后权益回退失败，需人工核查: orderId={}", latest.getOrderId(), e);
+            }
+            log.info("自动退款成功联动更新订单: orderId={}, orderStatus=已退款", latest.getOrderId());
+        } else if (curStatus != null && Objects.equals(curStatus, Orders.STATUS_REFUNDED)) {
+            log.info("订单已为已退款状态，幂等跳过联动更新: orderId={}", latest.getOrderId());
+        } else {
+            log.warn("订单状态不允许退款流转，跳过联动更新: orderId={}, currentStatus={}", latest.getOrderId(), curStatus);
         }
     }
 
@@ -279,6 +297,7 @@ public class RefundServiceImpl implements RefundService {
                     .setIfAbsent(lockKey, lockValue, LOCK_TTL_MS, TimeUnit.MILLISECONDS);
             return Boolean.TRUE.equals(success) ? lockValue : null;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("退款获取分布式锁失败，降级 DB+渠道幂等兜底: {}", lockKey, e);
             return null;
         }
@@ -294,13 +313,15 @@ public class RefundServiceImpl implements RefundService {
             return;
         }
         try {
-            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                 new DefaultRedisScript<Long>(luaScript, Long.class),
                 Collections.singletonList(lockKey),
                 lockValue
             );
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("退款释放分布式锁失败: {}", lockKey, e);
         }
     }
@@ -325,6 +346,7 @@ public class RefundServiceImpl implements RefundService {
         try {
             refundRecordService.recordReconcileTrace(paymentOrder.getId(), amount, reason);
         } catch (Exception traceEx) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("【严重】渠道退款失败对账痕迹持久化也失败，需人工核查: paymentOrderId={}, amount={}",
                     paymentOrder.getId(), amount, traceEx);
         }

@@ -18,7 +18,8 @@ public interface PriceHistoryService extends IService<PriceHistory> {
     /**
      * 记录价格变动
      */
-    PriceHistory recordPriceChange(Long materialId, java.math.BigDecimal oldPrice, java.math.BigDecimal newPrice, String changeReason, Long operatorId);
+    PriceHistory recordPriceChange(Long materialId, java.math.BigDecimal oldPrice, java.math.BigDecimal newPrice,
+            String changeReason, Long operatorId);
 
     /**
      * 查询物料价格历史

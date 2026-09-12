@@ -50,7 +50,8 @@ public class CouponUserController {
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "memberId", description = "会员ID（可选）")
-    public R<Page<CouponUser>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize, Long memberId) {
+    public R<Page<CouponUser>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+            "10") @Min(1) @Max(100) int pageSize, Long memberId) {
         Page<CouponUser> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<CouponUser> qw = new LambdaQueryWrapper<>();
         qw.eq(memberId != null, CouponUser::getMemberId, memberId);
@@ -85,7 +86,8 @@ public class CouponUserController {
     @Operation(summary = "可用优惠券", description = "根据会员用户ID与订单金额返回可使用的优惠券列表，用于收银台选券抵扣")
     @Parameter(name = "userId", description = "用户ID", required = true)
     @Parameter(name = "orderAmount", description = "订单应付金额", required = true)
-    public R<List<CouponAvailableDTO>> availableCoupons(@RequestParam Long userId, @RequestParam BigDecimal orderAmount) {
+    public R<List<CouponAvailableDTO>> availableCoupons(@RequestParam Long userId,
+            @RequestParam BigDecimal orderAmount) {
         List<CouponAvailableDTO> list = couponUserService.availableCoupons(userId, orderAmount);
         return R.success(list);
     }

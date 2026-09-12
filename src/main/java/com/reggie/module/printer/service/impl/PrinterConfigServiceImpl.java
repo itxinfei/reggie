@@ -21,11 +21,16 @@ import java.util.Map;
  */
 @Service
 @Transactional(rollbackFor = Exception.class)
-public class PrinterConfigServiceImpl extends ServiceImpl<PrinterConfigMapper, PrinterConfig> implements PrinterConfigService {
+public class PrinterConfigServiceImpl extends ServiceImpl<PrinterConfigMapper, PrinterConfig> implements
+        PrinterConfigService {
 
     @Autowired
     private PrinterConfigMapper printerConfigMapper;
 
+    /**
+     * 查询列表 by tenant。
+     * @return 返回结果
+     */
     @Override
     public List<PrinterConfig> listByTenant() {
         return this.list(new LambdaQueryWrapper<PrinterConfig>()
@@ -33,6 +38,11 @@ public class PrinterConfigServiceImpl extends ServiceImpl<PrinterConfigMapper, P
                 .orderByAsc(PrinterConfig::getSort));
     }
 
+    /**
+     * 获取 by type。
+     * @param printerType 参数 printerType
+     * @return 返回结果
+     */
     @Override
     public PrinterConfig getByType(String printerType) {
         return this.list(new LambdaQueryWrapper<PrinterConfig>()
@@ -42,6 +52,11 @@ public class PrinterConfigServiceImpl extends ServiceImpl<PrinterConfigMapper, P
                 .stream().findFirst().orElse(null);
     }
 
+    /**
+     * 处理 stat printers。
+     * @param tenantId 参数 tenantId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> statPrinters(Long tenantId) {
         return printerConfigMapper.statPrinters(tenantId);

@@ -17,7 +17,8 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface GroupBuyParticipationMapper extends BaseMapper<GroupBuyParticipation> {
 
-    @Select("SELECT COUNT(1) FROM group_buy_participation WHERE group_buy_id = #{campaignId} AND status IN ('JOINED','PAID')")
+    @Select("SELECT COUNT(1) FROM group_buy_participation WHERE group_buy_id = #{campaignId} AND status IN " +
+            "('JOINED','PAID')")
     int countParticipants(@Param("campaignId") Long campaignId);
 
     /**

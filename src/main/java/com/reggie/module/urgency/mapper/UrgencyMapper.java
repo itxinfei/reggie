@@ -85,6 +85,7 @@ public interface UrgencyMapper extends BaseMapper<UrgencyRecord> {
      * @param tenantId 租户ID
      * @return 平均响应时间
      */
-    @Select("SELECT AVG(TIMESTAMPDIFF(MINUTE, create_time, update_time)) FROM urgency_record WHERE tenant_id = #{tenantId} AND update_time IS NOT NULL")
+    @Select("SELECT AVG(TIMESTAMPDIFF(MINUTE, create_time, update_time)) FROM urgency_record WHERE tenant_id = " +
+            "#{tenantId} AND update_time IS NOT NULL")
     BigDecimal avgResponseTime(@Param("tenantId") Long tenantId);
 }

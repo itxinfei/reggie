@@ -22,11 +22,20 @@ public class DadaAdapter extends AbstractDeliveryPlatform {
 
     private static final String KEY = "DADA";
 
+    /**
+     * 处理 platform key。
+     * @return 返回结果
+     */
     @Override
     protected String platformKey() {
         return KEY;
     }
 
+    /**
+     * 接单 order。
+     * @param platformOrderId 参数 platformOrderId
+     * @return 返回结果
+     */
     @Override
     public boolean acceptOrder(String platformOrderId) {
         if (isMockOrUnconfigured("自动接单")) {
@@ -38,6 +47,11 @@ public class DadaAdapter extends AbstractDeliveryPlatform {
         return body != null;
     }
 
+    /**
+     * 同步 menu。
+     * @param dishes 参数 dishes
+     * @return 返回结果
+     */
     @Override
     public boolean syncMenu(List<Map<String, Object>> dishes) {
         if (isMockOrUnconfigured("同步菜单")) {
@@ -49,6 +63,12 @@ public class DadaAdapter extends AbstractDeliveryPlatform {
         return body != null;
     }
 
+    /**
+     * 更新 status。
+     * @param platformOrderId 参数 platformOrderId
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @Override
     public boolean updateStatus(String platformOrderId, String status) {
         if (isMockOrUnconfigured("更新订单状态")) {
@@ -61,6 +81,11 @@ public class DadaAdapter extends AbstractDeliveryPlatform {
         return body != null;
     }
 
+    /**
+     * 同步 stock。
+     * @param stock 参数 stock
+     * @return 返回结果
+     */
     @Override
     public boolean syncStock(Map<Long, Integer> stock) {
         if (isMockOrUnconfigured("同步库存")) {
@@ -72,6 +97,11 @@ public class DadaAdapter extends AbstractDeliveryPlatform {
         return body != null;
     }
 
+    /**
+     * 校验 callback。
+     * @param params 参数 params
+     * @return 返回结果
+     */
     @Override
     public boolean verifyCallback(Map<String, String> params) {
         DeliveryPlatformConfigProperties.PlatformConfig pc = getPlatformConfig();

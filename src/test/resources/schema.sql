@@ -30,6 +30,8 @@ DROP TABLE IF EXISTS menu;
 
 -- 操作日志
 DROP TABLE IF EXISTS log;
+DROP TABLE IF EXISTS operation_log;
+DROP TABLE IF EXISTS tenant;
 
 -- 区域
 DROP TABLE IF EXISTS region;
@@ -606,4 +608,48 @@ CREATE TABLE platform_config (
 );
 CREATE INDEX idx_platform_type_shop ON platform_config(platform_type, shop_id);
 CREATE INDEX idx_platform_tenant ON platform_config(tenant_id);
+
+-- ==================== tenant ====================
+CREATE TABLE tenant (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  name varchar(64) NULL DEFAULT NULL COMMENT '租户名称',
+  phone varchar(20) NULL DEFAULT NULL COMMENT '电话',
+  address varchar(255) NULL DEFAULT NULL COMMENT '地址',
+  password_type varchar(20) NULL DEFAULT 'MD5' COMMENT '密码加密类型',
+  status int NOT NULL DEFAULT 1 COMMENT '状态 0:禁用 1:正常',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '修改人',
+  PRIMARY KEY (id)
+);
+
+-- ==================== operation_log ====================
+CREATE TABLE operation_log (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  operator_id bigint NULL DEFAULT NULL COMMENT '操作人ID',
+  operator_name varchar(50) NULL DEFAULT NULL COMMENT '操作人姓名',
+  operator_ip varchar(50) NULL DEFAULT NULL COMMENT '操作人IP',
+  module varchar(50) NULL DEFAULT NULL COMMENT '操作模块',
+  operation_type varchar(20) NULL DEFAULT NULL COMMENT '操作类型',
+  table_name varchar(50) NULL DEFAULT NULL COMMENT '业务表名',
+  biz_id bigint NULL DEFAULT NULL COMMENT '业务记录ID',
+  description varchar(500) NULL DEFAULT NULL COMMENT '操作描述',
+  old_value text NULL COMMENT '变更前值(JSON)',
+  new_value text NULL COMMENT '变更后值(JSON)',
+  request_url varchar(500) NULL DEFAULT NULL COMMENT '请求URL',
+  request_method varchar(10) NULL DEFAULT NULL COMMENT '请求方法',
+  request_params text NULL COMMENT '请求参数(JSON)',
+  duration bigint NULL DEFAULT NULL COMMENT '执行时长(毫秒)',
+  is_success int NOT NULL DEFAULT 0 COMMENT '是否成功:0失败 1成功',
+  error_msg varchar(1000) NULL DEFAULT NULL COMMENT '错误信息',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  create_time datetime NOT NULL COMMENT '创建时间',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_operation_log_tenant ON operation_log(tenant_id);
+CREATE INDEX idx_operation_log_operator ON operation_log(operator_id);
+CREATE INDEX idx_operation_log_module ON operation_log(module);
+CREATE INDEX idx_operation_log_time ON operation_log(create_time);
 

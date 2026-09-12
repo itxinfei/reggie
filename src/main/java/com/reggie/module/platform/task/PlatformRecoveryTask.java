@@ -75,6 +75,7 @@ public class PlatformRecoveryTask {
                 try {
                     checkAndRecoverTenant();
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.error("[平台恢复] 租户 {} 健康检查失败: {}", tenant.getId(), e.getMessage());
                 } finally {
                     if (originalTenantId != null) {
@@ -106,6 +107,7 @@ public class PlatformRecoveryTask {
                     recoverPlatform(config);
                 }
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[平台恢复] 健康检查失败: platformType={}", config.getPlatformType(), e);
             }
         }
@@ -123,6 +125,7 @@ public class PlatformRecoveryTask {
             platformSyncService.pullOrders(config, beginTime, endTime);
             log.info("[平台恢复] 恢复成功: platformType={}", config.getPlatformType());
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台恢复] 恢复失败: platformType={}", config.getPlatformType(), e);
         }
     }
@@ -149,6 +152,7 @@ public class PlatformRecoveryTask {
                     .setIfAbsent(lockKey, lockValue, ttlMs, TimeUnit.MILLISECONDS);
             return Boolean.TRUE.equals(success) ? lockValue : null;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台恢复] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
             return null;
         }
@@ -164,13 +168,15 @@ public class PlatformRecoveryTask {
             return;
         }
         try {
-            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                 new DefaultRedisScript<Long>(luaScript, Long.class),
                 Collections.singletonList(lockKey),
                 lockValue
             );
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[平台恢复] 释放分布式锁失败: {}", lockKey, e);
         }
     }

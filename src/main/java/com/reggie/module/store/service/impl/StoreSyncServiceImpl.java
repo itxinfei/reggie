@@ -60,6 +60,14 @@ public class StoreSyncServiceImpl implements StoreSyncService {
     @Autowired
     private SetmealDishService setmealDishService;
 
+    /**
+     * 同步 dishes。
+     * @param sourceTenantId 参数 sourceTenantId
+     * @param targetTenantId 参数 targetTenantId
+     * @param dishIds 参数 dishIds
+     * @param operatorId 参数 operatorId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> syncDishes(Long sourceTenantId, Long targetTenantId,
                                            List<Long> dishIds, Long operatorId) {
@@ -110,6 +118,7 @@ public class StoreSyncServiceImpl implements StoreSyncService {
 
                     synced++;
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     failed++;
                     errors.add("菜品[" + dish.getName() + "]: " + e.getMessage());
                 }
@@ -121,6 +130,7 @@ public class StoreSyncServiceImpl implements StoreSyncService {
 
             updateSyncLog(syncLog, StoreSyncLog.STATUS_SUCCESS, synced, failed, errors);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             updateSyncLog(syncLog, StoreSyncLog.STATUS_FAILED, synced, failed,
                     Collections.singletonList(e.getMessage()));
             result.put("synced", 0);
@@ -131,6 +141,13 @@ public class StoreSyncServiceImpl implements StoreSyncService {
         return result;
     }
 
+    /**
+     * 同步 categories。
+     * @param sourceTenantId 参数 sourceTenantId
+     * @param targetTenantId 参数 targetTenantId
+     * @param operatorId 参数 operatorId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> syncCategories(Long sourceTenantId, Long targetTenantId, Long operatorId) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -157,6 +174,7 @@ public class StoreSyncServiceImpl implements StoreSyncService {
                     categoryService.save(newCat);
                     synced++;
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     failed++;
                     errors.add("分类[" + cat.getName() + "]: " + e.getMessage());
                 }
@@ -166,6 +184,7 @@ public class StoreSyncServiceImpl implements StoreSyncService {
             result.put("failed", failed);
             updateSyncLog(syncLog, StoreSyncLog.STATUS_SUCCESS, synced, failed, errors);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             updateSyncLog(syncLog, StoreSyncLog.STATUS_FAILED, 0, 1,
                     Collections.singletonList(e.getMessage()));
         }
@@ -173,6 +192,14 @@ public class StoreSyncServiceImpl implements StoreSyncService {
         return result;
     }
 
+    /**
+     * 同步 setmeals。
+     * @param sourceTenantId 参数 sourceTenantId
+     * @param targetTenantId 参数 targetTenantId
+     * @param setmealIds 参数 setmealIds
+     * @param operatorId 参数 operatorId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> syncSetmeals(Long sourceTenantId, Long targetTenantId,
                                              List<Long> setmealIds, Long operatorId) {
@@ -223,6 +250,7 @@ public class StoreSyncServiceImpl implements StoreSyncService {
 
                     synced++;
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     failed++;
                     errors.add("套餐[" + sm.getName() + "]: " + e.getMessage());
                 }
@@ -232,6 +260,7 @@ public class StoreSyncServiceImpl implements StoreSyncService {
             result.put("failed", failed);
             updateSyncLog(syncLog, StoreSyncLog.STATUS_SUCCESS, synced, failed, errors);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             updateSyncLog(syncLog, StoreSyncLog.STATUS_FAILED, 0, 1,
                     Collections.singletonList(e.getMessage()));
         }
@@ -239,6 +268,13 @@ public class StoreSyncServiceImpl implements StoreSyncService {
         return result;
     }
 
+    /**
+     * 同步 coupons。
+     * @param sourceTenantId 参数 sourceTenantId
+     * @param targetTenantId 参数 targetTenantId
+     * @param operatorId 参数 operatorId
+     * @return 返回结果
+     */
     @Override
     public Map<String, Object> syncCoupons(Long sourceTenantId, Long targetTenantId, Long operatorId) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -253,6 +289,13 @@ public class StoreSyncServiceImpl implements StoreSyncService {
         return result;
     }
 
+    /**
+     * 获取 sync logs。
+     * @param sourceTenantId 参数 sourceTenantId
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getSyncLogs(Long sourceTenantId, int page, int pageSize) {
         Page<StoreSyncLog> pageObj = PageUtils.of(page, pageSize);

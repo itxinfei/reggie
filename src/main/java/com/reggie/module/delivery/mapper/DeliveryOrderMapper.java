@@ -31,7 +31,8 @@ public interface DeliveryOrderMapper extends BaseMapper<DeliveryOrder> {
      * @return 配送订单（含 tenantId 供后续操作使用），不存在返回 null
      */
     @InterceptorIgnore(tenantLine = "true")
-    @Select("SELECT * FROM delivery_order WHERE platform = #{platform} AND platform_order_id = #{platformOrderId} AND is_deleted = 0 LIMIT 1")
+    @Select("SELECT * FROM delivery_order WHERE platform = #{platform} AND platform_order_id = #{platformOrderId} " +
+            "AND is_deleted = 0 LIMIT 1")
     DeliveryOrder selectByPlatformOrderCrossTenant(@Param("platform") String platform,
                                                     @Param("platformOrderId") String platformOrderId);
 

@@ -24,16 +24,32 @@ public class BaiduAdapter extends BaseModelAdapter {
 
     public static final String FORMAT_ID = "baidu";
 
+    /**
+     * 获取 format id。
+     * @return 返回结果
+     */
     @Override
     public String getFormatId() {
         return FORMAT_ID;
     }
 
+    /**
+     * 获取 display name。
+     * @return 返回结果
+     */
     @Override
     public String getDisplayName() {
         return "百度文心一言（ERNIE Bot 原生 API）";
     }
 
+    /**
+     * 处理 do chat。
+     * @param messages 参数 messages
+     * @param maxTokens 参数 maxTokens
+     * @param temperature 参数 temperature
+     * @param config 参数 config
+     * @return 返回结果
+     */
     @Override
     protected AIChatResponse doChat(List<AIMessage> messages, int maxTokens,
                                      double temperature, AiProviderConfig config) {
@@ -85,6 +101,7 @@ public class BaiduAdapter extends BaseModelAdapter {
                         + "）：HTTP " + responseCode + " - " + errorBody, config);
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("AI请求[{} / {}]未预期异常", config.getProviderCode(), FORMAT_ID, e);
             return errorResponse("百度AI连接失败（" + config.getProviderName() + "）：" + e.getMessage(), config);
         } finally {

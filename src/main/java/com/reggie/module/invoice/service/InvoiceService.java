@@ -23,7 +23,8 @@ public interface InvoiceService extends IService<InvoiceRecord> {
     boolean deleteTitle(Long id, Long tenantId, Long userId);
 
     /** 申请开票 */
-    InvoiceRecord applyInvoice(Long orderId, Long userId, Long tenantId, Long titleId, String title, String taxNumber, Integer type);
+    InvoiceRecord applyInvoice(Long orderId, Long userId, Long tenantId, Long titleId, String title, String taxNumber,
+            Integer type);
 
     /** 获取订单发票记录 */
     InvoiceRecord getInvoiceByOrder(Long orderId, Long userId, Long tenantId);

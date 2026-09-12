@@ -27,12 +27,26 @@ public class SupplierSettlementController {
     @Autowired
     private SupplierSettlementService supplierSettlementService;
 
+    /**
+     * 创建。
+     * @param settlement 参数 settlement
+     * @return 返回结果
+     */
     @PostMapping
     @Operation(summary = "创建结算单")
-    public R<SupplierSettlement> create(@Parameter(description = "结算单信息", required = true) @RequestBody SupplierSettlement settlement) {
+    public R<SupplierSettlement> create(@Parameter(description = "结算单信息", required =
+            true) @RequestBody SupplierSettlement settlement) {
         return R.success(supplierSettlementService.createSettlement(settlement));
     }
 
+    /**
+     * 分页查询。
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @param supplierId 参数 supplierId
+     * @param status 参数 status
+     * @return 返回结果
+     */
     @GetMapping("/page")
     @Operation(summary = "分页查询结算单")
     public R<?> page(
@@ -43,10 +57,17 @@ public class SupplierSettlementController {
         return R.success(supplierSettlementService.pageSettlements(page, pageSize, supplierId, status));
     }
 
+    /**
+     * 支付。
+     * @param id 参数 id
+     * @param payAmount 参数 payAmount
+     * @return 返回结果
+     */
     @PostMapping("/{id}/pay")
     @Operation(summary = "结算单付款")
     @Parameter(name = "id", description = "结算单ID", required = true)
-    public R<SupplierSettlement> pay(@PathVariable Long id, @Parameter(description = "实际付款金额（元）", required = true) @RequestParam BigDecimal payAmount) {
+    public R<SupplierSettlement> pay(@PathVariable Long id, @Parameter(description = "实际付款金额（元）", required =
+            true) @RequestParam BigDecimal payAmount) {
         return R.success(supplierSettlementService.paySettlement(id, payAmount));
     }
 }

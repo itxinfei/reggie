@@ -19,8 +19,16 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @Transactional(rollbackFor = Exception.class)
-public class PointsRecordServiceImpl extends ServiceImpl<PointsRecordMapper, PointsRecord> implements PointsRecordService {
+public class PointsRecordServiceImpl extends ServiceImpl<PointsRecordMapper, PointsRecord> implements
+        PointsRecordService {
 
+    /**
+     * 查询列表 by member。
+     * @param memberId 参数 memberId
+     * @param page 参数 page
+     * @param pageSize 参数 pageSize
+     * @return 返回结果
+     */
     @Override
     public Page<PointsRecord> listByMember(Long memberId, int page, int pageSize) {
         Page<PointsRecord> pageRequest = PageUtils.of(page, pageSize);

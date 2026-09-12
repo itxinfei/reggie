@@ -59,6 +59,12 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
     @Autowired
     private MaterialMapper materialMapper;
 
+    /**
+     * 创建 check。
+     * @param operator 参数 operator
+     * @param remark 参数 remark
+     * @return 返回结果
+     */
     @Override
     public StockCheck createCheck(String operator, String remark) {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -105,6 +111,11 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         throw new CustomException("盘点单号生成冲突，请重试");
     }
 
+    /**
+     * 完成 check。
+     * @param checkId 参数 checkId
+     * @param items 参数 items
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void completeCheck(Long checkId, List<StockCheckItemDTO> items) {
@@ -117,7 +128,8 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         if (currentTenantId != null && !currentTenantId.equals(sc.getTenantId())) {
             throw new CustomException("无权操作其他租户的盘点单");
         }
-        if (!StockCheckStatus.DRAFT.getValue().equals(sc.getStatus()) && !StockCheckStatus.IN_PROGRESS.getValue().equals(sc.getStatus())) {
+        if (!StockCheckStatus.DRAFT.getValue().equals(sc.getStatus()) && !StockCheckStatus.IN_PROGRESS.getValue()
+                .equals(sc.getStatus())) {
             throw new CustomException("盘点单状态不允许完成");
         }
 
@@ -136,7 +148,8 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
 
             BigDecimal bookQty = material.getStockQty() != null ? material.getStockQty() : BigDecimal.ZERO;
             BigDecimal diff = actualQty.subtract(bookQty);
-            totalDiff = totalDiff.add(diff.multiply(material.getUnitPrice() != null ? material.getUnitPrice() : BigDecimal.ZERO));
+            totalDiff = totalDiff.add(diff.multiply(material.getUnitPrice() != null ? material
+                    .getUnitPrice() : BigDecimal.ZERO));
 
             // 修改点：原子设置库存为实际盘点数量，消除 read-modify-write（updateById 整体写回覆盖并发字段）
             int adjRows = materialMapper.adjustStockTo(materialId, actualQty);
@@ -208,6 +221,11 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
         return result;
     }
 
+    /**
+     * 查询列表。
+     * @param queryWrapper 参数 queryWrapper
+     * @return 返回结果
+     */
     public List<StockCheck> list(Wrapper<StockCheck> queryWrapper) {
         List<StockCheck> list = super.list(queryWrapper);
         if (!CollectionUtils.isEmpty(list)) {
@@ -260,11 +278,11 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
                                 Material::getName,
                                 (v1, v2) -> v1));
 
-                for (StockCheckDetail d : allDetails) {
+                allDetails.forEach(d -> {
                     if (d.getMaterialId() != null) {
                         d.setMaterialName(nameMap.get(d.getMaterialId()));
                     }
-                }
+                });
             }
         }
 

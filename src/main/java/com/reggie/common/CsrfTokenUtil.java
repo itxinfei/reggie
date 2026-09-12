@@ -39,6 +39,7 @@ public class CsrfTokenUtil {
             // Base64 编码
             return Base64.getUrlEncoder().withoutPadding().encodeToString(combined);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             throw new CustomException("生成 CSRF Token 失败");
         }
     }
@@ -73,6 +74,7 @@ public class CsrfTokenUtil {
                 return Long.parseLong(new String(timestampBytes, java.nio.charset.StandardCharsets.UTF_8));
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("提取Token时间戳失败", e);
         }
         return 0;

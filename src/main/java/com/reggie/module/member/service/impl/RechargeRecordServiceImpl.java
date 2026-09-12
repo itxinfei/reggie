@@ -21,7 +21,8 @@ import java.math.BigDecimal;
  * @since 2026-07-09
  */
 @Service
-public class RechargeRecordServiceImpl extends ServiceImpl<RechargeRecordMapper, RechargeRecord> implements RechargeRecordService {
+public class RechargeRecordServiceImpl extends ServiceImpl<RechargeRecordMapper, RechargeRecord> implements
+        RechargeRecordService {
 
     /** 会员服务 */
     @Autowired
@@ -31,6 +32,13 @@ public class RechargeRecordServiceImpl extends ServiceImpl<RechargeRecordMapper,
     @Autowired
     private MemberMapper memberMapper;
 
+    /**
+     * 处理 recharge。
+     * @param memberId 参数 memberId
+     * @param amount 参数 amount
+     * @param giftAmount 参数 giftAmount
+     * @param paymentMethod 参数 paymentMethod
+     */
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void recharge(Long memberId, BigDecimal amount, BigDecimal giftAmount, String paymentMethod) {

@@ -46,6 +46,14 @@ public class RefundRecord implements Serializable {
     private Integer refundType;
     /** 申请人ID（用户端售后申请记录发起人） */
     private Long applyUserId;
+    /** 审核人ID（员工审核售后时记录） */
+    private Long auditUserId;
+    /** 审核时间 */
+    private LocalDateTime auditTime;
+    /** 拒绝原因（审核拒绝时记录） */
+    private String rejectReason;
+    /** 退款完成时间（渠道退款成功时记录） */
+    private LocalDateTime refundTime;
     /** 创建时间 */
     @TableField(value = "created_time", fill = FieldFill.INSERT)
     private LocalDateTime createdTime;

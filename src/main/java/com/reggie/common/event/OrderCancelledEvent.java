@@ -16,6 +16,10 @@ public class OrderCancelledEvent extends OrderDomainEvent {
         this.reason = reason;
     }
 
+    /**
+     * 获取 reason。
+     * @return 返回结果
+     */
     public String getReason() {
         return reason;
     }

@@ -46,6 +46,10 @@ public class AiProviderController {
     @Resource
     private AiProviderManager aiProviderManager;
 
+    /**
+     * 查询列表。
+     * @return 返回结果
+     */
     @GetMapping("/list")
     @Operation(summary = "供应商列表", description = "获取所有AI供应商配置")
     public R<List<AiProviderConfig>> list() {
@@ -55,6 +59,10 @@ public class AiProviderController {
         return R.success(list);
     }
 
+    /**
+     * 获取 active。
+     * @return 返回结果
+     */
     @GetMapping("/active")
     @Operation(summary = "当前激活供应商", description = "获取当前正在使用的AI供应商")
     public R<AiProviderConfig> getActive() {
@@ -63,6 +71,11 @@ public class AiProviderController {
         return R.success(config);
     }
 
+    /**
+     * 新增。
+     * @param config 参数 config
+     * @return 返回结果
+     */
     @PostMapping("/add")
     @RateLimit(maxRequestsPerSecond = 5)
     @Operation(summary = "添加或更新供应商", description = "新增AI供应商配置，若providerCode已存在则自动更新")
@@ -87,7 +100,8 @@ public class AiProviderController {
         // 修改点：使用 upsert 逻辑，providerCode 已存在则更新而非抛 DuplicateKeyException
         AiProviderConfig saved = providerConfigService.saveOrUpdateByCode(config);
         String action = (saved.getId() != null && saved.getId().equals(config.getId())) ? "更新" : "新增";
-        log.info("{}AI供应商: code={}, name={}, id={}", action, saved.getProviderCode(), saved.getProviderName(), saved.getId());
+        log.info("{}AI供应商: code={}, name={}, id={}", action, saved.getProviderCode(), saved.getProviderName(), saved
+                .getId());
 
         Map<String, Object> result = new HashMap<>();
         result.put("id", saved.getId());
@@ -96,6 +110,11 @@ public class AiProviderController {
         return R.success(result);
     }
 
+    /**
+     * 更新。
+     * @param config 参数 config
+     * @return 返回结果
+     */
     @PostMapping("/update")
     @RateLimit(maxRequestsPerSecond = 5)
     @Operation(summary = "更新供应商配置", description = "修改AI供应商配置信息")
@@ -133,6 +152,11 @@ public class AiProviderController {
         return R.success("更新成功");
     }
 
+    /**
+     * 删除。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @DeleteMapping("/delete/{id}")
     @RateLimit(maxRequestsPerSecond = 5)
     @Operation(summary = "删除供应商", description = "软删除AI供应商配置，不能删除当前激活的供应商")
@@ -146,6 +170,11 @@ public class AiProviderController {
         return R.success("删除成功");
     }
 
+    /**
+     * 处理 activate。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @PostMapping("/activate/{id}")
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "切换供应商", description = "激活指定供应商（切换后AI将使用该供应商）")
@@ -169,6 +198,11 @@ public class AiProviderController {
         return R.error("切换失败");
     }
 
+    /**
+     * 获取 detail。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/get/{id}")
     @Operation(summary = "获取单个供应商", description = "获取指定供应商的配置（API密钥已脱敏）")
     public R<AiProviderConfig> getDetail(@Parameter(description = "供应商配置ID", required = true) @PathVariable Long id) {
@@ -180,6 +214,11 @@ public class AiProviderController {
         return R.success(config);
     }
 
+    /**
+     * 处理 test。
+     * @param id 参数 id
+     * @return 返回结果
+     */
     @GetMapping("/test/{id}")
     @RateLimit(maxRequestsPerSecond = 2)
     @Operation(summary = "测试连通性", description = "测试指定AI供应商的连接是否正常")
@@ -193,10 +232,16 @@ public class AiProviderController {
 
     // ==================== 修改点：从供应商API拉取模型列表 ====================
 
+    /**
+     * 处理 fetch models。
+     * @param params 参数 params
+     * @return 返回结果
+     */
     @PostMapping("/fetch-models")
     @RateLimit(maxRequestsPerSecond = 2)
     @Operation(summary = "拉取模型列表", description = "调用AI供应商的 /models 接口获取可用模型列表（参考ChatBox/NextChat交互模式）")
-    public R<List<String>> fetchModels(@Parameter(description = "请求参数（baseUrl API地址、apiKey 密钥）", required = true) @RequestBody Map<String, String> params) {
+    public R<List<String>> fetchModels(@Parameter(description = "请求参数（baseUrl API地址、apiKey 密钥）", required =
+            true) @RequestBody Map<String, String> params) {
         String baseUrl = params.get("baseUrl");
         String apiKey = params.get("apiKey");
 
@@ -252,6 +297,10 @@ public class AiProviderController {
 
     // ==================== 预设供应商快捷初始化 ====================
 
+    /**
+     * 初始化 presets。
+     * @return 返回结果
+     */
     @PostMapping("/init-presets")
     @RateLimit(maxRequestsPerSecond = 1)
     @Operation(summary = "初始化预设供应商", description = "批量添加国产大模型预设配置（仅当无配置时生效）")
@@ -274,150 +323,67 @@ public class AiProviderController {
         List<AiProviderConfig> list = new ArrayList<>();
 
         // 1. DeepSeek（默认不激活，需管理员配置 API Key 后手动激活）
-        AiProviderConfig ds = new AiProviderConfig();
-        ds.setProviderCode("deepseek");
-        ds.setProviderName("DeepSeek");
-        ds.setBaseUrl("https://api.deepseek.com/v1");
-        ds.setModelName("deepseek-chat");
-        ds.setApiFormat("openai_compatible");
-        ds.setTimeout(60);
-        ds.setMaxTokens(2048);
-        ds.setTemperature(0.7);
-        ds.setEnabled(true);
-        ds.setIsActive(false);
-        ds.setSort(1);
-        ds.setRemark("DeepSeek V3，性价比高，支持128K上下文");
-        list.add(ds);
-
+        list.add(preset("deepseek", "DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat",
+                "openai_compatible", 2048, 1, "DeepSeek V3，性价比高，支持128K上下文"));
         // 2. 通义千问 Qwen
-        AiProviderConfig qwen = new AiProviderConfig();
-        qwen.setProviderCode("qwen");
-        qwen.setProviderName("通义千问");
-        qwen.setBaseUrl("https://dashscope.aliyuncs.com/compatible-mode/v1");
-        qwen.setModelName("qwen-turbo");
-        qwen.setApiFormat("openai_compatible");
-        qwen.setTimeout(60);
-        qwen.setMaxTokens(2048);
-        qwen.setTemperature(0.7);
-        qwen.setEnabled(true);
-        qwen.setIsActive(false);
-        qwen.setSort(2);
-        qwen.setRemark("阿里通义千问，DashScope API，国内稳定");
-        list.add(qwen);
-
+        list.add(preset("qwen", "通义千问", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-turbo",
+                "openai_compatible", 2048, 2, "阿里通义千问，DashScope API，国内稳定"));
         // 3. 智谱 AI GLM
-        AiProviderConfig zhipu = new AiProviderConfig();
-        zhipu.setProviderCode("zhipu");
-        zhipu.setProviderName("智谱AI");
-        zhipu.setBaseUrl("https://open.bigmodel.cn/api/paas/v4");
-        zhipu.setModelName("glm-4");
-        zhipu.setApiFormat("openai_compatible");
-        zhipu.setTimeout(60);
-        zhipu.setMaxTokens(2048);
-        zhipu.setTemperature(0.7);
-        zhipu.setEnabled(true);
-        zhipu.setIsActive(false);
-        zhipu.setSort(3);
-        zhipu.setRemark("智谱清言 GLM-4，清华技术背景");
-        list.add(zhipu);
-
+        list.add(preset("zhipu", "智谱AI", "https://open.bigmodel.cn/api/paas/v4", "glm-4",
+                "openai_compatible", 2048, 3, "智谱清言 GLM-4，清华技术背景"));
         // 4. 百度文心一言
-        AiProviderConfig ernie = new AiProviderConfig();
-        ernie.setProviderCode("ernie");
-        ernie.setProviderName("文心一言");
-        ernie.setBaseUrl("https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat");
-        ernie.setModelName("ernie-4.0");
-        ernie.setApiFormat("baidu");
-        ernie.setTimeout(60);
-        ernie.setMaxTokens(2048);
-        ernie.setTemperature(0.7);
-        ernie.setEnabled(true);
-        ernie.setIsActive(false);
-        ernie.setSort(4);
-        ernie.setRemark("百度文心一言 ERNIE 4.0");
-        list.add(ernie);
-
+        list.add(preset("ernie", "文心一言",
+                "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat", "ernie-4.0",
+                "baidu", 2048, 4, "百度文心一言 ERNIE 4.0"));
         // 5. 百川智能
-        AiProviderConfig baichuan = new AiProviderConfig();
-        baichuan.setProviderCode("baichuan");
-        baichuan.setProviderName("百川智能");
-        baichuan.setBaseUrl("https://api.baichuan-ai.com/v1");
-        baichuan.setModelName("Baichuan2-Turbo");
-        baichuan.setApiFormat("openai_compatible");
-        baichuan.setTimeout(60);
-        baichuan.setMaxTokens(2048);
-        baichuan.setTemperature(0.7);
-        baichuan.setEnabled(true);
-        baichuan.setIsActive(false);
-        baichuan.setSort(5);
-        baichuan.setRemark("百川智能 Baichuan2，开源模型");
-        list.add(baichuan);
-
+        list.add(preset("baichuan", "百川智能", "https://api.baichuan-ai.com/v1", "Baichuan2-Turbo",
+                "openai_compatible", 2048, 5, "百川智能 Baichuan2，开源模型"));
         // 6. 月之暗面 Moonshot
-        AiProviderConfig moonshot = new AiProviderConfig();
-        moonshot.setProviderCode("moonshot");
-        moonshot.setProviderName("月之暗面");
-        moonshot.setBaseUrl("https://api.moonshot.cn/v1");
-        moonshot.setModelName("moonshot-v1-8k");
-        moonshot.setApiFormat("openai_compatible");
-        moonshot.setTimeout(60);
-        moonshot.setMaxTokens(2048);
-        moonshot.setTemperature(0.7);
-        moonshot.setEnabled(true);
-        moonshot.setIsActive(false);
-        moonshot.setSort(6);
-        moonshot.setRemark("月之暗面 Kimi，长文本能力突出");
-        list.add(moonshot);
-
+        list.add(preset("moonshot", "月之暗面", "https://api.moonshot.cn/v1", "moonshot-v1-8k",
+                "openai_compatible", 2048, 6, "月之暗面 Kimi，长文本能力突出"));
         // 7. MiniMax
-        AiProviderConfig minimax = new AiProviderConfig();
-        minimax.setProviderCode("minimax");
-        minimax.setProviderName("MiniMax");
-        minimax.setBaseUrl("https://api.minimax.chat/v1");
-        minimax.setModelName("minimax/MiniMax-M1-80k");
-        minimax.setApiFormat("openai_compatible");
-        minimax.setTimeout(60);
-        minimax.setMaxTokens(2048);
-        minimax.setTemperature(0.7);
-        minimax.setEnabled(true);
-        minimax.setIsActive(false);
-        minimax.setSort(7);
-        minimax.setRemark("MiniMax M1 系列");
-        list.add(minimax);
-
+        list.add(preset("minimax", "MiniMax", "https://api.minimax.chat/v1", "minimax/MiniMax-M1-80k",
+                "openai_compatible", 2048, 7, "MiniMax M1 系列"));
         // 8. 360智脑
-        AiProviderConfig zhinv = new AiProviderConfig();
-        zhinv.setProviderCode("360");
-        zhinv.setProviderName("360智脑");
-        zhinv.setBaseUrl("https://api.360.cn/v1/chat");
-        zhinv.setModelName("360gpt-turbo");
-        zhinv.setApiFormat("360");
-        zhinv.setTimeout(60);
-        zhinv.setMaxTokens(2048);
-        zhinv.setTemperature(0.7);
-        zhinv.setEnabled(true);
-        zhinv.setIsActive(false);
-        zhinv.setSort(8);
-        zhinv.setRemark("360智脑");
-        list.add(zhinv);
-
+        list.add(preset("360", "360智脑", "https://api.360.cn/v1/chat", "360gpt-turbo",
+                "360", 2048, 8, "360智脑"));
         // 9. Anthropic Claude
-        AiProviderConfig claude = new AiProviderConfig();
-        claude.setProviderCode("anthropic");
-        claude.setProviderName("Anthropic Claude");
-        claude.setBaseUrl("https://api.anthropic.com/v1");
-        claude.setModelName("claude-sonnet-4-20250514");
-        claude.setApiFormat("anthropic");
-        claude.setTimeout(60);
-        claude.setMaxTokens(4096);
-        claude.setTemperature(0.7);
-        claude.setEnabled(true);
-        claude.setIsActive(false);
-        claude.setSort(9);
-        claude.setRemark("Anthropic Claude Sonnet 4，支持200K上下文，需海外API Key");
-        list.add(claude);
+        list.add(preset("anthropic", "Anthropic Claude", "https://api.anthropic.com/v1",
+                "claude-sonnet-4-20250514", "anthropic", 4096, 9,
+                "Anthropic Claude Sonnet 4，支持200K上下文，需海外API Key"));
 
         return list;
+    }
+
+    /**
+     * 构造单个预置供应商配置（等价抽取，降低方法长度）。
+     *
+     * @param code 供应商编码
+     * @param name 供应商名称
+     * @param baseUrl 接口地址
+     * @param model 模型名
+     * @param apiFormat 接口格式
+     * @param maxTokens 最大 token
+     * @param sort 排序
+     * @param remark 备注
+     * @return 预置配置
+     */
+    private AiProviderConfig preset(String code, String name, String baseUrl, String model,
+            String apiFormat, int maxTokens, int sort, String remark) {
+        AiProviderConfig c = new AiProviderConfig();
+        c.setProviderCode(code);
+        c.setProviderName(name);
+        c.setBaseUrl(baseUrl);
+        c.setModelName(model);
+        c.setApiFormat(apiFormat);
+        c.setTimeout(60);
+        c.setMaxTokens(maxTokens);
+        c.setTemperature(0.7);
+        c.setEnabled(true);
+        c.setIsActive(false);
+        c.setSort(sort);
+        c.setRemark(remark);
+        return c;
     }
 }
 

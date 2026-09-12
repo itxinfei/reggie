@@ -46,11 +46,20 @@ public class PermissionServiceImpl implements PermissionService {
     /** 缓存过期时间（小时） */
     private static final long CACHE_TTL_HOURS = 1;
 
+    /**
+     * 获取 all permissions。
+     * @return 返回结果
+     */
     @Override
     public List<Permission> getAllPermissions() {
         return permissionMapper.listAllEnabled();
     }
 
+    /**
+     * 获取 permissions by role ids。
+     * @param roleIds 参数 roleIds
+     * @return 返回结果
+     */
     @Override
     public List<Permission> getPermissionsByRoleIds(List<Long> roleIds) {
         if (roleIds == null || roleIds.isEmpty()) {
@@ -65,6 +74,11 @@ public class PermissionServiceImpl implements PermissionService {
         return result != null ? result : Collections.emptyList();
     }
 
+    /**
+     * 获取 permission keys。
+     * @param roleId 参数 roleId
+     * @return 返回结果
+     */
     @Override
     public List<String> getPermissionKeys(Long roleId) {
         // Redis不可用时直接查数据库
@@ -79,6 +93,7 @@ public class PermissionServiceImpl implements PermissionService {
                 return cached;
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[权限缓存] 读取缓存失败，降级查数据库：{}", e.getMessage(), e);
         }
 
@@ -90,6 +105,7 @@ public class PermissionServiceImpl implements PermissionService {
             try {
                 redisTemplate.opsForValue().set(cacheKey, keys, CACHE_TTL_HOURS, TimeUnit.HOURS);
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("[权限缓存] 写入缓存失败：{}", e.getMessage(), e);
             }
         }
@@ -121,6 +137,7 @@ public class PermissionServiceImpl implements PermissionService {
             redisTemplate.delete(cacheKey);
             log.info("[权限缓存] 已清除角色权限缓存：roleId={}", roleId);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[权限缓存] 清除缓存失败：roleId={}, error={}", roleId, e.getMessage(), e);
         }
     }
@@ -161,10 +178,16 @@ public class PermissionServiceImpl implements PermissionService {
                 log.info("[权限缓存] 已清除所有权限缓存，共{}条", keys.size());
             }
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[权限缓存] 清除所有缓存失败：{}", e.getMessage(), e);
         }
     }
 
+    /**
+     * 获取 permission keys by role ids。
+     * @param roleIds 参数 roleIds
+     * @return 返回结果
+     */
     @Override
     public List<String> getPermissionKeysByRoleIds(List<Long> roleIds) {
         if (roleIds == null || roleIds.isEmpty()) {
@@ -177,6 +200,11 @@ public class PermissionServiceImpl implements PermissionService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 获取 menu tree。
+     * @param roleId 参数 roleId
+     * @return 返回结果
+     */
     @Override
     public List<Map<String, Object>> getMenuTree(Long roleId) {
         List<Permission> allPerms = getAllPermissions();

@@ -76,6 +76,9 @@ public class OrderTimeoutTask {
     // ──────────────────────────────────────
     // 配送超时自动确认收货（每 10 分钟）
     // ──────────────────────────────────────
+    /**
+     * 处理 auto complete delivered orders。
+     */
     @Scheduled(fixedRate = DELIVERY_TIMEOUT_CHECK_INTERVAL)
     public void autoCompleteDeliveredOrders() {
         String lockValue = tryLock("schedule:lock:delivery-timeout", LOCK_TTL_MS);
@@ -130,6 +133,7 @@ public class OrderTimeoutTask {
                     order.getId(), order.getNumber(), BaseContext.getCurrentTenantId());
                 completed++;
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[定时任务] 自动完成订单失败: orderId={}, tenantId={}, error={}",
                     order.getId(), BaseContext.getCurrentTenantId(), e.getMessage());
             }
@@ -140,6 +144,9 @@ public class OrderTimeoutTask {
     // ──────────────────────────────────────
     // 订单超时自动取消（每 5 分钟）
     // ──────────────────────────────────────
+    /**
+     * 取消 timeout orders。
+     */
     @Scheduled(fixedRate = ORDER_TIMEOUT_CHECK_INTERVAL)
     public void cancelTimeoutOrders() {
         // 分布式锁防止任务重叠
@@ -204,6 +211,7 @@ public class OrderTimeoutTask {
                     order.getId(), order.getNumber(), BaseContext.getCurrentTenantId());
                 cancelled++;
             } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[定时任务] 取消超时订单失败: orderId={}, tenantId={}, error={}",
                     order.getId(), BaseContext.getCurrentTenantId(), e.getMessage());
             }
@@ -214,6 +222,9 @@ public class OrderTimeoutTask {
     // ──────────────────────────────────────
     // 每日经营统计（每天凌晨 2 点）
     // ──────────────────────────────────────
+    /**
+     * 处理 daily statistics。
+     */
     @Scheduled(cron = "0 0 2 * * ?")
     public void dailyStatistics() {
         String lockValue = tryLock("schedule:lock:daily-statistics", LOCK_TTL_MS);
@@ -236,6 +247,7 @@ public class OrderTimeoutTask {
                     log.info("[定时任务] 每日经营统计完成: date={}, tenantId={}, orders={}",
                         yesterday, tenant.getId(), report);
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.error("[定时任务] 每日统计失败: tenantId={}, error={}",
                         tenant.getId(), e.getMessage());
                 } finally {
@@ -250,6 +262,9 @@ public class OrderTimeoutTask {
     // ──────────────────────────────────────
     // 库存预警检查（每小时）
     // ──────────────────────────────────────
+    /**
+     * 校验 inventory alert。
+     */
     @Scheduled(fixedRate = INVENTORY_ALERT_CHECK_INTERVAL)
     public void checkInventoryAlert() {
         String lockValue = tryLock("schedule:lock:inventory-alert", LOCK_TTL_MS);
@@ -352,13 +367,15 @@ public class OrderTimeoutTask {
         }
         try {
             // Lua脚本：比对锁值后才删除，防止误删他人的锁
-            String luaScript = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String luaScript =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                 new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
                 java.util.Collections.singletonList(lockKey),
                 lockValue
             );
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[定时任务] 释放分布式锁失败: {}", lockKey, e);
         }
     }

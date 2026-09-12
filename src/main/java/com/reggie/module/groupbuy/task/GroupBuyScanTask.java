@@ -47,6 +47,9 @@ public class GroupBuyScanTask {
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    /**
+     * 扫描 group formed and not formed。
+     */
     @Scheduled(fixedDelay = INTERVAL_MS)
     public void scanGroupFormedAndNotFormed() {
         String lockValue = tryLock();
@@ -67,6 +70,7 @@ public class GroupBuyScanTask {
                 try {
                     total += groupBuyService.scanGroupFormedAndNotFormed();
                 } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                     log.error("[拼团扫描] 租户 {} 扫描失败: {}", tenant.getId(), e.getMessage(), e);
                 } finally {
                     if (originalTenantId != null) {
@@ -96,6 +100,7 @@ public class GroupBuyScanTask {
                     .setIfAbsent(LOCK_KEY, lockValue, LOCK_TTL_MS, TimeUnit.MILLISECONDS);
             return Boolean.TRUE.equals(ok) ? lockValue : null;
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[拼团扫描] 获取分布式锁失败，跳过本次执行: {}", e.getMessage());
             return null;
         }
@@ -106,12 +111,14 @@ public class GroupBuyScanTask {
             return;
         }
         try {
-            String lua = "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+            String lua =
+                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
             redisTemplate.execute(
                     new org.springframework.data.redis.core.script.DefaultRedisScript<>(lua, Long.class),
                     java.util.Collections.singletonList(LOCK_KEY),
                     lockValue);
         } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[拼团扫描] 释放分布式锁失败: {}", e.getMessage());
         }
     }

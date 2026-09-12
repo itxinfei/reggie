@@ -13,11 +13,21 @@ public class EnumValueValidator implements ConstraintValidator<EnumValue, Intege
 
     private int[] allowedValues;
 
+    /**
+     * 初始化 ialize。
+     * @param constraintAnnotation 参数 constraintAnnotation
+     */
     @Override
     public void initialize(EnumValue constraintAnnotation) {
         allowedValues = constraintAnnotation.values();
     }
 
+    /**
+     * 判断 valid。
+     * @param value 参数 value
+     * @param context 参数 context
+     * @return 返回结果
+     */
     @Override
     public boolean isValid(Integer value, ConstraintValidatorContext context) {
         if (value == null) {
