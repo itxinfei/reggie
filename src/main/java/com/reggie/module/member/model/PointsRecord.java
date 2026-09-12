@@ -50,6 +50,9 @@ public class PointsRecord implements Serializable {
     @Schema(description = "备注说明", example = "订单消费赠送积分")
     private String remark;
 
+    @Schema(description = "积分过期时间（获取积分时设为当前时间+1年，过期后自动扣减）", example = "2027-07-09 10:00:00")
+    private LocalDateTime expireTime;
+
     @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdTime;

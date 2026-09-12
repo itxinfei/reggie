@@ -542,13 +542,44 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
 
         Long tenantId = BaseContext.getCurrentTenantId();
 
-        // 分页查询当前门店用户（每页 500，避免大租户全量加载 OOM）
+        // 分页收集匹配用户并生成推送消息（等价抽取，降低方法长度）
         List<MarketingMessage> messagesToInsert = new ArrayList<>();
+        int[] scannedHolder = new int[1];
+        int pushed = collectPushMessages(campaign, campaignId, pushType, tenantId, messagesToInsert, scannedHolder);
+        int totalScanned = scannedHolder[0];
+        if (totalScanned == 0) {
+            log.info("[批量推送] 活动{}无可推送用户", campaignId);
+            return 0;
+        }
+
+        // 批量插入推送消息
+        if (!messagesToInsert.isEmpty()) {
+            messageMapper.insertBatchList(messagesToInsert);
+        }
+
+        // 更新参与人数
+        // 防御性 null 检查：currentParticipants 可能在数据库中为 null（历史数据或外部导入）
+        Integer curParticipants = campaign.getCurrentParticipants();
+        campaign.setCurrentParticipants((curParticipants != null ? curParticipants : 0) + pushed);
+        updateById(campaign);
+
+        log.info("[批量推送] 活动{}批量推送完成：推送{}/{}人", campaignId, pushed, totalScanned);
+        return pushed;
+    }
+
+    /**
+     * 分页扫描用户并生成匹配的推送消息（等价抽取，降低方法长度）。
+     *
+     * @param scannedHolder 输出：扫描总数
+     * @return 推送人数
+     */
+    private int collectPushMessages(MarketingCampaign campaign, Long campaignId, Integer pushType, Long tenantId,
+            List<MarketingMessage> messagesToInsert, int[] scannedHolder) {
         int pushed = 0;
         int totalScanned = 0;
+        // 每页 500，避免大租户全量加载 OOM
         int pageSize = 500;
         long pageNum = 1;
-        boolean reachedLimit = false;
         while (true) {
             Page<User> userPage = new Page<>(pageNum, pageSize);
             LambdaQueryWrapper<User> userWrapper = new LambdaQueryWrapper<>();
@@ -571,6 +602,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
             Map<Long, Integer> orderCountMap = batchQueryRecentOrderCounts(userIds);
             Map<Long, Integer> browseCountMap = batchQueryRecentBrowseCounts(userIds);
 
+            boolean reachedLimit = false;
             for (User user : pageUsers) {
                 try {
                     Long userId = user.getId();
@@ -594,15 +626,7 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
                         break;
                     }
 
-                    MarketingMessage message = new MarketingMessage();
-                    message.setCampaignId(campaignId);
-                    message.setUserId(userId);
-                    message.setPushType(pushType != null ? pushType : MarketingMessage.PUSH_POPUP);
-                    message.setTitle(campaign.getName());
-                    message.setContent(campaign.getDescription() != null ?
-                            campaign.getDescription() : "您有一份专属优惠待领取！");
-                    message.setStatus(MarketingMessage.STATUS_SENT);
-                    messagesToInsert.add(message);
+                    messagesToInsert.add(buildPushMessage(campaign, campaignId, pushType, userId));
                     pushed++;
                 } catch (Exception e) {
                     // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
@@ -614,24 +638,24 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
             }
             pageNum++;
         }
-        if (totalScanned == 0) {
-            log.info("[批量推送] 活动{}无可推送用户", campaignId);
-            return 0;
-        }
-
-        // 批量插入推送消息
-        if (!messagesToInsert.isEmpty()) {
-            messageMapper.insertBatchList(messagesToInsert);
-        }
-
-        // 更新参与人数
-        // 防御性 null 检查：currentParticipants 可能在数据库中为 null（历史数据或外部导入）
-        Integer curParticipants = campaign.getCurrentParticipants();
-        campaign.setCurrentParticipants((curParticipants != null ? curParticipants : 0) + pushed);
-        updateById(campaign);
-
-        log.info("[批量推送] 活动{}批量推送完成：推送{}/{}人", campaignId, pushed, totalScanned);
+        scannedHolder[0] = totalScanned;
         return pushed;
+    }
+
+    /**
+     * 构建单条推送消息（等价抽取）。
+     */
+    private MarketingMessage buildPushMessage(MarketingCampaign campaign, Long campaignId, Integer pushType,
+            Long userId) {
+        MarketingMessage message = new MarketingMessage();
+        message.setCampaignId(campaignId);
+        message.setUserId(userId);
+        message.setPushType(pushType != null ? pushType : MarketingMessage.PUSH_POPUP);
+        message.setTitle(campaign.getName());
+        message.setContent(campaign.getDescription() != null ?
+                campaign.getDescription() : "您有一份专属优惠待领取！");
+        message.setStatus(MarketingMessage.STATUS_SENT);
+        return message;
     }
 
     /**

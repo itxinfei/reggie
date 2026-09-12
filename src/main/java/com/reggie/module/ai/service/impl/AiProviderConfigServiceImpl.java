@@ -547,25 +547,8 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                     conn.setReadTimeout(15000);
 
                     int code = conn.getResponseCode();
-                    // 修复 P3-1：连接建立后二次验证 IP，防止 DNS 重绑定攻击
-                    // 通过反射调用 getConnectedAddress()，兼容 JDK 1.8 不同子版本
-                    InetAddress connectedAddr = null;
-                    try {
-                        java.lang.reflect.Method m = conn.getClass().getMethod("getConnectedAddress");
-                        connectedAddr = (InetAddress) m.invoke(conn);
-                    } catch (Exception e) {
-                        // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                        log.debug("fetchModelList: 无法获取连接地址", e);
-                    }
-                    if (connectedAddr != null
-                            && (connectedAddr.isSiteLocalAddress()
-                            || connectedAddr.isLoopbackAddress()
-                            || connectedAddr.isLinkLocalAddress()
-                            || connectedAddr.isAnyLocalAddress())) {
-                        log.warn("fetchModelList: DNS重绑定检测到内网地址, ip={}, url={}",
-                                connectedAddr.getHostAddress(), modelUrl);
-                        throw new java.net.ConnectException("禁止访问内网地址（DNS重绑定）");
-                    }
+                    // 修复 P3-1：连接建立后二次验证 IP，防止 DNS 重绑定攻击（等价抽取）
+                    assertNotInternalAddress(conn, modelUrl);
                     if (code == HTTP_OK) {
                         List<String> models = parseModelListResponse(conn);
                         allModels.addAll(models);
@@ -602,6 +585,34 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             if (conn != null) {
                 conn.disconnect();
             }
+        }
+    }
+
+    /**
+     * 连接建立后二次验证 IP，防止 DNS 重绑定攻击（等价抽取，降低方法长度）。
+     * <p>通过反射调用 getConnectedAddress()，兼容 JDK 1.8 不同子版本。</p>
+     *
+     * @param conn 连接
+     * @param modelUrl 请求地址
+     * @throws java.net.ConnectException 检测到内网地址时抛出
+     */
+    private void assertNotInternalAddress(HttpURLConnection conn, String modelUrl) throws java.net.ConnectException {
+        InetAddress connectedAddr = null;
+        try {
+            java.lang.reflect.Method m = conn.getClass().getMethod("getConnectedAddress");
+            connectedAddr = (InetAddress) m.invoke(conn);
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.debug("fetchModelList: 无法获取连接地址", e);
+        }
+        if (connectedAddr != null
+                && (connectedAddr.isSiteLocalAddress()
+                || connectedAddr.isLoopbackAddress()
+                || connectedAddr.isLinkLocalAddress()
+                || connectedAddr.isAnyLocalAddress())) {
+            log.warn("fetchModelList: DNS重绑定检测到内网地址, ip={}, url={}",
+                    connectedAddr.getHostAddress(), modelUrl);
+            throw new java.net.ConnectException("禁止访问内网地址（DNS重绑定）");
         }
     }
 

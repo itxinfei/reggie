@@ -24,4 +24,11 @@ public interface PointsRecordService extends IService<PointsRecord> {
      * @return 分页积分流水
      */
     Page<PointsRecord> listByMember(Long memberId, int page, int pageSize);
+
+    /**
+     * 处理过期积分：按 member_id 分组汇总过期积分，逐个扣减并写入 OUT 流水，
+     * 然后将过期记录逻辑删除防止重复处理。
+     * 由 {@link com.reggie.module.schedule.task.PointsExpireTask} 每天凌晨调用。
+     */
+    void expirePointsBatch();
 }

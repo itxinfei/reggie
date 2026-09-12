@@ -213,6 +213,7 @@
                 <div class="divNum">
                     <span>￥</span>
                     <span>{{ finalPrice.toFixed(2) }}</span>
+                    <span class="divDiscount" v-if="deliveryFee > 0">含配送费¥{{ Number(deliveryFee).toFixed(2) }}</span>
                     <span class="divDiscount" v-if="discountAmount > 0">已优惠¥{{ Number(discountAmount).toFixed(2) }}</span>
                 </div>
                 <div class="divPrice"></div>
@@ -261,6 +262,8 @@
                         couponLoading:false,
                         // 配送方式：0=立即配送，1=预约配送
                         deliveryMode: 0,
+                        // 配送费（从商家信息获取，展示用；后端按距离实际计算为准）
+                        deliveryFee: 0,
                         // 送达时间选择（立即配送）
                         showTimePicker: false,
                         selectedTimeIdx: 0,
@@ -323,9 +326,9 @@
                         }
                         return 0
                     },
-                    // 修改点：计算实付金额（优惠后），作为订单实际金额传给后端
+                    // 修改点：计算实付金额（菜品 + 配送费 - 优惠券），展示用；后端按距离实际计算配送费为准
                     finalPrice(){
-                        const raw = Math.max(0, this.goodsPrice - this.discountAmount)
+                        const raw = Math.max(0, this.goodsPrice + this.deliveryFee - this.discountAmount)
                         // 修改点：四舍五入到分，避免浮点数减法误差
                         return Math.round(raw * 100) / 100
                     },
@@ -377,6 +380,13 @@
                         }).catch(()=>{})
                     }
                     this.initData()
+                    // 修改点：加载商家配送费，用于结算页展示（后端按距离实际计算为准）
+                    var self = this
+                    fetchRestaurantInfo().then(function(res){
+                        if(res.code === 1 && res.data){
+                            self.deliveryFee = Number(res.data.deliveryFee) || 0
+                        }
+                    }).catch(function(){})
                 },
                 methods:{
                     // 修改点：将common.js的全局函数imgPath注册为Vue实例方法

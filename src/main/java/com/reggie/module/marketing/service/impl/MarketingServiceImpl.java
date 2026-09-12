@@ -305,34 +305,12 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
             Long tenantId) {
         Map<String, Object> result = new HashMap<>();
 
-        // 查询所有进行中的营销活动
-        LambdaQueryWrapper<FullReductionRule> frQw = new LambdaQueryWrapper<>();
-        frQw.eq(FullReductionRule::getTenantId, tenantId);
-        frQw.eq(FullReductionRule::getStatus, 1);
-        List<FullReductionRule> allFrRules = fullReductionRuleMapper.selectList(frQw);
+        // 查询所有进行中的营销活动（等价抽取）
+        List<FullReductionRule> allFrRules = loadActiveFrRules(tenantId);
+        List<DiscountRule> allDrRules = loadActiveDrRules(tenantId);
 
-        LambdaQueryWrapper<DiscountRule> drQw = new LambdaQueryWrapper<>();
-        drQw.eq(DiscountRule::getTenantId, tenantId);
-        drQw.eq(DiscountRule::getStatus, 1);
-        List<DiscountRule> allDrRules = discountRuleMapper.selectList(drQw);
-
-        // 一次性批量查询当前用户在该租户下所有满减规则的使用记录
-        // 然后用内存中的 groupingBy 统计 (campaignId, ruleId) -> 使用次数，避免 N+1 查询
-        List<CampaignUsageRecord> allUsageRecords;
-        if (userId != null && tenantId != null) {
-            LambdaQueryWrapper<CampaignUsageRecord> usageQw = new LambdaQueryWrapper<>();
-            usageQw.eq(CampaignUsageRecord::getUserId, userId);
-            usageQw.eq(CampaignUsageRecord::getTenantId, tenantId);
-            usageQw.eq(CampaignUsageRecord::getRuleType, 1); // 只查满减类型的记录
-            allUsageRecords = usageRecordMapper.selectList(usageQw);
-        } else {
-            allUsageRecords = new ArrayList<>();
-        }
-        Map<String, Integer> usageCountMap = new HashMap<>();
-        for (CampaignUsageRecord record : allUsageRecords) {
-            String key = record.getCampaignId() + "_" + record.getRuleId();
-            usageCountMap.put(key, usageCountMap.getOrDefault(key, 0) + 1);
-        }
+        // 一次性批量查询当前用户在该租户下所有满减规则的使用记录，内存统计，避免 N+1（等价抽取）
+        Map<String, Integer> usageCountMap = loadUsageCountMap(userId, tenantId);
 
         // 计算满减优惠
         BigDecimal frDiscount = BigDecimal.ZERO;
@@ -395,6 +373,48 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
 
         result.put("orderAmount", orderAmount);
         return result;
+    }
+
+    /**
+     * 加载租户下进行中的满减规则（等价抽取）。
+     */
+    private List<FullReductionRule> loadActiveFrRules(Long tenantId) {
+        LambdaQueryWrapper<FullReductionRule> frQw = new LambdaQueryWrapper<>();
+        frQw.eq(FullReductionRule::getTenantId, tenantId);
+        frQw.eq(FullReductionRule::getStatus, 1);
+        return fullReductionRuleMapper.selectList(frQw);
+    }
+
+    /**
+     * 加载租户下进行中的折扣规则（等价抽取）。
+     */
+    private List<DiscountRule> loadActiveDrRules(Long tenantId) {
+        LambdaQueryWrapper<DiscountRule> drQw = new LambdaQueryWrapper<>();
+        drQw.eq(DiscountRule::getTenantId, tenantId);
+        drQw.eq(DiscountRule::getStatus, 1);
+        return discountRuleMapper.selectList(drQw);
+    }
+
+    /**
+     * 一次性加载用户满减规则使用次数映射 (campaignId_ruleId -> 次数)，避免 N+1（等价抽取）。
+     */
+    private Map<String, Integer> loadUsageCountMap(Long userId, Long tenantId) {
+        List<CampaignUsageRecord> allUsageRecords;
+        if (userId != null && tenantId != null) {
+            LambdaQueryWrapper<CampaignUsageRecord> usageQw = new LambdaQueryWrapper<>();
+            usageQw.eq(CampaignUsageRecord::getUserId, userId);
+            usageQw.eq(CampaignUsageRecord::getTenantId, tenantId);
+            usageQw.eq(CampaignUsageRecord::getRuleType, 1); // 只查满减类型的记录
+            allUsageRecords = usageRecordMapper.selectList(usageQw);
+        } else {
+            allUsageRecords = new ArrayList<>();
+        }
+        Map<String, Integer> usageCountMap = new HashMap<>();
+        for (CampaignUsageRecord record : allUsageRecords) {
+            String key = record.getCampaignId() + "_" + record.getRuleId();
+            usageCountMap.put(key, usageCountMap.getOrDefault(key, 0) + 1);
+        }
+        return usageCountMap;
     }
 
     // ==================== 使用记录 ====================

@@ -150,113 +150,145 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         final AiProviderConfig providerConfig = aiProviderManager.getActiveConfig();
         final Long tenantId = BaseContext.getCurrentTenantId();
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                List<AIMessage> messages = buildMessages(request);
-                int maxTokens = (providerConfig != null && providerConfig.getMaxTokens() != null)
-                        ? providerConfig.getMaxTokens() : aiConfig.getMaxTokens();
-                double temperature = (providerConfig != null && providerConfig.getTemperature() != null)
-                        ? providerConfig.getTemperature() : aiConfig.getTemperature();
-
-                final long[] firstTokenTime = new long[1];
-                long streamStart = System.currentTimeMillis();
-
-                // 使用真流式输出（适配器直接支持 SSE 或降级分块）
-                StringBuilder fullContent = new StringBuilder();
-                final Long[] savedAiMsgId = new Long[1];
-                final List<AIRecommendedDish>[] parsedDishes = new List[]{null};
-
-                StreamCallback callback = new StreamCallback() {
-                    /**
-                     * 处理 on token。
-                     * @param token 参数 token
-                     * @param isLast 参数 isLast
-                     */
-                    @Override
-                    public void onToken(String token, boolean isLast) {
-                        try {
-                            if (isLast) {
-                                // 最后一块：持久化并发送完成信号
-                                String content = fullContent.toString();
-                                if (content.isEmpty()) return;
-
-                                // 解析推荐菜品（点餐场景）
-                                List<AIRecommendedDish> dishes = null;
-                                if ("order_assistant".equals(scene)) {
-                                    dishes = parseRecommendedDishes(content, tenantId);
-                                    parsedDishes[0] = dishes;
-                                    content = cleanJsonFromContent(content);
-                                }
-
-                                savedAiMsgId[0] = saveAiMessage(conversationId, userId,
-                                        content, null, dishes);
-
-                                Map<String, Object> doneData = new HashMap<>();
-                                doneData.put("status", "complete");
-                                if (savedAiMsgId[0] != null) {
-                                    doneData.put("messageId", savedAiMsgId[0]);
-                                }
-                                emitter.send(SseEmitter.event().name("done").data(doneData));
-
-                                if ("order_assistant".equals(scene) && dishes != null && !dishes.isEmpty()) {
-                                    try {
-                                        String dishJson = OBJECT_MAPPER.writeValueAsString(dishes);
-                                        emitter.send(SseEmitter.event().name("dishes").data(dishJson));
-                                    } catch (Exception e) {
-                                        // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                                        log.warn("序列化推荐菜品失败", e);
-                                    }
-                                }
-
-                                updateConversationTitle(conversationId, userMessage);
-                                emitter.complete();
-                            } else {
-                                // 中间 token：累积内容并推送
-                                fullContent.append(token);
-                                long now = System.currentTimeMillis();
-                                if (firstTokenTime[0] == 0) {
-                                    firstTokenTime[0] = now - streamStart;
-                                    log.debug("首字延迟: {}ms, conversationId={}", firstTokenTime[0], conversationId);
-                                }
-                                Map<String, Object> chunkData = new HashMap<>();
-                                chunkData.put("text", token);
-                                emitter.send(SseEmitter.event().name("message").data(chunkData));
-                            }
-                        } catch (Exception e) {
-                            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                            log.warn("SSE token推送失败: conversationId={}", conversationId, e);
-                        }
-                    }
-                };
-
-                // 调用流式接口
-                aiProviderManager.streamChat(messages, maxTokens, temperature, callback);
-
-                // 超时兜底：如果流式完成时间过长，记录延迟
-                if (firstTokenTime[0] > 0) {
-                    long totalTime = System.currentTimeMillis() - streamStart;
-                    if (firstTokenTime[0] > 3000) {
-                        log.warn("首字延迟过高: {}ms, totalTime={}ms, provider={}",
-                                firstTokenTime[0], totalTime,
-                                providerConfig != null ? providerConfig.getProviderCode() : "default");
-                    }
-                }
-            } catch (Exception e) {
-                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                log.error("SSE流式对话异常: conversationId={}", conversationId, e);
-                try {
-                    Map<String, Object> errorData = new HashMap<>();
-                    errorData.put("message", "服务暂时不可用，请稍后重试");
-                    emitter.send(SseEmitter.event().name("error").data(errorData));
-                    emitter.complete();
-                } catch (Exception ex) {
-                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                    emitter.completeWithError(ex);
-                }
-            }
-        }, aiExecutor);
+        CompletableFuture.runAsync(() -> doStreamChat(request, emitter, providerConfig, tenantId, userId,
+                conversationId, scene, userMessage), aiExecutor);
 
         return emitter;
+    }
+
+    /**
+     * 异步执行流式对话（等价抽取，降低方法长度）。
+     */
+    private void doStreamChat(AIChatRequest request, SseEmitter emitter, AiProviderConfig providerConfig,
+            Long tenantId, Long userId, String conversationId, String scene, String userMessage) {
+        try {
+            List<AIMessage> messages = buildMessages(request);
+            int maxTokens = (providerConfig != null && providerConfig.getMaxTokens() != null)
+                    ? providerConfig.getMaxTokens() : aiConfig.getMaxTokens();
+            double temperature = (providerConfig != null && providerConfig.getTemperature() != null)
+                    ? providerConfig.getTemperature() : aiConfig.getTemperature();
+
+            final long[] firstTokenTime = new long[1];
+            long streamStart = System.currentTimeMillis();
+
+            // 使用真流式输出（适配器直接支持 SSE 或降级分块）
+            StringBuilder fullContent = new StringBuilder();
+            final Long[] savedAiMsgId = new Long[1];
+            final List<AIRecommendedDish>[] parsedDishes = new List[]{null};
+
+            StreamCallback callback = new StreamCallback() {
+                /**
+                 * 处理 on token。
+                 * @param token 参数 token
+                 * @param isLast 参数 isLast
+                 */
+                @Override
+                public void onToken(String token, boolean isLast) {
+                    try {
+                        if (isLast) {
+                            // 最后一块：持久化并发送完成信号
+                            handleStreamComplete(emitter, fullContent, scene, tenantId, parsedDishes,
+                                    savedAiMsgId, conversationId, userId, userMessage);
+                        } else {
+                            // 中间 token：累积内容并推送
+                            fullContent.append(token);
+                            long now = System.currentTimeMillis();
+                            if (firstTokenTime[0] == 0) {
+                                firstTokenTime[0] = now - streamStart;
+                                log.debug("首字延迟: {}ms, conversationId={}", firstTokenTime[0], conversationId);
+                            }
+                            Map<String, Object> chunkData = new HashMap<>();
+                            chunkData.put("text", token);
+                            emitter.send(SseEmitter.event().name("message").data(chunkData));
+                        }
+                    } catch (Exception e) {
+                        // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+                        log.warn("SSE token推送失败: conversationId={}", conversationId, e);
+                    }
+                }
+            };
+
+            // 调用流式接口
+            aiProviderManager.streamChat(messages, maxTokens, temperature, callback);
+
+            // 超时兜底：如果流式完成时间过长，记录延迟
+            if (firstTokenTime[0] > 0) {
+                long totalTime = System.currentTimeMillis() - streamStart;
+                if (firstTokenTime[0] > 3000) {
+                    log.warn("首字延迟过高: {}ms, totalTime={}ms, provider={}",
+                            firstTokenTime[0], totalTime,
+                            providerConfig != null ? providerConfig.getProviderCode() : "default");
+                }
+            }
+        } catch (Exception e) {
+            handleStreamError(emitter, conversationId, e);
+        }
+    }
+
+    /**
+     * 处理流式最后一块：持久化并发送完成信号（等价抽取）。
+     */
+    private void handleStreamComplete(SseEmitter emitter, StringBuilder fullContent, String scene, Long tenantId,
+            List<AIRecommendedDish>[] parsedDishes, Long[] savedAiMsgId, String conversationId, Long userId,
+            String userMessage) throws java.io.IOException {
+        String content = fullContent.toString();
+        if (content.isEmpty()) {
+            return;
+        }
+
+        // 解析推荐菜品（点餐场景）
+        List<AIRecommendedDish> dishes = null;
+        if ("order_assistant".equals(scene)) {
+            dishes = parseRecommendedDishes(content, tenantId);
+            parsedDishes[0] = dishes;
+            content = cleanJsonFromContent(content);
+        }
+
+        savedAiMsgId[0] = saveAiMessage(conversationId, userId, content, null, dishes);
+
+        Map<String, Object> doneData = new HashMap<>();
+        doneData.put("status", "complete");
+        if (savedAiMsgId[0] != null) {
+            doneData.put("messageId", savedAiMsgId[0]);
+        }
+        emitter.send(SseEmitter.event().name("done").data(doneData));
+
+        if ("order_assistant".equals(scene) && dishes != null && !dishes.isEmpty()) {
+            sendDishesEvent(emitter, dishes);
+        }
+
+        updateConversationTitle(conversationId, userMessage);
+        emitter.complete();
+    }
+
+    /**
+     * 发送推荐菜品事件（等价抽取，失败静默降级）。
+     */
+    private void sendDishesEvent(SseEmitter emitter, List<AIRecommendedDish> dishes) {
+        try {
+            String dishJson = OBJECT_MAPPER.writeValueAsString(dishes);
+            emitter.send(SseEmitter.event().name("dishes").data(dishJson));
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.warn("序列化推荐菜品失败", e);
+        }
+    }
+
+    /**
+     * 处理流式异常并推送错误事件（等价抽取）。
+     */
+    private void handleStreamError(SseEmitter emitter, String conversationId, Exception e) {
+        // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+        log.error("SSE流式对话异常: conversationId={}", conversationId, e);
+        try {
+            Map<String, Object> errorData = new HashMap<>();
+            errorData.put("message", "服务暂时不可用，请稍后重试");
+            emitter.send(SseEmitter.event().name("error").data(errorData));
+            emitter.complete();
+        } catch (Exception ex) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            emitter.completeWithError(ex);
+        }
     }
 
     /**

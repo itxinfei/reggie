@@ -21,6 +21,7 @@ import com.reggie.enums.StockRecordType;
 import com.reggie.module.inventory.service.MaterialService;
 import com.reggie.module.inventory.service.StockCheckService;
 import com.reggie.module.inventory.service.StockRecordService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
  * @author reggie
  * @since 2026-07-09
  */
+@Slf4j
 @Service
 public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCheck> implements StockCheckService {
 
@@ -141,21 +143,34 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
                 throw new CustomException("盘点明细数据不完整，请检查食材ID和实盘数量");
             }
 
-            Material material = materialService.getById(materialId);
-            if (material == null) {
-                throw new CustomException("食材不存在: " + materialId);
+            // CAS 重试：读取账面数量后尝试条件更新，若并发出入库已改变 stock_qty 则重试（最多 3 次）
+            BigDecimal bookQty = null;
+            BigDecimal diff = null;
+            BigDecimal unitPrice = BigDecimal.ZERO;
+            int maxRetries = 3;
+            for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                Material material = materialService.getById(materialId);
+                if (material == null) {
+                    throw new CustomException("食材不存在: " + materialId);
+                }
+                bookQty = material.getStockQty() != null ? material.getStockQty() : BigDecimal.ZERO;
+                unitPrice = material.getUnitPrice() != null ? material.getUnitPrice() : BigDecimal.ZERO;
+                diff = actualQty.subtract(bookQty);
+
+                // CAS 原子更新：仅当 stock_qty 仍等于读取时的 bookQty 才写入 actualQty
+                int casRows = materialMapper.casAdjustStock(materialId, bookQty, actualQty);
+                if (casRows > 0) {
+                    // CAS 成功，跳出重试
+                    break;
+                }
+                if (attempt == maxRetries) {
+                    throw new CustomException("食材「" + material.getName() + "」库存并发变动频繁，盘点保存失败，请重试");
+                }
+                // CAS 失败，重新读取最新账面数量进入下一轮
+                log.warn("[盘点CAS重试] 食材{}第{}次尝试失败，库存已变动，重新读取", String.valueOf(materialId), String.valueOf(attempt));
             }
 
-            BigDecimal bookQty = material.getStockQty() != null ? material.getStockQty() : BigDecimal.ZERO;
-            BigDecimal diff = actualQty.subtract(bookQty);
-            totalDiff = totalDiff.add(diff.multiply(material.getUnitPrice() != null ? material
-                    .getUnitPrice() : BigDecimal.ZERO));
-
-            // 修改点：原子设置库存为实际盘点数量，消除 read-modify-write（updateById 整体写回覆盖并发字段）
-            int adjRows = materialMapper.adjustStockTo(materialId, actualQty);
-            if (adjRows == 0) {
-                throw new CustomException("食材不存在: " + materialId);
-            }
+            totalDiff = totalDiff.add(diff.multiply(unitPrice));
 
             StockCheckDetail detail = new StockCheckDetail();
             detail.setCheckId(checkId);
@@ -172,7 +187,7 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
             record.setMaterialId(materialId);
             record.setType(StockRecordType.CHECK.getValue());
             record.setQty(diff);
-            record.setUnitPrice(material.getUnitPrice());
+            record.setUnitPrice(unitPrice);
             record.setBizId(checkId);
             record.setRemark("盘点调整");
             record.setOperator(sc.getOperator());

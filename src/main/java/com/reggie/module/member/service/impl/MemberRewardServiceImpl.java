@@ -16,6 +16,7 @@ import com.reggie.module.order.model.Orders;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -47,16 +48,13 @@ public class MemberRewardServiceImpl extends ServiceImpl<MemberMapper, Member> i
      * 订单成交后发放会员权益（积分 + 优惠券核销）
      * <p>
      * 设计说明：
-     * - 本方法由异步事件监听器 {@link com.reggie.module.member.listener.OrderCompletedListener} 调用，
-     *   在独立线程（recommendExecutor）中执行，不绑定订单主事务。
-     * - addPoints / useCoupon 各自已有独立 @Transactional，保证单步操作原子性。
-     * - 两步之间非事务原子：因异步调用 + 代理绕过（注入实现类），外层 @Transactional 不生效。
-     * - 幂等设计（已发放则跳过）保证重复调用安全；部分失败通过日志告警 + 补偿机制处理。
-     * - 若 addPoints 成功但 useCoupon 失败，系统处于不一致状态（已发积分但未核销券），
-     *   需依赖补偿任务或对账修复。当前设计接受此风险（异步场景）。
+     * - 整体 @Transactional 保证积分发放与券核销在同一事务内，任一失败全部回滚。
+     * - 幂等设计（已发放则跳过）保证重复调用安全。
+     * - 若内部某步骤非幂等性失败（如并发），事务整体回滚，由调用方或补偿任务重试。
      * </p>
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void grantReward(Orders order) {
         if (order == null || order.getUserId() == null) {
             return;
@@ -64,43 +62,33 @@ public class MemberRewardServiceImpl extends ServiceImpl<MemberMapper, Member> i
         Long userId = order.getUserId();
 
         // 1. 积分发放：按实收金额（amount）计算，整取积分（幂等：同一订单仅发放一次）
-        try {
-            boolean alreadyGranted = pointsRecordService.lambdaQuery()
-                    .eq(PointsRecord::getBizType, "ORDER")
-                    .eq(PointsRecord::getBizId, order.getId())
-                    .count() > 0;
-            if (alreadyGranted) {
-                log.info("[会员权益] 订单{}积分已发放，跳过重复发放", order.getId());
-            } else {
-                Member member = memberService.getByUserId(userId);
-                if (member != null && order.getAmount() != null
-                        && order.getAmount().compareTo(BigDecimal.ZERO) > 0) {
-                    int points = order.getAmount().setScale(0, RoundingMode.FLOOR).intValue() * POINTS_PER_YUAN;
-                    if (points > 0) {
-                        memberService.addPoints(member.getId(), points, "ORDER", order.getId());
-                        log.info("[会员权益] 订单{}发放积分{}给用户{}会员{}", order.getId(), points, userId, member.getId());
-                    }
+        boolean alreadyGranted = pointsRecordService.lambdaQuery()
+                .eq(PointsRecord::getBizType, "ORDER")
+                .eq(PointsRecord::getBizId, order.getId())
+                .count() > 0;
+        if (alreadyGranted) {
+            log.info("[会员权益] 订单{}积分已发放，跳过重复发放", order.getId());
+        } else {
+            Member member = memberService.getByUserId(userId);
+            if (member != null && order.getAmount() != null
+                    && order.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+                int points = order.getAmount().setScale(0, RoundingMode.FLOOR).intValue() * POINTS_PER_YUAN;
+                if (points > 0) {
+                    memberService.addPoints(member.getId(), points, "ORDER", order.getId());
+                    log.info("[会员权益] 订单{}发放积分{}给用户{}会员{}", order.getId(), points, userId, member.getId());
                 }
             }
-        } catch (Exception e) {
-            // 积分发放失败不影响主交易流程
-            log.error("[会员权益] 订单" + order.getId() + " 积分发放失败: " + e.getMessage());
         }
 
         // 2. 优惠券核销：仅当本单记录了使用的优惠券时核销。
         //    （下单时已同步核销，此处为幂等兜底：completed 订单如券仍为 unused 则补核销；
         //    若已核销 useCoupon 返回 false，静默跳过）
         if (order.getUsedCouponId() != null) {
-            try {
-                // coupon_user.member_id 为会员ID，先经 user→member 映射（与下单核销语义一致）
-                Member member = memberService.getByUserId(userId);
-                Long memberId = member != null ? member.getId() : userId;
-                boolean ok = couponUserService.useCoupon(memberId, order.getUsedCouponId(), order.getId());
-                log.info("[会员权益] 订单{}核销优惠券{}结果={}", order.getId(), order.getUsedCouponId(), ok);
-            } catch (Exception e) {
-                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                log.error("[会员权益] 订单" + order.getId() + " 优惠券核销失败: " + e.getMessage());
-            }
+            // coupon_user.member_id 为会员ID，先经 user→member 映射（与下单核销语义一致）
+            Member member = memberService.getByUserId(userId);
+            Long memberId = member != null ? member.getId() : userId;
+            boolean ok = couponUserService.useCoupon(memberId, order.getUsedCouponId(), order.getId());
+            log.info("[会员权益] 订单{}核销优惠券{}结果={}", order.getId(), order.getUsedCouponId(), ok);
         }
     }
 

@@ -68,14 +68,16 @@ public interface MaterialMapper extends BaseMapper<Material> {
     int addStock(@Param("id") Long id, @Param("qty") BigDecimal qty);
 
     /**
-     * 原子设置食材库存为指定值（用于盘点调整）：stock_qty = #{actualQty}
-     * 修改点：消除盘点场景 read-modify-write（updateById 整体写回覆盖并发字段），
-     * 改为仅更新 stock_qty 字段的原子 UPDATE。
-     * 租户过滤由 TenantLineInnerInterceptor 自动注入，无需手动拼接 tenant_id
+     * CAS 原子设置食材库存：仅当当前 stock_qty = #{expectedQty} 时才更新为 #{actualQty}。
+     * 盘点场景用此方法替代 adjustStockTo，防止盘点期间并发出入库导致 bookQty 陈旧覆盖。
+     * 返回 0 表示库存已被并发修改，调用方应重试。
      * @param id 食材ID
+     * @param expectedQty 预期账面数量（读取时的 stock_qty）
      * @param actualQty 实际盘点数量
-     * @return 受影响行数，0 表示食材不存在
+     * @return 受影响行数，0 表示 CAS 失败或食材不存在
      */
-    @Update("UPDATE material SET stock_qty = #{actualQty}, update_time = NOW() WHERE id = #{id}")
-    int adjustStockTo(@Param("id") Long id, @Param("actualQty") BigDecimal actualQty);
+    @Update("UPDATE material SET stock_qty = #{actualQty}, update_time = NOW() "
+            + "WHERE id = #{id} AND stock_qty = #{expectedQty}")
+    int casAdjustStock(@Param("id") Long id, @Param("expectedQty") BigDecimal expectedQty,
+                       @Param("actualQty") BigDecimal actualQty);
 }

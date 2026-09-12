@@ -246,14 +246,21 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
             Orders order = orderService.getById(po.getOrderId());
             if (order != null && order.getStatus() != null) {
                 if (Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
+                    // 外卖场景：商家接单=开始配送，支付成功直接流转到派送中（跳过待接单中间态）；
+                    // 货到付款(payMethod=6)不走支付回调，此处不会出现，但防御性保留 ORDERED 状态
+                    int nextStatus = Objects.equals(order.getPayMethod(), 6)
+                            ? Orders.STATUS_ORDERED
+                            : Orders.STATUS_DELIVERING;
                     boolean updated = orderService.lambdaUpdate()
                             .eq(Orders::getId, order.getId())
                             .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
-                            .set(Orders::getStatus, Orders.STATUS_ORDERED)
+                            .set(Orders::getStatus, nextStatus)
                             .set(Orders::getCheckoutTime, LocalDateTime.now())
                             .update();
                     if (updated) {
-                        log.info("支付成功联动更新订单: orderId={}, orderStatus=待接单", po.getOrderId());
+                        log.info("支付成功联动更新订单: orderId={}, orderStatus={}",
+                                po.getOrderId(),
+                                nextStatus == Orders.STATUS_DELIVERING ? "派送中" : "待接单");
                         // 拼团订单支付成功：标记参与已支付（独立事务+幂等，非拼团单自动跳过；
                         // try-catch 保护支付主流程，拼团标记异常不影响支付状态）
                         try {

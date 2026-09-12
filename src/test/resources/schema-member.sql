@@ -93,6 +93,7 @@ CREATE TABLE points_record (
   biz_type varchar(50) NULL DEFAULT NULL COMMENT '关联业务类型',
   biz_id bigint NULL DEFAULT NULL COMMENT '关联业务ID',
   remark varchar(200) NULL DEFAULT NULL COMMENT '备注',
+  expire_time datetime NULL DEFAULT NULL COMMENT '积分过期时间',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',

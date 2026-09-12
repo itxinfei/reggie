@@ -180,6 +180,8 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         record.setPoints(points);
         record.setBizType(bizType);
         record.setBizId(bizId);
+        // 积分有效期：获取之日起 1 年
+        record.setExpireTime(LocalDateTime.now().plusYears(1));
         pointsRecordService.save(record);
 
         // 检查是否升级等级（CAS：条件包含当前 levelId，避免并发升级覆盖）
@@ -234,6 +236,22 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         record.setBizType(bizType);
         record.setBizId(bizId);
         pointsRecordService.save(record);
+
+        // 积分扣减后检查是否需要降级
+        Member refreshedMember = getById(memberId);
+        if (refreshedMember != null && refreshedMember.getLevelId() != null) {
+            MemberLevel currentLevel = memberLevelService.findLevelByPoints(refreshedMember.getPoints());
+            if (currentLevel != null && !currentLevel.getId().equals(refreshedMember.getLevelId())) {
+                // 当前积分对应的等级低于会员已有等级，执行降级
+                LambdaUpdateWrapper<Member> levelUpdate = new LambdaUpdateWrapper<>();
+                levelUpdate.eq(Member::getId, memberId)
+                        .eq(Member::getLevelId, refreshedMember.getLevelId())
+                        .set(Member::getLevelId, currentLevel.getId());
+                boolean updated = baseMapper.update(new Member(), levelUpdate) > 0;
+                log.info("会员等级降级: memberId={}, oldLevel={}, newLevel={}, updated={}",
+                        memberId, refreshedMember.getLevelId(), currentLevel.getId(), updated);
+            }
+        }
     }
 
     /**
