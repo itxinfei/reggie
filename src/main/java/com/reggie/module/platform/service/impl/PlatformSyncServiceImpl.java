@@ -1,21 +1,36 @@
 package com.reggie.module.platform.service.impl;
 
 import com.reggie.common.BaseContext;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.CustomException;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.adapter.PlatformAdapter;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.adapter.PlatformOrder;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.mapper.PlatformSyncLogMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.model.PlatformConfig;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.model.PlatformSyncLog;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.service.PlatformOrderPersistService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.service.PlatformSyncService;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.concurrent.TimeUnit;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 外卖平台同步服务实现
@@ -29,6 +44,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class PlatformSyncServiceImpl implements PlatformSyncService {
 
     /** 最大重试次数 */

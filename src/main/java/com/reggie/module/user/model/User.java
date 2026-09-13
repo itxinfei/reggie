@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import javax.validation.constraints.NotBlank;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
  * 用户信息
  */
 @Data
+@TableName("user")
 @Schema(description = "用户（C端用户）")
 public class User implements Serializable {
 

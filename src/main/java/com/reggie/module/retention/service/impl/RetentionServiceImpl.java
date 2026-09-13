@@ -1,29 +1,52 @@
 package com.reggie.module.retention.service.impl;
 
 import com.reggie.common.R;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.retention.dto.ChurnWarningVO;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.retention.dto.MemberLevelStatsVO;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.retention.dto.MemberVO;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.retention.dto.RetentionTrendVO;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.retention.dto.SmartRecommendVO;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.retention.mapper.RetentionMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.retention.model.RetentionMember;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.retention.service.RetentionService;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import org.springframework.transaction.annotation.Transactional;
 import java.math.RoundingMode;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.temporal.ChronoUnit;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Comparator;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.stream.Collectors;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 会员留存服务实现
@@ -34,6 +57,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @Slf4j
+@Transactional(rollbackFor = Exception.class)
 public class RetentionServiceImpl implements RetentionService {
 
     @Autowired

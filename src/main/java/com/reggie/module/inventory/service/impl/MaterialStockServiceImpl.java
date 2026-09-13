@@ -1,16 +1,26 @@
 package com.reggie.module.inventory.service.impl;
 
 import com.reggie.module.inventory.mapper.MaterialMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.model.DishMaterial;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.service.DishMaterialService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.service.MaterialStockService;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 原料库存联动服务实现
@@ -23,6 +33,7 @@ import java.util.List;
  */
 @Service
 @Slf4j
+@Transactional(rollbackFor = Exception.class)
 public class MaterialStockServiceImpl implements MaterialStockService {
 
     @Autowired(required = false)

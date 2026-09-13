@@ -1,31 +1,56 @@
 package com.reggie.module.inventory.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.mapper.MaterialMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.mapper.PurchaseOrderMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.mapper.StockRecordMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.model.Material;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.model.PurchaseOrder;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.model.StockRecord;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.service.InventoryStatsService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.service.MaterialCategoryService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.service.MaterialService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.service.SupplierService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.enums.PurchaseOrderStatus;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.enums.StockRecordType;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import org.springframework.transaction.annotation.Transactional;
 import java.math.RoundingMode;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalTime;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashMap;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * <p>
@@ -37,6 +62,7 @@ import java.util.Map;
  */
 @Slf4j
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class InventoryStatsServiceImpl implements InventoryStatsService {
 
     @Autowired

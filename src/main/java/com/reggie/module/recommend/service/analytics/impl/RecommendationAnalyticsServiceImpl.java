@@ -1,31 +1,56 @@
 package com.reggie.module.recommend.service.analytics.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.BaseContext;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.order.model.Orders;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.order.service.OrderService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.recommend.mapper.BrowseHistoryMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.recommend.mapper.RecommendationCacheMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.recommend.mapper.RecommendationFeedbackMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.recommend.mapper.UserPreferenceMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.recommend.model.RecommendationCache;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.recommend.model.RecommendationFeedback;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.recommend.service.analytics.RecommendationAnalyticsService;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Arrays;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashMap;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Set;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.stream.Collectors;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * <p>
@@ -38,6 +63,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class RecommendationAnalyticsServiceImpl implements RecommendationAnalyticsService {
 
     /** 概览统计窗口天数（近7天） */

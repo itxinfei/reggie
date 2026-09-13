@@ -1,35 +1,63 @@
 package com.reggie.module.inventory.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.BaseContext;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.ObjectMapperHolder;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.enums.StockRecordType;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.model.Material;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.model.MaterialCategory;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.model.StockRecord;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.service.MaterialCategoryService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.service.MaterialService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.service.ReplenishService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.service.StockRecordService;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import org.springframework.transaction.annotation.Transactional;
 import java.math.RoundingMode;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.HashSet;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Set;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.stream.Collectors;
+import org.springframework.transaction.annotation.Transactional;
 
 import static com.reggie.module.inventory.model.Material.STATUS_NORMAL;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 智能补货服务实现
@@ -48,6 +76,7 @@ import static com.reggie.module.inventory.model.Material.STATUS_NORMAL;
  */
 @Slf4j
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class ReplenishServiceImpl implements ReplenishService {
 
     /** Redis 缓存 Key 前缀 */

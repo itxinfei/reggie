@@ -1,14 +1,22 @@
 package com.reggie.module.platform.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.mapper.DishPlatformMappingMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.model.DishPlatformMapping;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.service.DishPlatformMappingService;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 商品平台映射服务实现
@@ -18,6 +26,7 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class DishPlatformMappingServiceImpl extends ServiceImpl<DishPlatformMappingMapper,
         DishPlatformMapping> implements DishPlatformMappingService {
 

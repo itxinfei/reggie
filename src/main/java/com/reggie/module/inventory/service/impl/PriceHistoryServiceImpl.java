@@ -1,16 +1,26 @@
 package com.reggie.module.inventory.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.BaseContext;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.mapper.PriceHistoryMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.model.PriceHistory;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.service.PriceHistoryService;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 价格历史服务实现
@@ -19,6 +29,7 @@ import java.util.List;
  * @since 2026-09-01
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class PriceHistoryServiceImpl extends ServiceImpl<PriceHistoryMapper, PriceHistory> implements
         PriceHistoryService {
 

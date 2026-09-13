@@ -1,17 +1,28 @@
 package com.reggie.module.platform.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.BaseContext;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.utils.PageUtils;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.mapper.PlatformSyncLogMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.model.PlatformSyncLog;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.service.PlatformSyncLogService;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 平台同步日志服务实现
@@ -20,6 +31,7 @@ import java.util.List;
  * @since 2026-08-24
  */
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class PlatformSyncLogServiceImpl extends ServiceImpl<PlatformSyncLogMapper, PlatformSyncLog> implements
         PlatformSyncLogService {
 

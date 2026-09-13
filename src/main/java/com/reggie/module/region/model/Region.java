@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
@@ -16,6 +17,7 @@ import java.util.List;
  * 省市区三级级联，通过parent_id自关联
  */
 @Data
+@TableName("region")
 @Schema(description = "行政区划实体")
 public class Region implements Serializable {
 

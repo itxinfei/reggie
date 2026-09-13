@@ -1,18 +1,30 @@
 package com.reggie.module.notification.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.utils.PageUtils;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.notification.mapper.NotificationRecordMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.notification.model.NotificationRecord;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.notification.service.NotificationRecordService;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * <p>
@@ -24,6 +36,7 @@ import java.util.Map;
  */
 @Slf4j
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class NotificationRecordServiceImpl
         extends ServiceImpl<NotificationRecordMapper, NotificationRecord>
         implements NotificationRecordService {

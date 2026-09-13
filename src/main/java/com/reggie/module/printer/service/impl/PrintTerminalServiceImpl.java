@@ -1,28 +1,50 @@
 package com.reggie.module.printer.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.CustomException;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.utils.PageUtils;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.printer.dto.AgentRegisterDTO;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.printer.mapper.PrintTaskMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.printer.mapper.PrintTerminalMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.printer.model.PrintTask;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.printer.model.PrintTerminal;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.printer.service.PrintTerminalService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.store.mapper.StoreInfoMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.store.model.StoreInfo;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.format.DateTimeFormatter;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 打印终端服务实现
@@ -35,6 +57,7 @@ import java.util.UUID;
  */
 @Slf4j
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class PrintTerminalServiceImpl extends ServiceImpl<PrintTerminalMapper, PrintTerminal>
         implements PrintTerminalService {
 

@@ -1,19 +1,32 @@
 package com.reggie.module.platform.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.BaseContext;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.mapper.PlatformConfigMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.model.PlatformConfig;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.service.PlatformConfigService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.platform.util.PlatformCredentialEncryptor;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 外卖平台接入配置服务实现
@@ -23,6 +36,7 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class PlatformConfigServiceImpl extends ServiceImpl<PlatformConfigMapper, PlatformConfig> implements
         PlatformConfigService {
 

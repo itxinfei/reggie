@@ -1,32 +1,53 @@
 package com.reggie.module.invoice.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.BaseContext;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.CustomException;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.invoice.mapper.InvoiceRecordMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.invoice.mapper.InvoiceTitleMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.invoice.model.InvoiceRecord;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.invoice.model.InvoiceTitle;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.invoice.service.InvoiceService;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.order.model.Orders;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.order.mapper.OrderMapper;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Objects;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 发票服务实现
  */
 @Slf4j
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, InvoiceRecord> implements InvoiceService {
 
     @Autowired

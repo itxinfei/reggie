@@ -1,20 +1,34 @@
 package com.reggie.module.schedule.service.impl;
 
 import com.reggie.common.BaseContext;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.CustomException;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.R;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.schedule.model.WorkSchedule;
+import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.schedule.service.WorkScheduleService;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalTime;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.format.DateTimeFormatter;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 排班服务实现类
@@ -25,6 +39,7 @@ import java.util.Map;
  */
 @Slf4j
 @Service
+@Transactional(rollbackFor = Exception.class)
 public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
