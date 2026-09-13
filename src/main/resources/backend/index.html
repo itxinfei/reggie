@@ -227,7 +227,7 @@
               /* ──1. 数据概览（直链，无二级）── */
               { id: '1', name: '数据概览', url: 'page/dashboard/overview.html', icon: 'ri-dashboard-line' },
 
-              /* ──2. 商品管理── */
+              /* ──2. 商品管理（4 项）── */
               { id: '2', name: '商品管理', icon: 'ri-shopping-bag-3-line', children: [
                 { id: '2-1', name: '分类管理', url: 'page/category/list.html', icon: 'ri-apps-2-line' },
                 { id: '2-2', name: '菜品管理', url: 'page/food/list.html', icon: 'ri-restaurant-2-line' },
@@ -235,8 +235,8 @@
                 { id: '2-4', name: '菜品规格', url: 'page/food/spec-management.html', icon: 'ri-list-check-2' },
               ]},
 
-              /* ──3. 订单管理（原订单中心-交易管理，扁平化）── */
-              { id: '3', name: '订单管理', icon: 'ri-file-list-3-line', children: [
+              /* ──3. 订单中心（6 项，合并订单管理+收银台+催菜）── */
+              { id: '3', name: '订单中心', icon: 'ri-file-list-3-line', children: [
                 { id: '3-1', name: '订单明细', url: 'page/order/list.html', icon: 'ri-file-list-3-line' },
                 { id: '3-2', name: '待处理订单', url: 'page/order/pending-monitor.html', icon: 'ri-radar-line' },
                 { id: '3-3', name: '紧急催菜', url: 'page/urgency/urgency.html', icon: 'ri-alarm-warning-line' },
@@ -245,102 +245,74 @@
                 { id: '3-6', name: '收银日结', url: 'page/cashier/daily-settlement.html', icon: 'ri-calendar-check-line' },
               ]},
 
-              /* ──4. 配送物流（原订单中心-配送/打印，独立一级）── */
-              { id: '4', name: '配送物流', icon: 'ri-truck-line', children: [
-                { id: '4-1', name: '配送订单', url: 'page/delivery/order-list.html', icon: 'ri-map-pin-line' },
-                { id: '4-2', name: '配送范围', url: 'page/delivery/range-management.html', icon: 'ri-road-map-line' },
-                { id: '4-3', name: '平台订单', url: 'page/platform/order-list.html', icon: 'ri-list-check-2' },
-                { id: '4-4', name: '商品映射', url: 'page/platform/dish-mapping.html', icon: 'ri-price-tag-3-line' },
-                { id: '4-5', name: '平台配置', url: 'page/platform/config.html', icon: 'ri-settings-3-line' },
-                { id: '4-6', name: '打印终端', url: 'page/printer/terminal-list.html', icon: 'ri-printer-line' },
-                { id: '4-7', name: '打印任务', url: 'page/printer/task-list.html', icon: 'ri-file-history-line' },
+              /* ──4. 堂食管理（4 项）── */
+              { id: '4', name: '堂食管理', icon: 'ri-store-2-line', children: [
+                { id: '4-1', name: '桌台管理', url: 'page/dining/table-list.html', icon: 'ri-layout-grid-line' },
+                { id: '4-2', name: '区域管理', url: 'page/dining/area-list.html', icon: 'ri-map-pin-2-line' },
+                { id: '4-3', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'ri-ticket-line' },
+                { id: '4-4', name: '预订管理', url: 'page/dining/reservation-list.html', icon: 'ri-calendar-check-line' },
               ]},
 
-              /* ──5. 堂食管理── */
-              { id: '5', name: '堂食管理', icon: 'ri-store-2-line', children: [
-                { id: '5-1', name: '桌台管理', url: 'page/dining/table-list.html', icon: 'ri-layout-grid-line' },
-                { id: '5-2', name: '区域管理', url: 'page/dining/area-list.html', icon: 'ri-map-pin-2-line' },
-                { id: '5-3', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'ri-ticket-line' },
-                { id: '5-4', name: '预订管理', url: 'page/dining/reservation-list.html', icon: 'ri-calendar-check-line' },
+              /* ──5. 配送平台（7 项，重新组织配送+平台+打印）── */
+              { id: '5', name: '配送平台', icon: 'ri-truck-line', children: [
+                { id: '5-1', name: '配送订单', url: 'page/delivery/order-list.html', icon: 'ri-map-pin-line' },
+                { id: '5-2', name: '配送范围', url: 'page/delivery/range-management.html', icon: 'ri-road-map-line' },
+                { id: '5-3', name: '平台订单', url: 'page/platform/order-list.html', icon: 'ri-list-check-2' },
+                { id: '5-4', name: '商品映射', url: 'page/platform/dish-mapping.html', icon: 'ri-price-tag-3-line' },
+                { id: '5-5', name: '平台配置', url: 'page/platform/config.html', icon: 'ri-settings-3-line' },
+                { id: '5-6', name: '打印终端', url: 'page/printer/terminal-list.html', icon: 'ri-printer-line' },
+                { id: '5-7', name: '打印任务', url: 'page/printer/task-list.html', icon: 'ri-file-history-line' },
               ]},
 
-              /* ──6. 商品库存（原进销存，语义更直觉）── */
-              { id: '6', name: '商品库存', icon: 'ri-archive-line', children: [
-                { id: '6-1', name: '原料管理', url: 'page/inventory/material-list.html', icon: 'ri-leaf-line' },
-                { id: '6-2', name: '食材分类', url: 'page/inventory/category-list.html', icon: 'ri-folder-3-line' },
-                { id: '6-3', name: '库存盘点', url: 'page/inventory/stock-check.html', icon: 'ri-check-double-line' },
-                { id: '6-4', name: '库存流水', url: 'page/inventory/stock-record.html', icon: 'ri-route-line' },
-                { id: '6-5', name: '采购管理', url: 'page/inventory/purchase-list.html', icon: 'ri-shopping-cart-2-line' },
-                { id: '6-6', name: '供应商管理', url: 'page/inventory/supplier-list.html', icon: 'ri-truck-line' },
-                { id: '6-7', name: '库存预警', url: 'page/inventory/material-warning.html', icon: 'ri-alert-line' },
+              /* ──6. 会员中心（7 项，精简会员+营销）── */
+              { id: '6', name: '会员中心', icon: 'ri-group-line', children: [
+                { id: '6-1', name: '会员列表', url: 'page/member-center/member-list.html', icon: 'ri-user-star-line' },
+                { id: '6-2', name: '会员等级', url: 'page/member-center/level-list.html', icon: 'ri-vip-crown-line' },
+                { id: '6-3', name: '积分管理', url: 'page/member-center/points-list.html', icon: 'ri-coin-line' },
+                { id: '6-4', name: '优惠券', url: 'page/member-center/coupon-list.html', icon: 'ri-coupon-line' },
+                { id: '6-5', name: '充值记录', url: 'page/member-center/recharge-list.html', icon: 'ri-bank-card-line' },
+                { id: '6-6', name: '营销活动', url: 'page/marketing/index.html', icon: 'ri-flag-line' },
+                { id: '6-7', name: '会员挽留', url: 'page/retention/retention.html', icon: 'ri-heart-line' },
               ]},
 
-              /* ──7. 会员营销（原会员与用户 + 原营销活动）── */
-              { id: '7', name: '会员营销', icon: 'ri-group-line', children: [
-                { id: '7-1', name: '会员列表', url: 'page/member-center/member-list.html', icon: 'ri-user-star-line' },
-                { id: '7-2', name: '会员等级', url: 'page/member-center/level-list.html', icon: 'ri-vip-crown-line' },
-                { id: '7-3', name: '积分管理', url: 'page/member-center/points-list.html', icon: 'ri-coin-line' },
-                { id: '7-4', name: '优惠券', url: 'page/member-center/coupon-list.html', icon: 'ri-coupon-line' },
-                { id: '7-5', name: '充值记录', url: 'page/member-center/recharge-list.html', icon: 'ri-bank-card-line' },
-                { id: '7-6', name: 'C端用户', url: 'page/user/list.html', icon: 'ri-user-3-line' },
-                { id: '7-7', name: '会员挽留', url: 'page/retention/retention.html', icon: 'ri-heart-line' },
-                { id: '7-8', name: '营销活动', url: 'page/marketing/index.html', icon: 'ri-flag-line' },
+              /* ──7. 数据报表（8 项，合并报表+导出+支付分析）── */
+              { id: '7', name: '数据报表', icon: 'ri-bar-chart-line', children: [
+                { id: '7-1', name: '营业日报', url: 'page/report/daily.html', icon: 'ri-file-chart-line' },
+                { id: '7-2', name: '经营报表', url: 'page/report/business-report.html', icon: 'ri-line-chart-line' },
+                { id: '7-3', name: '销售报表', url: 'page/report/sales-report.html', icon: 'ri-bar-chart-grouped-line' },
+                { id: '7-4', name: '菜品排行', url: 'page/report/dish-ranking.html', icon: 'ri-trophy-line' },
+                { id: '7-5', name: '时段分析', url: 'page/report/time-slot.html', icon: 'ri-time-line' },
+                { id: '7-6', name: '支付分析', url: 'page/report/payment-analysis.html', icon: 'ri-wallet-line' },
+                { id: '7-7', name: '评价管理', url: 'page/report/evaluation-list.html', icon: 'ri-star-line' },
+                { id: '7-8', name: '导出中心', url: 'page/export/index.html', icon: 'ri-file-download-line' },
               ]},
 
-              /* ──8. 数据报表（原经营分析-报表类）── */
-              { id: '8', name: '数据报表', icon: 'ri-bar-chart-line', children: [
-                { id: '8-1', name: '营业日报', url: 'page/report/daily.html', icon: 'ri-file-chart-line' },
-                { id: '8-2', name: '经营报表', url: 'page/report/business-report.html', icon: 'ri-line-chart-line' },
-                { id: '8-3', name: '销售报表', url: 'page/report/sales-report.html', icon: 'ri-bar-chart-grouped-line' },
-                { id: '8-4', name: '菜品排行', url: 'page/report/dish-ranking.html', icon: 'ri-trophy-line' },
-                { id: '8-5', name: '时段分析', url: 'page/report/time-slot.html', icon: 'ri-time-line' },
-                { id: '8-6', name: '评价管理', url: 'page/report/evaluation-list.html', icon: 'ri-star-line' },
-                { id: '8-7', name: '导出中心', url: 'page/export/index.html', icon: 'ri-file-download-line' },
+              /* ──8. 财务加盟（7 项，合并财务+加盟）── */
+              { id: '8', name: '财务加盟', icon: 'ri-wallet-3-line', children: [
+                { id: '8-1', name: '成本概览', url: 'page/cost/overview.html', icon: 'ri-pie-chart-line' },
+                { id: '8-2', name: '菜品成本', url: 'page/cost/dish-cost.html', icon: 'ri-restaurant-line' },
+                { id: '8-3', name: '提现管理', url: 'page/finance/withdrawal.html', icon: 'ri-bank-card-2-line' },
+                { id: '8-4', name: '发票管理', url: 'page/finance/invoice-list.html', icon: 'ri-receipt-line' },
+                { id: '8-5', name: '加盟商', url: 'page/franchise/franchisee-list.html', icon: 'ri-user-star-line' },
+                { id: '8-6', name: '加盟合同', url: 'page/franchise/contract-list.html', icon: 'ri-file-list-3-line' },
+                { id: '8-7', name: '分账结算', url: 'page/franchise/settlement-list.html', icon: 'ri-bank-card-line' },
               ]},
 
-              /* ──9. 财务中心（原经营分析-财务类）── */
-              { id: '9', name: '财务中心', icon: 'ri-wallet-3-line', children: [
-                { id: '9-1', name: '支付分析', url: 'page/report/payment-analysis.html', icon: 'ri-wallet-line' },
-                { id: '9-2', name: '成本概览', url: 'page/cost/overview.html', icon: 'ri-pie-chart-line' },
-                { id: '9-3', name: '菜品成本', url: 'page/cost/dish-cost.html', icon: 'ri-restaurant-line' },
-                { id: '9-4', name: '提现管理', url: 'page/finance/withdrawal.html', icon: 'ri-bank-card-2-line' },
-                { id: '9-5', name: '发票管理', url: 'page/finance/invoice-list.html', icon: 'ri-receipt-line' },
-                { id: '9-6', name: '加盟商', url: 'page/franchise/franchisee-list.html', icon: 'ri-user-star-line' },
-                { id: '9-7', name: '分账结算', url: 'page/franchise/settlement-list.html', icon: 'ri-bank-card-line' },
-              ]},
-
-              /* ──10. 营销门店（原营销与门店 + 智能推荐）── */
-              { id: '10', name: '营销门店', icon: 'ri-megaphone-line', children: [
-                { id: '10-1', name: '智能推荐', url: 'page/recommend/overview.html', icon: 'ri-lightbulb-flash-line' },
-                { id: '10-2', name: '加盟合同', url: 'page/franchise/contract-list.html', icon: 'ri-file-list-3-line' },
-                { id: '10-3', name: '门店列表', url: 'page/store/list.html', icon: 'ri-store-line' },
-                { id: '10-4', name: '总部控制台', url: 'page/store/dashboard.html', icon: 'ri-dashboard-3-line' },
-              ]},
-
-              /* ──11. 系统管理── */
-              { id: '11', name: '系统管理', icon: 'ri-settings-3-line', children: [
-                { id: '11-1', name: '员工管理', url: 'page/member/list.html', icon: 'ri-user-settings-line' },
-                { id: '11-2', name: '角色管理', url: 'page/sys/role-list.html', icon: 'ri-shield-user-line' },
-                { id: '11-3', name: '通知模板', url: 'page/sys/template-list.html', icon: 'ri-message-2-line' },
-                { id: '11-4', name: '系统配置', url: 'page/sys/config-list.html', icon: 'ri-tools-line' },
-                { id: '11-5', name: '操作日志', url: 'page/sys/operation-log.html', icon: 'ri-file-list-2-line' },
-                { id: '11-6', name: '地区管理', url: 'page/region/list.html', icon: 'ri-map-2-line' },
-                { id: '11-7', name: '消息通知', url: 'page/notification/list.html', icon: 'ri-notification-3-line' },
-                { id: '11-8', name: '客服管理', url: 'page/customer-service/list.html', icon: 'ri-customer-service-2-line' },
-                { id: '11-9', name: '考勤排班', url: 'page/attendance/attendance.html', icon: 'ri-calendar-check-line' },
-              ]},
-
-              /* ──12. AI 助手（独立一级，专注工具属性）── */
-              { id: '12', name: 'AI 助手', icon: 'ri-robot-line', children: [
-                { id: '12-1', name: '智能对话', url: 'page/ai/assistant.html', icon: 'ri-chat-3-line' },
-                { id: '12-2', name: '模型配置', url: 'page/ai/provider-config.html', icon: 'ri-cpu-line' },
-              ]},
-              { id: '13', name: '订阅计费', icon: 'ri-vip-crown-line', children: [
-                { id: '13-1', name: '套餐目录', url: 'page/billing/plan.html', icon: 'ri-price-tag-3-line' },
-                { id: '13-2', name: '我的订阅', url: 'page/billing/subscription.html', icon: 'ri-bank-card-line' },
-              ]},
-              { id: '14', name: '后厨出餐', icon: 'ri-restaurant-line', children: [
-                { id: '14-1', name: '出餐大屏', url: 'page/kds/board.html', icon: 'ri-tv-line' },
+              /* ──9. 系统设置（13 项，精简+合并扩展功能）── */
+              { id: '9', name: '系统设置', icon: 'ri-settings-3-line', children: [
+                { id: '9-1', name: '员工管理', url: 'page/member/list.html', icon: 'ri-user-settings-line' },
+                { id: '9-2', name: '角色管理', url: 'page/sys/role-list.html', icon: 'ri-shield-user-line' },
+                { id: '9-3', name: '考勤排班', url: 'page/attendance/attendance.html', icon: 'ri-calendar-check-line' },
+                { id: '9-4', name: '客服管理', url: 'page/customer-service/list.html', icon: 'ri-customer-service-2-line' },
+                { id: '9-5', name: '通知模板', url: 'page/sys/template-list.html', icon: 'ri-message-2-line' },
+                { id: '9-6', name: '消息通知', url: 'page/notification/list.html', icon: 'ri-notification-3-line' },
+                { id: '9-7', name: '系统配置', url: 'page/sys/config-list.html', icon: 'ri-tools-line' },
+                { id: '9-8', name: '操作日志', url: 'page/sys/operation-log.html', icon: 'ri-file-list-2-line' },
+                { id: '9-9', name: '地区管理', url: 'page/region/list.html', icon: 'ri-map-2-line' },
+                { id: '9-10', name: 'AI 助手', url: 'page/ai/assistant.html', icon: 'ri-robot-line' },
+                { id: '9-11', name: 'AI 配置', url: 'page/ai/provider-config.html', icon: 'ri-cpu-line' },
+                { id: '9-12', name: '订阅计费', url: 'page/billing/subscription.html', icon: 'ri-vip-crown-line' },
+                { id: '9-13', name: '出餐大屏', url: 'page/kds/board.html', icon: 'ri-tv-line' },
               ]},
             ],
             iframeUrl: 'page/dashboard/overview.html',
