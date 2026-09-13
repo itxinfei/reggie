@@ -280,6 +280,8 @@
             </div>
         </div>
 
+        <!-- 修改点：van-pull-refresh 包裹内容实现下拉刷新 -->
+        <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
         <div class="frequent-container">
             <!-- 快捷说明 -->
             <div class="quick-header">
@@ -338,6 +340,7 @@
                 <p style="margin-top:6rem;font-size:12rem;">去点餐后，这里会展示您的常购清单</p>
             </div>
         </div>
+        </van-pull-refresh>
     </div>
 
     <script src="../../backend/plugins/vue/vue.js"></script>
@@ -352,6 +355,7 @@
             data() {
                 return {
                     pageLoading: false,
+                    refreshing: false,
                     submitting: null,
                     items: [],
                     activeCategory: '全部',
@@ -371,6 +375,11 @@
                 goBack() {
                     // 修改点：统一走 common.js 的全局兜底
                     goBack();
+                },
+                // 修改点：下拉刷新
+                onRefresh() {
+                    this.initData();
+                    setTimeout(() => { this.refreshing = false; }, 1000);
                 },
                 async initData() {
                     this.pageLoading = true;

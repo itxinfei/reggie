@@ -61,13 +61,13 @@
     .map-areas { display: flex; flex-direction: column; gap: 16px; }
     .map-area { background: var(--bg-surface); border: 1px solid var(--el-border-color); border-radius: var(--radius-lg); padding: 14px 16px; }
     .map-area__head { display: flex; align-items: center; gap: 8px; font-size: var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 12px; }
-    .map-area__count { font-size: 12px; font-weight: 400; color: var(--text-muted); }
+    .map-area__count { font-size: var(--font-size-xs); font-weight: 400; color: var(--text-muted); }
     .map-area__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
     .map-seat { border: 1px solid var(--el-border-color); border-radius: var(--radius-md); padding: 10px 8px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--bg-surface); position: relative; }
     .map-seat:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: var(--el-color-primary); }
     .map-seat--selected { outline: 2px solid var(--el-color-primary); }
     .map-seat__name { font-size: var(--font-size-md); font-weight: 600; color: var(--el-text-primary); }
-    .map-seat__meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .map-seat__meta { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 2px; }
     .map-seat--FREE { border-top: 3px solid var(--color-success); }
     .map-seat--OCCUPIED { border-top: 3px solid var(--color-danger); }
     .map-seat--RESERVED { border-top: 3px solid var(--color-warning); }

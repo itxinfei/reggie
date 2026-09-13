@@ -69,6 +69,8 @@
                     <i class="icon-back-arrow" @click="goBack"></i>地址管理
                 </div>
             </div>
+            <!-- 修改点：van-pull-refresh 包裹内容实现下拉刷新 -->
+            <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
             <div class="divContent">
                 <!-- 修改点：卡片三区块重构 —— 顶部标签+地址 / 中部收货人 / 底部操作栏（默认单选左 + 编辑右），替代原绝对定位编辑图标与裸 divSplit -->
                 <div class="divItem" :class="{itemDefault: item.isDefault === 1}" v-for="item in addressList" :key="item.id" @click="itemClick(item)">
@@ -101,6 +103,7 @@
                     <div class="emptyHint" @click="toAddressCreatePage">点击添加新地址</div>
                 </div>
             </div>
+            </van-pull-refresh>
             <div class="divBottom" @click="toAddressCreatePage">+ 添加收货地址</div>
         </div>
             <!-- 开发环境版本,包含了有帮助的命令行警告 -->
@@ -118,6 +121,7 @@
                     return {
                         addressList:[],
                         loading: false, // 修改点：新增加载状态
+                        refreshing: false, // 修改点：下拉刷新状态
                         settingDefault: false // 修改点：设为默认地址防重锁
                     }
                 },
@@ -126,6 +130,11 @@
                     this.initData()
                 },
                 methods:{
+                    // 修改点：下拉刷新
+                    onRefresh(){
+                        this.initData()
+                        setTimeout(() => { this.refreshing = false }, 1000)
+                    },
                     // 修改点：拼接完整省市区地址
                     fullAddress(item){
                         let parts = []

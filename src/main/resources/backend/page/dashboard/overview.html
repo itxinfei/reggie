@@ -363,7 +363,7 @@
       transform: translateY(-1px);
     }
     .todo-item__icon {
-      font-size: 18px;
+      font-size: var(--font-size-xl);
       color: var(--color-brand-500);
       flex-shrink: 0;
     }
@@ -391,7 +391,7 @@
       font-size: var(--font-size-sm);
     }
     .todo-empty i {
-      font-size: 20px;
+      font-size: var(--font-size-2xl);
       color: var(--color-success);
     }
 
@@ -470,12 +470,12 @@
       <!-- ========== 库存预警提示 ========== -->
       <!-- 修改点：集成库存预警，显示低库存食材名称 -->
       <div v-if="!loading && inventoryAlert && inventoryAlert.lowStockCount > 0" class="inventory-alert">
-        <div style="display:flex;align-items:center;gap:12px;">
+        <div style="display:flex;align-items:center;gap:var(--space-3);">
           <span style="font-size:var(--font-size-3xl);"><i class="ri-error-warning-line" aria-hidden="true"></i></span>
           <div>
             <div class="inventory-alert__title">库存预警：{{ inventoryAlert.lowStockCount }} 种食材库存不足</div>
             <div class="inventory-alert__desc">
-              <span v-for="(item, idx) in (inventoryAlert.lowStockItems || [])" :key="idx" style="margin-right:12px;">
+              <span v-for="(item, idx) in (inventoryAlert.lowStockItems || [])" :key="idx" style="margin-right:var(--space-3);">
                 {{ item.name }}({{ item.stockQty }}{{ item.unit }})
               </span>
             </div>
@@ -510,7 +510,7 @@
               </div>
             </div>
           </div>
-          <div v-else style="text-align:center;padding:40px;color:var(--text-muted);">今日暂无订单</div>
+          <div v-else style="text-align:center;padding:var(--space-10);color:var(--text-muted);">今日暂无订单</div>
         </div>
 
         <div class="bottom-panel chart-panel">

@@ -345,7 +345,7 @@
     <!-- 头部统计（统一 stat-cards 组件） -->
     <div class="cashier-header">
       <div class="cashier-title">
-        <i class="el-icon-shopping-cart-2" style="color: var(--el-color-primary); margin-right: 8px;"></i>
+        <i class="el-icon-shopping-cart-2" style="color: var(--el-color-primary); margin-right: var(--space-2);"></i>
         收银台
       </div>
       <stat-cards :cards="headerCards" :loading="false"></stat-cards>
@@ -360,7 +360,7 @@
           待结账订单
         </div>
         <div class="order-list">
-          <div v-if="pendingOrders.length === 0" style="text-align: center; padding: 40px; color: var(--el-text-secondary);">
+          <div v-if="pendingOrders.length === 0" style="text-align: center; padding: var(--space-10); color: var(--el-text-secondary);">
             暂无待结账订单
           </div>
           <div
@@ -414,7 +414,7 @@
             <span class="summary-value total">¥{{ formatMoney(payableAmount) }}</span>
           </div>
         </div>
-        <div v-else style="text-align: center; padding: 40px; color: var(--el-text-secondary);">
+        <div v-else style="text-align: center; padding: var(--space-10); color: var(--el-text-secondary);">
           请先选择订单
         </div>
 
@@ -435,7 +435,7 @@
                 type="primary"
                 :loading="memberLoading"
                 @click="identifyMember"
-                style="margin-left: 8px;">
+                style="margin-left: var(--space-2);">
                 识别
               </el-button>
             </span>
@@ -495,7 +495,7 @@
 
         <!-- 支付方式 -->
         <div v-if="selectedOrder">
-          <div style="margin-bottom: 12px; font-weight: 500;">支付方式</div>
+          <div style="margin-bottom: var(--space-3); font-weight: 500;">支付方式</div>
           <div class="payment-methods">
             <div
               class="payment-method"
@@ -571,7 +571,7 @@
           </div>
 
           <!-- 备注 -->
-          <div style="margin-bottom: 20px;">
+          <div style="margin-bottom: var(--space-5);">
             <el-input v-model="remark" type="textarea" :rows="2" placeholder="备注（可选）"></el-input>
           </div>
 

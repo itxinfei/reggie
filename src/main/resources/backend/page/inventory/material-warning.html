@@ -23,26 +23,26 @@
 
     /* 批量补货按钮行 */
     .batch-bar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap }
-    .batch-bar__tip { font-size: 12px; color: var(--text-muted) }
+    .batch-bar__tip { font-size: var(--font-size-xs); color: var(--text-muted) }
 
     /* 阈值比例进度条 */
     .ratio-cell { display: flex; align-items: center; gap: 8px; width: 160px }
     .ratio-bar { flex: 1; height: 6px; background: var(--border-default); border-radius: var(--radius-sm); overflow: hidden }
     .ratio-bar__fill { height: 100%; border-radius: var(--radius-sm); transition: width 0.3s }
-    .ratio-text { font-size: 12px; font-weight: 500; min-width: 42px; text-align: right; font-variant-numeric: tabular-nums }
+    .ratio-text { font-size: var(--font-size-xs); font-weight: 500; min-width: 42px; text-align: right; font-variant-numeric: tabular-nums }
 
     /* 补货建议弹窗明细行 */
     .suggest-item { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-default); gap: 12px }
     .suggest-item:last-child { border-bottom: none }
     .suggest-item__name { width: 100px; font-weight: 500; color: var(--text-primary); font-size: var(--font-size-base) }
-    .suggest-item__label { font-size: 12px; color: var(--text-muted); width: 70px }
+    .suggest-item__label { font-size: var(--font-size-xs); color: var(--text-muted); width: 70px }
     .suggest-item__value { font-size: var(--font-size-base); color: var(--text-primary); width: 60px; text-align: right; font-variant-numeric: tabular-nums }
     .suggest-item__qty { width: 90px }
 
     /* 空态 */
     .empty-state { text-align: center; padding: 60px var(--space-4); color: var(--text-muted); font-size: var(--font-size-base) }
     .empty-state__icon { font-size: 48px; line-height: 1; margin-bottom: var(--space-4) }
-    .empty-state__desc { font-size: 12px; color: var(--text-muted); margin-top: var(--space-2) }
+    .empty-state__desc { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-2) }
 
     /* 严重度标签样式微调 */
     .severity-tag { font-weight: 500 }

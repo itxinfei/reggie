@@ -73,7 +73,7 @@
     </div>
 
     <!-- 加载中 -->
-    <div v-if="loading" style="text-align:center;padding:60px 0;color:var(--text-muted);">
+    <div v-if="loading" style="text-align:center;padding:var(--space-15) 0;color:var(--text-muted);">
       <div>加载中...</div>
     </div>
 
@@ -142,7 +142,7 @@
         <div class="qr-title">
           共 <strong>{{ cartTotal() }}</strong> 件商品
         </div>
-        <div style="font-size:var(--font-size-2xl);font-weight:700;color:var(--color-brand-500);margin-bottom:16px;">
+        <div style="font-size:var(--font-size-2xl);font-weight:700;color:var(--color-brand-500);margin-bottom:var(--space-4);">
           合计：￥{{ cartAmount().toFixed(2) }}
         </div>
         <div class="form-group">

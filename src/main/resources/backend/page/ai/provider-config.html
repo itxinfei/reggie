@@ -32,7 +32,7 @@
                 </div>
                 <div class="provider-detail">
                     <div class="name">{{ activeProvider.providerName }}
-                        <el-tag size="mini" type="success" style="margin-left:8px;">当前使用</el-tag>
+                        <el-tag size="mini" type="success" style="margin-left:var(--space-2);">当前使用</el-tag>
                     </div>
                     <div class="model">模型：{{ activeProvider.modelName }}</div>
                     <div class="url">接口地址：{{ activeProvider.baseUrl }}</div>
@@ -44,7 +44,7 @@
                 </div>
             </div>
         </div>
-        <div class="active-provider-card" v-else style="text-align:center;padding:40px;">
+        <div class="active-provider-card" v-else style="text-align:center;padding:var(--space-10);">
             <p style="color:var(--el-text-regular);font-size:var(--font-size-base);margin:0;">
                 暂无激活的 AI 模型，请在下方选择一个供应商并点击「激活」
             </p>
@@ -128,7 +128,7 @@
             </el-form-item>
             <el-form-item label="模型名称" prop="modelName">
                 <!-- 修改点：模型名称支持手动输入 + 一键拉取API模型列表（参考ChatBox/NextChat体验） -->
-                <div style="display:flex;gap:8px;width:100%;">
+                <div style="display:flex;gap:var(--space-2);width:100%;">
                     <el-input v-model="form.modelName" placeholder="deepseek-chat / qwen-turbo / glm-4"
                         style="flex:1;" />
                     <el-button size="mini" type="success" @click="fetchModelList"

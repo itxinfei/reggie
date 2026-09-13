@@ -64,6 +64,8 @@
                     <div class="skeleton-line-sm skeleton-w30"></div>
                 </div>
             </div>
+            <!-- 修改点：van-pull-refresh 包裹列表实现下拉刷新 -->
+            <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
             <!-- 消息列表 -->
             <div v-for="msg in messages" :key="msg.id"
                  :class="['msg-card', msg.status === 1 ? 'unread' : 'read']"
@@ -88,6 +90,7 @@
             <div class="load-more" v-if="hasMore && messages.length > 0" @click="loadMore">
                 {{ loading ? '加载中...' : '加载更多' }}
             </div>
+            </van-pull-refresh>
         </div>
 
         <!-- 消息详情弹窗 -->
@@ -118,6 +121,7 @@
                     page: 1,
                     pageSize: 15,
                     loading: false,
+                    refreshing: false,
                     hasMore: true,
                     detail: {
                         show: false,
@@ -146,6 +150,13 @@
             methods: {
                 goBack: function() {
                     history.go(-1);
+                },
+                // 修改点：下拉刷新
+                onRefresh: function() {
+                    this.page = 1;
+                    this.hasMore = true;
+                    this.loadMessages();
+                    setTimeout(function() { this.refreshing = false; }.bind(this), 1000);
                 },
 
                 loadMessages: function() {

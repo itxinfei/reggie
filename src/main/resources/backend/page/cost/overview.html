@@ -159,7 +159,7 @@ border-radius: var(--radius-sm);
       </div>
 
       <!-- 成本排名 -->
-      <div class="chart-card" style="margin-bottom: 20px;">
+      <div class="chart-card" style="margin-bottom: var(--space-5);">
         <div class="chart-title">菜品成本排名</div>
         <div id="rankingChart" class="chart-container"></div>
       </div>
@@ -167,7 +167,7 @@ border-radius: var(--radius-sm);
       <!-- 成本预警 -->
       <div class="alert-list">
         <div class="chart-title">成本预警</div>
-        <div v-if="alerts.length === 0" style="text-align: center; padding: 20px; color: var(--el-text-secondary);">
+        <div v-if="alerts.length === 0" style="text-align: center; padding: var(--space-5); color: var(--el-text-secondary);">
           暂无预警信息
         </div>
         <div v-else>
