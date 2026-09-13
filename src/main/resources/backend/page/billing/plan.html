@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>套餐目录 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+<body>
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+<div class="dashboard-container" id="billing-plan-app">
+  <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <header class="ds-page-header">
+      <div class="ds-page-header__titles">
+        <h1 class="ds-page-header__title">套餐目录</h1>
+        <p class="ds-page-header__subtitle">维护 SaaS 订阅套餐与门店/员工额度，套餐全局共享，上架后租户方可订购</p>
+      </div>
+    </header>
+
+    <!-- 搜索 + 主操作（对齐走全局规范，不在列配置写 align） -->
+    <table-bar
+      :search-items="searchConfig"
+      :actions="barActions"
+      @search="onSearch"
+      @reset="onReset"
+      @action="onAction"
+    ></table-bar>
+
+    <el-card shadow="never" class="ds-card">
+      <crud-table
+        v-if="loading || tableData.length > 0"
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="220"
+        :actions-fixed="true"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <!-- 年价：留空表示按月价×12 -->
+        <template #col-annualPrice="{ row }">
+          <span v-if="row.annualPrice != null">¥{{ formatAmount(row.annualPrice) }}</span>
+          <span v-else class="ds-text-secondary">按月价×12</span>
+        </template>
+        <!-- 门店上限：-1 不限 -->
+        <template #col-maxStores="{ row }">{{ limitText(row.maxStores) }}</template>
+        <!-- 员工上限：-1 不限 -->
+        <template #col-maxEmployees="{ row }">{{ limitText(row.maxEmployees) }}</template>
+        <!-- 状态 -->
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'info'" size="mini">
+            {{ row.status === 1 ? '已上架' : '已下架' }}
+          </el-tag>
+        </template>
+        <!-- 操作列 -->
+        <template #actions="{ row }">
+          <el-button size="mini" type="text" @click="openEdit(row)">编辑</el-button>
+          <el-button size="mini" type="text" :type="row.status === 1 ? 'warning' : 'success'" @click="toggleStatus(row)">
+            {{ row.status === 1 ? '下架' : '上架' }}
+          </el-button>
+          <el-button size="mini" type="text" class="danger-link" @click="remove(row)">删除</el-button>
+        </template>
+      </crud-table>
+
+      <div v-if="!loading && tableData.length === 0" class="ds-empty">
+        暂无套餐，点击上方「新增套餐」创建订阅方案
+      </div>
+    </el-card>
+
+    <!-- 新增/编辑对话框 -->
+    <crud-dialog
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      size="lg"
+      :close-on-click-modal="false"
+      :submit-loading="submitting"
+      @submit="submit"
+    >
+      <el-form :model="form" :rules="formRules" ref="formRef" label-width="110px">
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="套餐编码" prop="planCode">
+              <el-input v-model="form.planCode" placeholder="唯一编码，如 BASIC/PRO" maxlength="64"
+                        :disabled="action === 'edit'"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="套餐名称" prop="planName">
+              <el-input v-model="form.planName" placeholder="如：专业版" maxlength="64"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="月付价(元)" prop="price">
+              <el-input-number v-model="form.price" :min="0" :precision="2" :step="10" controls-position="right" style="width:100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="年付价(元)">
+              <el-input-number v-model="form.annualPrice" :min="0" :precision="2" :step="100" controls-position="right" style="width:100%;" placeholder="留空=月价×12"></el-input-number>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="门店上限" prop="maxStores">
+              <el-input-number v-model="form.maxStores" :min="-1" :step="1" controls-position="right" style="width:100%;"></el-input-number>
+              <div class="form-tip">-1 表示不限</div>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="员工上限" prop="maxEmployees">
+              <el-input-number v-model="form.maxEmployees" :min="-1" :step="1" controls-position="right" style="width:100%;"></el-input-number>
+              <div class="form-tip">-1 表示不限</div>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="排序" prop="sortOrder">
+              <el-input-number v-model="form.sortOrder" :min="0" :step="1" controls-position="right" style="width:100%;"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="状态">
+              <el-switch v-model="form.status" :active-value="1" :inactive-value="0" active-text="上架" inactive-text="下架"></el-switch>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="功能特性">
+          <el-input v-model="form.features" type="textarea" :rows="2" maxlength="500"
+                    placeholder="套餐包含的功能点描述，如：多门店、后厨大屏、经营报表"></el-input>
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="500"></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button size="medium" @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" size="medium" :loading="submitting" @click="submit">确 定</el-button>
+      </template>
+    </crud-dialog>
+  </div>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js"></script>
+<script src="../../js/components.js"></script>
+<script src="../../api/billing.js"></script>
+<script>
+  new Vue({
+    el: '#billing-plan-app',
+    mixins: [window.ReggieListMixin],
+    data() {
+      return {
+        tableData: [],
+        searchValues: {},
+        searchConfig: [
+          { type: 'input', field: 'keyword', placeholder: '套餐名称/编码', width: 220 },
+          { type: 'select', field: 'status', placeholder: '状态', width: 140, options: [
+            { label: '已上架', value: '1' },
+            { label: '已下架', value: '0' }
+          ] }
+        ],
+        barActions: [
+          { key: 'add', text: '新增套餐', type: 'primary', icon: 'el-icon-plus' }
+        ],
+        // 列对齐统一由 resolveColAlign 默认居中，金额列用 type:'money'
+        columns: [
+          { prop: 'planCode', label: '套餐编码', width: 130 },
+          { prop: 'planName', label: '套餐名称', minWidth: 130 },
+          { prop: 'price', label: '月付价', width: 120, type: 'money' },
+          { prop: 'annualPrice', label: '年付价', width: 130, slot: true },
+          { prop: 'maxStores', label: '门店上限', width: 100, slot: true },
+          { prop: 'maxEmployees', label: '员工上限', width: 100, slot: true },
+          { prop: 'features', label: '功能特性', minWidth: 180, showOverflowTooltip: true },
+          { prop: 'sortOrder', label: '排序', width: 80, type: 'number' },
+          { prop: 'status', label: '状态', width: 100, slot: true }
+        ],
+        action: '',
+        submitting: false,
+        dialogVisible: false,
+        form: this.emptyForm(),
+        formRules: {
+          planCode: [{ required: true, message: '请输入套餐编码', trigger: 'blur' }],
+          planName: [{ required: true, message: '请输入套餐名称', trigger: 'blur' }],
+          price: [{ required: true, message: '请输入月付价', trigger: 'change' }],
+          maxStores: [{ required: true, message: '请设置门店上限(-1不限)', trigger: 'change' }],
+          maxEmployees: [{ required: true, message: '请设置员工上限(-1不限)', trigger: 'change' }]
+        }
+      }
+    },
+    computed: {
+      dialogTitle() {
+        return this.action === 'edit' ? '编辑套餐' : '新增套餐'
+      }
+    },
+    created() {
+      this.fetchData()
+    },
+    methods: {
+      emptyForm() {
+        return {
+          id: null, planCode: '', planName: '', price: 0, annualPrice: null,
+          maxStores: 1, maxEmployees: 10, features: '', sortOrder: 0, status: 1, remark: ''
+        }
+      },
+      formatAmount(v) {
+        return (v == null || v === '') ? '—' : Number(v).toFixed(2)
+      },
+      limitText(v) {
+        return v === -1 || v == null ? '不限' : v
+      },
+      async fetchData() {
+        this.loading = true
+        var params = Object.assign({ page: this.page, pageSize: this.pageSize }, this.searchValues)
+        if (params.status !== '' && params.status != null) { params.status = Number(params.status) }
+        else { delete params.status }
+        if (!params.keyword) { delete params.keyword }
+        try {
+          var res = await window.billingApi.planPage(params)
+          if (String(res.code) === '1' && res.data) {
+            this.tableData = res.data.records || res.data.list || []
+            this.counts = Number(res.data.total) || 0
+          } else {
+            ReggieUI.error((res && res.msg) || '加载套餐失败')
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') { ReggieUI.error('加载套餐失败，请刷新重试') }
+        } finally {
+          this.loading = false
+        }
+      },
+      onSearch(params) {
+        this.searchValues = params || {}
+        this.page = 1
+        this.fetchData()
+      },
+      onReset() {
+        this.searchValues = {}
+        this.page = 1
+        this.fetchData()
+      },
+      onAction(act) {
+        if (act.key === 'add') { this.openAdd() }
+      },
+      openAdd() {
+        this.action = 'add'
+        this.form = this.emptyForm()
+        this.dialogVisible = true
+        this.$nextTick(() => { this.$refs.formRef && this.$refs.formRef.clearValidate() })
+      },
+      openEdit(row) {
+        this.action = 'edit'
+        this.form = {
+          id: row.id, planCode: row.planCode, planName: row.planName,
+          price: row.price != null ? Number(row.price) : 0,
+          annualPrice: row.annualPrice != null ? Number(row.annualPrice) : null,
+          maxStores: row.maxStores, maxEmployees: row.maxEmployees,
+          features: row.features || '', sortOrder: row.sortOrder || 0,
+          status: row.status, remark: row.remark || ''
+        }
+        this.dialogVisible = true
+        this.$nextTick(() => { this.$refs.formRef && this.$refs.formRef.clearValidate() })
+      },
+      submit() {
+        this.$refs.formRef.validate(async (valid) => {
+          if (!valid) return
+          this.submitting = true
+          try {
+            var api = this.action === 'edit' ? window.billingApi.planUpdate : window.billingApi.planAdd
+            var res = await api(this.form)
+            if (res && String(res.code) === '1') {
+              ReggieUI.success('保存成功')
+              this.dialogVisible = false
+              this.fetchData()
+            } else {
+              ReggieUI.error((res && res.msg) || '保存失败')
+            }
+          } catch (err) {
+            ReggieUI.error('保存失败，请重试')
+          } finally {
+            this.submitting = false
+          }
+        })
+      },
+      toggleStatus(row) {
+        var target = row.status === 1 ? 0 : 1
+        var tip = target === 1 ? '确认上架该套餐？' : '确认下架该套餐？下架后租户将无法新订购'
+        ReggieUI.confirm(tip, '提示', { type: 'warning' }).then(async () => {
+          var res = await window.billingApi.planStatus(row.id, target)
+          if (res && String(res.code) === '1') {
+            ReggieUI.success(target === 1 ? '已上架' : '已下架')
+            this.fetchData()
+          } else {
+            ReggieUI.error('操作失败')
+          }
+        }).catch(() => {})
+      },
+      remove(row) {
+        ReggieUI.confirm('确认删除该套餐？删除后不可恢复。', '提示', { type: 'warning' }).then(async () => {
+          var res = await window.billingApi.planRemove(row.id)
+          if (res && String(res.code) === '1') {
+            ReggieUI.success('已删除')
+            this.fetchData()
+          } else {
+            ReggieUI.error('删除失败')
+          }
+        }).catch(() => {})
+      }
+    }
+  })
+</script>
+<style>
+  .form-tip { font-size: 12px; color: var(--el-text-secondary, #909399); line-height: 1.4; }
+  .ds-empty { text-align: center; padding: 40px 0; color: var(--el-text-secondary, #909399); font-size: 14px; }
+  .ds-text-secondary { color: var(--el-text-secondary, #909399); }
+  .danger-link { color: var(--el-color-danger, #f56c6c); }
+</style>
+</body>
+</html>

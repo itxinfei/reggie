@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>后厨出餐大屏 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css" />
+  <style>
+    body { background: var(--bg-page); margin: 0; }
+    .kds-wrap { max-width: 1800px; margin: 0 auto; padding: var(--space-4) var(--space-5); }
+    .top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4); }
+    .top-bar__title { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); color: var(--text-primary); display:flex; align-items:center; gap:8px; }
+    .top-bar__title i { color: var(--el-color-primary); }
+    .top-bar__tools { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+    .meta-chip { font-size: var(--font-size-sm); color: var(--text-secondary); background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 999px; padding: 4px 14px; font-variant-numeric: tabular-nums; }
+    .meta-chip b { color: var(--text-primary); }
+    .tool-btn { cursor: pointer; border: 1px solid var(--border-default); background: var(--bg-surface); border-radius: 999px; padding: 7px 16px; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-regular); }
+    .tool-btn.on { background: var(--color-success-dark); color: var(--text-inverse); border-color: var(--color-success-dark); }
+    .tool-btn:active { opacity: .8; }
+
+    .stat-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-3); margin-bottom: var(--space-4); }
+    @media (max-width: 1100px) { .stat-row { grid-template-columns: repeat(3, 1fr); } }
+    .stat-card { background: var(--bg-surface); border-radius: var(--radius-md, 10px); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.08)); padding: var(--space-3) var(--space-4); }
+    .stat-card__label { font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: 4px; }
+    .stat-card__value { font-size: 1.8rem; font-weight: var(--font-weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .stat-card__value small { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-secondary); }
+    .stat-card.pending .stat-card__value { color: var(--color-danger-dark); }
+    .stat-card.cooking .stat-card__value { color: var(--el-color-primary); }
+    .stat-card.ready .stat-card__value { color: var(--color-success-dark); }
+    .stat-card.urgent .stat-card__value { color: var(--color-danger-dark); }
+
+    .board-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); align-items: start; }
+    @media (max-width: 1000px) { .board-columns { grid-template-columns: 1fr; } }
+    .kds-col { background: var(--bg-subtle, #f7f8fa); border-radius: var(--radius-md, 10px); padding: var(--space-3); min-height: 200px; }
+    .kds-col__head { display: flex; align-items: center; justify-content: space-between; padding: 2px var(--space-2) var(--space-3); font-weight: var(--font-weight-semibold); font-size: var(--font-size-lg); }
+    .kds-col__head .badge { min-width: 26px; text-align: center; border-radius: 999px; padding: 2px 10px; font-size: var(--font-size-sm); color: #fff; }
+    .kds-col.pending .kds-col__head { color: var(--color-danger-dark); }
+    .kds-col.pending .badge { background: var(--color-danger); }
+    .kds-col.cooking .kds-col__head { color: var(--el-color-primary); }
+    .kds-col.cooking .badge { background: var(--el-color-primary); }
+    .kds-col.ready .kds-col__head { color: var(--color-success-dark); }
+    .kds-col.ready .badge { background: var(--color-success); }
+    .col-body { display: flex; flex-direction: column; gap: var(--space-3); max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
+
+    .ticket { background: var(--bg-surface); border-radius: var(--radius-md, 10px); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.08)); border-left: 6px solid var(--border-default); padding: var(--space-3) var(--space-4); }
+    .ticket.urgent { border-left-color: var(--color-danger); background: var(--color-danger-lighter, #fef0f0); }
+    .ticket.s-warn { border-left-color: var(--color-warning); }
+    .ticket.s-alarm { border-left-color: var(--color-danger); animation: pulse 1.2s infinite; }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(245,108,108,.45); } 70% { box-shadow: 0 0 0 10px rgba(245,108,108,0); } 100% { box-shadow: 0 0 0 0 rgba(245,108,108,0); } }
+    .ticket__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .ticket__no { font-size: 1.35rem; font-weight: var(--font-weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .ticket__tags { display: flex; gap: 6px; align-items: center; }
+    .tag-mini { font-size: var(--font-size-xs); padding: 1px 8px; border-radius: 999px; background: var(--el-color-info-lighter, #f4f4f5); color: var(--text-secondary); }
+    .tag-mini.type-eat { background: var(--el-color-primary-lighter, #fffbeb); color: var(--el-color-primary); }
+    .tag-urgent { font-size: var(--font-size-xs); padding: 1px 8px; border-radius: 999px; background: var(--color-danger); color: #fff; font-weight: var(--font-weight-semibold); }
+    .ticket__time { font-size: 1.5rem; font-weight: var(--font-weight-bold); font-variant-numeric: tabular-nums; margin: 6px 0 4px; color: var(--text-primary); }
+    .ticket__time.warn { color: var(--color-warning-dark); }
+    .ticket__time.alarm { color: var(--color-danger-dark); }
+    .ticket__time small { font-size: var(--font-size-xs); color: var(--text-secondary); font-weight: var(--font-weight-medium); }
+    .dish-list { margin: 6px 0; padding: 0; list-style: none; }
+    .dish-list li { font-size: var(--font-size-base); color: var(--text-primary); padding: 2px 0; display: flex; justify-content: space-between; gap: 8px; }
+    .dish-list .flavor { color: var(--text-secondary); font-size: var(--font-size-sm); }
+    .dish-list .qty { font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ticket__remark { font-size: var(--font-size-sm); color: var(--color-danger-dark); margin-top: 2px; }
+    .ticket__ops { display: flex; gap: 8px; margin-top: var(--space-3); flex-wrap: wrap; }
+    .ticket__ops .el-button { margin-left: 0; }
+    .col-empty { text-align: center; color: var(--text-secondary); padding: var(--space-6) 0; font-size: var(--font-size-base); }
+  </style>
+</head>
+<body>
+<a href="#kds-main" class="skip-link">跳转到主内容</a>
+<div id="app">
+  <div class="kds-wrap" id="kds-main">
+    <div class="top-bar">
+      <div class="top-bar__title"><i class="ri-restaurant-2-line"></i>后厨出餐大屏</div>
+      <div class="top-bar__tools">
+        <span class="meta-chip"><i class="ri-time-line"></i> {{ clock }}</span>
+        <span class="meta-chip">更新 <b>{{ lastUpdate || '--' }}</b></span>
+        <button class="tool-btn" @click="loadData(true)"><i class="ri-refresh-line"></i> 刷新拉单</button>
+        <button class="tool-btn" :class="{ on: autoRefresh }" @click="toggleAuto">{{ autoRefresh ? '自动刷新 开' : '自动刷新 关' }}</button>
+        <button class="tool-btn" :class="{ on: soundOn }" @click="toggleSound">{{ soundOn ? '语音叫号 开' : '语音叫号 关' }}</button>
+        <button class="tool-btn" @click="fullscreen"><i class="ri-fullscreen-line"></i> 全屏</button>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-card pending"><div class="stat-card__label">待制作</div><div class="stat-card__value">{{ board.pendingCount }}</div></div>
+      <div class="stat-card cooking"><div class="stat-card__label">制作中</div><div class="stat-card__value">{{ board.cookingCount }}</div></div>
+      <div class="stat-card ready"><div class="stat-card__label">待取餐</div><div class="stat-card__value">{{ board.readyCount }}</div></div>
+      <div class="stat-card"><div class="stat-card__label">今日完成</div><div class="stat-card__value">{{ board.finishedCount }}</div></div>
+      <div class="stat-card urgent"><div class="stat-card__label">加急</div><div class="stat-card__value">{{ board.urgentCount }}</div></div>
+      <div class="stat-card"><div class="stat-card__label">平均出餐</div><div class="stat-card__value">{{ fmtMMSS(board.avgCookSeconds) }}<small> </small></div></div>
+    </div>
+
+    <div class="board-columns">
+      <!-- 待制作 -->
+      <div class="kds-col pending">
+        <div class="kds-col__head"><span><i class="ri-hourglass-2-line"></i> 待制作</span><span class="badge">{{ board.pendingCount }}</span></div>
+        <div class="col-body">
+          <div class="ticket" v-for="t in board.pending" :key="t.id" :class="ticketClass(t)">
+            <div class="ticket__head">
+              <span class="ticket__no">#{{ tail(t.orderNo) }}</span>
+              <span class="ticket__tags">
+                <span class="tag-urgent" v-if="t.urgent===1">加急</span>
+                <span class="tag-mini" :class="{'type-eat': t.orderType==='EAT_IN'}">{{ typeText(t.orderType) }}{{ t.tableName ? ' · '+t.tableName : '' }}</span>
+              </span>
+            </div>
+            <div class="ticket__time" :class="timeClass(t)">{{ elapsed(t) }}<small> 等待</small></div>
+            <ul class="dish-list"><li v-for="(d,i) in dishesOf(t)" :key="i"><span>{{ d.name }}<span class="flavor" v-if="d.dishFlavor">（{{ d.dishFlavor }}）</span></span><span class="qty">×{{ d.number }}</span></li></ul>
+            <div class="ticket__remark" v-if="t.remark"><i class="ri-chat-1-line"></i> {{ t.remark }}</div>
+            <div class="ticket__ops">
+              <el-button type="primary" size="small" @click="act('start',t)">开始制作</el-button>
+              <el-button size="small" @click="act('urgent',t)">{{ t.urgent===1 ? '取消加急' : '加急' }}</el-button>
+              <el-button type="danger" plain size="small" @click="act('cancel',t)">取消</el-button>
+            </div>
+          </div>
+          <div class="col-empty" v-if="!board.pending.length">暂无待制作工单</div>
+        </div>
+      </div>
+
+      <!-- 制作中 -->
+      <div class="kds-col cooking">
+        <div class="kds-col__head"><span><i class="ri-fire-line"></i> 制作中</span><span class="badge">{{ board.cookingCount }}</span></div>
+        <div class="col-body">
+          <div class="ticket" v-for="t in board.cooking" :key="t.id" :class="ticketClass(t)">
+            <div class="ticket__head">
+              <span class="ticket__no">#{{ tail(t.orderNo) }}</span>
+              <span class="ticket__tags">
+                <span class="tag-urgent" v-if="t.urgent===1">加急</span>
+                <span class="tag-mini" :class="{'type-eat': t.orderType==='EAT_IN'}">{{ typeText(t.orderType) }}{{ t.tableName ? ' · '+t.tableName : '' }}</span>
+              </span>
+            </div>
+            <div class="ticket__time" :class="timeClass(t)">{{ elapsed(t) }}<small> 已耗时</small></div>
+            <ul class="dish-list"><li v-for="(d,i) in dishesOf(t)" :key="i"><span>{{ d.name }}<span class="flavor" v-if="d.dishFlavor">（{{ d.dishFlavor }}）</span></span><span class="qty">×{{ d.number }}</span></li></ul>
+            <div class="ticket__remark" v-if="t.remark"><i class="ri-chat-1-line"></i> {{ t.remark }}</div>
+            <div class="ticket__ops">
+              <el-button type="success" size="small" @click="act('ready',t)">制作完成 · 叫号</el-button>
+              <el-button size="small" @click="act('urgent',t)">{{ t.urgent===1 ? '取消加急' : '加急' }}</el-button>
+              <el-button type="danger" plain size="small" @click="act('cancel',t)">取消</el-button>
+            </div>
+          </div>
+          <div class="col-empty" v-if="!board.cooking.length">暂无制作中工单</div>
+        </div>
+      </div>
+
+      <!-- 待取餐 -->
+      <div class="kds-col ready">
+        <div class="kds-col__head"><span><i class="ri-bell-line"></i> 待取餐（叫号）</span><span class="badge">{{ board.readyCount }}</span></div>
+        <div class="col-body">
+          <div class="ticket urgent" v-for="t in board.ready" :key="t.id">
+            <div class="ticket__head">
+              <span class="ticket__no">#{{ tail(t.orderNo) }}</span>
+              <span class="ticket__tags">
+                <span class="tag-mini" :class="{'type-eat': t.orderType==='EAT_IN'}">{{ typeText(t.orderType) }}{{ t.tableName ? ' · '+t.tableName : '' }}</span>
+              </span>
+            </div>
+            <div class="ticket__time">{{ fmtMMSS(t.waitSeconds) }}<small> 出餐用时</small></div>
+            <ul class="dish-list"><li v-for="(d,i) in dishesOf(t)" :key="i"><span>{{ d.name }}<span class="flavor" v-if="d.dishFlavor">（{{ d.dishFlavor }}）</span></span><span class="qty">×{{ d.number }}</span></li></ul>
+            <div class="ticket__ops">
+              <el-button type="success" size="small" @click="act('finish',t)">确认出餐完成</el-button>
+            </div>
+          </div>
+          <div class="col-empty" v-if="!board.ready.length">暂无待取餐工单</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js"></script>
+<script src="../../js/components.js"></script>
+<script src="../../api/kds.js"></script>
+<script>
+  new Vue({
+    el: '#app',
+    data: function () {
+      return {
+        board: { pending: [], cooking: [], ready: [], pendingCount: 0, cookingCount: 0, readyCount: 0, finishedCount: 0, urgentCount: 0, avgCookSeconds: 0, pulledCount: 0 },
+        clock: '',
+        nowTick: Date.now(),
+        lastUpdate: '',
+        autoRefresh: true,
+        soundOn: true,
+        pollTimer: null,
+        clockTimer: null,
+        spokenReady: {}
+      }
+    },
+    mounted: function () {
+      var self = this
+      this.tickClock()
+      this.loadData(true)
+      // 每秒走表（等待时长实时跳动）
+      this.clockTimer = setInterval(function () { self.tickClock() }, 1000)
+      // 每 10 秒自动拉新并刷新看板
+      this.pollTimer = setInterval(function () { if (self.autoRefresh) self.loadData(true) }, 10000)
+    },
+    beforeDestroy: function () {
+      if (this.pollTimer) clearInterval(this.pollTimer)
+      if (this.clockTimer) clearInterval(this.clockTimer)
+      try { speechSynthesis.cancel() } catch (e) {}
+    },
+    methods: {
+      tickClock: function () {
+        this.nowTick = Date.now()
+        this.clock = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+      },
+      loadData: function (autoPull) {
+        var self = this
+        window.kdsApi.board(autoPull !== false).then(function (res) {
+          if (res && String(res.code) === '1' && res.data) {
+            self.board = res.data
+            self.lastUpdate = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+            self.announceReady(res.data.ready || [])
+          }
+        }).catch(function (err) {
+          if (err && err.message !== 'NOTLOGIN') { console.warn('[KDS] 看板加载失败', err) }
+        })
+      },
+      // 待取餐新增工单语音叫号（每单只播报一次）
+      announceReady: function (readyList) {
+        if (!this.soundOn || !('speechSynthesis' in window)) return
+        var self = this
+        readyList.forEach(function (t) {
+          if (!self.spokenReady[t.id]) {
+            self.speak('请' + self.tail(t.orderNo) + '号取餐')
+            self.spokenReady[t.id] = true
+          }
+        })
+        var present = {}
+        readyList.forEach(function (t) { present[t.id] = true })
+        Object.keys(this.spokenReady).forEach(function (k) { if (!present[k]) delete self.spokenReady[k] })
+      },
+      speak: function (text) {
+        try {
+          var u = new SpeechSynthesisUtterance(text)
+          u.lang = 'zh-CN'; u.rate = 1.05; u.volume = 1
+          speechSynthesis.speak(u)
+        } catch (e) {}
+      },
+      act: function (action, t) {
+        var self = this
+        var confirmMap = { cancel: '确认取消该工单？' }
+        var run = function () {
+          var p
+          if (action === 'start') p = window.kdsApi.start(t.id)
+          else if (action === 'ready') p = window.kdsApi.ready(t.id)
+          else if (action === 'finish') p = window.kdsApi.finish(t.id)
+          else if (action === 'cancel') p = window.kdsApi.cancel(t.id)
+          else if (action === 'urgent') p = window.kdsApi.toggleUrgent(t.id)
+          if (!p) return
+          p.then(function (res) {
+            if (res && String(res.code) === '1') {
+              if (action === 'ready') { ReggieUI.success('已叫号：' + self.tail(t.orderNo)); self.speak('请' + self.tail(t.orderNo) + '号取餐') }
+              else if (action === 'finish') ReggieUI.success('已出餐完成')
+              self.loadData(false)
+            } else {
+              ReggieUI.error((res && res.msg) || '操作失败')
+            }
+          }).catch(function () { ReggieUI.error('操作失败，请重试') })
+        }
+        if (confirmMap[action]) {
+          ReggieUI.confirm(confirmMap[action], '提示', { type: 'warning' }).then(run).catch(function () {})
+        } else { run() }
+      },
+      dishesOf: function (t) {
+        if (t.details && t.details.length) return t.details
+        // 兜底：无明细时用摘要文本展示
+        return t.dishSummary ? [{ name: t.dishSummary, dishFlavor: null, number: '' }] : []
+      },
+      // 进行中工单按接单时间实时计算耗时
+      elapsed: function (t) {
+        if (!t.receiveTime) return '00:00'
+        var start = new Date(('' + t.receiveTime).replace(/-/g, '/')).getTime()
+        if (isNaN(start)) return '00:00'
+        var sec = Math.max(0, Math.floor((this.nowTick - start) / 1000))
+        return this.fmtMMSS(sec)
+      },
+      // 等待分级：>5分钟警告，>10分钟告警
+      timeClass: function (t) {
+        if (!t.receiveTime) return ''
+        var start = new Date(('' + t.receiveTime).replace(/-/g, '/')).getTime()
+        var sec = Math.max(0, Math.floor((this.nowTick - start) / 1000))
+        if (sec >= 600) return 'alarm'
+        if (sec >= 300) return 'warn'
+        return ''
+      },
+      ticketClass: function (t) {
+        return { urgent: t.urgent === 1, 's-warn': this.timeClass(t) === 'warn', 's-alarm': this.timeClass(t) === 'alarm' }
+      },
+      fmtMMSS: function (sec) {
+        sec = Number(sec) || 0
+        var m = Math.floor(sec / 60), s = sec % 60
+        return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s)
+      },
+      tail: function (no) {
+        if (!no) return '--'
+        var s = '' + no
+        return s.length <= 6 ? s : s.substring(s.length - 6)
+      },
+      typeText: function (s) {
+        if (s === 'EAT_IN') return '堂食'
+        if (s === 'OUTSIDE' || s === 'TAKEOUT' || s === 'DELIVERY') return '外卖'
+        if (s === 'QUEUE') return '排队'
+        if (s === 'RESERVATION') return '预订'
+        return s || '堂食'
+      },
+      toggleAuto: function () { this.autoRefresh = !this.autoRefresh },
+      toggleSound: function () {
+        this.soundOn = !this.soundOn
+        if (!this.soundOn) { try { speechSynthesis.cancel() } catch (e) {} }
+      },
+      fullscreen: function () {
+        var el = document.documentElement
+        if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen()
+        else if (document.exitFullscreen) document.exitFullscreen()
+      }
+    }
+  })
+</script>
+</body>
+</html>

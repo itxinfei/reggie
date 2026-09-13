@@ -1064,7 +1064,7 @@
         // 产生错误路径 /backend/page/dashboard/page/order/list.html 而 404（Whitelabel）。
         // 因此这里先完整 URL 匹配、再「仅路径(忽略 query)」匹配，命中即交给顶层 menuHandle
         // （iframe 的 src 相对顶层文档解析，路径正确）；都不命中才用 /backend/ 绝对前缀兜底。
-        // 修改点：递归遍历菜单树（支持订单中心三级分组菜单），
+        // 修改点：递归遍历菜单树（最多两级，扁平结构），
         // 父级分组节点（无 url）不匹配，仅叶子（有 url）参与命中。
         goTo(url) {
           try {
