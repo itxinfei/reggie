@@ -386,7 +386,9 @@
                         if(res.code === 1 && res.data){
                             self.deliveryFee = Number(res.data.deliveryFee) || 0
                         }
-                    }).catch(function(){})
+                    }).catch(function(err){
+                        console.warn('[add-order] 加载配送费失败，使用默认值 0:', err)
+                    })
                 },
                 methods:{
                     // 修改点：将common.js的全局函数imgPath注册为Vue实例方法
