@@ -73,12 +73,55 @@
             text-align: center; color: var(--gold-text); font-size: 13rem;
             padding: 6rem 0; position: relative; z-index: 1;
         }
+        /* 骨架屏样式 */
+        .skeleton-container { padding: 12rem; }
+        .skeleton-user { display: flex; align-items: center; padding: 20rem 12rem; background: var(--color-primary-gradient); border-radius: var(--radius-xl); margin-bottom: 12rem; }
+        .skeleton-avatar { width: 60rem; height: 60rem; border-radius: 50%; background: linear-gradient(90deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; flex-shrink: 0; }
+        .skeleton-user-info { flex: 1; margin-left: 12rem; }
+        .skeleton-member-card { padding: 16rem 18rem; background: var(--color-primary-gradient); border-radius: var(--radius-xl); margin-bottom: 12rem; }
+        .skeleton-stats { display: flex; gap: 16rem; margin-top: 12rem; }
+        .skeleton-stat { flex: 1; height: 40rem; border-radius: var(--radius-md); background: linear-gradient(90deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; }
+        .skeleton-links { background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; }
+        .skeleton-link-item { display: flex; align-items: center; padding: 16rem; border-bottom: 1px solid var(--border-light); }
+        .skeleton-link-item:last-child { border-bottom: none; }
+        .skeleton-icon { width: 24rem; height: 24rem; border-radius: var(--radius-sm); background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; flex-shrink: 0; margin-right: 12rem; }
+        .skeleton-line { height: 14rem; border-radius: 4rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; margin-bottom: 8rem; }
+        .skeleton-line:last-child { margin-bottom: 0; }
+        .skeleton-w30 { width: 30%; }
+        .skeleton-w40 { width: 40%; }
+        .skeleton-w50 { width: 50%; }
+        .skeleton-w60 { width: 60%; }
+        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
 <body>
     <div id="user" class="app" style="position:relative;">
-        <div v-if="pageLoading" class="loading-overlay">
-            <div class="loading-spinner"></div>
+        <!-- 修改点：骨架屏替代 loading 遮罩 -->
+        <div v-if="pageLoading" class="skeleton-container">
+            <!-- 用户信息骨架 -->
+            <div class="skeleton-user">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-user-info">
+                    <div class="skeleton-line skeleton-w40"></div>
+                    <div class="skeleton-line skeleton-w30"></div>
+                </div>
+            </div>
+            <!-- 会员卡片骨架 -->
+            <div class="skeleton-member-card">
+                <div class="skeleton-line skeleton-w60"></div>
+                <div class="skeleton-stats">
+                    <div class="skeleton-stat"></div>
+                    <div class="skeleton-stat"></div>
+                    <div class="skeleton-stat"></div>
+                </div>
+            </div>
+            <!-- 功能列表骨架 -->
+            <div class="skeleton-links">
+                <div class="skeleton-link-item" v-for="i in 5" :key="'sl'+i">
+                    <div class="skeleton-icon"></div>
+                    <div class="skeleton-line skeleton-w50"></div>
+                </div>
+            </div>
         </div>
         <div class="divHead">
             <div class="divTitle">

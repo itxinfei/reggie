@@ -23,6 +23,26 @@
     <link rel="stylesheet" href="styles/main.css" />
     <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
     <link rel="stylesheet" href="styles/tabbar.css" />
+    <!-- 骨架屏样式 -->
+    <style>
+      .skeleton-container { padding: 12rem; }
+      .skeleton-restaurant { display: flex; align-items: center; padding: 16rem; background: #fff; border-radius: 8rem; margin-bottom: 12rem; }
+      .skeleton-logo { width: 60rem; height: 60rem; border-radius: 8rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; flex-shrink: 0; }
+      .skeleton-info { flex: 1; margin-left: 12rem; }
+      .skeleton-line { height: 14rem; border-radius: 4rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; margin-bottom: 8rem; }
+      .skeleton-line:last-child { margin-bottom: 0; }
+      .skeleton-w30 { width: 30%; }
+      .skeleton-w40 { width: 40%; }
+      .skeleton-w60 { width: 60%; }
+      .skeleton-w80 { width: 80%; }
+      .skeleton-categories { display: flex; gap: 8rem; padding: 12rem; background: #fff; border-radius: 8rem; margin-bottom: 12rem; overflow: hidden; }
+      .skeleton-cat-item { width: 60rem; height: 28rem; border-radius: 14rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; flex-shrink: 0; }
+      .skeleton-dishes { display: flex; flex-direction: column; gap: 12rem; }
+      .skeleton-dish-item { display: flex; padding: 12rem; background: #fff; border-radius: 8rem; }
+      .skeleton-dish-img { width: 100rem; height: 100rem; border-radius: 8rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; flex-shrink: 0; }
+      .skeleton-dish-info { flex: 1; margin-left: 12rem; display: flex; flex-direction: column; justify-content: center; }
+      @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
   </head>
   <body>
     <div id="main" class="app">
@@ -52,6 +72,34 @@
           </div>
           <div class="user-btn" @click="toUserPage">
             <img :src="userAvatar || './images/headPage.png'" />
+          </div>
+        </div>
+
+        <!-- ====== 骨架屏：页面加载中 ====== -->
+        <div v-if="pageLoading" class="skeleton-container">
+          <!-- 商家信息骨架 -->
+          <div class="skeleton-restaurant">
+            <div class="skeleton-logo"></div>
+            <div class="skeleton-info">
+              <div class="skeleton-line skeleton-w60"></div>
+              <div class="skeleton-line skeleton-w40"></div>
+              <div class="skeleton-line skeleton-w80"></div>
+            </div>
+          </div>
+          <!-- 分类骨架 -->
+          <div class="skeleton-categories">
+            <div class="skeleton-cat-item" v-for="i in 6" :key="'sc'+i"></div>
+          </div>
+          <!-- 菜品列表骨架 -->
+          <div class="skeleton-dishes">
+            <div class="skeleton-dish-item" v-for="i in 4" :key="'sd'+i">
+              <div class="skeleton-dish-img"></div>
+              <div class="skeleton-dish-info">
+                <div class="skeleton-line skeleton-w60"></div>
+                <div class="skeleton-line skeleton-w40"></div>
+                <div class="skeleton-line skeleton-w30"></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -119,6 +167,7 @@
       </div>
 
       <!-- ====== 核心区域：左侧分类 + 右侧菜品 ====== -->
+      <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
       <div class="content-area">
         <!-- 左侧分类栏 -->
         <div class="category-sidebar" ref="categorySidebar">
@@ -165,6 +214,7 @@
           </div>
         </div>
       </div>
+      </van-pull-refresh>
 
       <!-- ====== 底部购物车栏 ====== -->
       <div class="cart-bar" v-if="cartData && cartData.length > 0" :style="{ zIndex: dialogFlavor.show ? 100 : 3000 }">
@@ -510,6 +560,10 @@
           el:'#main',
           data(){
             return {
+              // 修改点：骨架屏加载状态
+              pageLoading: true,
+              // 修改点：下拉刷新状态
+              refreshing: false,
               //左边菜品类别index
               activeType:0,
               categoryList:[],
@@ -990,7 +1044,17 @@
                 }
               }).catch(() => {
                 // 修改点：捕获Promise异常，避免控制台报错，未登录时会自动跳转登录页
+              }).finally(() => {
+                // 修改点：无论成功失败，关闭骨架屏
+                this.pageLoading = false
               })
+            },
+            // 修改点：下拉刷新处理
+            onRefresh(){
+              this.initData()
+              setTimeout(() => {
+                this.refreshing = false
+              }, 1000)
             },
             //分类点击
             categoryClick(index,id,type){
