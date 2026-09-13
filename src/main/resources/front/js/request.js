@@ -102,9 +102,9 @@
       // 修改点：网络异常时自动跳转断网页（排除已在断网页/登录页的情况，避免死循环）
       var currentPage = window.location.pathname;
       if ((message === "Network Error" || message === "后端接口连接异常" || message.includes("timeout"))
-          && !currentPage.includes('no-wify')
+          && !currentPage.includes('no-wifi')
           && !currentPage.includes('login')) {
-        window.location.href = '/front/page/no-wify.html'
+        window.location.href = '/front/page/no-wifi.html'
       }
       // 修改点：防御性检查vant是否加载
       if(window.vant && window.vant.Notify){

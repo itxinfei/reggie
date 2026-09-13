@@ -127,7 +127,7 @@
                     <div class="itemList">
                         <div class="item" v-for="(item,index) in cartData" :key="index">
                             <!-- 修改点：el-image替换为原生img，错误时显示占位图 -->
-                            <img :src="imgPath(item.image)" @error="imgError" class="dish-image" :alt="item.name || '菜品'" />
+                            <img :src="imgPath(item.image)" @error="imgError" class="dish-image" :alt="item.name || '菜品'" loading="lazy" />
                             <div class="desc">
                                 <div class="name">{{item.name}}</div>
                                 <div class="numPrice">

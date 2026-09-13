@@ -40,7 +40,7 @@
             <div v-for="item in evalList" :key="item.id" class="eval-card">
                 <div class="eval-header">
                     <div class="dish-info">
-                        <img v-if="item.dishImage" :src="getImageUrl(item.dishImage)" class="dish-img" :alt="item.dishName || '菜品'" />
+                        <img v-if="item.dishImage" :src="getImageUrl(item.dishImage)" class="dish-img" :alt="item.dishName || '菜品'" loading="lazy" />
                         <div class="dish-text">
                             <div class="dish-name">{{ item.dishName || '未知菜品' }}</div>
                             <div class="eval-meta">
@@ -59,7 +59,7 @@
                 <!-- 评价图片 -->
                 <div class="eval-imgs" v-if="item.images && item.images.length > 0">
                     <img v-for="(img, idx) in getImageList(item.images)" :key="idx"
-                         :src="getImageUrl(img)" :alt="'评价图片' + (idx + 1)" @click="previewImage(getImageUrl(img))" />
+                         :src="getImageUrl(img)" :alt="'评价图片' + (idx + 1)" @click="previewImage(getImageUrl(img))" loading="lazy" />
                 </div>
 
                 <!-- 商家回复 -->

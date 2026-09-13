@@ -108,7 +108,7 @@
           <div class="recommend-item" v-for="(dish, idx) in recommendDishes.slice(0, 8)" :key="'r'+idx"
                @click="recommendDishClick(dish)">
             <div class="ri-image">
-              <img :src="imgPath(dish.image)" @error="e => e.target.src='./images/noImg.png'" />
+              <img :src="imgPath(dish.image)" @error="e => e.target.src='./images/noImg.png'" loading="lazy" />
             </div>
             <div class="ri-info">
               <div class="ri-name">{{ dish.name }}</div>
@@ -141,7 +141,7 @@
             :key="index"
           >
             <div class="di-image" @click="dishDetails(item)">
-              <img :src="imgPath(item.image)" @error="imgError">
+              <img :src="imgPath(item.image)" @error="imgError" loading="lazy">
               <div class="di-tag" v-if="item.saleNum > 100">热卖</div>
             </div>
             <div class="di-info" @click="dishDetails(item)">
@@ -217,7 +217,7 @@
         </div>
         <div class="divCartContent">
           <div v-for="item in cartData" :key="item.id" class="divCartItem">
-            <img :src="imgPath(item.image)" @error="imgError" class="cart-img">
+            <img :src="imgPath(item.image)" @error="imgError" class="cart-img" loading="lazy">
             <div class="divDesc">
               <div class="name">{{ item.name }}</div>
               <div class="price">
@@ -305,7 +305,7 @@
           <div class="title">{{ setMealDialog.item.name }}</div>
           <div class="item" v-for="(item,index) in setMealDialog.item.list" :key="index">
             <!-- 修改点：套餐子项图加点击预览，与菜品详情一致 -->
-            <img :src="imgPath(item.image)" @error="imgError" class="meal-img" @click.stop="previewDishImage(imgPath(item.image))">
+            <img :src="imgPath(item.image)" @error="imgError" class="meal-img" @click.stop="previewDishImage(imgPath(item.image))" loading="lazy">
             <div class="divSubTitle">{{ item.name + '(' + item.copies + '份)' }}
               <div class="divPrice">
                 <span>￥</span><span>{{ Number(item.price || 0).toFixed(2) }}</span>
@@ -431,7 +431,7 @@
             :key="'d' + idx"
           >
             <div class="di-image" @click="dishDetails(item)">
-              <img :src="imgPath(item.image)" @error="imgError">
+              <img :src="imgPath(item.image)" @error="imgError" loading="lazy">
             </div>
             <div class="di-info" @click="dishDetails(item)">
               <div class="di-name">{{ item.name }}</div>
@@ -457,7 +457,7 @@
             :key="'m' + idx"
           >
             <div class="di-image" @click="dishDetails(item)">
-              <img :src="imgPath(item.image)" @error="imgError">
+              <img :src="imgPath(item.image)" @error="imgError" loading="lazy">
             </div>
             <div class="di-info" @click="dishDetails(item)">
               <div class="di-name">{{ item.name }}</div>
