@@ -37,6 +37,7 @@
                 >{{ tab.label }}</div>
             </div>
             <div class="divBody has-tabbar" v-if="orderList.length > 0">
+                <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
                 <van-list
                     v-model="loading"
                     :finished="finished"
@@ -76,6 +77,7 @@
                         </div>
                     </van-cell>
                 </van-list>
+                </van-pull-refresh>
                 <!-- 修改点：首屏加载骨架屏覆盖层（van-list 始终渲染，避免阻断其 @load 触发） -->
                 <van-skeleton v-if="firstLoading" class="list-skeleton" :row="5" title :avatar />
             </div>
@@ -126,6 +128,7 @@
                     orderList:[],
                     loading:false,
                     finished:false,
+                    refreshing:false, // 修改点：下拉刷新状态
                     firstLoading:true, // 修改点：首屏加载骨架屏
                     submitting:false, // 修改点：再来一单防重复提交
                     // 修改点：状态筛选
@@ -180,6 +183,16 @@
                 },
                 initData(){
                     this.getList()
+                },
+                // 修改点：下拉刷新处理
+                onRefresh(){
+                    this.paging.page = 1;
+                    this.orderList = [];
+                    this.finished = false;
+                    this.getList();
+                    setTimeout(() => {
+                        this.refreshing = false;
+                    }, 1000);
                 },
                 // 修改点：切换Tab时重置分页并重新加载
                 switchTab(status){
