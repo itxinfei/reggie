@@ -69,13 +69,13 @@
               <template slot-scope="scope">{{ scope.row.materialName }}</template>
             </el-table-column>
             <el-table-column prop="materialId" label="食材ID" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
-            <el-table-column prop="bookQty" label="账面数量" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
-            <el-table-column prop="actualQty" label="实际数量" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
-            <el-table-column prop="diffQty" label="差异数量" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
+            <el-table-column prop="bookQty" label="账面数量" width="140" align="right" :header-align="'center'" :show-overflow-tooltip="true" />
+            <el-table-column prop="actualQty" label="实际数量" width="140" align="right" :header-align="'center'" :show-overflow-tooltip="true" />
+            <el-table-column prop="diffQty" label="差异数量" width="140" align="right" :header-align="'center'" :show-overflow-tooltip="true" />
             <el-table-column label="差异" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
               <template slot-scope="scope">
-                <span :style="scope.row.diff < 0 ? 'color: var(--color-danger); font-weight: 600' : scope.row.diff > 0 ? 'color: var(--color-success); font-weight: 600' : 'color: var(--color-info)'">
-                  {{ scope.row.diff }}
+                <span :style="(scope.row.diffQty || scope.row.diff) < 0 ? 'color: var(--color-danger); font-weight: 600' : (scope.row.diffQty || scope.row.diff) > 0 ? 'color: var(--color-success); font-weight: 600' : 'color: var(--color-info)'">
+                  {{ scope.row.diffQty != null ? scope.row.diffQty : scope.row.diff }}
                 </span>
               </template>
             </el-table-column>
@@ -83,8 +83,11 @@
           </el-table>
           <div v-else class="empty-expand">暂无明细数据</div>
         </template>
+        <template #col-totalDiffAmount="{ row }">
+          <span :style="row.totalDiffAmount < 0 ? 'color: var(--color-danger); font-weight: 600' : row.totalDiffAmount > 0 ? 'color: var(--color-warning); font-weight: 600' : 'color: var(--color-info)'">{{ row.totalDiffAmount }}</span>
+        </template>
         <template #col-profitLoss="{ row }">
-          <span :style="row.profitLoss < 0 ? 'color: var(--color-danger); font-weight: 600' : 'color: var(--el-text-primary)'">{{ row.profitLoss }}</span>
+          <span :style="row.profitLoss < 0 ? 'color: var(--color-danger); font-weight: 600' : row.profitLoss > 0 ? 'color: var(--color-success); font-weight: 600' : 'color: var(--color-info)'">{{ row.profitLoss }}</span>
         </template>
         <template #col-status="{ row }">
           <el-tag :type="row.status === 'IN_PROGRESS' ? 'warning' : 'success'" size="small">
@@ -173,12 +176,12 @@
           columns: [
             { prop: 'checkNo', label: '盘点单号', width: 140 },
             { prop: 'operator', label: '操作员', width: 90, align: 'center' },
-            { prop: 'itemCount', label: '盘点项数', width: 90, type: 'number' },
-            { prop: 'totalDiffAmount', label: '总差异金额', width: 115, align: 'center', slot: true, type: 'money' },
-            { prop: 'profitLoss', label: '盈亏金额', width: 115, align: 'center', slot: true, type: 'money' },
+            { prop: 'itemCount', label: '盘点项数', width: 90, align: 'right', type: 'number' },
+            { prop: 'totalDiffAmount', label: '总差异金额', width: 115, align: 'right', slot: true, type: 'money' },
+            { prop: 'profitLoss', label: '盈亏金额', width: 115, align: 'right', slot: true, type: 'money' },
             { prop: 'remark', label: '备注', minWidth: 90 },
             { prop: 'status', label: '状态', width: 90, align: 'center', slot: true },
-            { prop: 'createdTime', label: '创建时间', width: 155 }
+            { prop: 'createdTime', label: '创建时间', width: 155, align: 'center' }
           ],
           tableSearchItems: [],
           tableActions: [
