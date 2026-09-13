@@ -11,9 +11,115 @@
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
+    /* ── 展开行摘要条 ── */
+    .expand-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      background: var(--bg-surface, #fff);
+      border: 1px solid var(--border-default, #e5e7eb);
+      border-radius: var(--radius-md, 8px);
+    }
+    .expand-summary__item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: var(--font-size-sm, 13px);
+    }
+    .expand-summary__item i {
+      font-size: 14px;
+      color: var(--text-muted, #9ca3af);
+    }
+    .expand-summary__label {
+      color: var(--text-muted, #9ca3af);
+    }
+    .expand-summary__value {
+      color: var(--text-primary, #1f2937);
+      font-weight: 500;
+    }
+
+    /* ── 子表格 ── */
     .sub-table { margin: 8px 0; width: 100%; }
     .sub-table .el-table__body-wrapper { background: var(--el-bg-ghost); }
-    .empty-expand { text-align: center; padding: 24px; color: var(--text-muted); font-size:var(--font-size-sm); }
+
+    /* ── 食材名称单元格 ── */
+    .material-name-cell {
+      display: flex;
+      align-items: center;
+      font-weight: 500;
+      color: var(--text-primary, #1f2937);
+    }
+
+    /* ── 数量列 ── */
+    .qty-book { color: var(--text-secondary, #4b5563); font-variant-numeric: tabular-nums; }
+    .qty-actual { color: var(--text-primary, #1f2937); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    /* ── 差异徽章 ── */
+    .diff-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: var(--font-size-sm, 13px);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .diff-badge i { font-size: 12px; }
+    .diff-badge--loss {
+      color: var(--color-danger, #f56c6c);
+      background: rgba(245, 108, 108, 0.08);
+    }
+    .diff-badge--profit {
+      color: var(--color-success, #67c23a);
+      background: rgba(103, 194, 58, 0.08);
+    }
+    .diff-badge--even {
+      color: var(--text-muted, #9ca3af);
+      background: rgba(156, 163, 175, 0.08);
+    }
+
+    /* ── 盈亏状态标签 ── */
+    .diff-status-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: var(--font-size-xs, 12px);
+      font-weight: 500;
+    }
+    .diff-status-tag--loss {
+      color: var(--color-danger, #f56c6c);
+      background: rgba(245, 108, 108, 0.06);
+    }
+    .diff-status-tag--profit {
+      color: var(--color-success, #67c23a);
+      background: rgba(103, 194, 58, 0.06);
+    }
+    .diff-status-tag--even {
+      color: var(--text-muted, #9ca3af);
+      background: rgba(156, 163, 175, 0.06);
+    }
+
+    /* ── 有差异的行高亮 ── */
+    .sub-table .has-diff td {
+      background: rgba(245, 108, 108, 0.02) !important;
+    }
+
+    /* ── 空状态 ── */
+    .empty-expand {
+      text-align: center;
+      padding: 32px 24px;
+      color: var(--text-muted, #9ca3af);
+      font-size: var(--font-size-sm, 13px);
+    }
+
+    /* ── 文字颜色工具类 ── */
+    .text-danger { color: var(--color-danger, #f56c6c) !important; }
+    .text-success { color: var(--color-success, #67c23a) !important; }
+
+    /* ── 录入弹窗明细 ── */
     .check-detail-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; padding-right: 4px; }
     .detail-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px; background: var(--el-bg-ghost); border-radius: var(--radius-md); border: 1px solid var(--el-border-light); }
     .detail-row .el-input--narrow-md { width: 120px; }
@@ -64,24 +170,74 @@
         @size-change="onSizeChange"
         @expand-change="loadDetails">
         <template #expand="{ row }">
-          <el-table aria-label="数据表格" :data="row.details" stripe class="tableBox sub-table" v-if="row.details && row.details.length">
-            <el-table-column label="食材名称" min-width="140" align="center">
-              <template slot-scope="scope">{{ scope.row.materialName }}</template>
-            </el-table-column>
-            <el-table-column prop="materialId" label="食材ID" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
-            <el-table-column prop="bookQty" label="账面数量" width="140" align="right" :header-align="'center'" :show-overflow-tooltip="true" />
-            <el-table-column prop="actualQty" label="实际数量" width="140" align="right" :header-align="'center'" :show-overflow-tooltip="true" />
-            <el-table-column prop="diffQty" label="差异数量" width="140" align="right" :header-align="'center'" :show-overflow-tooltip="true" />
-            <el-table-column label="差异" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
+          <!-- 盘点摘要条 -->
+          <div class="expand-summary">
+            <div class="expand-summary__item">
+              <i class="ri-user-line"></i>
+              <span class="expand-summary__label">操作员</span>
+              <span class="expand-summary__value">{{ row.operator || '-' }}</span>
+            </div>
+            <div class="expand-summary__item">
+              <i class="ri-time-line"></i>
+              <span class="expand-summary__label">盘点时间</span>
+              <span class="expand-summary__value">{{ row.createdTime || '-' }}</span>
+            </div>
+            <div class="expand-summary__item">
+              <i class="ri-file-list-3-line"></i>
+              <span class="expand-summary__label">盘点项数</span>
+              <span class="expand-summary__value">{{ row.itemCount || 0 }} 项</span>
+            </div>
+            <div class="expand-summary__item">
+              <i class="ri-error-warning-line"></i>
+              <span class="expand-summary__label">差异项</span>
+              <span class="expand-summary__value" :class="getDiffCount(row) > 0 ? 'text-danger' : 'text-success'">{{ getDiffCount(row) }} 项</span>
+            </div>
+            <div class="expand-summary__item" v-if="row.remark">
+              <i class="ri-sticky-note-line"></i>
+              <span class="expand-summary__label">备注</span>
+              <span class="expand-summary__value">{{ row.remark }}</span>
+            </div>
+          </div>
+          <!-- 明细表格 -->
+          <el-table aria-label="盘点明细" :data="row.details" stripe class="tableBox sub-table" v-if="row.details && row.details.length"
+            :row-class-name="detailRowClass">
+            <el-table-column label="食材名称" min-width="160">
               <template slot-scope="scope">
-                <span :style="(scope.row.diffQty || scope.row.diff) < 0 ? 'color: var(--color-danger); font-weight: 600' : (scope.row.diffQty || scope.row.diff) > 0 ? 'color: var(--color-success); font-weight: 600' : 'color: var(--color-info)'">
-                  {{ scope.row.diffQty != null ? scope.row.diffQty : scope.row.diff }}
+                <div class="material-name-cell">
+                  <i class="ri-leaf-line" style="color:var(--color-success);margin-right:6px;font-size:14px;"></i>
+                  <span>{{ scope.row.materialName }}</span>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="账面数量" width="130" align="right" :header-align="'center'">
+              <template slot-scope="scope">
+                <span class="qty-book">{{ scope.row.bookQty != null ? scope.row.bookQty : '-' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="实际数量" width="130" align="right" :header-align="'center'">
+              <template slot-scope="scope">
+                <span class="qty-actual">{{ scope.row.actualQty != null ? scope.row.actualQty : '-' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="差异" width="150" align="center" :header-align="'center'">
+              <template slot-scope="scope">
+                <span class="diff-badge" :class="getDiffClass(scope.row)">
+                  <i :class="getDiffIcon(scope.row)"></i>
+                  {{ formatDiff(scope.row) }}
                 </span>
               </template>
             </el-table-column>
-            <el-table-column prop="remark" label="备注" min-width="120" align="center" />
+            <el-table-column label="盈亏状态" width="120" align="center" :header-align="'center'">
+              <template slot-scope="scope">
+                <span class="diff-status-tag" :class="getDiffStatusClass(scope.row)">{{ getDiffStatusLabel(scope.row) }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="remark" label="备注" min-width="120" />
           </el-table>
-          <div v-else class="empty-expand">暂无明细数据</div>
+          <div v-else class="empty-expand">
+            <i class="ri-inbox-line" style="font-size:24px;display:block;margin-bottom:8px;color:var(--text-muted);"></i>
+            暂无明细数据
+          </div>
         </template>
         <template #col-totalDiffAmount="{ row }">
           <span :style="row.totalDiffAmount < 0 ? 'color: var(--color-danger); font-weight: 600' : row.totalDiffAmount > 0 ? 'color: var(--color-warning); font-weight: 600' : 'color: var(--color-info)'">{{ row.totalDiffAmount }}</span>
@@ -226,6 +382,51 @@
         }
       },
       methods: {
+        /* ── 展开行明细辅助方法 ── */
+        getDiffValue: function(row) {
+          var v = row.diffQty;
+          if (v == null) v = row.diff;
+          return Number(v) || 0;
+        },
+        getDiffCount: function(row) {
+          if (!row.details || !row.details.length) return 0;
+          var count = 0;
+          for (var i = 0; i < row.details.length; i++) {
+            if (this.getDiffValue(row.details[i]) !== 0) count++;
+          }
+          return count;
+        },
+        formatDiff: function(row) {
+          var v = this.getDiffValue(row);
+          return v > 0 ? '+' + v : String(v);
+        },
+        getDiffClass: function(row) {
+          var v = this.getDiffValue(row);
+          if (v < 0) return 'diff-badge--loss';
+          if (v > 0) return 'diff-badge--profit';
+          return 'diff-badge--even';
+        },
+        getDiffIcon: function(row) {
+          var v = this.getDiffValue(row);
+          if (v < 0) return 'ri-arrow-down-s-fill';
+          if (v > 0) return 'ri-arrow-up-s-fill';
+          return 'ri-subtract-line';
+        },
+        getDiffStatusLabel: function(row) {
+          var v = this.getDiffValue(row);
+          if (v < 0) return '盘亏';
+          if (v > 0) return '盘盈';
+          return '一致';
+        },
+        getDiffStatusClass: function(row) {
+          var v = this.getDiffValue(row);
+          if (v < 0) return 'diff-status-tag--loss';
+          if (v > 0) return 'diff-status-tag--profit';
+          return 'diff-status-tag--even';
+        },
+        detailRowClass: function(obj) {
+          return this.getDiffValue(obj.row) !== 0 ? 'has-diff' : '';
+        },
         onCardClick: function(payload) {
           this.activeFilter = payload.activeKey
           this.page = 1
