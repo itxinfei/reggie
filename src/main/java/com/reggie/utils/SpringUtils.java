@@ -234,6 +234,10 @@ public final class SpringUtils {
     // ==================== Private Helpers ====================
 
     private static Environment getEnvironment() {
-        return ApplicationContextProvider.getApplicationContext().getEnvironment();
+        ApplicationContext ctx = ApplicationContextProvider.getApplicationContext();
+        if (ctx == null) {
+            throw new IllegalStateException("Spring ApplicationContext 尚未初始化或已关闭");
+        }
+        return ctx.getEnvironment();
     }
 }

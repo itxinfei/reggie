@@ -895,11 +895,11 @@ public class ReportServiceImpl implements ReportService {
                 int payMethod = o.getPayMethod() != null ? o.getPayMethod() : 0;
                 BigDecimal amt = o.getAmount() != null ? o.getAmount() : BigDecimal.ZERO;
                 if (payMethod == 2) {
-                    payMap.put(2, payMap.get(2).add(amt));
+                    payMap.put(2, payMap.getOrDefault(2, BigDecimal.ZERO).add(amt));
                 } else if (payMethod == 3) {
-                    payMap.put(3, payMap.get(3).add(amt));
+                    payMap.put(3, payMap.getOrDefault(3, BigDecimal.ZERO).add(amt));
                 } else if (payMethod >= 1 && payMethod <= 6) {
-                    payMap.put(1, payMap.get(1).add(amt));
+                    payMap.put(1, payMap.getOrDefault(1, BigDecimal.ZERO).add(amt));
                 }
             }
 
