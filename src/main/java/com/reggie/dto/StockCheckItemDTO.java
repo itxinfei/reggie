@@ -19,12 +19,10 @@ public class StockCheckItemDTO {
     @NotNull(message = "食材ID不能为空")
     private Long materialId;
 
-    @Schema(description = "系统库存", required = true, example = "100.5")
-    @NotNull(message = "系统库存不能为空")
+    @Schema(description = "系统库存（可选，完成盘点时由后端自动读取）", example = "100.5")
     private BigDecimal systemStock;
 
-    @Schema(description = "实际库存", required = true, example = "98.0")
-    @NotNull(message = "实际库存不能为空")
+    @Schema(description = "实际库存（录入实盘和完成盘点时必填）", example = "98.0")
     private BigDecimal actualStock;
 
     @Schema(description = "备注", example = "部分食材损耗")

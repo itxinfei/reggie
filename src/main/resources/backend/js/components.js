@@ -851,6 +851,14 @@ Vue.component('crud-dialog', {
       default: null
     }
   },
+  data: function () {
+    // 修改点：内部镜像 visible，避免直接变异 prop（X/ESC 关闭时 prop 变异无法回传父，导致弹窗关不掉/关了又开）
+    return { currentVisible: this.visible }
+  },
+  watch: {
+    // 父通过 .sync 更新 visible 时，同步到内部受控状态
+    visible: function (val) { this.currentVisible = val }
+  },
   computed: {
     /** 尺寸别名 → 标准像素宽度（当自定义 width 时优先使用 width） */
     resolvedWidth: function () {
@@ -875,7 +883,8 @@ Vue.component('crud-dialog', {
     '  show-close' +
     '  :custom-class="dialogClass"' +
     '  :title="title"' +
-    '  :visible.sync="visible"' +
+    '  :visible="currentVisible"' +
+    '  @update:visible="onVisibleChange"' +
     '  :width="resolvedWidth"' +
     '  :close-on-click-modal="closeOnClickModal"' +
     '  :before-close="onBeforeClose"' +
@@ -896,8 +905,18 @@ Vue.component('crud-dialog', {
     '</el-dialog>',
   methods: {
     handleClose: function () {
+      this.currentVisible = false
       this.$emit('update:visible', false)
       this.$emit('close')
+    },
+    /**
+     * 承接 el-dialog 的 update:visible：X 按钮 / ESC 关闭时由 onBeforeClose 调 done() 触发，
+     * 这里把变化同步到内部状态并回传给父（.sync），确保父 visible 与弹窗实际状态一致。
+     */
+    onVisibleChange: function (val) {
+      this.currentVisible = val
+      this.$emit('update:visible', val)
+      if (!val) { this.$emit('close') }
     },
     /**
      * 取消按钮 / 外部关闭请求：先跑未保存守卫，通过才真正关闭。

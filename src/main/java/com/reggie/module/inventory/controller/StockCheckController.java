@@ -7,6 +7,7 @@ import com.reggie.common.R;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.CompleteStockCheckDTO;
 import com.reggie.dto.CreateStockCheckDTO;
+import com.reggie.dto.StockCheckItemDTO;
 import com.reggie.enums.StockCheckStatus;
 import com.reggie.module.inventory.model.StockCheck;
 import com.reggie.module.inventory.service.StockCheckService;
@@ -31,6 +32,9 @@ import javax.validation.constraints.Max;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.List;
+import java.util.Map;
+import com.reggie.module.inventory.model.StockCheckDetail;
 
 /**
  * 盘点管理控制器
@@ -114,6 +118,58 @@ public class StockCheckController {
             @Parameter(description = "盘点结果明细", required = true) @Valid @RequestBody CompleteStockCheckDTO dto) {
         stockCheckService.completeCheck(id, dto.getItems());
         return R.success("盘点完成");
+    }
+
+    /**
+     * 获取盘点统计
+     * @return 统计数据 {total, draft, inProgress, done, diffCount}
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "盘点统计", description = "获取盘点单状态统计，含总数/草稿/进行中/已完成/差异项数")
+    public R<Map<String, Object>> stats() {
+        return R.success(stockCheckService.getStats());
+    }
+
+    /**
+     * 获取盘点单明细列表
+     * @param id 盘点单ID
+     * @return 明细列表
+     */
+    @GetMapping("/{id}/details")
+    @Operation(summary = "盘点明细", description = "获取指定盘点单的明细列表，含食材名称和差异信息")
+    @Parameter(name = "id", description = "盘点单ID", required = true)
+    public R<List<StockCheckDetail>> details(@PathVariable Long id) {
+        return R.success(stockCheckService.getDetails(id));
+    }
+
+    /**
+     * 设置盘点项（添加食材 + 快照账面数量）
+     * @param id 盘点单ID
+     * @param items 食材列表
+     * @return 操作结果
+     */
+    @PutMapping("/{id}/items")
+    @Operation(summary = "设置盘点项", description = "为盘点单添加盘点食材，自动快照当前库存作为账面数量")
+    @Parameter(name = "id", description = "盘点单ID", required = true)
+    public R<String> setItems(@PathVariable Long id,
+            @Valid @RequestBody List<StockCheckItemDTO> items) {
+        stockCheckService.setCheckItems(id, items);
+        return R.success("盘点项设置成功");
+    }
+
+    /**
+     * 录入实际库存数量
+     * @param id 盘点单ID
+     * @param items [{materialId, actualStock}]
+     * @return 操作结果
+     */
+    @PutMapping("/{id}/record")
+    @Operation(summary = "录入实盘数量", description = "为盘点单中的食材录入实际库存数量")
+    @Parameter(name = "id", description = "盘点单ID", required = true)
+    public R<String> record(@PathVariable Long id,
+            @Valid @RequestBody List<StockCheckItemDTO> items) {
+        stockCheckService.recordActualQty(id, items);
+        return R.success("实盘数量录入成功");
     }
 
     /**

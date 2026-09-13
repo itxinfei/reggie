@@ -86,7 +86,8 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
             StockCheck sc = new StockCheck();
             sc.setTenantId(BaseContext.getCurrentTenantId());
             sc.setCheckNo("CK" + datePrefix + System.currentTimeMillis());
-            sc.setStatus(StockCheckStatus.IN_PROGRESS.getValue());
+            // 修改点：创建盘点单时设为"草稿"状态，等待用户添加盘点项
+            sc.setStatus(StockCheckStatus.DRAFT.getValue());
             sc.setOperator(operator);
             sc.setRemark(remark);
             sc.setProfitLoss(BigDecimal.ZERO);
@@ -98,8 +99,8 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
             StockCheck sc = new StockCheck();
             sc.setTenantId(BaseContext.getCurrentTenantId());
             sc.setCheckNo("CK" + datePrefix + String.format("%03d", seq));
-            // 修改点：创建盘点单时设为"进行中"状态（原来的 DRAFT 未在 UI 中映射，导致无状态显示）
-            sc.setStatus(StockCheckStatus.IN_PROGRESS.getValue());
+            // 修改点：创建盘点单时设为"草稿"状态，等待用户添加盘点项后再变为"进行中"
+            sc.setStatus(StockCheckStatus.DRAFT.getValue());
             sc.setOperator(operator);
             sc.setRemark(remark);
             sc.setProfitLoss(BigDecimal.ZERO);
@@ -254,6 +255,135 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
             fillStockCheckInfo(list);
         }
         return list;
+    }
+
+    @Override
+    public Map<String, Object> getStats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<StockCheck> qw = new LambdaQueryWrapper<>();
+        long total = count(qw);
+        qw = new LambdaQueryWrapper<>();
+        qw.eq(StockCheck::getStatus, StockCheckStatus.DRAFT.getValue());
+        long draft = count(qw);
+        qw = new LambdaQueryWrapper<>();
+        qw.eq(StockCheck::getStatus, StockCheckStatus.IN_PROGRESS.getValue());
+        long inProgress = count(qw);
+        qw = new LambdaQueryWrapper<>();
+        qw.eq(StockCheck::getStatus, StockCheckStatus.DONE.getValue());
+        long done = count(qw);
+        // 差异项数：已完成盘点单中明细 diffQty != 0 的条目数
+        long diffCount = 0;
+        if (done > 0) {
+            List<StockCheck> doneChecks = list(new LambdaQueryWrapper<StockCheck>()
+                    .eq(StockCheck::getStatus, StockCheckStatus.DONE.getValue())
+                    .select(StockCheck::getId));
+            if (!doneChecks.isEmpty()) {
+                List<Long> checkIds = doneChecks.stream().map(StockCheck::getId).collect(Collectors.toList());
+                List<StockCheckDetail> details = stockCheckDetailMapper.selectList(
+                        new LambdaQueryWrapper<StockCheckDetail>().in(StockCheckDetail::getCheckId, checkIds));
+                diffCount = details.stream()
+                        .filter(d -> d.getDiffQty() != null && d.getDiffQty().compareTo(BigDecimal.ZERO) != 0)
+                        .count();
+            }
+        }
+        java.util.LinkedHashMap<String, Object> stats = new java.util.LinkedHashMap<>();
+        stats.put("total", total);
+        stats.put("draft", draft);
+        stats.put("inProgress", inProgress);
+        stats.put("done", done);
+        stats.put("diffCount", diffCount);
+        return stats;
+    }
+
+    @Override
+    public List<StockCheckDetail> getDetails(Long checkId) {
+        List<StockCheckDetail> details = stockCheckDetailMapper.selectList(
+                new LambdaQueryWrapper<StockCheckDetail>().eq(StockCheckDetail::getCheckId, checkId));
+        // 填充 diff 瞬态字段和食材名称
+        if (!details.isEmpty()) {
+            for (StockCheckDetail d : details) {
+                d.setDiff(d.getDiffQty());
+            }
+            List<Long> materialIds = details.stream()
+                    .map(StockCheckDetail::getMaterialId).filter(id -> id != null).distinct()
+                    .collect(Collectors.toList());
+            if (!materialIds.isEmpty()) {
+                Map<Long, String> nameMap = materialService.list(
+                        new LambdaQueryWrapper<Material>().in(Material::getId, materialIds))
+                        .stream().collect(Collectors.toMap(Material::getId, Material::getName, (v1, v2) -> v1));
+                details.forEach(d -> d.setMaterialName(nameMap.get(d.getMaterialId())));
+            }
+        }
+        return details;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void setCheckItems(Long checkId, List<StockCheckItemDTO> items) {
+        StockCheck sc = getById(checkId);
+        if (sc == null) {
+            throw new CustomException("盘点单不存在");
+        }
+        if (!StockCheckStatus.DRAFT.getValue().equals(sc.getStatus())
+                && !StockCheckStatus.IN_PROGRESS.getValue().equals(sc.getStatus())) {
+            throw new CustomException("仅草稿或进行中的盘点单可添加盘点项");
+        }
+        // 清除旧明细
+        stockCheckDetailMapper.delete(new LambdaQueryWrapper<StockCheckDetail>()
+                .eq(StockCheckDetail::getCheckId, checkId));
+        // 写入新明细（账面数量从当前库存快照）
+        for (StockCheckItemDTO item : items) {
+            Material material = materialService.getById(item.getMaterialId());
+            if (material == null) {
+                throw new CustomException("食材不存在: " + item.getMaterialId());
+            }
+            BigDecimal bookQty = material.getStockQty() != null ? material.getStockQty() : BigDecimal.ZERO;
+            StockCheckDetail detail = new StockCheckDetail();
+            detail.setCheckId(checkId);
+            detail.setMaterialId(item.getMaterialId());
+            detail.setBookQty(bookQty);
+            detail.setActualQty(BigDecimal.ZERO);
+            detail.setDiffQty(BigDecimal.ZERO);
+            detail.setDiff(BigDecimal.ZERO);
+            stockCheckDetailMapper.insert(detail);
+        }
+        // 状态变为进行中
+        if (StockCheckStatus.DRAFT.getValue().equals(sc.getStatus())) {
+            LambdaUpdateWrapper<StockCheck> uw = new LambdaUpdateWrapper<>();
+            uw.eq(StockCheck::getId, checkId)
+                    .eq(StockCheck::getStatus, StockCheckStatus.DRAFT.getValue())
+                    .set(StockCheck::getStatus, StockCheckStatus.IN_PROGRESS.getValue());
+            baseMapper.update(null, uw);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void recordActualQty(Long checkId, List<StockCheckItemDTO> items) {
+        StockCheck sc = getById(checkId);
+        if (sc == null) {
+            throw new CustomException("盘点单不存在");
+        }
+        if (!StockCheckStatus.IN_PROGRESS.getValue().equals(sc.getStatus())) {
+            throw new CustomException("仅进行中的盘点单可录入实盘数量");
+        }
+        for (StockCheckItemDTO item : items) {
+            if (item.getMaterialId() == null || item.getActualStock() == null) {
+                continue;
+            }
+            StockCheckDetail existing = stockCheckDetailMapper.selectOne(
+                    new LambdaQueryWrapper<StockCheckDetail>()
+                            .eq(StockCheckDetail::getCheckId, checkId)
+                            .eq(StockCheckDetail::getMaterialId, item.getMaterialId()));
+            if (existing == null) {
+                throw new CustomException("该食材不在盘点项中: " + item.getMaterialId());
+            }
+            BigDecimal diff = item.getActualStock().subtract(existing.getBookQty());
+            existing.setActualQty(item.getActualStock());
+            existing.setDiffQty(diff);
+            existing.setDiff(diff);
+            stockCheckDetailMapper.updateById(existing);
+        }
     }
 
     /**

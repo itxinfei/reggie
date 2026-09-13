@@ -3,13 +3,15 @@ package com.reggie.module.inventory.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.dto.StockCheckItemDTO;
 import com.reggie.module.inventory.model.StockCheck;
+import com.reggie.module.inventory.model.StockCheckDetail;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
  * 库存盘点服务接口
  * </p>
- * <p>提供盘点单创建、盘点完成确认等功能</p>
+ * <p>提供盘点单创建、盘点项设置、实盘录入、完成确认等功能</p>
  *
  * @author 心飞为你飞
  * @since 2024-01-01
@@ -17,7 +19,7 @@ import java.util.List;
 public interface StockCheckService extends IService<StockCheck> {
 
     /**
-     * 创建盘点单
+     * 创建盘点单（草稿状态）
      *
      * @param operator 操作人
      * @param remark   备注
@@ -32,4 +34,35 @@ public interface StockCheckService extends IService<StockCheck> {
      * @param items   盘点明细列表
      */
     void completeCheck(Long checkId, List<StockCheckItemDTO> items);
+
+    /**
+     * 获取盘点统计（总数/草稿/进行中/已完成/差异项数）
+     *
+     * @return 统计数据 Map
+     */
+    Map<String, Object> getStats();
+
+    /**
+     * 获取盘点单明细列表
+     *
+     * @param checkId 盘点单ID
+     * @return 明细列表（含食材名称）
+     */
+    List<StockCheckDetail> getDetails(Long checkId);
+
+    /**
+     * 设置盘点项（食材列表 + 账面数量快照），盘点单从 DRAFT 变为 IN_PROGRESS
+     *
+     * @param checkId 盘点单ID
+     * @param items   食材列表 [{materialId}]
+     */
+    void setCheckItems(Long checkId, List<StockCheckItemDTO> items);
+
+    /**
+     * 录入实际库存数量
+     *
+     * @param checkId 盘点单ID
+     * @param items   [{materialId, actualStock}]
+     */
+    void recordActualQty(Long checkId, List<StockCheckItemDTO> items);
 }

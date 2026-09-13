@@ -42,6 +42,10 @@ const stockCheckPage = (params) => $axios({ url: '/api/inventory/stock-check/pag
 const addStockCheck = (params) => $axios({ url: '/api/inventory/stock-check', method: 'post', data: params })
 const completeStockCheck = (id, params) => $axios({ url: `/api/inventory/stock-check/complete/${id}`, method: 'put', data: params })
 const deleteStockCheck = (id) => $axios({ url: `/api/inventory/stock-check/${id}`, method: 'delete' })
+const stockCheckStats = () => $axios({ url: '/api/inventory/stock-check/stats', method: 'get' })
+const stockCheckDetails = (id) => $axios({ url: `/api/inventory/stock-check/${id}/details`, method: 'get' })
+const setStockCheckItems = (id, items) => $axios({ url: `/api/inventory/stock-check/${id}/items`, method: 'put', data: items })
+const recordStockCheckQty = (id, items) => $axios({ url: `/api/inventory/stock-check/${id}/record`, method: 'put', data: items })
 
 // 库存预警与补货（域⑨）
 const materialWarningPage = (params) => $axios({ url: '/api/inventory/material/warning/page', method: 'get', params })
