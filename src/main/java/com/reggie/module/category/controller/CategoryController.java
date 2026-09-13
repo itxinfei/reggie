@@ -121,7 +121,11 @@ public class CategoryController {
         for (String s : split) {
             String trim = s.trim();
             if (!trim.isEmpty()) {
-                idList.add(Long.parseLong(trim));
+                try {
+                    idList.add(Long.parseLong(trim));
+                } catch (NumberFormatException e) {
+                    return R.error("无效的分类ID: " + trim);
+                }
             }
         }
         if (idList.isEmpty()) {

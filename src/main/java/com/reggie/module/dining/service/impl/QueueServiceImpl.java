@@ -86,7 +86,12 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
             int seq = 1;
             if (last != null) {
                 String lastNo = last.getQueueNo();
-                seq = Integer.parseInt(lastNo.substring(lastNo.length() - 4)) + 1;
+                try {
+                    seq = Integer.parseInt(lastNo.substring(lastNo.length() - 4)) + 1;
+                } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
+                    log.warn("[排队取号] 解析历史排队号失败，重置为1: lastNo={}, error={}", lastNo, e.getMessage());
+                    seq = 1;
+                }
             }
 
             QueueRecord record = new QueueRecord();
