@@ -776,7 +776,14 @@ public class ReportServiceImpl implements ReportService {
         if (allOrders.isEmpty()) {
             // 整个范围无订单，所有日期所有菜品均为0
             for (String dateKey : dateKeys) {
-                dishNames.forEach(name -> dishDataMap.get(name.trim()).add(0));
+                dishNames.forEach(name -> {
+                    if (name != null) {
+                        List<Integer> dataList = dishDataMap.get(name.trim());
+                        if (dataList != null) {
+                            dataList.add(0);
+                        }
+                    }
+                });
             }
             return;
         }
@@ -813,11 +820,23 @@ public class ReportServiceImpl implements ReportService {
         for (String dateKey : dateKeys) {
             Map<String, Integer> dayCountMap = dateDishCountMap.get(dateKey);
             if (dayCountMap == null) {
-                dishNames.forEach(name -> dishDataMap.get(name.trim()).add(0));
+                dishNames.forEach(name -> {
+                    if (name != null) {
+                        List<Integer> dataList = dishDataMap.get(name.trim());
+                        if (dataList != null) {
+                            dataList.add(0);
+                        }
+                    }
+                });
             } else {
                 dishNames.forEach(name -> {
-                    String key = name.trim();
-                    dishDataMap.get(key).add(dayCountMap.getOrDefault(key, 0));
+                    if (name != null) {
+                        String key = name.trim();
+                        List<Integer> dataList = dishDataMap.get(key);
+                        if (dataList != null) {
+                            dataList.add(dayCountMap.getOrDefault(key, 0));
+                        }
+                    }
                 });
             }
         }

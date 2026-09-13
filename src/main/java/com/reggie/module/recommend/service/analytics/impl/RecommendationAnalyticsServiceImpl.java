@@ -277,8 +277,10 @@ public class RecommendationAnalyticsServiceImpl implements RecommendationAnalyti
 
             Map<String, Map<String, Object>> dateMap = new LinkedHashMap<>();
             for (Map<String, Object> row : rows) {
-                String date = row.get("date").toString();
-                dateMap.put(date, row);
+                Object dateObj = row.get("date");
+                if (dateObj != null) {
+                    dateMap.put(dateObj.toString(), row);
+                }
             }
 
             for (int i = days - 1; i >= 0; i--) {
@@ -289,8 +291,10 @@ public class RecommendationAnalyticsServiceImpl implements RecommendationAnalyti
 
                 Map<String, Object> row = dateMap.get(dateKey);
                 if (row != null) {
-                    browseCount.add(((Number) row.get("browse_count")).intValue());
-                    cartCount.add(((Number) row.get("cart_count")).intValue());
+                    Object browseObj = row.get("browse_count");
+                    Object cartObj = row.get("cart_count");
+                    browseCount.add(browseObj instanceof Number ? ((Number) browseObj).intValue() : 0);
+                    cartCount.add(cartObj instanceof Number ? ((Number) cartObj).intValue() : 0);
                 } else {
                     browseCount.add(0);
                     cartCount.add(0);

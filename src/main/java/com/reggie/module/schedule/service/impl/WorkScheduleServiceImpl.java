@@ -116,6 +116,10 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     public List<Map<String, Object>> getEmployeeSchedule(Long employeeId, String month, Long tenantId) {
         log.info("获取员工排班 - employeeId={}, month={}, tenantId={}", employeeId, month, tenantId);
 
+        if (employeeId == null) {
+            throw new CustomException("员工ID不能为空");
+        }
+
         LocalDate monthStart = LocalDate.now();
         if (month != null && !month.isEmpty()) {
             monthStart = LocalDate.parse(month + "-01", DATE_FMT);

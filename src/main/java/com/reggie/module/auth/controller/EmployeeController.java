@@ -764,7 +764,9 @@ public class EmployeeController {
             return R.error("新密码长度不能少于6位");
         }
 
-        Long empId = (Long) request.getSession().getAttribute("employee");
+        // 安全转型，避免 ClassCastException
+        Object empAttr = request.getSession().getAttribute("employee");
+        Long empId = (empAttr instanceof Number) ? ((Number) empAttr).longValue() : null;
         if (empId == null) {
             return R.error("请先登录");
         }
@@ -803,7 +805,11 @@ public class EmployeeController {
         if (empIdObj == null) {
             return false;
         }
-        Long empId = (Long) empIdObj;
+        // 安全转型，避免 ClassCastException
+        Long empId = (empIdObj instanceof Number) ? ((Number) empIdObj).longValue() : null;
+        if (empId == null) {
+            return false;
+        }
         Employee currentEmp = employeeService.getById(empId);
 
         // 更新 Session 中的租户信息（确保租户上下文最新）

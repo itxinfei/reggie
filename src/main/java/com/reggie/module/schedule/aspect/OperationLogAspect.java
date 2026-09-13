@@ -128,9 +128,11 @@ public class OperationLogAspect {
             opLog.setRequestMethod(request.getMethod());
             opLog.setOperatorIp(getClientIp(request));
 
-            // 从Session获取操作人信息
-            Long empId = (Long) request.getSession().getAttribute("employee");
-            Long userId = (Long) request.getSession().getAttribute("user");
+            // 从Session获取操作人信息（安全转型，避免 ClassCastException）
+            Object empAttr = request.getSession().getAttribute("employee");
+            Long empId = (empAttr instanceof Number) ? ((Number) empAttr).longValue() : null;
+            Object userAttr = request.getSession().getAttribute("user");
+            Long userId = (userAttr instanceof Number) ? ((Number) userAttr).longValue() : null;
             if (empId != null) {
                 opLog.setOperatorId(empId);
                 opLog.setOperatorName("员工-" + empId);

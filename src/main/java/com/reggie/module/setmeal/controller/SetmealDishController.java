@@ -84,10 +84,10 @@ public class SetmealDishController {
     @Operation(summary = "批量新增套餐菜品关联", description = "向套餐中添加多个菜品关联")
     @Parameter(name = "setmealDishList", description = "关联信息列表", required = true)
     public R<String> saveBatch(@RequestBody List<SetmealDish> setmealDishList) {
-        log.info("批量新增套餐菜品关联：count={}", setmealDishList.size());
-        if (setmealDishList.isEmpty()) {
+        if (setmealDishList == null || setmealDishList.isEmpty()) {
             return R.success("批量添加成功");
         }
+        log.info("批量新增套餐菜品关联：count={}", setmealDishList.size());
         // 校验套餐归属
         Long setmealId = setmealDishList.get(0).getSetmealId();
         if (!validateSetmealTenant(setmealId)) {
