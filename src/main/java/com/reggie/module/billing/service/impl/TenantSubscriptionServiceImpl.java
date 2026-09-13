@@ -280,12 +280,12 @@ public class TenantSubscriptionServiceImpl
     }
 
     /**
-     * 生成订阅单号：SUB + 14位时间 + 3位随机数。
+     * 生成订阅单号：SUB + 14位时间 + 6位随机数（冲突概率 1/1000000）。
      *
      * @return 单号
      */
     private String generateOrderNo() {
         return "SUB" + LocalDateTime.now().format(ORDER_NO_FMT)
-                + String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
+                + String.format("%06d", ThreadLocalRandom.current().nextInt(1000000));
     }
 }
