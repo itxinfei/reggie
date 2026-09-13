@@ -17,12 +17,52 @@
         <script src="../js/icon-fallback.js"></script>
         <!--本页面内容的样式-->
         <link rel="stylesheet" href="./../styles/address.css" />
+        <style>
+            /* 修改点：骨架屏样式 */
+            .skeleton-container { padding: 12rem 16rem; }
+            .skeleton-addr-card {
+                background: #fff; border-radius: 8rem; padding: 14rem 16rem; margin-bottom: 12rem;
+            }
+            .skeleton-addr-top { display: flex; align-items: center; gap: 8rem; margin-bottom: 12rem; }
+            .skeleton-addr-contact { display: flex; gap: 12rem; margin-bottom: 12rem; }
+            .skeleton-addr-action { display: flex; }
+            .skeleton-tag { width: 40rem; height: 20rem; border-radius: 4rem; }
+            .skeleton-line { height: 14rem; border-radius: 4rem; }
+            .skeleton-w20 { width: 20%; }
+            .skeleton-w30 { width: 30%; }
+            .skeleton-w40 { width: 40%; }
+            .skeleton-w60 { width: 60%; }
+            .skeleton-container .skeleton-addr-card,
+            .skeleton-container .skeleton-addr-top,
+            .skeleton-container .skeleton-addr-contact,
+            .skeleton-container .skeleton-addr-action,
+            .skeleton-container .skeleton-line,
+            .skeleton-container .skeleton-tag {
+                background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+                background-size: 200% 100%;
+                animation: skeleton-shine 1.5s ease-in-out infinite;
+            }
+            @keyframes skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        </style>
     </head>
     <body class="scrollable-page">
         <!-- 修改点：移除ElementUI v-loading，改用CSS加载遮罩 -->
         <div id="address" class="app" style="position:relative;">
-            <div v-if="loading" class="loading-overlay">
-                <div class="loading-spinner"></div>
+            <!-- 修改点：骨架屏替代 loading 遮罩 -->
+            <div v-if="loading" class="skeleton-container">
+                <div class="skeleton-addr-card" v-for="i in 3" :key="'sa'+i">
+                    <div class="skeleton-addr-top">
+                        <div class="skeleton-tag"></div>
+                        <div class="skeleton-line skeleton-w60"></div>
+                    </div>
+                    <div class="skeleton-addr-contact">
+                        <div class="skeleton-line skeleton-w30"></div>
+                        <div class="skeleton-line skeleton-w40"></div>
+                    </div>
+                    <div class="skeleton-addr-action">
+                        <div class="skeleton-line skeleton-w20"></div>
+                    </div>
+                </div>
             </div>
             <div class="divHead">
                 <div class="divTitle">

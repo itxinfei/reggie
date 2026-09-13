@@ -222,12 +222,56 @@
             font-size: var(--font-size-sm);
             color: var(--color-text-hint);
         }
+
+        /* 修改点：骨架屏样式 */
+        .skeleton-container { padding: 12rem 16rem; }
+        .skeleton-freq-header { height: 80rem; border-radius: 8rem; margin-bottom: 16rem; }
+        .skeleton-freq-tabs { display: flex; gap: 8rem; margin-bottom: 16rem; }
+        .skeleton-tab { width: 60rem; height: 28rem; border-radius: 14rem; }
+        .skeleton-freq-card {
+            background: #fff; border-radius: 8rem; padding: 14rem 16rem; margin-bottom: 12rem;
+        }
+        .skeleton-freq-row { display: flex; align-items: center; gap: 12rem; }
+        .skeleton-img { width: 60rem; height: 60rem; border-radius: 8rem; flex-shrink: 0; }
+        .skeleton-freq-info { flex: 1; }
+        .skeleton-btn { width: 60rem; height: 28rem; border-radius: 14rem; }
+        .skeleton-line { height: 14rem; border-radius: 4rem; margin-bottom: 8rem; }
+        .skeleton-line:last-child { margin-bottom: 0; }
+        .skeleton-w30 { width: 30%; }
+        .skeleton-w50 { width: 50%; }
+        .skeleton-container .skeleton-freq-header,
+        .skeleton-container .skeleton-freq-tabs,
+        .skeleton-container .skeleton-freq-card,
+        .skeleton-container .skeleton-freq-row,
+        .skeleton-container .skeleton-img,
+        .skeleton-container .skeleton-btn,
+        .skeleton-container .skeleton-line,
+        .skeleton-container .skeleton-tab {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shine 1.5s ease-in-out infinite;
+        }
+        @keyframes skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
 </head>
 <body>
     <div id="frequent" class="app">
-        <div v-if="pageLoading" class="loading-overlay">
-            <div class="loading-spinner"></div>
+        <!-- 修改点：骨架屏替代 loading 遮罩 -->
+        <div v-if="pageLoading" class="skeleton-container">
+            <div class="skeleton-freq-header"></div>
+            <div class="skeleton-freq-tabs">
+                <div class="skeleton-tab" v-for="i in 4" :key="'st'+i"></div>
+            </div>
+            <div class="skeleton-freq-card" v-for="i in 3" :key="'sf'+i">
+                <div class="skeleton-freq-row">
+                    <div class="skeleton-img"></div>
+                    <div class="skeleton-freq-info">
+                        <div class="skeleton-line skeleton-w50"></div>
+                        <div class="skeleton-line skeleton-w30"></div>
+                    </div>
+                    <div class="skeleton-btn"></div>
+                </div>
+            </div>
         </div>
 
         <div class="divHead">

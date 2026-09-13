@@ -12,6 +12,34 @@
     <link rel="stylesheet" href="./../styles/message.css" />
     <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+    <style>
+        /* 修改点：骨架屏样式 */
+        .skeleton-container { padding: 12rem 16rem; }
+        .skeleton-msg-card {
+            background: #fff; border-radius: 8rem; padding: 14rem 16rem; margin-bottom: 12rem;
+        }
+        .skeleton-msg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10rem; }
+        .skeleton-msg-content { margin-bottom: 8rem; }
+        .skeleton-tag { width: 50rem; height: 20rem; border-radius: 4rem; }
+        .skeleton-line { height: 14rem; border-radius: 4rem; }
+        .skeleton-line-sm { height: 10rem; border-radius: 3rem; }
+        .skeleton-w30 { width: 30%; }
+        .skeleton-w40 { width: 40%; }
+        .skeleton-w50 { width: 50%; }
+        .skeleton-w70 { width: 70%; }
+        .skeleton-w90 { width: 90%; }
+        .skeleton-container .skeleton-msg-card,
+        .skeleton-container .skeleton-msg-header,
+        .skeleton-container .skeleton-msg-content,
+        .skeleton-container .skeleton-line,
+        .skeleton-container .skeleton-line-sm,
+        .skeleton-container .skeleton-tag {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shine 1.5s ease-in-out infinite;
+        }
+        @keyframes skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
 </head>
 <body>
     <div id="messageApp" class="app">
@@ -22,6 +50,20 @@
         </div>
 
         <div class="divContent">
+            <!-- 修改点：骨架屏 -->
+            <div v-if="loading && messages.length === 0" class="skeleton-container">
+                <div class="skeleton-msg-card" v-for="i in 4" :key="'sm'+i">
+                    <div class="skeleton-msg-header">
+                        <div class="skeleton-line skeleton-w50"></div>
+                        <div class="skeleton-tag"></div>
+                    </div>
+                    <div class="skeleton-msg-content">
+                        <div class="skeleton-line skeleton-w90"></div>
+                        <div class="skeleton-line-sm skeleton-w70"></div>
+                    </div>
+                    <div class="skeleton-line-sm skeleton-w30"></div>
+                </div>
+            </div>
             <!-- 消息列表 -->
             <div v-for="msg in messages" :key="msg.id"
                  :class="['msg-card', msg.status === 1 ? 'unread' : 'read']"
