@@ -242,17 +242,25 @@
 
         renderFeedbackChart(data) {
             if (!this.feedbackChart) return;
-            const names = [];
-            const values = [];
-            const colors = [];
+            // data 为 Map<String, Integer>，如 {"喜欢":50,"加购":30,"不感兴趣":10}
+            const colorMap = { '喜欢': RgPalette.success, '加购': RgPalette.brand,
+                '不感兴趣': RgPalette.textMuted, '不喜欢': RgPalette.danger };
+            const fallbackColors = [RgPalette.brand, RgPalette.success, RgPalette.warning,
+                RgPalette.danger, RgPalette.info, RgPalette.textSecondary];
+            const entries = Object.entries(data || {});
+            const names = entries.map(function(e) { return e[0]; });
+            const values = entries.map(function(e) { return e[1]; });
+            const self = this;
             this.feedbackChart.setOption({
                 tooltip: { trigger: 'axis' },
                 grid: { left: 50, right: 20, top: 10, bottom: 40 },
                 xAxis: { type: 'category', data: names, axisLabel: { fontSize: 12 } },
                 yAxis: { type: 'value', name: '次数' },
                 series: [{
-                    type: 'bar', data: values.map((v, i) => ({ value: v, itemStyle: { color: colors[i],
-                        borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] } })), barWidth: 30,
+                    type: 'bar', data: values.map(function(v, i) {
+                        return { value: v, itemStyle: { color: colorMap[names[i]] || fallbackColors[i % fallbackColors.length],
+                            borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] } };
+                    }), barWidth: 30,
                     label: { show: true, position: 'top', fontSize: 12, fontWeight: 600 }
                 }]
             }, true);

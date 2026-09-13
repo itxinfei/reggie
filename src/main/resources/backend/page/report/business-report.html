@@ -438,10 +438,12 @@
         renderSlotCharts: function() {
           var that = this
           if (!this.slotChart) {
-            this.slotChart = echarts.init(document.getElementById('slotChart'))
+            var el1 = document.getElementById('slotChart');
+            if (el1) this.slotChart = echarts.init(el1);
           }
           if (!this.slotPieChart) {
-            this.slotPieChart = echarts.init(document.getElementById('slotPieChart'))
+            var el2 = document.getElementById('slotPieChart');
+            if (el2) this.slotPieChart = echarts.init(el2);
           }
           var rows = this.slotRows
           if (!rows.length) {
@@ -512,7 +514,8 @@
         },
         renderRankChart: function() {
           if (!this.rankChart) {
-            this.rankChart = echarts.init(document.getElementById('rankChart'))
+            var el3 = document.getElementById('rankChart');
+            if (el3) this.rankChart = echarts.init(el3);
           }
           var rows = this.rankingRows
           if (!rows.length) {

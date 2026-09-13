@@ -294,9 +294,12 @@ border-radius: var(--radius-sm);
           return Number(value).toFixed(2)
         },
         initCharts() {
-          this.trendChart = echarts.init(document.getElementById('trendChart'))
-          this.structureChart = echarts.init(document.getElementById('structureChart'))
-          this.rankingChart = echarts.init(document.getElementById('rankingChart'))
+          var dom1 = document.getElementById('trendChart');
+          if (dom1) this.trendChart = echarts.init(dom1);
+          var dom2 = document.getElementById('structureChart');
+          if (dom2) this.structureChart = echarts.init(dom2);
+          var dom3 = document.getElementById('rankingChart');
+          if (dom3) this.rankingChart = echarts.init(dom3);
           
           // 修改点：把回调存为 this.resizeHandler，否则 beforeDestroy 无法解绑（匿名函数无引用）
           this.resizeHandler = () => {
@@ -418,33 +421,35 @@ border-radius: var(--radius-sm);
             },
             legend: {
               orient: 'vertical',
-              left: 'left'
+              right: '5%',
+              top: 'center',
+              textStyle: { fontSize: 12, color: RgPalette.textSecondary }
             },
             series: [
               {
                 name: '成本结构',
                 type: 'pie',
                 radius: ['40%', '70%'],
-                avoidLabelOverlap: false,
+                center: ['35%', '50%'],
+                avoidLabelOverlap: true,
                 itemStyle: {
-                  borderRadius: RgPalette.radiusMd
-,
+                  borderRadius: RgPalette.radiusMd,
                   borderColor: RgPalette.white,
                   borderWidth: 2
                 },
                 label: {
-                  show: false,
-                  position: 'center'
+                  show: true,
+                  formatter: '{b}\n{d}%',
+                  fontSize: 12,
+                  color: RgPalette.textSecondary
                 },
+                labelLine: { show: true, length: 10, length2: 8 },
                 emphasis: {
                   label: {
                     show: true,
-                    fontSize: '20',
+                    fontSize: 14,
                     fontWeight: 'bold'
                   }
-                },
-                labelLine: {
-                  show: false
                 },
                 data: this.structureData.map(item => ({
                   value: item.value,

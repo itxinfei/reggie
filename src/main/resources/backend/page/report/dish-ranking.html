@@ -271,7 +271,7 @@
             const b = parseInt(h.substring(4,6), 16);
             return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
           };
-          const colors = [];
+          const colors = [RgPalette.brand, RgPalette.success, RgPalette.warning];
           const dates = data.dates || [];
           var series = (data.series || []).map(function(s, i) {
             const col = colors[i] || RgPalette.textSecondary;

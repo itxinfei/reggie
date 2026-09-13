@@ -203,8 +203,10 @@
           return Number(value).toFixed(2)
         },
         initCharts() {
-          this.revenueChart = echarts.init(document.getElementById('revenueChart'))
-          this.orderChart = echarts.init(document.getElementById('orderChart'))
+          var dom1 = document.getElementById('revenueChart');
+          if (dom1) this.revenueChart = echarts.init(dom1);
+          var dom2 = document.getElementById('orderChart');
+          if (dom2) this.orderChart = echarts.init(dom2);
 
           // 修改点：存引用以便 beforeDestroy 解绑（匿名函数无法 removeEventListener）
           this.resizeHandler = () => {

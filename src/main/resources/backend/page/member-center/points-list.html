@@ -244,8 +244,10 @@
           this.loading = false
         },
         initCharts: function() {
-          this.trendChart = echarts.init(document.getElementById('trendChart'))
-          this.pieChart = echarts.init(document.getElementById('pieChart'))
+          var dom1 = document.getElementById('trendChart');
+          if (dom1) this.trendChart = echarts.init(dom1);
+          var dom2 = document.getElementById('pieChart');
+          if (dom2) this.pieChart = echarts.init(dom2);
           // 修改点：具名处理函数并保存引用，便于 beforeDestroy 中移除监听器，防止页面切换时监听器累积泄漏
           this._resizeHandler = function() {
             if (this.trendChart) this.trendChart.resize()
