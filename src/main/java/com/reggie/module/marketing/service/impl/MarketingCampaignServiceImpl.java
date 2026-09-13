@@ -747,45 +747,20 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
             Map<Long, Integer> browseCountMap = batchQueryRecentBrowseCounts(userIds);
             // =====================================================
 
-            int matchedCount = 0;
-            for (User user : allUsers) {
-                if (preview.size() >= limit) {
-                    // 已达到预览数量上限，但仍继续统计总量
-                    matchedCount++;
-                    continue;
-                }
-
-                Long userId = user.getId();
-                // 新用户：优惠券领取数<=1
-                boolean isNewUser = (couponCountMap.getOrDefault(userId, 0L) <= 1);
-                // 高频用户：最近30天订单>=8
-                boolean isHighFreq = (orderCountMap.getOrDefault(userId, 0) >= 8);
-                // 流失预警：最近30天无订单 + 最近7天有浏览
-                boolean isChurnWarning = (orderCountMap.getOrDefault(userId, 0) == 0
-                        && browseCountMap.getOrDefault(userId, 0) > 0);
-
-                if (isUserMatchCampaign(campaign, isNewUser, isHighFreq, isChurnWarning)) {
-                    // 脱敏显示用户名
-                    String name = user.getName() != null ? user.getName() : "";
-                    String maskedName = maskName(name);
-                    String matchReason = getMatchReason(isNewUser, isHighFreq, isChurnWarning);
-
-                    Map<String, Object> userInfo = new LinkedHashMap<>();
-                    userInfo.put("userId", user.getId());
-                    userInfo.put("name", maskedName);
-                    userInfo.put("matchReason", matchReason);
-                    preview.add(userInfo);
-                    matchedCount++;
-                }
-            }
+            // 匹配用户并构建预览（等价抽取）
+            Map<String, Object> holder = buildPushPreview(campaign, allUsers, limit, couponCountMap, orderCountMap,
+                    browseCountMap);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> matched = (List<Map<String, Object>>) holder.get("preview");
+            int matchedCount = (Integer) holder.get("matchedCount");
 
             // 如果已遍历完且没达到上限，matchedCount 就是实际匹配总量
-            int estimate = Math.max(matchedCount, preview.size());
+            int estimate = Math.max(matchedCount, matched.size());
 
-            result.put("preview", preview);
+            result.put("preview", matched);
             result.put("estimate", estimate);
 
-            log.info("[推送预览] 活动{}匹配用户: preview={}, estimate={}", campaignId, preview.size(), estimate);
+            log.info("[推送预览] 活动{}匹配用户: preview={}, estimate={}", campaignId, matched.size(), estimate);
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("[推送预览] 查询异常", e);
@@ -794,6 +769,47 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         }
 
         return result;
+    }
+
+    /**
+     * 匹配用户并构建推送预览，返回 {preview, matchedCount}（等价抽取，降低方法长度）。
+     */
+    private Map<String, Object> buildPushPreview(MarketingCampaign campaign, List<User> allUsers, int limit,
+            Map<Long, Long> couponCountMap, Map<Long, Integer> orderCountMap,
+            Map<Long, Integer> browseCountMap) {
+        List<Map<String, Object>> preview = new ArrayList<>();
+        int matchedCount = 0;
+        for (User user : allUsers) {
+            if (preview.size() >= limit) {
+                // 已达到预览数量上限，但仍继续统计总量
+                matchedCount++;
+                continue;
+            }
+
+            Long userId = user.getId();
+            // 新用户：优惠券领取数<=1
+            boolean isNewUser = (couponCountMap.getOrDefault(userId, 0L) <= 1);
+            // 高频用户：最近30天订单>=8
+            boolean isHighFreq = (orderCountMap.getOrDefault(userId, 0) >= 8);
+            // 流失预警：最近30天无订单 + 最近7天有浏览
+            boolean isChurnWarning = (orderCountMap.getOrDefault(userId, 0) == 0
+                    && browseCountMap.getOrDefault(userId, 0) > 0);
+
+            if (isUserMatchCampaign(campaign, isNewUser, isHighFreq, isChurnWarning)) {
+                // 脱敏显示用户名
+                String name = user.getName() != null ? user.getName() : "";
+                Map<String, Object> userInfo = new LinkedHashMap<>();
+                userInfo.put("userId", user.getId());
+                userInfo.put("name", maskName(name));
+                userInfo.put("matchReason", getMatchReason(isNewUser, isHighFreq, isChurnWarning));
+                preview.add(userInfo);
+                matchedCount++;
+            }
+        }
+        Map<String, Object> holder = new HashMap<>();
+        holder.put("preview", preview);
+        holder.put("matchedCount", matchedCount);
+        return holder;
     }
 
     /**

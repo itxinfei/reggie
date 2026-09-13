@@ -217,17 +217,8 @@ public class TestImageGenerator implements CommandLineRunner {
             return;
         }
 
-        if (configPath != null && !configPath.isEmpty()) {
-            basePath = configPath;
-        } else {
-            String userDir = System.getProperty("user.dir");
-            if (userDir.contains("target") && userDir.endsWith("classes")) {
-                userDir = new File(userDir).getParentFile().getParent();
-            }
-            basePath = new File(userDir, "uploads").getAbsolutePath() + File.separator;
-        }
-
-        String dishesDir = basePath + "images" + File.separator + "dishes" + File.separator;
+        // 解析并初始化图片目录（等价抽取）
+        String dishesDir = resolveDishesDir();
         File dir = new File(dishesDir);
 
         // 如果目录存在且有任意图片文件，直接跳过（用户可能已上传自定义图片）
@@ -256,6 +247,38 @@ public class TestImageGenerator implements CommandLineRunner {
         log.info("🎨 检测到菜品图片目录为空，开始初始化图片...");
         log.info("📥 模式：{}", downloadRealImages ? "下载真实图片（仅执行一次）" : "本地生成");
 
+        // 逐菜品下载/生成图片（等价抽取）
+        int[] counts = generateAllDishImages(dishesDir);
+
+        log.info("✅ 菜品图片初始化完成，成功 {} 张（本次新生成 {} 张）", counts[0], counts[1]);
+        log.info("💡 提示：图片已保存到本地，下次启动将不会自动下载");
+    }
+
+    /**
+     * 解析图片根目录并返回菜品图片目录（等价抽取，降低方法长度）。
+     *
+     * @return 菜品图片目录（以分隔符结尾）
+     */
+    private String resolveDishesDir() {
+        if (configPath != null && !configPath.isEmpty()) {
+            basePath = configPath;
+        } else {
+            String userDir = System.getProperty("user.dir");
+            if (userDir.contains("target") && userDir.endsWith("classes")) {
+                userDir = new File(userDir).getParentFile().getParent();
+            }
+            basePath = new File(userDir, "uploads").getAbsolutePath() + File.separator;
+        }
+        return basePath + "images" + File.separator + "dishes" + File.separator;
+    }
+
+    /**
+     * 逐菜品下载（或降级本地生成）图片（等价抽取）。
+     *
+     * @param dishesDir 菜品图片目录
+     * @return [成功张数, 本次新生成张数]
+     */
+    private int[] generateAllDishImages(String dishesDir) {
         int count = 0;
         int successCount = 0;
         for (Map.Entry<String, String> entry : DISH_IMAGE_URLS.entrySet()) {
@@ -287,9 +310,7 @@ public class TestImageGenerator implements CommandLineRunner {
             successCount++;
             count++;
         }
-
-        log.info("✅ 菜品图片初始化完成，成功 {} 张（本次新生成 {} 张）", successCount, count);
-        log.info("💡 提示：图片已保存到本地，下次启动将不会自动下载");
+        return new int[] { successCount, count };
     }
 
     /**

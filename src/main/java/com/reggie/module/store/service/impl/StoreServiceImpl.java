@@ -210,6 +210,9 @@ public class StoreServiceImpl implements StoreService {
             if (updateDTO.getIsDineInEnabled() != null) {
                 storeWrapper.set("is_dine_in_enabled", updateDTO.getIsDineInEnabled());
             }
+            if (updateDTO.getPauseOrder() != null) {
+                storeWrapper.set("pause_order", updateDTO.getPauseOrder());
+            }
             // 使用 UpdateWrapper 的 set() 值更新；entity 传 null 避免 MP 从旧实体读取字段值覆盖 set() 结果
             storeInfoMapper.update(null, storeWrapper);
 
@@ -546,36 +549,14 @@ public class StoreServiceImpl implements StoreService {
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = today.plusDays(1).atStartOfDay();
 
-        // 一次性批量聚合：今日订单数/已完成金额（按门店）、今日新增用户（按门店）
+        // 一次性批量聚合：今日订单数/已完成金额（按门店）、今日新增用户（按门店）（等价抽取）
         Map<Long, Integer> ordersByTenant = new HashMap<>();
         Map<Long, BigDecimal> amountByTenant = new HashMap<>();
-        for (Map<String, Object> row : orderMapper.statTodayByTenant(start, end, Orders.STATUS_COMPLETED)) {
-            if (row.get("tenantId") == null) {
-                continue;
-            }
-            Long tid = ((Number) row.get("tenantId")).longValue();
-            int orders = row.get("totalOrders") == null ? 0 : ((Number) row.get("totalOrders")).intValue();
-            BigDecimal amt = row.get("todayAmount") == null
-                    ? BigDecimal.ZERO : new BigDecimal(row.get("todayAmount").toString());
-            ordersByTenant.put(tid, orders);
-            amountByTenant.put(tid, amt);
-        }
+        aggregateTodayOrders(start, end, ordersByTenant, amountByTenant);
+        Map<Long, Integer> newUsersByTenant = aggregateNewUsers(start, end);
 
-        Map<Long, Integer> newUsersByTenant = new HashMap<>();
-        for (Map<String, Object> row : userMapper.statNewUsersByTenant(start, end)) {
-            if (row.get("tenantId") == null) {
-                continue;
-            }
-            Long tid = ((Number) row.get("tenantId")).longValue();
-            int nu = row.get("newUsers") == null ? 0 : ((Number) row.get("newUsers")).intValue();
-            newUsersByTenant.put(tid, nu);
-        }
-
-        // 一次性加载租户名称，避免逐店 getById 的 N+1
-        Map<Long, String> tenantNameMap = new HashMap<>();
-        for (Tenant t : tenantService.list()) {
-            tenantNameMap.put(t.getId(), t.getName());
-        }
+        // 一次性加载租户名称，避免逐店 getById 的 N+1（等价抽取）
+        Map<Long, String> tenantNameMap = loadTenantNameMap();
 
         int totalOrders = 0;
         BigDecimal totalAmount = BigDecimal.ZERO;
@@ -592,13 +573,7 @@ public class StoreServiceImpl implements StoreService {
             totalAmount = totalAmount.add(storeAmount);
             totalNewUsers += storeNewUsers;
 
-            Map<String, Object> rank = new LinkedHashMap<>();
-            rank.put("tenantId", tenantId);
-            rank.put("storeCode", si.getStoreCode());
-            rank.put("storeName", tenantNameMap.getOrDefault(tenantId, ""));
-            rank.put("todayOrders", storeOrders);
-            rank.put("todayAmount", storeAmount);
-            ranking.add(rank);
+            ranking.add(buildStoreRank(si, tenantId, storeOrders, storeAmount, tenantNameMap));
         }
 
         dashboard.put("todayTotalOrders", totalOrders);
@@ -617,6 +592,65 @@ public class StoreServiceImpl implements StoreService {
         dashboard.put("storeRanking", ranking);
 
         return dashboard;
+    }
+
+    /**
+     * 聚合今日订单数与已完成金额（按门店）（等价抽取，降低方法长度）。
+     */
+    private void aggregateTodayOrders(LocalDateTime start, LocalDateTime end, Map<Long, Integer> ordersByTenant,
+            Map<Long, BigDecimal> amountByTenant) {
+        for (Map<String, Object> row : orderMapper.statTodayByTenant(start, end, Orders.STATUS_COMPLETED)) {
+            if (row.get("tenantId") == null) {
+                continue;
+            }
+            Long tid = ((Number) row.get("tenantId")).longValue();
+            int orders = row.get("totalOrders") == null ? 0 : ((Number) row.get("totalOrders")).intValue();
+            BigDecimal amt = row.get("todayAmount") == null
+                    ? BigDecimal.ZERO : new BigDecimal(row.get("todayAmount").toString());
+            ordersByTenant.put(tid, orders);
+            amountByTenant.put(tid, amt);
+        }
+    }
+
+    /**
+     * 聚合今日新增用户（按门店）（等价抽取）。
+     */
+    private Map<Long, Integer> aggregateNewUsers(LocalDateTime start, LocalDateTime end) {
+        Map<Long, Integer> newUsersByTenant = new HashMap<>();
+        for (Map<String, Object> row : userMapper.statNewUsersByTenant(start, end)) {
+            if (row.get("tenantId") == null) {
+                continue;
+            }
+            Long tid = ((Number) row.get("tenantId")).longValue();
+            int nu = row.get("newUsers") == null ? 0 : ((Number) row.get("newUsers")).intValue();
+            newUsersByTenant.put(tid, nu);
+        }
+        return newUsersByTenant;
+    }
+
+    /**
+     * 一次性加载租户名称映射，避免逐店 getById 的 N+1（等价抽取）。
+     */
+    private Map<Long, String> loadTenantNameMap() {
+        Map<Long, String> tenantNameMap = new HashMap<>();
+        for (Tenant t : tenantService.list()) {
+            tenantNameMap.put(t.getId(), t.getName());
+        }
+        return tenantNameMap;
+    }
+
+    /**
+     * 构建单店排行条目（等价抽取）。
+     */
+    private Map<String, Object> buildStoreRank(StoreInfo si, Long tenantId, int storeOrders, BigDecimal storeAmount,
+            Map<Long, String> tenantNameMap) {
+        Map<String, Object> rank = new LinkedHashMap<>();
+        rank.put("tenantId", tenantId);
+        rank.put("storeCode", si.getStoreCode());
+        rank.put("storeName", tenantNameMap.getOrDefault(tenantId, ""));
+        rank.put("todayOrders", storeOrders);
+        rank.put("todayAmount", storeAmount);
+        return rank;
     }
 
     /**
@@ -652,6 +686,147 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public StoreInfo findByTenantId(Long tenantId) {
         return storeInfoMapper.findByTenantId(tenantId);
+    }
+
+    // ==================== 集团汇总看板 ====================
+
+    /**
+     * 多店近 N 天营收趋势对比（按门店+日期分组）
+     * <p>聚合 SQL 返回原始行，此方法 pivot 为 ECharts 友好结构：{ dates, stores[] }</p>
+     */
+    @Override
+    public Map<String, Object> getMultiStoreTrend(int days) {
+        if (days <= 0) { days = 7; }
+        LocalDate today = LocalDate.now();
+        LocalDateTime startDate = today.minusDays(days - 1).atStartOfDay();
+        LocalDateTime endDate = today.plusDays(1).atStartOfDay();
+
+        List<Map<String, Object>> rows = storeInfoMapper.statDailyTrendByTenant(
+                startDate, endDate, Orders.STATUS_COMPLETED);
+
+        // tenantId → storeName
+        Map<Long, String> tenantNameMap = loadTenantNameMap();
+
+        // 生成日期序列
+        List<String> dateList = new ArrayList<>();
+        for (int i = 0; i < days; i++) {
+            dateList.add(today.minusDays(days - 1 - i).toString());
+        }
+
+        // pivot: tenantId → date → amount
+        // 使用 LinkedHashMap 保持插入顺序
+        Map<Long, LinkedHashMap<String, BigDecimal>> tenantDateMap = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            Long tid = row.get("tenantId") == null ? 0L : ((Number) row.get("tenantId")).longValue();
+            String date = row.get("date") == null ? "" : row.get("date").toString();
+            BigDecimal amt = row.get("totalAmount") == null
+                    ? BigDecimal.ZERO : new BigDecimal(row.get("totalAmount").toString());
+            if (!tenantDateMap.containsKey(tid)) {
+                tenantDateMap.put(tid, new LinkedHashMap<String, BigDecimal>());
+            }
+            tenantDateMap.get(tid).put(date, amt);
+        }
+
+        List<Map<String, Object>> stores = new ArrayList<>();
+        for (Map.Entry<Long, LinkedHashMap<String, BigDecimal>> entry : tenantDateMap.entrySet()) {
+            Map<String, Object> store = new LinkedHashMap<>();
+            store.put("tenantId", entry.getKey());
+            store.put("name", tenantNameMap.getOrDefault(entry.getKey(), "门店" + entry.getKey()));
+            List<BigDecimal> amounts = new ArrayList<>();
+            for (String d : dateList) {
+                amounts.add(entry.getValue().getOrDefault(d, BigDecimal.ZERO));
+            }
+            store.put("amounts", amounts);
+            stores.add(store);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("dates", dateList);
+        result.put("stores", stores);
+        return result;
+    }
+
+    /**
+     * 多品类销售对比（各店各品类的销售占比）
+     * <p>聚合 SQL 返回原始行，此方法按门店分组并补门店名称</p>
+     */
+    @Override
+    public List<Map<String, Object>> getCategoryComparison(String startDate, String endDate) {
+        LocalDate today = LocalDate.now();
+        LocalDateTime start;
+        LocalDateTime end;
+        if (startDate != null && !startDate.isEmpty()) {
+            start = LocalDate.parse(startDate).atStartOfDay();
+        } else {
+            start = today.minusDays(6).atStartOfDay();
+        }
+        if (endDate != null && !endDate.isEmpty()) {
+            end = LocalDate.parse(endDate).plusDays(1).atStartOfDay();
+        } else {
+            end = today.plusDays(1).atStartOfDay();
+        }
+
+        List<Map<String, Object>> rows = storeInfoMapper.statCategoryByTenant(
+                start, end, Orders.STATUS_COMPLETED);
+
+        Map<Long, String> tenantNameMap = loadTenantNameMap();
+
+        // 按 tenantId 分组
+        Map<Long, List<Map<String, Object>>> grouped = new LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            Long tid = row.get("tenantId") == null ? 0L : ((Number) row.get("tenantId")).longValue();
+            Map<String, Object> cat = new LinkedHashMap<>();
+            cat.put("categoryName", row.get("categoryName") == null ? "未分类" : row.get("categoryName"));
+            cat.put("totalAmount", row.get("totalAmount") == null ? BigDecimal.ZERO
+                    : new BigDecimal(row.get("totalAmount").toString()));
+            cat.put("totalCount", row.get("totalCount") == null ? 0 : ((Number) row.get("totalCount")).intValue());
+            if (!grouped.containsKey(tid)) {
+                grouped.put(tid, new ArrayList<Map<String, Object>>());
+            }
+            grouped.get(tid).add(cat);
+        }
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<Long, List<Map<String, Object>>> entry : grouped.entrySet()) {
+            Map<String, Object> store = new LinkedHashMap<>();
+            store.put("tenantId", entry.getKey());
+            store.put("tenantName", tenantNameMap.getOrDefault(entry.getKey(), "门店" + entry.getKey()));
+            store.put("categories", entry.getValue());
+            result.add(store);
+        }
+        return result;
+    }
+
+    /**
+     * 门店排行详情（近 N 天，营收/订单数/客单价三维）
+     * <p>聚合 SQL 返回原始行，此方法补门店名称</p>
+     */
+    @Override
+    public List<Map<String, Object>> getRankingDetail(int days) {
+        if (days <= 0) { days = 7; }
+        LocalDate today = LocalDate.now();
+        LocalDateTime startDate = today.minusDays(days - 1).atStartOfDay();
+        LocalDateTime endDate = today.plusDays(1).atStartOfDay();
+
+        List<Map<String, Object>> rows = storeInfoMapper.statRankingDetail(
+                startDate, endDate, Orders.STATUS_COMPLETED);
+
+        Map<Long, String> tenantNameMap = loadTenantNameMap();
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            Long tid = row.get("tenantId") == null ? 0L : ((Number) row.get("tenantId")).longValue();
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("tenantId", tid);
+            item.put("storeName", tenantNameMap.getOrDefault(tid, "门店" + tid));
+            item.put("totalAmount", row.get("totalAmount") == null ? BigDecimal.ZERO
+                    : new BigDecimal(row.get("totalAmount").toString()));
+            item.put("orderCount", row.get("orderCount") == null ? 0 : ((Number) row.get("orderCount")).intValue());
+            item.put("avgOrderAmount", row.get("avgOrderAmount") == null ? BigDecimal.ZERO
+                    : new BigDecimal(row.get("avgOrderAmount").toString()));
+            result.add(item);
+        }
+        return result;
     }
 }
 

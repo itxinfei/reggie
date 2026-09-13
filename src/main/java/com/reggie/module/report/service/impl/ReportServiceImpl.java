@@ -990,79 +990,25 @@ public class ReportServiceImpl implements ReportService {
         try {
             BaseContext.setCurrentTenantId(tenantId);
 
-            // 1. 查询日期范围内已完成的订单
-            LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
-            orderQw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
-                    LocalDate.parse(endDate).atTime(LocalTime.MAX));
-            orderQw.in(Orders::getStatus, Orders.STATUS_COMPLETED);
-            orderQw.select(Orders::getId);
-            List<Orders> orders = orderService.list(orderQw);
+            // 1. 查询日期范围内已完成的订单（等价抽取）
+            List<Orders> orders = loadCompletedOrders(startDate, endDate);
             if (orders.isEmpty()) {
                 result.put("ranking", ranking);
                 result.put("totalDishes", 0);
                 return result;
             }
 
+            // 2. 查询订单详情，关联菜品（等价抽取）
             List<Long> orderIds = orders.stream().map(Orders::getId).collect(Collectors.toList());
-
-            // 2. 查询订单详情，关联菜品
-            LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
-            detailQw.in(OrderDetail::getOrderId, orderIds);
-            detailQw.isNotNull(OrderDetail::getDishId);
-            detailQw.select(OrderDetail::getDishId, OrderDetail::getOrderId);
-            List<OrderDetail> details = orderDetailService.list(detailQw);
+            List<OrderDetail> details = loadOrderDetails(orderIds);
             if (details.isEmpty()) {
                 result.put("ranking", ranking);
                 result.put("totalDishes", 0);
                 return result;
             }
 
-            // 3. 按 (dishId, userId) 分组统计购买次数
-            // 先通过 orderId 反查 userId
-            Map<Long, Long> orderIdUserIdMap = orders.stream()
-                    .collect(Collectors.toMap(Orders::getId, Orders::getUserId, (a, b) -> a));
-
-            Map<Long, Map<Long, Integer>> dishUserCountMap = new HashMap<>();
-            for (OrderDetail d : details) {
-                Long userId = orderIdUserIdMap.get(d.getOrderId());
-                if (userId == null) continue;
-                dishUserCountMap
-                        .computeIfAbsent(d.getDishId(), k -> new HashMap<>())
-                        .merge(userId, 1, Integer::sum);
-            }
-
-            // 4. 收集涉及的菜品ID并查询名称
-            Set<Long> dishIds = dishUserCountMap.keySet();
-            LambdaQueryWrapper<Dish> dishQw = new LambdaQueryWrapper<>();
-            dishQw.in(Dish::getId, dishIds);
-            dishQw.select(Dish::getId, Dish::getName);
-            List<Dish> dishes = dishService.list(dishQw);
-            Map<Long, String> dishNameMap = dishes.stream()
-                    .collect(Collectors.toMap(Dish::getId, Dish::getName, (a, b) -> a));
-
-            // 5. 计算每个菜品的复购率
-            for (Map.Entry<Long, Map<Long, Integer>> entry : dishUserCountMap.entrySet()) {
-                Long dishId = entry.getKey();
-                Map<Long, Integer> userCountMap = entry.getValue();
-                int totalUsers = userCountMap.size();
-                long repurchaseUsers = userCountMap.values().stream().filter(c -> c >= 2).count();
-                double rate = totalUsers > 0 ? (double) repurchaseUsers / totalUsers * 100.0 : 0.0;
-
-                Map<String, Object> item = new HashMap<>();
-                item.put("dishId", dishId);
-                item.put("dishName", dishNameMap.getOrDefault(dishId, "未知菜品"));
-                item.put("totalUsers", totalUsers);
-                item.put("repurchaseUsers", (int) repurchaseUsers);
-                item.put("rate", Math.round(rate * 100.0) / 100.0);
-                ranking.add(item);
-            }
-
-            // 6. 按复购率降序排列
-            ranking.sort((a, b) -> Double.compare((Double) b.get("rate"), (Double) a.get("rate")));
-            if (ranking.size() > limit) {
-                ranking = ranking.subList(0, limit);
-            }
-
+            // 3-6. 统计复购率并排序取 TOP N（等价抽取）
+            ranking = buildRepurchaseRanking(orders, details, limit);
             result.put("ranking", ranking);
             result.put("totalDishes", ranking.size());
 
@@ -1070,6 +1016,86 @@ public class ReportServiceImpl implements ReportService {
             BaseContext.setCurrentTenantId(originalTenantId);
         }
         return result;
+    }
+
+    /**
+     * 查询日期范围内已完成订单（仅 id）（等价抽取）。
+     */
+    private List<Orders> loadCompletedOrders(String startDate, String endDate) {
+        LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+        orderQw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
+                LocalDate.parse(endDate).atTime(LocalTime.MAX));
+        orderQw.in(Orders::getStatus, Orders.STATUS_COMPLETED);
+        orderQw.select(Orders::getId);
+        return orderService.list(orderQw);
+    }
+
+    /**
+     * 查询订单详情（仅 dishId/orderId）（等价抽取）。
+     */
+    private List<OrderDetail> loadOrderDetails(List<Long> orderIds) {
+        LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
+        detailQw.in(OrderDetail::getOrderId, orderIds);
+        detailQw.isNotNull(OrderDetail::getDishId);
+        detailQw.select(OrderDetail::getDishId, OrderDetail::getOrderId);
+        return orderDetailService.list(detailQw);
+    }
+
+    /**
+     * 计算菜品复购率排名（按复购率降序，取前 limit）（等价抽取）。
+     */
+    private List<Map<String, Object>> buildRepurchaseRanking(List<Orders> orders, List<OrderDetail> details,
+            int limit) {
+        List<Map<String, Object>> ranking = new ArrayList<>();
+
+        // 通过 orderId 反查 userId
+        Map<Long, Long> orderIdUserIdMap = orders.stream()
+                .collect(Collectors.toMap(Orders::getId, Orders::getUserId, (a, b) -> a));
+
+        // 按 (dishId, userId) 分组统计购买次数
+        Map<Long, Map<Long, Integer>> dishUserCountMap = new HashMap<>();
+        for (OrderDetail d : details) {
+            Long userId = orderIdUserIdMap.get(d.getOrderId());
+            if (userId == null) {
+                continue;
+            }
+            dishUserCountMap
+                    .computeIfAbsent(d.getDishId(), k -> new HashMap<>())
+                    .merge(userId, 1, Integer::sum);
+        }
+
+        // 收集涉及的菜品ID并查询名称
+        Set<Long> dishIds = dishUserCountMap.keySet();
+        LambdaQueryWrapper<Dish> dishQw = new LambdaQueryWrapper<>();
+        dishQw.in(Dish::getId, dishIds);
+        dishQw.select(Dish::getId, Dish::getName);
+        List<Dish> dishes = dishService.list(dishQw);
+        Map<Long, String> dishNameMap = dishes.stream()
+                .collect(Collectors.toMap(Dish::getId, Dish::getName, (a, b) -> a));
+
+        // 计算每个菜品的复购率
+        for (Map.Entry<Long, Map<Long, Integer>> entry : dishUserCountMap.entrySet()) {
+            Long dishId = entry.getKey();
+            Map<Long, Integer> userCountMap = entry.getValue();
+            int totalUsers = userCountMap.size();
+            long repurchaseUsers = userCountMap.values().stream().filter(c -> c >= 2).count();
+            double rate = totalUsers > 0 ? (double) repurchaseUsers / totalUsers * 100.0 : 0.0;
+
+            Map<String, Object> item = new HashMap<>();
+            item.put("dishId", dishId);
+            item.put("dishName", dishNameMap.getOrDefault(dishId, "未知菜品"));
+            item.put("totalUsers", totalUsers);
+            item.put("repurchaseUsers", (int) repurchaseUsers);
+            item.put("rate", Math.round(rate * 100.0) / 100.0);
+            ranking.add(item);
+        }
+
+        // 按复购率降序排列
+        ranking.sort((a, b) -> Double.compare((Double) b.get("rate"), (Double) a.get("rate")));
+        if (ranking.size() > limit) {
+            ranking = ranking.subList(0, limit);
+        }
+        return ranking;
     }
 
     /**

@@ -282,7 +282,27 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
                 .eq(tenantId != null, StockRecord::getTenantId, tenantId)
         );
 
-        // 按 materialId 汇总出库总量
+        // 按 materialId 汇总出库总量（等价抽取）
+        Map<Long, BigDecimal> outQtyMap = aggregateOutQty(outRecords);
+
+        // 获取所有预警食材（stock < minStock）
+        List<Material> warningMaterials = checkWarning();
+        if (CollectionUtils.isEmpty(warningMaterials)) {
+            return new ArrayList<Map<String, Object>>();
+        }
+
+        List<Map<String, Object>> suggestList = buildReplenishItems(warningMaterials, outQtyMap, days);
+
+        // 按 suggestQty 降序（等价抽取）
+        sortBySuggestQtyDesc(suggestList);
+
+        return suggestList;
+    }
+
+    /**
+     * 按 materialId 汇总出库总量（等价抽取）。
+     */
+    private Map<Long, BigDecimal> aggregateOutQty(List<StockRecord> outRecords) {
         Map<Long, BigDecimal> outQtyMap = new HashMap<Long, BigDecimal>();
         if (!CollectionUtils.isEmpty(outRecords)) {
             for (StockRecord r : outRecords) {
@@ -293,13 +313,14 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
                 }
             }
         }
+        return outQtyMap;
+    }
 
-        // 获取所有预警食材（stock < minStock）
-        List<Material> warningMaterials = checkWarning();
-        if (CollectionUtils.isEmpty(warningMaterials)) {
-            return new ArrayList<Map<String, Object>>();
-        }
-
+    /**
+     * 构建补货建议明细（等价抽取，降低方法长度）。
+     */
+    private List<Map<String, Object>> buildReplenishItems(List<Material> warningMaterials,
+            Map<Long, BigDecimal> outQtyMap, int days) {
         List<Map<String, Object>> suggestList = new ArrayList<Map<String, Object>>(warningMaterials.size());
         BigDecimal replenishCycleDays = new BigDecimal("14");
 
@@ -342,8 +363,13 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
             item.put("supplierName", m.getSupplierName());
             suggestList.add(item);
         }
+        return suggestList;
+    }
 
-        // 按 suggestQty 降序（冒泡排序）
+    /**
+     * 按 suggestQty 降序冒泡排序（等价抽取）。
+     */
+    private void sortBySuggestQtyDesc(List<Map<String, Object>> suggestList) {
         for (int i = 0; i < suggestList.size(); i++) {
             for (int j = 0; j < suggestList.size() - 1 - i; j++) {
                 BigDecimal a = (BigDecimal) suggestList.get(j).get("suggestQty");
@@ -355,8 +381,6 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
                 }
             }
         }
-
-        return suggestList;
     }
 
     /**

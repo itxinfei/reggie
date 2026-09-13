@@ -170,8 +170,9 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .collect(Collectors.toMap(Attendance::getDate, a -> a, (a1, a2) -> a1));
 
         List<Map<String, Object>> calendar = new ArrayList<>();
-        int presentDays = 0, lateDays = 0, leaveDays = 0, absentDays = 0;
-        BigDecimal totalHours = BigDecimal.ZERO;
+        // counters: [0]出勤 [1]迟到 [2]请假 [3]缺勤
+        int[] counters = new int[4];
+        BigDecimal[] totalHours = new BigDecimal[] { BigDecimal.ZERO };
 
         for (int day = 1; day <= monthStart.lengthOfMonth(); day++) {
             LocalDate currentDay = monthStart.plusDays(day - 1);
@@ -182,31 +183,13 @@ public class AttendanceServiceImpl implements AttendanceService {
 
             Attendance record = recordByDate.get(currentDay);
             if (record != null) {
-                Integer status = record.getStatus();
-                dayRecord.put("status", status);
-                dayRecord.put("statusName", STATUS_DESC.getOrDefault(status, "未知"));
-                dayRecord.put("checkInTime",
-                        record.getCheckInTime() != null ? record.getCheckInTime().format(DT_FMT) : null);
-                dayRecord.put("checkOutTime",
-                        record.getCheckOutTime() != null ? record.getCheckOutTime().format(DT_FMT) : null);
-                BigDecimal workHours = record.getWorkHours() != null ? record.getWorkHours() : BigDecimal.ZERO;
-                dayRecord.put("workHours", workHours);
-
-                // 统计汇总
-                if (status == 1 || status == 2) {
-                    if (status == 1) presentDays++; else lateDays++;
-                    totalHours = totalHours.add(workHours);
-                } else if (status == 4) {
-                    leaveDays++;
-                } else if (status == 0) {
-                    absentDays++;
-                }
+                fillDayFromRecord(dayRecord, record, counters, totalHours);
             } else {
                 // 无记录的日期：周末视为缺勤，工作日视为无数据
                 if (dayOfWeek == 6 || dayOfWeek == 7) {
                     dayRecord.put("status", 0);
                     dayRecord.put("statusName", "缺勤");
-                    absentDays++;
+                    counters[3]++;
                 } else {
                     dayRecord.put("status", null);
                     dayRecord.put("statusName", "无记录");
@@ -220,11 +203,11 @@ public class AttendanceServiceImpl implements AttendanceService {
         }
 
         Map<String, Object> summary = new HashMap<>();
-        summary.put("presentDays", presentDays);
-        summary.put("lateDays", lateDays);
-        summary.put("leaveDays", leaveDays);
-        summary.put("absentDays", absentDays);
-        summary.put("totalWorkHours", totalHours.setScale(2, RoundingMode.HALF_UP));
+        summary.put("presentDays", counters[0]);
+        summary.put("lateDays", counters[1]);
+        summary.put("leaveDays", counters[2]);
+        summary.put("absentDays", counters[3]);
+        summary.put("totalWorkHours", totalHours[0].setScale(2, RoundingMode.HALF_UP));
 
         Map<String, Object> result = new HashMap<>();
         result.put("employeeId", employeeId);
@@ -232,6 +215,39 @@ public class AttendanceServiceImpl implements AttendanceService {
         result.put("calendar", calendar);
         result.put("summary", summary);
         return result;
+    }
+
+    /**
+     * 用考勤记录填充单日数据并累加统计（等价抽取，降低方法长度）。
+     *
+     * @param counters [出勤, 迟到, 请假, 缺勤] 计数
+     * @param totalHours 总工时（单元素数组）
+     */
+    private void fillDayFromRecord(Map<String, Object> dayRecord, Attendance record, int[] counters,
+            BigDecimal[] totalHours) {
+        Integer status = record.getStatus();
+        dayRecord.put("status", status);
+        dayRecord.put("statusName", STATUS_DESC.getOrDefault(status, "未知"));
+        dayRecord.put("checkInTime",
+                record.getCheckInTime() != null ? record.getCheckInTime().format(DT_FMT) : null);
+        dayRecord.put("checkOutTime",
+                record.getCheckOutTime() != null ? record.getCheckOutTime().format(DT_FMT) : null);
+        BigDecimal workHours = record.getWorkHours() != null ? record.getWorkHours() : BigDecimal.ZERO;
+        dayRecord.put("workHours", workHours);
+
+        // 统计汇总
+        if (status == 1 || status == 2) {
+            if (status == 1) {
+                counters[0]++;
+            } else {
+                counters[1]++;
+            }
+            totalHours[0] = totalHours[0].add(workHours);
+        } else if (status == 4) {
+            counters[2]++;
+        } else if (status == 0) {
+            counters[3]++;
+        }
     }
 
     // ==================== 今日考勤 ====================

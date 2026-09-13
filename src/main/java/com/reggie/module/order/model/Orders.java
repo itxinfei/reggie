@@ -151,7 +151,7 @@ public class Orders implements Serializable {
     private String idempotencyKey;
 
     /** 平台类型：MEITUAN / ELEME / DOUYIN / SELF / OTHER，平台订单使用 */
-    @Schema(description = "平台来源：MEITUAN/ELEME/DOUYIN/SELF/OTHER", example = "MEITUAN")
+    @Schema(description = "平台来源：MEITUAN/ELEME/DOUYIN/JD/SELF/OTHER", example = "MEITUAN")
     @TableField("platform_type")
     private String platformType;
 

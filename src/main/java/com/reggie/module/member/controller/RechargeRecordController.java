@@ -161,68 +161,33 @@ public class RechargeRecordController {
         if (tenantId != null) allQw.eq(RechargeRecord::getTenantId, tenantId);
         List<RechargeRecord> allRecords = rechargeRecordService.list(allQw);
 
-        // 1. 累计充值总额
-        BigDecimal totalAmount = allRecords.stream()
-                .map(r -> r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // 1. 累计充值总额（等价抽取）
+        BigDecimal totalAmount = sumAmount(allRecords);
         long totalCount = allRecords.size();
 
-        // 2. 今日充值
+        // 2. 今日充值（等价抽取）
         LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime todayEnd = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
-        List<RechargeRecord> todayRecords = allRecords.stream()
-                .filter(r -> r.getCreatedTime() != null && !r.getCreatedTime().isBefore(todayStart) && !r
-                        .getCreatedTime().isAfter(todayEnd))
-                .collect(Collectors.toList());
-        BigDecimal todayAmount = todayRecords.stream()
-                .map(r -> r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<RechargeRecord> todayRecords = filterByRange(allRecords, todayStart, todayEnd);
+        BigDecimal todayAmount = sumAmount(todayRecords);
 
-        // 3. 本月充值
+        // 3. 本月充值（等价抽取）
         LocalDateTime monthStart = LocalDateTime.of(LocalDate.now().withDayOfMonth(1), LocalTime.MIN);
         List<RechargeRecord> monthRecords = allRecords.stream()
                 .filter(r -> r.getCreatedTime() != null && !r.getCreatedTime().isBefore(monthStart))
                 .collect(Collectors.toList());
-        BigDecimal monthAmount = monthRecords.stream()
-                .map(r -> r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal monthAmount = sumAmount(monthRecords);
 
         // 4. 平均单笔充值金额
         BigDecimal avgAmount = totalCount > 0
                 ? totalAmount.divide(BigDecimal.valueOf(totalCount), 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
 
-        // 5. 支付方式分布
-        Map<String, BigDecimal> paymentMap = allRecords.stream()
-                .collect(Collectors.groupingBy(
-                        r -> r.getPaymentMethod() != null ? r.getPaymentMethod() : "未知",
-                        Collectors.reducing(BigDecimal.ZERO, r -> r.getAmount() != null ? r.getAmount() : BigDecimal
-                                .ZERO, BigDecimal::add)
-                ));
-        List<Map<String, Object>> paymentDistribution = new ArrayList<>();
-        paymentMap.forEach((k, v) -> {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("name", k);
-            item.put("value", v);
-            paymentDistribution.add(item);
-        });
+        // 5. 支付方式分布（等价抽取）
+        List<Map<String, Object>> paymentDistribution = buildPaymentDistribution(allRecords);
 
-        // 6. 近12月趋势
-        List<Map<String, Object>> trend = new ArrayList<>();
-        for (int i = 11; i >= 0; i--) {
-            LocalDate monthDate = LocalDate.now().minusMonths(i);
-            LocalDateTime ms = LocalDateTime.of(monthDate.withDayOfMonth(1), LocalTime.MIN);
-            LocalDateTime me = LocalDateTime.of(monthDate.withDayOfMonth(monthDate.lengthOfMonth()), LocalTime.MAX);
-            BigDecimal monthTotal = allRecords.stream()
-                    .filter(r -> r.getCreatedTime() != null && !r.getCreatedTime().isBefore(ms) && !r.getCreatedTime()
-                            .isAfter(me))
-                    .map(r -> r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("month", monthDate.getYear() + "-" + String.format("%02d", monthDate.getMonthValue()));
-            item.put("amount", monthTotal);
-            trend.add(item);
-        }
+        // 6. 近12月趋势（等价抽取）
+        List<Map<String, Object>> trend = buildMonthlyTrend(allRecords);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("totalAmount", totalAmount);
@@ -235,5 +200,63 @@ public class RechargeRecordController {
         result.put("paymentDistribution", paymentDistribution);
         result.put("trend", trend);
         return R.success(result);
+    }
+
+    /**
+     * 求和充值金额（等价抽取，降低方法长度）。
+     */
+    private BigDecimal sumAmount(List<RechargeRecord> records) {
+        return records.stream()
+                .map(r -> r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * 按创建时间范围过滤（等价抽取）。
+     */
+    private List<RechargeRecord> filterByRange(List<RechargeRecord> records, LocalDateTime start,
+            LocalDateTime end) {
+        return records.stream()
+                .filter(r -> r.getCreatedTime() != null && !r.getCreatedTime().isBefore(start)
+                        && !r.getCreatedTime().isAfter(end))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 构建支付方式分布（等价抽取）。
+     */
+    private List<Map<String, Object>> buildPaymentDistribution(List<RechargeRecord> allRecords) {
+        Map<String, BigDecimal> paymentMap = allRecords.stream()
+                .collect(Collectors.groupingBy(
+                        r -> r.getPaymentMethod() != null ? r.getPaymentMethod() : "未知",
+                        Collectors.reducing(BigDecimal.ZERO,
+                                r -> r.getAmount() != null ? r.getAmount() : BigDecimal.ZERO, BigDecimal::add)
+                ));
+        List<Map<String, Object>> paymentDistribution = new ArrayList<>();
+        paymentMap.forEach((k, v) -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("name", k);
+            item.put("value", v);
+            paymentDistribution.add(item);
+        });
+        return paymentDistribution;
+    }
+
+    /**
+     * 构建近12月充值趋势（等价抽取）。
+     */
+    private List<Map<String, Object>> buildMonthlyTrend(List<RechargeRecord> allRecords) {
+        List<Map<String, Object>> trend = new ArrayList<>();
+        for (int i = 11; i >= 0; i--) {
+            LocalDate monthDate = LocalDate.now().minusMonths(i);
+            LocalDateTime ms = LocalDateTime.of(monthDate.withDayOfMonth(1), LocalTime.MIN);
+            LocalDateTime me = LocalDateTime.of(monthDate.withDayOfMonth(monthDate.lengthOfMonth()), LocalTime.MAX);
+            BigDecimal monthTotal = sumAmount(filterByRange(allRecords, ms, me));
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("month", monthDate.getYear() + "-" + String.format("%02d", monthDate.getMonthValue()));
+            item.put("amount", monthTotal);
+            trend.add(item);
+        }
+        return trend;
     }
 }

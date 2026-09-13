@@ -48,6 +48,12 @@ const updateStatus = function(tenantId, status) {
     });
 }
 
+const togglePauseOrder = function(tenantId, pause) {
+    return $axios.put('/store/' + tenantId + '/pause', null, {
+        params: { pause: pause }
+    });
+}
+
 const batchUpdateStatus = function(tenantIds, status) {
     return $axios.put('/store/batch/status', {
         tenantIds: tenantIds,
@@ -94,4 +100,19 @@ const getDashboardOverview = function() {
 
 const getStoreRanking = function() {
     return $axios.get('/store/dashboard/ranking');
+}
+
+const getMultiStoreTrend = function(days) {
+    return $axios.get('/store/dashboard/trend', { params: { days: days || 7 } });
+}
+
+const getCategoryComparison = function(startDate, endDate) {
+    var params = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    return $axios.get('/store/dashboard/category-comparison', { params: params });
+}
+
+const getRankingDetail = function(days) {
+    return $axios.get('/store/dashboard/ranking-detail', { params: { days: days || 7 } });
 }

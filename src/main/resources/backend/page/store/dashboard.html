@@ -29,6 +29,8 @@
         .content-grid {
             display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;
         }
+        /* 趋势图全宽单列 */
+        .full-width-row { margin-bottom: 24px; }
 
         /* ========== 图表面板 ========== */
         .chart-panel {
@@ -86,7 +88,18 @@
         .rank-stats { text-align: right; flex-shrink: 0; min-width: 80px; }
         .rank-orders { font-size:var(--font-size-lg); font-weight: 700; color: var(--el-text-primary); }
         .rank-amount { font-size:var(--font-size-sm); color: var(--color-danger); font-weight: 600; }
+        .rank-avg { font-size:var(--font-size-xs); color: var(--color-info); }
         .rank-list { list-style: none; padding: 0; margin: 0; max-height: 372px; overflow-y: auto; }
+
+        /* ========== 排行维度切换 Tab ========== */
+        .rank-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+        .rank-tab {
+            padding: 4px 14px; font-size: var(--font-size-xs); font-weight: 500;
+            border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;
+            background: var(--el-bg-page); color: var(--text-secondary); border: none;
+        }
+        .rank-tab:hover { background: var(--el-bg-subtle); }
+        .rank-tab.active { background: var(--color-brand-500); color: var(--text-on-brand); font-weight: 600; }
 
         /* ========== 空状态 ========== */
         .empty-state {
@@ -146,47 +159,80 @@
         <!-- ========== KPI 指标卡片（固定 4 个） ========== -->
         <stat-cards :cards="statsCards" :loading="loading"></stat-cards>
 
+        <!-- ========== 多店营收趋势（全宽） ========== -->
+        <div class="full-width-row">
+            <div class="chart-panel">
+                <div class="panel-title"><i class="ri-line-chart-line" aria-hidden="true"></i> 多店营收趋势（近 7 天）</div>
+                <div class="panel-sub">各门店每日完成订单营收对比 · 多折线图</div>
+                <div class="chart-box" id="trendChart"></div>
+            </div>
+        </div>
+
         <!-- ========== 图表 + 排行 双栏 ========== -->
         <div class="content-grid">
-            <!-- 门店营收柱状图 -->
+            <!-- 品类销售对比（堆叠柱状图） -->
             <div class="chart-panel">
-                <div class="panel-title"><i class="ri-bar-chart-2-line" aria-hidden="true"></i> 各门店营收对比（今日）</div>
-                <div class="panel-sub">仅展示订单量前 10 名门店 · 完整榜单见右侧排行<template v-if="isStoreMode"> · 本店金色高亮</template></div>
-                <div class="chart-box" id="storeBarChart"></div>
+                <div class="panel-title"><i class="ri-pie-chart-2-line" aria-hidden="true"></i> 品类销售对比（近 7 天）</div>
+                <div class="panel-sub">各门店各品类的销售金额占比 · 堆叠柱状图</div>
+                <div class="chart-box" id="categoryChart"></div>
             </div>
 
-            <!-- 门店排行 -->
+            <!-- 门店排行（三维切换） -->
             <div class="ranking-panel chart-panel">
-                <div class="panel-title"><i class="ri-trophy-line" aria-hidden="true"></i> 门店实时排行</div>
-                <div v-if="dashboard && dashboard.storeRanking && dashboard.storeRanking.length > 0">
+                <div class="panel-title"><i class="ri-trophy-line" aria-hidden="true"></i> 门店排行</div>
+                <!-- 维度切换 -->
+                <div class="rank-tabs">
+                    <button class="rank-tab" :class="{ active: rankTab === 'amount' }" @click="switchRankTab('amount')">营收 TOP</button>
+                    <button class="rank-tab" :class="{ active: rankTab === 'orders' }" @click="switchRankTab('orders')">订单 TOP</button>
+                    <button class="rank-tab" :class="{ active: rankTab === 'avg' }" @click="switchRankTab('avg')">客单价 TOP</button>
+                </div>
+                <div v-if="rankedStores && rankedStores.length > 0">
                     <ul class="rank-list">
-                        <li class="rank-item" v-for="(store, idx) in dashboard.storeRanking" :key="store.tenantId" :class="{ 'is-current': isCurrentStore(store) }">
+                        <li class="rank-item" v-for="(store, idx) in rankedStores" :key="store.tenantId" :class="{ 'is-current': isCurrentStore(store) }">
                             <span :class="['rank-num', idx === 0 ? 'r1' : idx === 1 ? 'r2' : idx === 2 ? 'r3' : 'rn']">
                                 {{ idx + 1 }}
                             </span>
                             <div class="rank-info">
                                 <div class="rank-name">
                                     {{ store.storeName }}
-                                    <span class="rank-store-code">{{ store.storeCode }}</span>
                                     <span v-if="isCurrentStore(store)" class="rank-tag">本店</span>
                                 </div>
                             </div>
                             <div class="rank-bar-wrap">
-                                <div class="rank-bar-fill" :style="{ width: rankBarWidth(idx) }"></div>
+                                <div class="rank-bar-fill" :style="{ width: rankDetailBarWidth(idx) }"></div>
                             </div>
                             <div class="rank-stats">
-                                <div class="rank-orders">{{ store.todayOrders || 0 }} 单</div>
-                                <div class="rank-amount">¥{{ formatMoney(store.todayAmount) }}</div>
+                                <template v-if="rankTab === 'amount'">
+                                    <div class="rank-orders">¥{{ formatMoney(store.totalAmount) }}</div>
+                                    <div class="rank-avg">{{ store.orderCount || 0 }} 单</div>
+                                </template>
+                                <template v-else-if="rankTab === 'orders'">
+                                    <div class="rank-orders">{{ store.orderCount || 0 }} 单</div>
+                                    <div class="rank-avg">¥{{ formatMoney(store.totalAmount) }}</div>
+                                </template>
+                                <template v-else>
+                                    <div class="rank-orders">¥{{ formatMoney(store.avgOrderAmount) }}</div>
+                                    <div class="rank-avg">客单价</div>
+                                </template>
                             </div>
                         </li>
                     </ul>
-                    <div class="ranking-footer">共 {{ dashboard.storeRanking.length }} 家门店 · 按今日订单量排序</div>
+                    <div class="ranking-footer">共 {{ rankedStores.length }} 家门店 · 按{{ rankTabLabel }}排序</div>
                 </div>
                 <div v-else class="empty-state">
                     <div class="empty-icon"><i class="ri-inbox-line" aria-hidden="true"></i></div>
                     <div class="empty-text">暂无门店数据</div>
                     <div class="empty-hint">请先创建门店并完成配置</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- ========== 门店营收柱状图（保留原有，今日视角） ========== -->
+        <div class="full-width-row">
+            <div class="chart-panel">
+                <div class="panel-title"><i class="ri-bar-chart-2-line" aria-hidden="true"></i> 各门店营收对比（今日）</div>
+                <div class="panel-sub">仅展示订单量前 10 名门店 · 完整榜单见上方排行<template v-if="isStoreMode"> · 本店金色高亮</template></div>
+                <div class="chart-box" id="storeBarChart"></div>
             </div>
         </div>
 
@@ -210,6 +256,8 @@
         loading: false,
         dashboard: null,
         barChart: null,
+        trendChart: null,
+        categoryChart: null,
         resizeHandler: null,
         lastUpdated: null,
         brandColor: RgPalette.brand, // 与 --color-brand-500 一致（CH 定义见脚本顶部）
@@ -217,7 +265,12 @@
         // 修改点：8.7.2 单店看板模式（?storeId=X&name=门店名 打开时置位）
         currentStoreId: null,
         currentStoreName: '',
-        storeSummary: null
+        storeSummary: null,
+        // 集团汇总看板：排行维度与数据
+        rankTab: 'amount', // amount | orders | avg
+        rankDetail: [],    // 近7天排行详情（三维数据）
+        trendData: null,   // 多店营收趋势
+        categoryData: null // 品类销售对比
     },
     computed: {
         // 单店模式：true 时展示该门店今日概况 + 全门店排行对比（本店高亮）
@@ -252,6 +305,24 @@
                 { key: 'amount', icon: 'ri-money-cny-circle-line', label: '今日总营收', value: '¥' + this.formatMoney(d.todayTotalAmount), color: 'warning', subText: '客单价 ¥' + this.formatMoney(d.avgOrderAmount) },
                 { key: 'users', icon: 'ri-user-line', label: '今日新增用户', value: d.todayNewUsers || 0, color: 'info', subText: '全平台新注册用户' }
             ];
+        },
+        // 排行维度切换后，排序并截取排行数据
+        rankedStores() {
+            if (!this.rankDetail || this.rankDetail.length === 0) return [];
+            var arr = this.rankDetail.slice();
+            if (this.rankTab === 'amount') {
+                arr.sort(function(a, b) { return Number(b.totalAmount || 0) - Number(a.totalAmount || 0); });
+            } else if (this.rankTab === 'orders') {
+                arr.sort(function(a, b) { return (b.orderCount || 0) - (a.orderCount || 0); });
+            } else {
+                arr.sort(function(a, b) { return Number(b.avgOrderAmount || 0) - Number(a.avgOrderAmount || 0); });
+            }
+            return arr;
+        },
+        rankTabLabel() {
+            if (this.rankTab === 'amount') return '营收';
+            if (this.rankTab === 'orders') return '订单量';
+            return '客单价';
         }
     },
     created() {
@@ -263,12 +334,19 @@
         }
     },
     mounted() {
-        this.resizeHandler = () => { if (this.barChart) this.barChart.resize(); };
+        var self = this;
+        this.resizeHandler = function() {
+            if (self.barChart) self.barChart.resize();
+            if (self.trendChart) self.trendChart.resize();
+            if (self.categoryChart) self.categoryChart.resize();
+        };
         window.addEventListener('resize', this.resizeHandler);
     },
     beforeDestroy() {
         if (this.resizeHandler) window.removeEventListener('resize', this.resizeHandler);
         if (this.barChart) this.barChart.dispose();
+        if (this.trendChart) this.trendChart.dispose();
+        if (this.categoryChart) this.categoryChart.dispose();
     },
     methods: {
         // 修改点：8.7.2 单店看板 URL 参数解析
@@ -322,20 +400,48 @@
             }).catch(function(err) {
                 ReggieUI.error('加载失败：' + (err.message || '网络异常'));
             }).finally(function() { self.loading = false; });
+            // 并行加载排行详情（集团模式也需要排行三维切换）
+            getRankingDetail(7).then(function(res) {
+                if (res && res.code === 1) { self.rankDetail = res.data || []; }
+            }).catch(function() { /* 静默 */ });
         },
         loadDashboard() {
             var self = this;
-            getDashboardOverview().then(res => {
+            getDashboardOverview().then(function(res) {
                 if (res.code === 1) {
                     self.dashboard = res.data;
-                    self.lastUpdated = new Date();
-                    self.$nextTick(() => { self.renderBarChart(); });
                 } else {
                     ReggieUI.error(res.msg || '加载数据失败');
                 }
-            }).catch(err => {
+            }).catch(function(err) {
                 ReggieUI.error('加载失败：' + (err.message || '网络异常'));
-            }).finally(() => { self.loading = false; });
+            });
+            // 并行加载集团看板三个接口
+            Promise.all([
+                getRankingDetail(7).then(function(res) {
+                    if (res && res.code === 1) { self.rankDetail = res.data || []; }
+                }),
+                getMultiStoreTrend(7).then(function(res) {
+                    if (res && res.code === 1) { self.trendData = res.data; }
+                }),
+                getCategoryComparison().then(function(res) {
+                    if (res && res.code === 1) { self.categoryData = res.data; }
+                })
+            ]).then(function() {
+                self.lastUpdated = new Date();
+                self.$nextTick(function() {
+                    self.renderBarChart();
+                    self.renderTrendChart();
+                    self.renderCategoryChart();
+                });
+            }).catch(function() {
+                // 单接口失败不阻断其他图表渲染
+                self.$nextTick(function() {
+                    self.renderBarChart();
+                    self.renderTrendChart();
+                    self.renderCategoryChart();
+                });
+            }).finally(function() { self.loading = false; });
         },
         renderBarChart() {
             var self = this;
@@ -433,6 +539,176 @@
             return (window.RgFormat && window.RgFormat.formatMoney)
                 ? window.RgFormat.formatMoney(val)
                 : (Number(val || 0).toFixed(2));
+        },
+
+        // ==================== 集团汇总看板：多店营收趋势折线图 ====================
+        renderTrendChart() {
+            var data = this.trendData;
+            if (!data || !data.dates || !data.stores || data.stores.length === 0) return;
+            var dom = document.getElementById('trendChart');
+            if (!dom) return;
+            if (!this.trendChart) this.trendChart = echarts.init(dom);
+
+            var self = this;
+            var colors = [RgPalette.brand, RgPalette.seriesBlue, RgPalette.seriesGreen, RgPalette.seriesOrange,
+                          RgPalette.seriesCyan, RgPalette.seriesPurple, RgPalette.seriesMagenta, RgPalette.seriesPink];
+            var series = data.stores.map(function(s, i) {
+                return {
+                    name: s.name,
+                    type: 'line',
+                    smooth: true,
+                    symbol: 'emptyCircle',
+                    symbolSize: 7,
+                    data: s.amounts.map(function(a) { return Number(a); }),
+                    lineStyle: { width: 2.5, color: colors[i % colors.length] },
+                    itemStyle: { color: colors[i % colors.length], borderColor: RgPalette.white, borderWidth: 2 }
+                };
+            });
+
+            this.trendChart.setOption({
+                color: colors,
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
+                    textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
+                    formatter: function(params) {
+                        var html = '<b>' + params[0].axisValue + '</b><br/>';
+                        params.forEach(function(p) {
+                            html += p.marker + ' ' + p.seriesName + '：<b>¥' + Number(p.value).toFixed(2) + '</b><br/>';
+                        });
+                        return html;
+                    }
+                },
+                legend: {
+                    data: data.stores.map(function(s) { return s.name; }),
+                    bottom: 4, textStyle: { color: RgPalette.textRegular, fontSize: 12 },
+                    type: 'scroll', pageTextStyle: { color: RgPalette.textRegular }
+                },
+                grid: { left: 60, right: 30, top: 16, bottom: 52 },
+                xAxis: {
+                    type: 'category', data: data.dates,
+                    axisLine: { lineStyle: { color: RgPalette.borderLighter2 } },
+                    axisTick: { show: false },
+                    axisLabel: { color: RgPalette.info, fontSize: 11, rotate: 0 }
+                },
+                yAxis: {
+                    type: 'value', name: '营收(元)',
+                    nameTextStyle: { color: RgPalette.info, fontSize: 12 },
+                    axisLabel: { color: RgPalette.info, fontSize: 12, formatter: '¥{value}' },
+                    splitLine: { lineStyle: { color: RgPalette.borderLighter2, type: 'dashed' } },
+                    axisLine: { show: false }, axisTick: { show: false }
+                },
+                series: series
+            }, true);
+        },
+
+        // ==================== 集团汇总看板：品类销售对比堆叠柱状图 ====================
+        renderCategoryChart() {
+            var data = this.categoryData;
+            if (!data || data.length === 0) return;
+            var dom = document.getElementById('categoryChart');
+            if (!dom) return;
+            if (!this.categoryChart) this.categoryChart = echarts.init(dom);
+
+            // 提取所有品类名称（并集）
+            var categorySet = {};
+            data.forEach(function(store) {
+                (store.categories || []).forEach(function(c) {
+                    if (c.categoryName) categorySet[c.categoryName] = true;
+                });
+            });
+            var allCategories = Object.keys(categorySet);
+            if (allCategories.length === 0) return;
+
+            var colors = [RgPalette.brand, RgPalette.seriesBlue, RgPalette.seriesGreen, RgPalette.seriesOrange,
+                          RgPalette.seriesCyan, RgPalette.seriesPurple, RgPalette.seriesMagenta, RgPalette.seriesPink];
+            var storeNames = data.map(function(s) { return s.tenantName || ('门店' + s.tenantId); });
+
+            // 构建每个品类的系列数据
+            var series = allCategories.map(function(catName, i) {
+                var values = data.map(function(store) {
+                    var cats = store.categories || [];
+                    for (var j = 0; j < cats.length; j++) {
+                        if (cats[j].categoryName === catName) return Number(cats[j].totalAmount || 0);
+                    }
+                    return 0;
+                });
+                return {
+                    name: catName,
+                    type: 'bar',
+                    stack: 'total',
+                    barWidth: 36,
+                    data: values,
+                    itemStyle: {
+                        borderRadius: i === allCategories.length - 1
+                            ? [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] : [0, 0, 0, 0],
+                        color: colors[i % colors.length]
+                    }
+                };
+            });
+
+            this.categoryChart.setOption({
+                color: colors,
+                tooltip: {
+                    trigger: 'axis', axisPointer: { type: 'shadow' },
+                    backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
+                    textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
+                    formatter: function(params) {
+                        var html = '<b>' + params[0].axisValue + '</b><br/>';
+                        var total = 0;
+                        params.forEach(function(p) {
+                            if (p.value > 0) {
+                                html += p.marker + ' ' + p.seriesName + '：<b>¥' + Number(p.value).toFixed(2) + '</b><br/>';
+                                total += p.value;
+                            }
+                        });
+                        html += '<b>合计：¥' + Number(total).toFixed(2) + '</b>';
+                        return html;
+                    }
+                },
+                legend: {
+                    data: allCategories,
+                    bottom: 4, textStyle: { color: RgPalette.textRegular, fontSize: 12 },
+                    type: 'scroll', pageTextStyle: { color: RgPalette.textRegular }
+                },
+                grid: { left: 60, right: 30, top: 16, bottom: 52 },
+                xAxis: {
+                    type: 'category', data: storeNames,
+                    axisLine: { lineStyle: { color: RgPalette.borderLighter2 } },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: RgPalette.info, fontSize: 11, interval: 0,
+                        rotate: storeNames.length > 4 ? 25 : 0,
+                        formatter: function(v) { return v.length > 6 ? v.substring(0, 6) + '…' : v; }
+                    }
+                },
+                yAxis: {
+                    type: 'value', name: '销售金额(元)',
+                    nameTextStyle: { color: RgPalette.info, fontSize: 12 },
+                    axisLabel: { color: RgPalette.info, fontSize: 12, formatter: '¥{value}' },
+                    splitLine: { lineStyle: { color: RgPalette.borderLighter2, type: 'dashed' } },
+                    axisLine: { show: false }, axisTick: { show: false }
+                },
+                series: series
+            }, true);
+        },
+
+        // ==================== 排行维度切换 ====================
+        switchRankTab(tab) {
+            this.rankTab = tab;
+        },
+        rankDetailBarWidth(idx) {
+            var arr = this.rankedStores;
+            if (!arr || arr.length === 0) return '0%';
+            var maxVal = 0;
+            if (this.rankTab === 'amount') { maxVal = Number(arr[0].totalAmount || 0) || 1; }
+            else if (this.rankTab === 'orders') { maxVal = arr[0].orderCount || 1; }
+            else { maxVal = Number(arr[0].avgOrderAmount || 0) || 1; }
+            var curVal = 0;
+            if (this.rankTab === 'amount') { curVal = Number(arr[idx].totalAmount || 0); }
+            else if (this.rankTab === 'orders') { curVal = arr[idx].orderCount || 0; }
+            else { curVal = Number(arr[idx].avgOrderAmount || 0); }
+            return Math.max((curVal / maxVal * 100), 8) + '%';
         }
     }
 });

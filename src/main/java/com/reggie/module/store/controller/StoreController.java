@@ -15,6 +15,7 @@ import com.reggie.module.store.dto.SyncSetmealsDTO;
 import com.reggie.module.store.dto.UpdateStoreDTO;
 import com.reggie.module.store.model.StoreInfo;
 import com.reggie.module.store.model.StoreSearchDTO;
+import com.reggie.module.store.service.BusinessHoursService;
 import com.reggie.module.store.service.StoreService;
 import com.reggie.module.store.service.StoreSyncService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -63,6 +64,8 @@ public class StoreController {
     private StoreService storeService;
     @Autowired
     private StoreSyncService storeSyncService;
+    @Autowired(required = false)
+    private BusinessHoursService businessHoursService;
 
     // ==================== 门店管理 ====================
 
@@ -199,6 +202,24 @@ public class StoreController {
                                    @Min(0) @Max(1) @RequestParam Integer status) {
         storeService.updateStoreStatus(tenantId, status);
         return R.success("状态更新成功");
+    }
+
+    /**
+     * 暂停/恢复接单
+     * PUT /store/{tenantId}/pause?pause=true/false
+     */
+    @PutMapping("/{tenantId}/pause")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "暂停/恢复接单", description = "一键暂停接单或恢复接单，不关闭门店")
+    @Parameter(name = "tenantId", description = "租户ID", required = true)
+    @Parameter(name = "pause", description = "true=暂停接单 false=恢复接单", required = true)
+    public R<String> togglePause(@PathVariable Long tenantId,
+                                 @RequestParam boolean pause) {
+        if (businessHoursService == null) {
+            return R.error("暂停接单功能未启用");
+        }
+        businessHoursService.togglePauseOrder(tenantId, pause);
+        return R.success(pause ? "已暂停接单" : "已恢复接单");
     }
 
     /**

@@ -31,7 +31,7 @@ public class PlatformConfig implements Serializable {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    /** 平台类型：MEITUAN / ELEME / DOUYIN / SELF / OTHER */
+    /** 平台类型：MEITUAN / ELEME / DOUYIN / JD / SELF / OTHER */
     private String platformType;
 
     /** 平台展示名称（如「美团外卖-总店」） */

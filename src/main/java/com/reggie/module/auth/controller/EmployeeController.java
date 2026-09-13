@@ -129,19 +129,33 @@ public class EmployeeController {
             return R.error("用户名或密码错误");
         }
 
-        //3、密码校验（支持MD5和BCrypt）
-        String rawPassword = loginDTO.getPassword();
+        //3-4、密码校验并在需要时升级密码类型（等价抽取）
+        if (!verifyAndUpgradePassword(emp, loginDTO.getPassword())) {
+            return R.error("用户名或密码错误");
+        }
+
+        //5、登录成功，建立会话并返回脱敏信息（等价抽取）
+        return R.success(establishSessionAndBuildResult(request, emp));
+    }
+
+    /**
+     * 校验密码，并在密码为 MD5 且校验通过时自动升级为 BCrypt（等价抽取）。
+     *
+     * @param emp 员工
+     * @param rawPassword 原始密码
+     * @return 是否校验通过
+     */
+    private boolean verifyAndUpgradePassword(Employee emp, String rawPassword) {
         String encodedPassword = emp.getPassword();
         String passwordType = emp.getPasswordType() != null ? emp.getPasswordType() : SecurityConstants
                 .PASSWORD_TYPE_MD5;
 
         boolean passwordMatches = PasswordUtils.matches(rawPassword, encodedPassword, passwordType);
-
         if (!passwordMatches) {
-            return R.error("用户名或密码错误");
+            return false;
         }
 
-        //4、密码类型升级（如果是MD5且校验通过，自动升级为BCrypt）
+        // 密码类型升级（如果是MD5且校验通过，自动升级为BCrypt）
         if (SecurityConstants.PASSWORD_TYPE_MD5.equals(passwordType)) {
             String newEncoded = PasswordUtils.upgradeIfNeeded(rawPassword, encodedPassword, passwordType);
             if (newEncoded != null) {
@@ -152,22 +166,24 @@ public class EmployeeController {
                 employeeService.updateById(emp);
             }
         }
+        return true;
+    }
 
-        //5、登录成功，将员工id和租户id存入Session
-        // 注意：重新从数据库查询最新信息，确保租户上下文准确
+    /**
+     * 建立登录会话并返回脱敏后的登录信息（等价抽取）。
+     */
+    private Map<String, Object> establishSessionAndBuildResult(HttpServletRequest request, Employee emp) {
+        // 重新从数据库查询最新信息，确保租户上下文准确
         Employee freshEmp = employeeService.getById(emp.getId());
-        Long sessionTenantId;
         String sessionRoleKey;
         if (freshEmp != null) {
             request.getSession().setAttribute("employee", freshEmp.getId());
             request.getSession().setAttribute("tenantId", freshEmp.getTenantId());
-            sessionTenantId = freshEmp.getTenantId();
             sessionRoleKey = resolveRoleKey(freshEmp.getRole());
         } else {
             // 如果查询失败，使用原信息（降级处理）
             request.getSession().setAttribute("employee", emp.getId());
             request.getSession().setAttribute("tenantId", emp.getTenantId());
-            sessionTenantId = emp.getTenantId();
             sessionRoleKey = resolveRoleKey(emp.getRole());
             log.warn("员工登录后无法刷新数据，使用内存中的租户信息可能已过期 - empId: {}", emp.getId());
         }
@@ -178,7 +194,7 @@ public class EmployeeController {
         request.changeSessionId();
 
         // 返回脱敏后的登录信息（不包含密码等敏感字段）
-        java.util.HashMap<String, Object> result = new java.util.HashMap<>();
+        Map<String, Object> result = new HashMap<>();
         result.put("id", emp.getId());
         result.put("username", emp.getUsername());
         result.put("name", emp.getName());
@@ -188,8 +204,7 @@ public class EmployeeController {
         result.put("tenantId", emp.getTenantId());
         result.put("createTime", emp.getCreateTime());
         result.put("updateTime", emp.getUpdateTime());
-
-        return R.success(result);
+        return result;
     }
 
     /**
@@ -226,36 +241,67 @@ public class EmployeeController {
         // 安全说明：forgotPassword 是密码重置入口，跳过验证码等价于允许任意人重置任意账号密码，
         // 属严重安全缺陷。Mock 模式仅应用于登录场景的短信发送模拟，不应延伸至密码重置。
         // 如需在开发环境测试，通过 @Value 配置开关单独控制，且代码层面强制要求非生产环境。
-        if (forgotPasswordMockEnabled) {
-            // 修复 P2-2：白名单模式——仅 dev/test 环境允许 mock，其他环境一律拒绝
-            boolean isDevEnv = "dev".equals(activeProfile) || "test".equals(activeProfile)
-                    || "local".equals(activeProfile);
-            if (!isDevEnv) {
-                log.warn("[安全] 非开发环境拒绝使用 forgotPassword mock 模式，强制要求验证码 - activeProfile={}", activeProfile);
-            } else {
-                log.warn("开发环境：忘记密码跳过验证码校验 - username: {}, phone: {}, activeProfile: {}",
-                    LogMaskUtils.maskUsername(username), LogMaskUtils.maskPhone(phone), activeProfile);
-                Long tId = BaseContext.getCurrentTenantId();
-                LambdaQueryWrapper<Employee> mockQw = new LambdaQueryWrapper<>();
-                mockQw.eq(Employee::getUsername, username.trim());
-                mockQw.eq(Employee::getPhone, phone.trim());
-                if (tId != null) {
-                    mockQw.eq(Employee::getTenantId, tId);
-                }
-                Employee mockEmp = employeeService.getOne(mockQw);
-                if (mockEmp == null) {
-                    return R.error("用户名与手机号不匹配");
-                }
-                mockEmp.setPassword(PasswordUtils.encodePassword(newPassword));
-                mockEmp.setPasswordType(SecurityConstants.DEFAULT_PASSWORD_TYPE);
-                employeeService.updateById(mockEmp);
-                log.info("员工重置密码成功（mock模式） - username: {}, empId: {}, ip: {}, activeProfile: {}",
-                    username, mockEmp.getId(), request.getRemoteAddr(), activeProfile);
-                return R.success("密码重置成功，请使用新密码登录");
-            }
+        // mock 模式处理（等价抽取）：返回非 null 表示已处理完成，null 表示继续正常流程
+        R<String> mockResult = handleForgotPasswordMock(request, username, phone, newPassword);
+        if (mockResult != null) {
+            return mockResult;
         }
 
-        // 验证码校验（mock 模式且非生产环境时已提前返回，此处处理正常流程）
+        // 验证码校验（等价抽取）：返回非 null 表示校验失败
+        R<String> codeError = verifyForgotPasswordSmsCode(session, phone, code);
+        if (codeError != null) {
+            return codeError;
+        }
+
+        // 重置密码（等价抽取）
+        return resetPasswordByPhone(request, username, phone, newPassword);
+    }
+
+    /**
+     * 忘记密码 mock 模式处理（等价抽取）。
+     * <p>开发环境跳过验证码直接重置；非开发环境拒绝 mock 并返回 null 走正常流程。</p>
+     *
+     * @return 已处理完成时返回响应；应继续正常流程时返回 null
+     */
+    private R<String> handleForgotPasswordMock(HttpServletRequest request, String username, String phone,
+            String newPassword) {
+        if (!forgotPasswordMockEnabled) {
+            return null;
+        }
+        // 修复 P2-2：白名单模式——仅 dev/test 环境允许 mock，其他环境一律拒绝
+        boolean isDevEnv = "dev".equals(activeProfile) || "test".equals(activeProfile)
+                || "local".equals(activeProfile);
+        if (!isDevEnv) {
+            log.warn("[安全] 非开发环境拒绝使用 forgotPassword mock 模式，强制要求验证码 - activeProfile={}", activeProfile);
+            return null;
+        }
+        log.warn("开发环境：忘记密码跳过验证码校验 - username: {}, phone: {}, activeProfile: {}",
+                LogMaskUtils.maskUsername(username), LogMaskUtils.maskPhone(phone), activeProfile);
+        Long tId = BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<Employee> mockQw = new LambdaQueryWrapper<>();
+        mockQw.eq(Employee::getUsername, username.trim());
+        mockQw.eq(Employee::getPhone, phone.trim());
+        if (tId != null) {
+            mockQw.eq(Employee::getTenantId, tId);
+        }
+        Employee mockEmp = employeeService.getOne(mockQw);
+        if (mockEmp == null) {
+            return R.error("用户名与手机号不匹配");
+        }
+        mockEmp.setPassword(PasswordUtils.encodePassword(newPassword));
+        mockEmp.setPasswordType(SecurityConstants.DEFAULT_PASSWORD_TYPE);
+        employeeService.updateById(mockEmp);
+        log.info("员工重置密码成功（mock模式） - username: {}, empId: {}, ip: {}, activeProfile: {}",
+                username, mockEmp.getId(), request.getRemoteAddr(), activeProfile);
+        return R.success("密码重置成功，请使用新密码登录");
+    }
+
+    /**
+     * 校验忘记密码短信验证码（等价抽取）。
+     *
+     * @return 校验失败时返回错误响应；通过时返回 null
+     */
+    private R<String> verifyForgotPasswordSmsCode(HttpSession session, String phone, String code) {
         if (code == null || code.trim().isEmpty()) {
             return R.error("请输入短信验证码");
         }
@@ -269,12 +315,18 @@ public class EmployeeController {
         // 验证通过后清除验证码（一次性使用）
         session.removeAttribute("smsCode_" + phone);
         session.removeAttribute("smsCode_" + phone + "_time");
+        return null;
+    }
 
-        // 租户隔离：修复 P0-5，forgotPassword 为公开接口（无登录态，tenantId 必然为 null），
-        // 原实现 if(tenantId!=null) 条件永不满足导致无租户过滤，攻击者可跨租户重置密码。
-        // 修复方案：employee 表含 tenant_id 列时强制匹配当前请求的租户；
-        // 因公开接口无租户上下文，改为通过手机号反查该手机号所属租户的唯一员工。
-        // 若员工表无 tenant_id 列（IGNORE_TABLES），则 username+phone 全局唯一查找，记录安全日志。
+    /**
+     * 通过用户名+手机号查找员工并重置密码（等价抽取）。
+     *
+     * 租户隔离：修复 P0-5，forgotPassword 为公开接口（无登录态，tenantId 必然为 null），
+     * 原实现 if(tenantId!=null) 条件永不满足导致无租户过滤，攻击者可跨租户重置密码。
+     * 修复方案：改为通过用户名+手机号全局唯一查找，记录安全日志。
+     */
+    private R<String> resetPasswordByPhone(HttpServletRequest request, String username, String phone,
+            String newPassword) {
         LambdaQueryWrapper<Employee> qw = new LambdaQueryWrapper<>();
         qw.eq(Employee::getUsername, username.trim());
         qw.eq(Employee::getPhone, phone.trim());
@@ -289,7 +341,7 @@ public class EmployeeController {
         employeeService.updateById(emp);
 
         log.info("员工重置密码成功 - username: {}, empId: {}, ip: {}",
-            username, emp.getId(), request.getRemoteAddr());
+                username, emp.getId(), request.getRemoteAddr());
         return R.success("密码重置成功，请使用新密码登录");
     }
 

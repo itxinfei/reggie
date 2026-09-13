@@ -519,6 +519,7 @@ CREATE TABLE store_info (
   contact_phone varchar(20) NULL DEFAULT NULL COMMENT 'ŵϵ绰',
   longitude decimal(10,7) NULL DEFAULT NULL COMMENT '经度',
   latitude decimal(10,7) NULL DEFAULT NULL COMMENT '纬度',
+  pause_order int NOT NULL DEFAULT 0 COMMENT '暂停接单 0:正常 1:暂停',
   create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建用户',

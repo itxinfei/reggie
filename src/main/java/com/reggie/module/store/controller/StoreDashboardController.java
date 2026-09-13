@@ -8,8 +8,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -52,5 +54,46 @@ public class StoreDashboardController {
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("storeRanking", ranking);
         return R.success(result);
+    }
+
+    /**
+     * 多店近 N 天营收趋势对比（多折线图）
+     * @param days 天数，默认 7
+     * @return 趋势数据：{ dates, stores: [ { tenantId, name, amounts }, ... ] }
+     */
+    @GetMapping("/trend")
+    @Operation(summary = "多店营收趋势", description = "近 N 天各门店每日营收趋势对比，用于多折线图展示")
+    public R<Map<String, Object>> multiStoreTrend(
+            @RequestParam(defaultValue = "7") int days) {
+        Map<String, Object> data = storeService.getMultiStoreTrend(days);
+        return R.success(data);
+    }
+
+    /**
+     * 多品类销售对比（各店各品类的销售占比）
+     * @param startDate 起始日期（yyyy-MM-dd，可选）
+     * @param endDate   结束日期（yyyy-MM-dd，可选）
+     * @return 品类对比数据列表
+     */
+    @GetMapping("/category-comparison")
+    @Operation(summary = "品类销售对比", description = "各门店各品类的销售金额占比，支持日期范围筛选")
+    public R<List<Map<String, Object>>> categoryComparison(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        List<Map<String, Object>> data = storeService.getCategoryComparison(startDate, endDate);
+        return R.success(data);
+    }
+
+    /**
+     * 门店排行详情（近 N 天，营收/订单数/客单价三维）
+     * @param days 天数，默认 7
+     * @return 排行列表
+     */
+    @GetMapping("/ranking-detail")
+    @Operation(summary = "门店排行详情", description = "近 N 天门店营收/订单数/客单价三维排行")
+    public R<List<Map<String, Object>>> rankingDetail(
+            @RequestParam(defaultValue = "7") int days) {
+        List<Map<String, Object>> data = storeService.getRankingDetail(days);
+        return R.success(data);
     }
 }

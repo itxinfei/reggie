@@ -526,7 +526,23 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
             throw new CustomException("新桌台当前状态为[" + newTable.getStatus() + "]，无法转入");
         }
 
-        // 3. 将指定订单转移到新桌台
+        // 3. 将指定订单转移到新桌台（等价抽取）
+        transferOrdersToTable(splitOrderIds, newTableId, tenantId);
+
+        // 4. 更新原桌台状态（等价抽取）
+        updateOriginalTableAfterSplit(originalTableId, tenantId);
+
+        // 5. 新桌台绑定第一个转移的订单（等价抽取）
+        bindFirstOrderToTable(newTableId, tenantId, splitOrderIds.get(0));
+
+        log.info("拆台成功: originalTableId={}, newTableId={}, splitOrderIds={}",
+                originalTableId, newTableId, splitOrderIds);
+    }
+
+    /**
+     * 将指定订单转移到新桌台（等价抽取，降低方法长度）。
+     */
+    private void transferOrdersToTable(List<Long> splitOrderIds, Long newTableId, Long tenantId) {
         for (Long orderId : splitOrderIds) {
             LambdaUpdateWrapper<Orders> orderUw = new LambdaUpdateWrapper<>();
             orderUw.eq(Orders::getId, orderId)
@@ -534,59 +550,47 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
                    .set(Orders::getTableId, newTableId);
             orderService.update(orderUw);
         }
+    }
 
-        // 4. 检查原桌台是否还有订单
-        Long remainingOrderId = null;
-        LambdaQueryWrapper<DiningTable> checkQw = new LambdaQueryWrapper<>();
-        checkQw.eq(DiningTable::getTenantId, tenantId)
-               .eq(DiningTable::getId, originalTableId);
-        // 直接查询原桌台是否有绑定订单（currentOrderId 字段）
-        // 注意：一个桌台可能有多个订单，需要查询所有绑定到原桌台的订单
+    /**
+     * 拆台后更新原桌台状态：无剩余订单则释放，否则保持占用并更新 currentOrderId（等价抽取）。
+     */
+    private void updateOriginalTableAfterSplit(Long originalTableId, Long tenantId) {
+        // 一个桌台可能有多个订单，查询所有绑定到原桌台的订单
         List<Orders> remainingOrders = orderService.list(
                 new LambdaQueryWrapper<Orders>()
                         .eq(Orders::getTableId, originalTableId)
                         .eq(Orders::getTenantId, tenantId));
+        LambdaUpdateWrapper<DiningTable> originalUw = new LambdaUpdateWrapper<>();
+        originalUw.eq(DiningTable::getId, originalTableId)
+                  .eq(DiningTable::getTenantId, tenantId)
+                  .eq(DiningTable::getStatus, DiningTableStatus.OCCUPIED.getValue());
         if (remainingOrders.isEmpty()) {
             // 原桌台已无订单，释放
-            LambdaUpdateWrapper<DiningTable> originalUw = new LambdaUpdateWrapper<>();
-            originalUw.eq(DiningTable::getId, originalTableId)
-                      .eq(DiningTable::getTenantId, tenantId)
-                      .eq(DiningTable::getStatus, DiningTableStatus.OCCUPIED.getValue())
-                      .set(DiningTable::getStatus, DiningTableStatus.FREE.getValue())
+            originalUw.set(DiningTable::getStatus, DiningTableStatus.FREE.getValue())
                       .set(DiningTable::getCurrentOrderId, null);
-            boolean ok = update(originalUw);
-            if (!ok) {
-                throw new CustomException("原桌台状态已被变更，请刷新后重试");
-            }
         } else {
             // 原桌台还有订单，保持占用，更新 currentOrderId 为第一个剩余订单
-            remainingOrderId = remainingOrders.get(0).getId();
-            LambdaUpdateWrapper<DiningTable> originalUw = new LambdaUpdateWrapper<>();
-            originalUw.eq(DiningTable::getId, originalTableId)
-                      .eq(DiningTable::getTenantId, tenantId)
-                      .eq(DiningTable::getStatus, DiningTableStatus.OCCUPIED.getValue())
-                      .set(DiningTable::getCurrentOrderId, remainingOrderId);
-            boolean ok = update(originalUw);
-            if (!ok) {
-                throw new CustomException("原桌台状态已被变更，请刷新后重试");
-            }
+            originalUw.set(DiningTable::getCurrentOrderId, remainingOrders.get(0).getId());
         }
+        if (!update(originalUw)) {
+            throw new CustomException("原桌台状态已被变更，请刷新后重试");
+        }
+    }
 
-        // 5. 新桌台绑定第一个转移的订单
-        Long firstOrderId = splitOrderIds.get(0);
+    /**
+     * 新桌台绑定第一个转移的订单（等价抽取）。
+     */
+    private void bindFirstOrderToTable(Long newTableId, Long tenantId, Long firstOrderId) {
         LambdaUpdateWrapper<DiningTable> newUw = new LambdaUpdateWrapper<>();
         newUw.eq(DiningTable::getId, newTableId)
              .eq(DiningTable::getTenantId, tenantId)
              .eq(DiningTable::getStatus, DiningTableStatus.FREE.getValue())
              .set(DiningTable::getStatus, DiningTableStatus.OCCUPIED.getValue())
              .set(DiningTable::getCurrentOrderId, firstOrderId);
-        boolean ok = update(newUw);
-        if (!ok) {
+        if (!update(newUw)) {
             throw new CustomException("新桌台状态已被变更，请刷新后重试");
         }
-
-        log.info("拆台成功: originalTableId={}, newTableId={}, splitOrderIds={}",
-                originalTableId, newTableId, splitOrderIds);
     }
 
     /**
@@ -639,7 +643,21 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
         BigDecimal amount = masterOrder.getAmount() != null ? masterOrder.getAmount() : BigDecimal.ZERO;
         BigDecimal partAmount = amount.divide(BigDecimal.valueOf(dto.getParts()), 2, java.math.RoundingMode.HALF_UP);
 
-        // 4. 创建子订单
+        // 4. 创建子订单（等价抽取）
+        List<Orders> subOrders = createSubOrders(masterOrder, dto, tenantId, partAmount);
+
+        // 5. 主订单状态改为已分账（SPLIT），金额置 0 避免营收统计重复计入（等价抽取）
+        markMasterAsSplit(masterOrder, dto, tenantId);
+
+        log.info("AA 分账成功: masterOrderId={}, parts={}, subOrderIds={}",
+                masterOrder.getId(), dto.getParts(),
+                subOrders.stream().map(Orders::getId).collect(java.util.stream.Collectors.toList()));
+    }
+
+    /**
+     * 按份数创建分账子订单（等价抽取，降低方法长度）。
+     */
+    private List<Orders> createSubOrders(Orders masterOrder, SplitBillDTO dto, Long tenantId, BigDecimal partAmount) {
         List<Orders> subOrders = new java.util.ArrayList<>();
         for (int i = 0; i < dto.getParts(); i++) {
             Orders subOrder = new Orders();
@@ -662,8 +680,13 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
             orderService.save(subOrder);
             subOrders.add(subOrder);
         }
+        return subOrders;
+    }
 
-        // 5. 主订单状态改为已分账（SPLIT），金额置 0 避免营收统计重复计入
+    /**
+     * 将主订单标记为已分账（SPLIT）并把金额置 0，避免营收统计重复计入（等价抽取）。
+     */
+    private void markMasterAsSplit(Orders masterOrder, SplitBillDTO dto, Long tenantId) {
         LambdaUpdateWrapper<Orders> masterUw = new LambdaUpdateWrapper<>();
         masterUw.eq(Orders::getId, masterOrder.getId())
                 .eq(Orders::getTenantId, tenantId)
@@ -674,10 +697,6 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
                         (masterOrder.getRemark() != null ? masterOrder.getRemark() + "; " : "")
                                 + "AA分账" + dto.getParts() + "份");
         orderService.update(masterUw);
-
-        log.info("AA 分账成功: masterOrderId={}, parts={}, subOrderIds={}",
-                masterOrder.getId(), dto.getParts(),
-                subOrders.stream().map(Orders::getId).collect(java.util.stream.Collectors.toList()));
     }
 }
 

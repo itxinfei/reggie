@@ -44,7 +44,7 @@ public class MybatisPlusConfig {
      */
     private static final Set<String> IGNORE_TABLES = new HashSet<>(Arrays.asList(
         "tenant", "employee", "shopping_cart", "ai_provider_config", "dish_evaluation",
-        "permission", "role_permission", "region"
+        "permission", "role_permission", "region", "billing_plan"
     ));
 
     /**

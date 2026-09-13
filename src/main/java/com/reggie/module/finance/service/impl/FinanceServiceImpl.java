@@ -531,67 +531,92 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
             }
             List<Orders> orders = orderService.list(orderQw);
 
-            BigDecimal totalRevenue = BigDecimal.ZERO;
-            int orderCount = 0;
-            Set<Long> uniqueCustomers = new HashSet<>();
-
-            for (Orders order : orders) {
-                if (order.getStatus() == Orders.STATUS_COMPLETED) {
-                    orderCount++;
-                    totalRevenue = totalRevenue.add(order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO);
-                    if (order.getUserId() != null) {
-                        uniqueCustomers.add(order.getUserId());
-                    }
-                }
-            }
+            // 收入统计（等价抽取）
+            Map<String, Object> stats = computeRevenueStats(orders);
+            BigDecimal totalRevenue = (BigDecimal) stats.get("totalRevenue");
+            int orderCount = (Integer) stats.get("orderCount");
+            int customerCount = (Integer) stats.get("customerCount");
 
             // Query costs
             Map<String, Object> costSummary = costService.getCostSummary(date, date, tenantId);
-            // 类型安全取值：getOrDefault 若命中 key 但 value 非 BigDecimal（如 Integer/Long），
-            // 直接强转 ClassCastException。此处走安全转换路径，并对 null 兜底。
-            BigDecimal foodCost = toBigDecimal(costSummary.get("materialCost"));
-            BigDecimal laborCost = toBigDecimal(costSummary.get("laborCost"));
-            BigDecimal otherCost = toBigDecimal(costSummary.get("otherCost"));
-            BigDecimal totalCost = foodCost.add(laborCost).add(otherCost);
-
-            // Calculate profit
-            BigDecimal grossProfit = totalRevenue.subtract(totalCost);
-            BigDecimal grossProfitRate = totalRevenue.compareTo(BigDecimal.ZERO) > 0 ?
-                    grossProfit.divide(totalRevenue, 4, RoundingMode.HALF_UP)
-                            .multiply(new BigDecimal("100")) : BigDecimal.ZERO;
-
-            BigDecimal operatingExpense = BigDecimal.ZERO; // Simplified
-            BigDecimal netProfit = grossProfit.subtract(operatingExpense);
-            BigDecimal netProfitRate = totalRevenue.compareTo(BigDecimal.ZERO) > 0 ?
-                    netProfit.divide(totalRevenue, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")) : BigDecimal
-                            .ZERO;
-
-            BigDecimal averageOrderValue = orderCount > 0 ?
-                    totalRevenue.divide(BigDecimal.valueOf(orderCount), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
-
-            // Create profit analysis
-            ProfitAnalysis analysis = new ProfitAnalysis();
-            analysis.setAnalysisDate(date);
-            analysis.setTotalRevenue(totalRevenue);
-            analysis.setFoodCost(foodCost);
-            analysis.setLaborCost(laborCost);
-            analysis.setOtherCost(otherCost);
-            analysis.setTotalCost(totalCost);
-            analysis.setGrossProfit(grossProfit);
-            analysis.setGrossProfitRate(grossProfitRate);
-            analysis.setOperatingExpense(operatingExpense);
-            analysis.setNetProfit(netProfit);
-            analysis.setNetProfitRate(netProfitRate);
-            analysis.setOrderCount(orderCount);
-            analysis.setCustomerCount(uniqueCustomers.size());
-            analysis.setAverageOrderValue(averageOrderValue);
-            analysis.setTenantId(tenantId);
-            analysis.setCreateTime(LocalDateTime.now());
-            analysis.setUpdateTime(LocalDateTime.now());
-
-            profitAnalysisMapper.insert(analysis);
-            return analysis;
+            // 计算利润并保存（等价抽取）
+            return buildAndSaveProfitAnalysis(date, tenantId, totalRevenue, orderCount, customerCount, costSummary);
         }
+    }
+
+    /**
+     * 统计已完成订单的收入、订单数与去重客户数（等价抽取，降低方法长度）。
+     *
+     * @return {totalRevenue, orderCount, customerCount}
+     */
+    private Map<String, Object> computeRevenueStats(List<Orders> orders) {
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+        int orderCount = 0;
+        Set<Long> uniqueCustomers = new HashSet<>();
+        for (Orders order : orders) {
+            if (order.getStatus() == Orders.STATUS_COMPLETED) {
+                orderCount++;
+                totalRevenue = totalRevenue.add(order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO);
+                if (order.getUserId() != null) {
+                    uniqueCustomers.add(order.getUserId());
+                }
+            }
+        }
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalRevenue", totalRevenue);
+        stats.put("orderCount", orderCount);
+        stats.put("customerCount", uniqueCustomers.size());
+        return stats;
+    }
+
+    /**
+     * 根据收入与成本计算利润指标并保存利润分析（等价抽取，降低方法长度）。
+     */
+    private ProfitAnalysis buildAndSaveProfitAnalysis(LocalDate date, Long tenantId, BigDecimal totalRevenue,
+            int orderCount, int customerCount, Map<String, Object> costSummary) {
+        // 类型安全取值：getOrDefault 若命中 key 但 value 非 BigDecimal（如 Integer/Long），
+        // 直接强转 ClassCastException。此处走安全转换路径，并对 null 兜底。
+        BigDecimal foodCost = toBigDecimal(costSummary.get("materialCost"));
+        BigDecimal laborCost = toBigDecimal(costSummary.get("laborCost"));
+        BigDecimal otherCost = toBigDecimal(costSummary.get("otherCost"));
+        BigDecimal totalCost = foodCost.add(laborCost).add(otherCost);
+
+        // Calculate profit
+        BigDecimal grossProfit = totalRevenue.subtract(totalCost);
+        BigDecimal grossProfitRate = totalRevenue.compareTo(BigDecimal.ZERO) > 0 ?
+                grossProfit.divide(totalRevenue, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"))
+                : BigDecimal.ZERO;
+
+        BigDecimal operatingExpense = BigDecimal.ZERO; // Simplified
+        BigDecimal netProfit = grossProfit.subtract(operatingExpense);
+        BigDecimal netProfitRate = totalRevenue.compareTo(BigDecimal.ZERO) > 0 ?
+                netProfit.divide(totalRevenue, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"))
+                : BigDecimal.ZERO;
+
+        BigDecimal averageOrderValue = orderCount > 0 ?
+                totalRevenue.divide(BigDecimal.valueOf(orderCount), 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+
+        ProfitAnalysis analysis = new ProfitAnalysis();
+        analysis.setAnalysisDate(date);
+        analysis.setTotalRevenue(totalRevenue);
+        analysis.setFoodCost(foodCost);
+        analysis.setLaborCost(laborCost);
+        analysis.setOtherCost(otherCost);
+        analysis.setTotalCost(totalCost);
+        analysis.setGrossProfit(grossProfit);
+        analysis.setGrossProfitRate(grossProfitRate);
+        analysis.setOperatingExpense(operatingExpense);
+        analysis.setNetProfit(netProfit);
+        analysis.setNetProfitRate(netProfitRate);
+        analysis.setOrderCount(orderCount);
+        analysis.setCustomerCount(customerCount);
+        analysis.setAverageOrderValue(averageOrderValue);
+        analysis.setTenantId(tenantId);
+        analysis.setCreateTime(LocalDateTime.now());
+        analysis.setUpdateTime(LocalDateTime.now());
+
+        profitAnalysisMapper.insert(analysis);
+        return analysis;
     }
 
     /**

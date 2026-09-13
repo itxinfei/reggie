@@ -17,7 +17,7 @@ import java.util.Map;
 @Data
 public class SyncStockDTO {
 
-    @Schema(description = "外卖平台（MEITUAN-美团、ELEME-饿了么）", required = true, example = "MEITUAN")
+    @Schema(description = "外卖平台（MEITUAN-美团、ELEME-饿了么、DOUYIN-抖音、JD-京东）", required = true, example = "MEITUAN")
     @NotBlank(message = "平台不能为空")
     private String platform;
 

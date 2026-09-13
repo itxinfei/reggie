@@ -149,5 +149,35 @@ public interface StoreService {
      * @return 门店信息，不存在返回 null
      */
     StoreInfo findByTenantId(Long tenantId);
+
+    // ==================== 集团汇总看板 ====================
+
+    /**
+     * 多店近 N 天营收趋势对比（按门店+日期分组）
+     * <p>结果结构：{ dates: [...], stores: [ { tenantId, name, amounts: [...] }, ... ] }</p>
+     *
+     * @param days 天数，默认 7
+     * @return 趋势数据
+     */
+    Map<String, Object> getMultiStoreTrend(int days);
+
+    /**
+     * 多品类销售对比（各店各品类的销售占比）
+     * <p>结果结构：[ { tenantId, tenantName, categories: [ {categoryName, totalAmount, totalCount}, ... ] }, ... ]</p>
+     *
+     * @param startDate 起始日期（yyyy-MM-dd，可选，默认近 7 天）
+     * @param endDate   结束日期（yyyy-MM-dd，可选，默认今天）
+     * @return 品类对比数据
+     */
+    List<Map<String, Object>> getCategoryComparison(String startDate, String endDate);
+
+    /**
+     * 门店排行详情（近 N 天，营收/订单数/客单价三维）
+     * <p>结果结构：[ { tenantId, storeName, totalAmount, orderCount, avgOrderAmount }, ... ]</p>
+     *
+     * @param days 天数，默认 7
+     * @return 排行列表
+     */
+    List<Map<String, Object>> getRankingDetail(int days);
 }
 

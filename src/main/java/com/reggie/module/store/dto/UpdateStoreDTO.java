@@ -71,4 +71,9 @@ public class UpdateStoreDTO {
     @Min(value = 0, message = "堂食开关必须为0或1")
     @Max(value = 1, message = "堂食开关必须为0或1")
     private Integer isDineInEnabled;
+
+    @Schema(description = "暂停接单：0-正常接单 1-暂停接单")
+    @Min(value = 0, message = "暂停接单状态必须为0或1")
+    @Max(value = 1, message = "暂停接单状态必须为0或1")
+    private Integer pauseOrder;
 }

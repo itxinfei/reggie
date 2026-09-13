@@ -624,52 +624,51 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
             expiredCountFinalMap.put(tid, expiredCountFinalMap.getOrDefault(tid, 0) + 1);
         }
 
-        // 计算各模板即将到期优惠总额：模板 discountAmount × expiringCount
-        List<ExpiringByTemplateVO> result = new ArrayList<>();
+        // 计算各模板即将到期优惠总额：模板 discountAmount × expiringCount（等价抽取）
+        List<ExpiringByTemplateVO> sorted = new ArrayList<>();
         for (Map.Entry<Long, Integer> entry : expiringCountMap.entrySet()) {
-            Long tid = entry.getKey();
-            Integer cnt = entry.getValue();
-            CouponTemplate tpl = templateMap.get(tid);
-            ExpiringByTemplateVO vo = new ExpiringByTemplateVO();
-            vo.setTemplateId(tid);
-            if (tpl != null) {
-                vo.setTemplateName(tpl.getName());
-                vo.setCouponType(tpl.getType());
-                BigDecimal amount = tpl.getDiscountAmount() != null
-                        ? tpl.getDiscountAmount() : BigDecimal.ZERO;
-                vo.setExpiringDiscountAmount(amount.multiply(new BigDecimal(cnt))
-                        .setScale(2, RoundingMode.HALF_UP));
-            } else {
-                vo.setExpiringDiscountAmount(BigDecimal.ZERO);
-            }
-            vo.setExpiringCount(cnt);
-            vo.setExpiredCount(expiredCountFinalMap.getOrDefault(tid, 0));
-
-            // 已过期优惠总额
-            CouponTemplate tplForExpired = templateMap.get(tid);
-            if (tplForExpired != null && tplForExpired.getDiscountAmount() != null) {
-                BigDecimal amt = tplForExpired.getDiscountAmount();
-                int expCnt = expiredCountFinalMap.getOrDefault(tid, 0);
-                vo.setExpiredDiscountAmount(amt.multiply(new BigDecimal(expCnt))
-                        .setScale(2, RoundingMode.HALF_UP));
-            } else {
-                vo.setExpiredDiscountAmount(BigDecimal.ZERO);
-            }
-            result.add(vo);
+            sorted.add(buildExpiringVO(entry.getKey(), entry.getValue(), templateMap, expiredCountFinalMap));
         }
 
-        // 排序：即将到期数量倒序
-        List<ExpiringByTemplateVO> sorted = new ArrayList<>(result);
-        for (int i = 0; i < sorted.size() - 1; i++) {
-            for (int j = i + 1; j < sorted.size(); j++) {
-                if (sorted.get(j).getExpiringCount() > sorted.get(i).getExpiringCount()) {
-                    ExpiringByTemplateVO tmp = sorted.get(i);
-                    sorted.set(i, sorted.get(j));
-                    sorted.set(j, tmp);
-                }
-            }
-        }
+        // 排序：即将到期数量倒序（等价抽取）
+        sorted.sort((a, b) -> Integer.compare(b.getExpiringCount(), a.getExpiringCount()));
         return sorted;
+    }
+
+    /**
+     * 构建单个模板的到期统计 VO（等价抽取，降低方法长度）。
+     *
+     * @param tid 模板ID
+     * @param cnt 即将到期数量
+     * @param templateMap 模板映射
+     * @param expiredCountFinalMap 各模板已过期数量
+     * @return 到期统计 VO
+     */
+    private ExpiringByTemplateVO buildExpiringVO(Long tid, Integer cnt, Map<Long, CouponTemplate> templateMap,
+            Map<Long, Integer> expiredCountFinalMap) {
+        CouponTemplate tpl = templateMap.get(tid);
+        ExpiringByTemplateVO vo = new ExpiringByTemplateVO();
+        vo.setTemplateId(tid);
+        if (tpl != null) {
+            vo.setTemplateName(tpl.getName());
+            vo.setCouponType(tpl.getType());
+            BigDecimal amount = tpl.getDiscountAmount() != null ? tpl.getDiscountAmount() : BigDecimal.ZERO;
+            vo.setExpiringDiscountAmount(amount.multiply(new BigDecimal(cnt)).setScale(2, RoundingMode.HALF_UP));
+        } else {
+            vo.setExpiringDiscountAmount(BigDecimal.ZERO);
+        }
+        vo.setExpiringCount(cnt);
+        vo.setExpiredCount(expiredCountFinalMap.getOrDefault(tid, 0));
+
+        // 已过期优惠总额
+        if (tpl != null && tpl.getDiscountAmount() != null) {
+            int expCnt = expiredCountFinalMap.getOrDefault(tid, 0);
+            vo.setExpiredDiscountAmount(
+                    tpl.getDiscountAmount().multiply(new BigDecimal(expCnt)).setScale(2, RoundingMode.HALF_UP));
+        } else {
+            vo.setExpiredDiscountAmount(BigDecimal.ZERO);
+        }
+        return vo;
     }
 
     /**

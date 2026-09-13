@@ -86,6 +86,9 @@ public class StoreInfo implements Serializable {
     /** 纬度 */
     private BigDecimal latitude;
 
+    /** 暂停接单 0:正常 1:暂停 */
+    private Integer pauseOrder;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

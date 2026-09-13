@@ -92,6 +92,7 @@
               <el-option label="美团外卖" value="MEITUAN"></el-option>
               <el-option label="饿了么" value="ELEME"></el-option>
               <el-option label="抖音本地生活" value="DOUYIN"></el-option>
+              <el-option label="京东外卖" value="JD"></el-option>
               <el-option label="自营小程序" value="SELF"></el-option>
               <el-option label="其他" value="OTHER"></el-option>
             </el-select>
@@ -283,7 +284,7 @@
         this.fetchData(false)
       },
       platformTypeText(type) {
-        const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音', SELF: '自营', OTHER: '其他' }
+        const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音', JD: '京东', SELF: '自营', OTHER: '其他' }
         return map[type] || type
       },
       // 修改点：位标记拆解

@@ -211,14 +211,8 @@ public class PointsRecordController {
         if (tenantId != null) todayQw.eq(PointsRecord::getTenantId, tenantId);
         todayQw.between(PointsRecord::getCreatedTime, todayStart, todayEnd);
         List<PointsRecord> todayRecords = pointsRecordService.list(todayQw);
-        long todayAcquired = todayRecords.stream()
-                .filter(r -> "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN"
-                        .equalsIgnoreCase(r.getType()))
-                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
-        long todayConsumed = todayRecords.stream()
-                .filter(r -> "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT"
-                        .equalsIgnoreCase(r.getType()))
-                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+        long todayAcquired = sumAcquired(todayRecords);
+        long todayConsumed = sumConsumed(todayRecords);
 
         // 3. 本月获取/消耗积分
         LocalDateTime monthStart = LocalDateTime.of(LocalDate.now().withDayOfMonth(1), LocalTime.MIN);
@@ -228,58 +222,18 @@ public class PointsRecordController {
         if (tenantId != null) monthQw.eq(PointsRecord::getTenantId, tenantId);
         monthQw.between(PointsRecord::getCreatedTime, monthStart, monthEnd);
         List<PointsRecord> monthRecords = pointsRecordService.list(monthQw);
-        long monthAcquired = monthRecords.stream()
-                .filter(r -> "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN"
-                        .equalsIgnoreCase(r.getType()))
-                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
-        long monthConsumed = monthRecords.stream()
-                .filter(r -> "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT"
-                        .equalsIgnoreCase(r.getType()))
-                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+        long monthAcquired = sumAcquired(monthRecords);
+        long monthConsumed = sumConsumed(monthRecords);
 
         // 4. 累计获取/消耗积分（全历史）
         LambdaQueryWrapper<PointsRecord> allQw = new LambdaQueryWrapper<>();
         if (tenantId != null) allQw.eq(PointsRecord::getTenantId, tenantId);
         List<PointsRecord> allRecords = pointsRecordService.list(allQw);
-        long totalAcquired = allRecords.stream()
-                .filter(r -> "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r.getType()) || "IN"
-                        .equalsIgnoreCase(r.getType()))
-                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
-        long totalConsumed = allRecords.stream()
-                .filter(r -> "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r.getType()) || "OUT"
-                        .equalsIgnoreCase(r.getType()))
-                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+        long totalAcquired = sumAcquired(allRecords);
+        long totalConsumed = sumConsumed(allRecords);
 
-        // 5. 近30天每日积分趋势
-        List<Map<String, Object>> trend = new ArrayList<>();
-        for (int i = 29; i >= 0; i--) {
-            LocalDate date = LocalDate.now().minusDays(i);
-            LocalDateTime ds = LocalDateTime.of(date, LocalTime.MIN);
-            LocalDateTime de = LocalDateTime.of(date, LocalTime.MAX);
-            long dayAcquired = allRecords.stream()
-                    .filter(r -> {
-                        if (r.getCreatedTime() == null) return false;
-                        boolean inRange = !r.getCreatedTime().isBefore(ds) && !r.getCreatedTime().isAfter(de);
-                        boolean isAcquire = "earn".equalsIgnoreCase(r.getType()) || "ACQUIRE".equalsIgnoreCase(r
-                                .getType()) || "IN".equalsIgnoreCase(r.getType());
-                        return inRange && isAcquire;
-                    })
-                    .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
-            long dayConsumed = allRecords.stream()
-                    .filter(r -> {
-                        if (r.getCreatedTime() == null) return false;
-                        boolean inRange = !r.getCreatedTime().isBefore(ds) && !r.getCreatedTime().isAfter(de);
-                        boolean isConsume = "consume".equalsIgnoreCase(r.getType()) || "CONSUME".equalsIgnoreCase(r
-                                .getType()) || "OUT".equalsIgnoreCase(r.getType());
-                        return inRange && isConsume;
-                    })
-                    .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
-            Map<String, Object> dayMap = new LinkedHashMap<>();
-            dayMap.put("date", date.toString());
-            dayMap.put("acquired", dayAcquired);
-            dayMap.put("consumed", dayConsumed);
-            trend.add(dayMap);
-        }
+        // 5. 近30天每日积分趋势（等价抽取）
+        List<Map<String, Object>> trend = buildDailyTrend(allRecords);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("totalPoints", totalPoints);
@@ -291,5 +245,59 @@ public class PointsRecordController {
         result.put("totalConsumed", totalConsumed);
         result.put("trend", trend);
         return R.success(result);
+    }
+
+    /**
+     * 是否为获取积分类型（等价抽取）。
+     */
+    private boolean isAcquire(String type) {
+        return "earn".equalsIgnoreCase(type) || "ACQUIRE".equalsIgnoreCase(type) || "IN".equalsIgnoreCase(type);
+    }
+
+    /**
+     * 是否为消耗积分类型（等价抽取）。
+     */
+    private boolean isConsume(String type) {
+        return "consume".equalsIgnoreCase(type) || "CONSUME".equalsIgnoreCase(type) || "OUT".equalsIgnoreCase(type);
+    }
+
+    /**
+     * 汇总获取积分（等价抽取）。
+     */
+    private long sumAcquired(List<PointsRecord> records) {
+        return records.stream()
+                .filter(r -> isAcquire(r.getType()))
+                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+    }
+
+    /**
+     * 汇总消耗积分（等价抽取）。
+     */
+    private long sumConsumed(List<PointsRecord> records) {
+        return records.stream()
+                .filter(r -> isConsume(r.getType()))
+                .mapToLong(r -> r.getPoints() != null ? r.getPoints() : 0).sum();
+    }
+
+    /**
+     * 构建近30天每日积分趋势（等价抽取，降低方法长度）。
+     */
+    private List<Map<String, Object>> buildDailyTrend(List<PointsRecord> allRecords) {
+        List<Map<String, Object>> trend = new ArrayList<>();
+        for (int i = 29; i >= 0; i--) {
+            LocalDate date = LocalDate.now().minusDays(i);
+            LocalDateTime ds = LocalDateTime.of(date, LocalTime.MIN);
+            LocalDateTime de = LocalDateTime.of(date, LocalTime.MAX);
+            List<PointsRecord> dayRecords = allRecords.stream()
+                    .filter(r -> r.getCreatedTime() != null && !r.getCreatedTime().isBefore(ds)
+                            && !r.getCreatedTime().isAfter(de))
+                    .collect(Collectors.toList());
+            Map<String, Object> dayMap = new LinkedHashMap<>();
+            dayMap.put("date", date.toString());
+            dayMap.put("acquired", sumAcquired(dayRecords));
+            dayMap.put("consumed", sumConsumed(dayRecords));
+            trend.add(dayMap);
+        }
+        return trend;
     }
 }

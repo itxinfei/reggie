@@ -278,38 +278,10 @@ public class CommonController {
                 return;
             }
 
-            // 根据文件扩展名设置Content-Type（使用解码后的文件名提取扩展名，避免 URL 编码干扰）
-            int dotIdx = decodedName.lastIndexOf(".");
-            if (dotIdx < 0 || dotIdx == decodedName.length() - 1) {
-                // 无扩展名或以点号结尾，按二进制流处理
-                response.setContentType("application/octet-stream");
-            } else {
-                String extension = decodedName.substring(dotIdx + 1).toLowerCase();
-                switch (extension) {
-                    case "jpg":
-                    case "jpeg":
-                        response.setContentType("image/jpeg");
-                        break;
-                    case "png":
-                        response.setContentType("image/png");
-                        break;
-                    case "gif":
-                        response.setContentType("image/gif");
-                        break;
-                    default:
-                        response.setContentType("application/octet-stream");
-                }
-            }
-
-            try (FileInputStream fileInputStream = new FileInputStream(targetFile);
-                 ServletOutputStream outputStream = response.getOutputStream()) {
-                int len;
-                byte[] bytes = new byte[BUFFER_SIZE];
-                while ((len = fileInputStream.read(bytes)) != -1) {
-                    outputStream.write(bytes, 0, len);
-                    outputStream.flush();
-                }
-            }
+            // 根据文件扩展名设置Content-Type（等价抽取）
+            applyContentType(response, decodedName);
+            // 流式写出文件（等价抽取）
+            streamFile(targetFile, response);
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("文件下载失败: {}", filePath, e);
@@ -317,6 +289,48 @@ public class CommonController {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "文件不存在");
             } catch (IOException ex) {
                 log.error("发送错误响应失败", ex);
+            }
+        }
+    }
+
+    /**
+     * 根据解码后的文件名设置响应 Content-Type（等价抽取，降低方法长度）。
+     */
+    private void applyContentType(HttpServletResponse response, String decodedName) {
+        int dotIdx = decodedName.lastIndexOf(".");
+        if (dotIdx < 0 || dotIdx == decodedName.length() - 1) {
+            // 无扩展名或以点号结尾，按二进制流处理
+            response.setContentType("application/octet-stream");
+            return;
+        }
+        String extension = decodedName.substring(dotIdx + 1).toLowerCase();
+        switch (extension) {
+            case "jpg":
+            case "jpeg":
+                response.setContentType("image/jpeg");
+                break;
+            case "png":
+                response.setContentType("image/png");
+                break;
+            case "gif":
+                response.setContentType("image/gif");
+                break;
+            default:
+                response.setContentType("application/octet-stream");
+        }
+    }
+
+    /**
+     * 流式写出文件到响应（等价抽取）。
+     */
+    private void streamFile(File targetFile, HttpServletResponse response) throws IOException {
+        try (FileInputStream fileInputStream = new FileInputStream(targetFile);
+             ServletOutputStream outputStream = response.getOutputStream()) {
+            int len;
+            byte[] bytes = new byte[BUFFER_SIZE];
+            while ((len = fileInputStream.read(bytes)) != -1) {
+                outputStream.write(bytes, 0, len);
+                outputStream.flush();
             }
         }
     }

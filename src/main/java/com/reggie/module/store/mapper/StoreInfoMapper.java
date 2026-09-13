@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -125,4 +126,70 @@ public interface StoreInfoMapper extends BaseMapper<StoreInfo> {
                                            @Param("storeType") Integer storeType,
                                            @Param("status") Integer status,
                                            @Param("tenantId") Long tenantId);
+
+    // ==================== 集团汇总看板：跨租户聚合查询 ====================
+
+    /**
+     * 多店近 N 天每日营收趋势（按门店+日期分组）
+     * <p>绕过租户拦截器，查所有租户的完成订单汇总</p>
+     *
+     * @param startDate 起始时间（含）
+     * @param endDate   结束时间（不含）
+     * @param status    订单状态（应传已完成）
+     * @return 每行：date, tenantId, totalAmount, orderCount
+     */
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT DATE(o.order_time) AS date, o.tenant_id AS tenantId, "
+            + "SUM(o.amount) AS totalAmount, COUNT(*) AS orderCount "
+            + "FROM orders o WHERE o.is_deleted = 0 AND o.status = #{status} "
+            + "AND o.order_time >= #{startDate} AND o.order_time < #{endDate} "
+            + "GROUP BY DATE(o.order_time), o.tenant_id ORDER BY date")
+    List<Map<String, Object>> statDailyTrendByTenant(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("status") Integer status);
+
+    /**
+     * 多品类销售对比（按门店+品类分组）
+     * <p>绕过租户拦截器，查所有租户的已完成订单明细</p>
+     *
+     * @param startDate 起始时间（含）
+     * @param endDate   结束时间（不含）
+     * @param status    订单状态（应传已完成）
+     * @return 每行：tenantId, categoryName, totalAmount, totalCount
+     */
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT d.tenant_id AS tenantId, c.name AS categoryName, "
+            + "SUM(od.amount) AS totalAmount, SUM(od.number) AS totalCount "
+            + "FROM order_detail od "
+            + "JOIN orders o ON od.order_id = o.id AND o.is_deleted = 0 AND o.status = #{status} "
+            + "LEFT JOIN dish d ON od.dish_id = d.id AND d.is_deleted = 0 "
+            + "LEFT JOIN category c ON d.category_id = c.id AND c.is_deleted = 0 "
+            + "WHERE o.order_time >= #{startDate} AND o.order_time < #{endDate} "
+            + "GROUP BY d.tenant_id, c.name ORDER BY totalAmount DESC")
+    List<Map<String, Object>> statCategoryByTenant(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("status") Integer status);
+
+    /**
+     * 门店排行详情（近 N 天，营收/订单数/客单价三维）
+     * <p>绕过租户拦截器，查所有租户的已完成订单汇总</p>
+     *
+     * @param startDate 起始时间（含）
+     * @param endDate   结束时间（不含）
+     * @param status    订单状态（应传已完成）
+     * @return 每行：tenantId, orderCount, totalAmount, avgOrderAmount
+     */
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT o.tenant_id AS tenantId, COUNT(*) AS orderCount, "
+            + "SUM(o.amount) AS totalAmount, "
+            + "ROUND(SUM(o.amount)/COUNT(*), 2) AS avgOrderAmount "
+            + "FROM orders o WHERE o.is_deleted = 0 AND o.status = #{status} "
+            + "AND o.order_time >= #{startDate} AND o.order_time < #{endDate} "
+            + "GROUP BY o.tenant_id ORDER BY totalAmount DESC")
+    List<Map<String, Object>> statRankingDetail(
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            @Param("status") Integer status);
 }

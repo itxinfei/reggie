@@ -734,45 +734,18 @@ public class NotificationServiceImpl implements NotificationService {
      * 与立即发送(batchSend 非 scheduled 分支)行为一致，供 sendScheduledRecord 复用。
      */
     private void doSendRecord(NotificationRecord record, Long tenantId) {
-        // 记录虽标记为发送中，但外层无租户上下文（定时任务），模板查询需显式补租户条件
-        LambdaQueryWrapper<NotificationTemplate> templateWrapper = new LambdaQueryWrapper<>();
-        templateWrapper.eq(NotificationTemplate::getId, record.getTemplateId())
-                .eq(NotificationTemplate::getStatus, 1);
-        if (tenantId != null) {
-            templateWrapper.eq(NotificationTemplate::getTenantId, tenantId);
-        }
-        templateWrapper.last("LIMIT 1");
-        NotificationTemplate template = templateMapper.selectOne(templateWrapper);
+        // 加载模板（等价抽取）
+        NotificationTemplate template = loadActiveTemplate(record, tenantId);
         if (template == null) {
-            log.warn("[通知定时发送] 模板不存在或已停用，标记失败: recordId={}, templateId={}",
-                    record.getId(), record.getTemplateId());
-            NotificationRecord failed = new NotificationRecord();
-            failed.setId(record.getId());
-            failed.setFailCount(1);
-            failed.setStatus(3);
-            recordMapper.updateById(failed);
+            markRecordFailed(record.getId(), 1, null);
             return;
         }
 
-        List<String> targets = new ArrayList<>();
-        try {
-            String targetValue = record.getTargetValue();
-            if (targetValue != null && !targetValue.trim().isEmpty()) {
-                targets = objectMapper.readValue(targetValue,
-                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
-            }
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.warn("[通知定时发送] 目标列表反序列化失败: recordId={}", record.getId(), e);
-        }
-        if (targets == null || targets.isEmpty()) {
+        // 解析目标列表（等价抽取）
+        List<String> targets = parseRecordTargets(record);
+        if (targets.isEmpty()) {
             log.warn("[通知定时发送] 无有效目标，标记失败: recordId={}", record.getId());
-            NotificationRecord failed = new NotificationRecord();
-            failed.setId(record.getId());
-            failed.setFailCount(0);
-            failed.setStatus(3);
-            failed.setFailReason("目标列表为空");
-            recordMapper.updateById(failed);
+            markRecordFailed(record.getId(), 0, "目标列表为空");
             return;
         }
 
@@ -785,9 +758,74 @@ public class NotificationServiceImpl implements NotificationService {
         // 批量预解析 target→userId 映射（供消息中心同步，消除 N+1）
         Map<String, Long> userIdMap = resolveUserIds(targets, channel);
 
+        // 逐目标发送并汇总（等价抽取）
+        StringBuilder failReasons = new StringBuilder();
+        int[] counts = sendToTargetsWithReasons(targets, channel, template, title, content, userIdMap,
+                record.getId(), failReasons);
+        applySendResult(record.getId(), counts[0], counts[1], failReasons.toString());
+        log.info("[通知定时发送] 完成: recordId={}, 成功{}, 失败{}", record.getId(), counts[0], counts[1]);
+    }
+
+    /**
+     * 加载启用模板（定时任务无租户上下文，需显式补租户条件）（等价抽取）。
+     */
+    private NotificationTemplate loadActiveTemplate(NotificationRecord record, Long tenantId) {
+        LambdaQueryWrapper<NotificationTemplate> templateWrapper = new LambdaQueryWrapper<>();
+        templateWrapper.eq(NotificationTemplate::getId, record.getTemplateId())
+                .eq(NotificationTemplate::getStatus, 1);
+        if (tenantId != null) {
+            templateWrapper.eq(NotificationTemplate::getTenantId, tenantId);
+        }
+        templateWrapper.last("LIMIT 1");
+        NotificationTemplate template = templateMapper.selectOne(templateWrapper);
+        if (template == null) {
+            log.warn("[通知定时发送] 模板不存在或已停用，标记失败: recordId={}, templateId={}",
+                    record.getId(), record.getTemplateId());
+        }
+        return template;
+    }
+
+    /**
+     * 解析记录中的目标列表（等价抽取）。
+     */
+    private List<String> parseRecordTargets(NotificationRecord record) {
+        List<String> targets = new ArrayList<>();
+        try {
+            String targetValue = record.getTargetValue();
+            if (targetValue != null && !targetValue.trim().isEmpty()) {
+                targets = objectMapper.readValue(targetValue,
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+            }
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.warn("[通知定时发送] 目标列表反序列化失败: recordId={}", record.getId(), e);
+        }
+        return targets;
+    }
+
+    /**
+     * 标记记录发送失败（等价抽取）。
+     */
+    private void markRecordFailed(Long recordId, int failCount, String failReason) {
+        NotificationRecord failed = new NotificationRecord();
+        failed.setId(recordId);
+        failed.setFailCount(failCount);
+        failed.setStatus(3);
+        if (failReason != null) {
+            failed.setFailReason(failReason);
+        }
+        recordMapper.updateById(failed);
+    }
+
+    /**
+     * 逐目标发送并收集失败原因（等价抽取）。
+     *
+     * @return [成功数, 失败数]
+     */
+    private int[] sendToTargetsWithReasons(List<String> targets, Integer channel, NotificationTemplate template,
+            String title, String content, Map<String, Long> userIdMap, Long recordId, StringBuilder failReasons) {
         int successCount = 0;
         int failCount = 0;
-        StringBuilder failReasons = new StringBuilder();
         for (String target : targets) {
             try {
                 boolean ok = sendToTarget(target, channel, template, title, content, null);
@@ -803,16 +841,21 @@ public class NotificationServiceImpl implements NotificationService {
                 failCount++;
                 failReasons.append("[").append(target).append("]异常:")
                         .append(e.getMessage()).append("; ");
-                log.error("[通知定时发送] 单目标发送异常: recordId={}, target={}",
-                        record.getId(), target, e);
+                log.error("[通知定时发送] 单目标发送异常: recordId={}, target={}", recordId, target, e);
             }
         }
+        return new int[] { successCount, failCount };
+    }
 
+    /**
+     * 根据成功/失败数写回发送结果状态（等价抽取）。
+     */
+    private void applySendResult(Long recordId, int successCount, int failCount, String failReason) {
         NotificationRecord result = new NotificationRecord();
-        result.setId(record.getId());
+        result.setId(recordId);
         result.setSuccessCount(successCount);
         result.setFailCount(failCount);
-        result.setFailReason(failReasons.toString());
+        result.setFailReason(failReason);
         if (failCount == 0) {
             result.setStatus(2);
         } else if (successCount == 0) {
@@ -821,7 +864,6 @@ public class NotificationServiceImpl implements NotificationService {
             result.setStatus(4);
         }
         recordMapper.updateById(result);
-        log.info("[通知定时发送] 完成: recordId={}, 成功{}, 失败{}", record.getId(), successCount, failCount);
     }
 
     /**

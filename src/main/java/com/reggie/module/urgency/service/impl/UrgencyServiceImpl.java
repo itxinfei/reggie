@@ -387,22 +387,7 @@ public class UrgencyServiceImpl implements UrgencyService {
             } else {
                 normalCount++;
             }
-            Map<String, Object> item = new HashMap<>();
-            item.put("id", order.getId());
-            item.put("orderId", order.getId());
-            item.put("orderNo", order.getNumber());
-            item.put("orderTime", order.getOrderTime() != null ? order.getOrderTime() : order.getCreateTime());
-            item.put("waitMinutes", wait);
-            item.put("level", level);
-            item.put("isOverdue", wait >= alarmMinutes);
-            item.put("isMissed", "MISSED".equals(level));
-            item.put("customerName", order.getUserName());
-            item.put("phone", order.getPhone());
-            item.put("amount", order.getAmount());
-            item.put("source", order.getSource());
-            item.put("tableNo", order.getTableId() == null ? "--" : tableNames.getOrDefault(order.getTableId(), "--"));
-            item.put("dishNames", dishNamesMap.getOrDefault(order.getId(), ""));
-            list.add(item);
+            list.add(buildMonitorItem(order, wait, level, alarmMinutes, tableNames, dishNamesMap));
         }
         long avgWaitMinutes = orders.isEmpty() ? 0 : totalWaitMinutes / orders.size();
 
@@ -427,6 +412,29 @@ public class UrgencyServiceImpl implements UrgencyService {
         result.put("hasAlarm", (alarmCount + missedCount) > 0);
         result.put("hasMissed", missedCount > 0);
         return result;
+    }
+
+    /**
+     * 构建单个未接单订单的监控条目（等价抽取，降低方法长度）。
+     */
+    private Map<String, Object> buildMonitorItem(Orders order, long wait, String level, int alarmMinutes,
+            Map<Long, String> tableNames, Map<Long, String> dishNamesMap) {
+        Map<String, Object> item = new HashMap<>();
+        item.put("id", order.getId());
+        item.put("orderId", order.getId());
+        item.put("orderNo", order.getNumber());
+        item.put("orderTime", order.getOrderTime() != null ? order.getOrderTime() : order.getCreateTime());
+        item.put("waitMinutes", wait);
+        item.put("level", level);
+        item.put("isOverdue", wait >= alarmMinutes);
+        item.put("isMissed", "MISSED".equals(level));
+        item.put("customerName", order.getUserName());
+        item.put("phone", order.getPhone());
+        item.put("amount", order.getAmount());
+        item.put("source", order.getSource());
+        item.put("tableNo", order.getTableId() == null ? "--" : tableNames.getOrDefault(order.getTableId(), "--"));
+        item.put("dishNames", dishNamesMap.getOrDefault(order.getId(), ""));
+        return item;
     }
 
     /**

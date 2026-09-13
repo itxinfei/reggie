@@ -497,16 +497,66 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
                 throw new CustomException("该日期已日结，不能重复日结");
             }
 
-        // 2. 查询当日订单
+            // 2. 查询当日订单（等价抽取）
+            List<Orders> orders = queryDailyOrders(settlementDate, tenantId);
+
+            // 3. 创建或复用日结记录
+            DailySettlement settlement;
+            if (existing != null) {
+                settlement = existing;
+            } else {
+                settlement = new DailySettlement();
+                settlement.setSettlementDate(settlementDate);
+                settlement.setTenantId(tenantId);
+            }
+
+            // 4. 统计营业额与支付方式构成（等价抽取）
+            applyDailyStats(settlement, orders);
+
+            // 5. 计算净收入、成本、毛利润
+            BigDecimal netIncome = settlement.getTotalRevenue().subtract(settlement.getRefundAmount());
+            BigDecimal totalCost = BigDecimal.ZERO;
+            BigDecimal grossProfit = netIncome.subtract(totalCost);
+            BigDecimal profitRate = BigDecimal.ZERO;
+            if (netIncome.compareTo(BigDecimal.ZERO) > 0) {
+                profitRate = grossProfit.divide(netIncome, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
+            }
+
+            settlement.setNetIncome(netIncome);
+            settlement.setMaterialCost(BigDecimal.ZERO);
+            settlement.setLaborCost(BigDecimal.ZERO);
+            settlement.setOtherCost(BigDecimal.ZERO);
+            settlement.setTotalCost(totalCost);
+            settlement.setGrossProfit(grossProfit);
+            settlement.setProfitRate(profitRate);
+            settlement.setStatus(1); // 已结账
+            settlement.setSettlementTime(LocalDateTime.now());
+            settlement.setSettlementUserId(userId);
+            settlement.setSettlementUserName(userName);
+
+            // 6. 持久化（等价抽取）
+            persistDailySettlement(settlement, existing == null, userId);
+            return settlement;
+        }
+    }
+
+    /**
+     * 查询指定日期的订单（等价抽取，降低方法长度）。
+     */
+    private List<Orders> queryDailyOrders(LocalDate settlementDate, Long tenantId) {
         LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
         orderQw.ge(Orders::getOrderTime, settlementDate.atStartOfDay());
         orderQw.le(Orders::getOrderTime, settlementDate.atTime(LocalTime.MAX));
         if (tenantId != null) {
             orderQw.eq(Orders::getTenantId, tenantId);
         }
-        List<Orders> orders = orderService.list(orderQw);
+        return orderService.list(orderQw);
+    }
 
-        // 3. 统计营业额
+    /**
+     * 统计营业额与支付方式构成并回填日结记录（等价抽取，降低方法长度）。
+     */
+    private void applyDailyStats(DailySettlement settlement, List<Orders> orders) {
         BigDecimal totalRevenue = BigDecimal.ZERO;
         BigDecimal cashIncome = BigDecimal.ZERO;
         BigDecimal wechatIncome = BigDecimal.ZERO;
@@ -544,32 +594,6 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
             }
         }
 
-        // 4. 计算净收入
-        BigDecimal netIncome = totalRevenue.subtract(refundAmount);
-
-        // 5. 查询成本（这里简化处理，实际需要查询成本模块）
-        BigDecimal materialCost = BigDecimal.ZERO;
-        BigDecimal laborCost = BigDecimal.ZERO;
-        BigDecimal otherCost = BigDecimal.ZERO;
-        BigDecimal totalCost = BigDecimal.ZERO;
-
-        // 6. 计算毛利润
-        BigDecimal grossProfit = netIncome.subtract(totalCost);
-        BigDecimal profitRate = BigDecimal.ZERO;
-        if (netIncome.compareTo(BigDecimal.ZERO) > 0) {
-            profitRate = grossProfit.divide(netIncome, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
-        }
-
-        // 7. 创建或更新日结记录
-        DailySettlement settlement;
-        if (existing != null) {
-            settlement = existing;
-        } else {
-            settlement = new DailySettlement();
-            settlement.setSettlementDate(settlementDate);
-            settlement.setTenantId(tenantId);
-        }
-
         settlement.setTotalRevenue(totalRevenue);
         settlement.setCashIncome(cashIncome);
         settlement.setWechatIncome(wechatIncome);
@@ -579,29 +603,20 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         settlement.setOrderCount(orderCount);
         settlement.setRefundAmount(refundAmount);
         settlement.setRefundCount(refundCount);
-        settlement.setNetIncome(netIncome);
-        settlement.setMaterialCost(materialCost);
-        settlement.setLaborCost(laborCost);
-        settlement.setOtherCost(otherCost);
-        settlement.setTotalCost(totalCost);
-        settlement.setGrossProfit(grossProfit);
-        settlement.setProfitRate(profitRate);
-        settlement.setStatus(1); // 已结账
-        settlement.setSettlementTime(LocalDateTime.now());
-        settlement.setSettlementUserId(userId);
-        settlement.setSettlementUserName(userName);
+    }
 
-        if (existing != null) {
-            settlement.setUpdateTime(LocalDateTime.now());
-            settlement.setUpdateUser(userId);
-            dailySettlementMapper.updateById(settlement);
-        } else {
+    /**
+     * 持久化日结记录：新增或更新（等价抽取）。
+     */
+    private void persistDailySettlement(DailySettlement settlement, boolean isNew, Long userId) {
+        if (isNew) {
             settlement.setCreateTime(LocalDateTime.now());
             settlement.setCreateUser(userId);
             dailySettlementMapper.insert(settlement);
-        }
-
-        return settlement;
+        } else {
+            settlement.setUpdateTime(LocalDateTime.now());
+            settlement.setUpdateUser(userId);
+            dailySettlementMapper.updateById(settlement);
         }
     }
 

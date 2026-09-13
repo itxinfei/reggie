@@ -30,9 +30,11 @@ import com.reggie.module.setmeal.service.SetmealDishService;
 import com.reggie.module.setmeal.service.SetmealService;
 import com.reggie.module.shopping.service.ShoppingCartService;
 import com.reggie.module.store.model.StoreInfo;
+import com.reggie.module.store.service.BusinessHoursService;
 import com.reggie.module.store.service.StoreService;
 import com.reggie.module.user.service.UserService;
 import com.reggie.module.printer.service.PrinterService;
+import com.reggie.module.inventory.service.MaterialStockService;
 import com.reggie.module.dining.service.DiningTableService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -109,6 +111,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     private DiningTableService diningTableService;
 
     /**
+     * 原料库存联动服务（可选注入，无 BOM 配方时降级跳过）
+     */
+    @Autowired(required = false)
+    private MaterialStockService materialStockService;
+
+    /**
      * 收银记录 Mapper（用于查询订单是否已有收银记录，判断待收银状态）
      */
     @Autowired(required = false)
@@ -123,6 +131,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     /** 配送增强服务（可选注入，未配置配送规则时降级跳过配送校验） */
     @Autowired(required = false)
     private DeliveryEnhancedService deliveryEnhancedService;
+
+    /** 营业时间与暂停接单服务（可选注入，无配置时降级跳过校验） */
+    @Autowired(required = false)
+    private BusinessHoursService businessHoursService;
 
     /** 门店服务（可选注入，用于读取门店坐标/起送价/配送配置） */
     @Autowired(required = false)
@@ -155,6 +167,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         //获得当前用户id
         Long userId = BaseContext.getCurrentId();
 
+        // 营业时间 + 暂停接单校验（可选服务，降级兼容）
+        Long tenantId = orders.getTenantId() != null ? orders.getTenantId() : BaseContext.getCurrentTenantId();
+        if (businessHoursService != null) {
+            businessHoursService.checkBusinessHours(tenantId);
+        }
+
         //查询当前用户的购物车数据
         LambdaQueryWrapper<ShoppingCart> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ShoppingCart::getUserId, userId);
@@ -164,13 +182,73 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             throw new CustomException("购物车为空，不能下单");
         }
 
-        //查询用户数据
+        //查询用户与地址数据（等价抽取）
+        Map<String, Object> ctx = loadAndValidateSubmitContext(userId, orders);
+        User user = (User) ctx.get("user");
+        AddressBook addressBook = (AddressBook) ctx.get("addressBook");
+
+        // 配送校验：起送价 + 配送范围 + 配送费（外卖单专属，堂食/预订不进入此分支）
+        // 门店坐标 / 起送价 / 配送费配置均来自 StoreInfo，地址经纬度来自 AddressBook（GeoUtils 自动回填）
+        // 任一依赖缺失时降级跳过（不阻断下单），保证开发环境无配置也能下单
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        StoreInfo storeInfo = (storeService != null) ? storeService.findByTenantId(currentTenantId) : null;
+        boolean deliveryCheckEnabled = deliveryEnhancedService != null && storeInfo != null
+                && storeInfo.getIsDeliveryEnabled() != null && storeInfo.getIsDeliveryEnabled() == 1;
+
+        long orderId = IdWorker.getId();//订单号
+
+        // 服务端重新核价并构建订单明细（等价抽取，幽灵菜品防御）
+        Map<String, Object> detailsHolder = buildOrderDetailsAndComputeAmount(shoppingCarts, orderId,
+                currentTenantId);
+        @SuppressWarnings("unchecked")
+        List<OrderDetail> orderDetails = (List<OrderDetail>) detailsHolder.get("orderDetails");
+        BigDecimal totalAmount = (BigDecimal) detailsHolder.get("totalAmount");
+
+        // 起送价精确校验 + 配送费精确计算（等价抽取）
+        BigDecimal deliveryFee = computeDeliveryFee(deliveryCheckEnabled, storeInfo, addressBook, totalAmount,
+                currentTenantId);
+        // 配送费计入订单总额
+        BigDecimal finalAmount = totalAmount.add(deliveryFee);
+
+        // 优惠券折扣（等价抽取）
+        Map<String, Object> couponHolder = resolveCouponDiscount(orders, userId, orderId, totalAmount);
+        BigDecimal couponDiscount = (BigDecimal) couponHolder.get("couponDiscount");
+        boolean couponOk = (Boolean) couponHolder.get("couponOk");
+        Long usedCouponId = (Long) couponHolder.get("usedCouponId");
+        finalAmount = finalAmount.subtract(couponDiscount);
+        if (finalAmount.compareTo(BigDecimal.ZERO) < 0) {
+            finalAmount = BigDecimal.ZERO;
+        }
+        orders.setUsedCouponId(couponOk ? usedCouponId : null);
+
+        // 设置订单字段（等价抽取）
+        applySubmitOrderFields(orders, orderId, userId, user, addressBook, finalAmount, deliveryFee);
+        //向订单表插入数据，一条数据
+        // 修复 check-then-act 竞态：用 Redis SETNX 原子抢占幂等令牌，防止并发重复下单（等价抽取）
+        String idempotencyKey = orders.getIdempotencyKey();
+        String lockKey = "order:idem:" + idempotencyKey;
+        int lockState = prepareIdempotencyLock(orders, idempotencyKey, lockKey);
+        if (lockState < 0) {
+            // 并发请求或已下单：已回填既有订单，直接返回
+            return;
+        }
+        boolean lockAcquired = lockState == 1;
+
+        // 落库订单与明细、扣库存、清空购物车（失败释放幂等锁）（等价抽取）
+        saveOrderWithLockRelease(orders, orderDetails, shoppingCarts, wrapper, lockAcquired, lockKey);
+
+        // 自动触发打印（等价抽取）
+        printOrderQuietly(orderId);
+    }
+
+    /**
+     * 加载并校验下单上下文（用户 + 地址簿）（等价抽取，降低方法长度）。
+     */
+    private Map<String, Object> loadAndValidateSubmitContext(Long userId, Orders orders) {
         User user = userService.getById(userId);
         if (user == null) {
             throw new CustomException("用户信息不存在，不能下单");
         }
-
-        //查询地址数据
         Long addressBookId = orders.getAddressBookId();
         if (addressBookId == null) {
             throw new CustomException("请选择收货地址");
@@ -179,18 +257,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         if (addressBook == null) {
             throw new CustomException("用户地址信息有误，不能下单");
         }
+        Map<String, Object> holder = new HashMap<>();
+        holder.put("user", user);
+        holder.put("addressBook", addressBook);
+        return holder;
+    }
 
-        // 配送校验：起送价 + 配送范围 + 配送费（外卖单专属，堂食/预订不进入此分支）
-        // 门店坐标 / 起送价 / 配送费配置均来自 StoreInfo，地址经纬度来自 AddressBook（GeoUtils 自动回填）
-        // 任一依赖缺失时降级跳过（不阻断下单），保证开发环境无配置也能下单
-        Long currentTenantId = BaseContext.getCurrentTenantId();
-        BigDecimal deliveryFee = BigDecimal.ZERO;
-        StoreInfo storeInfo = (storeService != null) ? storeService.findByTenantId(currentTenantId) : null;
-        boolean deliveryCheckEnabled = deliveryEnhancedService != null && storeInfo != null
-                && storeInfo.getIsDeliveryEnabled() != null && storeInfo.getIsDeliveryEnabled() == 1;
-
-        long orderId = IdWorker.getId();//订单号
-
+    /**
+     * 服务端重新核价并构建订单明细（幽灵菜品防御）（等价抽取，降低方法长度）。
+     *
+     * @return {orderDetails, totalAmount}
+     */
+    private Map<String, Object> buildOrderDetailsAndComputeAmount(List<ShoppingCart> shoppingCarts, long orderId,
+            Long currentTenantId) {
         BigDecimal totalAmount = BigDecimal.ZERO;
         // 幽灵菜品防御：下单时服务端重新核价——菜品/套餐存在性、租户归属、启售状态、
         // 价格一律以数据库为准，禁止信任购物车中可能被注入的客户端金额（与 submitEatInOrder 核价逻辑对齐）
@@ -263,38 +342,54 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             totalAmount = totalAmount.add(lineTotal);
         }
 
+        Map<String, Object> holder = new HashMap<>();
+        holder.put("orderDetails", orderDetails);
+        holder.put("totalAmount", totalAmount);
+        return holder;
+    }
 
-        // 起送价精确校验 + 配送费精确计算（服务端核价完成后再计算，免运门槛基于真实菜品金额）
-        if (deliveryCheckEnabled) {
-            BigDecimal minAmount = storeInfo.getMinDeliveryAmount();
-            if (minAmount != null && minAmount.compareTo(BigDecimal.ZERO) > 0
-                    && totalAmount.compareTo(minAmount) < 0) {
-                throw new CustomException("订单金额未达到起送价 " + minAmount + " 元，无法下单");
+    /**
+     * 校验起送价并计算配送费（等价抽取，降低方法长度）。
+     */
+    private BigDecimal computeDeliveryFee(boolean deliveryCheckEnabled, StoreInfo storeInfo, AddressBook addressBook,
+            BigDecimal totalAmount, Long currentTenantId) {
+        BigDecimal deliveryFee = BigDecimal.ZERO;
+        if (!deliveryCheckEnabled) {
+            return deliveryFee;
+        }
+        // 起送价精确校验（服务端核价完成后再计算，免运门槛基于真实菜品金额）
+        BigDecimal minAmount = storeInfo.getMinDeliveryAmount();
+        if (minAmount != null && minAmount.compareTo(BigDecimal.ZERO) > 0
+                && totalAmount.compareTo(minAmount) < 0) {
+            throw new CustomException("订单金额未达到起送价 " + minAmount + " 元，无法下单");
+        }
+        // 配送范围 + 配送费（地址经纬度存在时才校验，避免无地图 Key 环境阻断下单）
+        BigDecimal addrLon = addressBook.getLongitude();
+        BigDecimal addrLat = addressBook.getLatitude();
+        BigDecimal storeLon = storeInfo.getLongitude();
+        BigDecimal storeLat = storeInfo.getLatitude();
+        if (addrLon != null && addrLat != null && storeLon != null && storeLat != null) {
+            BigDecimal distance = deliveryEnhancedService.calculateDistance(storeLon, storeLat, addrLon, addrLat);
+            // 修复免运门槛失效：传真实核价后 totalAmount，满额自动免配送费
+            java.util.Map<String, Object> feeResult = deliveryEnhancedService.calculateFee(
+                    addrLon, addrLat, distance, totalAmount, currentTenantId);
+            Boolean inRange = (Boolean) feeResult.get("inRange");
+            if (inRange != null && !inRange) {
+                throw new CustomException("收货地址不在配送范围内");
             }
-            // 配送范围 + 配送费（地址经纬度存在时才校验，避免无地图 Key 环境阻断下单）
-            BigDecimal addrLon = addressBook.getLongitude();
-            BigDecimal addrLat = addressBook.getLatitude();
-            BigDecimal storeLon = storeInfo.getLongitude();
-            BigDecimal storeLat = storeInfo.getLatitude();
-            if (addrLon != null && addrLat != null && storeLon != null && storeLat != null) {
-                BigDecimal distance = deliveryEnhancedService.calculateDistance(storeLon, storeLat, addrLon, addrLat);
-                // 修复免运门槛失效：传真实核价后 totalAmount，满额自动免配送费
-                java.util.Map<String, Object> feeResult = deliveryEnhancedService.calculateFee(
-                        addrLon, addrLat, distance, totalAmount, currentTenantId);
-                Boolean inRange = (Boolean) feeResult.get("inRange");
-                if (inRange != null && !inRange) {
-                    throw new CustomException("收货地址不在配送范围内");
-                }
-                Object feeObj = feeResult.get("fee");
-                if (feeObj instanceof BigDecimal) {
-                    deliveryFee = ((BigDecimal) feeObj).setScale(2, java.math.RoundingMode.HALF_UP);
-                }
+            Object feeObj = feeResult.get("fee");
+            if (feeObj instanceof BigDecimal) {
+                deliveryFee = ((BigDecimal) feeObj).setScale(2, java.math.RoundingMode.HALF_UP);
             }
         }
-        // 配送费计入订单总额
-        BigDecimal finalAmount = totalAmount.add(deliveryFee);
+        return deliveryFee;
+    }
 
-        // 优惠券折扣：服务端校验归属/有效期/门槛，计算可抵扣金额并立即核销（防"选券不生效"）
+    /**
+     * 校验并核销优惠券，返回 {couponDiscount, couponOk, usedCouponId}（等价抽取，降低方法长度）。
+     */
+    private Map<String, Object> resolveCouponDiscount(Orders orders, Long userId, long orderId,
+            BigDecimal totalAmount) {
         BigDecimal couponDiscount = BigDecimal.ZERO;
         Long usedCouponId = orders.getUsedCouponId();
         boolean couponOk = false;
@@ -324,12 +419,18 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 usedCouponId = null;
             }
         }
-        finalAmount = finalAmount.subtract(couponDiscount);
-        if (finalAmount.compareTo(BigDecimal.ZERO) < 0) {
-            finalAmount = BigDecimal.ZERO;
-        }
-        orders.setUsedCouponId(couponOk ? usedCouponId : null);
+        Map<String, Object> holder = new HashMap<>();
+        holder.put("couponDiscount", couponDiscount);
+        holder.put("couponOk", couponOk);
+        holder.put("usedCouponId", usedCouponId);
+        return holder;
+    }
 
+    /**
+     * 设置提交订单的字段（等价抽取，降低方法长度）。
+     */
+    private void applySubmitOrderFields(Orders orders, long orderId, Long userId, User user, AddressBook addressBook,
+            BigDecimal finalAmount, BigDecimal deliveryFee) {
         orders.setId(orderId);
         orders.setOrderTime(LocalDateTime.now());
         // 修复：下单状态按支付方式分流，避免支付主链路断裂。
@@ -359,39 +460,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 + (addressBook.getCityName() == null ? "" : addressBook.getCityName())
                 + (addressBook.getDistrictName() == null ? "" : addressBook.getDistrictName())
                 + (addressBook.getDetail() == null ? "" : addressBook.getDetail()));
-        //向订单表插入数据，一条数据
-        // 修复 check-then-act 竞态：用 Redis SETNX 原子抢占幂等令牌，防止并发重复下单
-        String idempotencyKey = orders.getIdempotencyKey();
-        String lockKey = "order:idem:" + idempotencyKey;
-        boolean lockAcquired = false;
-        if (redisTemplate != null && idempotencyKey != null && !idempotencyKey.trim().isEmpty()) {
-            Boolean ok = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", IDEMPOTENCY_TTL_MINUTES, java.util
-                    .concurrent.TimeUnit.MINUTES);
-            lockAcquired = ok != null && ok;
-            if (!lockAcquired) {
-                // 并发请求或已下单：查询既有订单并回填，避免重复落库
-                Orders existing = checkIdempotency(idempotencyKey);
-                if (existing != null) {
-                    orders.setId(existing.getId());
-                    orders.setNumber(existing.getNumber());
-                    orders.setAmount(existing.getAmount());
-                    orders.setStatus(existing.getStatus());
-                    orders.setUsedCouponId(existing.getUsedCouponId());
-                    return;
-                }
-                // 锁存在但订单未落库（并发处理中），拒绝重复提交
-                throw new CustomException("订单正在处理中，请勿重复提交");
-            }
-        }
+    }
 
+    /**
+     * 落库订单与明细、扣库存、清空购物车，失败释放幂等锁（等价抽取，降低方法长度）。
+     */
+    private void saveOrderWithLockRelease(Orders orders, List<OrderDetail> orderDetails,
+            List<ShoppingCart> shoppingCarts, LambdaQueryWrapper<ShoppingCart> wrapper, boolean lockAcquired,
+            String lockKey) {
         try {
             this.save(orders);
-
             //向订单明细表插入数据，多条数据
             orderDetailService.saveBatch(orderDetails);
-
             this.deductStockForOrder(shoppingCarts);
-
             //清空购物车数据
             shoppingCartService.remove(wrapper);
         } catch (RuntimeException e) {
@@ -405,17 +486,52 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             }
             throw e;
         }
+    }
 
-        // 自动触发打印（异步，不影响下单主流程）
-        if (printerService != null) {
-            final long finalOrderId = orderId;
-            try {
-                printerService.printOrder(finalOrderId, "BILL");
-                printerService.printOrder(finalOrderId, "KITCHEN");
-            } catch (Exception e) {
-                // 打印失败不影响下单结果
-                log.warn("[打印] 自动打印触发失败，订单ID={}, 原因={}", finalOrderId, e.getMessage(), e);
-            }
+    /**
+     * 原子抢占下单幂等令牌（等价抽取，降低方法长度）。
+     *
+     * @return -1 表示已存在既有订单并已回填（调用方应直接 return）；0 表示未加锁（无 Redis）；
+     *         1 表示已获得锁
+     */
+    private int prepareIdempotencyLock(Orders orders, String idempotencyKey, String lockKey) {
+        if (redisTemplate == null || idempotencyKey == null || idempotencyKey.trim().isEmpty()) {
+            return 0;
+        }
+        Boolean ok = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", IDEMPOTENCY_TTL_MINUTES, java.util
+                .concurrent.TimeUnit.MINUTES);
+        boolean lockAcquired = ok != null && ok;
+        if (lockAcquired) {
+            return 1;
+        }
+        // 并发请求或已下单：查询既有订单并回填，避免重复落库
+        Orders existing = checkIdempotency(idempotencyKey);
+        if (existing != null) {
+            orders.setId(existing.getId());
+            orders.setNumber(existing.getNumber());
+            orders.setAmount(existing.getAmount());
+            orders.setStatus(existing.getStatus());
+            orders.setUsedCouponId(existing.getUsedCouponId());
+            return -1;
+        }
+        // 锁存在但订单未落库（并发处理中），拒绝重复提交
+        throw new CustomException("订单正在处理中，请勿重复提交");
+    }
+
+    /**
+     * 异步自动打印订单小票（失败不影响下单）（等价抽取）。
+     */
+    private void printOrderQuietly(long orderId) {
+        if (printerService == null) {
+            return;
+        }
+        final long finalOrderId = orderId;
+        try {
+            printerService.printOrder(finalOrderId, "BILL");
+            printerService.printOrder(finalOrderId, "KITCHEN");
+        } catch (Exception e) {
+            // 打印失败不影响下单结果
+            log.warn("[打印] 自动打印触发失败，订单ID={}, 原因={}", finalOrderId, e.getMessage(), e);
         }
     }
 
@@ -497,6 +613,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             throw new CustomException("请至少选择一道菜品");
         }
 
+        // 营业时间 + 暂停接单校验（可选服务，降级兼容）
+        Long eatInTenantId = orders.getTenantId() != null ? orders.getTenantId() : BaseContext.getCurrentTenantId();
+        if (businessHoursService != null) {
+            businessHoursService.checkBusinessHours(eatInTenantId);
+        }
+
         // 设置堂食来源
         orders.setSource(com.reggie.enums.OrderSource.EAT_IN.getValue());
         Long tableId = orders.getTableId();
@@ -549,10 +671,25 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         Long userId = BaseContext.getCurrentId();
         long orderId = IdWorker.getId();
 
-        // 计算总金额（价格从菜品/套餐表服务端查询，防止客户端篡改）
-        BigDecimal totalAmount = BigDecimal.ZERO;
+        // 计算总金额（价格从菜品/套餐表服务端查询，防止客户端篡改）（等价抽取）
         Long currentTenantId = BaseContext.getCurrentTenantId();
+        BigDecimal totalAmount = computeEatInTotalAmount(orderDetails, orderId, currentTenantId);
 
+        // 设置订单字段（等价抽取）
+        applyEatInOrderFields(orders, orderId, totalAmount, userId);
+
+        // 落库 + 扣库存（失败释放幂等锁）（等价抽取）
+        saveEatInOrderWithLockRelease(orders, orderDetails, eatInLockAcquired, lockKey);
+
+        // 更新桌台状态 + 自动打印（等价抽取）
+        afterEatInOrderSaved(tableId, orderId);
+    }
+
+    /**
+     * 计算堂食订单总金额并按服务端价格回填明细（等价抽取，降低方法长度）。
+     */
+    private BigDecimal computeEatInTotalAmount(List<OrderDetail> orderDetails, long orderId, Long currentTenantId) {
+        BigDecimal totalAmount = BigDecimal.ZERO;
         // N+1 修复：批量预加载菜品和套餐，避免循环内 getById
         java.util.List<Long> dishIds = new java.util.ArrayList<>();
         java.util.List<Long> setmealIds = new java.util.ArrayList<>();
@@ -602,8 +739,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             detail.setName(dishName);
             totalAmount = totalAmount.add(lineTotal);
         }
+        return totalAmount;
+    }
 
-        // 设置订单字段
+    /**
+     * 设置堂食订单字段（等价抽取）。
+     */
+    private void applyEatInOrderFields(Orders orders, long orderId, BigDecimal totalAmount, Long userId) {
         orders.setId(orderId);
         orders.setOrderTime(LocalDateTime.now());
         // 修复：堂食订单按支付方式分流
@@ -624,7 +766,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         orders.setPhone(orders.getPhone() != null ? orders.getPhone() : "");
         orders.setAddress(orders.getTableName() != null ? "堂食-" + orders.getTableName() : "堂食");
         orders.setAddressBookId(null); // 堂食无地址簿
+    }
 
+    /**
+     * 落库堂食订单与明细并扣减库存，失败时释放幂等锁（等价抽取）。
+     */
+    private void saveEatInOrderWithLockRelease(Orders orders, List<OrderDetail> orderDetails,
+            boolean eatInLockAcquired, String lockKey) {
         try {
             this.save(orders);
             orderDetailService.saveBatch(orderDetails);
@@ -641,7 +789,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             }
             throw e;
         }
+    }
 
+    /**
+     * 堂食订单落库后续处理：更新桌台状态为占用 + 自动打印（等价抽取）。
+     */
+    private void afterEatInOrderSaved(Long tableId, long orderId) {
         // 更新桌台状态为占用
         if (diningTableService != null) {
             try {
@@ -755,6 +908,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
         dishService.deductStock(dishId, qty);
         dishService.autoToggleSoldOut(dishId);
+        // 原料库存联动：按 BOM 配方同步扣减原料
+        if (materialStockService != null) {
+            materialStockService.deductMaterialStock(dishId, qty);
+        }
     }
 
 
@@ -940,7 +1097,30 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         java.util.List<ShoppingCart> toAdd = new java.util.ArrayList<>();
         java.util.List<ShoppingCart> toUpdate = new java.util.ArrayList<>();
 
-        // N+1 修复：批量预加载菜品和套餐，避免循环内 4 次 getById
+        // N+1 修复：批量预加载菜品和套餐（等价抽取）
+        java.util.Map<String, Object> maps = preloadDishAndSetmealMaps(details);
+        @SuppressWarnings("unchecked")
+        java.util.Map<Long, Dish> batchDishMap = (java.util.Map<Long, Dish>) maps.get("dishMap");
+        @SuppressWarnings("unchecked")
+        java.util.Map<Long, Setmeal> batchSetmealMap = (java.util.Map<Long, Setmeal>) maps.get("setmealMap");
+
+        // 构建购物车新增/更新操作（等价抽取）
+        processAgainDetails(details, userId, existingMap, batchDishMap, batchSetmealMap, toAdd, toUpdate);
+
+        if (!toUpdate.isEmpty()) {
+            shoppingCartService.updateBatchById(toUpdate);
+        }
+        if (!toAdd.isEmpty()) {
+            shoppingCartService.saveBatch(toAdd);
+        }
+    }
+
+    /**
+     * 批量预加载菜品与套餐映射（等价抽取，降低方法长度）。
+     *
+     * @return {dishMap, setmealMap}
+     */
+    private java.util.Map<String, Object> preloadDishAndSetmealMaps(List<OrderDetail> details) {
         java.util.List<Long> batchDishIds = new java.util.ArrayList<>();
         java.util.List<Long> batchSetmealIds = new java.util.ArrayList<>();
         for (OrderDetail d : details) {
@@ -955,7 +1135,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         if (!batchSetmealIds.isEmpty()) {
             for (Setmeal s : setmealService.listByIds(batchSetmealIds)) { batchSetmealMap.put(s.getId(), s); }
         }
+        java.util.Map<String, Object> holder = new java.util.HashMap<>();
+        holder.put("dishMap", batchDishMap);
+        holder.put("setmealMap", batchSetmealMap);
+        return holder;
+    }
 
+    /**
+     * 按订单明细构建购物车的新增/更新操作（等价抽取）。
+     */
+    private void processAgainDetails(List<OrderDetail> details, Long userId,
+            java.util.Map<String, ShoppingCart> existingMap, java.util.Map<Long, Dish> batchDishMap,
+            java.util.Map<Long, Setmeal> batchSetmealMap, java.util.List<ShoppingCart> toAdd,
+            java.util.List<ShoppingCart> toUpdate) {
         for (OrderDetail d : details) {
             String key = d.getDishId() != null
                 ? "dishId:" + d.getDishId() + ":flavor:" + (d.getDishFlavor() == null ? "" : d.getDishFlavor())
@@ -979,19 +1171,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 cart.setNumber(d.getNumber());
                 cart.setAmount(d.getAmount());
                 cart.setCreateTime(LocalDateTime.now());
-
                 // 重新从数据库查询最新价格
                 refreshCartFromSource(cart, d, batchDishMap, batchSetmealMap);
-
                 toAdd.add(cart);
             }
-        }
-
-        if (!toUpdate.isEmpty()) {
-            shoppingCartService.updateBatchById(toUpdate);
-        }
-        if (!toAdd.isEmpty()) {
-            shoppingCartService.saveBatch(toAdd);
         }
     }
 
@@ -1192,30 +1375,24 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             return;
         }
 
-        // 收集需要回填的userIds（userName为空）
-        Set<Long> userIds = orders.stream()
-                .filter(o -> StringUtils.isBlank(o.getUserName()))
-                .map(Orders::getUserId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        // 批量加载回填所需映射（等价抽取，降低方法长度）
+        Map<Long, String> tableNameMap = collectTableNameMap(orders);
+        Map<Long, User> userMap = collectUserMap(orders);
+        Map<Long, AddressBook> addrMap = collectAddressMap(orders);
 
-        // 收集需要回填的addressBookIds（phone/address/consignee任一为空）
-        Set<Long> addrIds = orders.stream()
-                .filter(o -> StringUtils.isBlank(o.getPhone())
-                        || StringUtils.isBlank(o.getAddress())
-                        || StringUtils.isBlank(o.getConsignee()))
-                .map(Orders::getAddressBookId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        // 回填各订单的空字段（等价抽取）
+        applyBackfill(orders, tableNameMap, userMap, addrMap);
+    }
 
-        // 收集需要回填的tableIds（tableName为空）
+    /**
+     * 收集并批量加载桌台名映射（tableName 为空的订单）（等价抽取）。
+     */
+    private Map<Long, String> collectTableNameMap(List<Orders> orders) {
         Set<Long> tableIds = orders.stream()
                 .filter(o -> StringUtils.isBlank(o.getTableName()))
                 .map(Orders::getTableId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-
-        // 批量查询table表
         Map<Long, String> tableNameMap = new HashMap<>();
         if (!tableIds.isEmpty() && diningTableService != null) {
             List<com.reggie.module.dining.model.DiningTable> tables =
@@ -1226,8 +1403,18 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 }
             }
         }
+        return tableNameMap;
+    }
 
-        // 批量查询user表
+    /**
+     * 收集并批量加载用户映射（userName 为空的订单）（等价抽取）。
+     */
+    private Map<Long, User> collectUserMap(List<Orders> orders) {
+        Set<Long> userIds = orders.stream()
+                .filter(o -> StringUtils.isBlank(o.getUserName()))
+                .map(Orders::getUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         Map<Long, User> userMap = new HashMap<>();
         if (!userIds.isEmpty()) {
             List<User> users = userService.listByIds(new ArrayList<>(userIds));
@@ -1235,8 +1422,20 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 userMap.put(u.getId(), u);
             }
         }
+        return userMap;
+    }
 
-        // 批量查询address_book表
+    /**
+     * 收集并批量加载地址簿映射（phone/address/consignee 任一为空的订单）（等价抽取）。
+     */
+    private Map<Long, AddressBook> collectAddressMap(List<Orders> orders) {
+        Set<Long> addrIds = orders.stream()
+                .filter(o -> StringUtils.isBlank(o.getPhone())
+                        || StringUtils.isBlank(o.getAddress())
+                        || StringUtils.isBlank(o.getConsignee()))
+                .map(Orders::getAddressBookId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         Map<Long, AddressBook> addrMap = new HashMap<>();
         if (!addrIds.isEmpty()) {
             List<AddressBook> addrs = addressBookService.listByIds(new ArrayList<>(addrIds));
@@ -1244,8 +1443,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 addrMap.put(a.getId(), a);
             }
         }
+        return addrMap;
+    }
 
-        // 回填各订单的空字段
+    /**
+     * 回填订单的 tableName/userName/地址等空字段（等价抽取）。
+     */
+    private void applyBackfill(List<Orders> orders, Map<Long, String> tableNameMap, Map<Long, User> userMap,
+            Map<Long, AddressBook> addrMap) {
         for (Orders order : orders) {
             // 回填tableName
             if (StringUtils.isBlank(order.getTableName()) && order.getTableId() != null) {

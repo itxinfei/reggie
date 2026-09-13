@@ -165,16 +165,57 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         Long orderId = evaluation.getOrderId();
         Long dishId = evaluation.getDishId();
 
+        // 校验请求合法性（等价抽取，降低方法长度）
+        validateEvaluationRequest(evaluation, userId, orderId, dishId);
+
+        // 设置默认审核状态为待审核
+        if (evaluation.getStatus() == null) {
+            evaluation.setStatus(0);
+        }
+
+        // XSS防护：对评价内容和菜品名称进行HTML转义
+        if (evaluation.getContent() != null) {
+            evaluation.setContent(StringEscapeUtils.escapeHtml4(evaluation.getContent()));
+        }
+        if (evaluation.getDishName() != null) {
+            evaluation.setDishName(StringEscapeUtils.escapeHtml4(evaluation.getDishName()));
+        }
+
+        // 设置租户ID（从当前上下文获取）
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户信息缺失");
+        }
+        evaluation.setTenantId(tenantId);
+
+        // 设置创建人和修改人
+        Long currentUserId = BaseContext.getCurrentId();
+        evaluation.setCreateUser(currentUserId);
+        evaluation.setUpdateUser(currentUserId);
+
+        // 保存评价
+        this.save(evaluation);
+        log.info("菜品评价新增成功：evaluationId={}", evaluation.getId());
+        return evaluation;
+    }
+
+    /**
+     * 校验新增评价请求的合法性（等价抽取，降低方法长度）。
+     *
+     * @param evaluation 评价
+     * @param userId 用户ID
+     * @param orderId 订单ID
+     * @param dishId 菜品ID
+     */
+    private void validateEvaluationRequest(DishEvaluation evaluation, Long userId, Long orderId, Long dishId) {
         // 校验用户ID
         if (userId == null) {
             throw new CustomException("用户信息缺失");
         }
-
         // 校验订单ID
         if (orderId == null) {
             throw new CustomException("订单ID不能为空");
         }
-
         // 校验菜品ID
         if (dishId == null) {
             throw new CustomException("菜品ID不能为空");
@@ -185,12 +226,10 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         if (order == null) {
             throw new CustomException("订单不存在");
         }
-
         // 校验订单归属（当前用户必须是订单的下单用户）
         if (!userId.equals(order.getUserId())) {
             throw new CustomException("无权评价该订单");
         }
-
         // 校验订单状态（必须是已完成状态才能评价）
         if (order.getStatus() == null || order.getStatus() != Orders.STATUS_COMPLETED) {
             throw new CustomException("订单未完成，无法评价");
@@ -225,36 +264,6 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         if (content != null && content.length() > MAX_CONTENT_LENGTH) {
             throw new CustomException("评价内容不能超过" + MAX_CONTENT_LENGTH + "个字符");
         }
-
-        // 设置默认审核状态为待审核
-        if (evaluation.getStatus() == null) {
-            evaluation.setStatus(0);
-        }
-
-        // XSS防护：对评价内容和菜品名称进行HTML转义
-        if (evaluation.getContent() != null) {
-            evaluation.setContent(StringEscapeUtils.escapeHtml4(evaluation.getContent()));
-        }
-        if (evaluation.getDishName() != null) {
-            evaluation.setDishName(StringEscapeUtils.escapeHtml4(evaluation.getDishName()));
-        }
-
-        // 设置租户ID（从当前上下文获取）
-        Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId == null) {
-            throw new CustomException("租户信息缺失");
-        }
-        evaluation.setTenantId(tenantId);
-
-        // 设置创建人和修改人
-        Long currentUserId = BaseContext.getCurrentId();
-        evaluation.setCreateUser(currentUserId);
-        evaluation.setUpdateUser(currentUserId);
-
-        // 保存评价
-        this.save(evaluation);
-        log.info("菜品评价新增成功：evaluationId={}", evaluation.getId());
-        return evaluation;
     }
 
     /**

@@ -143,99 +143,20 @@ public class RefundServiceImpl implements RefundService {
             // 防"本地落库失败后重试/并发退款"造成的双重扣款。
             String refundNo = generateRefundNo();
 
-            // === 2.3 调用渠道退款（事务外，外部 HTTP 不被事务包裹） ===
-            PaymentChannel paymentChannel = paymentChannelFactory.getChannel(latestCheck.getChannel());
-            RefundRequest refundRequest = new RefundRequest();
-            refundRequest.setChannelTradeNo(latestCheck.getChannelTradeNo());
-            refundRequest.setAmount(refundAmount);
-            refundRequest.setReason(reason);
-            refundRequest.setOutRequestNo(refundNo);
-            RefundResponse refundResponse;
-            try {
-                refundResponse = paymentChannel.refund(refundRequest);
-            } catch (Exception e) {
-                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                log.error("【严重】订单取消自动退款渠道调用异常，需人工处理！orderId={}, paymentOrderId={}, amount={}",
-                        orderId, paymentOrderId, refundAmount, e);
-                // 渠道调用异常（钱未出）——留对账待办痕迹，供 RefundReconcileTask 扫描告警人工退款，
-                // 避免 campaign ENDED 后 scan 不再扫 OPEN 导致永久漏退（M1）
-                recordReconcileTraceSafely(latestCheck, refundAmount, "[对账待办]渠道退款调用异常待人工");
-                return false;
-            }
-            if (refundResponse == null || !refundResponse.isSuccess()) {
-                String errMsg = refundResponse != null ? refundResponse.getErrorMsg() : "无响应";
-                log.error("【严重】订单取消自动退款被渠道拒绝，需人工处理！orderId={}, paymentOrderId={}, errorMsg={}",
-                        orderId, paymentOrderId, errMsg);
-                // 渠道拒绝（钱未出）——留对账待办痕迹，供 RefundReconcileTask 扫描告警人工退款（M1）
-                recordReconcileTraceSafely(latestCheck, refundAmount, "[对账待办]渠道退款被拒绝待人工：" + errMsg);
+            // === 2.3 调用渠道退款（等价抽取，事务外，外部 HTTP 不被事务包裹） ===
+            if (!invokeChannelRefund(latestCheck, refundAmount, reason, refundNo, orderId, paymentOrderId)) {
                 return false;
             }
 
-            // === 3. 事务内本地落库（行锁二次校验 + CAS 防覆盖） ===
+            // === 3. 事务内本地落库（等价抽取，行锁二次校验 + CAS 防覆盖） ===
+            final Long fPaymentOrderId = paymentOrderId;
             final BigDecimal fRefundAmount = refundAmount;
             final String fReason = (reason != null && !reason.trim().isEmpty()) ? reason : "订单自动退款";
-            final Long fPaymentOrderId = paymentOrderId;
             try {
-                new TransactionTemplate(transactionManager).execute(status -> {
-                    // 重新查询支付单（防并发退款）
-                    PaymentOrder latest = paymentOrderService.getById(fPaymentOrderId);
-                    if (latest == null || !STATUS_SUCCESS.equals(latest.getStatus())) {
-                        throw new CustomException("支付单状态已变更，退款失败");
-                    }
-                    // 事务内二次累计退款校验（SELECT ... FOR UPDATE 锁支付单行，阻塞并发退款）
-                    BigDecimal lockedAmount = paymentOrderMapper.selectPaymentAmountForUpdate(latest.getId(),
-                            STATUS_SUCCESS);
-                    BigDecimal latestAmount = latest.getAmount();
-                    if (lockedAmount == null || latestAmount == null) {
-                        throw new CustomException("支付金额异常，退款失败");
-                    }
-                    if (lockedAmount.compareTo(latestAmount) != 0) {
-                        throw new CustomException("支付单状态已变更，退款失败");
-                    }
-                    BigDecimal refunded = refundRecordService.sumRefundedAmount(latest.getId());
-                    if (refunded.add(fRefundAmount).compareTo(latestAmount) > 0) {
-                        throw new CustomException("累计退款金额超过支付金额（已退：" + refunded + "元）");
-                    }
-                    // 创建退款记录并标记成功（渠道已确认退款）。refundNo 提前生成作为渠道幂等键，
-                    // 此处复用同一单号，保证本地记录与渠道 out_request_no 一一对应。
-                    RefundRecord record = refundRecordService.createRefund(latest.getId(), fRefundAmount, fReason,
-                            refundNo);
-                    refundRecordService.markRefundSuccess(record.getRefundNo());
-                    // 全额退款时：支付单 SUCCESS -> REFUND + 业务订单联动为已退款(6)
-                    boolean isFull = refunded.add(fRefundAmount).compareTo(latestAmount) == 0;
-                    if (isFull) {
-                        boolean poUpdated = paymentOrderService.lambdaUpdate()
-                                .eq(PaymentOrder::getId, latest.getId())
-                                .eq(PaymentOrder::getStatus, STATUS_SUCCESS)
-                                .set(PaymentOrder::getStatus, STATUS_REFUND)
-                                .set(PaymentOrder::getUpdateTime, LocalDateTime.now())
-                                .update();
-                        if (!poUpdated) {
-                            throw new CustomException("支付单状态已变更，退款失败");
-                        }
-                        Orders order = orderService.getById(latest.getOrderId());
-                        if (order != null) {
-                            updateOrderOnFullRefund(order, latest);
-                        }
-                    }
-                    return null;
-                });
+                persistRefundInTransaction(paymentOrderId, refundAmount, fReason, refundNo);
             } catch (Exception e) {
-                // 渠道已退款但本地落库失败——资金已出、数据未同步，必须告警人工核对。
-                // catch Exception 覆盖 CustomException（业务校验）+ DataAccessException（DB 异常）等所有本地失败，
-                // 避免渠道已退款却因非业务异常漏留对账痕迹导致资金流失。
-                // 1. 降级持久化对账待办痕迹（独立事务，供 RefundReconcileTask 扫描）
-                try {
-                    refundRecordService.recordReconcileTrace(fPaymentOrderId, fRefundAmount, fReason);
-                } catch (Exception traceEx) {
-                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                    log.error("【严重】渠道退款成功但本地落库失败，对账痕迹持久化也失败: orderId={}, paymentOrderId={}, refundAmount={}",
-                            orderId, fPaymentOrderId, fRefundAmount, traceEx);
-                }
-                // 2. 主日志告警
-                log.error("【严重】渠道退款成功但本地数据更新失败，需人工核对对账！orderId={}, paymentOrderId={}, refundAmount={}",
-                        orderId, fPaymentOrderId, fRefundAmount, e);
-                return false;
+                // 渠道已退款但本地落库失败（等价抽取）
+                return handlePersistRefundFailure(fPaymentOrderId, fRefundAmount, fReason, orderId, e);
             }
             log.info("订单自动退款成功: orderId={}, paymentOrderId={}, refundAmount={}", orderId, fPaymentOrderId,
                     fRefundAmount);
@@ -245,6 +166,115 @@ public class RefundServiceImpl implements RefundService {
                 unlock(lockKey, lockValue);
             }
         }
+    }
+
+    /**
+     * 调用渠道退款，返回是否成功（失败时已留对账待办痕迹）（等价抽取，降低方法长度）。
+     */
+    private boolean invokeChannelRefund(PaymentOrder latestCheck, BigDecimal refundAmount, String reason,
+            String refundNo, Long orderId, Long paymentOrderId) {
+        PaymentChannel paymentChannel = paymentChannelFactory.getChannel(latestCheck.getChannel());
+        RefundRequest refundRequest = new RefundRequest();
+        refundRequest.setChannelTradeNo(latestCheck.getChannelTradeNo());
+        refundRequest.setAmount(refundAmount);
+        refundRequest.setReason(reason);
+        refundRequest.setOutRequestNo(refundNo);
+        RefundResponse refundResponse;
+        try {
+            refundResponse = paymentChannel.refund(refundRequest);
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("【严重】订单取消自动退款渠道调用异常，需人工处理！orderId={}, paymentOrderId={}, amount={}",
+                    orderId, paymentOrderId, refundAmount, e);
+            // 渠道调用异常（钱未出）——留对账待办痕迹，供 RefundReconcileTask 扫描告警人工退款，
+            // 避免 campaign ENDED 后 scan 不再扫 OPEN 导致永久漏退（M1）
+            recordReconcileTraceSafely(latestCheck, refundAmount, "[对账待办]渠道退款调用异常待人工");
+            return false;
+        }
+        if (refundResponse == null || !refundResponse.isSuccess()) {
+            String errMsg = refundResponse != null ? refundResponse.getErrorMsg() : "无响应";
+            log.error("【严重】订单取消自动退款被渠道拒绝，需人工处理！orderId={}, paymentOrderId={}, errorMsg={}",
+                    orderId, paymentOrderId, errMsg);
+            // 渠道拒绝（钱未出）——留对账待办痕迹，供 RefundReconcileTask 扫描告警人工退款（M1）
+            recordReconcileTraceSafely(latestCheck, refundAmount, "[对账待办]渠道退款被拒绝待人工：" + errMsg);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 渠道已退款但本地落库失败时的告警与对账痕迹处理（等价抽取，降低方法长度）。
+     *
+     * @return 恒定返回 false（供调用方直接 return）
+     */
+    private boolean handlePersistRefundFailure(Long paymentOrderId, BigDecimal refundAmount, String reason,
+            Long orderId, Exception e) {
+        // 渠道已退款但本地落库失败——资金已出、数据未同步，必须告警人工核对。
+        // catch Exception 覆盖 CustomException（业务校验）+ DataAccessException（DB 异常）等所有本地失败，
+        // 避免渠道已退款却因非业务异常漏留对账痕迹导致资金流失。
+        // 1. 降级持久化对账待办痕迹（独立事务，供 RefundReconcileTask 扫描）
+        try {
+            refundRecordService.recordReconcileTrace(paymentOrderId, refundAmount, reason);
+        } catch (Exception traceEx) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("【严重】渠道退款成功但本地落库失败，对账痕迹持久化也失败: orderId={}, paymentOrderId={}, refundAmount={}",
+                    orderId, paymentOrderId, refundAmount, traceEx);
+        }
+        // 2. 主日志告警
+        log.error("【严重】渠道退款成功但本地数据更新失败，需人工核对对账！orderId={}, paymentOrderId={}, refundAmount={}",
+                orderId, paymentOrderId, refundAmount, e);
+        return false;
+    }
+
+    /**
+     * 事务内本地落库：行锁二次校验 + 创建退款记录 + 全额退款联动（等价抽取，降低方法长度）。
+     */
+    private void persistRefundInTransaction(Long paymentOrderId, BigDecimal refundAmount, String fReason,
+            String refundNo) {
+        final BigDecimal fRefundAmount = refundAmount;
+        new TransactionTemplate(transactionManager).execute(status -> {
+            // 重新查询支付单（防并发退款）
+            PaymentOrder latest = paymentOrderService.getById(paymentOrderId);
+            if (latest == null || !STATUS_SUCCESS.equals(latest.getStatus())) {
+                throw new CustomException("支付单状态已变更，退款失败");
+            }
+            // 事务内二次累计退款校验（SELECT ... FOR UPDATE 锁支付单行，阻塞并发退款）
+            BigDecimal lockedAmount = paymentOrderMapper.selectPaymentAmountForUpdate(latest.getId(),
+                    STATUS_SUCCESS);
+            BigDecimal latestAmount = latest.getAmount();
+            if (lockedAmount == null || latestAmount == null) {
+                throw new CustomException("支付金额异常，退款失败");
+            }
+            if (lockedAmount.compareTo(latestAmount) != 0) {
+                throw new CustomException("支付单状态已变更，退款失败");
+            }
+            BigDecimal refunded = refundRecordService.sumRefundedAmount(latest.getId());
+            if (refunded.add(fRefundAmount).compareTo(latestAmount) > 0) {
+                throw new CustomException("累计退款金额超过支付金额（已退：" + refunded + "元）");
+            }
+            // 创建退款记录并标记成功（渠道已确认退款）。refundNo 提前生成作为渠道幂等键，
+            // 此处复用同一单号，保证本地记录与渠道 out_request_no 一一对应。
+            RefundRecord record = refundRecordService.createRefund(latest.getId(), fRefundAmount, fReason, refundNo);
+            refundRecordService.markRefundSuccess(record.getRefundNo());
+            // 全额退款时：支付单 SUCCESS -> REFUND + 业务订单联动为已退款(6)
+            boolean isFull = refunded.add(fRefundAmount).compareTo(latestAmount) == 0;
+            if (isFull) {
+                boolean poUpdated = paymentOrderService.lambdaUpdate()
+                        .eq(PaymentOrder::getId, latest.getId())
+                        .eq(PaymentOrder::getStatus, STATUS_SUCCESS)
+                        .set(PaymentOrder::getStatus, STATUS_REFUND)
+                        .set(PaymentOrder::getUpdateTime, LocalDateTime.now())
+                        .update();
+                if (!poUpdated) {
+                    throw new CustomException("支付单状态已变更，退款失败");
+                }
+                Orders order = orderService.getById(latest.getOrderId());
+                if (order != null) {
+                    updateOrderOnFullRefund(order, latest);
+                }
+            }
+            return null;
+        });
     }
 
     /**

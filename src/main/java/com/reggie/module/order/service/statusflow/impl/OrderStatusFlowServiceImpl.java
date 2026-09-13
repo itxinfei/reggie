@@ -10,6 +10,7 @@ import com.reggie.common.event.OrderCompletedEvent;
 import com.reggie.enums.DiningTableStatus;
 import com.reggie.enums.OrderSource;
 import com.reggie.enums.OrderStatus;
+import com.reggie.module.inventory.service.MaterialStockService;
 import com.reggie.module.dish.service.DishService;
 import com.reggie.module.member.service.MemberRewardService;
 import com.reggie.module.order.mapper.OrderMapper;
@@ -83,6 +84,10 @@ public class OrderStatusFlowServiceImpl
     /** 桌台服务（堂食订单完成/取消/拒单时释放桌台占用） */
     @Autowired
     private com.reggie.module.dining.service.DiningTableService diningTableService;
+
+    /** 原料库存联动服务（可选注入，退款时按 BOM 恢复原料） */
+    @Autowired(required = false)
+    private MaterialStockService materialStockService;
 
     // ==================== 状态流转入口 ====================
 
@@ -505,6 +510,10 @@ public class OrderStatusFlowServiceImpl
         try {
             dishService.addStock(dishId, qty);
             dishService.autoToggleSoldOut(dishId);
+            // 原料库存联动：按 BOM 配方同步恢复原料
+            if (materialStockService != null) {
+                materialStockService.restoreMaterialStock(dishId, qty);
+            }
             log.info("[库存回退] 菜品ID={} 回退{}份", dishId, qty);
             return true;
         } catch (Exception e) {
