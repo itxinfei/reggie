@@ -171,14 +171,85 @@
     .mc-coupon-empty { padding: 24rem 0; }
     .mc-coupon-actions { display: flex; justify-content: flex-end; margin-top: 4rem; }
     .mc-bottom-spacer { height: 30rem; }
+
+    /* 修改点：骨架屏样式 */
+    .skeleton-container { background: var(--bg-page); min-height: 100vh; }
+    .skeleton-header { height: 200rem; background: var(--color-primary-gradient); }
+    .skeleton-card {
+      margin: -40rem 16rem 16rem; background: var(--bg-card); border-radius: var(--radius-lg);
+      padding: 20rem; box-shadow: var(--shadow-card); position: relative; z-index: 1;
+    }
+    .skeleton-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16rem; }
+    .skeleton-card-bottom { padding-top: 12rem; border-top: 1rem dashed var(--bg-hover); }
+    .skeleton-benefits {
+      display: flex; gap: 10rem; padding: 16rem; background: var(--bg-card);
+      margin: 0 16rem 14rem; border-radius: var(--radius-lg);
+    }
+    .skeleton-benefit { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8rem; }
+    .skeleton-circle { width: 48rem; height: 48rem; border-radius: var(--radius-lg); }
+    .skeleton-section {
+      margin: 0 16rem 14rem; background: var(--bg-card); border-radius: var(--radius-lg);
+      padding: 16rem 18rem; box-shadow: var(--shadow-card);
+    }
+    .skeleton-section-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16rem; }
+    .skeleton-row { display: flex; align-items: center; justify-content: space-between; padding: 12rem 0; border-bottom: 1rem solid var(--bg-hover); }
+    .skeleton-row:last-child { border-bottom: none; }
+    .skeleton-tag { width: 50rem; height: 20rem; border-radius: var(--radius-round); }
+    .skeleton-line { height: 14rem; border-radius: var(--radius-sm); }
+    .skeleton-w20 { width: 20%; }
+    .skeleton-w30 { width: 30%; }
+    .skeleton-w40 { width: 40%; }
+    .skeleton-w50 { width: 50%; }
+    .skeleton-w80 { width: 80%; }
+    .skeleton-container .skeleton-header,
+    .skeleton-container .skeleton-card,
+    .skeleton-container .skeleton-benefit,
+    .skeleton-container .skeleton-section,
+    .skeleton-container .skeleton-line,
+    .skeleton-container .skeleton-tag,
+    .skeleton-container .skeleton-circle {
+      background: linear-gradient(90deg, var(--bg-hover) 25%, #e8e8e8 50%, var(--bg-hover) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shine 1.5s ease-in-out infinite;
+    }
+    @keyframes skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   </style>
 </head>
 <body class="scrollable-page">
   <div id="member-center">
-    <!-- 加载 -->
-    <van-overlay :show="loading" :z-index="999">
-      <van-loading size="36rem" text-color="#fff" class="mc-loading-center">加载中...</van-loading>
-    </van-overlay>
+    <!-- 修改点：骨架屏替代 loading 遮罩 -->
+    <div v-if="loading" class="skeleton-container">
+      <!-- 头部骨架 -->
+      <div class="skeleton-header"></div>
+      <!-- 会员卡骨架 -->
+      <div class="skeleton-card">
+        <div class="skeleton-card-top">
+          <div class="skeleton-line skeleton-w30"></div>
+          <div class="skeleton-tag"></div>
+        </div>
+        <div class="skeleton-card-bottom">
+          <div class="skeleton-line skeleton-w40"></div>
+        </div>
+      </div>
+      <!-- 权益骨架 -->
+      <div class="skeleton-benefits">
+        <div class="skeleton-benefit" v-for="i in 4" :key="'sb'+i">
+          <div class="skeleton-circle"></div>
+          <div class="skeleton-line skeleton-w80"></div>
+        </div>
+      </div>
+      <!-- 积分卡片骨架 -->
+      <div class="skeleton-section">
+        <div class="skeleton-section-title">
+          <div class="skeleton-line skeleton-w30"></div>
+          <div class="skeleton-line skeleton-w20"></div>
+        </div>
+        <div class="skeleton-row" v-for="i in 3" :key="'sr'+i">
+          <div class="skeleton-line skeleton-w50"></div>
+          <div class="skeleton-line skeleton-w30"></div>
+        </div>
+      </div>
+    </div>
 
     <!-- 头部 -->
     <div class="mc-header">

@@ -144,6 +144,8 @@
                 </div>
             </div>
         </div>
+        <!-- 修改点：van-pull-refresh 包裹内容实现下拉刷新 -->
+        <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
         <div class="divContent has-tabbar">
             <!-- 会员卡片 -->
             <div class="member-card" @click="goMemberCenter" v-if="memberInfo">
@@ -251,6 +253,7 @@
                 {{ logoutLoading ? '退出中...' : '退出登录' }}
             </div>
         </div>
+        </van-pull-refresh>
 
         <!-- ====== 最新订单菜品图大图预览（对齐美团订单卡片交互） ====== -->
         <!-- 修改点：Vue2 下 van-* 禁自闭合，:show.sync 替代 v-model:show（my-evaluations.html 权威写法） -->
@@ -289,7 +292,7 @@
             data: function(){
                 return {
                     userPhone: '', userName: '', userAvatar: '', userGender: undefined,
-                    pageLoading: false, addOrderLoading: false, logoutLoading: false,
+                    pageLoading: false, refreshing: false, addOrderLoading: false, logoutLoading: false,
                     memberInfo: null,
                     // 修改点：初始为空数组，v-if="order[0]" 先渲染 false（隐藏卡片），
                     // 避免旧 dummy 对象在加载间隙闪现「xundefined」/「共0件,实付 ￥NaN」
@@ -312,6 +315,11 @@
                 this.loadData()
             },
             methods:{
+                // 修改点：下拉刷新
+                onRefresh(){
+                    this.loadData()
+                    setTimeout(() => { this.refreshing = false }, 1000)
+                },
                 async loadData(){
                     this.pageLoading = true
                     try {

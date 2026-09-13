@@ -78,12 +78,54 @@
       border-radius: 50%;
       animation: loading-spin 0.8s linear infinite;
     }
+
+    /* 修改点：骨架屏样式 */
+    .skeleton-container { padding: 12rem 16rem; }
+    .skeleton-inv-card {
+      background: #fff; border-radius: 8rem; padding: 14rem 16rem; margin-bottom: 12rem;
+    }
+    .skeleton-inv-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rem; }
+    .skeleton-inv-row { display: flex; gap: 12rem; margin-bottom: 8rem; }
+    .skeleton-tag { width: 50rem; height: 20rem; border-radius: 4rem; }
+    .skeleton-line { height: 14rem; border-radius: 4rem; }
+    .skeleton-w30 { width: 30%; }
+    .skeleton-w40 { width: 40%; }
+    .skeleton-w50 { width: 50%; }
+    .skeleton-container .skeleton-inv-card,
+    .skeleton-container .skeleton-inv-header,
+    .skeleton-container .skeleton-inv-row,
+    .skeleton-container .skeleton-line,
+    .skeleton-container .skeleton-tag {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: skeleton-shine 1.5s ease-in-out infinite;
+    }
+    @keyframes skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   </style>
 </head>
 <body class="scrollable-page">
   <div id="invoice-list-app">
-    <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner"></div>
+    <!-- 修改点：骨架屏替代 loading 遮罩 -->
+    <div v-if="loading" class="skeleton-container">
+      <!-- 发票卡片骨架 -->
+      <div class="skeleton-inv-card" v-for="i in 3" :key="'si'+i">
+        <div class="skeleton-inv-header">
+          <div class="skeleton-line skeleton-w50"></div>
+          <div class="skeleton-tag"></div>
+        </div>
+        <div class="skeleton-inv-row">
+          <div class="skeleton-line skeleton-w30"></div>
+          <div class="skeleton-line skeleton-w40"></div>
+        </div>
+        <div class="skeleton-inv-row">
+          <div class="skeleton-line skeleton-w30"></div>
+          <div class="skeleton-line skeleton-w50"></div>
+        </div>
+        <div class="skeleton-inv-row">
+          <div class="skeleton-line skeleton-w30"></div>
+          <div class="skeleton-line skeleton-w40"></div>
+        </div>
+      </div>
     </div>
 
     <div class="divHead">
@@ -93,6 +135,8 @@
     </div>
 
     <!-- 发票记录列表 -->
+    <!-- 修改点：van-pull-refresh 包裹列表实现下拉刷新 -->
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
     <div class="inv-list" v-if="records.length > 0">
       <div v-for="item in records" :key="item.id" class="inv-card" @click="goInvoice(item)">
         <div class="card-head">
@@ -119,6 +163,7 @@
       <img src="./../images/no_order.png" class="empty-img" alt="暂无发票记录"/>
       <p class="empty-text">暂无发票记录</p>
     </div>
+    </van-pull-refresh>
 
     <!-- 分页 -->
     <van-pagination
@@ -144,6 +189,7 @@
       data: function() {
         return {
           loading: false,
+          refreshing: false,
           records: [],
           total: 0,
           page: 1,
@@ -154,6 +200,12 @@
         this.loadData()
       },
       methods: {
+        // 修改点：下拉刷新
+        onRefresh: function(){
+          this.page = 1
+          this.loadData()
+          setTimeout(function(){ this.refreshing = false }.bind(this), 1000)
+        },
         loadData: function() {
           var self = this
           this.loading = true

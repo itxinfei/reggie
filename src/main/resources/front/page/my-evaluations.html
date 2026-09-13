@@ -64,6 +64,8 @@
         </div>
 
         <!-- 评价列表 -->
+        <!-- 修改点：van-pull-refresh 包裹列表实现下拉刷新 -->
+        <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
         <div class="eval-list" v-if="evalList.length > 0">
             <div v-for="item in evalList" :key="item.id" class="eval-card">
                 <div class="eval-header">
@@ -108,6 +110,14 @@
 
         <!-- 空状态 -->
         <div class="empty-state" v-else-if="!loading">
+            <img src="./../images/no_order.png" class="empty-img" alt="暂无评价记录"/>
+            <p class="empty-text">暂无评价记录</p>
+            <!-- 修改点：el-button 替换为原生button -->
+            <button class="btn-primary" @click="goToOrder">去下单</button>
+        </div>
+        </van-pull-refresh>
+
+        <!-- 分页 -->
             <img src="./../images/no_order.png" class="empty-img" alt="暂无评价记录"/>
             <p class="empty-text">暂无评价记录</p>
             <!-- 修改点：el-button 替换为原生button -->
@@ -193,6 +203,8 @@
                     submitVisible: false,
                     submitLoading: false,
                     submitData: { orderId: null, dishes: [] },
+                    // 下拉刷新状态
+                    refreshing: false,
                     // 图片预览
                     previewShow: false,
                     previewImages: [],
@@ -209,6 +221,12 @@
                 }
             },
             methods: {
+                // 修改点：下拉刷新
+                onRefresh(){
+                    this.page = 1
+                    this.loadData()
+                    setTimeout(() => { this.refreshing = false }, 1000)
+                },
                 async loadData() {
                     this.loading = true
                     try {
