@@ -410,7 +410,8 @@
             rangeType: [{ required: true, message: '请选择范围类型', trigger: 'change' }],
             feeType: [{ required: true, message: '请选择配送费类型', trigger: 'change' }]
           },
-          rangeTypeRules: null,
+          // 修改点(2026-09-14)：移除 data 中的 rangeTypeRules: null，
+          // 该属性已在 computed 中动态合并基础规则+条件规则，data 里的空声明会与 computed 冲突触发 Vue 警告
           feeStepVisible: false,
           feeStepEditVisible: false,
           feeStepDialogTitle: '新增阶梯规则',

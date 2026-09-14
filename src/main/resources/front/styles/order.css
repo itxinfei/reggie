@@ -355,6 +355,12 @@
   justify-content: center;
 }
 
+/* 修改点(2026-09-14)：空态容器居中 —— 原 .divContainer 无 text-align，
+   内部的 inline-block「去逛逛」按钮会贴左（实测按钮左边缘=容器左边缘，偏左约 55px） */
+#order .divNoData .divContainer {
+  text-align: center;
+}
+
 #order .divNoData .divContainer img {
   width: 220rem;
   height: 118rem;

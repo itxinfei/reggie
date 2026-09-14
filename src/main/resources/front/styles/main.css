@@ -449,6 +449,11 @@
   color: var(--color-text-hint);
   transition: color 0.2s;
 }
+/* 修改点(2026-09-15)：图标容器，用于将分类角标锚定在图标右上角 */
+.category-sidebar .cat-item .cat-icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
 
 .category-sidebar .cat-item.active .cat-icon {
   color: var(--color-primary-dark);
@@ -499,9 +504,14 @@
   border-radius: var(--radius-md);
   text-align: center;
   padding: 0 4rem;
+  /* 修改点(2026-09-15)：角标锚定图标右上角（相对 .cat-icon-wrap），贴合图标而非漂浮侧栏右侧 */
   position: absolute;
-  top: 6rem;
-  right: 3rem;
+  top: -4rem;
+  right: -6rem;
+}
+/* 优惠角标用品牌金区分「热」红角标 */
+.category-sidebar .cat-item .cat-badge--coupon {
+  background: var(--color-primary);
 }
 
 /* ---- 右侧菜品面板 ---- */

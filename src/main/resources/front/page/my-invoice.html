@@ -146,10 +146,11 @@
         },
         // Vant 2 van-tag 合法类型：default/primary/success/danger/warning
         // 修改点：stateColor 优先使用品牌令牌语义色（令牌绿/红由全局 --van-* 变量统一），Vant 内置色作为兜底
+        // 修改点(2026-09-15)：状态底色改用设计令牌（替代硬编码 rgba），与全站状态色体系统一
         stateColor: function(s) {
-          if (s == 1) return 'rgba(255,179,0,0.1)' // 待开具：警告黄
-          if (s == 2) return 'rgba(7,193,96,0.1)'  // 已开具：成功绿
-          return 'var(--bg-input)'                  // 待申请/已作废：中性灰
+          if (s == 1) return 'var(--color-primary-tint)' // 待开具：品牌金浅底
+          if (s == 2) return 'var(--color-success-bg)'  // 已开具：成功绿浅底
+          return 'var(--bg-input)'                        // 待申请/已作废：中性灰
         },
         tagType: function(s) {
           if (s == 1) return 'default'

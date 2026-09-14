@@ -74,16 +74,10 @@ body.login-page {
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  /* 美团暖色渐变：顶部暖黄 → 浅橙 → 米白底部
-     修改点(2026-09-14)：装饰光晕由伪元素改为 background 图层（背景不产生横向溢出）。
-     原因：原 #login::after{right:-70rem;width:200rem} 向右溢出约 73px，使 #login（overflow-x:hidden）
-     仍是可横向滚动容器（scrollWidth 463 > clientWidth 390）；输入框自动聚焦时被浏览器滚到 scrollLeft=73，
-     导致整个表单左移 ~73px、左边被裁切。改用 background 图层后 scrollWidth==clientWidth，从根上消除该 bug。
-     （桌面端已单独覆盖为纯渐变，光晕自动不显示，与原先隐藏 ::before/::after 效果一致） */
-  background:
-    radial-gradient(circle 100rem at calc(100% - 30rem) 70rem, rgba(255, 160, 30, 0.12) 0%, rgba(255, 140, 20, 0.04) 40%, transparent 70%),
-    radial-gradient(circle 150rem at 70rem 50rem, rgba(255, 180, 40, 0.18) 0%, rgba(255, 194, 0, 0.08) 35%, transparent 70%),
-    var(--login-bg-gradient);
+  /* 美团暖色线性渐变：顶部暖黄 → 浅橙 → 米白底部。
+     修改点(2026-09-15)：移除两层装饰光晕 radial-gradient，仅保留线性渐变，简化背景、降低视觉复杂度。
+     注：背景图层仍用于规避横向溢出（详见 2026-09-14 记录：背景不产生 scrollWidth>clientWidth），故不用伪元素 */
+  background: var(--login-bg-gradient);
   padding: 0 28rem;
   padding-bottom: 60rem;
   box-sizing: border-box;
@@ -167,14 +161,6 @@ body.login-page {
   margin-bottom: 4rem;
 }
 
-#login .brandSlogan {
-  font-size: 12rem;
-  color: rgba(120, 70, 0, 0.45);
-  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
-  letter-spacing: 2rem;
-  font-weight: 400;
-}
-
 /* ---- 登录标题 ---- */
 #login .loginHeading {
   font-size: 18rem;
@@ -220,10 +206,6 @@ body.login-page {
   padding: 10rem 18rem;
   position: relative;
   transition: background 0.2s;
-}
-
-#login .codeItem {
-  padding-right: 128rem;
 }
 
 /* 分隔线 */
@@ -350,47 +332,39 @@ body.login-page {
   animation: fadeInUp 0.25s ease-out;
 }
 
-/* ---- 验证码按钮（金色渐变胶囊，与登录按钮风格统一） ---- */
+/* ---- 验证码按钮（与输入框同框，框内右侧文字按钮 + 竖分隔线） ---- */
 #login .codeBtn {
-  position: absolute;
-  right: 18rem;
-  top: 50%;
-  transform: translateY(-50%);
+  flex-shrink: 0;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  height: 30rem;
+  padding: 0 0 0 16rem;
+  border-left: 1px solid var(--login-input-border);
   font-size: 13rem;
   font-family: "PingFangSC-Semibold", Microsoft YaHei, sans-serif;
-  font-weight: 700;
-  color: var(--login-text-brand);
+  font-weight: 600;
+  /* 修改点：白底框内用深金（全站惯例），原深棕 --login-text-brand 仅适合金字按钮 */
+  color: var(--color-primary-dark);
+  background: transparent;
   cursor: pointer;
   white-space: nowrap;
-  padding: 12rem 20rem;
-  border-radius: 999rem;
-  border: 0;
-  background: var(--color-primary-gradient);
-  box-shadow: 0 6rem 16rem rgba(255, 170, 0, 0.30);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.2s;
 }
 
 #login .codeBtn:hover {
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 50%, var(--color-primary-dark) 100%);
-  box-shadow: 0 4rem 14rem rgba(255, 170, 0, 0.4);
-  transform: translateY(-50%) translateY(-1rem);
+  opacity: 0.75;
 }
 
 #login .codeBtn:active {
-  transform: translateY(-50%) scale(0.94);
-  box-shadow: 0 1rem 4rem rgba(255, 170, 0, 0.25);
+  opacity: 0.6;
 }
 
 #login .codeDisabled {
-  /* 修改点：硬编码 #b8b0a0 / #f0ece0 → --login-text-placeholder / --login-bg-disabled */
   color: var(--login-text-placeholder) !important;
-  border-color: transparent !important;
   cursor: not-allowed !important;
-  background: var(--login-bg-disabled) !important;
-  box-shadow: none !important;
-  transform: translateY(-50%) !important;
 }
 
 /* ---- 错误提示 ---- */
@@ -542,8 +516,8 @@ body.login-page {
   cursor: pointer;
   margin-right: 4rem;
   flex-shrink: 0;
-  /* 热区扩大：padding扩展点击面积，负margin抵消不撑开布局 */
-  padding: 14rem;
+  /* 修改点(2026-09-15)：仅纵向扩展热区，横向 padding 归零，使勾选框紧贴协议文案（更紧凑） */
+  padding: 14rem 0;
   margin-top: -14rem;
   margin-bottom: -14rem;
   border-radius: 50%;
@@ -1034,9 +1008,9 @@ body.login-page {
     font-size: 12px;
   }
 
-  /* 协议勾选热区 — 桌面端同步扩大 */
+  /* 协议勾选热区 — 桌面端同步扩大（仅纵向，保持与移动端一致的紧凑间距） */
   #login .agreementCheckbox {
-    padding: 10px;
+    padding: 10px 0;
     margin-top: -10px;
     margin-bottom: -10px;
   }

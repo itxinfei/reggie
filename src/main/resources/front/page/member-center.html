@@ -83,15 +83,17 @@
     .mc-section-title .count { font-size: 12rem; color: var(--color-text-hint); font-weight: 400; }
 
     /* ---- 权益 ---- */
-    .mc-benefits { display: flex; padding: 14rem 12rem; gap: 10rem; flex-wrap: wrap; }
-    .mc-benefit { flex: 1; min-width: 80rem; text-align: center; padding: 10rem 4rem; }
+    /* 修改点(2026-09-15)：4 个权益改为一行 4 列网格，避免原先 flex 三列换行导致第 4 个「生日礼遇」单独成行、视觉失衡 */
+    .mc-benefits { display: grid; grid-template-columns: repeat(4, 1fr); padding: 14rem 12rem; gap: 10rem; }
+    .mc-benefit { min-width: 0; text-align: center; padding: 10rem 4rem; }
     .mc-benefit-icon { width: 48rem; height: 48rem; margin: 0 auto 8rem; border-radius: var(--radius-lg);
       display: flex; align-items: center; justify-content: center; font-size: 24rem; }
     .mc-benefit-icon.locked { opacity: 0.4; filter: grayscale(0.8); }
-    /* 修改点：金色 tint 精确收敛为令牌；绿/紫为权益图标语义 tint（成功绿/装饰紫），无对应令牌，保留局部 rgba */
-    .mc-benefit-icon--gold { background: var(--color-primary-tint-strong); color: var(--color-primary-dark); }
-    .mc-benefit-icon--green { background: rgba(103, 194, 58, 0.1); color: #52a33e; }
-    .mc-benefit-icon--purple { background: rgba(139, 92, 246, 0.1); color: #7b5ce6; }
+    /* 修改点(2026-09-15)：权益图标统一为品牌金（原 gold/green/purple 混色，且 green(#52a33e)/purple(#7b5ce6) 不在令牌体系），
+       与个人中心订单入口、首页加购按钮保持同一套视觉语言 */
+    .mc-benefit-icon--gold,
+    .mc-benefit-icon--green,
+    .mc-benefit-icon--purple { background: var(--color-primary-tint-strong); color: var(--color-primary-dark); }
     .mc-benefit-name { font-size: 12rem; color: var(--color-text-primary); font-weight: 500; }
     .mc-benefit-desc { font-size: 10rem; color: var(--color-text-hint); margin-top: 2rem; }
 
@@ -267,7 +269,9 @@
     <div class="mc-card" v-if="memberInfo">
       <div class="mc-card-top" v-if="memberInfo.isMember && memberInfo.member">
         <div class="mc-level-name">{{ memberInfo.level ? memberInfo.level.name : '普通会员' }}</div>
-        <div :class="['mc-level-tag', levelTagClass]">{{ levelTagText }}</div>
+        <!-- 修改点(2026-09-15)：原右侧 .mc-level-tag 渲染与左侧等级名同一字段（均=memberInfo.level.name），
+             导致「黄金会员」在卡片上重复出现两次。改为展示「等级折扣」（真实权益信息），无折扣时隐藏，消除重复 -->
+        <div :class="['mc-level-tag', levelTagClass]" v-if="levelDiscountText">{{ levelDiscountText }}</div>
       </div>
       <div class="mc-card-stats" v-if="memberInfo.isMember && memberInfo.member">
         <div class="mc-card-stat">
@@ -437,9 +441,16 @@
           if (n.indexOf('银')!==-1) return 'mid'
           return 'low'
         },
-        levelTagText: function() {
-          if (!this.memberInfo || !this.memberInfo.level) return '未开通'
-          return this.memberInfo.level.name || '会员'
+        // 修改点(2026-09-15)：右侧等级标签改为展示「等级折扣」，避免与左侧等级名重复。
+        // discount 以 0~1 小数表示（如 0.95 → 9.5折）；无折扣信息时返回空（配合模板 v-if 隐藏标签，卡片仅显示左侧等级名）
+        levelDiscountText: function() {
+          if (!this.memberInfo || !this.memberInfo.level) return ''
+          var d = this.memberInfo.level.discount
+          if (typeof d === 'number' && d > 0 && d < 1) {
+            var z = (d * 10).toFixed(1).replace(/\.0$/, '')
+            return z + '折'
+          }
+          return ''
         },
         nextLevel: function() {
           if (!this.memberInfo || !this.memberInfo.isMember || !this.allLevels.length) return null

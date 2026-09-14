@@ -13,7 +13,7 @@
         <!-- 引入样式  -->
         <link rel="stylesheet" href="../styles/index.css?v=20260914" />
         <!--本页面内容的样式-->
-        <link rel="stylesheet" href="./../styles/order.css?v=20260914b" />
+        <link rel="stylesheet" href="./../styles/order.css?v=20260914c" />
         <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
         <link rel="stylesheet" href="../styles/tabbar.css" />
         <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
@@ -268,7 +268,11 @@
                                 })
                                 this.orderList.push(...records)
                             }
-                            if(this.paging.page >= res.data.pages){
+                            // 修改点(2026-09-15)：原 finished 判断依赖 res.data.pages，若后端未返回 pages（undefined）
+                            // 则 finished 永远为 false → van-list 反复触发 @load → 同批订单被重复 push（主键重复 + 控制台告警）。
+                            // 改为：本页无数据 或 页数耗尽即结束；pages 缺失时按「本页无数据」兜底，避免无限加载
+                            var finishedPages = (typeof res.data.pages === 'number') ? res.data.pages : 1
+                            if(records.length === 0 || this.paging.page >= finishedPages){
                                 this.finished = true;
                             }
                             this.paging.page = this.paging.page + 1

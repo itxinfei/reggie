@@ -16,7 +16,7 @@
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js"></script>
         <!--本页面内容的样式-->
-        <link rel="stylesheet" href="./../styles/address.css?v=20260914" />
+        <link rel="stylesheet" href="./../styles/address.css?v=20260914b" />
         <style>
             /* 修改点：骨架屏样式 */
             .skeleton-container { padding: 12rem 16rem; }
@@ -110,7 +110,10 @@
                         <i class="ri-map-pin-line"></i>
                     </div>
                     <div class="emptyText">暂无收货地址</div>
-                    <div class="emptyHint" @click="toAddressCreatePage">点击添加新地址</div>
+                    <!-- 修改点(2026-09-14)：移除此处的「点击添加新地址」入口 —— 它与底部固定按钮
+                         「+ 添加收货地址」功能完全重复且同屏展示。此处改为非交互的引导说明，
+                         唯一的新增入口统一由底部按钮承担（位置稳定、拇指易触达） -->
+                    <div class="emptyHint">添加地址后，下单更便捷</div>
                 </div>
             </div>
             </van-pull-refresh>

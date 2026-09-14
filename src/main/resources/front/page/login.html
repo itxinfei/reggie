@@ -13,7 +13,7 @@
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js"></script>
         <link rel="stylesheet" href="../styles/index.css?v=20260914" />
-        <link rel="stylesheet" href="./../styles/login.css?v=20260914d" />
+        <link rel="stylesheet" href="./../styles/login.css?v=20260915a" />
     </head>
     <body class="login-page">
         <div id="login">
@@ -21,44 +21,23 @@
             <div v-if="loading" class="loading-overlay">
                 <div class="loading-spinner"></div>
             </div>
-            <!-- 品牌区 - 精简版：小logo + 名字 + 标语 -->
+            <!-- 修改点(2026-09-15)：简化登录页 — 移除 logo 热气动画与标语，降低视觉复杂度（主色保持品牌金） -->
             <div class="brandArea">
                 <div class="brandIcon">
                     <svg viewBox="0 0 72 72" width="56" height="56">
                         <!-- 碗体 -->
                         <ellipse class="logo-bowl" cx="36" cy="38" rx="28" ry="22"/>
-                        <ellipse cx="36" cy="38" rx="28" ry="22" fill="url(#bowlGrad)"/>
                         <!-- 碗口 -->
                         <rect class="logo-rim" x="8" y="16" width="56" height="4" rx="2"/>
                         <!-- 米饭 -->
                         <ellipse class="logo-rice" cx="36" cy="18" rx="24" ry="8"/>
                         <ellipse class="logo-highlight" cx="30" cy="16" rx="10" ry="5" opacity="0.6"/>
                         <ellipse class="logo-highlight" cx="42" cy="15" rx="8" ry="4" opacity="0.4"/>
-                        <!-- 热气 -->
-                        <path class="logo-steam" d="M22 10 Q24 4 22 -2" fill="none" stroke-width="2.5" stroke-linecap="round" opacity="0.9">
-                            <animate attributeName="d" values="M22 10 Q24 4 22 -2;M22 10 Q20 4 22 -2;M22 10 Q24 4 22 -2" dur="2s" repeatCount="indefinite"/>
-                            <animate attributeName="opacity" values="0.9;0.3;0.9" dur="2s" repeatCount="indefinite"/>
-                        </path>
-                        <path class="logo-steam" d="M36 6 Q38 -1 36 -8" fill="none" stroke-width="2.5" stroke-linecap="round" opacity="0.7">
-                            <animate attributeName="d" values="M36 6 Q38 -1 36 -8;M36 6 Q34 -1 36 -8;M36 6 Q38 -1 36 -8" dur="2.5s" repeatCount="indefinite"/>
-                            <animate attributeName="opacity" values="0.7;0.2;0.7" dur="2.5s" repeatCount="indefinite"/>
-                        </path>
-                        <path class="logo-steam" d="M50 12 Q52 5 50 -2" fill="none" stroke-width="2" stroke-linecap="round" opacity="0.5">
-                            <animate attributeName="d" values="M50 12 Q52 5 50 -2;M50 12 Q48 5 50 -2;M50 12 Q52 5 50 -2" dur="3s" repeatCount="indefinite"/>
-                            <animate attributeName="opacity" values="0.5;0.1;0.5" dur="3s" repeatCount="indefinite"/>
-                        </path>
                         <!-- 碗底阴影 -->
                         <ellipse class="logo-shadow" cx="36" cy="58" rx="22" ry="4"/>
-                        <defs>
-                            <radialGradient id="bowlGrad" cx="30%" cy="30%">
-                                <stop class="logo-grad-stop" offset="0%" stop-opacity="0.5"/>
-                                <stop offset="100%" stop-color="transparent"/>
-                            </radialGradient>
-                        </defs>
                     </svg>
                 </div>
                 <div class="brandName">瑞吉外卖</div>
-                <div class="brandSlogan">美味生活，即刻送达</div>
             </div>
 
             <!-- 修改点：新增登录标题，明确告知用户当前页用途 -->
@@ -78,16 +57,16 @@
                 </div>
                 <div class="divSplit"></div>
                 <div class="inputItem codeItem">
-                    <!-- 修改点：el-input 替换为原生input -->
+                    <!-- 修改点：el-input 替换为原生input；获取验证码按钮移入同一框内 -->
                     <div class="input-wrapper">
                         <i class="inputIcon ri-lock-line input-prefix"></i>
                         <input type="text" class="code-input" placeholder="输入验证码" v-model="form.code" maxlength="6">
+                        <span class="codeBtn"
+                              @click='getCode'
+                              :class="{codeDisabled: countdown > 0}">
+                            {{ countdown > 0 ? countdown + 's后重发' : '获取验证码' }}
+                        </span>
                     </div>
-                    <span class="codeBtn"
-                          @click='getCode'
-                          :class="{codeDisabled: countdown > 0}">
-                        {{ countdown > 0 ? countdown + 's后重发' : '获取验证码' }}
-                    </span>
                 </div>
             </div>
 

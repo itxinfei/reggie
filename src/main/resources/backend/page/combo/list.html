@@ -90,7 +90,7 @@
         <el-image
           class="combo-img-btn"
           :src="getImage(row.image)"
-          :preview-src-list="[`/common/download?name=${row.image}`]"
+          :preview-src-list="[getImage(row.image)]"
           alt="套餐图片"
         >
           <div slot="error" class="image-slot">
@@ -549,6 +549,10 @@ new Vue({
     },
 
     getImage(image) {
+      // 修改点(2026-09-14)：图片字段可能是外链（http(s)://）或本地文件名，
+      // 外链直接用原 URL，本地文件名才走 /common/download 接口，避免外链被当文件名导致 404
+      if (!image) return ''
+      if (/^https?:\/\//i.test(image)) return image
       return `/common/download?name=${image}`
     },
 
@@ -681,7 +685,7 @@ new Vue({
             categoryId: data.categoryId,
             price: String(data.price),
             image: data.image,
-            imageUrl: `/common/download?name=${data.image}`,
+            imageUrl: this.getImage(data.image),
             description: data.description || ''
           }
           this.comboDishTable = (data.setmealDishes || []).map(function (obj) {

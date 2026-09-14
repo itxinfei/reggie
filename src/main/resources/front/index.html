@@ -20,7 +20,7 @@
     <!-- 引入样式  -->
     <link rel="stylesheet" href="styles/index.css?v=20260914" />
     <!--本页面内容的样式-->
-    <link rel="stylesheet" href="styles/main.css?v=20260914b" />
+    <link rel="stylesheet" href="styles/main.css?v=20260915" />
     <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
     <link rel="stylesheet" href="styles/tabbar.css" />
     <!-- 骨架屏样式 -->
@@ -178,9 +178,14 @@
             :class="{active: activeType === index}"
             @click="categoryClick(index,item.id,item.type)"
           >
-            <i :class="getCategoryIcon(item.name)" class="cat-icon"></i>
+            <span class="cat-icon-wrap">
+              <i :class="getCategoryIcon(item.name)" class="cat-icon"></i>
+              <!-- 修改点(2026-09-15)：分类角标精细化 — 锚定在图标右上角（不再漂浮侧栏整行右侧）；
+                   热销=「热」红角标，优惠=「惠」金角标，修正原「优惠」也显示「热」的文案错配 -->
+              <span class="cat-badge" v-if="item.name === '热销'">热</span>
+              <span class="cat-badge cat-badge--coupon" v-else-if="item.name === '优惠'">惠</span>
+            </span>
             <span class="cat-text">{{ item.name }}</span>
-            <span class="cat-badge" v-if="item.name === '热销' || item.name === '优惠'">热</span>
           </div>
         </div>
 
