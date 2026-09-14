@@ -43,6 +43,13 @@
   transform: translate(0, -50%) scale(0.85);
 }
 
+#order .divHead .divTitle .home-icon {
+  left: auto;
+  right: var(--spacing-lg);
+  font-size: 18rem;
+  color: var(--color-text-primary);
+}
+
 #order .divBody {
   position: relative;
   margin: 0 var(--spacing-md) var(--spacing-md);
