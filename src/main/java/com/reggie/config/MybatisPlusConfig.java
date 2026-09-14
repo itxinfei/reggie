@@ -41,10 +41,11 @@ public class MybatisPlusConfig {
      * 修改点：permission/role_permission 两个表均无 tenant_id 列，若不加入忽略表，
      * TenantLineInnerInterceptor 会对其追加 WHERE tenant_id = ? 导致 Unknown column 异常。
      * 修改点：region 为全局行政区划字典表，无 tenant_id 列，加入白名单避免 Unknown column 异常。
+     * 修改点（2026-09-14）：billing 模块已删除（假需求：默认MOCK模拟开通），billing_plan 白名单项一并移除。
      */
     private static final Set<String> IGNORE_TABLES = new HashSet<>(Arrays.asList(
         "tenant", "employee", "shopping_cart", "ai_provider_config", "dish_evaluation",
-        "permission", "role_permission", "region", "billing_plan"
+        "permission", "role_permission", "region"
     ));
 
     /**

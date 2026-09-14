@@ -1,0 +1,228 @@
+/* ========== 常购清单页面 ========== */
+
+#frequent .frequent-container {
+  height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+  background: var(--bg-page);
+}
+
+/* 快捷标题栏 */
+#frequent .quick-header {
+  margin: 12rem;
+  padding: 16rem var(--spacing-md);
+  background: var(--color-primary-gradient);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  gap: 10rem;
+}
+#frequent .quick-header .qi-icon {
+  width: 44rem;
+  height: 44rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#frequent .quick-header .qi-icon i {
+  font-size: 22rem;
+  color: var(--color-text-primary);
+}
+#frequent .quick-header .qi-text {
+  flex: 1;
+}
+#frequent .quick-header .qi-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 24rem;
+}
+#frequent .quick-header .qi-desc {
+  font-size: var(--font-size-sm);
+  color: var(--gold-text);
+  line-height: 20rem;
+  margin-top: 2rem;
+}
+
+/* 分类标签 */
+#frequent .category-tabs {
+  display: flex;
+  gap: 8rem;
+  padding: 0 12rem;
+  margin-bottom: 10rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#frequent .category-tabs::-webkit-scrollbar {
+  display: none;
+}
+#frequent .category-tab {
+  flex-shrink: 0;
+  padding: 6rem 16rem;
+  border-radius: var(--radius-round);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+}
+#frequent .category-tab.active {
+  background: var(--color-primary);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* 菜品卡片 */
+#frequent .dish-card {
+  margin: 0 12rem 12rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  gap: 10rem;
+  padding: 12rem;
+  position: relative;
+}
+#frequent .dish-card .dish-img {
+  width: 90rem;
+  height: 90rem;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--bg-hover);
+}
+#frequent .dish-card .dish-img-placeholder {
+  width: 90rem;
+  height: 90rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#frequent .dish-card .dish-img-placeholder i {
+  font-size: 32rem;
+  color: var(--color-text-disabled);
+}
+#frequent .dish-card .dish-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+#frequent .dish-card .dish-name {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-all;
+}
+#frequent .dish-card .dish-meta {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  line-height: 18rem;
+}
+#frequent .dish-card .dish-meta .freq-badge {
+  display: inline-block;
+  background: var(--color-primary-tint-strong);
+  color: var(--color-primary-dark);
+  padding: 1rem 6rem;
+  border-radius: var(--radius-sm);
+  font-size: 10rem;
+  margin-right: 6rem;
+}
+#frequent .dish-card .dish-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4rem;
+}
+#frequent .dish-card .dish-price {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--color-price);
+  font-family: var(--font-family-number);
+}
+#frequent .dish-card .dish-price::before {
+  content: '¥';
+  font-size: var(--font-size-sm);
+  margin-right: 1rem;
+}
+#frequent .dish-card .reorder-btn {
+  padding: 6rem 16rem;
+  background: var(--color-primary-gradient);
+  color: var(--color-text-primary);
+  border: none;
+  border-radius: 16rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast);
+}
+#frequent .dish-card .reorder-btn:active {
+  opacity: 0.8;
+}
+#frequent .dish-card .reorder-btn:disabled {
+  background: var(--color-text-disabled);
+  cursor: not-allowed;
+}
+
+/* 分组标题 */
+#frequent .group-title {
+  margin: 6rem 12rem 8rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  line-height: 20rem;
+}
+
+/* 空状态 — 使用全局 .empty-state 组件（index.css），此处仅保留页面专属覆盖 */
+
+/* 底部 */
+#frequent .bottom-hint {
+  text-align: center;
+  padding: 10rem 0 20rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+}
+
+/* 骨架屏 */
+#frequent .skeleton-container { padding: 12rem 16rem; }
+#frequent .skeleton-freq-header { height: 80rem; border-radius: 8rem; margin-bottom: 16rem; }
+#frequent .skeleton-freq-tabs { display: flex; gap: 8rem; margin-bottom: 16rem; }
+#frequent .skeleton-tab { width: 60rem; height: 28rem; border-radius: 14rem; }
+#frequent .skeleton-freq-card {
+  background: #fff; border-radius: 8rem; padding: 14rem 16rem; margin-bottom: 12rem;
+}
+#frequent .skeleton-freq-row { display: flex; align-items: center; gap: 12rem; }
+#frequent .skeleton-img { width: 60rem; height: 60rem; border-radius: 8rem; flex-shrink: 0; }
+#frequent .skeleton-freq-info { flex: 1; }
+#frequent .skeleton-btn { width: 60rem; height: 28rem; border-radius: 14rem; }
+#frequent .skeleton-line { height: 14rem; border-radius: 4rem; margin-bottom: 8rem; }
+#frequent .skeleton-line:last-child { margin-bottom: 0; }
+#frequent .skeleton-w30 { width: 30%; }
+#frequent .skeleton-w50 { width: 50%; }
+#frequent .skeleton-container .skeleton-freq-header,
+#frequent .skeleton-container .skeleton-freq-tabs,
+#frequent .skeleton-container .skeleton-freq-card,
+#frequent .skeleton-container .skeleton-freq-row,
+#frequent .skeleton-container .skeleton-img,
+#frequent .skeleton-container .skeleton-btn,
+#frequent .skeleton-container .skeleton-line,
+#frequent .skeleton-container .skeleton-tab {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shine 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }

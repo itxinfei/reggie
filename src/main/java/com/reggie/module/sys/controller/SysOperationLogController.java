@@ -92,8 +92,6 @@ public class SysOperationLogController {
             "delivery_order",
             "recommendation_cache",
             "marketing_campaign",
-            "franchise",
-            "franchise_settlement",
             "ai_user_profile"
     ));
 

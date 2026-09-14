@@ -20,9 +20,10 @@ body.scrollable-page {
   --addr-tag-company-shadow: var(--color-primary-dark-tint);
   --addr-tag-company-fg: var(--color-primary-dark);
 
-  --addr-tag-home-gradient: linear-gradient(135deg, var(--color-primary-light), var(--color-primary-light));
-  --addr-tag-home-border: var(--color-primary);
-  --addr-tag-home-shadow: var(--color-primary-dark-tint);
+  --addr-tag-home-gradient: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  --addr-tag-home-border: #ff9800;
+  --addr-tag-home-shadow: rgba(255, 152, 0, 0.12);
+  --addr-tag-home-fg: #e65100;
 
   --addr-tag-school-gradient: linear-gradient(135deg, #e6faf3, #ccf0e2);
   --addr-tag-school-border: #7fd4b0;
@@ -82,10 +83,10 @@ body.scrollable-page {
   min-height: 128rem;
   background: var(--bg-card);
   border-radius: var(--radius-xl);
-  margin-top: 10rem;
+  margin-top: 12rem;
   margin-left: 12rem;
   margin-right: 12rem;
-  padding: 14rem 16rem;
+  padding: 16rem 18rem;
   position: relative;
   box-shadow: 0 2rem 10rem var(--mask-light);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -132,9 +133,9 @@ body.scrollable-page {
 #address .divContent .divItem .addrText {
   flex: 1;
   min-width: 0;
-  font-size: 14rem;
+  font-size: 15rem;
   font-family: var(--font-family-body);
-  font-weight: 400;
+  font-weight: 500;
   text-align: left;
   color: var(--color-text-primary);
   line-height: 22rem;
@@ -153,7 +154,7 @@ body.scrollable-page {
 }
 #address .divContent .divItem .addrTag.spanHome {
   background: var(--addr-tag-home-gradient);
-  color: var(--color-primary-dark);
+  color: var(--addr-tag-home-fg);
 }
 #address .divContent .divItem .addrTag.spanSchool {
   background: var(--addr-tag-school-gradient);
@@ -248,14 +249,15 @@ body.scrollable-page {
   font-style: normal;
   font-size: 18rem;
   line-height: 1;
-  width: 24rem;
-  height: 24rem;
+  width: 32rem;
+  height: 32rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: var(--color-text-hint);
-  border-radius: 50%;
+  border-radius: var(--radius-md);
+  background: var(--bg-page);
   transition: all 0.25s;
 }
 #address .divContent .divItem .ri-edit-line:active {
@@ -366,4 +368,48 @@ body.scrollable-page {
   #address .divBottom {
     max-width: 420rem;
   }
+}
+
+/* ================================================================
+   新增：默认地址内联徽标（标签旁）
+   ================================================================ */
+#address .divContent .divItem .defaultBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10rem;
+  font-weight: 600;
+  padding: 1rem 6rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-tint);
+  color: var(--color-primary-dark);
+  margin-left: 6rem;
+  flex-shrink: 0;
+  letter-spacing: 0.5rem;
+  vertical-align: middle;
+}
+
+/* ================================================================
+   新增：删除按钮样式
+   ================================================================ */
+#address .divContent .divItem .divActionBar .btnDelete {
+  display: inline-flex;
+  align-items: center;
+  gap: 3rem;
+  font-size: 12rem;
+  font-family: var(--font-family-body);
+  color: var(--color-text-hint);
+  cursor: pointer;
+  user-select: none;
+  padding: 4rem 8rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+}
+
+#address .divContent .divItem .divActionBar .btnDelete i {
+  font-size: 14rem;
+}
+
+#address .divContent .divItem .divActionBar .btnDelete:active {
+  color: var(--color-danger);
+  background: var(--color-danger-tint);
 }

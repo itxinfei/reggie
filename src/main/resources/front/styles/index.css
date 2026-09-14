@@ -524,6 +524,57 @@ select:focus-visible,
   border-radius: inherit;
 }
 
+/* ========== 统一空状态组件 ========== */
+/* 用法：<div class="empty-state"><i class="ri-xxx-line"></i><p class="empty-text">提示文案</p><div class="empty-action">操作</div></div> */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rem 20rem;
+  text-align: center;
+}
+.empty-state i {
+  font-size: 60rem;
+  color: var(--color-text-disabled);
+  margin-bottom: 16rem;
+}
+.empty-state img {
+  width: 120rem;
+  height: 120rem;
+  opacity: 0.5;
+  margin-bottom: 16rem;
+  object-fit: contain;
+}
+.empty-state .empty-text {
+  color: var(--color-text-hint);
+  font-size: 14rem;
+  line-height: 22rem;
+}
+.empty-state .empty-sub {
+  color: var(--color-text-disabled);
+  font-size: 12rem;
+  margin-top: 6rem;
+}
+.empty-state .empty-action {
+  display: inline-block;
+  height: 36rem;
+  line-height: 36rem;
+  padding: 0 32rem;
+  margin-top: 16rem;
+  background: var(--color-primary-gradient);
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+.empty-state .empty-action:active {
+  transform: scale(0.95);
+  opacity: 0.85;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

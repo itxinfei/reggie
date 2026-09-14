@@ -9,9 +9,9 @@
     <script src="./../js/base.js"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css" />
+    <link rel="stylesheet" href="../styles/frequent-orders.css" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js"></script>
-    <style>
         .frequent-container {
             height: calc(100vh - var(--header-height));
             overflow-y: auto;
@@ -251,8 +251,6 @@
             background-size: 200% 100%;
             animation: skeleton-shine 1.5s ease-in-out infinite;
         }
-        @keyframes skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    </style>
 </head>
 <body>
     <div id="frequent" class="app">
@@ -336,8 +334,8 @@
             <!-- 空状态 -->
             <div class="empty-state" v-else-if="!pageLoading && items.length === 0">
                 <i class="ri-shopping-bag-line"></i>
-                <p>暂无常购菜品</p>
-                <p style="margin-top:6rem;font-size:12rem;">去点餐后，这里会展示您的常购清单</p>
+                <p class="empty-text">暂无常购菜品</p>
+                <p class="empty-sub">去点餐后，这里会展示您的常购清单</p>
             </div>
         </div>
         </van-pull-refresh>

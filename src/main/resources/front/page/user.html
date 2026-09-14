@@ -18,7 +18,7 @@
         /* 会员卡片 */
         .member-card {
             margin: 0 12rem 12rem;
-            background: var(--color-primary-gradient);
+            background: var(--color-primary-gradient-deep);
             border-radius: var(--radius-xl);
             padding: 16rem 18rem;
             position: relative;
@@ -139,6 +139,7 @@
                         <span v-else-if="userGender == '0'" class="gender-icon">
                             <svg viewBox="0 0 24 24" style="width:16rem;height:16rem" fill="currentColor"><path d="M12 12c-1.93 0-3.5-1.57-3.5-3.5S10.07 5 12 5s3.5 1.57 3.5 3.5S13.93 12 12 12zm0-5c-.83 0-1.5.67-1.5 1.5S11.17 10 12 10s1.5-.67 1.5-1.5S12.83 7 12 7zm7 9h-4v3h-2v-3H9v-2h4v-3h2v3h4v2z"/></svg>
                         </span>
+                        <span v-if="memberInfo && memberInfo.isMember" class="member-tag"><i class="ri-vip-crown-2-fill"></i>会员</span>
                     </div>
                     <div class="divPhone">{{ maskedPhone }}</div>
                 </div>
@@ -178,7 +179,44 @@
                 </div>
             </div>
 
+            <!-- 订单快捷入口网格 -->
+            <div class="order-quick-grid">
+                <div class="order-quick-item" @click="toOrderPageWithStatus(1)">
+                    <span class="oq-icon oq-pending">
+                        <i class="ri-time-line"></i>
+                        <span v-if="pendingCount > 0" class="oq-badge">{{ pendingCount }}</span>
+                    </span>
+                    <span class="oq-label">待付款</span>
+                </div>
+                <div class="order-quick-item" @click="toOrderPageWithStatus(2)">
+                    <span class="oq-icon">
+                        <i class="ri-restaurant-line"></i>
+                    </span>
+                    <span class="oq-label">待接单</span>
+                </div>
+                <div class="order-quick-item" @click="toOrderPageWithStatus(3)">
+                    <span class="oq-icon oq-delivering">
+                        <i class="ri-e-bike-2-line"></i>
+                    </span>
+                    <span class="oq-label">配送中</span>
+                </div>
+                <div class="order-quick-item" @click="toOrderPageWithStatus(4)">
+                    <span class="oq-icon oq-evaluate">
+                        <i class="ri-star-line"></i>
+                    </span>
+                    <span class="oq-label">待评价</span>
+                </div>
+                <div class="order-quick-item" @click="toOrderPageWithStatus(5)">
+                    <span class="oq-icon oq-refund">
+                        <i class="ri-refund-2-line"></i>
+                    </span>
+                    <span class="oq-label">退款</span>
+                </div>
+            </div>
+
             <div class="divLinks">
+                <!-- 第一组：常用服务 -->
+                <div class="menu-group-title">常用服务</div>
                 <div class="item" @click="goMemberCenter">
                     <i class="ri-vip-crown-2-line link-icon" aria-hidden="true"></i>
                     <span>会员中心</span>
@@ -190,19 +228,22 @@
                     <span>地址管理</span>
                     <i class="icon-arrow-right"></i>
                 </div>
-                <div class="divSplit"></div>
-                <div class="item" @click="toMessagePage">
-                    <i class="ri-notification-2-line link-icon" aria-hidden="true"></i>
-                    <span>消息中心</span>
-                    <i class="icon-arrow-right"></i>
-                </div>
-                <div class="divSplit"></div>
+                <!-- 第二组：订单与消息 -->
+                <div class="menu-group-title">订单与消息</div>
                 <div class="item" @click="toOrderPage">
                     <i class="ri-file-list-3-line link-icon" aria-hidden="true"></i>
                     <span>历史订单</span>
                     <i class="icon-arrow-right"></i>
                 </div>
                 <div class="divSplit"></div>
+                <div class="item" @click="toMessagePage" style="position:relative">
+                    <i class="ri-notification-2-line link-icon" aria-hidden="true"></i>
+                    <span>消息中心</span>
+                    <span v-if="unreadCount > 0" class="msg-badge">{{ unreadCount }}</span>
+                    <i class="icon-arrow-right"></i>
+                </div>
+                <!-- 第三组：更多 -->
+                <div class="menu-group-title">更多</div>
                 <div class="item" @click="toFrequentPage">
                     <i class="ri-shopping-basket-line link-icon" aria-hidden="true"></i>
                     <span>常购清单</span>
@@ -225,7 +266,7 @@
                 <div class="title">最新订单</div>
                 <div class="timeStatus">
                     <span>{{order[0].orderTime}}</span>
-                    <span>{{getStatus(order[0].status)}}</span>
+                    <span :class="getStatusClass(order[0].status)">{{getStatus(order[0].status)}}</span>
                 </div>
                 <div class="dishList">
                     <!-- 修改点：对齐美团订单卡片——菜品小图+名称+x数量，点击小图可全屏放大预览（van-image-preview） -->
@@ -286,6 +327,7 @@
     <script src="./../api/login.js"></script>
     <script src="./../api/member-center.js"></script>
     <script src="./../api/invoice.js"></script>
+    <script src="./../api/recommend.js"></script>
     <script>
         new Vue({
             el:"#user",
@@ -294,6 +336,8 @@
                     userPhone: '', userName: '', userAvatar: '', userGender: undefined,
                     pageLoading: false, refreshing: false, addOrderLoading: false, logoutLoading: false,
                     memberInfo: null,
+                    pendingCount: 0,
+                    unreadCount: 0,
                     // 修改点：初始为空数组，v-if="order[0]" 先渲染 false（隐藏卡片），
                     // 避免旧 dummy 对象在加载间隙闪现「xundefined」/「共0件,实付 ￥NaN」
                     order: [],
@@ -326,7 +370,9 @@
                         await Promise.all([
                             this.fetchUserInfo(),
                             this.fetchMemberInfo(),
-                            this.getLatestOrder()
+                            this.getLatestOrder(),
+                            this.fetchUnreadCount(),
+                            this.fetchPendingCount()
                         ])
                     } finally { this.pageLoading = false }
                 },
@@ -355,6 +401,22 @@
                         }
                     } catch(e) { console.warn('[user] fetchMemberInfo 失败:', e) }
                 },
+                async fetchUnreadCount(){
+                    try {
+                        var res = await recommendApi.getUnreadCount()
+                        if(res.code === 1 && res.data !== undefined) {
+                            this.unreadCount = res.data || 0
+                        }
+                    } catch(e) { console.warn('[user] fetchUnreadCount 失败:', e) }
+                },
+                async fetchPendingCount(){
+                    try {
+                        var res = await orderPagingApi({ page:1, pageSize:1, status: 1 })
+                        if(res.code === 1 && res.data && res.data.total !== undefined) {
+                            this.pendingCount = res.data.total || 0
+                        }
+                    } catch(e) { console.warn('[user] fetchPendingCount 失败:', e) }
+                },
                 goBack: function(){
                     // 修改点：直接访问时 history 无前序页面，兜底回首页（与 my-invoice/invoice 一致）
                     if (window.history.length > 1) history.go(-1)
@@ -372,6 +434,13 @@
                     window.requestAnimationFrame(function(){ window.location.href = url })
                 },
                 getStatus: function(status){ return getStatus(status) },
+                getStatusClass: function(status){
+                    var map = { 1: 'status-pending', 2: 'status-pending', 3: 'status-delivering', 4: 'status-complete', 5: 'status-cancel' }
+                    return map[status] || ''
+                },
+                toOrderPageWithStatus: function(status){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/order.html?status=' + status })
+                },
                 // 修改点：注册 common.js 的全局 imgPath（Vue 模板中无法直接访问全局函数，index.html/add-order.html 同款）
                 imgPath: function(path){
                     if (!path) return ''

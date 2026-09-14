@@ -1,0 +1,268 @@
+/* ========== 配送追踪页面 ========== */
+
+#tracking .tracking-container {
+  height: calc(100vh - var(--header-height));
+  overflow-y: auto;
+  background: var(--bg-page);
+}
+
+/* 订单信息卡片 */
+#tracking .order-info-card {
+  margin: 12rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 16rem var(--spacing-md);
+  box-shadow: var(--shadow-card);
+}
+#tracking .order-info-card .info-row {
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  line-height: 22rem;
+}
+#tracking .order-info-card .info-row .ri-map-pin-line {
+  color: var(--color-primary-dark);
+  font-size: 16rem;
+  flex-shrink: 0;
+}
+#tracking .order-info-card .dish-summary {
+  margin-top: 10rem;
+  padding-top: 10rem;
+  border-top: 1px solid var(--bg-hover);
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  line-height: 22rem;
+}
+
+/* 配送状态卡片 */
+#tracking .status-card {
+  margin: 0 12rem 12rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 20rem var(--spacing-md);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+#tracking .status-card .status-icon {
+  width: 56rem;
+  height: 56rem;
+  border-radius: 50%;
+  background: var(--color-primary-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10rem;
+}
+#tracking .status-card .status-icon i {
+  font-size: 28rem;
+  color: var(--color-text-primary);
+}
+#tracking .status-card .status-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 26rem;
+}
+#tracking .status-card .status-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  line-height: 20rem;
+  margin-top: 4rem;
+}
+
+/* 时间线 */
+#tracking .timeline-card {
+  margin: 0 12rem 12rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 16rem var(--spacing-md);
+  box-shadow: var(--shadow-card);
+}
+#tracking .timeline-card .section-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 22rem;
+  margin-bottom: 14rem;
+}
+#tracking .timeline-item {
+  display: flex;
+  position: relative;
+  padding-bottom: 18rem;
+}
+#tracking .timeline-item:last-child {
+  padding-bottom: 0;
+}
+#tracking .timeline-dot-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 24rem;
+  flex-shrink: 0;
+}
+#tracking .timeline-dot {
+  width: 12rem;
+  height: 12rem;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  flex-shrink: 0;
+  z-index: 1;
+  transition: all var(--transition-fast);
+}
+/* 已完成步骤：金色圆点 */
+#tracking .timeline-item.done .timeline-dot {
+  background: var(--color-primary);
+}
+/* 配送中当前步骤：金色圆点放大 + 柔和光环 */
+#tracking .timeline-item.active .timeline-dot {
+  width: 14rem;
+  height: 14rem;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 4rem var(--color-primary-tint);
+}
+#tracking .timeline-line {
+  width: 2rem;
+  flex: 1;
+  background: var(--bg-hover);
+  margin-top: 4rem;
+}
+/* 仅已完成步骤的连接线为金色 */
+#tracking .timeline-item.done .timeline-line {
+  background: var(--color-primary);
+}
+#tracking .timeline-item:last-child .timeline-line {
+  display: none;
+}
+#tracking .timeline-content {
+  flex: 1;
+  padding-left: 10rem;
+  padding-top: 0;
+}
+#tracking .timeline-title {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  line-height: 20rem;
+}
+/* 未开始步骤：弱化为提示灰 */
+#tracking .timeline-item:not(.done):not(.active) .timeline-title {
+  color: var(--color-text-hint);
+}
+/* 配送中当前步骤标题用深色加粗 */
+#tracking .timeline-item.active .timeline-title {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+#tracking .timeline-time {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  line-height: 18rem;
+  margin-top: 2rem;
+}
+
+/* 骑手信息卡片 */
+#tracking .rider-card {
+  margin: 0 12rem 12rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 16rem var(--spacing-md);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  gap: 12rem;
+}
+#tracking .rider-avatar {
+  width: 48rem;
+  height: 48rem;
+  border-radius: 50%;
+  background: var(--color-primary-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+#tracking .rider-avatar i {
+  font-size: 24rem;
+  color: var(--color-text-primary);
+}
+#tracking .rider-info {
+  flex: 1;
+}
+#tracking .rider-name {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 22rem;
+}
+#tracking .rider-status-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  line-height: 20rem;
+  margin-top: 2rem;
+}
+#tracking .rider-actions {
+  display: flex;
+  gap: 10rem;
+}
+#tracking .rider-action-btn {
+  width: 40rem;
+  height: 40rem;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+#tracking .rider-action-btn:active {
+  background: var(--bg-hover);
+}
+#tracking .rider-action-btn i {
+  font-size: 18rem;
+  color: var(--color-text-primary);
+}
+
+/* 平台信息 */
+#tracking .platform-card {
+  margin: 0 12rem 12rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 14rem var(--spacing-md);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+}
+#tracking .platform-tag {
+  display: inline-block;
+  padding: 2rem 10rem;
+  border-radius: 4rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-white);
+}
+#tracking .platform-tag.meituan {
+  background: var(--platform-meituan);
+}
+#tracking .platform-tag.eleme {
+  background: var(--platform-eleme);
+}
+#tracking .platform-tag.douyin {
+  background: var(--platform-douyin);
+}
+
+/* 底部操作 */
+#tracking .bottom-actions {
+  padding: 10rem 12rem;
+  display: flex;
+  gap: 10rem;
+}
+#tracking .bottom-actions .van-button {
+  flex: 1;
+}
+
+/* 空状态 — 使用全局 .empty-state 组件（index.css） */

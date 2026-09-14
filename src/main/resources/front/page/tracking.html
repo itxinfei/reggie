@@ -8,9 +8,9 @@
     <script src="./../js/base.js"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css" />
+    <link rel="stylesheet" href="../styles/tracking.css" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js"></script>
-    <style>
         .tracking-container {
             height: calc(100vh - var(--header-height));
             overflow-y: auto;
@@ -286,11 +286,6 @@
             font-size: 60rem;
             color: var(--color-text-disabled);
         }
-        .empty-state p {
-            margin-top: 12rem;
-            font-size: var(--font-size-md);
-        }
-    </style>
 </head>
 <body>
     <div id="tracking" class="app">
@@ -392,7 +387,7 @@
         <!-- 空状态 / 加载失败 -->
         <div class="empty-state" v-else-if="!pageLoading && !trackingData">
             <i class="ri-map-pin-time-line"></i>
-            <p>暂无配送信息</p>
+            <p class="empty-text">暂无配送信息</p>
         </div>
     </div>
 

@@ -45,6 +45,24 @@
   transform: translateY(-50%) scale(0.85);
 }
 
+/* ---- 全部已读按钮 ---- */
+#messageApp .divHead .divTitle .mark-all-btn {
+  position: absolute;
+  right: var(--spacing-lg);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13rem;
+  font-weight: 500;
+  font-family: var(--font-family-body);
+  color: var(--color-text-primary);
+  opacity: 0.85;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+}
+#messageApp .divHead .divTitle .mark-all-btn:active {
+  opacity: 1;
+}
+
 /* ---- 内容区 ---- */
 #messageApp .divContent {
   padding: var(--spacing-lg);
@@ -151,21 +169,9 @@
   color: var(--color-text-secondary);
 }
 
-/* ---- 空状态 ---- */
+/* ---- 空状态 — 使用全局 .empty-state 组件（index.css），此处仅保留页面专属覆盖 ---- */
 #messageApp .empty-state {
-  text-align: center;
-  padding: 60px var(--spacing-xl);
-}
-
-#messageApp .empty-state img {
-  width: 120rem;
-  margin-bottom: var(--spacing-lg);
-  opacity: 0.6;
-}
-
-#messageApp .empty-state p {
-  font-size: var(--font-size-md);
-  color: var(--color-text-hint);
+  padding: 60rem var(--spacing-xl);
 }
 
 /* ---- 加载更多 ---- */

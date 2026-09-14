@@ -46,6 +46,13 @@ public class QRCodeUtil {
     private String uploadPath;
 
     /**
+     * 服务器地址（用于生成二维码链接），配置在 application.yml
+     * 格式：http://IP:端口 或 http://域名
+     */
+    @Value("${reggie.server-url:http://localhost:8080}")
+    private String serverUrl;
+
+    /**
      * 二维码尺寸（像素）
      */
     private static final int QR_CODE_SIZE = 300;
@@ -123,13 +130,10 @@ public class QRCodeUtil {
 
     /**
      * 构建二维码内容
-     * 格式：https://your-domain.com/h5/order?tableId={桌台ID}
+     * 格式：http://IP:端口/front/page/qrcode-order.html?tableId={桌台ID}
      */
     private String buildTableQRContent(Long tableId, String tableName) {
-        // 注意：这里的域名需要根据实际部署环境修改
-        // 可以通过配置文件动态读取
-        String domain = System.getProperty("qr.domain", "https://your-domain.com");
-        return domain + "/h5/order?tableId=" + tableId;
+        return serverUrl + "/front/page/qrcode-order.html?tableId=" + tableId;
     }
 
     /**

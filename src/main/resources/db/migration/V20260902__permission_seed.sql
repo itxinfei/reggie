@@ -64,7 +64,6 @@ INSERT INTO permission (id, permission_name, permission_key, permission_type, pa
 (604, '优惠券',   'page:coupon-list',   1, 6, 'page/member-center/coupon-list.html',  'ri-coupon-line',       4, 1, NOW()),
 (605, '充值记录', 'page:recharge-list', 1, 6, 'page/member-center/recharge-list.html', 'ri-bank-card-line',    5, 1, NOW()),
 (606, 'C端用户',  'page:user-list',     1, 6, 'page/user/list.html',                  'ri-user-3-line',       6, 1, NOW()),
-(607, '会员挽留', 'page:retention',     1, 6, 'page/retention/retention.html',        'ri-heart-line',        7, 1, NOW()),
 
 -- 经营分析（7xx）
 (701, '营业日报',   'page:daily-report',     1, 7, 'page/report/daily.html',                'ri-file-chart-line',        1,  1, NOW()),
@@ -74,7 +73,7 @@ INSERT INTO permission (id, permission_name, permission_key, permission_type, pa
 (705, '支付分析',   'page:payment-analysis', 1, 7, 'page/report/payment-analysis.html',     'ri-wallet-line',            5,  1, NOW()),
 (706, '时段分析',   'page:time-slot',        1, 7, 'page/report/time-slot.html',            'ri-time-line',              6,  1, NOW()),
 (707, '评价管理',   'page:evaluation-list',  1, 7, 'page/report/evaluation-list.html',      'ri-star-line',              7,  1, NOW()),
-(708, '智能推荐',   'page:recommend',        1, 7, 'page/recommend/overview.html',          'ri-lightbulb-flash-line',   8,  1, NOW()),
+(708, '热门菜排行', 'page:recommend',        1, 7, 'page/recommend/overview.html',          'ri-lightbulb-flash-line',   8,  1, NOW()),
 (709, '成本概览',   'page:cost-overview',    1, 7, 'page/cost/overview.html',               'ri-pie-chart-line',         9,  1, NOW()),
 (710, '菜品成本',   'page:dish-cost',        1, 7, 'page/cost/dish-cost.html',              'ri-restaurant-line',       10,  1, NOW()),
 (711, '提现管理',   'page:withdrawal',       1, 7, 'page/finance/withdrawal.html',          'ri-bank-card-2-line',      11,  1, NOW()),
@@ -83,9 +82,6 @@ INSERT INTO permission (id, permission_name, permission_key, permission_type, pa
 
 -- 营销与门店（8xx）
 (801, '营销活动',   'page:marketing',        1, 8, 'page/marketing/index.html',            'ri-flag-line',           1, 1, NOW()),
-(802, '加盟商',     'page:franchisee-list',  1, 8, 'page/franchise/franchisee-list.html',  'ri-user-star-line',      2, 1, NOW()),
-(803, '加盟合同',   'page:contract-list',    1, 8, 'page/franchise/contract-list.html',    'ri-file-list-3-line',    3, 1, NOW()),
-(804, '分账结算',   'page:settlement-list',  1, 8, 'page/franchise/settlement-list.html',  'ri-bank-card-line',      4, 1, NOW()),
 (805, '门店列表',   'page:store-list',       1, 8, 'page/store/list.html',                 'ri-store-line',          5, 1, NOW()),
 (806, '总部控制台', 'page:store-dashboard',  1, 8, 'page/store/dashboard.html',            'ri-dashboard-3-line',    6, 1, NOW()),
 
@@ -105,7 +101,6 @@ INSERT INTO permission (id, permission_name, permission_key, permission_type, pa
 
 -- 2) 按钮权限（对齐后端 @RequiresPermission 全部 key，parent 挂在对应页面下）
 INSERT INTO permission (id, permission_name, permission_key, permission_type, parent_id, route_path, icon, sort, status, create_time) VALUES
-(10001, '加盟管理',       'franchise:manage',    2, 802, NULL, NULL, 1, 1, NOW()),
 (10002, '评价查看',       'evaluation:view',     2, 707, NULL, NULL, 1, 1, NOW()),
 (10003, '评价审核',       'evaluation:audit',    2, 707, NULL, NULL, 2, 1, NOW()),
 (10004, '评价回复',       'evaluation:reply',    2, 707, NULL, NULL, 3, 1, NOW()),

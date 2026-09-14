@@ -139,6 +139,12 @@
   color: var(--color-text-primary);
 }
 
+/* 修改点：订单状态颜色——与 user 页面快捷入口图标色系对齐 */
+#order .divBody .item .timeStatus .status-pending { color: var(--color-primary-dark); font-weight: 600; }
+#order .divBody .item .timeStatus .status-delivering { color: var(--color-success); font-weight: 600; }
+#order .divBody .item .timeStatus .status-complete { color: var(--color-text-hint); }
+#order .divBody .item .timeStatus .status-cancel { color: var(--color-text-disabled); }
+
 #order .divBody .item .dishList {
   padding-top: var(--spacing-sm);
   padding-bottom: 11rem;

@@ -46,6 +46,7 @@
         <div class="divHead">
             <div class="divTitle">
                 <i class="icon-back-arrow" @click="goBack"></i>消息中心
+                <span v-if="unreadCount > 0" class="mark-all-btn" @click.stop="markAllRead">全部已读</span>
             </div>
         </div>
 
@@ -82,8 +83,8 @@
 
             <!-- 空状态 -->
             <div class="empty-state" v-if="messages.length === 0 && !loading">
-                <img src="./../images/noImg.png" alt="暂无图片"/>
-                <p>暂无消息</p>
+                <i class="ri-chat-3-line"></i>
+                <p class="empty-text">暂无消息</p>
             </div>
 
             <!-- 加载更多 -->
@@ -123,6 +124,7 @@
                     loading: false,
                     refreshing: false,
                     hasMore: true,
+                    unreadCount: 0,
                     detail: {
                         show: false,
                         title: '',
@@ -133,6 +135,7 @@
             },
             created: function() {
                 this.loadMessages();
+                this.fetchUnreadCount();
                 // 修改点：注册 ESC 键监听，支持关闭消息详情弹窗
                 this._handleEscKey = function(e) {
                     if ((e.key === 'Escape' || e.key === 'Esc') && this.detail.show) {
@@ -199,6 +202,7 @@
                         recommendApi.markMessageRead(msg.id).then(function(res) {
                             if (res && res.code === 1) {
                                 msg.status = 2;
+                                if (self.unreadCount > 0) self.unreadCount--;
                             }
                         }).catch(function(err) {
                             console.error('标记已读失败:', err);
@@ -208,6 +212,38 @@
 
                 closeDetail: function() {
                     this.detail.show = false;
+                },
+
+                fetchUnreadCount: function() {
+                    var self = this;
+                    recommendApi.getUnreadCount().then(function(res) {
+                        if (res && res.code === 1 && res.data !== undefined) {
+                            self.unreadCount = res.data;
+                        }
+                    }).catch(function() {});
+                },
+
+                markAllRead: function() {
+                    var self = this;
+                    var unreadMsgs = self.messages.filter(function(m) { return m.status === 1; });
+                    if (unreadMsgs.length === 0) {
+                        vant.Toast('暂无未读消息');
+                        return;
+                    }
+                    vant.Dialog.confirm({
+                        title: '全部已读',
+                        message: '确定将所有未读消息标记为已读？'
+                    }).then(function() {
+                        var promises = unreadMsgs.map(function(m) {
+                            return recommendApi.markMessageRead(m.id).then(function(res) {
+                                if (res && res.code === 1) { m.status = 2; }
+                            }).catch(function() {});
+                        });
+                        Promise.all(promises).then(function() {
+                            self.unreadCount = 0;
+                            vant.Toast.success('已全部标记为已读');
+                        });
+                    }).catch(function() {});
                 },
 
                 pushTypeName: function(type) {

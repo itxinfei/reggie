@@ -3,14 +3,13 @@
   height: 100%;
 }
 
-/* ---- 头部：统一品牌渐变色 + 调整高度适配用户信息 ---- */
+/* ---- 头部：统一品牌渐变色 + 增大头像 + 优化布局 ---- */
 #user .divHead {
   width: 100%;
-  height: 140rem;
+  height: 164rem;
   background: var(--color-primary-gradient);
   box-sizing: border-box;
-  padding-left: var(--spacing-md);
-  padding-right: var(--spacing-md);
+  padding: 0 var(--spacing-lg) var(--spacing-lg);
 }
 
 #user .divHead .divTitle {
@@ -21,8 +20,8 @@
   text-align: center;
   color: var(--color-text-primary);
   line-height: 25rem;
-  padding-top: 44rem;
-  margin-bottom: 14rem;
+  padding-top: 48rem;
+  margin-bottom: 16rem;
   position: relative;
 }
 
@@ -44,13 +43,14 @@
 }
 
 #user .divHead .divUser > img {
-  width: 52rem;
-  height: 52rem;
+  width: 64rem;
+  height: 64rem;
   border-radius: var(--radius-round);
-  margin-right: var(--spacing-md);
-  border: 2px solid rgba(255, 255, 255, 0.6);
+  margin-right: var(--spacing-lg);
+  border: 3px solid rgba(255, 255, 255, 0.7);
   background: var(--bg-hover);
   object-fit: cover;
+  box-shadow: 0 2rem 8rem rgba(0, 0, 0, 0.15);
 }
 
 #user .divHead .divUser .desc {
@@ -60,7 +60,7 @@
 }
 
 #user .divHead .divUser .desc .divName {
-  font-size: var(--font-size-lg);
+  font-size: 18rem;
   font-family: var(--font-family-title);
   font-weight: 600;
   text-align: left;
@@ -68,13 +68,14 @@
   margin-bottom: 4rem;
   display: flex;
   align-items: center;
+  gap: 8rem;
 }
 
 /* 修改点：动态性别图标 */
 #user .divHead .divUser .desc .divName .gender-icon {
-  width: 16rem;
-  height: 16rem;
-  margin-left: 6rem;
+  width: 18rem;
+  height: 18rem;
+  margin-left: 0;
   opacity: 0.8;
 }
 
@@ -87,10 +88,9 @@
   color: rgba(51, 51, 51, 0.75);
 }
 
-/* 修改点：divContent 高度与头部精确匹配 —— 头部 #user .divHead 高度 140rem，
-   原 148rem 与头部差 8rem，导致内容区底部错位/异常留白（2026-09-01 微调） */
+/* 修改点：divContent 高度与头部精确匹配 —— 头部 #user .divHead 高度 164rem */
 #user .divContent {
-  height: calc(100% - 140rem);
+  height: calc(100% - 164rem);
   overflow-y: auto;
   padding-bottom: var(--spacing-xl);
 }
@@ -125,17 +125,25 @@
   border: 0;
 }
 
-/* 修改点：菜单位图 png → ri-* 矢量图标，图标统一用品牌金色 + 激活加深 */
+/* 修改点：菜单位图 png → ri-* 矢量图标，图标统一用品牌金色圆形背景衬底 */
 #user .divLinks .item .link-icon {
   font-size: 18rem;
   line-height: 1;
-  margin-right: 7rem;
-  color: var(--color-primary);
-  transition: color var(--transition-fast);
+  margin-right: 10rem;
+  color: var(--color-primary-dark);
+  width: 36rem;
+  height: 36rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-tint);
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
 }
 
 #user .divLinks .item:active .link-icon {
-  color: var(--color-primary-dark);
+  background: var(--color-primary-tint-strong);
 }
 
 #user .divLinks .item span {
@@ -309,24 +317,19 @@
 
 /* ---- 退出登录 ---- */
 #user .quitLogin {
-  margin: 0 var(--spacing-md) var(--spacing-md);
-  height: 50rem;
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  font-size: 15rem;
+  margin: var(--spacing-xl) auto var(--spacing-lg);
+  padding: var(--spacing-sm) 0;
+  font-size: 13rem;
   font-family: var(--font-family-body);
-  font-weight: 500;
+  font-weight: 400;
   text-align: center;
-  color: var(--color-danger);
-  line-height: 50rem;
+  color: var(--color-text-hint);
   cursor: pointer;
-  transition: all var(--transition-normal);
-  box-shadow: var(--shadow-card);
+  transition: color var(--transition-fast);
   user-select: none;
 }
 
 #user .quitLogin:active {
-  background: var(--color-danger-tint);
   color: var(--color-danger);
 }
 
@@ -335,4 +338,170 @@
   color: var(--color-text-disabled);
   cursor: not-allowed;
   pointer-events: none;
+}
+
+/* ================================================================
+   新增：头部会员标签（紧跟用户名）
+   ================================================================ */
+#user .divHead .divUser .desc .divName .member-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3rem;
+  font-size: 10rem;
+  font-weight: 600;
+  padding: 2rem 8rem;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-primary);
+  letter-spacing: 0.5rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#user .divHead .divUser .desc .divName .member-tag i {
+  font-size: 12rem;
+}
+
+/* ================================================================
+   新增：订单快捷入口网格
+   ================================================================ */
+#user .order-quick-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  margin: var(--spacing-md) var(--spacing-md) 0;
+  padding: var(--spacing-lg) 0;
+  box-shadow: var(--shadow-card);
+}
+
+#user .order-quick-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rem;
+  cursor: pointer;
+  position: relative;
+  flex: 1;
+  transition: transform var(--transition-fast);
+}
+
+#user .order-quick-item:active {
+  transform: scale(0.92);
+}
+
+#user .order-quick-item .oq-icon {
+  width: 40rem;
+  height: 40rem;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20rem;
+  background: var(--color-primary-tint);
+  color: var(--color-primary-dark);
+  position: relative;
+}
+
+#user .order-quick-item .oq-icon.oq-pending {
+  background: rgba(255, 154, 0, 0.1);
+  color: #ff9a00;
+}
+
+#user .order-quick-item .oq-icon.oq-delivering {
+  background: rgba(7, 193, 96, 0.1);
+  color: #07c160;
+}
+
+#user .order-quick-item .oq-icon.oq-evaluate {
+  background: rgba(255, 179, 0, 0.1);
+  color: #ffb300;
+}
+
+#user .order-quick-item .oq-icon.oq-refund {
+  background: rgba(233, 78, 60, 0.1);
+  color: #e94e3c;
+}
+
+#user .order-quick-item .oq-badge {
+  position: absolute;
+  top: -4rem;
+  right: -4rem;
+  min-width: 16rem;
+  height: 16rem;
+  border-radius: 8rem;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 10rem;
+  font-family: var(--font-family-number);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4rem;
+  line-height: 1;
+}
+
+#user .order-quick-item .oq-label {
+  font-size: 12rem;
+  font-family: var(--font-family-body);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* ================================================================
+   新增：菜单分组标题
+   ================================================================ */
+#user .menu-group-title {
+  font-size: 13rem;
+  font-family: var(--font-family-body);
+  font-weight: 500;
+  color: var(--color-text-hint);
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-sm);
+  margin: 0;
+}
+
+/* ================================================================
+   新增：菜单项消息角标
+   ================================================================ */
+#user .divLinks .item .msg-badge {
+  position: absolute;
+  right: 24rem;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 16rem;
+  height: 16rem;
+  border-radius: 8rem;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 10rem;
+  font-family: var(--font-family-number);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4rem;
+  line-height: 1;
+}
+
+/* ================================================================
+   新增：订单状态颜色
+   ================================================================ */
+#user .divOrders .timeStatus .status-pending {
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+#user .divOrders .timeStatus .status-delivering {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+#user .divOrders .timeStatus .status-complete {
+  color: var(--color-text-hint);
+}
+
+#user .divOrders .timeStatus .status-cancel {
+  color: var(--color-text-disabled);
 }

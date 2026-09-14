@@ -47,7 +47,7 @@
                     <van-cell v-for="order in orderList" :key="order.id" class="item">
                         <div class="timeStatus">
                             <span>{{order.orderTime}}</span>
-                            <span>{{getStatus(order.status)}}</span>
+                            <span :class="getStatusClass(order.status)">{{getStatus(order.status)}}</span>
                         </div>
                         <div class="dishList">
                             <div v-for="(item,dIdx) in order.orderDetails || []" :key="dIdx" class="item">
@@ -253,6 +253,10 @@
                 },
                 getStatus(status){
                     return getStatus(status)
+                },
+                getStatusClass(status){
+                    var map = {1:'status-pending',2:'status-pending',3:'status-delivering',4:'status-complete',5:'status-cancel',6:'status-cancel'};
+                    return map[status] || '';
                 },
                 async addOrderAgain(order){
                     if(this.submitting) return;

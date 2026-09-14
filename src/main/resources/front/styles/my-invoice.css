@@ -1,0 +1,86 @@
+/* ========== 我的发票页面 ========== */
+
+#invoice-list-app body,
+#invoice-list-app { background: var(--bg-page); }
+
+/* 列表 */
+#invoice-list-app .inv-list { padding: 16rem 16rem 24rem; }
+#invoice-list-app .inv-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 16rem 18rem;
+  margin-bottom: 16rem;
+  box-shadow: var(--shadow-card);
+  transition: transform var(--transition-fast);
+}
+#invoice-list-app .inv-card:active { transform: scale(0.98); }
+#invoice-list-app .inv-card .card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10rem;
+}
+#invoice-list-app .inv-card .title-name {
+  font-size: 15rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#invoice-list-app .inv-card .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4rem 0;
+  font-size: 13rem;
+  color: var(--color-text-secondary);
+}
+#invoice-list-app .inv-card .row .mono { font-family: var(--font-family-number, monospace); color: var(--color-text-primary); }
+#invoice-list-app .inv-card .row .price { color: var(--color-primary); font-weight: 700; font-size: 15rem; font-family: var(--font-family-number, monospace); }
+#invoice-list-app .inv-card .row .label { color: var(--color-text-hint); }
+
+/* 分页 */
+#invoice-list-app .pagination-wrap { margin-top: 8rem; }
+
+/* 空状态 — 使用全局 .empty-state 组件（index.css） */
+
+/* loading */
+#invoice-list-app .loading-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255, 255, 255, 0.6);
+  z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+}
+#invoice-list-app .loading-spinner {
+  width: 28rem; height: 28rem;
+  border: 3rem solid var(--border-light);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: loading-spin 0.8s linear infinite;
+}
+
+/* 骨架屏 */
+#invoice-list-app .skeleton-container { padding: 12rem 16rem; }
+#invoice-list-app .skeleton-inv-card {
+  background: #fff; border-radius: 8rem; padding: 14rem 16rem; margin-bottom: 12rem;
+}
+#invoice-list-app .skeleton-inv-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rem; }
+#invoice-list-app .skeleton-inv-row { display: flex; gap: 12rem; margin-bottom: 8rem; }
+#invoice-list-app .skeleton-tag { width: 50rem; height: 20rem; border-radius: 4rem; }
+#invoice-list-app .skeleton-line { height: 14rem; border-radius: 4rem; }
+#invoice-list-app .skeleton-w30 { width: 30%; }
+#invoice-list-app .skeleton-w40 { width: 40%; }
+#invoice-list-app .skeleton-w50 { width: 50%; }
+#invoice-list-app .skeleton-container .skeleton-inv-card,
+#invoice-list-app .skeleton-container .skeleton-inv-header,
+#invoice-list-app .skeleton-container .skeleton-inv-row,
+#invoice-list-app .skeleton-container .skeleton-line,
+#invoice-list-app .skeleton-container .skeleton-tag {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shine 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }

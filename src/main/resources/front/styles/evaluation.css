@@ -1,36 +1,36 @@
 /* ========== 我的评价页面 ========== */
 
 .eval-list {
-  padding: 0 16px 16px;
+  padding: 0 16rem 16rem;
 }
 
 .eval-card {
   background: var(--bg-card);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 8px var(--border-hair);
+  border-radius: var(--radius-lg);
+  padding: 16rem;
+  margin-bottom: 12rem;
+  box-shadow: var(--shadow-card);
 }
 
 .eval-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 10rem;
 }
 
 .dish-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 10rem;
   flex: 1;
   min-width: 0;
 }
 
 .dish-img {
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
+  width: 44rem;
+  height: 44rem;
+  border-radius: var(--radius-md);
   object-fit: cover;
   flex-shrink: 0;
   background: var(--bg-input);
@@ -42,7 +42,7 @@
 }
 
 .dish-name {
-  font-size: 15px;
+  font-size: 15rem;
   font-weight: 600;
   color: var(--color-text-primary);
   overflow: hidden;
@@ -53,18 +53,17 @@
 .eval-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 4px;
+  gap: 8rem;
+  margin-top: 4rem;
 }
 
 .eval-stars {
   display: inline-flex;
-  gap: 1px;
+  gap: 1rem;
 }
 
 .eval-stars .star {
-  /* 修改点：14px → 22px，与提交弹窗 .star-rating .star-item 星级尺寸统一，提升列表评分可读性 */
-  font-size: 22px;
+  font-size: 22rem;
   color: var(--color-text-disabled);
 }
 
@@ -73,15 +72,15 @@
 }
 
 .eval-date {
-  font-size: 12px;
+  font-size: 12rem;
   color: var(--color-text-secondary);
 }
 
 .status-tag {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+  padding: 2rem 8rem;
+  border-radius: var(--radius-sm);
+  font-size: 11rem;
   font-weight: 500;
   flex-shrink: 0;
 }
@@ -102,24 +101,24 @@
 }
 
 .eval-content {
-  font-size: 14px;
+  font-size: 14rem;
   color: var(--color-text-secondary);
   line-height: 1.6;
-  margin-bottom: 10px;
+  margin-bottom: 10rem;
   word-break: break-word;
 }
 
 .eval-imgs {
   display: flex;
-  gap: 8px;
+  gap: 8rem;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  margin-bottom: 10rem;
 }
 
 .eval-imgs img {
-  width: 80px;
-  height: 80px;
-  border-radius: 6px;
+  width: 80rem;
+  height: 80rem;
+  border-radius: 6rem;
   object-fit: cover;
   cursor: pointer;
   border: 1px solid var(--bg-hover);
@@ -127,64 +126,55 @@
 
 .reply-section {
   background: var(--bg-input);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-top: 8px;
+  border-radius: var(--radius-md);
+  padding: 10rem 12rem;
+  margin-top: 8rem;
 }
 
 .reply-label {
-  font-size: 12px;
+  font-size: 12rem;
   color: var(--color-text-hint);
-  margin-bottom: 4px;
+  margin-bottom: 4rem;
 }
 
 .reply-text {
-  font-size: 14px;
+  font-size: 14rem;
   color: var(--color-text-primary);
   line-height: 1.6;
 }
 
 .reply-time {
-  font-size: 12px;
+  font-size: 12rem;
   color: var(--color-text-secondary);
-  margin-top: 6px;
+  margin-top: 6rem;
 }
 
 .eval-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 10px;
-  padding-top: 10px;
+  gap: 12rem;
+  margin-top: 10rem;
+  padding-top: 10rem;
   border-top: 1px solid var(--bg-hover);
 }
 
 /* 提交评价弹窗 */
 .submit-eval-item {
-  margin-bottom: 16px;
-  padding: 12px;
+  margin-bottom: 16rem;
+  padding: 12rem;
   background: var(--bg-input);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 20px;
-}
-.empty-state .empty-img { width: 120rem; opacity: 0.4; }
-.empty-state .empty-text { color: var(--color-text-hint); margin-top: 16rem; font-size: 14rem; }
 .empty-state .pagination-wrap { margin: 16rem 0; }
 
-/* 修改点：自定义星级评分组件（替代el-rate） */
+/* 自定义星级评分组件 */
 .star-rating {
   display: inline-flex;
-  gap: 2px;
+  gap: 2rem;
 }
 .star-rating .star-item {
-  font-size: 22px;
+  font-size: 22rem;
   color: var(--color-text-disabled);
   cursor: pointer;
   transition: color 0.15s, transform 0.15s;
@@ -197,36 +187,36 @@
   transform: scale(1.15);
 }
 
-/* 修改点：文本按钮样式（替代 el-button type="text"） */
+/* 文本按钮样式 */
 .btn-text {
   background: none;
   border: none;
-  font-size: 13px;
+  font-size: 13rem;
   color: var(--color-primary);
-  padding: 4px 8px;
+  padding: 4rem 8rem;
   cursor: pointer;
 }
 .btn-text.btn-text-danger {
   color: var(--color-danger);
 }
 
-/* 修改点：主要按钮（空状态"去下单"） */
+/* 主要按钮（空状态"去下单"） */
 .btn-primary {
   background: var(--color-primary-gradient);
   color: var(--color-text-primary);
   border: none;
-  border-radius: 20px;
-  padding: 8px 24px;
-  font-size: 14px;
+  border-radius: var(--radius-xl);
+  padding: 8rem 24rem;
+  font-size: 14rem;
   cursor: pointer;
-  margin-top: 12px;
+  margin-top: 12rem;
   transition: opacity 0.2s;
 }
 .btn-primary:active {
   opacity: 0.85;
 }
 
-/* 修改点：评价提交弹窗样式（替代el-dialog） */
+/* 评价提交弹窗样式 */
 .submit-modal {
   position: fixed;
   top: 0;
@@ -250,54 +240,53 @@
   position: relative;
   z-index: 2001;
   width: 90%;
-  max-width: 420px;
+  max-width: 420rem;
   background: var(--bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 8px 32px var(--mask-medium);
+  box-shadow: 0 8rem 32rem var(--mask-medium);
 }
 .submit-modal-header {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 16rem;
   border-bottom: 1px solid var(--border-light);
 }
 .submit-modal-header h3 {
-  font-size: 17px;
+  font-size: 17rem;
   font-weight: 600;
   color: var(--color-text-primary);
   margin: 0;
 }
 .submit-modal-header .modal-close {
   position: absolute;
-  right: 14px;
+  right: 14rem;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 18px;
+  font-size: 18rem;
   color: var(--color-text-hint);
   cursor: pointer;
-  /* 修改点：扩展点击热区至 ≥44px（4px → 13px） */
-  padding: 13px;
+  padding: 13rem;
   line-height: 1;
 }
 .submit-modal-body {
-  padding: 16px;
+  padding: 16rem;
   max-height: 50vh;
   overflow-y: auto;
 }
 .submit-modal-footer {
   display: flex;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 12rem;
+  padding: 12rem 16rem;
   border-top: 1px solid var(--border-light);
   justify-content: flex-end;
 }
 .submit-modal-footer button {
-  padding: 8px 20px;
-  border-radius: 20px;
-  font-size: 14px;
+  padding: 8rem 20rem;
+  border-radius: var(--radius-xl);
+  font-size: 14rem;
   cursor: pointer;
   border: 1px solid var(--border-medium);
   background: var(--bg-card);
@@ -314,26 +303,26 @@
   cursor: not-allowed;
 }
 
-/* 修改点：评价表单内部样式 */
+/* 评价表单内部样式 */
 .submit-order-info {
-  margin-bottom: 16px;
-  padding: 10px;
+  margin-bottom: 16rem;
+  padding: 10rem;
   background: var(--bg-input);
-  border-radius: 6px;
+  border-radius: 6rem;
 }
 .submit-order-id {
   font-weight: 500;
 }
 .submit-order-tip {
   color: var(--color-text-secondary);
-  font-size: 13px;
-  margin-top: 4px;
+  font-size: 13rem;
+  margin-top: 4rem;
 }
 .submit-dish-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 10rem;
+  margin-bottom: 10rem;
 }
 .submit-dish-name {
   font-weight: 500;
@@ -342,9 +331,9 @@
 .eval-textarea {
   width: 100%;
   border: 1px solid var(--bg-hover);
-  border-radius: 8px;
-  padding: 10px;
-  font-size: 14px;
+  border-radius: var(--radius-md);
+  padding: 10rem;
+  font-size: 14rem;
   font-family: inherit;
   line-height: 1.5;
   resize: vertical;
@@ -353,42 +342,41 @@
 }
 .eval-textarea:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-tint);
+  box-shadow: 0 0 0 3rem var(--color-primary-tint);
 }
 .eval-word-count {
   display: block;
   text-align: right;
-  font-size: 12px;
+  font-size: 12rem;
   color: var(--color-text-hint);
-  margin-top: 4px;
+  margin-top: 4rem;
 }
 
 /* 写评价入口栏 */
-/* 修改点：金底白字的"去评价"主按钮 → 描边态白底金边金字，与提交弹窗取消按钮同构，降低金底区域的金色面积占比 */
 .write-eval-bar {
-  margin: 10px 12px;
-  padding: 12px;
+  margin: 10rem 12rem;
+  padding: 12rem;
   background: var(--color-primary-tint);
   border: 1px solid var(--color-primary-tint-lg);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 10rem;
 }
 .write-eval-bar .write-eval-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 8rem;
+  font-size: 13rem;
   color: var(--color-text-primary);
-  line-height: 20px;
+  line-height: 20rem;
 }
 .write-eval-bar .write-eval-info i {
-  font-size: 18px;
+  font-size: 18rem;
   color: var(--color-primary-dark);
 }
-/* 入口按钮：描边态（白底 + 金边 + 深金文字），点击反馈走 Vant 默认 plain 按压态 */
+/* 入口按钮：描边态（白底 + 金边 + 深金文字） */
 .write-eval-bar .van-button--primary.van-button--plain {
   background-color: var(--color-text-white) !important;
   border-color: var(--color-primary) !important;
@@ -396,22 +384,20 @@
   font-weight: 600;
 }
 
-/* ================================================================
-   桌面端适配（与 address/address-edit 页面一致：限宽居中，避免全宽拉伸）
-   ================================================================ */
+/* 桌面端适配 */
 @media screen and (min-width: 752px) {
   #eval-app .eval-list {
-    max-width: 460px;
+    max-width: 460rem;
     margin: 0 auto;
     width: 100%;
     box-sizing: border-box;
   }
   #eval-app .write-eval-bar {
-    max-width: 460px;
+    max-width: 460rem;
     margin-left: auto;
     margin-right: auto;
   }
   #eval-app .submit-dialog {
-    max-width: 420px;
+    max-width: 420rem;
   }
 }

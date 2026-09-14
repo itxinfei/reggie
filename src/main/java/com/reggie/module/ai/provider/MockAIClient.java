@@ -15,14 +15,17 @@ import java.util.List;
  * <p>
  * 模拟AI Provider，无需API Key即可使用，用于演示、测试或无网络环境。
  * </p>
+ * <p>
+ * 修改点（2026-09-14）：移除 matchIfMissing=true 和 @Primary，不再默认激活。
+ * 需要演示模式时在 application.yml 显式设置 reggie.ai.enabled=false。
+ * </p>
  *
  * @author 心飞为你飞
  * @since 2026-07-09
  */
 @Slf4j
 @Component
-@Primary
-@ConditionalOnProperty(name = "reggie.ai.enabled", havingValue = "false", matchIfMissing = true)
+@ConditionalOnProperty(name = "reggie.ai.enabled", havingValue = "false")
 public class MockAIClient implements AIClient {
 
     /** AI配置属性 */
