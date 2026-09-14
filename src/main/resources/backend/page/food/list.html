@@ -453,7 +453,7 @@
           try {
             var dishRes = await getDishPage(params)
             if (String(dishRes.code) === '1') { self.tableData = dishRes.data.records || []; self.counts = dishRes.data.total }
-          } catch (err) { ReggieUI.error('加载菜品列表失败:') }
+          } catch (err) { ReggieUI.error('加载菜品列表失败') }
           self.loading = false
         },
         // 修改点：F9 列表 + 统计一起刷新（仅在增删改/上下架等会改变全局计数的操作后调用）

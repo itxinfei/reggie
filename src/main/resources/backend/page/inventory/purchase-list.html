@@ -493,7 +493,7 @@
           }
         },
         statusType(status) {
-          const map = { DRAFT: 'info', ORDERED: 'warning', PARTIAL: '', RECEIVED: 'success', CANCELLED: 'danger' }
+          const map = { DRAFT: 'info', ORDERED: 'warning', PARTIAL: 'warning', RECEIVED: 'success', CANCELLED: 'danger' }
           return map[status] || 'info'
         },
         statusLabel(status) {

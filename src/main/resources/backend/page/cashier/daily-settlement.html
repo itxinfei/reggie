@@ -137,9 +137,9 @@
           </span>
         </template>
         <template #col-status="{ row }">
-          <span class="status-tag" :class="row.status === 1 ? 'settled' : 'unsettled'">
+          <el-tag size="small" :type="row.status === 1 ? 'success' : 'warning'">
             {{ row.status === 1 ? '已结算' : '未结算' }}
-          </span>
+          </el-tag>
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="handleViewDetail(row)">查看</el-button>
