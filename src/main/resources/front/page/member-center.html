@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>会员中心 - 瑞吉外卖</title>
   <link rel="stylesheet" href="../styles/vant.min.css">
-  <link rel="stylesheet" href="../styles/index.css">
+  <link rel="stylesheet" href="../styles/index.css?v=20260914">
   <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css">
   <!-- 修改点：emoji 兜底不再静态引入 —— fallback 在真字体之后加载会覆盖 ::before，导致权益图标渲染为彩色 emoji；
        字体加载失败时改由 js/icon-fallback.js 动态注入 remixicon-fallback.css 降级，避免空白方块 -->
@@ -37,7 +37,8 @@
     /* ---- 会员卡 ---- */
     .mc-card {
       margin: -10rem 16rem 16rem; background: var(--color-primary-gradient-card);
-      border-radius: 16rem; padding: 20rem 20rem 16rem; position: relative; z-index: 3;
+      /* 修改点(2026-09-14)：16rem → --radius-xl 令牌（值相同，统一走令牌便于换肤） */
+      border-radius: var(--radius-xl); padding: 20rem 20rem 16rem; position: relative; z-index: 3;
       /* 修改点：硬编码 rgba(224,144,0,0.3) → 令牌化金色阴影（阴影色为金褐色，属品牌色系，可加局部声明） */
       box-shadow: 0 8rem 30rem rgba(224, 144, 0, 0.3); overflow: hidden;
     }

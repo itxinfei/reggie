@@ -73,6 +73,25 @@
     }
   }
 
+  /**
+   * 未登录统一处理：清理本地登录态，并跳转登录页。
+   * iframe 内发 postMessage 通知顶层窗口跳转（index.html 已有 handleChildNotLogin 监听），
+   * 非 iframe 时直接当前窗口跳转。
+   * 修改点(2026-09-14)：从 success 拦截器抽取为独立函数，供 error 拦截器复用，
+   * 修复"后端未登录返回 HTTP 401 时 axios 走 error 分支，NOTLOGIN 跳转逻辑不生效"的缺陷。
+   */
+  function handleNotLogin() {
+    try { localStorage.removeItem('userInfo'); } catch (_) {}
+    clearCsrfToken();
+    if (window.self !== window.top) {
+      try {
+        window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*');
+      } catch (_) {}
+    } else {
+      window.location.href = '/backend/page/login/login.html';
+    }
+  }
+
   // 响应拦截器
   service.interceptors.response.use(res => {
       // 修改点：保存后端返回的CSRF Token
@@ -84,28 +103,7 @@
       const code = res.data ? res.data.code : undefined;
       // NOTLOGIN状态码处理：返回登录页面
       if (code === 0 && res.data.msg === 'NOTLOGIN') {
-        localStorage.removeItem('userInfo')
-        clearCsrfToken();
-        // 修改点(2026-08-12)：统一由顶层窗口跳转登录页。
-        // 优先导航顶层窗口；若处于 iframe 且顶层导航被浏览器策略阻止，
-        // 则发消息通知父窗口处理，避免登录页被嵌套在当前 iframe（数据区）内
-        // 修改点(2026-08-29)：修正NOTLOGIN顶层跳转逻辑。
-        // 旧逻辑用 `window.top && window.top !== window` 判定是否处于iframe：
-        // window.top 永远是对象引用（非null），跨源时浏览器也返回一个对象，
-        // 因此该判定恒为 true，导致 iframe 内必走 top.location 导航分支。
-        // 而 index.html 的 iframe sandbox 未加 allow-top-navigation，
-        // 顶层导航会被浏览器策略拦截抛异常，仅靠 catch 兜底 postMessage ——
-        // 属"依赖异常控制流"的脆弱写法。
-        // 新逻辑：window.self !== window.top 是明确、正确的 iframe 判定；
-        // 处于 iframe 时首选 postMessage 通知顶层（index.html 已有 handleChildNotLogin 监听），
-        // 非 iframe 时直接当前窗口跳转。
-        if (window.self !== window.top) {
-          try {
-            window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*');
-          } catch (_) {}
-        } else {
-          window.location.href = '/backend/page/login/login.html'
-        }
+        handleNotLogin();
         return Promise.reject(new Error('NOTLOGIN'))  // 修改点：阻止Promise继续进入then回调
       } else {
         // 修改点(2026-08-24)：业务失败（code=0 且非 NOTLOGIN）时，reject 让请求进入页面 catch，
@@ -130,6 +128,17 @@
       }
     },
     error => {
+      // 修改点(2026-09-14)：未登录识别。
+      // 后端 LoginCheckFilter 在未登录时返回 HTTP 401 + JSON body {code:0, msg:'NOTLOGIN'}，
+      // axios 会把 4xx 视为错误走本 error 分支，原 NOTLOGIN 跳转逻辑写在 success 分支不生效。
+      // 此处先识别 401/NOTLOGIN，复用 handleNotLogin 跳转登录页，且不弹错误提示。
+      if (error && error.response && error.response.status === 401) {
+        var respData = error.response.data;
+        if (respData && (respData.msg === 'NOTLOGIN' || respData.code === 0)) {
+          handleNotLogin();
+          return Promise.reject(new Error('NOTLOGIN'));
+        }
+      }
       let { message } = error;
       // 修改点：尝试从响应体中提取详细的错误信息
       if (error.response && error.response.data) {

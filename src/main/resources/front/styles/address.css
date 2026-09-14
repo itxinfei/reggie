@@ -435,7 +435,7 @@ body.scrollable-page {
   width: 72rem;
   height: 100%;
   background: var(--color-danger);
-  color: #fff;
+  color: var(--color-text-white);
   font-size: var(--font-size-sm);
   cursor: pointer;
 }

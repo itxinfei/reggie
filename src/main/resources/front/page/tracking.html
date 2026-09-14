@@ -7,7 +7,7 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260914" />
     <link rel="stylesheet" href="../styles/tracking.css" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js"></script>
@@ -48,11 +48,11 @@
             line-height: 22rem;
         }
 
-        /* 配送状态卡片 */
+        /* 配送状态卡片 —— 修改点(2026-09-14)：圆角与间距对齐全站卡片规范（--radius-lg） */
         .status-card {
-            margin: 0 12rem 10rem;
+            margin: 0 var(--spacing-md) var(--spacing-md);
             background: var(--bg-card);
-            border-radius: var(--radius-md);
+            border-radius: var(--radius-lg);
             padding: 18rem var(--spacing-md);
             box-shadow: var(--shadow-card);
             text-align: center;
@@ -77,6 +77,18 @@
             color: var(--color-text-primary);
             line-height: 26rem;
         }
+        .status-card .status-text {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            color: var(--color-text-primary);
+            line-height: 26rem;
+        }
+        /* 修改点(2026-09-14)：配送状态文字按全站状态色语义着色（--status-* 令牌） */
+        .status-card .status-text.status-pending   { color: var(--status-pending); }
+        .status-card .status-text.status-accepted  { color: var(--status-accepted); }
+        .status-card .status-text.status-shipped   { color: var(--status-shipped); }
+        .status-card .status-text.status-completed { color: var(--status-completed); }
+        .status-card .status-text.status-cancelled { color: var(--status-cancelled); }
         .status-card .status-desc {
             font-size: var(--font-size-sm);
             color: var(--color-text-hint);
@@ -325,7 +337,7 @@
                 <div class="status-icon">
                     <i :class="statusIcon"></i>
                 </div>
-                <div class="status-text">{{ statusText }}</div>
+                <div class="status-text" :class="statusClass">{{ statusText }}</div>
                 <div class="status-desc">{{ statusDesc }}</div>
             </div>
 
@@ -447,6 +459,19 @@
                         CANCELLED: 'ri-close-line'
                     };
                     return map[this.trackingData.status] || 'ri-map-pin-line';
+                },
+                // 修改点(2026-09-14)：配送状态 → 全站统一的状态色语义类（--status-*）
+                statusClass() {
+                    if (!this.trackingData) return 'status-pending';
+                    const map = {
+                        PENDING: 'status-pending',
+                        ACCEPTED: 'status-accepted',
+                        PICKING: 'status-accepted',
+                        DELIVERING: 'status-shipped',
+                        DELIVERED: 'status-shipped',
+                        CANCELLED: 'status-cancelled'
+                    };
+                    return map[this.trackingData.status] || 'status-pending';
                 },
                 timelineSteps() {
                     return [
