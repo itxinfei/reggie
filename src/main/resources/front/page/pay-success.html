@@ -30,6 +30,8 @@
                 <!-- 修改点：位图 success.png → 语义绿 RemixIcon（对齐 --color-success，随主题缩放不失真） -->
                 <i class="ri-checkbox-circle-fill success-icon" aria-hidden="true"></i>
                 <div class="divSuccess">下单成功</div>
+                <div class="divOrderNo" v-if="orderNo">订单号：{{orderNo}}</div>
+                <div class="divAmount" v-if="amount > 0">实付金额：<span class="price">￥{{amount.toFixed(2)}}</span></div>
                 <div class="divDesc">预计{{finishTime}}到达</div>
                 <div class="divDesc1">后厨正在加紧制作中，请耐心等待~</div>
                 <div class="divActions">
@@ -57,7 +59,10 @@
                 return {
                     finishTime:'',
                     // 修改点（P2-11）：订单列表「去支付」/下单后携带的订单 ID，用于回查支付结果
-                    reorderId: ''
+                    reorderId: '',
+                    // 修改点：展示订单号和实付金额
+                    orderNo: '',
+                    amount: 0
                 }
             },
             computed:{},
@@ -81,7 +86,10 @@
                         // 不再调用 paymentCreateApi 避免重复创建支付单
                         const res = await getOrderDetailApi(this.reorderId)
                         if(res && res.code === 1 && res.data){
-                            var orderStatus = res.data.status || res.data.orderStatus
+                            var d = res.data
+                            this.orderNo = d.number || d.orderNo || ''
+                            this.amount = Number(d.amount || d.actualAmount || 0)
+                            var orderStatus = d.status || d.orderStatus
                             if(orderStatus && orderStatus !== 1){
                                 vant.Toast.success('支付成功')
                             }else{

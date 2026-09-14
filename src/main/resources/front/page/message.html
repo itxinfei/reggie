@@ -179,6 +179,7 @@
                         }
                     }).catch(function(err) {
                         console.error('加载消息失败:', err);
+                        vant.Toast.fail('加载消息失败');
                     }).finally(function() {
                         self.loading = false;
                     });
@@ -206,6 +207,7 @@
                             }
                         }).catch(function(err) {
                             console.error('标记已读失败:', err);
+                            vant.Toast.fail('标记已读失败');
                         });
                     }
                 },

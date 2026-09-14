@@ -73,6 +73,25 @@
   margin-bottom: 10rem;
 }
 
+/* 修改点：订单号和实付金额展示 */
+#pay_success .divContent .divOrderNo {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  margin-bottom: 4rem;
+}
+
+#pay_success .divContent .divAmount {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  margin-bottom: 8rem;
+}
+
+#pay_success .divContent .divAmount .price {
+  color: var(--color-danger);
+  font-weight: 600;
+  font-family: var(--font-family-number);
+}
+
 #pay_success .divContent .divDesc,
 #pay_success .divContent .divDesc1 {
   height: auto;
