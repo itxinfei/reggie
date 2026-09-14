@@ -99,8 +99,8 @@
 #user .divLinks {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding-left: 17rem;
-  padding-right: 11rem;
+  /* 修改点(2026-09-14)：左右内边距对称统一为 16rem（原 17/11 不对称） */
+  padding: 0 var(--spacing-lg);
   margin: var(--spacing-md) var(--spacing-md) 0;
   box-shadow: var(--shadow-card);
 }
@@ -152,12 +152,15 @@
   color: var(--color-text-primary);
 }
 
-#user .divLinks .item i {
+/* 修改点(2026-09-14 修复图标错位)：原选择器命中行内所有 <i>，把左侧的 .link-icon 也绝对定位到了右边，
+   与箭头重叠，导致"菜单图标跑到右侧"。改为只作用于箭头（排除 .link-icon）。 */
+#user .divLinks .item > i:not(.link-icon) {
   position: absolute;
   right: 0;
   top: 50%;
   transform: translate(0, -50%);
   color: var(--color-text-hint);
+  font-size: 18rem;
 }
 
 /* ---- 最新订单卡片 ---- */
@@ -404,24 +407,14 @@
   position: relative;
 }
 
-#user .order-quick-item .oq-icon.oq-pending {
-  background: var(--color-primary-dark-tint);
-  color: var(--color-primary-dark);
-}
-
-#user .order-quick-item .oq-icon.oq-delivering {
-  background: var(--color-success-tint);
-  color: var(--color-success);
-}
-
-#user .order-quick-item .oq-icon.oq-evaluate {
-  background: var(--color-warning-tint, rgba(255, 179, 0, 0.12));
-  color: var(--color-warning);
-}
-
+/* 修改点(2026-09-14 统一设计语言)：原 5 个订单入口混用 金/绿/金/红 三色，视觉杂乱；
+   统一为品牌金底 + 深金字，数量信息由红色角标承载（更贴近美团订单入口的克制配色） */
+#user .order-quick-item .oq-icon.oq-pending,
+#user .order-quick-item .oq-icon.oq-delivering,
+#user .order-quick-item .oq-icon.oq-evaluate,
 #user .order-quick-item .oq-icon.oq-refund {
-  background: var(--color-danger-tint);
-  color: var(--color-danger);
+  background: var(--color-primary-tint);
+  color: var(--color-primary-dark);
 }
 
 #user .order-quick-item .oq-badge {
@@ -456,9 +449,11 @@
 #user .menu-group-title {
   font-size: 13rem;
   font-family: var(--font-family-body);
-  font-weight: 500;
-  color: var(--color-text-hint);
-  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-sm);
+  font-weight: 600;
+  letter-spacing: 0.5rem;
+  /* 修改点(2026-09-14 可访问性)：#999 在白色上对比度约 2.9:1 不达 AA，改用 #666（约 5.7:1） */
+  color: var(--color-text-secondary);
+  padding: var(--spacing-lg) 0 var(--spacing-sm);
   margin: 0;
 }
 

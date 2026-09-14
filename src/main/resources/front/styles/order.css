@@ -77,30 +77,42 @@
 /* 修改点：美团风格状态Tab筛选栏 */
 #order .status-tabs {
   display: flex;
-  height: 44rem;
+  height: 46rem;
   background: var(--bg-card);
-  padding: 0 12rem;
-  border-bottom: 1px solid var(--bg-hover);
+  padding: 0 8rem;
+  border-bottom: 1px solid var(--border-light);
   position: sticky;
   top: 0;
   z-index: 10;
+  /* 修改点(2026-09-14)：7 个状态过多，允许横向滚动兜底，避免挤压 */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#order .status-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 #order .status-tabs .status-tab {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   text-align: center;
-  line-height: 44rem;
+  line-height: 46rem;
   font-size: var(--font-size-md);
   font-family: var(--font-family-body);
   color: var(--color-text-secondary);
   cursor: pointer;
   position: relative;
+  padding: 0 2rem;
+  white-space: nowrap;
   transition: color var(--transition-fast);
 }
 
+/* 修改点(2026-09-14 可访问性)：原激活态文字用品牌金 #ffc200（白底对比度约 1.6:1，远低于 AA 4.5:1）；
+   改为深色加粗文字 + 金色指示条（对比度约 12.6:1），品牌识别由指示条承载 */
 #order .status-tabs .status-tab.active {
-  color: var(--color-primary);
-  font-weight: 600;
+  color: var(--color-text-primary);
+  font-weight: 700;
   font-family: var(--font-family-title);
 }
 
@@ -110,10 +122,10 @@
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 24rem;
+  width: 28rem;
   height: 3rem;
   background: var(--color-primary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xl);
 }
 
 #order .divBody .van-list .van-cell::after {
@@ -338,9 +350,9 @@
 }
 
 #order .divNoData .divContainer img {
-  width: 240rem;
-  height: 129rem;
-  opacity: 0.6;
+  width: 220rem;
+  height: 118rem;
+  opacity: 0.75;
 }
 
 #order .divNoData .divContainer div {
@@ -348,7 +360,8 @@
   font-family: var(--font-family-body);
   font-weight: 400;
   text-align: center;
-  color: var(--color-text-hint);
+  /* 修改点(可访问性)：#999 → #666，白底对比度 2.9:1 → 5.7:1 */
+  color: var(--color-text-secondary);
   line-height: 33rem;
   height: 33rem;
   margin-top: 12rem;
@@ -357,16 +370,18 @@
 /* 修改点：空状态引导按钮 */
 #order .divNoData .divContainer .goShopBtn {
   display: inline-block;
-  height: 36rem;
-  line-height: 36rem;
-  padding: 0 32rem;
-  margin-top: 16rem;
+  height: 40rem;
+  line-height: 40rem;
+  padding: 0 34rem;
+  margin-top: 20rem;
   background: var(--color-primary-gradient);
-  border-radius: var(--radius-xl);
+  border-radius: 999rem;
   font-size: var(--font-size-md);
   font-weight: 600;
+  letter-spacing: 1rem;
   color: var(--color-text-primary);
   cursor: pointer;
+  box-shadow: 0 4rem 12rem var(--color-primary-shadow);
   transition: all var(--transition-normal);
 }
 #order .divNoData .divContainer .goShopBtn:active {

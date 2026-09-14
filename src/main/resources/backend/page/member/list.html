@@ -76,6 +76,13 @@
             @click="statusHandle(row)"
             v-if="isAdmin"
           >{{ row.status == '1' ? '禁用' : '启用' }}</el-button>
+          <el-button
+            type="text"
+            size="small"
+            class="btn-delete"
+            @click="deleteHandle(row)"
+            v-if="isAdmin"
+          >删除</el-button>
         </template>
       </crud-table>
     </main>
@@ -460,6 +467,26 @@
                 ReggieUI.error('请求失败：' + err)
               })
             }).catch((e) => { console.warn('[member/list.html] 用户取消调整账号状态:', e) })
+          },
+          // 删除员工
+          deleteHandle(row) {
+            ReggieUI.confirm('确认删除员工「' + row.name + '」吗？删除后不可恢复。', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }).then(async () => {
+              try {
+                const res = await deleteEmployee([row.id])
+                if (String(res.code) === '1') {
+                  ReggieUI.success('删除成功')
+                  this.refreshAll()
+                } else {
+                  ReggieUI.error(res.msg || '删除失败')
+                }
+              } catch (err) {
+                ReggieUI.error('请求失败：' + err)
+              }
+            }).catch((e) => { console.warn('[member/list.html] 用户取消删除操作:', e) })
           },
           // 导出员工数据
           exportEmployees(format) {

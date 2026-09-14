@@ -215,11 +215,12 @@
 }
 
 /* ---- 商家信息卡片 ---- */
+/* 修改点(2026-09-14 对齐美团)：放大圆角与留白、logo 更大更圆、店名加重 */
 .restaurant-card {
   background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  padding: 14rem 14rem 8rem 14rem;
-  box-shadow: var(--shadow-md);
+  border-radius: 14rem;
+  padding: 16rem 14rem 10rem 14rem;
+  box-shadow: 0 6rem 18rem rgba(120, 80, 0, 0.08);
   position: relative;
   z-index: 2;
 }
@@ -227,15 +228,15 @@
 .restaurant-card .rc-top {
   display: flex;
   align-items: flex-start;
-  margin-bottom: 8rem;
+  margin-bottom: 10rem;
 }
 
 .restaurant-card .rc-logo {
-  width: 56rem;
-  height: 56rem;
-  border-radius: var(--radius-md);
+  width: 60rem;
+  height: 60rem;
+  border-radius: 10rem;
   flex-shrink: 0;
-  margin-right: 10rem;
+  margin-right: 12rem;
   object-fit: cover;
   border: 1px solid var(--border-hair);
 }
@@ -248,14 +249,15 @@
 .restaurant-card .rc-name-row {
   display: flex;
   align-items: center;
-  margin-bottom: 5rem;
+  margin-bottom: 6rem;
 }
 
 .restaurant-card .rc-name {
-  font-size: 18rem;
-  font-weight: 700;
+  font-size: 19rem;
+  font-weight: 800;
   color: var(--color-text-primary);
   margin-right: 6rem;
+  line-height: 24rem;
 }
 
 .restaurant-card .rc-brand {
@@ -272,10 +274,11 @@
 .restaurant-card .rc-meta {
   font-size: 11rem;
   color: var(--color-text-secondary);
-  margin-bottom: 4rem;
+  margin-bottom: 5rem;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  line-height: 16rem;
 }
 
 .restaurant-card .rc-stars {
@@ -294,6 +297,7 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  line-height: 16rem;
 }
 
 /* ---- 优惠券栏（美团最标志性元素） ---- */
@@ -313,15 +317,18 @@
   display: none;
 }
 
+/* 修改点(2026-09-14 对齐美团)：券胶囊统一 22rem 高、6rem 圆角、加粗金额 */
 .coupon-bar .coupon-item {
   display: flex;
   align-items: center;
   flex-shrink: 0;
   margin-right: 8rem;
   background: var(--color-price-tint);
-  border: 0.5px solid var(--color-price-tint-strong);
-  border-radius: var(--radius-md);
-  padding: 2rem 6rem;
+  border: 1px solid var(--color-price-tint-strong);
+  border-radius: 6rem;
+  padding: 3rem 8rem 3rem 3rem;
+  height: 22rem;
+  box-sizing: border-box;
 }
 
 .coupon-bar .coupon-item .coupon-tag {
@@ -329,10 +336,10 @@
   font-weight: 700;
   color: var(--color-text-white);
   background: var(--color-price);
-  padding: 1rem 4rem;
-  border-radius: var(--radius-md);
-  margin-right: 3rem;
-  line-height: 14rem;
+  padding: 0 4rem;
+  border-radius: 4rem;
+  margin-right: 4rem;
+  line-height: 15rem;
 }
 
 .coupon-bar .coupon-item .coupon-text {
@@ -340,9 +347,9 @@
   color: var(--color-price);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
-  line-height: 14rem;
+  line-height: 15rem;
 }
 
 .coupon-bar .coupon-arrow {
@@ -358,12 +365,13 @@
   display: flex;
   align-items: center;
   background: var(--color-primary-light);
-  border-radius: var(--radius-md);
-  padding: 7rem 10rem;
-  margin-top: 8rem;
+  border-radius: 8rem;
+  padding: 8rem 10rem;
+  margin-top: 10rem;
   font-size: 11rem;
   color: var(--color-text-primary);
   cursor: pointer;
+  line-height: 16rem;
 }
 
 .notice-bar .notice-icon {
@@ -398,7 +406,7 @@
 
 /* ---- 左侧分类栏（精确美团样式） ---- */
 .category-sidebar {
-  width: 80rem;
+  width: 86rem;
   background: var(--bg-page);
   overflow-y: auto;
   overflow-x: hidden;
@@ -412,17 +420,17 @@
 
 .category-sidebar .cat-item {
   position: relative;
-  padding: 12rem 6rem;
+  padding: 13rem 6rem;
   text-align: center;
   cursor: pointer;
   transition: background 0.15s;
-  min-height: 56rem;
+  min-height: 58rem;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
+  gap: 3rem;
 }
 
 .category-sidebar .cat-item:active {
@@ -431,7 +439,7 @@
 
 /* 分类图标 */
 .category-sidebar .cat-item .cat-icon {
-  font-size: 18rem;
+  font-size: 19rem;
   color: var(--color-text-hint);
   transition: color 0.2s;
 }
@@ -468,9 +476,9 @@
   top: 50%;
   transform: translateY(-50%);
   width: 3rem;
-  height: 18rem;
+  height: 20rem;
   background: var(--color-primary);
-  border-radius: 0 2rem 2rem 0;
+  border-radius: 0 3rem 3rem 0;
 }
 
 .category-sidebar .cat-item .cat-badge {
@@ -507,10 +515,11 @@
 }
 
 /* 菜品条目 */
+/* 修改点(2026-09-14 对齐美团)：行高留白 +2rem，缩略图 88→90rem，分割线起点随之后移 */
 .dish-item {
   display: flex;
   align-items: flex-start;
-  padding: 12rem 14rem;
+  padding: 14rem 14rem;
   position: relative;
 }
 
@@ -518,7 +527,7 @@
   content: '';
   position: absolute;
   bottom: 0;
-  left: 116rem;
+  left: 118rem;
   right: 14rem;
   height: 1px;
   background: var(--bg-hover);
@@ -529,9 +538,9 @@
 }
 
 .dish-item .di-image {
-  width: 88rem;
-  height: 88rem;
-  border-radius: var(--radius-md);
+  width: 90rem;
+  height: 90rem;
+  border-radius: 8rem;
   flex-shrink: 0;
   overflow: hidden;
   position: relative;
@@ -565,10 +574,11 @@
   background: linear-gradient(135deg, var(--color-price), var(--color-danger));
   color: var(--color-text-white);
   font-size: 9rem;
-  font-weight: 600;
-  padding: 1rem 5rem;
-  border-radius: 4rem 0 5rem 0;
-  line-height: 1.5;
+  font-weight: 700;
+  padding: 2rem 6rem;
+  border-radius: 6rem 0 8rem 0;
+  line-height: 1.4;
+  letter-spacing: 0.5rem;
 }
 
 .dish-item .di-info {
@@ -578,7 +588,7 @@
   display: flex;
   flex-direction: column;
   padding-right: 0;
-  min-height: 88rem;
+  min-height: 90rem;
 }
 
 .dish-item .di-name {
@@ -615,17 +625,20 @@
 }
 
 .dish-item .di-price {
-  font-size: 18rem;
-  font-weight: 700;
+  font-size: 20rem;
+  font-weight: 800;
   color: var(--color-price);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
   line-height: 1;
+  letter-spacing: -0.3rem;
 }
 
 .dish-item .di-price .di-symbol {
   font-size: 12rem;
-  font-weight: 600;
+  font-weight: 700;
+  margin-right: 1rem;
+  letter-spacing: 0;
 }
 
 /* 右侧操作区 — 底部对齐，美团小程序风格 */
@@ -651,6 +664,37 @@
   transform: scale(0.8);
 }
 
+/* 修改点(2026-09-14 对齐美团)：加购/减购由"细线图标"改为圆形按钮 ——
+   + 为实心金色圆(白色加号)，− 为白底金边圆(金色减号)，这是美团菜品卡最具辨识度的元素 */
+.dish-item .di-action .ri-add-line {
+  width: 24rem;
+  height: 24rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16rem;
+  line-height: 1;
+  color: var(--color-text-white);
+  background: var(--color-primary-gradient);
+  box-shadow: 0 2rem 6rem var(--color-primary-shadow);
+}
+
+.dish-item .di-action .ri-subtract-line {
+  width: 24rem;
+  height: 24rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15rem;
+  line-height: 1;
+  color: var(--color-primary-dark);
+  background: var(--color-text-white);
+  border: 1px solid var(--color-primary);
+  box-sizing: border-box;
+}
+
 .dish-item .di-action .di-num {
   display: inline-flex;
   align-items: center;
@@ -672,14 +716,14 @@
   background: var(--color-primary);
   color: var(--color-text-primary);
   font-size: 10rem;
-  font-weight: 600;
-  padding: 2rem 8rem;
-  border-radius: var(--radius-lg);
+  font-weight: 700;
+  padding: 0 10rem;
+  border-radius: 999rem;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.12s;
   line-height: 1;
-  height: 20rem;
+  height: 22rem;
 }
 
 .dish-item .di-action .di-spec:active {
@@ -690,20 +734,21 @@
 /* 空状态 */
 .empty-tip {
   text-align: center;
-  padding: 80rem 0;
+  padding: 72rem 0;
   color: var(--color-text-disabled);
 }
 
 .empty-tip img {
-  width: 100rem;
-  height: 100rem;
-  margin-bottom: 12rem;
-  opacity: 0.25;
+  width: 96rem;
+  height: 96rem;
+  margin-bottom: 14rem;
+  opacity: 0.3;
+  filter: grayscale(1);
 }
 
 .empty-tip p {
-  font-size: 14rem;
-  color: var(--color-text-disabled);
+  font-size: 13rem;
+  color: var(--color-text-hint);
 }
 
 /* ================================================================

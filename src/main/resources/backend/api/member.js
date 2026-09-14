@@ -52,5 +52,14 @@ function queryEmployeeById (id) {
   })
 }
 
+// 删除员工（支持批量）
+function deleteEmployee (ids) {
+  return $axios({
+    url: '/employee',
+    method: 'delete',
+    params: { ids: ids }
+  })
+}
+
 // 优惠券模板分页
 const couponTemplatePage = (params) => $axios({ url: '/api/member/coupon-template/page', method: 'get', params })
