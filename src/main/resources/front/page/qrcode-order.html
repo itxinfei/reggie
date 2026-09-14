@@ -131,7 +131,7 @@
     <div class="dish-list" v-if="!loading">
       <div class="dish-card" v-for="dish in filteredDishes" :key="dish.id" :class="{'sold-out': dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)}" @click="addToCart(dish)">
         <div class="dish-img-wrap">
-          <img :src="getImage(dish.image)" class="dish-img" :alt="dish.name || '菜品图片'" />
+          <img :src="getImage(dish.image)" class="dish-img" :alt="dish.name || '菜品图片'" @error="$event.target.src='../images/noImg.png'" />
           <div v-if="dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)" class="sold-out-overlay">
             <span class="sold-out-text">售罄</span>
           </div>
@@ -139,7 +139,7 @@
         <div class="dish-info">
           <div class="dish-name">{{ dish.name }}</div>
           <div class="dish-bottom">
-            <div class="dish-price">{{ Number(dish.price).toFixed(2) }}</div>
+            <div class="dish-price">¥{{ Number(dish.price || 0).toFixed(2) }}</div>
             <div class="dish-stock" v-if="dish.stockQty != null">库存{{ dish.stockQty }}</div>
           </div>
         </div>
@@ -177,7 +177,7 @@
         <div v-for="item in cart" :key="item.dishId" class="cart-item">
           <div class="cart-item-info">
             <div class="cart-item-name">{{ item.name }}</div>
-            <div class="cart-item-price">¥{{ Number(item.price).toFixed(2) }}</div>
+            <div class="cart-item-price">¥{{ Number(item.price || 0).toFixed(2) }}</div>
           </div>
           <div class="qty-control">
             <button class="qty-btn minus" @click.stop="changeQty(item, -1)">-</button>

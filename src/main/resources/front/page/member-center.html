@@ -344,7 +344,7 @@
           </div>
           <div class="mc-point-info">
             <div class="p-title">{{ item.type==='ACQUIRE'||item.type==='IN' ? '获取积分' : '消耗积分' }}</div>
-            <div class="p-time">{{ item.createdTime }}</div>
+            <div class="p-time">{{ item.createdTime ? item.createdTime.replace('T', ' ').substring(0, 16) : '' }}</div>
           </div>
           <div :class="['mc-point-val', item.type==='ACQUIRE'||item.type==='IN' ? 'in' : 'out']">
             {{ item.type==='ACQUIRE'||item.type==='IN' ? '+' : '-' }}{{ item.points }}
@@ -393,10 +393,10 @@
       <div class="mc-recharge-list" v-if="activeTab==='recharge'">
         <div v-if="rechargeData.length===0" class="mc-empty">暂无充值记录</div>
         <div class="mc-recharge-item" v-for="item in rechargeData" :key="item.id||item.createdTime">
-          <div class="mc-recharge-amount">+￥{{ item.amount }}</div>
+          <div class="mc-recharge-amount">+￥{{ Number(item.amount || 0).toFixed(2) }}</div>
           <div class="mc-recharge-info">
-            <div class="r-time">{{ item.createdTime }}</div>
-            <div class="r-gift" v-if="item.giftAmount > 0">赠送 ￥{{ item.giftAmount }}</div>
+            <div class="r-time">{{ item.createdTime ? item.createdTime.replace('T', ' ').substring(0, 16) : '' }}</div>
+            <div class="r-gift" v-if="item.giftAmount > 0">赠送 ￥{{ Number(item.giftAmount || 0).toFixed(2) }}</div>
           </div>
         </div>
       </div>

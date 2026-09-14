@@ -62,7 +62,7 @@
 
         <!-- 场景切换标签 -->
         <div class="scene-tabs">
-            <span v-for="scene in scenes"
+            <span v-for="scene in scenes" :key="scene.value"
                   :class="['scene-tab', { active: currentScene === scene.value }]"
                   @click="switchScene(scene.value)">
                 <i :class="scene.icon" aria-hidden="true"></i> {{ scene.label }}
@@ -140,7 +140,7 @@
                      @touchmove="onMsgTouchMove">
                     <div class="chat-avatar">
                         <i v-if="msg.role === 'assistant'" class="ri-robot-line"></i>
-                        <img v-else-if="userInfo && userAvatar" :src="userAvatar" alt="avatar" />
+                        <img v-else-if="userInfo && userAvatar" :src="userAvatar" alt="avatar" @error="userAvatar=''" />
                         <i v-else class="ri-user-line"></i>
                     </div>
                     <div class="msg-body">
