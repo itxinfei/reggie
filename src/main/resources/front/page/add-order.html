@@ -28,7 +28,7 @@
             </div>
             <div class="divHead">
                 <div class="divTitle">
-                    <i class="icon-back-arrow" @click="goBack"></i>确认订单
+                    <i class="ri-arrow-left-s-line" @click="goBack"></i>确认订单
                 </div>
             </div>
             <div class="divContent">
@@ -39,7 +39,7 @@
                             <span>{{address.consignee}}{{address.sex === '1' ? '先生':'女士'}}</span>
                             <span>{{address.phone}}</span>
                         </div>
-                        <i class="icon-arrow-right"></i>
+                        <i class="ri-arrow-right-s-line"></i>
                     </div>
                     <div class="divSplit"></div>
                     <!-- 修改点：配送方式选择（立即/预约） -->
@@ -55,12 +55,12 @@
                         <!-- 立即配送：选择时段 -->
                         <div class="divFinishTime" v-if="deliveryMode === 0" @click="showTimePicker = true">
                             预计{{ selectedTimeLabel }}
-                            <i class="icon-arrow-right" style="font-size:12rem;vertical-align:middle;"></i>
+                            <i class="ri-arrow-right-s-line" style="font-size:12rem;vertical-align:middle;"></i>
                         </div>
                         <!-- 预约配送：选择日期时间 -->
                         <div class="divFinishTime" v-if="deliveryMode === 1" @click="showSchedulePicker = true">
                             {{ scheduleLabel }}
-                            <i class="icon-arrow-right" style="font-size:12rem;vertical-align:middle;"></i>
+                            <i class="ri-arrow-right-s-line" style="font-size:12rem;vertical-align:middle;"></i>
                         </div>
                     </div>
                 </div>

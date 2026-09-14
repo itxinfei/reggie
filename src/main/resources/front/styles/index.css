@@ -437,15 +437,17 @@ i {
   justify-content: center;
 }
 
-.divHead .divTitle .icon-back-arrow {
+.divHead .divTitle .ri-arrow-left-s-line {
   position: absolute;
   left: var(--spacing-lg);
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-text-primary);
+  font-size: 18rem;
+  cursor: pointer;
 }
 
-.divHead .divTitle .icon-back-arrow:active {
+.divHead .divTitle .ri-arrow-left-s-line:active {
   transform: translateY(-50%) scale(0.85);
 }
 

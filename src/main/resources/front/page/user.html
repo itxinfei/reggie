@@ -125,7 +125,7 @@
         </div>
         <div class="divHead">
             <div class="divTitle">
-                <i class="icon-back-arrow" @click="goBack"></i>个人中心
+                <i class="ri-arrow-left-s-line" @click="goBack"></i>个人中心
             </div>
             <div class="divUser">
                 <img :src="userAvatar || './../images/headPage.png'" alt="用户头像"/>
@@ -220,58 +220,58 @@
                 <div class="item" @click="goMemberCenter">
                     <i class="ri-vip-crown-2-line link-icon" aria-hidden="true"></i>
                     <span>会员中心</span>
-                    <i class="icon-arrow-right"></i>
+                    <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toAddressPage">
                     <i class="ri-map-pin-line link-icon" aria-hidden="true"></i>
                     <span>地址管理</span>
-                    <i class="icon-arrow-right"></i>
+                    <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <!-- 第二组：订单与消息 -->
                 <div class="menu-group-title">订单与消息</div>
                 <div class="item" @click="toOrderPage">
                     <i class="ri-file-list-3-line link-icon" aria-hidden="true"></i>
                     <span>历史订单</span>
-                    <i class="icon-arrow-right"></i>
+                    <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toMessagePage" style="position:relative">
                     <i class="ri-notification-2-line link-icon" aria-hidden="true"></i>
                     <span>消息中心</span>
                     <span v-if="unreadCount > 0" class="msg-badge">{{ unreadCount }}</span>
-                    <i class="icon-arrow-right"></i>
+                    <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <!-- 第三组：更多 -->
                 <div class="menu-group-title">更多</div>
                 <div class="item" @click="toFrequentPage">
                     <i class="ri-shopping-basket-line link-icon" aria-hidden="true"></i>
                     <span>常购清单</span>
-                    <i class="icon-arrow-right"></i>
+                    <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toEvaluationPage">
                     <i class="ri-star-line link-icon" aria-hidden="true"></i>
                     <span>我的评价</span>
-                    <i class="icon-arrow-right"></i>
+                    <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toInvoicePage">
                     <i class="ri-receipt-line link-icon" aria-hidden="true"></i>
                     <span>我的发票</span>
-                    <i class="icon-arrow-right"></i>
+                    <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="contactService">
                     <i class="ri-customer-service-2-line link-icon" aria-hidden="true"></i>
                     <span>联系客服</span>
-                    <i class="icon-arrow-right"></i>
+                    <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toSettings">
                     <i class="ri-settings-3-line link-icon" aria-hidden="true"></i>
                     <span>设置</span>
-                    <i class="icon-arrow-right"></i>
+                    <i class="ri-arrow-right-s-line"></i>
                 </div>
             </div>
             <div class="divOrders" v-if="order[0]">

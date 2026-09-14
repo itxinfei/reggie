@@ -55,18 +55,11 @@
   max-width: 110rem;
 }
 
-.top-bar .location .icon-location-outline {
-  width: 16rem;
-  height: 16rem;
-  border-color: var(--gold-text);
+.top-bar .location .ri-map-pin-line {
+  font-size: 16rem;
+  color: var(--gold-text);
   margin-right: 4rem;
   flex-shrink: 0;
-  border-width: 1.5rem;
-}
-.top-bar .location .icon-location-outline::after {
-  width: 5rem;
-  height: 5rem;
-  background: var(--gold-text);
 }
 
 .top-bar .location span {

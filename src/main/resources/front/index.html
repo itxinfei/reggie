@@ -51,11 +51,11 @@
         <!-- 顶部导航：定位 | 搜索 | 用户 -->
         <div class="top-bar">
           <div class="location" @click="toAddressPage">
-            <i class="icon-location-outline"></i>
+            <i class="ri-map-pin-line"></i>
             <span>{{ addressInfo ? (addressInfo.label || addressInfo.cityName + addressInfo.districtName) : '收货地址' }}</span>
           </div>
           <div class="search-box" @click="onSearchClick">
-            <i class="icon-search"></i>
+            <i class="ri-search-line"></i>
             <span>搜索菜品、套餐</span>
             <i class="ri-mic-line voice-icon" @click.stop="startVoiceSearch"></i>
           </div>
@@ -432,7 +432,7 @@
             @keyup.enter="doSearch"
           />
           <i
-            class="icon-circle-close so-clear"
+            class="ri-close-circle-fill so-clear"
             v-if="searchKeyword"
             @click="clearSearch"
           ></i>
