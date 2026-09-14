@@ -82,7 +82,7 @@ body.scrollable-page {
   align-items: center;
   justify-content: center;
 }
-#address_edit .divHead .divTitle .backArrow {
+#address_edit .divHead .divTitle .ri-arrow-left-s-line {
   position: absolute;
   left: 16rem;
   top: 50%;
@@ -96,7 +96,7 @@ body.scrollable-page {
   transition: transform 0.2s;
   user-select: none;
 }
-#address_edit .divHead .divTitle .backArrow:active { transform: translateY(-50%) scale(1.15); }
+#address_edit .divHead .divTitle .ri-arrow-left-s-line:active { transform: translateY(-50%) scale(1.15); }
 
 /* ============================================
    可滚动区域

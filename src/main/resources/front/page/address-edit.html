@@ -11,13 +11,14 @@
     <link rel="stylesheet" href="./../styles/address-edit.css"/>
     <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+    <script src="./../js/icon-fallback.js"></script>
 </head>
 <body class="scrollable-page">
     <div id="address_edit" class="app" v-cloak>
         <!-- 顶部导航 -->
         <div class="divHead">
             <div class="divTitle">
-                <i class="backArrow" @click="goBack">&lt;</i>
+                <i class="ri-arrow-left-s-line" @click="goBack"></i>
                 <span>{{title}}</span>
             </div>
         </div>
