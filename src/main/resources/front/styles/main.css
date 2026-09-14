@@ -639,15 +639,15 @@
   min-height: 24rem;
 }
 
-.dish-item .di-action img {
-  width: 20rem;
-  height: 20rem;
+.dish-item .di-action i {
+  font-size: 20rem;
   cursor: pointer;
   transition: transform 0.1s;
   flex-shrink: 0;
+  color: var(--color-primary);
 }
 
-.dish-item .di-action img:active {
+.dish-item .di-action i:active {
   transform: scale(0.8);
 }
 
@@ -1034,9 +1034,9 @@
 #main .dialogCart .divCartTitle .cart-close-btn:active {
   background: var(--mask-light-active);
 }
-#main .dialogCart .divCartTitle .cart-close-btn img {
-  width: 18rem;
-  height: 18rem;
+#main .dialogCart .divCartTitle .cart-close-btn i {
+  font-size: 18rem;
+  color: var(--color-text-secondary);
 }
 
 #main .dialogCart .divCartContent {
@@ -1097,14 +1097,14 @@
   gap: 4rem;
 }
 
-#main .dialogCart .divCartContent .divCartItem .divNum img {
-  width: 26rem;
-  height: 26rem;
+#main .dialogCart .divCartContent .divCartItem .divNum i {
+  font-size: 26rem;
   cursor: pointer;
   transition: transform 0.12s;
+  color: var(--color-primary);
 }
 
-#main .dialogCart .divCartContent .divCartItem .divNum img:active {
+#main .dialogCart .divCartContent .divCartItem .divNum i:active {
   transform: scale(0.82);
 }
 
@@ -1229,14 +1229,14 @@
   transform: scale(0.95);
 }
 
-#main .detailsDialog .divNum img {
-  width: 26rem;
-  height: 26rem;
+#main .detailsDialog .divNum i {
+  font-size: 26rem;
   cursor: pointer;
   transition: transform 0.12s;
+  color: var(--color-primary);
 }
 
-#main .detailsDialog .divNum img:active {
+#main .detailsDialog .divNum i:active {
   transform: scale(0.82);
 }
 
@@ -1268,9 +1268,9 @@
   border-radius: 50%;
 }
 
-#main .detailsDialog .detailsDialogClose img {
-  width: 18rem;
-  height: 18rem;
+#main .detailsDialog .detailsDialogClose i {
+  font-size: 18rem;
+  color: var(--color-text-secondary);
 }
 
 /* ====== 菜品详情弹窗 - 评价展示 ====== */
@@ -1484,14 +1484,14 @@
   cursor: pointer;
 }
 
-#main .setMealDetailsDialog .divNum img {
-  width: 26rem;
-  height: 26rem;
+#main .setMealDetailsDialog .divNum i {
+  font-size: 26rem;
   cursor: pointer;
   transition: transform 0.12s;
+  color: var(--color-primary);
 }
 
-#main .setMealDetailsDialog .divNum img:active {
+#main .setMealDetailsDialog .divNum i:active {
   transform: scale(0.82);
 }
 
@@ -1518,9 +1518,9 @@
   transform: translateX(-50%);
 }
 
-#main .setMealDetailsDialog .detailsDialogClose img {
-  width: 36rem;
-  height: 36rem;
+#main .setMealDetailsDialog .detailsDialogClose i {
+  font-size: 36rem;
+  color: var(--color-text-secondary);
 }
 
 /* ================================================================
@@ -1879,7 +1879,7 @@
 .di-image,
 .di-info,
 .di-spec,
-.di-action img,
+.di-action i,
 .cart-icon-wrap,
 .voice-icon,
 .suggestion-item,

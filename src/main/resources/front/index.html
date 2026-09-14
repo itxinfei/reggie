@@ -203,10 +203,10 @@
               </div>
             </div>
             <div class="di-action">
-              <img src="./images/subtract.png" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"/>
+              <i class="ri-subtract-line" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"></i>
               <span class="di-num" v-if="item.number">{{ item.number }}</span>
               <span class="di-spec" v-if="item.flavors && item.flavors.length > 0 && !item.number" @click.prevent.stop="chooseFlavorClick(item)">选规格</span>
-              <img src="./images/add.png" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"/>
+              <i class="ri-add-line" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"></i>
             </div>
           </div>
           <div class="empty-tip" v-if="!dishList || dishList.length === 0">
@@ -258,7 +258,7 @@
           <div @click="dialogFlavorAddCart">加入购物车</div>
         </div>
         <div class="divFlavorClose" @click="dialogFlavor.show = false">
-          <img src="./images/close.png"/>
+          <i class="ri-close-line"></i>
         </div>
       </van-dialog>
 
@@ -270,7 +270,7 @@
             <i class="clear-icon ri-delete-bin-line"></i> 清空
           </div>
           <div class="cart-close-btn" @click="cartDialogShow = false">
-            <img src="./images/close.png"/>
+            <i class="ri-close-line"></i>
           </div>
         </div>
         <div class="divCartContent">
@@ -285,11 +285,11 @@
             </div>
             <div class="divNum">
               <div class="divSubtract">
-                <img src="./images/subtract.png" @click="cartNumberSubtract(item)"/>
+                <i class="ri-subtract-line" @click="cartNumberSubtract(item)"></i>
               </div>
               <div class="divDishNum">{{ item.number }}</div>
               <div class="divAdd">
-                <img src="./images/add.png" @click="cartNumAdd(item)"/>
+                <i class="ri-add-line" @click="cartNumAdd(item)"></i>
               </div>
             </div>
             <div class="divSplit"></div>
@@ -338,17 +338,17 @@
           </div>
           <div class="right">
             <div class="divSubtract" v-if="detailsDialog.item.number > 0">
-              <img src="./images/subtract.png" @click="subtractCart(detailsDialog.item)"/>
+              <i class="ri-subtract-line" @click="subtractCart(detailsDialog.item)"></i>
             </div>
             <div class="divDishNum" v-if="detailsDialog.item.number">{{ detailsDialog.item.number }}</div>
             <div class="divTypes" v-if="detailsDialog.item.flavors && detailsDialog.item.flavors.length > 0 && !detailsDialog.item.number" @click="chooseFlavorClick(detailsDialog.item)">选择规格</div>
             <div class="divAdd" v-else>
-              <img src="./images/add.png" @click="addCart(detailsDialog.item)"/>
+              <i class="ri-add-line" @click="addCart(detailsDialog.item)"></i>
             </div>
           </div>
         </div>
         <div class="detailsDialogClose" @click="detailsDialog.show = false">
-          <img src="./images/close.png"/>
+          <i class="ri-close-line"></i>
         </div>
       </van-dialog>
 
@@ -378,17 +378,17 @@
           </div>
           <div class="right">
             <div class="divSubtract" v-if="setMealDialog.item.number > 0">
-              <img src="./images/subtract.png" @click="subtractCart(setMealDialog.item)"/>
+              <i class="ri-subtract-line" @click="subtractCart(setMealDialog.item)"></i>
             </div>
             <div class="divDishNum" v-if="setMealDialog.item.number">{{ setMealDialog.item.number }}</div>
             <div class="divAdd" v-if="setMealDialog.item.number">
-              <img src="./images/add.png" @click="addCart(setMealDialog.item)"/>
+              <i class="ri-add-line" @click="addCart(setMealDialog.item)"></i>
             </div>
             <div class="addCart" @click="addCart(setMealDialog.item)" v-if="!setMealDialog.item.number">加入购物车</div>
           </div>
         </div>
         <div class="detailsDialogClose" @click="setMealDialog.show = false">
-          <img src="./images/close.png"/>
+          <i class="ri-close-line"></i>
         </div>
       </van-dialog>
 
@@ -500,10 +500,10 @@
               </div>
             </div>
             <div class="di-action">
-              <img src="./images/subtract.png" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"/>
+              <i class="ri-subtract-line" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"></i>
               <span class="di-num" v-if="item.number">{{ item.number }}</span>
               <span class="di-spec" v-if="item.flavors && item.flavors.length > 0 && !item.number" @click.prevent.stop="chooseFlavorClick(item)">选规格</span>
-              <img src="./images/add.png" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"/>
+              <i class="ri-add-line" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"></i>
             </div>
           </div>
 
@@ -526,9 +526,9 @@
               </div>
             </div>
             <div class="di-action">
-              <img src="./images/subtract.png" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"/>
+              <i class="ri-subtract-line" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"></i>
               <span class="di-num" v-if="item.number">{{ item.number }}</span>
-              <img src="./images/add.png" @click.prevent.stop="addCart(item)"/>
+              <i class="ri-add-line" @click.prevent.stop="addCart(item)"></i>
             </div>
           </div>
 
