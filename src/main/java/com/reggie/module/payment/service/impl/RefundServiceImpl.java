@@ -1,73 +1,43 @@
 package com.reggie.module.payment.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.CustomException;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.member.service.MemberRewardService;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.order.model.Orders;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.order.service.OrderService;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.payment.channel.PaymentChannel;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.payment.channel.PaymentChannelFactory;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.payment.channel.RefundRequest;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.payment.channel.RefundResponse;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.payment.mapper.PaymentOrderMapper;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.payment.model.PaymentOrder;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.payment.model.RefundRecord;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.payment.service.PaymentOrderService;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.payment.service.RefundRecordService;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.payment.service.RefundService;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
-import org.springframework.transaction.annotation.Transactional;
 import java.time.format.DateTimeFormatter;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.Arrays;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.Objects;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.concurrent.TimeUnit;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.concurrent.atomic.AtomicReference;
-import org.springframework.transaction.annotation.Transactional;
 
 import static com.reggie.module.payment.model.PaymentOrder.STATUS_REFUND;
-import org.springframework.transaction.annotation.Transactional;
 import static com.reggie.module.payment.model.PaymentOrder.STATUS_SUCCESS;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 退款服务实现：按业务订单全额退款。
@@ -122,6 +92,7 @@ public class RefundServiceImpl implements RefundService {
      * @return 返回结果
      */
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public boolean refundByOrder(Long orderId, String reason) {
         if (orderId == null) {
             return false;
@@ -266,7 +237,10 @@ public class RefundServiceImpl implements RefundService {
     private void persistRefundInTransaction(Long paymentOrderId, BigDecimal refundAmount, String fReason,
             String refundNo) {
         final BigDecimal fRefundAmount = refundAmount;
-        new TransactionTemplate(transactionManager).execute(status -> {
+        // REQUIRES_NEW：独立事务，异常不污染外层事务（修复拼团退款 catch 后仍 UnexpectedRollback）
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+        txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        txTemplate.execute(status -> {
             // 重新查询支付单（防并发退款）
             PaymentOrder latest = paymentOrderService.getById(paymentOrderId);
             if (latest == null || !STATUS_SUCCESS.equals(latest.getStatus())) {
