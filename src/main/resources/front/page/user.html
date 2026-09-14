@@ -261,6 +261,18 @@
                     <span>我的发票</span>
                     <i class="icon-arrow-right"></i>
                 </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="contactService">
+                    <i class="ri-customer-service-2-line link-icon" aria-hidden="true"></i>
+                    <span>联系客服</span>
+                    <i class="icon-arrow-right"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="toSettings">
+                    <i class="ri-settings-3-line link-icon" aria-hidden="true"></i>
+                    <span>设置</span>
+                    <i class="icon-arrow-right"></i>
+                </div>
             </div>
             <div class="divOrders" v-if="order[0]">
                 <div class="title">最新订单</div>
@@ -476,6 +488,21 @@
                 },
                 toInvoicePage: function(){
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/my-invoice.html' })
+                },
+                // 联系客服（拨打电话或显示联系方式）
+                contactService: function(){
+                    vant.Dialog.confirm({
+                        title: '联系客服',
+                        message: '客服电话：400-123-4567\n服务时间：09:00-22:00',
+                        confirmButtonText: '拨打',
+                        cancelButtonText: '取消'
+                    }).then(function(){
+                        window.location.href = 'tel:4001234567'
+                    }).catch(function(){})
+                },
+                // 设置页（暂用 toast 提示）
+                toSettings: function(){
+                    vant.Toast('设置功能开发中');
                 },
                 toMessagePage: function(){
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/message.html' })

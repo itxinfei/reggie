@@ -419,26 +419,38 @@
 
 .category-sidebar .cat-item {
   position: relative;
-  padding: 14rem 8rem;
+  padding: 12rem 6rem;
   text-align: center;
   cursor: pointer;
   transition: background 0.15s;
-  min-height: 48rem;
+  min-height: 56rem;
   box-sizing: border-box;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2rem;
 }
 
 .category-sidebar .cat-item:active {
   background: var(--bg-hover);
 }
 
+/* 分类图标 */
+.category-sidebar .cat-item .cat-icon {
+  font-size: 18rem;
+  color: var(--color-text-hint);
+  transition: color 0.2s;
+}
+
+.category-sidebar .cat-item.active .cat-icon {
+  color: var(--color-primary-dark);
+}
+
 .category-sidebar .cat-item .cat-text {
-  font-size: 13rem;
+  font-size: 12rem;
   color: var(--color-text-secondary);
-  line-height: 20rem;
-  word-break: break-all;
+  line-height: 16rem;
   transition: all 0.2s;
   display: block;
   overflow: hidden;
@@ -786,6 +798,14 @@
 .cart-bar .cart-amount {
   font-size: 18rem;
   font-weight: 700;
+}
+
+/* 起送门槛提示 */
+.cart-bar .cart-min-order {
+  font-size: 11rem;
+  font-weight: 400;
+  margin-left: 6rem;
+  opacity: 0.8;
 }
 
 .cart-bar .cart-empty-text {

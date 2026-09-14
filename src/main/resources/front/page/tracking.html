@@ -363,19 +363,10 @@
                 </div>
             </div>
 
-            <!-- 底部操作 -->
+            <!-- 底部操作（仅终态显示"查看订单"，骑手卡片已有电话按钮） -->
             <div class="bottom-actions" v-if="trackingData">
                 <van-button
-                    v-if="isDelivering && hasRiderInfo"
-                    type="primary"
-                    block
-                    round
-                    @click="callRider"
-                >
-                    <i class="ri-phone-line" style="margin-right:4rem;"></i>联系骑手
-                </van-button>
-                <van-button
-                    v-else-if="isFinalStatus"
+                    v-if="isFinalStatus"
                     type="default"
                     block
                     round
@@ -404,6 +395,7 @@
             data() {
                 return {
                     pageLoading: false,
+                    refreshing: false,
                     trackingData: null,
                     orderId: null
                 };
@@ -498,14 +490,35 @@
                 this.orderId = this.getUrlParam('orderId');
                 if (this.orderId) {
                     this.loadTracking();
+                    // 修改点：30秒自动轮询刷新（仅页面可见时）
+                    this._pollTimer = setInterval(function(){
+                        if(!document.hidden && this.orderId){
+                            this.loadTracking();
+                        }
+                    }.bind(this), 30000);
+                    this._onVisibility = function(){
+                        if(!document.hidden && this.orderId){
+                            this.loadTracking();
+                        }
+                    }.bind(this);
+                    document.addEventListener('visibilitychange', this._onVisibility);
                 } else {
                     vant.Toast.fail('缺少订单信息');
                 }
+            },
+            beforeDestroy(){
+                if(this._pollTimer) clearInterval(this._pollTimer);
+                if(this._onVisibility) document.removeEventListener('visibilitychange', this._onVisibility);
             },
             methods: {
                 goBack() {
                     // 修改点：统一走 common.js 的全局兜底
                     goBack();
+                },
+                // 下拉刷新
+                async onRefresh(){
+                    await this.loadTracking();
+                    this.refreshing = false;
                 },
                 getUrlParam(name) {
                     const reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)');

@@ -40,6 +40,7 @@
   --color-danger: #e94e3c;
   --color-success: #07c160;
   --color-warning: #ffb300;
+  --color-warning-tint: rgba(255, 179, 0, 0.12);
   /* info：历史遗留语义——为防全站蓝主色回退，覆盖为品牌金。
      若需第三方平台真实蓝，请使用 --platform-xxx 令牌而非 --color-info */
   --color-info: #ffc200;

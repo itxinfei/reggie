@@ -73,7 +73,8 @@
             <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
             <div class="divContent">
                 <!-- 修改点：卡片三区块重构 —— 顶部标签+地址 / 中部收货人 / 底部操作栏（默认单选左 + 编辑右），替代原绝对定位编辑图标与裸 divSplit -->
-                <div class="divItem" :class="{itemDefault: item.isDefault === 1}" v-for="item in addressList" :key="item.id" @click="itemClick(item)">
+                <van-swipe-cell v-for="item in addressList" :key="item.id">
+                <div class="divItem" :class="{itemDefault: item.isDefault === 1}" @click="itemClick(item)">
                     <div class="addrTop">
                         <span class="addrTag" :class="{spanCompany:item.label === '公司',spanHome:item.label === '家',spanSchool:item.label === '学校',spanNone:item.label === '无'}">{{item.label}}</span>
                         <span class="addrText">{{ fullAddress(item) }}</span>
@@ -98,6 +99,12 @@
                         </div>
                     </div>
                 </div>
+                <template #right>
+                    <div class="swipe-delete-btn" @click.stop="deleteAddress(item)">
+                        <i class="ri-delete-bin-line"></i> 删除
+                    </div>
+                </template>
+                </van-swipe-cell>
                 <!-- 修改点：空状态提示 -->
                 <div class="emptyState" v-if="!loading && addressList.length === 0">
                     <div class="emptyIcon">

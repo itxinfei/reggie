@@ -45,35 +45,67 @@
                     @load="getList"
                     >
                     <van-cell v-for="order in orderList" :key="order.id" class="item">
-                        <div class="timeStatus">
-                            <span>{{order.orderTime}}</span>
-                            <span :class="getStatusClass(order.status)">{{getStatus(order.status)}}</span>
+                        <!-- 卡片头部：订单号 + 时间 + 状态 -->
+                        <div class="order-header">
+                            <div class="order-meta">
+                                <span class="order-no">订单号 {{order.number || order.id}}</span>
+                                <span class="order-time">{{order.orderTime}}</span>
+                            </div>
+                            <span class="order-status" :class="getStatusClass(order.status)">{{getStatus(order.status)}}</span>
                         </div>
-                        <div class="dishList">
-                            <div v-for="(item,dIdx) in order.orderDetails || []" :key="dIdx" class="item">
-                                <span>{{item.name}}</span>
-                                <span>x{{item.number}}</span>
+                        <!-- 配送中/待接单：迷你进度条 -->
+                        <div class="order-progress" v-if="order.status === 2 || order.status === 3">
+                            <div class="progress-step" :class="{done: order.status >= 2, active: order.status === 2}">已接单</div>
+                            <div class="progress-line" :class="{done: order.status >= 3}"></div>
+                            <div class="progress-step" :class="{done: order.status >= 3, active: order.status === 3}">配送中</div>
+                            <div class="progress-line"></div>
+                            <div class="progress-step">已送达</div>
+                        </div>
+                        <!-- 菜品列表：左侧缩略图 + 名称数量 + 右侧价格 -->
+                        <div class="dish-list">
+                            <div v-for="(item,dIdx) in (order.orderDetails || []).slice(0,3)" :key="dIdx" class="dish-item">
+                                <img v-if="item.image || item.dishImage" :src="item.image || item.dishImage" class="dish-img" @error="$event.target.style.display='none'"/>
+                                <div v-else class="dish-img dish-img-placeholder"><i class="ri-restaurant-line"></i></div>
+                                <div class="dish-info">
+                                    <span class="dish-name">{{item.name}}</span>
+                                    <span class="dish-qty">x{{item.number}}</span>
+                                </div>
+                                <span class="dish-price">￥{{Number(item.amount || 0).toFixed(2)}}</span>
+                            </div>
+                            <div v-if="(order.orderDetails || []).length > 3" class="dish-more">
+                                等共{{order.orderDetails.length}}件商品
                             </div>
                         </div>
-                        <div class="result">
-                            <span>共{{order.sumNum}} 件商品，实付</span><span class="price">￥{{ Number(order.amount || 0).toFixed(2) }}</span>
+                        <!-- 合计行 -->
+                        <div class="order-total">
+                            <span>共{{order.sumNum}}件  实付</span>
+                            <span class="price">￥{{ Number(order.amount || 0).toFixed(2) }}</span>
                         </div>
-                        <div class="btn" v-if="order.status === 1">
-                            <!-- 修改点：增加去支付入口，直接跳结算页重新发起支付 -->
-                            <div class="btnPay" @click="goToPay(order)">去支付</div>
-                            <div class="btnCancel" @click="cancelOrder(order)">取消订单</div>
-                        </div>
-                        <div class="btn" v-if="order.status === 2 || order.status === 3">
-                            <div class="btnAgain" @click="viewTracking(order)">配送追踪</div>
-                            <div v-if="order.status === 3" class="btnEval" @click="confirmReceipt(order)">确认收货</div>
-                        </div>
-                        <div class="btn" v-if="order.status === 4">
-                            <div class="btnAgain" @click="addOrderAgain(order)">再来一单</div>
-                            <!-- 修改点：已完成订单可申请开票（电子发票） -->
-                            <div class="btnShare" @click="openInvoice(order)">开发票</div>
-                            <div class="btnEval" @click="evaluateOrder(order)">评价</div>
-                            <div class="btnShare" @click="shareOrder(order)">分享</div>
-                            <div class="btnCancel" @click="applyRefund(order)">申请售后</div>
+                        <!-- 操作按钮：对齐美团——主按钮2个 + 更多菜单 -->
+                        <div class="order-actions">
+                            <!-- 待付款 -->
+                            <template v-if="order.status === 1">
+                                <div class="act-btn act-outline" @click="cancelOrder(order)">取消订单</div>
+                                <div class="act-btn act-primary" @click="goToPay(order)">去支付</div>
+                            </template>
+                            <!-- 待接单 -->
+                            <template v-if="order.status === 2">
+                                <div class="act-btn act-outline" @click="viewTracking(order)">查看详情</div>
+                            </template>
+                            <!-- 配送中 -->
+                            <template v-if="order.status === 3">
+                                <div class="act-btn act-outline" @click="viewTracking(order)">查看详情</div>
+                                <div class="act-btn act-primary" @click="confirmReceipt(order)">确认收货</div>
+                            </template>
+                            <!-- 已完成 -->
+                            <template v-if="order.status === 4">
+                                <div class="act-btn act-outline" @click="applyRefund(order)">申请售后</div>
+                                <div class="act-btn act-primary" @click="addOrderAgain(order)">再来一单</div>
+                            </template>
+                            <!-- 已取消/已退款 -->
+                            <template v-if="order.status === 5 || order.status === 6">
+                                <div class="act-btn act-outline" @click="addOrderAgain(order)">再来一单</div>
+                            </template>
                         </div>
                     </van-cell>
                 </van-list>

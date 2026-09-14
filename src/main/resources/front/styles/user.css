@@ -405,23 +405,23 @@
 }
 
 #user .order-quick-item .oq-icon.oq-pending {
-  background: rgba(255, 154, 0, 0.1);
-  color: #ff9a00;
+  background: var(--color-primary-dark-tint);
+  color: var(--color-primary-dark);
 }
 
 #user .order-quick-item .oq-icon.oq-delivering {
-  background: rgba(7, 193, 96, 0.1);
-  color: #07c160;
+  background: var(--color-success-tint);
+  color: var(--color-success);
 }
 
 #user .order-quick-item .oq-icon.oq-evaluate {
-  background: rgba(255, 179, 0, 0.1);
-  color: #ffb300;
+  background: var(--color-warning-tint, rgba(255, 179, 0, 0.12));
+  color: var(--color-warning);
 }
 
 #user .order-quick-item .oq-icon.oq-refund {
-  background: rgba(233, 78, 60, 0.1);
-  color: #e94e3c;
+  background: var(--color-danger-tint);
+  color: var(--color-danger);
 }
 
 #user .order-quick-item .oq-badge {

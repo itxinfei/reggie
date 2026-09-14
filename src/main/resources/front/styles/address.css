@@ -413,3 +413,17 @@ body.scrollable-page {
   color: var(--color-danger);
   background: var(--color-danger-tint);
 }
+
+/* 滑动删除按钮 */
+.swipe-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rem;
+  width: 72rem;
+  height: 100%;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}

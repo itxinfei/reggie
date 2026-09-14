@@ -113,199 +113,213 @@
   border: 0;
 }
 
-#order .divBody .item .timeStatus {
-  height: 46rem;
-  font-size: var(--font-size-md);
-  font-family: var(--font-family-body);
-  font-weight: 400;
-  text-align: left;
-  color: var(--color-text-secondary);
-  line-height: 20rem;
+/* ---- 订单卡片头部：订单号 + 时间 + 状态 ---- */
+#order .divBody .item .order-header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--spacing-md) 0 var(--spacing-sm);
+  border-bottom: 1px solid var(--border-light);
+}
+
+#order .divBody .item .order-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+#order .divBody .item .order-no {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-hint);
+  font-family: var(--font-family-number);
+}
+
+#order .divBody .item .order-time {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+#order .divBody .item .order-status {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* 订单状态颜色 */
+#order .order-status.status-pending { color: var(--color-primary-dark); }
+#order .order-status.status-delivering { color: var(--color-success); }
+#order .order-status.status-complete { color: var(--color-text-hint); }
+#order .order-status.status-cancel { color: var(--color-text-disabled); }
+
+/* ---- 迷你进度条（配送中/待接单） ---- */
+#order .order-progress {
+  display: flex;
   align-items: center;
-  border-bottom: 2rem dashed var(--bg-hover);
+  padding: var(--spacing-sm) 0;
+  gap: 0;
 }
 
-#order .divBody .item:first-child .timeStatus {
-  border-top: 0;
+#order .progress-step {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+  white-space: nowrap;
+  position: relative;
 }
 
-#order .divBody .item + .item .timeStatus {
-  border-top: 1px solid var(--bg-hover);
+#order .progress-step.done {
+  color: var(--color-success);
 }
 
-#order .divBody .item .timeStatus span:first-child {
+#order .progress-step.active {
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
+#order .progress-line {
+  flex: 1;
+  height: 2rem;
+  background: var(--border-light);
+  margin: 0 6rem;
+  border-radius: 1rem;
+}
+
+#order .progress-line.done {
+  background: var(--color-success);
+}
+
+/* ---- 菜品列表：左侧缩略图 ---- */
+#order .dish-list {
+  padding: var(--spacing-sm) 0;
+}
+
+#order .dish-item {
+  display: flex;
+  align-items: center;
+  padding: 4rem 0;
+  gap: var(--spacing-sm);
+}
+
+#order .dish-img {
+  width: 52rem;
+  height: 52rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+#order .dish-img-placeholder {
+  background: var(--bg-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-disabled);
+  font-size: 20rem;
+}
+
+#order .dish-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+#order .dish-name {
+  font-size: var(--font-size-md);
   color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* 修改点：订单状态颜色——与 user 页面快捷入口图标色系对齐 */
-#order .divBody .item .timeStatus .status-pending { color: var(--color-primary-dark); font-weight: 600; }
-#order .divBody .item .timeStatus .status-delivering { color: var(--color-success); font-weight: 600; }
-#order .divBody .item .timeStatus .status-complete { color: var(--color-text-hint); }
-#order .divBody .item .timeStatus .status-cancel { color: var(--color-text-disabled); }
-
-#order .divBody .item .dishList {
-  padding-top: var(--spacing-sm);
-  padding-bottom: 11rem;
+#order .dish-qty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
 }
 
-#order .divBody .item .dishList .item {
-  padding-top: 5rem;
-  padding-bottom: 5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  min-height: 20rem;
+#order .dish-price {
   font-size: var(--font-size-md);
-  font-family: var(--font-family-body);
-  font-weight: 400;
-  text-align: left;
   color: var(--color-text-secondary);
-  line-height: 1.5;
+  font-family: var(--font-family-number);
+  flex-shrink: 0;
 }
 
-#order .divBody .item .result {
+#order .dish-more {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  text-align: center;
+  padding: 4rem 0;
+}
+
+/* ---- 合计行 ---- */
+#order .order-total {
   display: flex;
   justify-content: flex-end;
-  height: 20rem;
+  align-items: baseline;
+  gap: 4rem;
+  padding: var(--spacing-sm) 0;
   font-size: var(--font-size-md);
-  font-family: var(--font-family-body);
-  font-weight: 400;
-  text-align: left;
   color: var(--color-text-secondary);
-  line-height: 20rem;
+  border-top: 1px solid var(--border-light);
 }
 
-#order .divBody .item .result .price {
+#order .order-total .price {
   color: var(--color-price);
   font-weight: 600;
   font-family: var(--font-family-number);
   font-size: var(--font-size-lg);
 }
 
-#order .divBody .item .btn {
+/* ---- 操作按钮（对齐美团：主按钮+描边按钮） ---- */
+#order .order-actions {
   display: flex;
   justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 8rem 12rem;
-  margin-bottom: 17rem;
-  margin-top: var(--spacing-xl);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0 var(--spacing-xs);
 }
 
-#order .divBody .btn .btnAgain {
-  width: 124rem;
-  height: 36rem;
-  border: 1px solid var(--color-text-disabled);
+#order .act-btn {
+  height: 32rem;
+  padding: 0 16rem;
   border-radius: var(--radius-xl);
-  font-size: var(--font-size-md);
-  font-family: var(--font-family-body);
+  font-size: var(--font-size-sm);
   font-weight: 500;
-  text-align: center;
-  color: var(--color-text-primary);
-  line-height: 36rem;
-  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
 }
 
-#order .divBody .btn .btnAgain:active {
+#order .act-btn:active {
+  transform: scale(0.96);
+}
+
+/* 描边按钮（次要操作） */
+#order .act-outline {
+  border: 1px solid var(--color-text-disabled);
+  background: var(--bg-card);
+  color: var(--color-text-primary);
+}
+
+#order .act-outline:active {
   background: var(--bg-hover);
   border-color: var(--color-primary);
 }
 
-/* 修改点：去支付按钮 —— 品牌金主色，视觉权重最高 */
-#order .divBody .btn .btnPay {
-  width: 124rem;
-  height: 36rem;
+/* 实心按钮（主操作） */
+#order .act-primary {
   border: none;
-  border-radius: var(--radius-xl);
-  font-size: var(--font-size-md);
-  font-family: var(--font-family-body);
-  font-weight: 500;
-  text-align: center;
+  background: var(--color-primary-gradient);
   color: var(--color-text-primary);
-  line-height: 36rem;
-  position: relative;
-  cursor: pointer;
-  transition: all var(--transition-normal);
-  background: var(--color-primary-gradient, var(--color-primary));
-  box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
+  box-shadow: 0 2rem 6rem var(--color-primary-tint-lg);
 }
 
-#order .divBody .btn .btnPay:active {
-  transform: scale(0.97);
-  box-shadow: 0 1rem 4rem var(--color-primary-tint-md);
+#order .act-primary:active {
+  box-shadow: 0 1rem 3rem var(--color-primary-tint-md);
 }
 
-/* 修改点：取消订单按钮样式 */
-#order .divBody .btn .btnCancel {
-  width: 124rem;
-  height: 36rem;
-  border: 1px solid var(--order-cancel-border);
-  border-radius: var(--radius-xl);
-  font-size: var(--font-size-md);
-  font-family: var(--font-family-body);
-  font-weight: 500;
-  text-align: center;
-  color: var(--color-danger);
-  line-height: 36rem;
-  position: relative;
-  cursor: pointer;
-  transition: all var(--transition-normal);
-  background: var(--bg-card);
-}
-
-#order .divBody .btn .btnCancel:active {
-  background: var(--order-cancel-active-bg);
-  border-color: var(--color-danger);
-}
-
-/* 修改点：评价按钮样式 */
-#order .divBody .btn .btnEval {
-  width: 124rem;
-  height: 36rem;
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-xl);
-  font-size: var(--font-size-md);
-  font-family: var(--font-family-body);
-  font-weight: 500;
-  text-align: center;
-  color: var(--color-primary-dark);
-  line-height: 36rem;
-  position: relative;
-  cursor: pointer;
-  transition: all var(--transition-normal);
-  background: var(--bg-card);
-}
-
-#order .divBody .btn .btnEval:active {
-  background: var(--order-eval-active-bg);
-  border-color: var(--color-primary-dark);
-}
-
-/* 修改点：分享按钮样式 */
-#order .divBody .btn .btnShare {
-  width: 124rem;
-  height: 36rem;
-  border: 1px solid var(--color-text-disabled);
-  border-radius: var(--radius-xl);
-  font-size: var(--font-size-md);
-  font-family: var(--font-family-body);
-  font-weight: 500;
-  text-align: center;
-  color: var(--color-text-secondary);
-  line-height: 36rem;
-  position: relative;
-  cursor: pointer;
-  transition: all var(--transition-normal);
-  background: var(--bg-card);
-}
-
-#order .divBody .btn .btnShare:active {
-  background: var(--bg-hover);
-  border-color: var(--color-primary);
-}
 
 #order .divNoData {
   width: 100%;

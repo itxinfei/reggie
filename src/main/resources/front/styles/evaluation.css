@@ -328,6 +328,34 @@
   font-weight: 500;
   flex: 1;
 }
+/* 快捷评价标签（对齐美团） */
+.quick-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6rem;
+  margin-bottom: 8rem;
+}
+
+.quick-tag {
+  padding: 4rem 10rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.quick-tag.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-tint);
+  color: var(--color-primary-dark);
+}
+
+.quick-tag:active {
+  transform: scale(0.96);
+}
+
 .eval-textarea {
   width: 100%;
   border: 1px solid var(--bg-hover);

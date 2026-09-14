@@ -92,48 +92,123 @@
   font-family: var(--font-family-number);
 }
 
-#pay_success .divContent .divDesc,
-#pay_success .divContent .divDesc1 {
-  height: auto;
+/* 预计送达时间（突出显示） */
+#pay_success .divContent .divEta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6rem;
+  margin: 12rem 0;
   font-size: var(--font-size-lg);
-  font-family: var(--font-family-title);
-  font-weight: 400;
-  text-align: center;
-  color: var(--color-text-secondary);
-  line-height: 1.5;
-  padding: 0 8rem;
+  color: var(--color-primary-dark);
+  font-weight: 500;
+}
+
+#pay_success .divContent .divEta i {
+  font-size: 18rem;
+}
+
+#pay_success .divContent .divEta strong {
+  font-size: 20rem;
+  font-family: var(--font-family-number);
+}
+
+/* 订单进度迷你条 */
+#pay_success .order-mini-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16rem 20rem;
+  margin: 8rem 0;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+#pay_success .mp-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rem;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+}
+
+#pay_success .mp-step.done {
+  color: var(--color-success);
+}
+
+#pay_success .mp-step i {
+  font-size: 18rem;
+}
+
+#pay_success .mp-line {
+  flex: 1;
+  height: 2rem;
+  background: var(--border-light);
+  margin: 0 4rem;
+  margin-bottom: 16rem;
 }
 
 #pay_success .divContent .divDesc1 {
-  margin-top: 7rem;
+  height: auto;
+  font-size: var(--font-size-md);
+  text-align: center;
+  color: var(--color-text-hint);
+  line-height: 1.5;
+  padding: 0 8rem;
+  margin-top: 8rem;
   margin-bottom: 20rem;
 }
 
-#pay_success .divContent .btnView {
-  width: 124rem;
-  height: 36rem;
-  background: var(--color-primary);
-  border-radius: 18rem;
-  font-size: 15rem;
-  font-family: var(--font-family-title);
-  font-weight: 500;
-  text-align: center;
-  color: var(--color-text-primary);
-  line-height: 36rem;
-  cursor: pointer;
-  transition: opacity var(--transition-fast);
-}
-
-#pay_success .divContent .btnView:active {
-  opacity: 0.8;
-}
-
-/* 分享按钮 */
+/* 操作按钮区 */
 #pay_success .divActions {
   display: flex;
   align-items: center;
   gap: 12rem;
   margin-top: 20rem;
+}
+
+#pay_success .divContent .btnView {
+  width: 124rem;
+  height: 38rem;
+  background: var(--color-primary-gradient);
+  border-radius: var(--radius-xl);
+  font-size: 15rem;
+  font-weight: 500;
+  text-align: center;
+  color: var(--color-text-primary);
+  line-height: 38rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
+}
+
+#pay_success .divContent .btnView:active {
+  transform: scale(0.97);
+}
+
+/* 继续点餐按钮 */
+#pay_success .divContent .btnContinue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rem;
+  width: 124rem;
+  height: 38rem;
+  border: 1px solid var(--color-text-disabled);
+  border-radius: var(--radius-xl);
+  font-size: 15rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--bg-card);
+}
+
+#pay_success .divContent .btnContinue:active {
+  background: var(--bg-hover);
+  border-color: var(--color-primary);
 }
 #pay_success .divActions .btnShare {
   display: flex;

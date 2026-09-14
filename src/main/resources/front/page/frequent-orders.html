@@ -307,7 +307,8 @@
             <template v-if="filteredItems.length > 0">
                 <div class="group-title">按点餐频率排序</div>
                 <div class="dish-card" v-for="item in filteredItems" :key="item.key">
-                    <div class="dish-img-placeholder">
+                    <img v-if="item.image" :src="item.image" class="dish-img" @error="$event.target.style.display='none'"/>
+                    <div v-else class="dish-img-placeholder">
                         <i class="ri-restaurant-line"></i>
                     </div>
                     <div class="dish-info">
@@ -427,7 +428,8 @@
                                             count: detail.number || 1,
                                             category: cat,
                                             lastOrderTime: order.orderTime,
-                                            orderId: order.id
+                                            orderId: order.id,
+                                            image: detail.image || detail.dishImage || ''
                                         });
                                     }
                                 }

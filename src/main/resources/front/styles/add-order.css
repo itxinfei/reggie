@@ -410,22 +410,28 @@
   width: 28rem;
   height: 28rem;
   border-radius: var(--radius-md);
-  font-size: 14rem;
-  font-weight: 600;
+  font-size: 18rem;
   text-align: center;
   line-height: 28rem;
-  /* 修改点：浅金底(#ffd54f)上白字对比度仅约 1.3:1，违反 WCAG；改为深字 */
-  color: var(--color-text-primary);
   margin-right: 10rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-#add_order .divContent .pay-method .pay-wechat {
-  background: var(--color-success);
+/* 微信绿 */
+#add_order .pay-wechat-icon {
+  color: #07c160;
 }
 
-#add_order .divContent .pay-method .pay-alipay {
-  /* 支付宝官方蓝：平台图标专用色，不属"蓝色作主色"违规 */
-  background: var(--platform-alipay);
+/* 支付宝蓝 */
+#add_order .pay-alipay-icon {
+  color: #1677ff;
+}
+
+/* 货到付款 */
+#add_order .pay-cod-icon {
+  color: var(--color-text-secondary);
 }
 
 #add_order .divContent .pay-method .pay-text {
@@ -438,6 +444,85 @@
   color: var(--color-primary);
   font-size: 18rem;
   font-weight: bold;
+}
+
+/* ---- 餐具选择（对齐美团环保提示） ---- */
+#add_order .utensils-section {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  margin-top: 10rem;
+  padding: 14rem 14rem 10rem;
+}
+
+#add_order .utensils-section .title {
+  font-size: 16rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 10rem;
+}
+
+#add_order .utensils-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rem;
+}
+
+#add_order .utensils-btn {
+  padding: 6rem 14rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+#add_order .utensils-btn.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-tint);
+  color: var(--color-primary-dark);
+  font-weight: 500;
+}
+
+#add_order .utensils-btn:active {
+  transform: scale(0.96);
+}
+
+#add_order .utensils-tip {
+  margin-top: 8rem;
+  font-size: var(--font-size-xs);
+  color: var(--color-success);
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+}
+
+/* ---- 价格明细（独立区块） ---- */
+#add_order .price-breakdown {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  margin-top: 10rem;
+  padding: 14rem;
+}
+
+#add_order .price-breakdown .title {
+  font-size: 16rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 10rem;
+}
+
+#add_order .price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6rem 0;
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+}
+
+#add_order .price-row.discount {
+  color: var(--color-danger);
 }
 
 /* 修改点：优惠券选择 */

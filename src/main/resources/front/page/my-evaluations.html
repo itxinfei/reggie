@@ -150,6 +150,12 @@
                                           @click="dish.starRating = s">★</span>
                                 </span>
                             </div>
+                            <!-- 快捷评价标签（对齐美团） -->
+                            <div class="quick-tags">
+                                <span class="quick-tag" v-for="tag in quickTags" :key="tag"
+                                      :class="{active: dish.content && dish.content.includes(tag)}"
+                                      @click="toggleQuickTag(dish, tag)">{{tag}}</span>
+                            </div>
                             <!-- 修改点：el-input textarea 替换为原生textarea -->
                             <textarea v-model="dish.content" rows="2" class="eval-textarea"
                                       placeholder="分享您的用餐体验（选填）" maxlength="200"></textarea>
@@ -196,6 +202,8 @@
                     submitVisible: false,
                     submitLoading: false,
                     submitData: { orderId: null, dishes: [] },
+                    // 快捷评价标签
+                    quickTags: ['味道好', '分量足', '配送快', '包装好', '食材新鲜', '性价比高'],
                     // 下拉刷新状态
                     refreshing: false,
                     // 图片预览
@@ -214,6 +222,15 @@
                 }
             },
             methods: {
+                // 快捷标签切换（追加/移除到评价内容）
+                toggleQuickTag(dish, tag){
+                    var content = dish.content || ''
+                    if(content.includes(tag)){
+                        dish.content = content.replace(tag, '').replace(/  +/g, ' ').trim()
+                    }else{
+                        dish.content = (content + ' ' + tag).trim()
+                    }
+                },
                 // 修改点：下拉刷新
                 onRefresh(){
                     this.page = 1

@@ -177,6 +177,7 @@
             :class="{active: activeType === index}"
             @click="categoryClick(index,item.id,item.type)"
           >
+            <i :class="getCategoryIcon(item.name)" class="cat-icon"></i>
             <span class="cat-text">{{ item.name }}</span>
             <span class="cat-badge" v-if="item.name === '热销' || item.name === '优惠'">热</span>
           </div>
@@ -225,10 +226,17 @@
         <div class="cart-price" v-if="cartData && cartData.length > 0">
           <span class="cart-symbol">¥</span>
           <span class="cart-amount">{{ goodsPrice.toFixed(2) }}</span>
+          <!-- 起送门槛提示 -->
+          <span class="cart-min-order" v-if="goodsPrice < minOrderAmount">
+            还差¥{{(minOrderAmount - goodsPrice).toFixed(2)}}起送
+          </span>
         </div>
         <div class="cart-empty-text" v-else>购物车空空如也</div>
         <div class="cart-spacer"></div>
-        <div :class="['cart-submit', cartData && cartData.length > 0 ? 'cart-submit-active' : 'cart-submit-disabled']" @click="toAddOrderPage">去结算</div>
+        <div :class="['cart-submit', goodsPrice >= minOrderAmount ? 'cart-submit-active' : 'cart-submit-disabled']"
+             @click="goodsPrice >= minOrderAmount ? toAddOrderPage : null">
+          {{ goodsPrice >= minOrderAmount ? '去结算' : '¥' + minOrderAmount + '起送' }}
+        </div>
       </div>
 
       <!-- ====== 口味选择弹窗 ====== -->
@@ -644,6 +652,10 @@
               })
               // 修改点：四舍五入到分，避免浮点数累加误差（如 3.7199999999999998）
               return Math.round(price * 100) / 100
+            },
+            // 起送门槛（从商家信息获取，默认15元）
+            minOrderAmount(){
+              return Number(this.restaurantInfo.minOrder || 15)
             },
             // 修改点：当前选中分类名称，用于右侧列表标题
             activeCategoryName(){
