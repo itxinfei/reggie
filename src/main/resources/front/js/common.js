@@ -1,5 +1,7 @@
-// 图片路径转换
+// 图片路径转换（外部URL直接返回，本地路径走代理）
 function imgPath(path){
+    if (!path) return '/front/images/noImg.png'
+    if (path.indexOf('http://') === 0 || path.indexOf('https://') === 0) return path
     return '/common/download?name=' + path
 }
 

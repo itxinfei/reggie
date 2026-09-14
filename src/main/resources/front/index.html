@@ -699,6 +699,8 @@
           methods:{
             // 修改点：将common.js的全局函数imgPath注册为Vue实例方法，Vue模板中无法访问全局函数
             imgPath(path){
+              if (!path) return './images/noImg.png'
+              if (path.indexOf('http://') === 0 || path.indexOf('https://') === 0) return path
               return '/common/download?name=' + path
             },
             // 修改点：图片加载失败兜底，替代el-image的error slot

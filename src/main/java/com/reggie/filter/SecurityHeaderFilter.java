@@ -63,7 +63,7 @@ public class SecurityHeaderFilter extends OncePerRequestFilter {
                     + "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
                     + "style-src 'self' 'unsafe-inline'; "
                     + "img-src 'self' data: https:; "
-                    + "font-src 'self'; "
+                    + "font-src 'self' data: https://b.yzcdn.cn; "
                     + "connect-src 'self'; "
                     + "frame-ancestors 'self'; "
                     + "base-uri 'self'; "
