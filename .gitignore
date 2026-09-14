@@ -223,3 +223,4 @@ db_snapshot_live.sql
 # 完整 mysqldump 转储（本地调试用，160KB+，不提交）
 schema-mysql.sql
 review-report.html
+codebuddytmp_*
