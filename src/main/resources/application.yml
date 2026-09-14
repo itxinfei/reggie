@@ -1,0 +1,179 @@
+server:
+  port: 8080
+  servlet:
+    session:
+      timeout: 30m  # 会话30分钟无操作自动过期
+      cookie:
+        http-only: true      # 防止 XSS 窃取 Session ID
+        secure: false        # 开发环境 false，生产环境启用 HTTPS 后设为 true
+        same-site: strict    # 防止 CSRF 攻击
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  # 启用 HTTP 响应压缩：后台所有 iframe 子页面都要加载 vue.js(~350KB)+element-ui(~560KB)，
+  # 未开启压缩时每次切换菜单都重新下载约 1MB 未压缩资源，是页面"很卡"的主要根因。
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,image/svg+xml,font/ttf,font/woff,font/woff2
+    min-response-size: 1024
+
+spring:
+  application:
+    name: reggie_take_out
+  profiles:
+    active: dev  # 默认开发环境
+  # 禁用 DevTools 自动重启（IDEA 可能自动加载 DevTools）
+  devtools:
+    restart:
+      enabled: false
+
+# MyBatis Plus 配置
+mybatis-plus:
+  # 修改点：显式声明 mapper XML 扫描路径，覆盖默认 classpath*:/mapper/**/*.xml。
+  # 历史上有部分模块（attendance/dashboard/urgency）的 XML 直接放在 com/reggie/module/{模块}/
+  # 根目录下而非 mapper/ 子目录，导致默认扫描漏掉、运行时报 Invalid bound statement (not found)。
+  # 此处用两条 ant 匹配同时覆盖 mapper/ 子目录与模块根目录两种放置方式。
+  mapper-locations:
+    - classpath*:/mapper/**/*.xml
+    - classpath*:/com/reggie/mapper/**/*.xml
+    - classpath*:/com/reggie/module/*/mapper/**/*.xml
+    - classpath*:/com/reggie/module/*/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID
+
+# 项目配置（可选，留空则使用jar包所在目录下的uploads/）
+# reggie:
+#   path: ./uploads/
+
+# 测试图片生成配置
+reggie:
+  # 服务器地址（用于生成堂食二维码链接）
+  # 部署时修改为实际服务器IP，例如：http://192.168.1.100:8080
+  server-url: http://localhost:8080
+  image:
+    # 是否在启动时下载真实网络图片（true=仅首次启动时下载，false=禁用）
+    # 注意：下载一次后，后续启动会自动跳过（检测到图片即停止）
+    download-real-images: true
+    # 网络图片下载超时时间（毫秒）
+    download-timeout: 10000
+    # 下载重试次数（暂未启用，预留）
+    download-retry: 2
+  # 短信服务配置
+  sms:
+    # 短信签名（生产环境需在application-prod.yml中覆盖）
+    sign-name: 瑞吉外卖
+    # 短信模板编码（开发环境留空，不实际发送；生产环境在application-prod.yml中配置）
+    template-code:
+    # 修改点：短信Mock模式开关（开发环境默认true，仅打印日志不实际发送）
+    mock-mode: true
+
+  # 修改点：APP推送服务配置
+  push:
+    # 推送Mock模式（开发环境默认true，仅打印日志不实际发送；生产环境设为false并配置推送SDK）
+    mock-mode: true
+    # 推送服务商：mock / jpush / getui / fcm
+    provider: mock
+
+  # 支付回调签名校验配置
+  # 安全约定：mock-mode=true（默认，开发/演示）跳过回调验签仅告警；
+  # 生产环境必须设为 false 并配置支付宝公钥/微信API密钥做真实签名校验，密钥缺失则拒绝回调（fail-closed）
+  payment:
+    mock-mode: true
+    # 支付宝公钥（RSA2，Base64 X.509，不含 PEM 头尾）——支付宝开放平台 → 应用 → 开发设置
+    alipay-public-key:
+    # 微信支付 API 密钥（APIv2，32位）——微信商户平台 → 账户中心 → API安全
+    wechat-api-key:
+    # 微信回调签名类型：MD5（默认）/ HMAC-SHA256
+    wechat-sign-type: MD5
+
+  # 外卖平台对接配置
+  # 安全约定：mock-mode=true（默认，开发/演示）跳过真实平台调用与回调验签，仅打印告警；
+  # 生产环境必须设为 false 并配置各平台 enabled=true + appId/appSecret/baseUrl/merchantId/notifyToken，
+  # 未配置的平台操作一律拒绝执行（fail-closed），严禁静默假成功
+  delivery:
+    mock-mode: true
+    platforms:
+      MEITUAN:
+        enabled: false
+        app-id:
+        app-secret:
+        merchant-id:
+        base-url: https://api-open.meituan.com
+        notify-token:
+      ELEME:
+        enabled: false
+        app-id:
+        app-secret:
+        merchant-id:
+        base-url: https://open-api.shop.ele.me
+        notify-token:
+      DOUYIN:
+        enabled: false
+        app-id:
+        app-secret:
+        merchant-id:
+        base-url: https://open.douyin.com
+        notify-token:
+
+  # 修改点(2026-07-10)：AI配置已全面迁移至数据库 ai_provider_config 表
+  # 以下 yml 配置仅作为兜底参考值，实际使用的供应商/模型/密钥全部从数据库读取
+  # 请在 后台管理 → AI供应商配置 中管理所有AI大模型参数
+  ai:
+    enabled: true
+    provider: deepseek        # 已废弃：仅当数据库无激活配置时作为 providerCode 参考
+    api-key:                  # 已废弃：请勿在此配置，统一在数据库管理
+    base-url: https://api.deepseek.com/v1  # 已废弃
+    model: deepseek-chat      # 已废弃
+    timeout: 60               # 兜底超时（若数据库未设置 timeout 则回退此值）
+    max-tokens: 2048          # 兜底 Token（若数据库未设置 maxTokens 则回退此值）
+    temperature: 0.7          # 兜底温度（若数据库未设置 temperature 则回退此值）
+
+# API文档配置（必须在Spring根级别，不能嵌套在reggie下）
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+    try-it-out-enabled: true
+    filter: true
+    doc-expansion: none
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+
+# Actuator 管理端点：默认仅暴露 health 和 info，防止敏感信息泄露
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: never
+
+# ==================== 开发环境专用 Actuator 增强 ====================
+# 仅在 dev 环境（当前默认 active: dev）开放更多监控端点并展示详情，
+# 方便 IDEA 的 Actuator/Endpoints 面板检索 health、beans、mappings 等数据。
+# 生产环境请勿激活 dev，避免敏感信息暴露。
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+management:
+  endpoints:
+    web:
+      exposure:
+        # 安全说明：移除 env/configprops — 这两个端点会泄露所有环境变量和配置属性（含密码、API Key）
+        include: health,info,beans,mappings,loggers,metrics,threaddump
+  endpoint:
+    health:
+      show-details: always

@@ -46,6 +46,30 @@
   --color-info: #ffc200;
   --color-price: #F34346;
 
+  /* ================================================================
+     订单状态色（语义化，2026-09-14 全站统一）
+     —— 新增状态只需：① 加 --status-xxx / --status-xxx-bg 令牌
+        ② 在下方「状态色语义类」中加一行类映射，不必改各页面
+     ================================================================ */
+  /* 待付款：需用户行动（去支付），用醒目橙，区别于品牌金 */
+  --status-pending: #FF7D00;
+  --status-pending-bg: rgba(255, 125, 0, 0.10);
+  /* 待接单 / 待发货：商家处理中，用品牌深金 */
+  --status-accepted: #FF9A00;
+  --status-accepted-bg: rgba(255, 154, 0, 0.10);
+  /* 已发货 / 配送中：流程推进顺利，用成功绿 */
+  --status-shipped: #07C160;
+  --status-shipped-bg: rgba(7, 193, 96, 0.10);
+  /* 已完成：终态，中性灰 */
+  --status-completed: #8C8C8C;
+  --status-completed-bg: rgba(140, 140, 140, 0.10);
+  /* 已取消：失效终态，浅灰（比“已完成”更弱） */
+  --status-cancelled: #BFBFBF;
+  --status-cancelled-bg: rgba(191, 191, 191, 0.14);
+  /* 售后中 / 退款中：需人工关注，用危险红 */
+  --status-refunding: #E94E3C;
+  --status-refunding-bg: rgba(233, 78, 60, 0.10);
+
   /* ---- 星级（评价/评分统一） ---- */
   --color-star: #f7ba2a;
 
@@ -143,6 +167,44 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* ================================================================
+   订单状态色 — 语义类（共享层，全站任何页面直接复用）
+   用法：<span class="status-shipped">配送中</span>
+        或胶囊标签：<span class="status-tag status-shipped">配送中</span>
+   ================================================================ */
+.status-pending   { color: var(--status-pending); }
+.status-accepted  { color: var(--status-accepted); }
+.status-shipped   { color: var(--status-shipped); }
+.status-completed { color: var(--status-completed); }
+.status-cancelled { color: var(--status-cancelled); }
+.status-refunding { color: var(--status-refunding); }
+
+/* 兼容历史类名（历史订单/个人中心曾用），语义与上方保持一致，避免改一处漏一处 */
+.status-delivering { color: var(--status-shipped); }
+.status-complete   { color: var(--status-completed); }
+.status-cancel     { color: var(--status-cancelled); }
+
+/* 状态胶囊标签（订单详情/列表头部等需要"标签感"的场景） */
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20rem;
+  padding: 0 8rem;
+  border-radius: 999rem;
+  font-size: 11rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.status-tag.status-pending   { color: var(--status-pending);   background: var(--status-pending-bg); }
+.status-tag.status-accepted  { color: var(--status-accepted);  background: var(--status-accepted-bg); }
+.status-tag.status-shipped   { color: var(--status-shipped);   background: var(--status-shipped-bg); }
+.status-tag.status-completed { color: var(--status-completed); background: var(--status-completed-bg); }
+.status-tag.status-cancelled { color: var(--status-cancelled); background: var(--status-cancelled-bg); }
+.status-tag.status-refunding { color: var(--status-refunding); background: var(--status-refunding-bg); }
 
 /* ================================================================
    全局基础样式

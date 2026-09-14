@@ -1,226 +1,80 @@
-# ============================================================
-# Reggie 外卖管理系统 - Git 忽略规则
-# 策略: 仅保留源代码与必要文档，其余一律不上传
-# ============================================================
+# ============================================
+# Reggie 外卖系统 - Git 忽略规则
+# 只保留 docs/ src/ printer-agent/ README.md LICENSE pom.xml
+# ============================================
 
-# ----------------------------------------------------------
-# 构建输出 (Maven / Java)
-# ----------------------------------------------------------
+# ===== IDE 和编辑器 =====
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+
+# ===== Claude / AI 工具 =====
+.claude/
+.claudeignore
+CLAUDE.md
+AGENTS.md
+PROJECT_ANALYSIS_REPORT.md
+.codebuddy/
+.joycode/
+.qoder/
+.rtk/
+
+# ===== 构建产物 =====
 target/
+build/
 *.class
 *.jar
 *.war
 *.ear
-*.out
-compile-errors*.txt
-
-# ----------------------------------------------------------
-# 数据库文件 —— 严禁上传至 Gitee！
-# 包含所有 SQL 导出、数据库二进制文件等
-# 测试用的 H2 DDL Schema 是代码固件，予以保留
-# ----------------------------------------------------------
-*.sql
-*.db
-*.sqlite
-*.sqlite3
-*.mdb
-*.accdb
-*.frm
-*.ibd
-*.myd
-*.myi
-# 例外：H2 内存库测试 Schema（纯 DDL，无数据，单元测试依赖）
-!src/test/resources/*.sql
-# 例外：数据库迁移脚本（Flyway 格式，随代码版本管理）
-!src/main/resources/db/migration/*.sql
-
-# ----------------------------------------------------------
-# 日志文件
-# ----------------------------------------------------------
 logs/
 *.log
-*.log.*
 
-# ----------------------------------------------------------
-# IDE 配置文件 (IntelliJ / VS Code / Eclipse)
-# ----------------------------------------------------------
-.idea/
-.vscode/
-.settings/
-*.iml
-.project
-.classpath
-.factorypath
-.springBeans
-
-# ----------------------------------------------------------
-# 操作系统生成文件
-# ----------------------------------------------------------
-.DS_Store
-Thumbs.db
-Desktop.ini
-ehthumbs.db
-
-# ----------------------------------------------------------
-# 运行时上传目录 (用户上传的图片等)
-# ----------------------------------------------------------
-uploads/
-
-# ----------------------------------------------------------
-# 环境配置文件 (包含数据库密码 / API Key 等敏感信息)
-# ----------------------------------------------------------
-.env
-.env.*
-*.env
-application.yml
-application*.yml
-application*.yaml
-application*.properties
-# 配置文件备份
-*.yml.bak
-*.yaml.bak
-*.properties.bak
-
-# ----------------------------------------------------------
-# AI 编码助手 / 浏览器自动化本地配置 (不参与版本控制)
-# ----------------------------------------------------------
-.codebuddy/
-.claude/
-.claudeignore
-.superpowers/
-.mimocode/
-.rtk/
-.playwright-cli/
-.workbuddy/
-CLAUDE.md
-
-# ----------------------------------------------------------
-# 临时文件 / 调试残留
-# ----------------------------------------------------------
-*.tmp
-*.temp
-*.bak
-*.swp
-*.swo
-*~
-cookies.txt
-response.txt
-cp.txt
-# Windows 空设备重定向残留 / 本地工具缓存
-nul
-.atomcode/
+# ===== 依赖和缓存 =====
 .m2/
-
-# ----------------------------------------------------------
-# 一次性工具脚本 (非项目源代码)
-# ----------------------------------------------------------
-download_images.py
-patch_provider.py
-update_mapper_javadoc.py
-fresh.yaml
-tmp_scan.py
-
-# ----------------------------------------------------------
-# 本地维护文档 (非对外发布用)
-# ----------------------------------------------------------
-CHANGELOG.md
-CODE-REVIEW-REPORT.md
-FRONTEND-REVIEW-REPORT.md
-backend-style-audit.md
-backend-table-ui-audit.md
-
-# ----------------------------------------------------------
-# Maven 包装器 (整体忽略，不参与版本控制)
-# ----------------------------------------------------------
 .mvn/
-mvnw
-mvnw.cmd
+node_modules/
+.npm/
+.yarn/
 
-# ----------------------------------------------------------
-# GitHub Actions CI 配置 (本地开发用，不上 Gitee)
-# ----------------------------------------------------------
-.github/
-.github/workflows/
+# ===== 前端工具配置 =====
+.eslintrc.js
+.stylelintrc.json
+.prettierrc
+postcss.config.js
 
-# ----------------------------------------------------------
-# AI Agent 配置文件 (本地维护，不上 Gitee)
-# ----------------------------------------------------------
-AGENTS.md
+# ===== 数据库 =====
+db/
 
-# ----------------------------------------------------------
-# 打印代理运行期生成物 (终端凭据 token.json 勿提交)
-# ----------------------------------------------------------
-printer-agent/token.json
-printer-agent/__pycache__/
-printer-agent/build/
-# 打包交付物整体不提交（exe/token/日志均在此，可随时重新打包）
-printer-agent/dist/
-
-# ----------------------------------------------------------
-# Playwright E2E 测试套件 (本地开发用，不上 Gitee)
-# ----------------------------------------------------------
+# ===== 脚本和工具 =====
+scripts/
+tools/
 tests/
 
-# ----------------------------------------------------------
-# docs/ 目录：仅保留教学资料（讲义/imgs/PPT），其余排除
-# ----------------------------------------------------------
-docs/research/
-docs/superpowers/
-docs/资料/
-docs/code-review-report.md
-docs/frontend-benchmark-report.md
-docs/TestImageGenerator-最终版说明.md
-docs/项目完成度分析报告-2026-07-08.md
-# 通配：禁止上传任何 docs/*.md 分析文档
-docs/*.md
+# ===== 上传文件 =====
+uploads/
 
-/scripts/
+# ===== 其他 =====
+.gitattributes
+.gitignore
+.env
+.env.*
+*.tmp
+*.bak
+*.swp
+*~
+.DS_Store
+Thumbs.db
+CHANGELOG.md
 
-# ----------------------------------------------------------
-# 前端依赖与测试生成产物 (tests/ 为 Playwright E2E 套件)
-# ----------------------------------------------------------
-node_modules/
-tests/node_modules/
-tests/allure-results/
-tests/allure-report/
-tests/playwright-report/
-tests/tests/reports/
-tests/reports/
-tests/test-results/
-tests/report/
-*.tsbuildinfo
-
-# ----------------------------------------------------------
-# 根目录本地维护文档 (与代码运行无关,不进版本库)
-# ----------------------------------------------------------
-REVIEW_COLLECT.md
-CODE_REVIEW_REPORT.md
-
-# 禁止误提交一次性/本地脚本（已在一次性工具脚本段覆盖，此处兜底）
-*.py.bak
-scripts/
-
-# ----------------------------------------------------------
-# 临时调试脚本 / 一次性工具（各会话产生的 .py/.sh/.js/.txt 残留）
-# ----------------------------------------------------------
-*.py
-*.sh
-# 临时测试转储 / 调试快照（各会话产生的 .txt 残留，禁止上传）
-test-*.txt
-*_test.txt
-fontsize-files.txt
-*_report.txt
-audit_pages.js
-fix_placeholders.js
-locate_err.js
-_*_reversed.html
-_old_assistant.html
-_qrcode_*.html
-_merged/
-_old_pages/
-_pre/
-db_snapshot_live.sql
-# 完整 mysqldump 转储（本地调试用，160KB+，不提交）
-schema-mysql.sql
-review-report.html
-codebuddytmp_*
+# ===== 保留的文件（不忽略） =====
+!docs/
+!src/
+!printer-agent/
+!README.md
+!LICENSE
+!pom.xml

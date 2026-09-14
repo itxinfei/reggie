@@ -288,7 +288,8 @@
                     return getStatus(status)
                 },
                 getStatusClass(status){
-                    var map = {1:'status-pending',2:'status-pending',3:'status-delivering',4:'status-complete',5:'status-cancel',6:'status-cancel'};
+                    // 修改点(2026-09-14)：6 类状态各归各位（原 1/2 同为 pending、6 误归 cancel）
+                    var map = {1:'status-pending',2:'status-accepted',3:'status-shipped',4:'status-completed',5:'status-cancelled',6:'status-refunding'};
                     return map[status] || '';
                 },
                 async addOrderAgain(order){

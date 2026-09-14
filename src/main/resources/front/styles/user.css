@@ -483,20 +483,13 @@
 /* ================================================================
    新增：订单状态颜色
    ================================================================ */
-#user .divOrders .timeStatus .status-pending {
-  color: var(--color-primary-dark);
-  font-weight: 600;
-}
-
-#user .divOrders .timeStatus .status-delivering {
-  color: var(--color-success);
-  font-weight: 600;
-}
-
-#user .divOrders .timeStatus .status-complete {
-  color: var(--color-text-hint);
-}
-
-#user .divOrders .timeStatus .status-cancel {
-  color: var(--color-text-disabled);
-}
+/* 订单状态颜色 —— 修改点(2026-09-14)：统一引用共享层状态色令牌（--status-*），与历史订单页一致 */
+#user .divOrders .timeStatus .status-pending   { color: var(--status-pending); font-weight: 600; }
+#user .divOrders .timeStatus .status-accepted  { color: var(--status-accepted); font-weight: 600; }
+#user .divOrders .timeStatus .status-shipped,
+#user .divOrders .timeStatus .status-delivering { color: var(--status-shipped); font-weight: 600; }
+#user .divOrders .timeStatus .status-completed,
+#user .divOrders .timeStatus .status-complete   { color: var(--status-completed); font-weight: 600; }
+#user .divOrders .timeStatus .status-cancelled,
+#user .divOrders .timeStatus .status-cancel     { color: var(--status-cancelled); }
+#user .divOrders .timeStatus .status-refunding  { color: var(--status-refunding); font-weight: 600; }

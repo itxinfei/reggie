@@ -999,6 +999,9 @@ public class RecommendServiceImpl implements RecommendService {
         map.put("description", dish.getDescription());
         map.put("categoryId", dish.getCategoryId());
         map.put("status", dish.getStatus());
+        // 修改点(2026-09-14)：显式标注类型，前端据此区分菜品/套餐
+        // （此前只有 setmeal 带 type，dish 不带 → 前端只能靠 flavors 是否存在猜测，导致误判为套餐）
+        map.put("type", "dish");
         return map;
     }
 

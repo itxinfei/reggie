@@ -448,7 +448,8 @@
                 },
                 getStatus: function(status){ return getStatus(status) },
                 getStatusClass: function(status){
-                    var map = { 1: 'status-pending', 2: 'status-pending', 3: 'status-delivering', 4: 'status-complete', 5: 'status-cancel' }
+                    // 修改点(2026-09-14)：与历史订单页统一的 6 类状态映射
+                    var map = { 1: 'status-pending', 2: 'status-accepted', 3: 'status-shipped', 4: 'status-completed', 5: 'status-cancelled', 6: 'status-refunding' }
                     return map[status] || ''
                 },
                 toOrderPageWithStatus: function(status){

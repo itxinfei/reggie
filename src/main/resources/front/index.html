@@ -20,7 +20,7 @@
     <!-- 引入样式  -->
     <link rel="stylesheet" href="styles/index.css" />
     <!--本页面内容的样式-->
-    <link rel="stylesheet" href="styles/main.css?v=20260914" />
+    <link rel="stylesheet" href="styles/main.css?v=20260914b" />
     <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
     <link rel="stylesheet" href="styles/tabbar.css" />
     <!-- 骨架屏样式 -->
@@ -54,10 +54,11 @@
             <i class="ri-map-pin-line"></i>
             <span>{{ addressInfo ? (addressInfo.label || addressInfo.cityName + addressInfo.districtName) : '收货地址' }}</span>
           </div>
+          <!-- 修改点(2026-09-14)：语音入口从搜索框边缘移入「搜索浮层的输入框」内（见 .so-voice）。
+               首页搜索框回归干净入口：放大镜 + 占位文案，避免麦克风挤在框边缘。 -->
           <div class="search-box" @click="onSearchClick">
             <i class="ri-search-line"></i>
             <span>搜索菜品、套餐</span>
-            <i class="ri-mic-line voice-icon" @click.stop="startVoiceSearch"></i>
           </div>
           <!-- 修改点：消息铃铛入口 + 未读角标 -->
           <div class="msg-bell" @click="toMessagePage">
@@ -436,6 +437,13 @@
             v-if="searchKeyword"
             @click="clearSearch"
           ></i>
+          <!-- 修改点(2026-09-14)：语音搜索入口移到这里（输入框右侧），位置更符合直觉 -->
+          <i
+            class="ri-mic-line so-voice"
+            @click.stop="startVoiceSearch"
+            title="语音搜索"
+            aria-label="语音搜索"
+          ></i>
         </div>
         <span class="search-cancel" @click="closeSearch">取消</span>
       </div>
@@ -749,9 +757,16 @@
                 window.location.href = '/front/page/ai-assistant.html'
               })
             },
-            // 修改点：点击推荐菜品，走 dishDetails 加载评价数据
-            recommendDishClick(dish){
-              this.dishDetails(dish)
+            // 修改点(2026-09-14 修复「套餐不存在」)：推荐接口 /recommend/dishes 返回的是
+            // {id,name,image,price,description,type}，没有 flavors 字段；直接交给 dishDetails
+            // 会因 !Array.isArray(flavors) 被误判为「套餐」，用菜品ID去查套餐 → 后端抛"套餐不存在"。
+            // 这里显式标注 type 后再分发，确保推荐内容与后端数据匹配。
+            recommendDishClick(item){
+              if(item && item.type === 'setmeal'){
+                this.dishDetails(item)
+              }else{
+                this.dishDetails(Object.assign({}, item, { type: 'dish', flavors: [] }))
+              }
             },
             // 修改点：分类图标映射（RemixIcon 类名，禁止使用 emoji）
             getCategoryIcon(name){
@@ -1441,7 +1456,12 @@
               //先清除对象数据，如果不行的话dialog使用v-if
               this.detailsDialog.item = {}
               this.setMealDialog.item = {}
-              if(Array.isArray(item.flavors)){
+              // 修改点(2026-09-14)：优先按显式 type 判断菜品/套餐；
+              // 无 type 时回退旧的「有 flavors 数组即菜品」逻辑（兼容菜品列表/套餐列表数据）
+              var isSetmeal = (item.type === 'setmeal') ? true
+                            : (item.type === 'dish') ? false
+                            : !Array.isArray(item.flavors)
+              if(!isSetmeal){
                 this.detailsDialog.item = item
                 this.detailsDialog.show = true
                 // 加载菜品评价数据

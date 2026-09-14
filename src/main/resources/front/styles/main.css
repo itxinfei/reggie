@@ -76,12 +76,13 @@
   /* 修改点：min-width 保证搜索框在窄屏不被固定子元素挤压到不可用（固定元素合计约 200rem+），
      同时移除低对比半透明背景，改用高不透明度白卡 + 深色文字，提升金色渐变上的可读性 */
   min-width: 88rem;
-  height: 32rem;
+  /* 修改点(2026-09-14)：作为"搜索入口"更醒目好点——高度 32→36rem、胶囊圆角、左右留白 14rem */
+  height: 36rem;
   background: var(--surface-white-85);
-  border-radius: var(--radius-xl);
+  border-radius: 999rem;
   display: flex;
   align-items: center;
-  padding: 0 12rem;
+  padding: 0 14rem;
   cursor: pointer;
   transition: background 0.2s, box-shadow 0.2s;
   box-shadow: var(--shadow-sm);
@@ -113,9 +114,9 @@
     font-size: 14rem;
   }
 
-  /* 修改点：窄屏搜索框占位文字直接隐藏，只保留放大镜 + 语音按钮 */
+  /* 修改点(2026-09-14)：麦克风已移出搜索框，窄屏无需再隐藏占位文字 */
   .top-bar .search-box span {
-    display: none;
+    font-size: 13rem;
   }
 }
 
@@ -125,18 +126,23 @@
   margin-right: 5rem;
 }
 
-/* 语音搜索按钮 */
-.top-bar .search-box .voice-icon {
-  margin-right: 0;
-  margin-left: auto;
-  font-size: 18rem !important;
-  color: var(--color-primary-dark) !important;
+/* 语音搜索按钮 —— 修改点(2026-09-14)：从首页搜索框边缘移入搜索浮层的输入框内（.so-voice）。
+   放在真实输入框右侧更符合直觉，也不用再挤压首页搜索框。 */
+.search-input-wrap .so-voice {
+  font-size: 18rem;
+  color: var(--color-primary-dark);
+  margin-left: 8rem;
+  flex-shrink: 0;
   cursor: pointer;
-  padding: 2rem;
-  transition: transform var(--transition-fast);
+  padding: 6rem 4rem;
+  line-height: 1;
+  border-radius: var(--radius-round);
+  transition: transform var(--transition-fast), background var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
 }
-.top-bar .search-box .voice-icon:active {
-  transform: scale(1.2);
+.search-input-wrap .so-voice:active {
+  transform: scale(1.15);
+  background: var(--color-primary-tint);
 }
 
 .top-bar .search-box span {
@@ -1926,7 +1932,7 @@
 .di-spec,
 .di-action i,
 .cart-icon-wrap,
-.voice-icon,
+.so-voice,
 .suggestion-item,
 .search-tag {
   cursor: pointer;

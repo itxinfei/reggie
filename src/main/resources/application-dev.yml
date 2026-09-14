@@ -1,0 +1,89 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    druid:
+      url: jdbc:mysql://localhost:3306/reggie?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: root
+      # 开发环境数据库密码：仅用于本地开发，禁止在生产使用；本地 MySQL root 密码为 123456
+      password: ${DB_PASSWORD:123456}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      # 连接池基础配置
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      # 连接有效性检测
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      # 空闲连接回收
+      min-evictable-idle-time-millis: 1800000
+      max-evictable-idle-time-millis: 3600000
+      time-between-eviction-runs-millis: 300000
+      # keep-alive 检查间隔，必须大于 time-between-eviction-runs-millis（Druid 1.1.23 强制校验）
+      keep-alive-between-time-millis: 600000
+      # 连接物理超时
+      phyTimeoutMillis: 1800000
+      keep-alive: true
+      # Druid 监控页面：仅开发环境启用，且仅允许 127.0.0.1 访问
+      # 安全说明：该页面可执行 SQL，默认禁用；如需启用务必使用强密码并限制来源 IP
+      stat-view-servlet:
+        enabled: false
+        url-pattern: /druid/*
+        login-username: ${DRUID_USERNAME:admin}
+        login-password: ${DRUID_PASSWORD:Ch4nge-Me-N0w!}
+        allow: 127.0.0.1
+      filter:
+        stat:
+          enabled: true
+          slow-sql-millis: 1000
+          log-slow-sql: true
+        wall:
+          enabled: true
+          config:
+            # 允许 DELETE：业务物理删除（分类/地址/推荐缓存清理等 removeById/deleteById）依赖；
+            # wall 核心防护仍是禁止 drop/truncate/alter 等 DDL 注入
+            delete-allow: true
+            drop-table-allow: false
+            truncate-allow: false
+            alter-allow: false
+  redis:
+    host: localhost
+    port: 6379
+    password:
+    database: 0
+    # 修改点：添加命令超时和连接超时，防止线程饥饿
+    timeout: 5000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 2          # 至少保持2个预热连接，避免冷启动延迟
+        max-wait: 3000ms     # 修改点：从-1ms(无限等待)改为3秒超时，防止线程饥饿
+      # 修改点：添加连接超时配置
+      cluster:
+        refresh:
+          adaptive: true
+          period: 30s
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 地图服务（高德地理编码/逆地理编码）
+# 开发环境 Key 留空时 GeoUtils 走降级逻辑（不阻断地址保存，下单时按门店坐标兜底校验）
+# 生产环境必须填写真实高德 Web 服务 Key（申请：https://lbs.amap.com/api/webservice/guide/create-project/get-key）
+reggie:
+  geo:
+    amap:
+      key: ${AMAP_KEY:}
+      # 地理编码接口（地址→经纬度）
+      geocode-url: https://restapi.amap.com/v3/geocode/geo
+      # 逆地理编码接口（经纬度→地址）
+      regeocode-url: https://restapi.amap.com/v3/geocode/regeo
+      # 请求超时（毫秒）
+      timeout-ms: 3000
+

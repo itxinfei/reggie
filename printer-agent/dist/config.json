@@ -1,0 +1,9 @@
+{
+  "server_url": "http://127.0.0.1:8080",
+  "store_code": "S0001",
+  "terminal_name": "收银台-01",
+  "printer_name": "",
+  "paper_size": "80mm",
+  "poll_interval": 3,
+  "log_level": "INFO"
+}

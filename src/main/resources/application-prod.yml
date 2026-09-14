@@ -1,0 +1,119 @@
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    session:
+      timeout: 30m  # 会话30分钟无操作自动过期
+      cookie:
+        secure: true        # 生产环境启用HTTPS后设为true，仅通过HTTPS传输Cookie
+        http-only: true      # 防止 XSS 窃取 Session ID
+        same-site: strict    # 防止 CSRF 攻击
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,image/svg+xml,font/ttf,font/woff,font/woff2
+    min-response-size: 1024
+  # 修改点：Tomcat 生产化连接器配置（适配后台 iframe 密集加载场景）
+  # max-threads=200：Spring Boot 2.4 默认 200，显式声明便于运维调整
+  # connection-timeout=10s：连接超时 10s，避免空闲连接耗尽线程
+  # max-connections=8192：单 worker 线程并发连接上限（HTTP/2 多路复用场景）
+  # accept-count=100：全连接队列满后内核保留的 backlog，超出直接拒绝
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    max-connections: 8192
+    accept-count: 100
+    connection-timeout: 10000
+
+spring:
+  # Jasypt 配置加密：
+  #   敏感密码（数据库/Redis/API Key）使用 ENC(...) 格式，启动时由 Jasypt 自动解密
+  #   加密密钥通过环境变量 JASYPT_ENCRYPTOR_PASSWORD 传入（禁止硬编码）
+  #   生成加密值命令：
+  #     java -cp jasypt-1.9.3.jar org.jasypt.intf.cli.JasyptPBEStringEncryptionCLI \
+  #         input="你的密码" password=${JASYPT_ENCRYPTOR_PASSWORD} \
+  #         algorithm=PBEWithMD5AndTripleDES
+  #   若未配置 JASYPT_ENCRYPTOR_PASSWORD，启动时将抛出解密异常
+  # 说明：ENC() 内为占位示例，实际部署时替换为真实加密值
+  datasource:
+    druid:
+      url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:reggie}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=true&requireSSL=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      username: ${DB_USERNAME:root}
+      # Jasypt 加密密码（首选，部署时替换为真实加密值）：
+      # password: ENC(通过 jasypt-cli 生成的真实密文)
+      # 环境变量降级（备选，二选一使用）：
+      password: ${DB_PASSWORD}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      # 连接池基础配置
+      initial-size: 10
+      min-idle: 10
+      max-active: 50
+      max-wait: 60000
+      # 连接有效性检测
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      # 空闲连接回收
+      min-evictable-idle-time-millis: 1800000
+      max-evictable-idle-time-millis: 3600000
+      time-between-eviction-runs-millis: 300000
+      # keep-alive 检查间隔，必须大于 time-between-eviction-runs-millis（Druid 1.1.23 强制校验）
+      keep-alive-between-time-millis: 600000
+      # 连接物理超时
+      phyTimeoutMillis: 1800000
+      keep-alive: true
+      # 生产环境禁用 Druid 监控页面，防止泄露数据库结构
+      stat-view-servlet:
+        enabled: false
+      filter:
+        stat:
+          enabled: false
+        wall:
+          enabled: true
+          config:
+            # 允许 DELETE：业务物理删除（分类/地址/推荐缓存清理等 removeById/deleteById）依赖；
+            # wall 核心防护仍是禁止 drop/truncate/alter 等 DDL 注入
+            delete-allow: true
+            drop-table-allow: false
+            truncate-allow: false
+            alter-allow: false
+  # Redis 配置（修改点：启用生产环境 Redis 配置）
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    # Jasypt 加密密码（首选，部署时替换为真实加密值）：
+    # password: ENC(通过 jasypt-cli 生成的真实密文)
+    # 环境变量降级（备选，二选一使用）：
+    password: ${REDIS_PASSWORD}
+    database: 0
+    timeout: 5000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 2
+        max-wait: 3000ms
+      cluster:
+        refresh:
+          adaptive: true
+          period: 30s
+
+mybatis-plus:
+  configuration:
+    log-impl:
+
+# 生产环境短信和推送配置
+reggie:
+  sms:
+    sign-name: ${SMS_SIGN_NAME:瑞吉外卖}
+    template-code: ${SMS_TEMPLATE_CODE:}
+    mock-mode: false
+  push:
+    mock-mode: false
+
+# 生产环境禁用 Swagger/OpenAPI 文档，防止暴露接口信息
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
