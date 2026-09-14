@@ -178,7 +178,7 @@
                     },
                     async doDeleteAddress(item){
                         try {
-                            var res = await deleteAddressApi({id: item.id})
+                            var res = await deleteAddressApi({ids: item.id})
                             if(res.code === 1){
                                 vant.Toast.success('删除成功')
                                 this.initData()

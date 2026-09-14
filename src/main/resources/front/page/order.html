@@ -321,7 +321,8 @@
                 // （delivery_order 表主键是 platformOrderId，getByPlatformOrderId 查询）。
                 // 本系统 Orders.number 是自增主键字符串，与平台订单号不同，直接传会导致"配送订单不存在"。
                 viewTracking(order){
-                    var platformOrderId = order && (order.platformOrderId || order.platformOrderId !== undefined ? order.platformOrderId : order.number);
+                    // 修改点：platformOrderId 为 null 时 fallback 到 order.number
+                    var platformOrderId = order && (order.platformOrderId || order.number);
                     if(platformOrderId){
                         window.requestAnimationFrame(()=>{
                             window.location.href = '/front/page/tracking.html?orderId=' + encodeURIComponent(platformOrderId)

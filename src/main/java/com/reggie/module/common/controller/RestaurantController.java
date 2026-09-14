@@ -25,7 +25,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/restaurant")
 @Slf4j
-@RequireEmployee
+// 修改点：移除类级别 @RequireEmployee，/info 接口 C 端首页/下单页需要访问
 @Tag(name = "商家信息", description = "获取商家基本信息、配送参数等")
 public class RestaurantController {
 

@@ -511,7 +511,7 @@
                             vant.Toast.fail(res.msg || '再来一单失败');
                             this.addOrderLoading = false
                         }
-                    } catch(e) { this.addOrderLoading = false }
+                    } catch(e) { vant.Toast.fail('再来一单失败'); this.addOrderLoading = false }
                 },
                 async toPageLogin(){
                     if(this.logoutLoading) return;

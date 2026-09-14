@@ -49,6 +49,7 @@
         <script src="../js/vant.min.js"></script>
         <!-- 修改点（P2-11）：支付结果回查依赖支付发起接口，加载 payment.js -->
         <script src="./../api/payment.js"></script>
+        <script src="./../api/order.js"></script>
         <script>
         new Vue({
             el:"#pay_success",
@@ -76,17 +77,15 @@
                 async checkPayResult(){
                     if(!this.reorderId) return
                     try {
-                        const res = await paymentCreateApi({
-                            orderId: this.reorderId,
-                            channel: 'WECHAT'
-                        })
+                        // 修改点：回查订单状态判断支付结果（status !== 1 表示已支付）
+                        // 不再调用 paymentCreateApi 避免重复创建支付单
+                        const res = await getOrderDetailApi(this.reorderId)
                         if(res && res.code === 1 && res.data){
-                            const d = res.data
-                            if(d.success){
+                            var orderStatus = res.data.status || res.data.orderStatus
+                            if(orderStatus && orderStatus !== 1){
                                 vant.Toast.success('支付成功')
                             }else{
-                                const msg = d.errorMsg || d.rawResponse || '支付未完成'
-                                vant.Toast.fail(msg)
+                                vant.Toast.fail('支付未完成，请在订单列表中继续支付')
                             }
                         }
                     } catch (e) {

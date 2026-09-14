@@ -118,13 +118,6 @@
         </van-pull-refresh>
 
         <!-- 分页 -->
-            <img src="./../images/no_order.png" class="empty-img" alt="暂无评价记录"/>
-            <p class="empty-text">暂无评价记录</p>
-            <!-- 修改点：el-button 替换为原生button -->
-            <button class="btn-primary" @click="goToOrder">去下单</button>
-        </div>
-
-        <!-- 分页 -->
         <van-pagination
             v-if="total > pageSize"
             v-model="page"

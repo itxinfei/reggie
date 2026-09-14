@@ -7,6 +7,14 @@ function  addOrderApi(data){
       })
 }
 
+// 查询订单详情（C 端用于支付结果回查等场景）
+function getOrderDetailApi(id) {
+  return $axios({
+      'url': '/order/' + id,
+      'method': 'get'
+  })
+}
+
 //分页查询订单
 function orderPagingApi(data) {
   return $axios({

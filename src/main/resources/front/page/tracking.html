@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="../styles/tracking.css" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js"></script>
+    <style>
         .tracking-container {
             height: calc(100vh - var(--header-height));
             overflow-y: auto;
@@ -286,6 +287,7 @@
             font-size: 60rem;
             color: var(--color-text-disabled);
         }
+    </style>
 </head>
 <body>
     <div id="tracking" class="app">
@@ -304,7 +306,7 @@
             <div class="order-info-card" v-if="trackingData">
                 <div class="info-row">
                     <i class="ri-map-pin-line"></i>
-                    <span>{{ trackingData.address || trackingData.userName }}</span>
+                    <span>{{ trackingData.address }}</span>
                 </div>
                 <div class="dish-summary" v-if="trackingData.dishSummary">
                     {{ trackingData.dishSummary }}
