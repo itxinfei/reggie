@@ -140,9 +140,8 @@ body.scrollable-page {
   user-select: none;
   letter-spacing: 0.5rem;
 }
-#address_edit .divContent .formGroup .formLabel .labelSvg {
-  width: 16rem;
-  height: 16rem;
+#address_edit .divContent .formGroup .formLabel i {
+  font-size: 16rem;
   margin-right: 6rem;
   flex-shrink: 0;
   color: var(--color-primary-dark);
@@ -262,9 +261,8 @@ body.scrollable-page {
   gap: 4rem;
 }
 #address_edit .divContent .formGroup .sexBtn:active { transform: scale(0.96); }
-#address_edit .divContent .formGroup .sexBtn .sexSvg {
-  width: 16rem;
-  height: 16rem;
+#address_edit .divContent .formGroup .sexBtn i {
+  font-size: 16rem;
 }
 #address_edit .divContent .formGroup .sexBtn.sexBtnActive {
   background: var(--color-primary-gradient);

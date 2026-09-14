@@ -92,10 +92,9 @@
                             <i class="ri-checkbox-blank-circle-line" v-else></i>
                             <span class="defaultText">{{ item.isDefault === 1 ? '默认地址' : '设为默认地址' }}</span>
                         </div>
-                        <div style="display:flex;align-items:center;gap:8rem">
-                            <span class="btnDelete" @click.stop.prevent="deleteAddress(item)"><i class="ri-delete-bin-line"></i>删除</span>
-                            <!-- 修改点：编辑图标从绝对定位改入操作栏文档流，右侧不再被长地址遮挡 -->
-                            <i class="ri-edit-line" @click.stop.prevent="toAddressEditPage(item)" alt="编辑地址"></i>
+                        <div class="divActions">
+                            <span class="actionBtn" @click.stop.prevent="toAddressEditPage(item)"><i class="ri-edit-line"></i>编辑</span>
+                            <span class="actionBtn actionBtnDelete" @click.stop.prevent="deleteAddress(item)"><i class="ri-delete-bin-line"></i>删除</span>
                         </div>
                     </div>
                 </div>
@@ -108,7 +107,7 @@
                 <!-- 修改点：空状态提示 -->
                 <div class="emptyState" v-if="!loading && addressList.length === 0">
                     <div class="emptyIcon">
-                        <i class="icon-location-outline"></i>
+                        <i class="ri-map-pin-line"></i>
                     </div>
                     <div class="emptyText">暂无收货地址</div>
                     <div class="emptyHint" @click="toAddressCreatePage">点击添加新地址</div>

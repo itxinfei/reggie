@@ -421,7 +421,7 @@
     <div class="search-overlay" v-if="searchShow" @click.self="closeSearch">
       <div class="search-header">
         <div class="search-input-wrap">
-          <i class="icon-search so-icon"></i>
+          <i class="ri-search-line so-icon"></i>
           <input
             type="text"
             class="search-input"
@@ -448,7 +448,7 @@
           :key="idx"
           @click="selectSuggestion(sug)"
         >
-          <i class="icon-search"></i>
+          <i class="ri-search-line"></i>
           <span class="suggestion-name">{{ sug.name }}</span>
           <span class="suggestion-type">{{ sug.isMeal ? '套餐' : '菜品' }}</span>
         </div>

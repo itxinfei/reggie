@@ -1761,7 +1761,7 @@
   background: var(--bg-page);
 }
 
-.search-suggestions .suggestion-item .icon-search {
+.search-suggestions .suggestion-item .ri-search-line {
   color: var(--color-text-disabled);
   font-size: 14rem;
   margin-right: 10rem;
