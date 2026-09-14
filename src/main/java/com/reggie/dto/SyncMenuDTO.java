@@ -21,7 +21,6 @@ public class SyncMenuDTO {
     @NotBlank(message = "平台不能为空")
     private String platform;
 
-    @Schema(description = "菜品列表", required = true)
-    @NotNull(message = "菜品列表不能为空")
+    @Schema(description = "菜品列表（可选，为空时由后端自动从数据库获取）")
     private List<Map<String, Object>> dishes;
 }

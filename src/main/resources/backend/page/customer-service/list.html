@@ -587,6 +587,7 @@
             this.fetchSessionList()
           } catch(e) {
             console.error('分配失败', e)
+            ReggieUI.error('分配失败，请稍后重试')
           } finally {
             this.dialogSubmitting = false
           }
@@ -673,6 +674,7 @@
             this.fetchComplaintList()
           } catch(e) {
             console.error('处理投诉失败', e)
+            ReggieUI.error('处理投诉失败，请稍后重试')
           } finally {
             this.dialogSubmitting = false
           }

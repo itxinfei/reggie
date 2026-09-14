@@ -264,32 +264,40 @@
               }
           },
         async fetchData(reloadStats = true) {
-          // 修改点：传递 activeFilter 状态参数到后端
-          const params = {
-            page: this.page,
-            pageSize: this.pageSize,
-            name: this.input ? this.input : undefined
-          }
-          if (this.activeFilter) { params.status = this.activeFilter }
-
-          // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-          const requests = [getMemberList(params)]
-          if (reloadStats) { requests.push(this.loadMemberStats()) }
-          const results = await Promise.all(requests)
-          const memberRes = results[0]
-
-          // 处理员工列表数据
-          if (String(memberRes.code) === '1') {
-            this.tableData = memberRes.data.records || []
-            this.counts = memberRes.data.total
-          }
-
-          if (reloadStats) {
-            const statsRes = results[1]
-            // 处理统计数据
-            if (statsRes && String(statsRes.code) === '1') {
-              this.stats = statsRes.data || this.stats
+          // 修改点：loading 状态管理（原未设置，crud-table 骨架屏不生效）
+          this.loading = true
+          try {
+            // 修改点：传递 activeFilter 状态参数到后端
+            const params = {
+              page: this.page,
+              pageSize: this.pageSize,
+              name: this.input ? this.input : undefined
             }
+            if (this.activeFilter) { params.status = this.activeFilter }
+
+            // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
+            const requests = [getMemberList(params)]
+            if (reloadStats) { requests.push(this.loadMemberStats()) }
+            const results = await Promise.all(requests)
+            const memberRes = results[0]
+
+            // 处理员工列表数据
+            if (String(memberRes.code) === '1') {
+              this.tableData = memberRes.data.records || []
+              this.counts = memberRes.data.total
+            }
+
+            if (reloadStats) {
+              const statsRes = results[1]
+              // 处理统计数据
+              if (statsRes && String(statsRes.code) === '1') {
+                this.stats = statsRes.data || this.stats
+              }
+            }
+          } catch (err) {
+            console.warn('加载会员列表失败:', err)
+          } finally {
+            this.loading = false
           }
         },
           // 加载员工统计数据

@@ -21,8 +21,7 @@ public class SyncStockDTO {
     @NotBlank(message = "平台不能为空")
     private String platform;
 
-    @Schema(description = "库存数据（Key: 商品ID, Value: 库存数量）", required = true)
-    @NotNull(message = "库存数据不能为空")
+    @Schema(description = "库存数据（Key: 商品ID, Value: 库存数量，可选为空时由后端自动从数据库获取）")
     @Size(max = 100, message = "库存数据不能超过100条")
     private Map<Long, Integer> stock;
 }

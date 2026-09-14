@@ -496,6 +496,9 @@ new Vue({
       if (this.activeFilter) {
         params.status = this.activeFilter
       }
+      // 修改点：名称筛选参数（原未读取 this.input，导致下拉选中后筛选不生效）
+      var name = (this.input || '').trim()
+      if (name) { params.name = name }
       try {
         // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
         const comboRes = await getSetmealPage(params)

@@ -344,6 +344,8 @@
 
         /** 卡片点击筛选 */
         onStatCardClick({ activeKey }) {
+          // 修改点：设置 activeStatus（原未赋值，导致 loadData 不携带 status 参数，卡片筛选无效）
+          this.activeStatus = activeKey || ''
           // 清空搜索条件
           if (this.$refs.tableBar) {
             this.$refs.tableBar.clearSearch()

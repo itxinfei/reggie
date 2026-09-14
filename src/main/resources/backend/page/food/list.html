@@ -463,25 +463,17 @@
         },
         async loadDishStats() {
           try {
-            // 修改点：并行查询各状态菜品总数，替代硬编码 deletedDishes=0；结果自赋值，调用方无需再取返回值
-            var results = await Promise.all([
-              getDishPage({ page: 1, pageSize: 1, status: '1' }),
-              getDishPage({ page: 1, pageSize: 1, status: '0' }),
-              getDishPage({ page: 1, pageSize: 1, isDeleted: 1 })
-            ])
-            var activeCount = (String(results[0].code) === '1') ? (results[0].data.total || 0) : 0
-            var inactiveCount = (String(results[1].code) === '1') ? (results[1].data.total || 0) : 0
-            var deletedCount = (String(results[2].code) === '1') ? (results[2].data.total || 0) : 0
-            var stats = {
-              totalDishes: activeCount + inactiveCount,
-              activeDishes: activeCount,
-              inactiveDishes: inactiveCount,
-              deletedDishes: deletedCount
+            // 修改点：使用后端 /dish/stats 端点一次性获取统计数据（原 isDeleted 参数因 @TableLogic 无效）
+            var res = await getDishStats()
+            if (String(res.code) === '1' && res.data) {
+              this.stats = {
+                totalDishes: (res.data.total || 0),
+                activeDishes: (res.data.active || 0),
+                inactiveDishes: (res.data.inactive || 0),
+                deletedDishes: 0 // @TableLogic 下无法统计已删除数量，置 0
+              }
             }
-            this.stats = stats
-            return { code: 1, data: stats }
           } catch (err) { console.warn('加载菜品统计数据失败:', err) }
-          return { code: 0 }
         },
         loadCategoryOptions: function() {
           var self = this

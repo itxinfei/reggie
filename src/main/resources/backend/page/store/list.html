@@ -660,9 +660,12 @@
                     ReggieUI.error((res && res.msg) || '状态更新失败');
                 }
             }).catch(function(err) {
-                if (err && err.__cancelled) { self.loadData(); return; }
-                console.warn('[门店管理] 状态更新失败:', err);
-                ReggieUI.error('状态更新失败，请重试');
+                // 修改点：统一重载数据恢复 el-switch 状态（原非 __cancelled 分支未 loadData，前端状态与后端不一致）
+                if (!err || !err.__cancelled) {
+                  console.warn('[门店管理] 状态更新失败:', err);
+                  ReggieUI.error('状态更新失败，请重试');
+                }
+                self.loadData();
             });
         },
         // ========== 暂停/恢复接单 ==========

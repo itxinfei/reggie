@@ -386,8 +386,9 @@
             campaignColumns: [
                 { prop: 'id', label: 'ID', width: 60, align: 'center' },
                 { prop: 'name', label: '活动名称', width: 120, slot: true },
-                { prop: 'type', label: '类型', width: 90, align: 'center', slot: true },
-                { prop: 'target', label: '目标', width: 100, align: 'center', slot: true },
+                // 修改点：prop 改为实际数据字段名（原 type/target 与 campaignType/targetType 不匹配）
+                { prop: 'campaignType', label: '类型', width: 90, align: 'center', slot: true },
+                { prop: 'targetType', label: '目标', width: 100, align: 'center', slot: true },
                 { prop: 'status', label: '状态', width: 100, align: 'center', slot: true },
                 { prop: 'time', label: '活动时间', width: 190, slot: true },
                 { prop: 'participants', label: '参与/上限', width: 120, align: 'center', slot: true }

@@ -435,19 +435,21 @@
         }
       },
       computed: {
+        // 修改点：合并基础校验规则(formRules)与条件校验规则(圆形/多边形)，原 rangeTypeRules || formRules 导致 feeType 校验丢失
         rangeTypeRules() {
-          if (this.formData.rangeType === 1) {
-            return {
-              centerLongitude: [{ required: true, message: '请输入中心经度', trigger: 'blur' }],
-              centerLatitude: [{ required: true, message: '请输入中心纬度', trigger: 'blur' }],
-              radius: [{ required: true, message: '请输入半径', trigger: 'blur' }]
-            }
-          } else if (this.formData.rangeType === 2) {
-            return {
-              polygonPoints: [{ required: true, whitespace: true, message: '请输入多边形坐标', trigger: 'blur' }]
-            }
+          var base = {
+            ruleName: [{ required: true, message: '请输入规则名称', trigger: 'blur' }],
+            rangeType: [{ required: true, message: '请选择范围类型', trigger: 'change' }],
+            feeType: [{ required: true, message: '请选择配送费类型', trigger: 'change' }]
           }
-          return null
+          if (this.formData.rangeType === 1) {
+            base.centerLongitude = [{ required: true, message: '请输入中心经度', trigger: 'blur' }]
+            base.centerLatitude = [{ required: true, message: '请输入中心纬度', trigger: 'blur' }]
+            base.radius = [{ required: true, message: '请输入半径', trigger: 'blur' }]
+          } else if (this.formData.rangeType === 2) {
+            base.polygonPoints = [{ required: true, whitespace: true, message: '请输入多边形坐标', trigger: 'blur' }]
+          }
+          return base
         },
         statsCards() {
           return [

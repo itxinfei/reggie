@@ -648,10 +648,15 @@
         // 状态流转白名单（与后端 ALLOWED_TABLE_TRANSITIONS 一致）
         canTransition: function(current, target) {
           if (current === target) return false
-          const rules = {}
-          const allowed = rules[current]
+          var rules = {
+            FREE: ['OCCUPIED', 'RESERVED', 'CLEANING'],
+            OCCUPIED: ['FREE', 'CLEANING'],
+            RESERVED: ['OCCUPIED', 'FREE'],
+            CLEANING: ['FREE']
+          }
+          var allowed = rules[current]
           if (!allowed) return false
-          for (let i = 0; i < allowed.length; i++) {
+          for (var i = 0; i < allowed.length; i++) {
             if (allowed[i] === target) return true
           }
           return false

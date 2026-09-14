@@ -19,8 +19,8 @@ const deliveryFilterOptions = (params) => $axios({ url: '/api/delivery/options',
 /** 获取配送统计数据 */
 const deliveryStats = (params) => $axios({ url: '/api/delivery/stats', method: 'get', params })
 
-/** 同步菜品到外卖平台 */
-const deliverySyncMenu = () => $axios({ url: '/api/delivery/sync/menu', method: 'post' })
+/** 同步菜品到外卖平台（platform 必传，dishes 可选） */
+const deliverySyncMenu = (data) => $axios({ url: '/api/delivery/sync/menu', method: 'post', data: data || {} })
 
-/** 同步库存到外卖平台 */
-const deliverySyncStock = () => $axios({ url: '/api/delivery/sync/stock', method: 'post' })
+/** 同步库存到外卖平台（platform 必传，stock 可选） */
+const deliverySyncStock = (data) => $axios({ url: '/api/delivery/sync/stock', method: 'post', data: data || {} })

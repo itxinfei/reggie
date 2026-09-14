@@ -533,6 +533,8 @@
         },
         async submitRefund() {
           const self = this
+          // 修改点：防重保护（原无守卫，快速双击可并发退款）
+          if (self.refundLoading) return
           if (!self.refundForm.amount || parseFloat(self.refundForm.amount) <= 0) { ReggieUI.warning('请输入有效的退款金额'); return }
           let reason = self.refundForm.reasonType
           if (!reason) { ReggieUI.warning('请选择退款原因'); return }

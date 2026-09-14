@@ -156,6 +156,26 @@
           </el-form-item>
         </el-form>
       </crud-dialog>
+
+      <!-- 同步平台选择弹窗 -->
+      <crud-dialog
+        title="选择同步平台"
+        :visible.sync="syncDialogVisible"
+        size="sm"
+        @submit="confirmSync"
+        @close="cancelSync"
+      >
+        <el-form :model="syncForm" label-width="80px" size="small">
+          <el-form-item label="外卖平台">
+            <el-select v-model="syncForm.platform" placeholder="请选择平台" style="width: 100%">
+              <el-option label="美团" value="MEITUAN"></el-option>
+              <el-option label="饿了么" value="ELEME"></el-option>
+              <el-option label="抖音" value="DOUYIN"></el-option>
+              <el-option label="京东" value="JD"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </crud-dialog>
     </div>
   </div>
 
@@ -194,6 +214,10 @@
             { key: 'syncMenu', text: '同步菜品', type: 'primary' },
             { key: 'syncStock', text: '同步库存', type: 'primary' }
           ],
+          // 同步弹窗
+          syncDialogVisible: false,
+          syncType: '',
+          syncForm: { platform: 'MEITUAN' },
           // 表格列配置
           columns: [
             { prop: 'platformOrderId', label: '订单号', minWidth: 140 },
@@ -332,8 +356,8 @@
           this.search()
         },
         onAction: function(payload) {
-          if (payload.key === 'syncMenu') this.syncMenu()
-          else if (payload.key === 'syncStock') this.syncStock()
+          if (payload.key === 'syncMenu') this.openSyncDialog('menu')
+          else if (payload.key === 'syncStock') this.openSyncDialog('stock')
         },
         onPageChange: function(payload) {
           this.page = payload.page
@@ -345,32 +369,42 @@
           this.search(false)
         },
         // ==================== 同步操作 ====================
-        async syncMenu() {
-          if (this.syncLoading) return
-          this.syncLoading = true
-          try {
-            const res = await deliverySyncMenu()
-            if (String(res.code) === '1') ReggieUI.success('同步菜品成功')
-            else ReggieUI.warning(res.msg || '同步失败，请稍后重试')
-          } catch (err) {
-            if (err.message === 'NOTLOGIN') return
-            ReggieUI.error('请求失败：' + err)
-          } finally {
-            this.syncLoading = false
-          }
+        openSyncDialog: function(type) {
+          this.syncType = type
+          this.syncForm.platform = 'MEITUAN'
+          this.syncDialogVisible = true
         },
-        async syncStock() {
+        cancelSync: function() {
+          this.syncDialogVisible = false
+          this.syncType = ''
+        },
+        async confirmSync() {
+          if (!this.syncForm.platform) {
+            ReggieUI.warning('请选择同步平台')
+            return
+          }
           if (this.syncLoading) return
           this.syncLoading = true
+          this.syncDialogVisible = false
+          var platform = this.syncForm.platform
           try {
-            const res = await deliverySyncStock()
-            if (String(res.code) === '1') ReggieUI.success('同步库存成功')
-            else ReggieUI.warning(res.msg || '同步失败，请稍后重试')
+            var res
+            if (this.syncType === 'menu') {
+              res = await deliverySyncMenu({ platform: platform })
+            } else {
+              res = await deliverySyncStock({ platform: platform })
+            }
+            if (String(res.code) === '1') {
+              ReggieUI.success(this.syncType === 'menu' ? '同步菜品成功' : '同步库存成功')
+            } else {
+              ReggieUI.warning(res.msg || '同步失败，请稍后重试')
+            }
           } catch (err) {
             if (err.message === 'NOTLOGIN') return
-            ReggieUI.error('请求失败：' + err)
+            ReggieUI.error('请求失败：' + (err.message || err))
           } finally {
             this.syncLoading = false
+            this.syncType = ''
           }
         },
         // ==================== 订单操作 ====================

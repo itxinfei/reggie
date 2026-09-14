@@ -86,7 +86,11 @@ public class ReservationController {
                                      @Parameter(description = "手机号（可选，模糊搜索）")
                                      @RequestParam(required = false) String phone,
                                      @Parameter(description = "预订日期（可选，格式yyyy-MM-dd）")
-                                     @RequestParam(required = false) String reservedDate) {
+                                     @RequestParam(required = false) String reservedDate,
+                                     @Parameter(description = "开始日期（可选，格式yyyy-MM-dd）")
+                                     @RequestParam(required = false) String beginTime,
+                                     @Parameter(description = "结束日期（可选，格式yyyy-MM-dd）")
+                                     @RequestParam(required = false) String endTime) {
         Page<Reservation> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Reservation> qw = new LambdaQueryWrapper<>();
         // 强制租户过滤，防止跨租户数据泄露
@@ -98,7 +102,11 @@ public class ReservationController {
         qw.eq(status != null && !status.isEmpty(), Reservation::getStatus, status);
         qw.like(customerName != null && !customerName.isEmpty(), Reservation::getCustomerName, customerName);
         qw.like(phone != null && !phone.isEmpty(), Reservation::getPhone, phone);
-        if (reservedDate != null && !reservedDate.isEmpty()) {
+        // 日期筛选：优先 beginTime/endTime 范围查询，其次 reservedDate 单日查询
+        if (beginTime != null && !beginTime.isEmpty() && endTime != null && !endTime.isEmpty()) {
+            qw.ge(Reservation::getReservedTime, beginTime + " 00:00:00");
+            qw.le(Reservation::getReservedTime, endTime + " 23:59:59");
+        } else if (reservedDate != null && !reservedDate.isEmpty()) {
             qw.apply("DATE(reserved_time) = {0}", reservedDate);
         }
         qw.orderByDesc(Reservation::getReservedTime);
