@@ -859,17 +859,6 @@ Vue.component('crud-dialog', {
     // 父通过 .sync 更新 visible 时，同步到内部受控状态
     visible: function (val) { this.currentVisible = val }
   },
-  mounted: function () {
-    // 架构护栏：crud-dialog 必须受父级 .sync 或显式 @update:visible 控制。
-    // 若父未监听 update:visible，关闭事件无法回传父，弹窗会"关不掉/关了又开"——
-    // 正是本次修复的根因模式。挂载时主动告警，把"静默坏掉"变成"可见报错"，避免同类问题复发。
-    if (typeof this.$listeners === 'undefined' || !this.$listeners['update:visible']) {
-      console.error(
-        '[crud-dialog] 缺少 "update:visible" 监听：使用处必须写 :visible.sync="xxx"' +
-        '（或 :visible="xxx" @update:visible="xxx = $event"）。否则关闭后父状态不同步，弹窗将关不掉。'
-      )
-    }
-  },
   computed: {
     /** 尺寸别名 → 标准像素宽度（当自定义 width 时优先使用 width） */
     resolvedWidth: function () {

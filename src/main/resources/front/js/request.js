@@ -88,6 +88,23 @@
       return Promise.reject(new Error('Invalid response'))
     },
     error => {
+      // 修改点：401 = 登录态缺失/会话失效（后端 LoginCheckFilter 返回 401 + {code:0,msg:'NOTLOGIN'}）。
+      // 原逻辑只在「响应成功分支」判断 NOTLOGIN（要求后端返回 200），但本项目未登录返回的是 401，
+      // 导致成功分支永远收不到、不会跳登录页，只能在受保护页面刷一堆 "系统接口401异常" 报错。
+      // 在此统一处理 401 -> 跳登录页，避免未登录用户被困在页面且满屏报错。
+      var errResp = error && error.response;
+      if (errResp && errResp.status === 401) {
+        var body = errResp.data;
+        var isNotLogin = !body || (body.code === 0 && body.msg === 'NOTLOGIN');
+        if (isNotLogin) {
+          clearCsrfToken();
+          var curPage = window.location.pathname;
+          if (!curPage.includes('login')) {
+            window.location.href = '/front/page/login.html';
+          }
+          return Promise.reject(error);
+        }
+      }
       let { message } = error || {};
       if (!message) message = '未知错误';
       if (message === "Network Error") {

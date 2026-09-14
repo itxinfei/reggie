@@ -132,6 +132,7 @@
         }
       },
       methods: {
+        /* ── 数据加载 ── */
         async init(reloadStats = true) {
           this.loading = true
           const ls = this.lastSearch || {};
@@ -175,7 +176,7 @@
           } catch (err) { console.warn('加载预约统计失败:', err) }
           return { code: 0 }
         },
-        // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
+        /* ── 筛选与分页 ── */
         onCardClick: function(payload) {
           this.activeFilter = payload.activeKey
           this.lastSearch = this.activeFilter ? { status: this.activeFilter } : {}
@@ -203,6 +204,7 @@
           this.page = 1
           this.init(false)
         },
+        /* ── 预订状态操作 ── */
         confirmHandle(id) {
           const self = this
           ReggieUI.confirm('确认该预订?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })

@@ -670,10 +670,14 @@
             this.userPhone = sessionStorage.getItem("userPhone") || ''
             this.userName = sessionStorage.getItem("userName") || ''
             this.userAvatar = sessionStorage.getItem("userAvatar") || ''
-            // 修改点：加载个性化推荐
+            // 修改点：加载个性化推荐（/recommend/dishes 为公开接口，游客可访问，实测 200）
             this.loadRecommendations()
-            // 修改点：加载未读消息数量（消息铃铛角标）
-            this.fetchUnreadCount()
+            // 修改点：未登录时不请求受保护接口 —— /recommend/messages/unread-count 游客访问返回 401，
+            // 401 拦截器会重定向到登录页，会破坏本页「未登录也可浏览菜单但不能操作购物车」的设计
+            // （与下方 initData 的 isLogin 守卫保持一致）
+            if (this.userPhone) {
+              this.fetchUnreadCount()
+            }
           },
           mounted(){
             // 修改点：若已登录则正常加载，未登录也可浏览菜单但不能操作购物车

@@ -226,6 +226,7 @@
         mounted() {
         },
         methods: {
+          /* ========== 数据加载 ========== */
           // 修改点：通用优化方案 — 下拉框本地缓存，避免每次打开都发请求
           async loadFilterOptions() {
             // 如果已加载过数据，直接使用缓存
@@ -302,6 +303,7 @@
             }
             return { code: 0 }
           },
+          /* ========== 搜索与筛选 ========== */
           handleQuery() {
             // 修改点：搜索时复位卡片筛选，避免冲突
             this.activeFilter = ''
@@ -327,6 +329,7 @@
             this.page = 1
             this.fetchData(false)
           },
+          /* ========== 分类操作（新增/编辑/删除） ========== */
            // 添加
           addClass(st) {
             if (st === 'class') {

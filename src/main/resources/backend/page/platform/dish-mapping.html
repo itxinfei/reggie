@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
+<!-- ====== 商品平台映射管理页 ====== -->
+<!-- 功能：管理菜品与外卖平台的映射关系，支持上/下架同步、营业状态同步，按平台/状态筛选 -->
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="dish-mapping-app">
   <div class="container" id="main-content" role="main" aria-label="页面主要内容">
@@ -147,7 +149,7 @@
       }
     },
     methods: {
-      // 修改点：列表数据拉取（后端分页，返回 records/total），reloadStats 控制是否重载统计卡片
+      /* ── 数据加载 ── */
       async fetchData(reloadStats) {
         if (reloadStats === undefined) { reloadStats = true }
         this.loading = true
@@ -196,7 +198,7 @@
         }
         return { code: 0 }
       },
-      // 修改点：统计卡片点击 — 按状态筛选数据
+      /* ── 筛选与分页 ── */
       onCardClick(payload) {
         this.activeFilter = payload.activeKey
         this.page = 1
@@ -224,7 +226,7 @@
         const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音', SELF: '自营', OTHER: '其他' }
         return map[type] || type
       },
-      // 修改点：同步菜品上/下架到平台（带二次确认 + 成功后更新本地状态）
+      /* ── 菜品与营业状态同步 ── */
       syncDish(row, action) {
         const self = this
         const tip = action === 'on_shelf' ? '确认将该菜品上架到 ' + this.platformTypeText(row.platformType) + '？' : '确认将该菜品下架？'

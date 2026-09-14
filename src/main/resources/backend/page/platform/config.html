@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="../../styles/components-stats-card.css" />
 </head>
 <body>
+<!-- ====== 外卖平台对接配置页 ====== -->
+<!-- 功能：统一管理外卖平台接入，支持新增/编辑/启停用/删除平台配置，按状态统计卡片快速筛选 -->
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="platform-app">
   <div class="container" id="main-content" role="main" aria-label="页面主要内容">
@@ -212,13 +214,14 @@
       this.fetchData()
     },
     methods: {
-      // 修改点：表单初始值
+      /* ── 表单工具 ── */
       emptyForm() {
         return {
           id: null, platformType: 'MEITUAN', platformName: '', shopId: '',
           appKey: '', appSecret: '', accessToken: '', syncScope: 1, enabled: 1, remark: ''
         }
       },
+      /* ── 数据加载 ── */
       // 修改点：列表数据拉取（后端分页，返回 records/total）
       // reloadStats=true 时并行重载统计卡片（初始进入/增删改/启停后）；卡片筛选/翻页时传 false 不重算
       async fetchData(reloadStats) {
@@ -267,7 +270,7 @@
         }
         return { code: 0 }
       },
-      // 修改点：统计卡片点击 — 按启用状态筛选数据
+      /* ── 筛选与分页 ── */
       onCardClick(payload) {
         this.activeFilter = payload.activeKey
         this.page = 1
@@ -295,7 +298,7 @@
         ;[1, 2, 4, 8].forEach(function (b) { if (scope & b) res.push(map[b]) })
         return res
       },
-      // 修改点：打开新增
+      /* ── 弹窗表单（新增/编辑/提交） ── */
       openAdd() {
         this.action = 'add'
         this.form = this.emptyForm()
@@ -348,7 +351,7 @@
           }
         })
       },
-      // 修改点：启用/停用切换（带二次确认）
+      /* ── 启停用与删除 ── */
       toggle(row) {
         const enabled = row.enabled === 1 ? 0 : 1
         const tip = enabled === 1 ? '确认启用该平台配置？' : '确认停用该平台配置？'

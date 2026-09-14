@@ -7,9 +7,13 @@
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+  <!-- ==================== 后厨出餐大屏 ==================== -->
+  <!-- 功能说明：KDS厨房显示系统，三栏看板（待制作/制作中/待取餐），支持自动刷新/语音叫号/加急/全屏 -->
   <style>
+    /* ===== 页面基础与外层容器 ===== */
     body { background: var(--bg-page); margin: 0; }
     .kds-wrap { max-width: 1800px; margin: 0 auto; padding: var(--space-4) var(--space-5); }
+    /* ===== 顶栏：标题/时钟/工具按钮 ===== */
     .top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4); }
     .top-bar__title { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); color: var(--text-primary); display:flex; align-items:center; gap:8px; }
     .top-bar__title i { color: var(--el-color-primary); }
@@ -20,6 +24,7 @@
     .tool-btn.on { background: var(--color-success-dark); color: var(--text-inverse); border-color: var(--color-success-dark); }
     .tool-btn:active { opacity: .8; }
 
+    /* ===== 统计卡片行：待制作/制作中/待取餐/今日完成/加急/平均出餐 ===== */
     .stat-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-3); margin-bottom: var(--space-4); }
     @media (max-width: 1100px) { .stat-row { grid-template-columns: repeat(3, 1fr); } }
     .stat-card { background: var(--bg-surface); border-radius: var(--radius-md, 10px); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.08)); padding: var(--space-3) var(--space-4); }
@@ -31,6 +36,7 @@
     .stat-card.ready .stat-card__value { color: var(--color-success-dark); }
     .stat-card.urgent .stat-card__value { color: var(--color-danger-dark); }
 
+    /* ===== 三栏看板布局（待制作/制作中/待取餐） ===== */
     .board-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); align-items: start; }
     @media (max-width: 1000px) { .board-columns { grid-template-columns: 1fr; } }
     .kds-col { background: var(--bg-subtle, #f7f8fa); border-radius: var(--radius-md, 10px); padding: var(--space-3); min-height: 200px; }
@@ -44,6 +50,7 @@
     .kds-col.ready .badge { background: var(--color-success); }
     .col-body { display: flex; flex-direction: column; gap: var(--space-3); max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
 
+    /* ===== 工单卡片样式（含加急/警告/告警状态） ===== */
     .ticket { background: var(--bg-surface); border-radius: var(--radius-md, 10px); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.08)); border-left: 6px solid var(--border-default); padding: var(--space-3) var(--space-4); }
     .ticket.urgent { border-left-color: var(--color-danger); background: var(--color-danger-lighter, #fef0f0); }
     .ticket.s-warn { border-left-color: var(--color-warning); }
@@ -73,6 +80,7 @@
 <a href="#kds-main" class="skip-link">跳转到主内容</a>
 <div id="app">
   <div class="kds-wrap" id="kds-main">
+    <!-- 顶栏：页面标题/实时时钟/上次更新时间/刷新/自动刷新/语音叫号/全屏 -->
     <div class="top-bar">
       <div class="top-bar__title"><i class="ri-restaurant-2-line"></i>后厨出餐大屏</div>
       <div class="top-bar__tools">
@@ -85,6 +93,7 @@
       </div>
     </div>
 
+    <!-- 统计概览：待制作/制作中/待取餐/今日完成/加急/平均出餐时间 -->
     <div class="stat-row">
       <div class="stat-card pending"><div class="stat-card__label">待制作</div><div class="stat-card__value">{{ board.pendingCount }}</div></div>
       <div class="stat-card cooking"><div class="stat-card__label">制作中</div><div class="stat-card__value">{{ board.cookingCount }}</div></div>
@@ -94,8 +103,9 @@
       <div class="stat-card"><div class="stat-card__label">平均出餐</div><div class="stat-card__value">{{ fmtMMSS(board.avgCookSeconds) }}<small> </small></div></div>
     </div>
 
+    <!-- 三栏看板：待制作→制作中→待取餐（出餐完成） -->
     <div class="board-columns">
-      <!-- 待制作 -->
+      <!-- 左栏：待制作工单（可开始制作/加急/取消） -->
       <div class="kds-col pending">
         <div class="kds-col__head"><span><i class="ri-hourglass-2-line"></i> 待制作</span><span class="badge">{{ board.pendingCount }}</span></div>
         <div class="col-body">
@@ -120,7 +130,7 @@
         </div>
       </div>
 
-      <!-- 制作中 -->
+      <!-- 中栏：制作中工单（可标记完成并叫号/加急/取消） -->
       <div class="kds-col cooking">
         <div class="kds-col__head"><span><i class="ri-fire-line"></i> 制作中</span><span class="badge">{{ board.cookingCount }}</span></div>
         <div class="col-body">
@@ -145,7 +155,7 @@
         </div>
       </div>
 
-      <!-- 待取餐 -->
+      <!-- 右栏：待取餐工单（确认出餐完成） -->
       <div class="kds-col ready">
         <div class="kds-col__head"><span><i class="ri-bell-line"></i> 待取餐（叫号）</span><span class="badge">{{ board.readyCount }}</span></div>
         <div class="col-body">
@@ -206,10 +216,12 @@
       try { speechSynthesis.cancel() } catch (e) {}
     },
     methods: {
+      // ========== 定时器与时钟 ==========
       tickClock: function () {
         this.nowTick = Date.now()
         this.clock = new Date().toLocaleTimeString('zh-CN', { hour12: false })
       },
+      // ========== 数据加载 ==========
       loadData: function (autoPull) {
         var self = this
         window.kdsApi.board(autoPull !== false).then(function (res) {
@@ -222,6 +234,7 @@
           if (err && err.message !== 'NOTLOGIN') { console.warn('[KDS] 看板加载失败', err) }
         })
       },
+      // ========== 语音叫号 ==========
       // 待取餐新增工单语音叫号（每单只播报一次）
       announceReady: function (readyList) {
         if (!this.soundOn || !('speechSynthesis' in window)) return
@@ -243,6 +256,7 @@
           speechSynthesis.speak(u)
         } catch (e) {}
       },
+      // ========== 工单操作（开始/完成/叫号/取消/加急） ==========
       act: function (action, t) {
         var self = this
         var confirmMap = { cancel: '确认取消该工单？' }
@@ -268,6 +282,7 @@
           ReggieUI.confirm(confirmMap[action], '提示', { type: 'warning' }).then(run).catch(function () {})
         } else { run() }
       },
+      // ========== 辅助方法 ==========
       dishesOf: function (t) {
         if (t.details && t.details.length) return t.details
         // 兜底：无明细时用摘要文本展示

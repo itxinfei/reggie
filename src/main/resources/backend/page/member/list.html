@@ -234,7 +234,7 @@
         mounted() {
         },
         methods: {
-          // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
+          /* ── 筛选选项加载 ── */
           async loadFilterOptions() {
             this.optionsLoading = true
             this.optionsLoadError = false
@@ -263,7 +263,8 @@
                   this.loadFilterOptions()
               }
           },
-        async fetchData(reloadStats = true) {
+          /* ── 数据加载 ── */
+          async fetchData(reloadStats = true) {
           // 修改点：loading 状态管理（原未设置，crud-table 骨架屏不生效）
           this.loading = true
           try {
@@ -313,6 +314,7 @@
             }
             return { code: 0 }
           },
+          /* ── 筛选与分页 ── */
           handleQuery() {
             // 修改点：搜索时清空卡片筛选状态
             this.activeFilter = ''
@@ -338,7 +340,7 @@
             this.page = 1
             this.fetchData(false)
           },
-          // 打开员工弹窗
+          /* ── 员工弹窗（新增/编辑/提交） ── */
           addMemberHandle (st) {
             this.resetMemberForm()
             if (st === 'add') {

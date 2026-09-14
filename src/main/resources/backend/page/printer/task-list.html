@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 <body>
+  <!-- ====== 打印任务管理页 ====== -->
+  <!-- 功能：查看门店 PC 打印代理的执行流水，支持按类型/状态/时间筛选、查看任务详情 -->
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="printer-task-app">
@@ -189,6 +191,7 @@
         }
       },
       methods: {
+        /* ── 数据加载 ── */
         async fetchData(reloadStats = true) {
           const range = this.query.timeRange && this.query.timeRange.length === 2 ? this.query.timeRange : []
           const params = {
@@ -237,6 +240,7 @@
           }
           return { code: 0 }
         },
+        /* ── 筛选与分页 ── */
         search() {
           this.activeFilter = ''
           this.page = 1
@@ -264,6 +268,7 @@
         onTableAction(payload) {
           if (payload.key === 'refresh') { this.fetchData(true) }
         },
+        /* ── 任务详情 ── */
         showDetail(row) {
           this.dialog.row = row
           this.dialog.visible = true
@@ -280,6 +285,7 @@
           } catch (e) { /* 非 JSON 原样展示 */ }
           return content
         },
+        /* ── 状态/类型映射 ── */
         getTypeTag(taskType) {
           const MAP = {
             'BILL': { label: '小票', type: 'success' },

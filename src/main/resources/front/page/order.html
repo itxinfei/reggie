@@ -112,7 +112,7 @@
                 </van-list>
                 </van-pull-refresh>
                 <!-- 修改点：首屏加载骨架屏覆盖层（van-list 始终渲染，避免阻断其 @load 触发） -->
-                <van-skeleton v-if="firstLoading" class="list-skeleton" :row="5" title :avatar />
+                <van-skeleton v-if="firstLoading" class="list-skeleton" :row="5" title :avatar="true" />
             </div>
             <!-- 修改点：空状态增加引导按钮 -->
             <div class="divNoData has-tabbar" v-else>

@@ -243,6 +243,7 @@
         this.loadStats()
       },
       methods: {
+        /* ========== 工具方法 ========== */
         formatMoney(value) {
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
@@ -255,6 +256,7 @@
           const map = { 1: '满减', 2: '折扣', 3: '赠品' }
           return map[type] || '未知'
         },
+        /* ========== 数据加载 ========== */
         async init() {
           this.loading = true
           const self = this
@@ -296,6 +298,7 @@
             inactive: list.filter(function(r) { return Number(r.status) === 0 }).length
           }
         },
+        /* ========== 搜索与筛选 ========== */
         // stat-cards 点击
         onCardClick: function(payload) {
           const self = this
@@ -332,6 +335,7 @@
           this.page = 1
           this.applyFilter()
         },
+        /* ========== 满减规则操作（新增/编辑/删除） ========== */
         handleAdd() {
           this.dialogTitle = '新增满减规则'
           this.formData = {

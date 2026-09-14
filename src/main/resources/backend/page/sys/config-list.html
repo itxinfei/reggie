@@ -173,6 +173,7 @@
         }
       },
       methods: {
+        /* ── 数据加载 ── */
         async init(reloadStats = true) {
           this.loading = true
           try {
@@ -219,7 +220,7 @@
           } catch (err) { console.warn('加载配置统计失败:', err) }
           return { code: 0 }
         },
-        // 修改点：stat-cards 点击（payload.activeKey 为 .sync 更新后的值）
+        /* ── 筛选与分页 ── */
         onCardClick: function(payload) {
           this.activeFilter = payload.activeKey
           this.lastSearch = this.activeFilter ? this.buildFilterParams(this.activeFilter) : {}
@@ -264,6 +265,7 @@
           const map = { 1: 'success', 2: 'warning', 3: 'info' }
           return map[type] || ''
         },
+        /* ── 弹窗表单（新增/编辑/删除） ── */
         openDialog() {
           this.formData.title = '新增配置'
           this.formData = { title: '新增配置', dialogVisible: true, id: null, configKey: '', configValue: '', configType: 1, description: '' }

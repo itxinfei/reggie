@@ -41,9 +41,7 @@
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
-  <!-- ====== 会员管理页 ====== -->
-  <!-- 功能：管理会员信息、等级与余额，支持新增/编辑/充值/启禁用/删除会员，详情弹窗展示充值记录与优惠券 -->
-  <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="member-app">
     <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
@@ -295,7 +293,6 @@
         }
       },
       methods: {
-        /* ── 筛选与卡片交互 ── */
         // 修改点：<stat-cards> 组件统一卡片点击分发
         onCardClick: function(payload) {
           this.onFilterClick(payload.key)
@@ -388,7 +385,6 @@
             if (e !== 'cancel') ReggieUI.error('删除失败')
           }
         },
-        /* ── 数据加载 ── */
         async init(reloadStats = true) {
           this.loading = true
           // 修改点：搜索参数来源统一为 searchInput（原读取未定义的 searchValues，导致搜索条件从未下发）
@@ -476,7 +472,6 @@
         onReset: function() { this.activeFilter = ''; this.searchInput = { name: '', phone: '', levelId: '' }; this.page = 1; this.init(false) },
         onPageChange: function(p) { this.page = p.page; this.init(false) },
         onSizeChange: function(p) { this.pageSize = (p && p.pageSize !== undefined) ? p.pageSize : p; this.page = 1; this.init(false) },
-        /* ── 会员详情弹窗 ── */
         // 会员详情弹窗：点击"详情"按钮打开弹窗并加载充值记录/优惠券
         selectMember: function(row) {
           const self = this
@@ -522,7 +517,6 @@
           if (s === 'EXPIRED' || s === '2' || s === 2) return 'warning'
           return 'success'
         },
-        /* ── 充值操作 ── */
         showRecharge: function(row) { this.rechargeMember = row; this.rechargeForm = { amount: '', giftAmount: '0', paymentMethod: 'WECHAT' }; this.rechargeDialogVisible = true },
         async submitRecharge() {
           if (this.submitting) return // 提交防重

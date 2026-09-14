@@ -139,6 +139,7 @@
         }
       },
       methods: {
+        /* ========== 数据加载 ========== */
         // 修改点：F9 性能 — 全局操作日志统计不随翻页重算，仅 reloadStats 时纳入 Promise.all
         async init(reloadStats = true) {
           this.loading = true
@@ -194,6 +195,7 @@
           }
           return { code: 0 }
         },
+        /* ========== 搜索与筛选 ========== */
         // stat-cards 点击
         onCardClick: function(payload) {
           const self = this
@@ -224,6 +226,7 @@
           this.page = 1
           this.init(false)
         },
+        /* ========== 分页处理 ========== */
         onPageChange(payload) {
           this.page = payload.page
           this.init(false)
@@ -233,6 +236,7 @@
           this.page = 1
           this.init(false)
         },
+        /* ========== 工具方法 ========== */
         opTypeTag(type) {
           const map = { CREATE: 'success', UPDATE: 'warning', DELETE: 'danger', EXPORT: 'info', LOGIN: 'info' }
           return map[type] || 'info'

@@ -11,15 +11,18 @@
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
+    /* ── 图表区域 ── */
     .chart-panels { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
     .chart-panel { flex: 1; min-width: 380px; background: var(--bg-surface); border-radius: var(--radius-lg);
       box-shadow: var(--shadow-sm); padding: 18px 20px; }
     .chart-panel .panel-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 12px;
       padding-bottom: 10px; border-bottom: 1px solid var(--el-bg-lighter); }
     .chart-box { width: 100%; height: 300px; }
+    /* ── 筛选栏 ── */
     .filter-bar { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 14px 20px; margin-bottom: 16px;
       box-shadow: var(--shadow-xs); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .filter-bar .el-select { width: 150px; }
+    /* ── 充值会员信息卡片 ── */
     .recharge-member { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%;
       padding: 10px 14px; background: var(--bg-subtle); border: 1px solid var(--border-default);
       border-radius: var(--radius-sm); font-size: var(--font-size-base); color: var(--text-primary) }
@@ -32,7 +35,9 @@
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
- <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <!-- ====== 充值记录管理页 ====== -->
+  <!-- 功能：查看会员充值流水，支持按手机号/支付方式筛选，含趋势图与支付方式分布图，支持手动充值 -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="recharge-app">
     <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
@@ -213,7 +218,7 @@
         if (this.paymentChart) { this.paymentChart.dispose(); this.paymentChart = null }
       },
       methods: {
-        // 修改点：新增 fmtMoney 工具方法
+        /* ── 数据加载 ── */
         // 修改点：F9 性能 — 列表查询与全局统计分离，reloadStats=true 才重算
         async fetchData(reloadStats = true) {
           this.loading = true
@@ -238,6 +243,7 @@
           } catch(e) { ReggieUI.error('请求失败：' + e) }
           this.loading = false
         },
+        /* ── 图表初始化与渲染 ── */
         initCharts: function() {
           var dom1 = document.getElementById('trendChart');
           if (dom1) this.trendChart = echarts.init(dom1);
@@ -292,9 +298,10 @@
           if (n >= 10000) return (n/10000).toFixed(2).replace(/\.?0+$/,'') + '万'
           return n.toFixed(2)
         },
+        /* ── 筛选与分页 ── */
         handleQuery: function() { this.page = 1; this.fetchData(false) },
         reset: function() { this.input = { phone: '', paymentMethod: '' }; this.page = 1; this.fetchData(false) },
-        // ===== 手动充值（8.4.3） =====
+        /* ── 手动充值弹窗（8.4.3） ── */
         openRecharge: function() {
           this.rechargeForm.phone = ''
           this.rechargeForm.amount = 100

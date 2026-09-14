@@ -42,7 +42,9 @@
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
- <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <!-- ====== 积分明细管理页 ====== -->
+  <!-- 功能：查看会员积分变动记录，支持按手机号/类型筛选，含趋势图与饼图统计，支持手动积分调整 -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="points-app">
     <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
@@ -219,6 +221,7 @@
         if (this.pieChart) { this.pieChart.dispose(); this.pieChart = null }
       },
       methods: {
+        /* ── 数据加载 ── */
         // 修改点：F9 性能 — 列表查询与全局统计分离，reloadStats=true 才重算
         async fetchData(reloadStats = true) {
           this.loading = true
@@ -243,6 +246,7 @@
           } catch(e) { ReggieUI.error('请求失败：' + e) }
           this.loading = false
         },
+        /* ── 图表初始化与渲染 ── */
         initCharts: function() {
           var dom1 = document.getElementById('trendChart');
           if (dom1) this.trendChart = echarts.init(dom1);
@@ -293,11 +297,12 @@
             })
           }
         },
+        /* ── 筛选与分页 ── */
         fmtNum: function(n) { return (n || 0).toLocaleString() },
         setType: function(t) { this.input.type = t; this.page = 1; this.fetchData(false) },
         handleQuery: function() { this.page = 1; this.fetchData(false) },
         reset: function() { this.input = { phone: '', type: '' }; this.page = 1; this.fetchData(false) },
-        // ===== 积分调整（8.4.3） =====
+        /* ── 积分调整弹窗（8.4.3） ── */
         openAdjust: function() {
           this.adjustForm.phone = ''
           this.adjustForm.adjustType = 'IN'

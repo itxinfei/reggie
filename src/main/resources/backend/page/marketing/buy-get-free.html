@@ -9,6 +9,8 @@
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+  <!-- ==================== 买赠活动管理 ==================== -->
+  <!-- 功能说明：管理买赠促销活动，支持按菜品/套餐/全场设置买X赠Y规则，含起送金额/每单限次/活动时段 -->
 </head>
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
@@ -22,12 +24,14 @@
         <div class="ds-page-header__actions"></div>
       </header>
 
+      <!-- 统计卡片：全部/进行中/已暂停/已结束，点击可筛选 -->
       <stat-cards
         :cards="statsCards"
         :active-key.sync="activeFilter"
         @card-click="onCardClick"
       ></stat-cards>
 
+      <!-- 搜索栏：按活动名称搜索 + 新增买赠活动按钮 -->
       <table-bar
         ref="tableBar"
         :search-items="searchConfig"
@@ -37,6 +41,7 @@
         @action="onAction"
       ></table-bar>
 
+      <!-- 数据表格：ID/活动名称/买赠规则/适用范围/赠品/起送金额/每单限次/活动时间/状态/使用次数 -->
       <crud-table
         ref="crudTable"
         :data="tableData"
@@ -88,6 +93,7 @@
       </crud-table>
     </main>
 
+    <!-- 新增/编辑弹窗：活动名称/买赠数量/适用菜品/赠品/起送金额/每单限次/活动时段/描述/状态 -->
     <crud-dialog :show-submit="true" :show-cancel="true"
       :size="'lg'"
       :title="dialogTitle"
@@ -187,16 +193,16 @@
             { key: 'add', text: '+ 新增买赠活动', type: 'primary' }
           ],
           columns: [
-            { prop: 'id', label: 'ID', width: 70, align: 'center' },
+            { prop: 'id', label: 'ID', width: 60, align: 'center' },
             { prop: 'name', label: '活动名称', minWidth: 160 },
-            { prop: 'buyGet', label: '买赠', slot: true, width: 110, align: 'center' },
-            { prop: 'applicable', label: '适用范围', slot: true, width: 110, align: 'center' },
+            { prop: 'buyGet', label: '买赠', slot: true, width: 90, align: 'center' },
+            { prop: 'applicable', label: '适用范围', slot: true, width: 90, align: 'center' },
             { prop: 'gift', label: '赠品', slot: true, minWidth: 130 },
-            { prop: 'minOrderAmount', label: '起送金额', slot: true, width: 110, type: 'money' },
-            { prop: 'maxTimesPerOrder', label: '每单限次', width: 90, align: 'center' },
+            { prop: 'minOrderAmount', label: '起送金额', slot: true, width: 100, type: 'money' },
+            { prop: 'maxTimesPerOrder', label: '每单限次', width: 80, align: 'center' },
             { prop: 'time', label: '活动时间', slot: true, width: 240 },
-            { prop: 'status', label: '状态', slot: true, width: 90, align: 'center' },
-            { prop: 'usageCount', label: '使用次数', slot: true, width: 90, align: 'center' }
+            { prop: 'status', label: '状态', slot: true, width: 80, align: 'center' },
+            { prop: 'usageCount', label: '使用次数', slot: true, width: 80, align: 'center' }
           ],
           stats: { total: 0, active: 0, paused: 0, ended: 0 },
           lastSearch: {},
@@ -251,6 +257,7 @@
         this.loadStats()
       },
       methods: {
+        // ========== 辅助方法 ==========
         formatMoney: function(value) {
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
@@ -275,6 +282,7 @@
         },
         // 修改点：/dish/options 返回 Map<String,List<String>>（无 id），赠品需按 id 回写名称，
         // 故改用 /dish/list 获取带 id 与 name 的菜品列表
+        // ========== 数据加载 ==========
         loadDishOptions: function() {
           const self = this
           queryDishList({}).then(function(res) {
@@ -337,6 +345,7 @@
             ended: ended
           }
         },
+        // ========== 筛选/分页事件 ==========
         onCardClick: function(payload) {
           const self = this
           self.activeFilter = payload.activeKey
@@ -371,6 +380,7 @@
           this.page = 1
           this.applyFilter()
         },
+        // ========== 新增/编辑 ==========
         onGiftDishChange: function(id) {
           const self = this
           var opt = self.dishOptions.filter(function(d) { return d.value === id })[0]
@@ -413,6 +423,7 @@
             this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
           }.bind(this))
         },
+        // ========== 状态切换/删除 ==========
         async handleToggleStatus(row) {
           try {
             if (row.status === 0 || row.status === 3) {

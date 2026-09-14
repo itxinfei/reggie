@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
+    /* ── 全局基础 ── */
     html, body {
       height: 100%;
       margin: 0;
@@ -34,6 +35,7 @@
       margin: 0 auto;
       width: 100%;
     }
+    /* ── 工具栏 ── */
     .tableBar {
       display: flex;
       align-items: center;
@@ -46,6 +48,7 @@
       box-shadow: var(--shadow-sm);
       border: 1px solid var(--el-border-light);
     }
+    /* ── 图表区域 ── */
     .chart-row {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -68,6 +71,7 @@
     .chart-container {
       height: 300px;
     }
+    /* ── 成本预警列表 ── */
     .alert-list {
       background: var(--bg-surface);
       border-radius: var(--radius-lg);
@@ -113,6 +117,8 @@ border-radius: var(--radius-sm);
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
 
+  <!-- ====== 成本核算总览页 ====== -->
+  <!-- 功能：核算菜品成本与毛利，展示成本趋势/结构/排名图表与成本预警 -->
   <div id="app" class="cost-container">
     <div class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
@@ -283,6 +289,7 @@ border-radius: var(--radius-sm);
         })
       },
       methods: {
+        /* ── 工具方法 ── */
         formatDate(date) {
           const year = date.getFullYear()
           const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -293,6 +300,7 @@ border-radius: var(--radius-sm);
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
         },
+        /* ── 图表初始化与数据加载 ── */
         initCharts() {
           var dom1 = document.getElementById('trendChart');
           if (dom1) this.trendChart = echarts.init(dom1);
@@ -352,6 +360,7 @@ border-radius: var(--radius-sm);
             this.loading = false
           }
         },
+        /* ── 图表渲染 ── */
         updateTrendChart() {
           const option = {
             tooltip: {
@@ -501,6 +510,7 @@ border-radius: var(--radius-sm);
           }
           this.rankingChart.setOption(option)
         },
+        /* ── 筛选与导出 ── */
         resetQuery() {
           const end = new Date()
           const start = new Date()

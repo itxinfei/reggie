@@ -136,6 +136,7 @@
         setTimeout(function() { self.loaded = true }, 120)
       },
       methods: {
+        /* ========== 表单校验 ========== */
         chkUser: function(rule, v, cb) {
           cb(v && v.length >= 1 ? undefined : new Error('请输入用户名'))
         },
@@ -150,6 +151,7 @@
           }
           return false
         },
+        /* ========== 主题切换 ========== */
         setTheme: function() {
           document.documentElement.classList.toggle('dark-theme', this.dark)
           document.documentElement.classList.toggle('light-theme', !this.dark)
@@ -159,6 +161,7 @@
           localStorage.setItem('login-theme', this.dark ? 'dark' : 'light')
           this.setTheme()
         },
+        /* ========== 登录流程 ========== */
         focusPass: function() {
           const el = this.$refs.loginForm.$el.querySelector('input[type="password"]')
           if (el) el.focus()

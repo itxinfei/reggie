@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="../../styles/ai-provider.css" />
 </head>
 <body>
+<!-- ====== AI 服务商配置管理页 ====== -->
+<!-- 功能：管理 AI 服务商与连接测试，支持激活/编辑/删除供应商、测试连接、一键初始化预设模型 -->
 <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="provider-app">
@@ -270,6 +272,7 @@
         },
 
         methods: {
+            /* ── 数据加载 ── */
             loadData: function() {
                 const self = this;
                 Promise.all([
@@ -296,6 +299,7 @@
                 return 'icon-' + (code || 'custom');
             },
 
+            /* ── 供应商操作（激活/测试/删除） ── */
             activateProvider: function(id) {
                 const self = this;
                 ReggieUI.confirm('切换模型后，AI 将立即使用新模型。确定继续吗？', '切换确认', {
@@ -372,6 +376,7 @@
                 }).catch(function(err) { console.warn('[provider-config] 删除供应商操作取消或失败:', err) });
             },
 
+            /* ── 弹窗表单（新增/编辑/提交） ── */
             openAddDialog: function() {
                 this.form = {
                     id: null, providerCode: '', providerName: '',
@@ -486,6 +491,7 @@
                 return '';
             },
 
+            /* ── 预设初始化与模型列表 ── */
             initPresets: function() {
                 const self = this;
                 ReggieUI.confirm(

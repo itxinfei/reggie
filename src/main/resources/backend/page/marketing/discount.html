@@ -263,6 +263,7 @@
         this.loadOptions()
       },
       methods: {
+        /* ========== 数据加载 ========== */
         // 修改点：加载适用分类/菜品/套餐下拉选项（原三项恒为空数组，选范围后无法选择具体对象）
         async loadOptions() {
           const self = this
@@ -286,6 +287,7 @@
             }
           } catch (e) { /* 套餐加载失败不阻塞页面 */ }
         },
+        /* ========== 工具方法 ========== */
         formatMoney(value) {
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
@@ -339,6 +341,7 @@
             inactive: list.filter(function(r) { return Number(r.status) === 0 }).length
           }
         },
+        /* ========== 搜索与筛选 ========== */
         // stat-cards 点击
         onCardClick: function(payload) {
           const self = this
@@ -375,6 +378,7 @@
           this.page = 1
           this.applyFilter()
         },
+        /* ========== 折扣规则操作（新增/编辑/删除） ========== */
         handleAdd() {
           this.dialogTitle = '新增折扣规则'
           this.formData = {

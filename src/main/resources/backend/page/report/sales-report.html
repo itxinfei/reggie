@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="../../styles/main.css" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
+    /* ========== 页面基础布局 ========== */
     html, body {
       height: 100%;
       margin: 0;
@@ -23,6 +24,7 @@
       max-width: 1400px;
       margin: 0 auto;
     }
+    /* ========== 图表卡片 ========== */
     .chart-row {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -191,6 +193,7 @@
         }
       },
       methods: {
+        /* ========== 工具方法 ========== */
         getWeekNumber(date) {
           const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
           const dayNum = d.getUTCDay() || 7
@@ -202,6 +205,7 @@
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
         },
+        /* ========== 图表初始化 ========== */
         initCharts() {
           var dom1 = document.getElementById('revenueChart');
           if (dom1) this.revenueChart = echarts.init(dom1);
@@ -215,6 +219,7 @@
           }
           window.addEventListener('resize', this.resizeHandler)
         },
+        /* ========== 数据加载 ========== */
         handleTypeChange() {
           this.fetchData()
         },
@@ -287,6 +292,7 @@
             this.loading = false
           }
         },
+        /* ========== 图表更新 ========== */
         updateCharts() {
           const labels = this.detailData.map(d => d.label)
           const revenues = this.detailData.map(d => d.revenue)

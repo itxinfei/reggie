@@ -8,7 +8,10 @@
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
+  <!-- ==================== 菜品成本管理 ==================== -->
+  <!-- 功能说明：核算单菜品的食材/人工/其他成本与售价，计算毛利率，支持新增/编辑/删除/导出 -->
   <style>
+    /* ===== 页面基础 ===== */
     html, body {
       height: 100%;
       margin: 0;
@@ -21,6 +24,7 @@
       max-width: 1400px;
       margin: 0 auto;
     }
+    /* ===== 搜索栏样式 ===== */
     .tableBar {
       display: flex;
       align-items: center;
@@ -40,12 +44,14 @@
     .tableBar .toolbar-spacer {
       flex: 1;
     }
+    /* ===== 数据表格样式 ===== */
     .table-card {
       background: var(--bg-surface);
       border-radius: var(--radius-lg);
       padding: 20px;
       box-shadow: var(--shadow-sm);
     }
+    /* ===== 毛利率等级样式（高>=30%/中>=10%/低<10%） ===== */
     .profit-rate {
       font-weight: 600;
     }
@@ -72,7 +78,7 @@
       </div>
       <div class="ds-page-header__actions"></div>
     </header>
-    <!-- 工具栏 -->
+    <!-- 搜索栏：按菜品名称查询 + 新增/导出按钮 -->
     <div class="tableBar">
       <span class="toolbar-label">菜品名称：</span>
       <el-input v-model="searchName" placeholder="请输入菜品名称" clearable style="width: 200px;"></el-input>
@@ -83,7 +89,7 @@
       <el-button type="success" icon="el-icon-download" @click="handleExport">导出</el-button>
     </div>
 
-    <!-- 表格 -->
+    <!-- 数据表格：菜品名称/各项成本/售价/毛利率/备注 -->
     <div class="table-card">
       <crud-table
         :data="filteredTableData"
@@ -106,7 +112,7 @@
       </crud-table>
     </div>
 
-    <!-- 新增/编辑对话框 -->
+    <!-- 新增/编辑弹窗：选择菜品后自动带出BOM成本，手动填写人工/其他成本与售价 -->
     <crud-dialog :show-submit="true" :show-cancel="true" :title="dialogTitle" :visible.sync="dialogVisible" size="lg" @submit="handleSubmit">
       <el-form :model="formData" :rules="formRules" ref="costForm" label-width="100px">
         <!-- 双列栅格：大屏两列、小屏单列（CLAUDE.md 7.2 场景C）；菜品远程搜索独占一行，备注跨全宽 -->
@@ -223,6 +229,7 @@
         this.fetchData()
       },
       methods: {
+        // ========== 辅助方法 ==========
         formatMoney(value) {
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
@@ -232,6 +239,7 @@
           if (rate >= 10) return 'medium'
           return 'low'
         },
+        // ========== 数据加载 ==========
         async fetchData() {
           this.loading = true
           try {
@@ -249,6 +257,7 @@
           this.searchName = ''
           this.fetchData()
         },
+        // ========== 菜品远程搜索与选择 ==========
         async searchDishes(query) {
           if (query !== '') {
             this.dishLoading = true
@@ -287,6 +296,7 @@
             }
           }
         },
+        // ========== 新增/编辑 ==========
         handleAdd() {
           this.dialogTitle = '新增菜品成本'
           this.formData = {
@@ -312,6 +322,7 @@
             this.$refs.costForm && this.$refs.costForm.clearValidate()
           })
         },
+        // ========== 删除/导出 ==========
         async handleDelete(row) {
           try {
             await ReggieUI.confirm('确定要删除该菜品成本吗？', '提示', {

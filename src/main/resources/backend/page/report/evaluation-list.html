@@ -12,12 +12,14 @@
     <link rel="stylesheet" href="../../styles/main.css" />
   <link rel="stylesheet" href="../../styles/chart-panel.css" />
   <style>
+    /* ========== 页面基础布局 ========== */
     html, body { height: 100%; margin: 0; padding: 0; overflow-y: auto; overflow-x: hidden;
       background: var(--bg-page);
       font-family: var(--font-family-base); }
     .eval-app-wrap { min-height: 100%; display: flex; flex-direction: column; }
     .eval-app-wrap .container { flex: 1; background: transparent; padding: 24px 32px 32px;
       min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
+    /* ========== 筛选栏 ========== */
     /* 修改点：筛选栏统一样式 */
     .eval-app-wrap .filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
       background: var(--bg-surface); padding: 16px 24px; border-radius: var(--radius-lg); margin-bottom: 20px;
@@ -31,6 +33,7 @@
       transition: all 0.2s; color: var(--el-text-regular); outline: none; }
     .eval-app-wrap .star-btn:hover { border-color: var(--el-color-primary); color: var(--el-color-primary); }
     .eval-app-wrap .star-btn.active { background: var(--el-color-primary); border-color: var(--el-color-primary); color: var(--bg-surface); }
+    /* ========== 评价内容展示 ========== */
     .eval-app-wrap .eval-stars { display: inline-flex; gap: 2px; }
     .eval-app-wrap .eval-stars .star { font-size:var(--font-size-lg); color: var(--el-border-lighter2); }
     .eval-app-wrap .eval-stars .star.filled { color: var(--gold-legacy); }
@@ -42,6 +45,7 @@
     .eval-app-wrap .eval-images img { width: 46px; height: 46px; border-radius: var(--radius-md); object-fit: cover;
       cursor: pointer; border: 1px solid var(--el-border-light); transition: transform 0.2s; }
     .eval-app-wrap .eval-images img:hover { transform: scale(1.1); }
+    /* ========== 状态标签 ========== */
     .eval-app-wrap .status-tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px;
       border-radius: var(--radius-md); font-size:var(--font-size-xs); font-weight: 600; }
     .eval-app-wrap .status-tag.pending { background: var(--color-warning-light); color: var(--color-warning); }
@@ -50,6 +54,7 @@
     .eval-app-wrap .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
     .eval-app-wrap .status-dot.pending { background: var(--color-warning); } .eval-app-wrap .status-dot.approved { background: var(--color-success); }
     .eval-app-wrap .status-dot.rejected { background: var(--color-danger); }
+    /* ========== 操作按钮 ========== */
     .eval-app-wrap .action-btns { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
     .eval-app-wrap .detail-section { margin-bottom: 20px; }
     .eval-app-wrap .detail-section-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary);
@@ -60,6 +65,7 @@
     .eval-app-wrap .detail-row .dvalue { flex: 1; color: var(--el-text-primary); }
     .eval-app-wrap .reply-box { background: var(--el-bg-subtle); border-radius: var(--radius-md); padding: 14px 16px; margin-top: 8px; }
     .eval-app-wrap .reply-box .reply-time { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 6px; }
+    /* ========== 就地回复（展开行） ========== */
     /* 修改点：8.5.3 就地回复（展开行）样式 */
     .eval-app-wrap .inline-reply { padding: 4px 4px 4px 12px; }
     .eval-app-wrap .inline-reply__meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -70,6 +76,7 @@
       line-height: 1.6; max-width: 640px; }
     .eval-app-wrap .inline-reply__editor { margin-top: 12px; max-width: 640px; }
     .eval-app-wrap .image-preview { max-width: 100%; max-height: 450px; border-radius: var(--radius-md); }
+    /* ========== 响应式适配 ========== */
     @media (max-width: 1200px) { .eval-app-wrap .container { padding: 16px 20px 20px !important; } }
     @media (max-width: 768px) { .eval-app-wrap .container { padding: 12px 16px 16px !important; }
       .eval-app-wrap .filter-bar { flex-direction: column; align-items: stretch; } }
@@ -325,6 +332,7 @@
           }
         },
         methods: {
+          /* ========== 数据加载 ========== */
           loadFilterOptions: function() {
             const self = this; self.optionsLoading = true; self.optionsLoadError = false;
             dishOptions().then(function(res) {
@@ -377,6 +385,7 @@
               ReggieUI.error('加载评价统计失败');
             });
           },
+          /* ========== 搜索与筛选 ========== */
           handleSearch: function() { this.page = 1; this.loadData(); },
           resetFilters: function() {
             this.filters = { dishName: '', starRating: null, status: null };
@@ -389,10 +398,12 @@
             this.filterStatus = this.filters.status;
             this.page = 1; this.loadData();
           },
+          /* ========== 评价详情 ========== */
           viewDetail: function(row) {
             this.detailData = row; this.detailImages = this.getImageList(row.images); this.detailVisible = true;
           },
           closeDetail: function() { this.detailVisible = false; this.detailData = {}; this.detailImages = []; },
+          /* ========== 审核与回复 ========== */
           // 修改点：重命名为 handleAudit，避免与 evaluation.js 全局 auditEvaluation 函数名冲突
           handleAudit: function(row, status) {
             const self = this;
@@ -436,12 +447,14 @@
             }).catch(function(err) { ReggieUI.error('请求失败：' + (err.message || err)); })
             .finally(function() { self.inlineReplyLoading = false; });
           },
+          /* ========== 分页处理 ========== */
           // 修改点：分页统一交由 crud-table 组件管理（@page-change 同时携带页码与每页条数）
           onPageChange: function(p) {
             this.page = p.page
             if (p.pageSize) this.pageSize = p.pageSize
             this.loadData()
           },
+          /* ========== 工具方法 ========== */
           // 修改点：新增 hasImages 安全判断，替代模板中的 row.images.length 直接访问
           hasImages: function(images) {
             if (!images) return false;

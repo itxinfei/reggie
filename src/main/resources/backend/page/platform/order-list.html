@@ -249,8 +249,7 @@
       }
     },
     methods: {
-      // 修改点：列表数据拉取（复用后端 platformOrderPage，返回 records/total）
-      // reloadStats=true 时并行拉取全量统计（筛选变化触发），翻页/改页大小传 false 不重算统计
+      /* ── 数据加载 ── */
       async fetchData(reloadStats) {
         this.loading = true
         try {
@@ -282,6 +281,7 @@
           this.loading = false
         }
       },
+      /* ── 筛选与分页 ── */
       search() {
         this.page = 1
         this.fetchData(true)
@@ -316,7 +316,7 @@
         const n = Number(val)
         return isNaN(n) ? '0.00' : n.toFixed(2)
       },
-      // 修改点：打开详情（先预填行数据，再异步补全菜品明细）
+      /* ── 订单详情与拉单 ── */
       openDetail(row) {
         this.detailVisible = true
         this.detail = Object.assign({}, row)
@@ -350,7 +350,7 @@
           this.pulling = false
         }
       },
-      // 修改点：状态回传动作文案（action -> {文案, 本地目标状态}）
+      /* ── 状态回传 ── */
       pushMeta(action) {
         const map = {
           accept: { text: '接单', status: 3 },

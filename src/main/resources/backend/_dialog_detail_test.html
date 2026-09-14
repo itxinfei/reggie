@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>会员详情弹窗关闭测试（复刻 member-list 详情弹窗）</title>
+  <link rel="stylesheet" href="./plugins/element-ui/index.css">
+  <style>
+    body { padding: 40px; font-family: sans-serif; }
+    .member-detail { padding: 10px; }
+    .member-detail__head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .member-detail__name { font-size: 18px; font-weight: 600; }
+    .member-detail__level { color: #e6a23c; font-size: 12px; }
+    .member-detail__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .member-detail__item { text-align: center; background: #f5f7fa; border-radius: 6px; padding: 10px; }
+    .member-detail__label { color: #909399; font-size: 12px; margin-bottom: 4px; }
+    .member-detail__value { font-weight: 600; }
+    .member-detail__info { font-size: 13px; color: #606266; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h2>会员详情弹窗关闭测试</h2>
+    <p>此页 1:1 复刻 `member-list.html` 里"会员详情"弹窗的 props 和内容结构。</p>
+    <el-button id="open-detail" type="primary" @click="openDetail">打开会员详情弹窗</el-button>
+
+    <crud-dialog
+      :show-submit="false"
+      :show-cancel="true"
+      title="会员详情"
+      :visible.sync="detailVisible"
+      size="md"
+      cancel-text="关 闭"
+      :show-close="true"
+      @close="detailVisible = false"
+    >
+      <div v-if="selectedMember" class="member-detail">
+        <div class="member-detail__head">
+          <span class="member-detail__name">{{ selectedMember.name }}</span>
+          <span class="member-detail__level">{{ selectedMember.levelName }}</span>
+        </div>
+        <div class="member-detail__grid">
+          <div class="member-detail__item">
+            <div class="member-detail__label">余额</div>
+            <div class="member-detail__value">¥{{ selectedMember.balance }}</div>
+          </div>
+          <div class="member-detail__item">
+            <div class="member-detail__label">积分</div>
+            <div class="member-detail__value">{{ selectedMember.points }}</div>
+          </div>
+          <div class="member-detail__item">
+            <div class="member-detail__label">累计消费</div>
+            <div class="member-detail__value">¥{{ selectedMember.totalConsumption }}</div>
+          </div>
+        </div>
+        <div class="member-detail__info">
+          <div>手机号：{{ selectedMember.phone }}</div>
+          <div>注册时间：{{ selectedMember.createTime }}</div>
+        </div>
+        <el-tabs v-model="detailTab" style="margin-top:16px;">
+          <el-tab-pane label="充值记录" name="recharge">
+            <div>2026-08-22 + ¥550.00</div>
+          </el-tab-pane>
+          <el-tab-pane label="优惠券" name="coupon">
+            <div>暂无优惠券</div>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+    </crud-dialog>
+
+    <div style="margin-top:24px; color:#606266;">
+      <p>detailVisible = {{ detailVisible }}</p>
+      <p>操作：点弹窗右上角 X，或点底部"关 闭"按钮。</p>
+    </div>
+  </div>
+
+  <script src="./plugins/vue/vue.js"></script>
+  <script src="./plugins/element-ui/index.js"></script>
+  <script src="./js/components.js?v=20260914"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      data: function () {
+        return {
+          detailVisible: false,
+          detailTab: 'recharge',
+          selectedMember: {
+            name: '会员一',
+            levelName: '钻石会员',
+            balance: 500,
+            points: 25000,
+            totalConsumption: 8800,
+            phone: '13900000101',
+            createTime: '2026-09-01 16:31:41'
+          }
+        }
+      },
+      methods: {
+        openDetail: function () {
+          this.detailVisible = true
+        }
+      }
+    })
+  </script>
+</body>
+</html>

@@ -146,6 +146,7 @@
         }
       },
       methods: {
+        /* ========== 数据加载 ========== */
         isOnline(row) {
           if (!row.lastHeartbeat) return false
           const t = new Date(String(row.lastHeartbeat).replace(' ', 'T'))
@@ -198,6 +199,7 @@
           }
           return { code: 0 }
         },
+        /* ========== 搜索与筛选 ========== */
         search() {
           this.activeFilter = ''
           this.page = 1
@@ -228,6 +230,7 @@
         onTableAction(payload) {
           if (payload.key === 'refresh') { this.fetchData(true) }
         },
+        /* ========== 终端操作（测试/启停/删除） ========== */
         handleTest(row) {
           ReggieUI.confirm('将向该终端派发一条测试打印任务，确认继续？', '测试打印', {
             confirmButtonText: '确定',
@@ -287,6 +290,7 @@
             })
           })
         },
+        /* ========== 工具方法 ========== */
         getPrintTypeTags(printTypes) {
           if (!printTypes) return []
           const MAP = {

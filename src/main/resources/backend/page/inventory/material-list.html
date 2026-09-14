@@ -288,6 +288,7 @@
           }
         },
         methods: {
+          /* ========== 数据加载 ========== */
           // 修改点：<stat-cards> 组件统一卡片点击分发
           onCardClick: function(payload) {
             const key = payload.activeKey;
@@ -400,6 +401,7 @@
               await this.loadFilterOptions()
             }
           },
+          /* ========== 搜索与筛选 ========== */
           handleQuery() {
             // 修改点：搜索时清空卡片筛选状态
             this.activeFilter = ''
@@ -415,6 +417,7 @@
           },
           // 修改点：stats-card 点击切换筛选状态 — 已迁移至 onCardClick，保留兼容
           // filterBy 已由 onCardClick 替代
+          /* ========== 食材操作（新增/编辑/删除/预警） ========== */
           addHandle() {
             this.action = 'add'
             this.formData.title = '新增食材'
@@ -540,6 +543,7 @@
               })
             }
           },
+          /* ========== 分页处理 ========== */
           // 修改点：分页处理改为 crud-table 事件驱动（参考 supplier-list 已验证模式）
           onPageChange({ page, pageSize }) {
             this.page = page

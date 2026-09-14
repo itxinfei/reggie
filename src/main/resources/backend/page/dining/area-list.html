@@ -173,6 +173,7 @@
         }
       },
       methods: {
+        /* ========== 数据加载 ========== */
         // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
         async loadFilterOptions() {
           this.optionsLoading = true
@@ -256,6 +257,7 @@
           }
           return { code: 0 }
         },
+        /* ========== 搜索与筛选 ========== */
         handleQuery() {
           this.page = 1
           this.fetchData(false)
@@ -278,6 +280,7 @@
           this.page = 1
           this.fetchData(false)
         },
+        /* ========== 区域操作（新增/编辑/删除） ========== */
         addHandle() {
           this.action = 'add'
           this.dialog.title = '新增区域'

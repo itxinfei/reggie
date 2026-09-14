@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
+    /* ========== 等级进阶阶梯 ========== */
     .progression-section { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 20px;
       box-shadow: var(--shadow-sm); }
     .progression-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 16px;
@@ -23,6 +24,7 @@
     .prog-pts { font-size: var(--font-size-xs); color: var(--color-info); }
     .prog-discount { font-size: var(--font-size-xs); color: var(--emerald); font-weight: 600; }
 
+    /* ========== 响应式适配 ========== */
     @media (max-width: 900px) {
       .prog-name { font-size: var(--font-size-xs); }
     }
@@ -176,6 +178,7 @@
       },
       created: function() { this.fetchData(true) },
       methods: {
+        /* ========== 数据加载 ========== */
         // 修改点：<table-bar> 组件统一操作分发
         onTableAction: function(payload) {
           if (payload.key === 'add') { this.addHandle(); }
@@ -209,6 +212,7 @@
           } catch(e) { ReggieUI.error('请求失败：' + e) }
           this.loading = false
         },
+        /* ========== 等级阶梯展示 ========== */
         getBarWidth: function(idx) {
           const max = this.sortedLevels.length || 1
           return ((idx + 1) / max * 100) + '%'
@@ -226,6 +230,7 @@
           if (idx >= 1)          return 'ri-award-line';
           return 'ri-seedling-line';
         },
+        /* ========== 搜索与筛选 ========== */
         // <table-bar> @search 回调（table-bar 已管理搜索条件，通过 searchParams 传入）
         handleQuery: function(searchParams) {
           this.lastSearch = searchParams || {};
@@ -238,6 +243,7 @@
           this.page = 1
           this.fetchData(false)
         },
+        /* ========== 等级操作（新增/编辑/删除） ========== */
         addHandle: function() {
           this.action = 'add'; this.formData.title = '新增会员等级'
           this.formData.id = ''; this.formData.name = ''; this.formData.minPoints = ''

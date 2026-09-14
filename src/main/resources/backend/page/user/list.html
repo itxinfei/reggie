@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
   <style>
+    /* 页面样式已通过 main.css 统一管理 */
   </style>
 </head>
 <body>
@@ -209,11 +210,13 @@
         }
       },
       methods: {
+        /* ========== 工具方法 ========== */
         // 身份证号脱敏：保留前6位和后4位
         maskIdNumber: function(idNumber) {
           if (!idNumber || idNumber.length < 10) return idNumber
           return idNumber.substring(0, 6) + '********' + idNumber.substring(idNumber.length - 4)
         },
+        /* ========== 数据加载 ========== */
         // 修改点：<stat-cards> 组件统一卡片点击分发
         // <stat-cards> 点击（使用 payload.activeKey 判断，避免 .sync 导致的 toggle 反转）
         onCardClick: function(payload) {
@@ -318,6 +321,7 @@
           return { code: 0 }
         },
 
+        /* ========== 搜索与筛选 ========== */
         // 查询（由 <table-bar> @search 触发，searchParams 包含 table-bar 管理的搜索条件）
         handleQuery(searchParams) {
           this.activeFilter = ''
@@ -339,6 +343,7 @@
         },
         // filterByStatus 已迁移至 onCardClick
 
+        /* ========== 用户操作（启停/删除） ========== */
         // 状态切换（禁用/启用）
         statusHandle(row) {
           this.statusDialog.userId = row.id
@@ -401,6 +406,7 @@
 
         // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
 
+        /* ========== 导出功能 ========== */
         // 列表操作区按钮分发（导出Excel/PDF）
         onAction: function(payload) {
           if (payload.key === 'exportExcel') this.exportUsers('excel')

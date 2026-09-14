@@ -26,6 +26,17 @@
   --login-danger-bg: var(--color-danger-bg);
   --login-shimmer: linear-gradient(90deg, transparent, var(--color-primary-light) 30%, var(--color-primary-light) 70%, transparent);
 
+  /* ---- 2026-09-14 视觉升级令牌（圆角 / 阴影 / 描边 统一收敛，便于整体换肤） ---- */
+  --login-radius-card: 24rem;
+  --login-radius-input: 16rem;
+  --login-card-border: rgba(255, 179, 0, 0.12);
+  --login-input-border: #ece3d3;
+  --login-input-bg: #fbfaf6;
+  --login-shadow-card: 0 16rem 40rem rgba(180, 120, 0, 0.12), 0 4rem 12rem rgba(180, 120, 0, 0.06);
+  --login-shadow-card-focus: 0 20rem 48rem rgba(255, 160, 0, 0.18), 0 4rem 14rem rgba(180, 120, 0, 0.08);
+  --login-ring: 0 0 0 4rem rgba(255, 180, 0, 0.16);
+  --login-shadow-btn: 0 10rem 24rem rgba(255, 170, 0, 0.34), 0 2rem 6rem rgba(255, 150, 0, 0.18);
+
   /* ---- 品牌 logo SVG 令牌（收敛 SVG 内硬编码 fill/stroke） ---- */
   --logo-bowl: var(--color-primary);        /* 碗体主色（统一品牌金 #ffb200） */
   --logo-rim: var(--color-primary-dark);    /* 碗口（统一品牌深金 #ff9a00） */
@@ -63,8 +74,16 @@ body.login-page {
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  /* 美团暖色渐变：顶部暖黄 → 浅橙 → 米白底部 */
-  background: var(--login-bg-gradient);
+  /* 美团暖色渐变：顶部暖黄 → 浅橙 → 米白底部
+     修改点(2026-09-14)：装饰光晕由伪元素改为 background 图层（背景不产生横向溢出）。
+     原因：原 #login::after{right:-70rem;width:200rem} 向右溢出约 73px，使 #login（overflow-x:hidden）
+     仍是可横向滚动容器（scrollWidth 463 > clientWidth 390）；输入框自动聚焦时被浏览器滚到 scrollLeft=73，
+     导致整个表单左移 ~73px、左边被裁切。改用 background 图层后 scrollWidth==clientWidth，从根上消除该 bug。
+     （桌面端已单独覆盖为纯渐变，光晕自动不显示，与原先隐藏 ::before/::after 效果一致） */
+  background:
+    radial-gradient(circle 100rem at calc(100% - 30rem) 70rem, rgba(255, 160, 30, 0.12) 0%, rgba(255, 140, 20, 0.04) 40%, transparent 70%),
+    radial-gradient(circle 150rem at 70rem 50rem, rgba(255, 180, 40, 0.18) 0%, rgba(255, 194, 0, 0.08) 35%, transparent 70%),
+    var(--login-bg-gradient);
   padding: 0 28rem;
   padding-bottom: 60rem;
   box-sizing: border-box;
@@ -74,37 +93,10 @@ body.login-page {
   justify-content: center;
 }
 
-/* ---- 背景装饰元素（暖色调） ---- */
-
-/* 左上角大圆 — 暖橙色光晕 */
-#login::before {
-  content: '';
-  position: absolute;
-  top: -100rem;
-  left: -80rem;
-  width: 300rem;
-  height: 300rem;
-  background: radial-gradient(circle, rgba(255, 180, 40, 0.18) 0%, rgba(255, 194, 0, 0.08) 35%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* 右上角小圆 — 温暖的橙光 */
-#login::after {
-  content: '';
-  position: absolute;
-  top: -30rem;
-  right: -70rem;
-  width: 200rem;
-  height: 200rem;
-  background: radial-gradient(circle, rgba(255, 160, 30, 0.12) 0%, rgba(255, 140, 20, 0.04) 40%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* 新增：中部装饰圆 */
+/* ---- 背景装饰元素（暖色调） ----
+   修改点(2026-09-14)：原 #login::before / #login::after 两个装饰光晕已移除，
+   改用 #login 自身的 background 图层实现（见上方 #login 规则），避免伪元素溢出导致横向滚动错位。
+   中部装饰圆 .decorCircle 保留备用。 */
 .decorCircle {
   position: absolute;
   border-radius: 50%;
@@ -199,38 +191,33 @@ body.login-page {
   margin-bottom: 20rem;
 }
 
-/* 修改点：添加边框 + 微调内边距，增强表单视觉层次 */
+/* 修改点(2026-09-14)：纯白卡面 + 大圆角 + 分层柔和投影，强化“浮起”层次感 */
 /* ---- 表单卡片 ---- */
 #login .divContainer {
   width: calc(100% - 28rem);
   max-width: 420rem;
   box-sizing: border-box;
-  background: var(--bg-card);
-  border-radius: 18rem;
-  /* 修改点：硬编码 #f0e8d8 → --login-border-warm */
-  border: 1px solid var(--login-border-warm);
-  box-shadow:
-    0 2rem 12rem var(--border-hair),
-    0 8rem 36rem rgba(180, 120, 0, 0.08);
-  padding: 6rem 0;
-  margin-bottom: 20rem;
+  background: #ffffff;
+  border-radius: var(--login-radius-card);
+  border: 1px solid var(--login-card-border);
+  box-shadow: var(--login-shadow-card);
+  padding: 8rem 0;
+  margin-bottom: 24rem;
   position: relative;
   z-index: 1;
   transition: box-shadow 0.35s ease, transform 0.35s ease, border-color 0.35s ease;
 }
 
-/* 修改点：聚焦时边框提亮，增强交互反馈 */
+/* 修改点：聚焦时投影加深上浮，增强交互反馈 */
 #login .divContainer:focus-within {
   border-color: var(--color-primary-light);
-  box-shadow:
-    0 2rem 14rem var(--border-hair),
-    0 10rem 40rem rgba(255, 160, 0, 0.14);
-  transform: translateY(-1rem);
+  box-shadow: var(--login-shadow-card-focus);
+  transform: translateY(-2rem);
 }
 
 /* 输入项容器 */
 #login .inputItem {
-  padding: 12rem 20rem;
+  padding: 10rem 18rem;
   position: relative;
   transition: background 0.2s;
 }
@@ -252,29 +239,27 @@ body.login-page {
 #login .divContainer .input-wrapper {
   display: flex;
   align-items: center;
-  /* 修改点：硬编码 #faf9f5 → --login-bg-card */
-  background: var(--login-bg-card);
-  /* 修改点：硬编码 #e8e0d0 → --login-border-card */
-  border: 1px solid var(--login-border-card);
-  border-radius: 10rem;
-  padding: 0 12rem 0 0;
+  background: var(--login-input-bg);
+  border: 1px solid var(--login-input-border);
+  border-radius: var(--login-radius-input);
+  padding: 0 14rem 0 0;
   transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
 }
 #login .divContainer .input-wrapper:focus-within {
   border-color: var(--color-primary);
   background: var(--color-text-white);
-  box-shadow: 0 0 0 3px var(--color-primary-tint);
+  box-shadow: var(--login-ring);
 }
 
 /* ---- 输入框重写 ---- */
 #login .divContainer .code-input {
   border: 0 !important;
-  height: 54rem;
-  line-height: 54rem;
+  height: 56rem;
+  line-height: 56rem;
   font-size: 16rem;
-  /* 修改点：硬编码 #3a2a10 → --login-text-dark */
+  font-weight: 500;
   color: var(--login-text-dark);
-  padding-left: 6rem !important;
+  padding-left: 8rem !important;
   padding-right: 0 !important;
   background: transparent;
   border-radius: 0;
@@ -286,9 +271,9 @@ body.login-page {
 }
 
 #login .divContainer .code-input::placeholder {
-  /* 修改点：硬编码 #c8b898 → --login-border-active */
-  color: var(--login-border-active);
+  color: #b7ab93;
   font-size: 14rem;
+  font-weight: 400;
   transition: color 0.25s;
 }
 
@@ -299,13 +284,12 @@ body.login-page {
 /* 修改点：图标定位改为相对于wrapper，用padding-left留空间 */
 /* 输入框前缀图标 */
 #login .divContainer .inputIcon {
-  font-size: 18rem;
-  /* 修改点：硬编码 #d8c8a8 → --login-border-input */
-  color: var(--login-border-input);
-  line-height: 54rem;
+  font-size: 20rem;
+  color: #c3b79f;
+  line-height: 56rem;
   flex-shrink: 0;
-  padding-left: 12rem;
-  padding-right: 2rem;
+  padding-left: 14rem;
+  padding-right: 4rem;
   transition: color 0.3s, transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -330,11 +314,11 @@ body.login-page {
   color: var(--color-success);
 }
 #login .divContainer .validIcon {
-  font-size: 18rem;
+  font-size: 20rem;
   color: var(--color-success);
   flex-shrink: 0;
-  padding: 0 12rem 0 2rem;
-  line-height: 54rem;
+  padding: 0 14rem 0 2rem;
+  line-height: 56rem;
   animation: checkPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes checkPop {
@@ -369,21 +353,20 @@ body.login-page {
 /* ---- 验证码按钮（金色渐变胶囊，与登录按钮风格统一） ---- */
 #login .codeBtn {
   position: absolute;
-  right: 20rem;
+  right: 18rem;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 12rem;
-  font-family: "PingFangSC", Microsoft YaHei, sans-serif;
-  font-weight: 600;
-  /* 修改点：金底白字对比度约1.7:1违规 → 金底深字，与 .btnActive 的 #4a3000 惯例统一 */
+  font-size: 13rem;
+  font-family: "PingFangSC-Semibold", Microsoft YaHei, sans-serif;
+  font-weight: 700;
   color: var(--login-text-brand);
   cursor: pointer;
   white-space: nowrap;
-  padding: 11rem 18rem;
-  border-radius: 24rem;
+  padding: 12rem 20rem;
+  border-radius: 999rem;
   border: 0;
   background: var(--color-primary-gradient);
-  box-shadow: 0 2rem 8rem rgba(255, 170, 0, 0.3);
+  box-shadow: 0 6rem 16rem rgba(255, 170, 0, 0.30);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -617,6 +600,8 @@ body.login-page {
   transition: color 0.25s;
   font-weight: 500;
   position: relative;
+  /* 修改点(2026-09-14)：避免《用户协议》/《隐私政策》在窄屏被从中间拆行（如"隐私政/策》"） */
+  white-space: nowrap;
 }
 
 #login .agreementLink:hover {
@@ -884,12 +869,6 @@ body.login-page {
     /* 修改点：硬编码渐变 → --login-bg-gradient */
     background: var(--login-bg-gradient);
     box-shadow: 0 8px 40px var(--mask-soft), 0 2px 12px var(--border-hair);
-  }
-
-  /* 修改点：桌面端隐藏装饰伪元素，卡片自带背景 */
-  #login::before,
-  #login::after {
-    display: none;
   }
 
   /* 品牌区域 */

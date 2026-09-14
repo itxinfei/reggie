@@ -7,7 +7,10 @@
   <title>提现管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../styles/tokens.css" />
     <link rel="stylesheet" href="../../styles/main.css" />
+  <!-- ==================== 提现管理 ==================== -->
+  <!-- 功能说明：审核商家提现申请，支持查看/审核/打款/取消操作，统计总申请/待审核/已打款/总金额 -->
   <style>
+    /* ===== 页面基础 ===== */
     html, body {
       height: 100%;
       margin: 0;
@@ -20,6 +23,7 @@
       max-width: 1400px;
       margin: 0 auto;
     }
+    /* ===== 搜索栏样式 ===== */
     .tableBar {
       display: flex;
       align-items: center;
@@ -39,6 +43,7 @@
     .tableBar .toolbar-spacer {
       flex: 1;
     }
+    /* ===== 统计卡片样式 ===== */
     .stats-row {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -68,12 +73,14 @@
       font-size:var(--font-size-base);
       color: var(--el-text-secondary);
     }
+    /* ===== 数据表格样式 ===== */
     .table-card {
       background: var(--bg-surface);
       border-radius: var(--radius-lg);
       padding: 20px;
       box-shadow: var(--shadow-sm);
     }
+    /* ===== 状态标签样式（待审核/审核通过/已打款/已拒绝/已取消） ===== */
     .status-tag {
       padding: 4px 8px;
       border-radius: var(--radius-sm);
@@ -99,6 +106,7 @@
       background: var(--el-color-info-lighter);
       color: var(--el-color-info);
     }
+    /* ===== 详情弹窗样式 ===== */
     .withdraw-detail .dt-item { display: flex; padding: 10px 0; border-bottom: 1px solid var(--el-bg-lighter); }
     .withdraw-detail .dt-label { width: 100px; color: var(--gray-666); font-size: var(--font-size-sm); flex-shrink: 0; }
     .withdraw-detail .dt-value { flex: 1; font-size: var(--font-size-sm); color: var(--gray-333); }
@@ -116,10 +124,10 @@
       </div>
       <div class="ds-page-header__actions"></div>
     </header>
-    <!-- 统计卡片 -->
+    <!-- 统计卡片：总申请数/待审核/已打款/总提现金额 -->
     <stat-cards :cards="statsCards"></stat-cards>
 
-    <!-- 搜索 + 操作栏 -->
+    <!-- 搜索栏：按状态筛选 + 申请提现按钮 -->
     <table-bar
       :search-items="searchItems"
       :actions="actionItems"
@@ -128,7 +136,7 @@
       @action="onAction"
     ></table-bar>
 
-    <!-- 数据表格 -->
+    <!-- 数据表格：申请编号/申请人/提现金额/方式/收款账户/状态/申请时间/操作 -->
     <crud-table
       :data="pagedData"
       :columns="columns"
@@ -166,7 +174,7 @@
       </template>
     </crud-table>
 
-    <!-- 申请详情弹窗 -->
+    <!-- 详情弹窗：只读展示申请编号/申请人/金额/方式/账户/状态/时间/审核备注 -->
     <crud-dialog :show-cancel="true" title="申请详情" :visible.sync="detailDialogVisible" size="md" :show-submit="false" cancel-text="关 闭">
       <div v-if="detailRow" class="withdraw-detail">
         <div class="dt-item"><span class="dt-label">申请编号</span><span class="dt-value">{{ detailRow.applicationNo }}</span></div>
@@ -180,7 +188,7 @@
       </div>
     </crud-dialog>
 
-    <!-- 申请对话框 -->
+    <!-- 申请提现弹窗：填写金额/方式/收款账户/收款人/备注 -->
     <crud-dialog :show-submit="true" :show-cancel="true" title="申请提现" :visible.sync="addDialogVisible" size="md" :submit-loading="submitLoading" @submit="handleAddSubmit">
       <el-form :model="addForm" :rules="addRules" ref="addForm" label-width="100px">
         <el-form-item label="提现金额" prop="amount">
@@ -205,7 +213,7 @@
       </el-form>
     </crud-dialog>
 
-    <!-- 审核对话框 -->
+    <!-- 审核弹窗：选择通过/拒绝 + 填写审核备注 -->
     <crud-dialog :show-submit="true" :show-cancel="true" title="审核提现申请" :visible.sync="reviewDialogVisible" size="md" :submit-loading="submitLoading" @submit="handleReviewSubmit">
       <el-form :model="reviewForm" :rules="reviewRules" ref="reviewFormRef" label-width="100px">
         <el-form-item label="申请编号">
@@ -226,7 +234,7 @@
       </el-form>
     </crud-dialog>
 
-    <!-- 打款对话框 -->
+    <!-- 打款确认弹窗：确认金额 + 填写打款流水号 -->
     <crud-dialog :show-submit="true" :show-cancel="true" title="确认打款" :visible.sync="paymentDialogVisible" size="md" :submit-loading="submitLoading" @submit="handlePaymentSubmit">
       <el-form :model="paymentForm" :rules="paymentRules" ref="paymentFormRef" label-width="100px">
         <el-form-item label="申请编号">
@@ -287,13 +295,13 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'applicationNo', label: '申请编号', width: 180, align: 'center' },
-            { prop: 'applicantName', label: '申请人', width: 100, align: 'center' },
-            { prop: 'amount', label: '提现金额', width: 120, align: 'center', type: 'money', slot: true },
-            { prop: 'withdrawMethod', label: '提现方式', width: 100, align: 'center', slot: true },
+            { prop: 'applicationNo', label: '申请编号', width: 160, align: 'center' },
+            { prop: 'applicantName', label: '申请人', width: 90, align: 'center' },
+            { prop: 'amount', label: '提现金额', width: 110, align: 'center', type: 'money', slot: true },
+            { prop: 'withdrawMethod', label: '提现方式', width: 90, align: 'center', slot: true },
             { prop: 'receiveAccount', label: '收款账户', minWidth: 150, align: 'center' },
-            { prop: 'status', label: '状态', width: 100, align: 'center', slot: true },
-            { prop: 'createTime', label: '申请时间', width: 180, align: 'center' }
+            { prop: 'status', label: '状态', width: 80, align: 'center', slot: true },
+            { prop: 'createTime', label: '申请时间', width: 160, align: 'center' }
           ],
           submitLoading: false,
           
@@ -364,6 +372,7 @@
         this.fetchStatistics()
       },
       methods: {
+        // ========== 辅助方法 ==========
         formatMoney(value) {
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
@@ -385,6 +394,7 @@
           const map = { 0: '待审核', 1: '审核通过', 2: '已打款', 3: '已拒绝', 4: '已取消' }
           return map[status] || '未知'
         },
+        // ========== 分页/搜索事件 ==========
         onPageChange(payload) {
           this.page = payload.page
         },
@@ -405,6 +415,7 @@
             this.handleAdd()
           }
         },
+        // ========== 数据加载 ==========
         async fetchData() {
           this.loading = true
           try {
@@ -437,6 +448,7 @@
           this.page = 1
           this.fetchData()
         },
+        // ========== 申请提现 ==========
         handleAdd() {
           this.addForm = {
             amount: 100,
@@ -477,6 +489,7 @@
             self.submitLoading = false
           })
         },
+        // ========== 查看/审核/打款/取消 ==========
         handleView(row) {
           this.detailRow = row
           this.detailDialogVisible = true

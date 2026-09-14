@@ -9,6 +9,8 @@
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+  <!-- ==================== 秒杀活动管理 ==================== -->
+  <!-- 功能说明：管理限时秒杀活动，设置秒杀菜品/原价/秒杀价/总量/限购/时段，支持状态切换 -->
 </head>
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
@@ -22,12 +24,14 @@
         <div class="ds-page-header__actions"></div>
       </header>
 
+      <!-- 统计卡片：全部/进行中/已暂停/已结束，点击可筛选 -->
       <stat-cards
         :cards="statsCards"
         :active-key.sync="activeFilter"
         @card-click="onCardClick"
       ></stat-cards>
 
+      <!-- 搜索栏：按活动名称搜索 + 新增秒杀活动按钮 -->
       <table-bar
         ref="tableBar"
         :search-items="searchConfig"
@@ -37,6 +41,7 @@
         @action="onAction"
       ></table-bar>
 
+      <!-- 数据表格：ID/活动名称/秒杀菜品/原价/秒杀价/已售总量/每人限购/活动时间/状态 -->
       <crud-table
         ref="crudTable"
         :data="tableData"
@@ -86,6 +91,7 @@
       </crud-table>
     </main>
 
+    <!-- 新增/编辑弹窗：活动名称/秒杀菜品/原价/秒杀价/总量/限购/活动时段/描述/状态 -->
     <crud-dialog :show-submit="true" :show-cancel="true"
       :size="'lg'"
       :title="dialogTitle"
@@ -186,15 +192,15 @@
             { key: 'add', text: '+ 新增秒杀活动', type: 'primary' }
           ],
           columns: [
-            { prop: 'id', label: 'ID', width: 70, align: 'center' },
+            { prop: 'id', label: 'ID', width: 60, align: 'center' },
             { prop: 'name', label: '活动名称', minWidth: 160 },
-            { prop: 'dish', label: '秒杀菜品', slot: true, minWidth: 140 },
+            { prop: 'dish', label: '秒杀菜品', slot: true, minWidth: 120 },
             { prop: 'originalPrice', label: '原价', slot: true, width: 100, align: 'center', type: 'money' },
-            { prop: 'flashPrice', label: '秒杀价', slot: true, width: 110, align: 'center', type: 'money' },
-            { prop: 'stock', label: '已售/总量', slot: true, width: 120, align: 'center' },
-            { prop: 'maxPerUser', label: '每人限购', slot: true, width: 90, align: 'center' },
+            { prop: 'flashPrice', label: '秒杀价', slot: true, width: 100, align: 'center', type: 'money' },
+            { prop: 'stock', label: '已售/总量', slot: true, width: 100, align: 'center' },
+            { prop: 'maxPerUser', label: '每人限购', slot: true, width: 80, align: 'center' },
             { prop: 'time', label: '活动时间', slot: true, width: 240 },
-            { prop: 'status', label: '状态', slot: true, width: 90, align: 'center' }
+            { prop: 'status', label: '状态', slot: true, width: 80, align: 'center' }
           ],
           stats: { total: 0, active: 0, paused: 0, ended: 0 },
           lastSearch: {},
@@ -248,6 +254,7 @@
         this.loadStats()
       },
       methods: {
+        // ========== 辅助方法 ==========
         formatMoney: function(value) {
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
@@ -272,6 +279,7 @@
         },
         // 修改点：/dish/options 返回 Map<String,List<String>>（无 id/price），秒杀需按 id 回写菜名与原价，
         // 故改用 /dish/list 获取带 id/name/price 的菜品列表
+        // ========== 数据加载 ==========
         loadDishOptions: function() {
           const self = this
           queryDishList({}).then(function(res) {
@@ -335,6 +343,7 @@
             ended: ended
           }
         },
+        // ========== 筛选/分页事件 ==========
         onCardClick: function(payload) {
           const self = this
           self.activeFilter = payload.activeKey
@@ -369,6 +378,7 @@
           this.page = 1
           this.applyFilter()
         },
+        // ========== 新增/编辑 ==========
         onDishChange: function(id) {
           const self = this
           var opt = self.dishOptions.filter(function(d) { return d.value === id })[0]
@@ -412,6 +422,7 @@
             this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
           }.bind(this))
         },
+        // ========== 状态切换/删除 ==========
         async handleToggleStatus(row) {
           try {
             if (row.status === 0 || row.status === 3) {

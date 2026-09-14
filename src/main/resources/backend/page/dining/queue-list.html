@@ -53,6 +53,8 @@
   </style>
 </head>
 <body>
+  <!-- ====== 排队叫号管理页 ====== -->
+  <!-- 功能：堂食排队取号、叫号、入座全流程管理，支持按手机号/状态筛选、统计卡片快速过滤 -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="queue-app">
     <div class="container queue-container" id="main-content" role="main" aria-label="排队叫号看板">
@@ -298,7 +300,7 @@
         this.loadTableOptions()
       },
       methods: {
-        // 状态标签映射
+        /* ── 状态标签映射 ── */
         statusTagType: function(status) {
           if (status === 'WAITING') return 'warning'
           if (status === 'CALLED') return 'danger'
@@ -309,6 +311,7 @@
           var map = { WAITING: '等待中', CALLED: '已叫号', SEATED: '已入座', CANCELLED: '已取消' }
           return map[status] || '未知'
         },
+        /* ── 数据加载 ── */
         // 修改点：原 loadStats/loadTable 合并为 fetchData，reloadStats=true 并行重载统计（初始进入/增删改后）；搜索/卡片筛选时传 false 不重算
         async fetchData(reloadStats) {
           if (reloadStats === undefined) { reloadStats = true }
@@ -370,7 +373,7 @@
             }
           }).catch(function() { /* 桌台加载失败不影响主流程 */ })
         },
-        // 筛选
+        /* ── 筛选与分页 ── */
         onSearch: function() {
           this.page = 1
           this.fetchData(false)
@@ -404,6 +407,7 @@
           this.page = 1
           this.fetchData(false)
         },
+        /* ── 叫号操作 ── */
         // 叫下一位
         callNext: function() {
           var self = this
@@ -425,7 +429,7 @@
           })
         },
         // 单独叫号（已移除行操作按钮，全局"叫下一位"按钮替代）
-        // 取号弹窗
+        /* ── 取号弹窗 ── */
         showTakeDialog: function() {
           this.takeForm.phone = ''
           this.takeForm.seatCount = 2
@@ -456,7 +460,7 @@
             })
           })
         },
-        // 入座弹窗
+        /* ── 入座弹窗 ── */
         seatHandle: function(row) {
           this.seatForm.queueId = row.id
           this.seatForm.queueNo = row.queueNo || ''
@@ -489,6 +493,7 @@
             ReggieUI.error('请求失败：' + err)
           })
         },
+        /* ── 状态流转操作 ── */
         // CALLED → WAITING（退回等待，用于误叫号纠错）
         recallHandle: function(row) {
           var self = this

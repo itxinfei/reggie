@@ -338,6 +338,8 @@
   </style>
 </head>
 <body>
+  <!-- ====== 收银台主页面 ====== -->
+  <!-- 功能：线下收银结账，支持选择待结账订单、会员识别与优惠券抵扣、多种支付方式、现金找零、一键日结 -->
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
   <a href="#app" class="skip-link">跳转到主内容</a>
 
@@ -703,6 +705,7 @@
         document.removeEventListener('keydown', this.onGlobalKeydown)
       },
       methods: {
+        /* ── 工具方法 ── */
         updateTime() {
           const now = new Date()
           const hours = String(now.getHours()).padStart(2, '0')
@@ -718,6 +721,7 @@
           if (!phone || phone.length < 4) return ''
           return phone.substring(phone.length - 4)
         },
+        /* ── 数据加载 ── */
         async fetchData() {
           try {
             // 获取今日统计
@@ -757,6 +761,7 @@
             ReggieUI.error('获取数据失败')
           }
         },
+        /* ── 订单选择与支付方式 ── */
         selectOrder(order) {
           this.selectedOrder = order
           this.actualAmount = order.amount
@@ -774,6 +779,7 @@
             this.actualAmount = this.payableAmount
           }
         },
+        /* ── 会员识别与优惠券 ── */
         async identifyMember() {
           const phone = (this.memberPhone || '').trim()
           if (!phone) {
@@ -842,6 +848,7 @@
             : '无门槛'
           return '满减券 · ' + cond
         },
+        /* ── 收款与日结 ── */
         async handlePayment() {
           if (!this.selectedOrder) {
             ReggieUI.warning('请先选择订单')

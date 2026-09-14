@@ -194,6 +194,7 @@
         }
       },
       methods: {
+        /* ========== 数据加载 ========== */
         // 修改点：<table-bar> 组件统一操作分发
         onTableAction: function(payload) {
           if (payload.key === 'add') { this.addHandle(); }
@@ -275,6 +276,7 @@
           }
           return { code: 0 }
         },
+        /* ========== 搜索与筛选 ========== */
         handleQuery() {
           // 名称搜索保持当前层级筛选，仅翻回第 1 页
           this.page = 1
@@ -313,6 +315,7 @@
           }
         },
 
+        /* ========== 地区操作（新增/编辑/删除） ========== */
         addHandle() {
           this.formData = {
             title: '新增地区', id: undefined, name: '', code: '', level: 1,

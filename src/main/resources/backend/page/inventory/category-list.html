@@ -156,6 +156,7 @@
         }
       },
       methods: {
+        /* ========== 数据加载 ========== */
         // 修改点：<table-bar> 组件统一操作分发
         onTableAction: function(payload) {
           if (payload.key === 'add') { this.addHandle(); }
@@ -214,6 +215,7 @@
           }
           return { code: 0 }
         },
+        /* ========== 搜索与筛选 ========== */
         handleQuery() {
           this.page = 1
           this.fetchData(false)
@@ -223,6 +225,7 @@
           this.page = 1
           this.fetchData(false)
         },
+        /* ========== 分类操作（新增/编辑/删除） ========== */
         addHandle() {
           this.formData = {
             title: '新增食材分类',
@@ -292,6 +295,7 @@
             })
           })
         },
+        /* ========== 分页处理 ========== */
         // 修改点：分页处理改为 crud-table 事件驱动（参考 supplier-list 已验证模式）
         onPageChange({ page, pageSize }) {
           this.page = page

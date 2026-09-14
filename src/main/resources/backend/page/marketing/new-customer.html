@@ -9,6 +9,8 @@
 
   <link rel="stylesheet" href="../../styles/tokens.css" />
   <link rel="stylesheet" href="../../styles/main.css" />
+  <!-- ==================== 新客优惠管理 ==================== -->
+  <!-- 功能说明：管理新客专享优惠活动，支持固定金额/按比例两种优惠类型，含起送金额/有效天数/启用禁用 -->
 </head>
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
@@ -22,12 +24,14 @@
         <div class="ds-page-header__actions"></div>
       </header>
 
+      <!-- 统计卡片：全部/已启用/已禁用，点击可筛选 -->
       <stat-cards
         :cards="statsCards"
         :active-key.sync="activeFilter"
         @card-click="onCardClick"
       ></stat-cards>
 
+      <!-- 搜索栏：按优惠名称搜索 + 新增新客优惠按钮 -->
       <table-bar
         ref="tableBar"
         :search-items="searchConfig"
@@ -37,6 +41,7 @@
         @action="onAction"
       ></table-bar>
 
+      <!-- 数据表格：ID/优惠名称/优惠类型/优惠值/最大优惠/起送金额/有效天数/状态 -->
       <crud-table
         ref="crudTable"
         :data="tableData"
@@ -86,6 +91,7 @@
       </crud-table>
     </main>
 
+    <!-- 新增/编辑弹窗：优惠名称/类型/优惠值/最大优惠/起送金额/有效天数/备注/状态 -->
     <crud-dialog :show-submit="true" :show-cancel="true"
       :size="'md'"
       :title="dialogTitle"
@@ -162,14 +168,14 @@
             { key: 'add', text: '+ 新增新客优惠', type: 'primary' }
           ],
           columns: [
-            { prop: 'id', label: 'ID', width: 80, align: 'center' },
+            { prop: 'id', label: 'ID', width: 60, align: 'center' },
             { prop: 'name', label: '优惠名称', minWidth: 180 },
-            { prop: 'discountType', label: '优惠类型', slot: true, width: 110, align: 'center' },
-            { prop: 'discountValue', label: '优惠值', slot: true, width: 120, align: 'center', type: 'money' },
-            { prop: 'maxDiscountAmount', label: '最大优惠', slot: true, width: 120, type: 'money' },
-            { prop: 'minOrderAmount', label: '起送金额', slot: true, width: 130, type: 'money' },
-            { prop: 'validDays', label: '有效天数', slot: true, width: 100, align: 'center' },
-            { prop: 'status', label: '状态', slot: true, width: 90, align: 'center' }
+            { prop: 'discountType', label: '优惠类型', slot: true, width: 90, align: 'center' },
+            { prop: 'discountValue', label: '优惠值', slot: true, width: 100, align: 'center', type: 'money' },
+            { prop: 'maxDiscountAmount', label: '最大优惠', slot: true, width: 100, type: 'money' },
+            { prop: 'minOrderAmount', label: '起送金额', slot: true, width: 100, type: 'money' },
+            { prop: 'validDays', label: '有效天数', slot: true, width: 80, align: 'center' },
+            { prop: 'status', label: '状态', slot: true, width: 80, align: 'center' }
           ],
           stats: { total: 0, active: 0, inactive: 0 },
           lastSearch: {},
@@ -210,10 +216,12 @@
         this.loadStats()
       },
       methods: {
+        // ========== 辅助方法 ==========
         formatMoney: function(value) {
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
         },
+        // ========== 数据加载 ==========
         async init() {
           this.loading = true
           const self = this
@@ -264,6 +272,7 @@
             console.warn('加载新客优惠统计失败:', err)
           }
         },
+        // ========== 筛选/分页事件 ==========
         onCardClick: function(payload) {
           const self = this
           self.activeFilter = payload.activeKey
@@ -297,6 +306,7 @@
           this.page = 1
           this.init()
         },
+        // ========== 新增/编辑 ==========
         handleAdd: function() {
           this.dialogTitle = '新增新客优惠'
           this.formData = {
@@ -323,6 +333,7 @@
             this.$refs.ruleForm && this.$refs.ruleForm.clearValidate()
           }.bind(this))
         },
+        // ========== 状态切换/删除 ==========
         async handleToggleStatus(row) {
           try {
             const newStatus = row.status === 1 ? 0 : 1
