@@ -299,9 +299,9 @@
           })
         },
         getImage: function(img) {
-          if (!img) return './../../images/noImg.png'
+          if (!img) return '../images/noImg.png'
           if (img.startsWith('http')) return img
-          return './../../common/download?name=' + img
+          return '/common/download?name=' + img
         },
         switchCategory: function(catId) {
           this.activeCategory = catId
