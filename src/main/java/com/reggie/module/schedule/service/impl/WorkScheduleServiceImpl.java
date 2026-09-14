@@ -1,271 +1,237 @@
 package com.reggie.module.schedule.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.CustomException;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.R;
-import org.springframework.transaction.annotation.Transactional;
+import com.reggie.module.auth.model.Employee;
+import com.reggie.module.auth.service.EmployeeService;
+import com.reggie.module.schedule.mapper.WorkScheduleMapper;
 import com.reggie.module.schedule.model.WorkSchedule;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.schedule.service.WorkScheduleService;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalTime;
-import org.springframework.transaction.annotation.Transactional;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
-import org.springframework.transaction.annotation.Transactional;
-import java.util.HashMap;
-import org.springframework.transaction.annotation.Transactional;
+import java.util.LinkedHashMap;
 import java.util.List;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.Map;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 排班服务实现类
- * <p>
- * 注意：目前 work_schedule 表尚未创建，所有方法使用 Mock 数据填充。
- * 后续表创建后可替换为 MyBatis-Plus 查询实现。
- * </p>
+ * 排班表 业务实现层
+ *
+ * @author 心飞为你飞
+ * @since 2024-01-01
  */
 @Slf4j
 @Service
-@Transactional(rollbackFor = Exception.class)
-public class WorkScheduleServiceImpl implements WorkScheduleService {
+public class WorkScheduleServiceImpl extends ServiceImpl<WorkScheduleMapper, WorkSchedule>
+        implements WorkScheduleService {
 
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    @Autowired
+    private WorkScheduleMapper workScheduleMapper;
+
+    @Autowired
+    private EmployeeService employeeService;
 
     /**
-     * 班次映射
-     */
-    private static final String[] SHIFT_NAMES = {"早班", "中班", "晚班", "全天"};
-    private static final String[][] SHIFT_TIME_RANGES = {
-            {"07:00", "14:00"},
-            {"14:00", "22:00"},
-            {"18:00", "02:00"},
-            {"08:00", "20:00"}
-    };
-
-    /**
-     * 获取 monthly schedule。
-     * @param tenantId 参数 tenantId
-     * @param month 参数 month
-     * @return 返回结果
+     * 查询当月排班：按员工+日期维度汇总，每人每天一行
+     *
+     * @param tenantId 租户ID
+     * @param month    格式 yyyy-MM，默认当月
+     * @return 排班列表（每行含 employeeId/employeeName/date/shift/shiftStart/shiftEnd/remark）
      */
     @Override
     public List<Map<String, Object>> getMonthlySchedule(Long tenantId, String month) {
-        log.info("获取本月排班表 - tenantId={}, month={}", tenantId, month);
+        // 解析月份范围
+        YearMonth ym = parseMonth(month);
+        LocalDate startDate = ym.atDay(1);
+        LocalDate endDate = ym.atEndOfMonth();
 
-        LocalDate monthStart = LocalDate.now();
-        if (month != null && !month.isEmpty()) {
-            monthStart = LocalDate.parse(month + "-01", DATE_FMT);
-        }
-        int daysInMonth = monthStart.lengthOfMonth();
+        // 查询该月所有排班记录
+        LambdaQueryWrapper<WorkSchedule> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(WorkSchedule::getTenantId, tenantId)
+                .ge(WorkSchedule::getScheduleDate, startDate)
+                .le(WorkSchedule::getScheduleDate, endDate)
+                .orderByAsc(WorkSchedule::getScheduleDate)
+                .orderByAsc(WorkSchedule::getEmployeeId);
+        List<WorkSchedule> records = workScheduleMapper.selectList(wrapper);
 
-        // Mock 员工列表
-        String[][] employees = {
-                {"1", "张三"},
-                {"2", "李四"},
-                {"3", "王五"},
-                {"4", "赵六"},
-                {"5", "孙七"}
-        };
-
+        // 转换为前端需要的 Map 结构
         List<Map<String, Object>> result = new ArrayList<>();
-
-        // 按日期生成排班
-        for (int day = 1; day <= daysInMonth; day++) {
-            LocalDate currentDay = monthStart.plusDays(day - 1);
-            int dayOfWeek = currentDay.getDayOfWeek().getValue();
-            String dateStr = currentDay.format(DATE_FMT);
-
-            for (String[] emp : employees) {
-                Map<String, Object> schedule = new HashMap<>();
-                schedule.put("employeeId", Long.parseLong(emp[0]));
-                schedule.put("employeeName", emp[1]);
-                schedule.put("date", dateStr);
-                schedule.put("dayOfWeek", dayOfWeek);
-                schedule.put("dayOfWeekName", getDayOfWeekName(dayOfWeek));
-
-                if (dayOfWeek == 6 || dayOfWeek == 7) {
-                    schedule.put("shift", 3);
-                    schedule.put("shiftName", "全天");
-                    schedule.put("shiftStart", "08:00");
-                    schedule.put("shiftEnd", "20:00");
-                    schedule.put("isWorkDay", true);
-                } else {
-                    // 按员工编号和日期分配班次
-                    int shift = (Integer.parseInt(emp[0]) + day) % 4;
-                    schedule.put("shift", shift);
-                    schedule.put("shiftName", SHIFT_NAMES[shift]);
-                    schedule.put("shiftStart", SHIFT_TIME_RANGES[shift][0]);
-                    schedule.put("shiftEnd", SHIFT_TIME_RANGES[shift][1]);
-                    schedule.put("isWorkDay", true);
-                }
-
-                schedule.put("remark", "");
-                result.add(schedule);
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * 获取 employee schedule。
-     * @param employeeId 参数 employeeId
-     * @param month 参数 month
-     * @param tenantId 参数 tenantId
-     * @return 返回结果
-     */
-    @Override
-    public List<Map<String, Object>> getEmployeeSchedule(Long employeeId, String month, Long tenantId) {
-        log.info("获取员工排班 - employeeId={}, month={}, tenantId={}", employeeId, month, tenantId);
-
-        if (employeeId == null) {
-            throw new CustomException("员工ID不能为空");
-        }
-
-        LocalDate monthStart = LocalDate.now();
-        if (month != null && !month.isEmpty()) {
-            monthStart = LocalDate.parse(month + "-01", DATE_FMT);
-        }
-        int daysInMonth = monthStart.lengthOfMonth();
-
-        List<Map<String, Object>> result = new ArrayList<>();
-
-        for (int day = 1; day <= daysInMonth; day++) {
-            LocalDate currentDay = monthStart.plusDays(day - 1);
-            int dayOfWeek = currentDay.getDayOfWeek().getValue();
-            String dateStr = currentDay.format(DATE_FMT);
-
-            Map<String, Object> schedule = new HashMap<>();
-            schedule.put("employeeId", employeeId);
-            schedule.put("employeeName", "张三");
-            schedule.put("date", dateStr);
-            schedule.put("dayOfWeek", dayOfWeek);
-            schedule.put("dayOfWeekName", getDayOfWeekName(dayOfWeek));
-
-            int shift = (employeeId.intValue() + day) % 4;
-            schedule.put("shift", shift);
-            schedule.put("shiftName", SHIFT_NAMES[shift]);
-            schedule.put("shiftStart", SHIFT_TIME_RANGES[shift][0]);
-            schedule.put("shiftEnd", SHIFT_TIME_RANGES[shift][1]);
-            schedule.put("remark", "");
-
-            result.add(schedule);
-        }
-
-        return result;
-    }
-
-    /**
-     * 保存 schedule。
-     * @param employeeId 参数 employeeId
-     * @param date 参数 date
-     * @param shift 参数 shift
-     * @param shiftStart 参数 shiftStart
-     * @param shiftEnd 参数 shiftEnd
-     * @return 返回结果
-     */
-    @Override
-    public R<Void> saveSchedule(Long employeeId, String date, int shift, String shiftStart, String shiftEnd) {
-        log.info("保存排班 - employeeId={}, date={}, shift={}, shiftStart={}, shiftEnd={}",
-                employeeId, date, shift, shiftStart, shiftEnd);
-
-        if (employeeId == null) {
-            return R.error("员工ID不能为空");
-        }
-        if (date == null || date.isEmpty()) {
-            return R.error("排班日期不能为空");
-        }
-        if (shift < 0 || shift > 3) {
-            return R.error("班次参数错误，可选范围：0=早班,1=中班,2=晚班,3=全天");
-        }
-
-        // 验证时间格式
-        try {
-            LocalTime.parse(shiftStart);
-            LocalTime.parse(shiftEnd);
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            return R.error("班次时间格式不正确，请使用 HH:mm 格式");
-        }
-
-        // 验证日期格式
-        try {
-            LocalDate.parse(date, DATE_FMT);
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            return R.error("日期格式不正确，请使用 yyyy-MM-dd 格式");
-        }
-
-        // Mock 保存（实际表创建后用 MyBatis-Plus 实现）
-        WorkSchedule schedule = new WorkSchedule();
-        schedule.setEmployeeId(employeeId);
-        schedule.setScheduleDate(LocalDate.parse(date, DATE_FMT));
-        schedule.setShift(shift);
-        schedule.setShiftStart(LocalTime.parse(shiftStart));
-        schedule.setShiftEnd(LocalTime.parse(shiftEnd));
-        schedule.setWorkDateStr(date);
-        schedule.setTenantId(BaseContext.getCurrentTenantId());
-
-        R<Void> r = R.success(null);
-        r.add("shiftName", SHIFT_NAMES[shift]);
-        r.add("date", date);
-        return r;
-    }
-
-    /**
-     * 获取 today schedule。
-     * @param tenantId 参数 tenantId
-     * @return 返回结果
-     */
-    @Override
-    public List<Map<String, Object>> getTodaySchedule(Long tenantId) {
-        log.info("获取今日排班 - tenantId={}", tenantId);
-
-        LocalDate today = LocalDate.now();
-        String todayStr = today.format(DATE_FMT);
-
-        // Mock 今日排班数据
-        String[][] todaySchedules = {
-                {"1", "张三", "3", "08:00", "20:00", "全天值班"},
-                {"2", "李四", "0", "07:00", "14:00", ""},
-                {"3", "王五", "1", "14:00", "22:00", ""},
-                {"4", "赵六", "2", "18:00", "02:00", ""},
-                {"5", "孙七", "3", "08:00", "20:00", "备班"}
-        };
-
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (String[] row : todaySchedules) {
-            Map<String, Object> item = new HashMap<>();
-            item.put("employeeId", Long.parseLong(row[0]));
-            item.put("employeeName", row[1]);
-            item.put("shift", Integer.parseInt(row[2]));
-            item.put("shiftName", SHIFT_NAMES[Integer.parseInt(row[2])]);
-            item.put("shiftStart", row[3]);
-            item.put("shiftEnd", row[4]);
-            item.put("remark", row[5]);
-            item.put("date", todayStr);
+        for (WorkSchedule ws : records) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", ws.getId());
+            item.put("employeeId", ws.getEmployeeId());
+            item.put("employeeName", ws.getEmployeeName());
+            item.put("date", ws.getWorkDateStr() != null ? ws.getWorkDateStr()
+                    : ws.getScheduleDate().format(DATE_FMT));
+            item.put("shift", ws.getShift());
+            item.put("shiftStart", ws.getShiftStart() != null ? ws.getShiftStart().toString() : "08:00");
+            item.put("shiftEnd", ws.getShiftEnd() != null ? ws.getShiftEnd().toString() : "18:00");
+            item.put("remark", ws.getRemark());
             result.add(item);
         }
 
         return result;
     }
 
-    private String getDayOfWeekName(int dayOfWeek) {
-        String[] names = {"", "周一", "周二", "周三", "周四", "周五", "周六", "周日"};
-        return names[dayOfWeek];
+    /**
+     * 查询某员工某月排班
+     *
+     * @param employeeId 员工ID
+     * @param month      格式 yyyy-MM，默认当月
+     * @param tenantId   租户ID
+     * @return 排班列表
+     */
+    @Override
+    public List<Map<String, Object>> getEmployeeSchedule(Long employeeId, String month, Long tenantId) {
+        YearMonth ym = parseMonth(month);
+        LocalDate startDate = ym.atDay(1);
+        LocalDate endDate = ym.atEndOfMonth();
+
+        LambdaQueryWrapper<WorkSchedule> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(WorkSchedule::getTenantId, tenantId)
+                .eq(WorkSchedule::getEmployeeId, employeeId)
+                .ge(WorkSchedule::getScheduleDate, startDate)
+                .le(WorkSchedule::getScheduleDate, endDate)
+                .orderByAsc(WorkSchedule::getScheduleDate);
+        List<WorkSchedule> records = workScheduleMapper.selectList(wrapper);
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (WorkSchedule ws : records) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", ws.getId());
+            item.put("employeeId", ws.getEmployeeId());
+            item.put("employeeName", ws.getEmployeeName());
+            item.put("date", ws.getWorkDateStr() != null ? ws.getWorkDateStr()
+                    : ws.getScheduleDate().format(DATE_FMT));
+            item.put("shift", ws.getShift());
+            item.put("shiftStart", ws.getShiftStart() != null ? ws.getShiftStart().toString() : "08:00");
+            item.put("shiftEnd", ws.getShiftEnd() != null ? ws.getShiftEnd().toString() : "18:00");
+            item.put("remark", ws.getRemark());
+            result.add(item);
+        }
+
+        return result;
+    }
+
+    /**
+     * 保存排班：新增或更新某员工某日排班
+     *
+     * @param employeeId 员工ID
+     * @param date       日期，格式 yyyy-MM-dd
+     * @param shift      班次（0=早班, 1=中班, 2=晚班, 3=全天）
+     * @param shiftStart 班次开始时间
+     * @param shiftEnd   班次结束时间
+     * @return 操作结果
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public R<Void> saveSchedule(Long employeeId, String date, int shift, String shiftStart, String shiftEnd) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        // 校验员工存在且属于当前租户
+        Employee employee = employeeService.getById(employeeId);
+        if (employee == null || !tenantId.equals(employee.getTenantId())) {
+            throw new CustomException("员工不存在");
+        }
+
+        LocalDate scheduleDate = LocalDate.parse(date, DATE_FMT);
+
+        // 检查是否已有该日排班（同租户+同员工+同日期）
+        LambdaQueryWrapper<WorkSchedule> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(WorkSchedule::getTenantId, tenantId)
+                .eq(WorkSchedule::getEmployeeId, employeeId)
+                .eq(WorkSchedule::getScheduleDate, scheduleDate);
+        WorkSchedule existing = workScheduleMapper.selectOne(wrapper);
+
+        if (existing != null) {
+            // 更新已有排班
+            existing.setShift(shift);
+            existing.setShiftStart(LocalTime.parse(ensureTimeFormat(shiftStart)));
+            existing.setShiftEnd(LocalTime.parse(ensureTimeFormat(shiftEnd)));
+            workScheduleMapper.updateById(existing);
+        } else {
+            // 新增排班
+            WorkSchedule ws = new WorkSchedule();
+            ws.setEmployeeId(employeeId);
+            ws.setEmployeeName(employee.getName());
+            ws.setScheduleDate(scheduleDate);
+            ws.setShift(shift);
+            ws.setShiftStart(LocalTime.parse(ensureTimeFormat(shiftStart)));
+            ws.setShiftEnd(LocalTime.parse(ensureTimeFormat(shiftEnd)));
+            ws.setWorkDateStr(date);
+            ws.setTenantId(tenantId);
+            workScheduleMapper.insert(ws);
+        }
+
+        return R.success(null);
+    }
+
+    /**
+     * 查询今日排班
+     *
+     * @param tenantId 租户ID
+     * @return 今日排班列表
+     */
+    @Override
+    public List<Map<String, Object>> getTodaySchedule(Long tenantId) {
+        LocalDate today = LocalDate.now();
+
+        LambdaQueryWrapper<WorkSchedule> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(WorkSchedule::getTenantId, tenantId)
+                .eq(WorkSchedule::getScheduleDate, today)
+                .orderByAsc(WorkSchedule::getShiftStart);
+        List<WorkSchedule> records = workScheduleMapper.selectList(wrapper);
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (WorkSchedule ws : records) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", ws.getId());
+            item.put("employeeId", ws.getEmployeeId());
+            item.put("employeeName", ws.getEmployeeName());
+            item.put("shift", ws.getShift());
+            item.put("shiftStart", ws.getShiftStart() != null ? ws.getShiftStart().toString() : "08:00");
+            item.put("shiftEnd", ws.getShiftEnd() != null ? ws.getShiftEnd().toString() : "18:00");
+            item.put("remark", ws.getRemark());
+            result.add(item);
+        }
+
+        return result;
+    }
+
+    /**
+     * 解析月份字符串，默认当月
+     */
+    private YearMonth parseMonth(String month) {
+        if (month != null && !month.isEmpty()) {
+            return YearMonth.parse(month, MONTH_FMT);
+        }
+        return YearMonth.now();
+    }
+
+    /**
+     * 确保时间为 HH:mm 或 HH:mm:ss 格式，不足补 :00
+     */
+    private String ensureTimeFormat(String time) {
+        if (time == null || time.isEmpty()) {
+            return "08:00";
+        }
+        // 如果只有 HH:mm，补 :00 变为 HH:mm:ss
+        if (time.length() == 5) {
+            return time + ":00";
+        }
+        return time;
     }
 }
