@@ -65,7 +65,17 @@
         <appender-ref ref="ERROR_FILE"/>
     </appender>
 
-    <!-- 开发环境：控制台 + 文件 -->
+    <!--
+      开发环境：控制台 + 文件
+      ★ 日志策略（2026-09-15 明确）：平时不刷屏，仅报错（ERROR 及以上）才输出
+        - root level="ERROR"：全局只放行 ERROR 日志（INFO/WARN/DEBUG 全部吞掉）
+        - ERROR 日志同时写入两处：控制台 + logs/reggie-error.log（告警排查用）
+        - 注意：application-dev.yml 的 mybatis-plus log-impl 必须保持 Slf4jImpl，
+          若改回 StdOutImpl 会绕过这里的级别控制，控制台重新被 SQL 刷屏
+      【临时调试】需要看某个包的 INFO/DEBUG 日志时，在下面"第三方框架日志级别"区
+        或 application-dev.yml 的 logging.level 里按包开级别，不要动 root，例如：
+        <logger name="com.reggie.module.member" level="DEBUG"/>
+    -->
     <springProfile name="dev">
         <root level="ERROR">
             <appender-ref ref="CONSOLE"/>
@@ -82,7 +92,12 @@
         </root>
     </springProfile>
 
-    <!-- 第三方框架日志级别 -->
+    <!--
+      第三方框架日志级别（全部压到 ERROR，防止框架 INFO/WARN 刷屏）
+      ★ 项目业务包 com.reggie 未单独配置，跟随 root=ERROR：
+          业务代码里的 log.error(...) 会正常输出并进 error 日志文件；
+          log.info / log.warn 开发期默认不打印，需要时按包在这里加 <logger> 开 DEBUG/INFO
+    -->
     <logger name="org.springframework" level="ERROR"/>
     <logger name="com.baomidou" level="ERROR"/>
     <logger name="com.mysql" level="ERROR"/>

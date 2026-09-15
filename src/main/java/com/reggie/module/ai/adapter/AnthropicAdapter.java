@@ -124,7 +124,13 @@ public class AnthropicAdapter extends BaseModelAdapter {
             }
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("AI请求[{} / {}]未预期异常", config.getProviderCode(), FORMAT_ID, e);
+            // 修改点(2026-09-15)：外网不可达属运行环境问题，降为 WARN 且不打全量堆栈，避免刷屏
+            if (AiNetworkFailureUtils.isNetworkFailure(e)) {
+                log.warn("AI请求[{} / {}]外部服务不可达（网络环境问题，非应用缺陷）：{}",
+                        config.getProviderCode(), FORMAT_ID, e.getMessage());
+            } else {
+                log.error("AI请求[{} / {}]未预期异常", config.getProviderCode(), FORMAT_ID, e);
+            }
             return errorResponse("Anthropic AI服务连接失败（" + config.getProviderName() + "）："
                     + e.getMessage(), config);
         } finally {

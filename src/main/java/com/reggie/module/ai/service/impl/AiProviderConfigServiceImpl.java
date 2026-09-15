@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.ObjectMapperHolder;
 import com.reggie.common.CustomException;
+import com.reggie.module.ai.adapter.AiNetworkFailureUtils;
 import com.reggie.module.ai.mapper.AiProviderConfigMapper;
 import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.provider.AiProviderManager;
@@ -579,7 +580,13 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             return result;
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("fetchModelList: 未预期异常, baseUrl={}", baseUrl, e);
+            // 修改点(2026-09-15)：外网不可达属运行环境问题，降为 WARN 且不打全量堆栈，避免刷屏
+            if (AiNetworkFailureUtils.isNetworkFailure(e)) {
+                log.warn("fetchModelList: 外部服务不可达（网络环境问题，非应用缺陷）, baseUrl={}, msg={}",
+                        baseUrl, e.getMessage());
+            } else {
+                log.error("fetchModelList: 未预期异常, baseUrl={}", baseUrl, e);
+            }
             return Collections.emptyList();
         } finally {
             if (conn != null) {

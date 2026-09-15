@@ -5,8 +5,8 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>收银台 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-    <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <style>
     html, body {
       height: 100%;
@@ -616,14 +616,14 @@
   <!-- 修改点：补引 axios —— request.js 首行即使用全局 axios，缺失会抛错导致
        $axios 永不挂载，本页所有接口请求全部失效 -->
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js"></script>
-  <script src="../../js/components.js?v=20260915b"></script>
-  <script src="../../js/accessibility-utils.js"></script>
-  <script src="../../js/performance-utils.js"></script>
-  <script src="../../js/common.js"></script>
-  <script src="../../api/cashier.js"></script>
-  <script src="../../api/order.js"></script>
-  <script src="../../api/member-center.js"></script>
+  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/common.js?v=20260915c"></script>
+  <script src="../../api/cashier.js?v=20260915c"></script>
+  <script src="../../api/order.js?v=20260915c"></script>
+  <script src="../../api/member-center.js?v=20260915c"></script>
   <script>
     new Vue({
       el: '#app',
@@ -744,6 +744,17 @@
             const ordersRes = await getPendingCheckoutList()
             if (ordersRes.code === 1) {
               this.pendingOrders = ordersRes.data || []
+              // 修改点（2026-09-15）：支持从桌台管理「结账/加菜」跳转自动选中订单
+              // 桌台页 window.open('/backend/page/cashier/index.html?orderId=N')，此处按参数自动点选
+              const urlOrderId = new URLSearchParams(location.search).get('orderId')
+              if (urlOrderId) {
+                const target = this.pendingOrders.find(function(o) { return String(o.id) === String(urlOrderId) })
+                if (target) {
+                  this.selectOrder(target)
+                } else {
+                  ReggieUI.warning('订单 #' + urlOrderId + ' 不在待结账列表中（可能已结账），请手动选择')
+                }
+              }
             } else {
               // 修改点：此前 else 静默
               ReggieUI.error((ordersRes && ordersRes.msg) || '获取待收银订单失败')

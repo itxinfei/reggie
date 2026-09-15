@@ -8,9 +8,9 @@
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
   <!-- 修改点：P3-4 CSS 加载链路瘦身——移除与 main.css 重复的 page/components/design-system 引用（main.css 已 @import 全部），仅保留 main + tokens + stat-cards（stat-cards 为非工程化页面使用的独立构建产物，main.css 的 @import 与 link 会重复加载，但各 100 行内，命中浏览器缓存） -->
-  <link rel="stylesheet" href="../../styles/main.css" />
-    <link rel="stylesheet" href="../../styles/components-stats-card.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+    <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: var(--font-family-base);
@@ -560,12 +560,12 @@
 
     <script src="../../plugins/vue/vue.js"></script>
     <script src="../../plugins/axios/axios.min.js"></script>
-    <script src="../../js/request.js"></script>
-  <script src="../../js/accessibility-utils.js"></script>
-  <script src="../../js/performance-utils.js"></script>
-    <script src="../../api/user.js"></script>
-    <script src="../../js/components.js?v=20260915b"></script>
-    <script src="../../api/notification.js"></script>
+    <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+  <script src="../../js/performance-utils.js?v=20260915c"></script>
+    <script src="../../api/user.js?v=20260915c"></script>
+    <script src="../../js/components.js?v=20260915c"></script>
+    <script src="../../api/notification.js?v=20260915c"></script>
     <script>
         // 修改点：全新消息通知管理 - 支持用户选择器、短信发送、APP推送
         const app = new Vue({

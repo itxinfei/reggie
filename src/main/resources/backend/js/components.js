@@ -488,6 +488,20 @@ Vue.component('crud-table', {
       type: Boolean,
       default: false
     },
+    /**
+     * 是否渲染内置只读"查看"按钮（默认 false，对既有页面零影响）。
+     * 开启后，操作列会自动在页面自定义按钮之前渲染一个"查看"按钮，
+     * 点击打开通用只读详情弹窗（按 columns 渲染 标签:值），无需各页单独写弹窗。
+     */
+    viewable: {
+      type: Boolean,
+      default: false
+    },
+    /** 内置查看弹窗标题 */
+    viewTitle: {
+      type: String,
+      default: '查看'
+    },
     /** 表格加载状态 */
     loading: {
       type: Boolean,
@@ -667,6 +681,7 @@ Vue.component('crud-table', {
       // 修改点：支持 actionsFixed 固定到右侧，并加 crud-actions-col class 便于 CSS nowrap 防截断
       '<el-table-column v-if="showActions" :label="actionsLabel" :min-width="actionsWidth" :align="actionsAlign" :header-align="actionsAlign" :fixed="actionsFixed ? \'right\' : false" class-name="crud-actions-col">' +
         '<template slot-scope="scope">' +
+          '<el-button v-if="viewable" type="text" size="small" class="btn-view" @click="openView(scope.row)">查看</el-button>' +
           '<slot name="actions" :row="scope.row" :$index="scope.$index" :size="size"></slot>' +
         '</template>' +
       '</el-table-column>' +
@@ -690,11 +705,25 @@ Vue.component('crud-table', {
     '  @size-change="onSizeChange"' +
     '  @current-change="onPageChange"' +
     '></el-pagination>' +
+    // ===== 内置只读查看弹窗（viewable 开启时渲染） =====
+    '<el-dialog :title="viewTitle" :visible.sync="viewVisible" width="560px" :close-on-click-modal="false" append-to-body class="crud-view-dialog">' +
+      '<div v-if="viewRow" class="crud-view-body">' +
+        '<div v-for="col in viewColumns" :key="col.prop" class="crud-view-row">' +
+          '<div class="crud-view-label">{{ col.label }}</div>' +
+          '<div class="crud-view-value">{{ formatViewValue(viewRow, col) }}</div>' +
+        '</div>' +
+      '</div>' +
+      '<div slot="footer" class="dialog-footer">' +
+        '<el-button @click="viewVisible = false">关 闭</el-button>' +
+      '</div>' +
+    '</el-dialog>' +
   '</div>',
   data: function () {
     return {
       currentPage: this.page,
-      selectedRows: []
+      selectedRows: [],
+      viewVisible: false,
+      viewRow: null
     }
   },
   watch: {
@@ -714,6 +743,13 @@ Vue.component('crud-table', {
       if (this.selection) n += 1
       if (this.showIndex) n += 1
       return n
+    },
+    /** 内置查看弹窗的字段列表（排除选择/序号/展开等特殊列） */
+    viewColumns: function () {
+      var cols = this.columns || []
+      return cols.filter(function (c) {
+        return c && c.prop && c.label && c.type !== 'selection' && c.type !== 'index' && c.type !== 'expand'
+      })
     }
   },
   methods: {
@@ -774,6 +810,20 @@ Vue.component('crud-table', {
     },
     onPageChange: function (val) {
       this.$emit('page-change', { page: val, pageSize: this.pageSize })
+    },
+    /** 内置只读查看：打开通用详情弹窗 */
+    openView: function (row) {
+      this.viewRow = row
+      this.viewVisible = true
+    },
+    /** 内置查看弹窗的单元格值格式化（复用全站 window.RgFormat 逻辑，空值显示 —） */
+    formatViewValue: function (row, col) {
+      var val = row ? row[col.prop] : undefined
+      if (val === null || val === undefined || val === '') return '—'
+      if (typeof col.formatter === 'function') return col.formatter(val, row, col)
+      if (col.type === 'money') return '¥' + this.formatMoney(val)
+      if (col.type === 'number') return this.formatNumber(val)
+      return val
     }
   }
 })

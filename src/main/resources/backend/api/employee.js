@@ -1,7 +1,11 @@
-// 修改点：筛选下拉选项（动态加载员工姓名）
+// 员工管理 API（原 api/member.js——文件名与内容不符，已按内容正名为 employee.js）
+// 修改点：getMemberList→getEmployeePage、getMemberStats→getEmployeeStats（原函数名误导，实际查询的是员工）
+
+// 筛选下拉选项（动态加载员工姓名）
 const employeeOptions = () => $axios({ url: '/employee/options', method: 'get' })
 
-function getMemberList (params) {
+// 员工分页列表
+function getEmployeePage (params) {
   return $axios({
     url: '/employee/page',
     method: 'get',
@@ -9,15 +13,15 @@ function getMemberList (params) {
   })
 }
 
-// 修改点：员工统计聚合接口（后端 count 查询），替代前端 pageSize:1000 全量拉取
-function getMemberStats () {
+// 员工统计聚合接口（后端 count 查询），替代前端 pageSize:1000 全量拉取
+function getEmployeeStats () {
   return $axios({
     url: '/employee/stats',
     method: 'get'
   })
 }
 
-// 修改---启用禁用接口
+// 启用/禁用员工
 function enableOrDisableEmployee (params) {
   return $axios({
     url: '/employee/status',
@@ -26,7 +30,7 @@ function enableOrDisableEmployee (params) {
   })
 }
 
-// 新增---添加员工
+// 添加员工
 function addEmployee (params) {
   return $axios({
     url: '/employee',
@@ -35,7 +39,7 @@ function addEmployee (params) {
   })
 }
 
-// 修改---添加员工
+// 修改员工
 function editEmployee (params) {
   return $axios({
     url: '/employee',
@@ -44,7 +48,7 @@ function editEmployee (params) {
   })
 }
 
-// 修改页面反查详情接口
+// 编辑页反查员工详情
 function queryEmployeeById (id) {
   return $axios({
     url: `/employee/${id}`,
@@ -60,6 +64,3 @@ function deleteEmployee (ids) {
     params: { ids: ids }
   })
 }
-
-// 优惠券模板分页
-const couponTemplatePage = (params) => $axios({ url: '/api/member/coupon-template/page', method: 'get', params })

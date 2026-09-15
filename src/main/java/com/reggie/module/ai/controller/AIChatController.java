@@ -44,6 +44,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * <p>
@@ -69,6 +75,13 @@ public class AIChatController {
 
     @Resource
     private com.reggie.module.ai.provider.AiProviderManager aiProviderManager;
+
+    /**
+     * AI 健康探活线程池（见 {@code AsyncConfig#aiHealthProbeExecutor}）。
+     * 用于将探活调用与 HTTP 请求线程隔离，配合 Future.get(timeout) 实现有界超时。
+     */
+    @Resource(name = "aiHealthProbeExecutor")
+    private ThreadPoolTaskExecutor aiHealthProbeExecutor;
 
     // ==================== 核心对话接口 ====================
 
@@ -230,25 +243,61 @@ public class AIChatController {
     }
 
     /**
+     * AI 健康探活超时时间（秒）。
+     * <p>
+     * 探活属于「体验型」接口，仅用于前端展示连接状态，不应让请求长时间挂起，
+     * 因此取值远小于供应商配置的业务超时（30~60 秒）。
+     */
+    private static final int AI_HEALTH_PROBE_TIMEOUT_SECONDS = 3;
+
+    /**
      * AI服务健康检查
+     * <p>
+     * 修改点：探活改为「有界超时」执行。原实现在请求线程中同步调用外部 AI 接口，
+     * 供应商不可达时需等待完整连接超时（配置 30s）才返回，前端请求长时间挂起（无响应）。
+     * 现改为提交到专用线程池并以 3 秒为上限等待结果，超时即判定不可用并快速返回，
+     * 避免管理端页面出现悬挂请求。
      */
     @GetMapping("/health")
-    @Operation(summary = "AI服务健康检查", description = "检查AI服务是否可用")
+    @Operation(summary = "AI服务健康检查", description = "检查AI服务是否可用（探活上限3秒，超时判定不可用）")
     public R<Map<String, Object>> health() {
-        AIChatResponse testResponse = aiProviderManager.chat(
-                java.util.Arrays.asList(
-                        com.reggie.module.ai.model.AIMessage.builder().role("user").content("ping").build()
-                ), 50, 0.1);
-        boolean available = testResponse != null && testResponse.getContent() != null
-                && !testResponse.getContent().contains("未配置")
-                && !testResponse.getContent().contains("未就绪")
-                && !testResponse.getContent().contains("不可用")
-                && !testResponse.getContent().contains("失败");
         Map<String, Object> result = new HashMap<>();
-        result.put("available", available);
-        result.put("model", testResponse != null ? testResponse.getModel() : "unknown");
         result.put("features", Arrays.asList("streaming", "conversation", "feedback", "order_assistant",
                 "business_analysis"));
+
+        Future<AIChatResponse> probe = null;
+        try {
+            probe = aiHealthProbeExecutor.submit(() -> aiProviderManager.chat(
+                    Arrays.asList(AIMessage.builder().role("user").content("ping").build()), 50, 0.1));
+            AIChatResponse testResponse = probe.get(AI_HEALTH_PROBE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            boolean available = testResponse != null && testResponse.getContent() != null
+                    && !testResponse.getContent().contains("未配置")
+                    && !testResponse.getContent().contains("未就绪")
+                    && !testResponse.getContent().contains("不可用")
+                    && !testResponse.getContent().contains("失败");
+            result.put("available", available);
+            result.put("model", testResponse != null ? testResponse.getModel() : "unknown");
+        } catch (TimeoutException e) {
+            if (probe != null) {
+                probe.cancel(true);
+            }
+            log.warn("AI健康检查探活超时（{}秒），判定为不可用", AI_HEALTH_PROBE_TIMEOUT_SECONDS);
+            result.put("available", false);
+            result.put("model", "unknown");
+        } catch (RejectedExecutionException e) {
+            log.warn("AI健康检查探活任务被线程池拒绝，判定为不可用", e);
+            result.put("available", false);
+            result.put("model", "unknown");
+        } catch (ExecutionException e) {
+            log.warn("AI健康检查探活执行失败，判定为不可用", e);
+            result.put("available", false);
+            result.put("model", "unknown");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("AI健康检查探活被中断，判定为不可用");
+            result.put("available", false);
+            result.put("model", "unknown");
+        }
         return R.success(result);
     }
 

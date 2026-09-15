@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>规格管理 - 瑞吉外卖</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css">
-  <link rel="stylesheet" href="../../styles/tokens.css">
-  <link rel="stylesheet" href="../../styles/main.css">
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c">
+  <link rel="stylesheet" href="../../styles/main.css?v=20260915c">
   <style>
     /* ===== 规格管理页专有样式（前缀 spec- 避免污染全局） ===== */
     .spec-main { margin-top: 20px; }
@@ -131,13 +131,39 @@
     .spec-group-nav__dot.is-off { background-color: var(--text-muted); }
 
     /* ===== 右侧：选项工作台 ===== */
+    /* 修改点：信息头两行布局——首行组名+启用开关，次行标签+统计 */
+    .spec-panel__title-wrap.is-column {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .spec-panel__title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: var(--space-2);
+    }
+    .spec-panel__status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
     .spec-group-head {
       display: inline-flex;
       align-items: center;
-      gap: var(--space-2);
+      gap: 8px;
       flex-wrap: wrap;
     }
-    .spec-group-head .el-switch { margin-left: var(--space-1); }
+    .spec-group-head__divider {
+      width: 1px;
+      height: 12px;
+      background-color: var(--border-default);
+    }
+    .spec-panel__count { font-variant-numeric: tabular-nums; }
 
     /* 行内操作按钮横向居中排列 */
     .spec-row-actions {
@@ -312,9 +338,22 @@
         <el-col :xs="24" :lg="17">
           <section class="spec-panel" aria-label="规格选项列表">
             <!-- 选中组信息头 -->
+            <!-- 修改点：信息头改为两行布局——首行组名+启用开关，次行类型/必选标签与统计，避免单行拥挤失衡 -->
             <div v-if="currentGroup" class="spec-panel__head">
-              <div class="spec-panel__title-wrap">
-                <h2 class="spec-panel__title">{{ currentGroup.name }}</h2>
+              <div class="spec-panel__title-wrap is-column">
+                <div class="spec-panel__title-row">
+                  <h2 class="spec-panel__title">{{ currentGroup.name }}</h2>
+                  <span class="spec-panel__status">
+                    <span class="spec-panel__status-label">{{ currentGroup.status === 1 ? '已启用' : '已停用' }}</span>
+                    <el-switch
+                      v-model="currentGroup.status"
+                      :active-value="1"
+                      :inactive-value="0"
+                      :aria-label="'切换规格组「' + currentGroup.name + '」启用状态'"
+                      @change="toggleGroupStatus(currentGroup)">
+                    </el-switch>
+                  </span>
+                </div>
                 <div class="spec-group-head">
                   <el-tag :type="currentGroup.type === 1 ? 'info' : 'success'" size="small">
                     {{ currentGroup.type === 1 ? '单选' : '多选' }}
@@ -324,13 +363,7 @@
                   <el-tag v-if="currentGroup.type === 2 && currentGroup.maxSelect > 0" type="warning" size="small">
                     最多 {{ currentGroup.maxSelect }} 项
                   </el-tag>
-                  <el-switch
-                    v-model="currentGroup.status"
-                    :active-value="1"
-                    :inactive-value="0"
-                    :aria-label="'切换规格组「' + currentGroup.name + '」启用状态'"
-                    @change="toggleGroupStatus(currentGroup)">
-                  </el-switch>
+                  <span class="spec-group-head__divider" aria-hidden="true"></span>
                   <span class="spec-panel__count">共 {{ filteredOptions.length }} 项</span>
                 </div>
               </div>
@@ -514,12 +547,12 @@
   <!-- 修改点：补引 axios —— request.js 首行即使用全局 axios，缺失会抛错导致
        $axios 永不挂载，本页所有接口请求全部失效 -->
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js"></script>
-  <script src="../../js/components.js?v=20260915b"></script>
-  <script src="../../js/accessibility-utils.js"></script>
-  <script src="../../js/performance-utils.js"></script>
-  <script src="../../js/common.js"></script>
-  <script src="../../api/dish-spec.js"></script>
+  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/common.js?v=20260915c"></script>
+  <script src="../../api/dish-spec.js?v=20260915c"></script>
   <script>
     new Vue({
       el: '#app',

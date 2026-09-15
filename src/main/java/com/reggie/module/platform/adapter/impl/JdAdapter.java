@@ -23,12 +23,14 @@ import java.util.Map;
 import java.lang.NumberFormatException;
 
 /**
- * 京东外卖（京东到家开放平台）适配器（真实对接）
+ * 京东外卖（京东秒送/京东到家开放平台）适配器（占位协议，待按官方文档对接）
  * <p>
- * 实现京东外卖订单拉取与状态回传。京东到家开放平台响应通常包裹在
- * {@code {code,msg,result:[...]}} 结构中，订单数组直接位于 result 内，
- * 字段以驼峰（camelCase）命名；签名与接口路径以京东到家开放平台文档为准，
- * 当前按通用约定实现，如不一致仅需调整 {@link #buildSign(Map, String)} 与请求路径。
+ * 实现京东外卖订单拉取与状态回接。注意（2026-09-15 修正）：
+ * 1. 原 BASE_URL 使用 openo2o.jddj.com 为不存在的域名（NXDOMAIN），已修正为真实网关 openapi.jddj.com
+ *    （开放平台入口 https://opendj.jd.com）；
+ * 2. 接口路径、header（X-Jd-AppKey）、鉴权（access_token 拼接）与签名 buildSign 均为占位"通用约定"，
+ *    未按京东秒送开放平台官方协议实现（buildSign 目前亦未被调用）；
+ *    正式对接前必须入驻开放平台并按文档重写协议层，否则请求仍会被网关拒绝。
  * </p>
  *
  * @author reggie
@@ -39,7 +41,9 @@ import java.lang.NumberFormatException;
 public class JdAdapter implements PlatformAdapter {
 
     private static final String PLATFORM_TYPE = "JD";
-    private static final String BASE_URL = "https://openo2o.jddj.com/djapi/v1";
+    // 修改点(2026-09-15)：修正假域名 openo2o.jddj.com（NXDOMAIN）为真实网关 openapi.jddj.com；
+    // 路径/签名仍为占位约定，正式对接须按 https://opendj.jd.com 官方文档重写协议层
+    private static final String BASE_URL = "https://openapi.jddj.com/djapi/v1";
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();

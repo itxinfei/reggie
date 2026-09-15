@@ -8,8 +8,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-    <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <style>
     /* 8.4.2 三 Tab 合并：券模板（卡片式）/ 发放记录 / 即将到期 —— 全部引用 tokens.css 设计令牌 */
     .coupon-tabs { margin-top: var(--space-4) }
@@ -27,7 +27,9 @@
     .coupon-card__usage { font-size: var(--font-size-xs); color: var(--text-secondary); display: flex; align-items: center; gap: var(--space-2) }
     .coupon-card__usage .el-progress { flex: 1 }
     .coupon-card__remain { color: var(--color-warning-dark); white-space: nowrap }
-    .coupon-card__ops { display: flex; gap: 6px; flex-wrap: wrap; border-top: 1px dashed var(--border-default); padding-top: var(--space-3) }
+    .coupon-card__ops { display: flex; gap: 6px; flex-wrap: nowrap; border-top: 1px dashed var(--border-default); padding-top: var(--space-3) }
+    /* 修改点：四个操作按钮（发放/效果/修改/删除）强制一行展示——等分宽度并取消 el-button 默认外边距，避免换行 */
+    .coupon-card__ops .el-button { flex: 1; margin-left: 0; padding-left: 0; padding-right: 0 }
     .coupon-pager { margin-top: var(--space-4); display: flex; justify-content: flex-end }
     .card-loading { text-align: center; padding: 48px 0; color: var(--text-muted); font-size: var(--font-size-base) }
 
@@ -478,11 +480,11 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js"></script>
-  <script src="../../js/accessibility-utils.js"></script>
-  <script src="../../js/performance-utils.js"></script>
-  <script src="../../js/components.js?v=20260915b"></script>
-  <script src="../../api/member-center.js"></script>
+  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../api/member-center.js?v=20260915c"></script>
   <script>
     // 8.4.2 优惠券三 Tab 合并：券模板（卡片式）/ 发放记录 / 即将到期，发券在模板卡内完成不跳页
     new Vue({

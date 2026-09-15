@@ -23,11 +23,12 @@ import java.util.Map;
 import java.lang.NumberFormatException;
 
 /**
- * 饿了么开放平台适配器（真实对接）
+ * 饿了么开放平台适配器（占位协议，待按官方文档对接）
  * <p>
- * 实现饿了么开放平台订单拉取与状态回传。各接口路径/签名规则以饿了么开放平台文档为准；
- * 当前按通用开放平台约定实现（时间戳 + 签名头），如与实际文档不一致，仅需调整
- * {@link #buildSign(Map, String)} 与请求头即可。
+ * 实现饿了么开放平台订单拉取与状态回传。注意（2026-09-15 如实标注）：当前 BASE_URL
+ * （openapi.ele.me，非官方文档网关 api.ele.me）、接口路径与签名 buildSign 均为占位
+ * "通用约定"，非饿了么开放平台（open.faas.ele.me）官方协议，buildSign 亦未被调用；
+ * 正式对接前必须入驻并按文档重写协议层。
  * </p>
  *
  * @author reggie

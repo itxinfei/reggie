@@ -13,6 +13,7 @@ import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -66,11 +67,21 @@ public class PlatformRetryTask {
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    /** 修改点(2026-09-15)：平台同步总开关（默认 false）。适配器为占位协议时重试必然失败且无限堆积，
+     * 关闭开关可避免每 2 分钟空转重试并刷 ERROR 日志 */
+    @Value("${reggie.platform.sync-enabled:false}")
+    private boolean syncEnabled;
+
     /**
      * 每 2 分钟执行一次，重试失败的同步操作
      */
     @Scheduled(fixedDelay = 120000)
     public void retryFailedOperations() {
+        // 修改点(2026-09-15)：总开关守卫——未开启真实平台对接前不执行重试外呼
+        if (!syncEnabled) {
+            log.debug("[平台重试] reggie.platform.sync-enabled=false，跳过本次重试");
+            return;
+        }
         // 分布式锁防止多实例重复执行（fail-closed：Redis 不可用则跳过）
         String lockValue = tryLock("platform:lock:retry", LOCK_TTL_MS);
         if (lockValue == null) {

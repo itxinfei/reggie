@@ -8,8 +8,8 @@
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -139,13 +139,13 @@
     <script src="../../plugins/element-ui/index.js?v=20260915"></script>
     <!-- 引入axios -->
     <script src="../../plugins/axios/axios.min.js"></script>
-    <script src="../../js/request.js"></script>
-  <script src="../../js/accessibility-utils.js"></script>
-  <script src="../../js/performance-utils.js"></script>
-    <script src="../../api/member.js"></script>
-    <script src="../../api/export.js"></script>
-    <script src="../../js/validate.js"></script>
-    <script src="../../js/components.js?v=20260915b"></script>
+    <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+  <script src="../../js/performance-utils.js?v=20260915c"></script>
+    <script src="../../api/employee.js?v=20260915c"></script>
+    <script src="../../api/export.js?v=20260915c"></script>
+    <script src="../../js/validate.js?v=20260915c"></script>
+    <script src="../../js/components.js?v=20260915c"></script>
     <script>
       new Vue({
         el: '#member-app',
@@ -235,18 +235,50 @@
         created() {
           this.loadFilterOptions()
           this.fetchData(true)
-          try {
-            const userInfo = localStorage.getItem('userInfo')
-            if (userInfo) {
-              this.isAdmin = JSON.parse(userInfo).isAdmin || false
-            }
-          } catch (e) {
-            console.warn('解析用户信息失败:', e)
-          }
+          this.initAdminFlag()
         },
         mounted() {
         },
         methods: {
+          /**
+           * 初始化"是否超管"标识，决定 编辑/禁用/删除 按钮是否显示。
+           *
+           * 修改点1：登录时 localStorage 存的是 role 字段（1=超管，见 EmployeeRole.ADMIN）；
+           *         旧代码读取的是 isAdmin 键，而该键从未被任何代码写入、恒为 false，
+           *         导致三个操作按钮对所有人都隐藏、只剩"查看"。
+           * 修改点2：升级前已登录的老会话，其 userInfo 不含 role 字段，
+           *         此时回源查询员工详情补齐并写回 localStorage，
+           *         避免用户必须重新登录才能恢复操作按钮。
+           */
+          initAdminFlag() {
+            const self = this
+            let parsed = null
+            try {
+              const userInfo = localStorage.getItem('userInfo')
+              if (userInfo) parsed = JSON.parse(userInfo)
+            } catch (e) {
+              console.warn('解析用户信息失败:', e)
+              return
+            }
+            if (parsed && parsed.role !== undefined && parsed.role !== null) {
+              self.isAdmin = Number(parsed.role) === 1
+              return
+            }
+            if (!parsed || !parsed.id) return
+            queryEmployeeById(parsed.id).then(function (res) {
+              const role = res && res.data ? res.data.role : undefined
+              if (role === undefined || role === null) return
+              self.isAdmin = Number(role) === 1
+              try {
+                parsed.role = role
+                localStorage.setItem('userInfo', JSON.stringify(parsed))
+              } catch (e) {
+                console.warn('回写用户信息失败:', e)
+              }
+            }).catch(function () {
+              // 回源失败时保持非管理员，不影响列表等其余功能
+            })
+          },
           /* ── 筛选选项加载 ── */
           async loadFilterOptions() {
             this.optionsLoading = true
@@ -290,7 +322,7 @@
             if (this.activeFilter) { params.status = this.activeFilter }
 
             // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-            const requests = [getMemberList(params)]
+            const requests = [getEmployeePage(params)]
             if (reloadStats) { requests.push(this.loadMemberStats()) }
             const results = await Promise.all(requests)
             const memberRes = results[0]
@@ -318,7 +350,7 @@
           // 修改点：改为调用后端 /employee/stats 聚合接口（count 查询），避免 pageSize:1000 全量拉取与截断风险
           async loadMemberStats() {
             try {
-              const res = await getMemberStats()
+              const res = await getEmployeeStats()
               if (String(res.code) === '1') {
                 return res
               }

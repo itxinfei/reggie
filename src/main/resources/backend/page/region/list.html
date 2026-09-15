@@ -5,9 +5,9 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>行政区划管理 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-    <link rel="stylesheet" href="../../styles/main.css" />
-    <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+    <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -53,7 +53,7 @@
         :page-size="pageSize"
         :total="counts"
         :loading="loading"
-        :show-actions="true"
+        :show-actions="true" :viewable="true"
         :actions-width="240"
         :page-sizes="[10, 20, 30, 50]"
         @page-change="onPageChange"
@@ -110,11 +110,11 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js"></script>
-  <script src="../../js/accessibility-utils.js"></script>
-  <script src="../../js/performance-utils.js"></script>
-  <script src="../../api/region.js"></script>
-  <script src="../../js/components.js?v=20260915b"></script>
+  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../api/region.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260915c"></script>
 <script>
     new Vue({
       el: '#region-app',

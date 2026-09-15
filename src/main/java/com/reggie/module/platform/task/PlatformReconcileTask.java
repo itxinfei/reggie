@@ -8,6 +8,7 @@ import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -52,11 +53,21 @@ public class PlatformReconcileTask {
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    /** 修改点(2026-09-15)：平台同步总开关（默认 false）。适配器为占位协议时对账无真实数据可对，
+     * 关闭开关可避免无效对账外呼 */
+    @Value("${reggie.platform.sync-enabled:false}")
+    private boolean syncEnabled;
+
     /**
      * 每天凌晨 2 点执行对账
      */
     @Scheduled(cron = "0 0 2 * * ?")
     public void executeDailyReconcile() {
+        // 修改点(2026-09-15)：总开关守卫——未开启真实平台对接前不执行对账
+        if (!syncEnabled) {
+            log.debug("[平台对账] reggie.platform.sync-enabled=false，跳过本次对账");
+            return;
+        }
         // 分布式锁防止多实例重复执行（fail-closed：Redis 不可用则跳过）
         String lockValue = tryLock("platform:lock:reconcile", LOCK_TTL_MS);
         if (lockValue == null) {

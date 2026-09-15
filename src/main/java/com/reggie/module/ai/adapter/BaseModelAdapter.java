@@ -55,12 +55,14 @@ public abstract class BaseModelAdapter implements AiModelAdapter {
         } catch (Exception e) {
             // 修改点：由于 doChat() 的实现类内部可能已捕获异常，
             // 这里使用 instanceof 分发以支持子类向外抛出网络异常的场景
+            // 修改点(2026-09-15)：外部网络不可达/超时属运行环境问题（离线、防火墙、供应商域名不通），
+            // 统一降为 WARN 且不打印全量堆栈，避免 ERROR 刷屏淹没真实程序缺陷
             if (e instanceof java.net.SocketTimeoutException) {
-                log.error("AI请求[{}]超时", config.getProviderCode(), e);
+                log.warn("AI请求[{}]响应超时（网络环境问题，非应用缺陷）：{}", config.getProviderCode(), e.getMessage());
                 return errorResponse("AI服务响应超时（" + config.getProviderName() + "），请稍后重试", config);
             }
-            if (e instanceof java.net.ConnectException) {
-                log.error("AI请求[{}]连接失败", config.getProviderCode(), e);
+            if (AiNetworkFailureUtils.isNetworkFailure(e)) {
+                log.warn("AI请求[{}]外部服务不可达（网络环境问题，非应用缺陷）：{}", config.getProviderCode(), e.getMessage());
                 return errorResponse("无法连接到AI服务（" + config.getProviderName() + "），请检查网络和API地址", config);
             }
             log.error("AI请求[{}]异常", config.getProviderCode(), e);

@@ -7,8 +7,8 @@
   <title>考勤管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
 </head>
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
@@ -134,11 +134,11 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js"></script>
-  <script src="../../js/accessibility-utils.js"></script>
-  <script src="../../js/performance-utils.js"></script>
-  <script src="../../js/components.js?v=20260915b"></script>
-  <script src="../../api/attendance.js"></script>
+  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../api/attendance.js?v=20260915c"></script>
   <script>
     new Vue({
       el: '#attendance-app',
@@ -328,6 +328,11 @@
         // ===== 考勤日历 =====
         fetchCalendar: function () {
           const self = this
+          // 修改点：未选择员工时直接渲染空日历，不再发起 employeeId 为空的请求（原会命中不存在的路径返回 404）
+          if (!self.calendarEmployee) {
+            self.buildCalendar(self.calendarMonth, null)
+            return
+          }
           self.calendarLoading = true
           attendanceCalendar({ month: self.calendarMonth, employeeId: self.calendarEmployee }).then(function (res) {
             // 后端返回 {employeeId, month, calendar: [...], summary: {...}}，提取calendar数组

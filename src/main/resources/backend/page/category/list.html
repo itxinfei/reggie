@@ -8,8 +8,8 @@
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <!-- 对齐规范单一来源：styles/consistency.css（.is-left/.is-center/.is-right），页面禁止写 text-align 覆盖 -->
 </head>
 <body>
@@ -58,7 +58,7 @@
         :page-size="pageSize"
         :total="counts"
         :loading="loading"
-        :show-actions="true"
+        :show-actions="true" :viewable="true"
         :actions-width="160"
         @page-change="onPageChange"
         @size-change="onSizeChange"
@@ -139,13 +139,13 @@
     <script src="../../plugins/element-ui/index.js?v=20260915"></script>
     <!-- 引入axios -->
     <script src="../../plugins/axios/axios.min.js"></script>
-    <script src="../../js/request.js"></script>
-  <script src="../../js/accessibility-utils.js"></script>
-  <script src="../../js/performance-utils.js"></script>
-    <script src="../../api/category.js"></script>
-    <script src="../../api/food.js"></script>
-    <script src="../../api/combo.js"></script>
-    <script src="../../js/components.js?v=20260915b"></script>
+    <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+  <script src="../../js/performance-utils.js?v=20260915c"></script>
+    <script src="../../api/category.js?v=20260915c"></script>
+    <script src="../../api/food.js?v=20260915c"></script>
+    <script src="../../api/combo.js?v=20260915c"></script>
+    <script src="../../js/components.js?v=20260915c"></script>
     <script>
       new Vue({
         el: '#category-app',

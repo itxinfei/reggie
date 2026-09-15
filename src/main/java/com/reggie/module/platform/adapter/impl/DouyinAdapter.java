@@ -23,12 +23,14 @@ import java.util.Map;
 import java.lang.NumberFormatException;
 
 /**
- * 抖音生活服务（抖音外卖）开放平台适配器（真实对接）
+ * 抖音生活服务（抖音外卖）开放平台适配器（占位协议，待按官方文档对接）
  * <p>
  * 实现抖音生活服务订单拉取与状态回传。抖音开放平台响应通常包裹在
  * {@code {err_no,err_msg,data:{...}}} 结构中，订单列表在 data.order_list 内，
- * 字段以下划线（snake_case）命名；签名与接口路径以抖音生活服务开放平台文档为准，
- * 当前按通用约定实现，如不一致仅需调整 {@link #buildSign(Map, String)} 与请求路径。
+ * 字段以下划线（snake_case）命名。注意（2026-09-15 如实标注）：当前接口路径与签名
+ * buildSign 均为占位"通用约定"，非抖音生活服务开放平台
+ * （developer.open-douyin.com，生活服务商家应用）官方协议，buildSign 亦未被调用；
+ * 正式对接前必须入驻并按文档重写协议层。
  * </p>
  *
  * @author reggie

@@ -9,9 +9,9 @@
     <!-- 引入样式 -->
     <!-- 修改点(2026-09-01)：移除 plugins/element-ui/index.css 官方样式表 ——
          与 common.css（→common-el.css，token 化副本）重复加载，统一由后者单源提供 -->
-    <link rel="stylesheet" href="styles/common.css" />
-    <link rel="stylesheet" href="styles/index.css" />
-    <link rel="stylesheet" href="styles/design-system.css" />
+    <link rel="stylesheet" href="styles/common.css?v=20260915c" />
+    <link rel="stylesheet" href="styles/index.css?v=20260915c" />
+    <link rel="stylesheet" href="styles/design-system.css?v=20260915c" />
     <!-- Remix Icon v4.6 — 2700+ 免费商用图标，替代原 iconfont（仅7个图标） -->
     <link href="plugins/remixicon/remixicon.css" rel="stylesheet" />
     <style>
@@ -206,9 +206,9 @@
     <script src="plugins/element-ui/index.js?v=20260915"></script>
     <!-- 引入axios -->
     <script src="plugins/axios/axios.min.js"></script>
-    <script src="js/request.js"></script>
-    <script src="js/components.js?v=20260915b"></script>
-    <script src="./api/login.js"></script>
+    <script src="js/request.js?v=20260915c"></script>
+    <script src="js/components.js?v=20260915c"></script>
+    <script src="./api/login.js?v=20260915c"></script>
     <script>
 
       new Vue({
@@ -283,7 +283,7 @@
                 { id: '7-5', name: '时段分析', url: 'page/report/time-slot.html', icon: 'ri-time-line' },
                 { id: '7-6', name: '支付分析', url: 'page/report/payment-analysis.html', icon: 'ri-wallet-line' },
                 { id: '7-7', name: '评价管理', url: 'page/report/evaluation-list.html', icon: 'ri-star-line' },
-                { id: '7-8', name: '导出中心', url: 'page/export/index.html', icon: 'ri-file-download-line' },
+                { id: '7-8', name: '导出中心', url: 'page/export/index.html?v=20260915d', icon: 'ri-file-download-line' },
               ]},
 
               /* ──8. 财务管理（4 项）── */
@@ -296,7 +296,7 @@
 
               /* ──9. 系统设置（12 项，精简+合并扩展功能）── */
               { id: '9', name: '系统设置', icon: 'ri-settings-3-line', children: [
-                { id: '9-1', name: '员工管理', url: 'page/member/list.html', icon: 'ri-user-settings-line' },
+                { id: '9-1', name: '员工管理', url: 'page/employee/list.html?v=20260915d', icon: 'ri-user-settings-line' },
                 { id: '9-2', name: '角色管理', url: 'page/sys/role-list.html', icon: 'ri-shield-user-line' },
                 { id: '9-3', name: '考勤排班', url: 'page/attendance/attendance.html', icon: 'ri-calendar-check-line' },
                 { id: '9-4', name: '客服管理', url: 'page/customer-service/list.html', icon: 'ri-customer-service-2-line' },

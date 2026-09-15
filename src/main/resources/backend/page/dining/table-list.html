@@ -8,8 +8,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <style>
     /* 卡片视图切换 */
     .table-grid-toggle { display: flex; align-items: center; gap: 8px; }
@@ -136,7 +136,7 @@
           :total="counts"
           :loading="loading"
           :show-index="true"
-          :show-actions="true"
+          :show-actions="true" :viewable="true"
           :actions-width="200"
           :stripe="true"
           :border="true"
@@ -371,11 +371,11 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js"></script>
-  <script src="../../js/accessibility-utils.js"></script>
-  <script src="../../js/performance-utils.js"></script>
-  <script src="../../js/components.js?v=20260915b"></script>
-  <script src="../../api/dining.js"></script>
+  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../api/dining.js?v=20260915c"></script>
   <script>
     new Vue({
       el: '#table-app',
@@ -725,7 +725,10 @@
           const self = this
           tableInfo(row.id).then(function(res) {
             if (res.code === 1 && res.data && res.data.currentOrderId) {
-              window.open('cashier/index.html#/order/' + res.data.currentOrderId, '_blank')
+              // 修改点（2026-09-15）：原相对路径 'cashier/index.html' 会被拼成
+              // /backend/page/dining/cashier/index.html（不存在）→ 404 Whitelabel；
+              // 改为站点绝对路径 + ?orderId= 参数，收银台据此自动选中订单
+              window.open('/backend/page/cashier/index.html?orderId=' + res.data.currentOrderId, '_blank')
             } else {
               ReggieUI.warning('该桌台未绑定订单，无法加菜')
             }
@@ -736,7 +739,8 @@
           const self = this
           tableInfo(row.id).then(function(res) {
             if (res.code === 1 && res.data && res.data.currentOrderId) {
-              window.open('cashier/index.html#/order/' + res.data.currentOrderId, '_blank')
+              // 修改点（2026-09-15）：同上加菜，改为站点绝对路径 + orderId 参数
+              window.open('/backend/page/cashier/index.html?orderId=' + res.data.currentOrderId, '_blank')
             } else {
               ReggieUI.warning('该桌台未绑定订单，无法结账')
             }

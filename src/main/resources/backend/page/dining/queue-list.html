@@ -7,24 +7,39 @@
   <title>排队叫号 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-  <link rel="stylesheet" href="../../styles/main.css" />
-  <link rel="stylesheet" href="../../styles/components-stats-card.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
   <style>
     .queue-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
 
-    /* 筛选栏 */
-    .filter-bar { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: flex-end; gap: var(--space-4); margin-bottom: var(--space-6); flex-wrap: wrap }
-    .filter-bar__label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap }
-    .filter-bar__col { display: flex; flex-direction: column; gap: 4px }
-    .filter-bar__input { height: 36px }
-    .filter-bar__btn { height: 36px; font-size: var(--font-size-base) }
+    /* 修改点（2026-09-15）：筛选+叫号压缩为「单行」工具栏
+       原实现标签位于控件上方（两行）→ 工具栏过高，且「重置」被挤到第二行。
+       现改为标签与控件同行、控件统一 small 尺寸、降低纵向内边距，整条工具栏仅一行。 */
+    .bar-row {
+      display: flex; align-items: center; gap: var(--space-4);
+      padding: 8px var(--space-4);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--space-4);
+      flex-wrap: nowrap;
+    }
 
-    /* 叫号操作栏 */
-    .call-bar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap; padding: var(--space-3) var(--space-4); background: var(--el-bg-ghost); border-radius: var(--radius-md) }
+    /* 左分区：筛选组（transparent 子组，共享工具栏表面；吃掉剩余宽度） */
+    .filter-bar { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: 0; margin: 0; background: transparent; box-shadow: none; flex-wrap: wrap }
+    .filter-bar__label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap }
+    /* 标签与输入框同一行（原先上下两行，是工具栏过高的主因） */
+    .filter-bar__col { display: flex; flex-direction: row; align-items: center; gap: 6px }
+    /* 工具栏内 small 按钮与输入框统一 32px（全局 small 按钮为 40px，会导致行高被按钮顶高、控件错位） */
+    .bar-row .el-button--small { height: 32px; padding-top: 0; padding-bottom: 0 }
+
+    /* 右分区：叫号组（主操作区，竖分隔线与筛选组划界） */
+    .call-bar { flex: 0 0 auto; max-width: 100%; display: flex; align-items: center; gap: var(--space-3); padding: 0 0 0 var(--space-4); margin: 0; border-left: 1px solid var(--border-default); background: transparent; border-radius: 0; flex-wrap: wrap }
     .call-bar__seat { display: flex; align-items: center; gap: var(--space-2) }
     .call-bar__seat-label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap }
-    .call-bar__tip { font-size: var(--font-size-xs); color: var(--text-muted) }
+    .call-bar__tip { font-size: var(--font-size-xs); color: var(--text-muted); white-space: nowrap }
     .call-bar__reset { font-size: var(--font-size-xs) }
 
     /* 取号弹窗 */
@@ -44,11 +59,18 @@
     /* 状态标签 */
     .status-tag { font-weight: 500 }
 
-    /* 响应式筛选栏 */
+    /* 响应式：中等宽度先隐藏辅助提示文案，保证工具栏仍保持一行 */
+    @media (max-width: 1360px) {
+      .call-bar__tip { display: none }
+    }
+
+    /* 窄屏：改回纵向堆叠（原写得是非法空条件 @media ()，规则从未生效，已修正） */
     @media (max-width: 768px) {
-      .filter-bar { flex-direction: column; align-items: stretch }
-      .filter-bar__col { flex: 1 }
-      .filter-bar__input { width: 100% }
+      .bar-row { flex-direction: column; align-items: stretch }
+      .filter-bar { align-items: stretch }
+      /* 窄屏堆叠时分隔线由竖转横，保持分区可读 */
+      .call-bar { border-left: none; padding-left: 0; border-top: 1px solid var(--border-default); padding-top: var(--space-3) }
+      .filter-bar__input { width: 100% !important }
     }
   </style>
 </head>
@@ -68,15 +90,17 @@
       <!-- 修改点：统计卡片支持点击筛选（点击按排队状态过滤数据，与状态下拉框联动） -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
+      <!-- 修改点（2026-09-15）：筛选栏与叫号栏合并为一行（窄屏自动堆叠） -->
+      <div class="bar-row">
       <!-- 筛选栏 -->
       <div class="filter-bar">
         <div class="filter-bar__col">
           <span class="filter-bar__label">手机号：</span>
-          <el-input v-model="searchPhone" class="filter-bar__input" style="width:200px" clearable placeholder="请输入手机号" aria-label="手机号" @keyup.enter.native="onSearch"></el-input>
+          <el-input v-model="searchPhone" class="filter-bar__input" size="small" style="width:170px" clearable placeholder="请输入手机号" aria-label="手机号" @keyup.enter.native="onSearch"></el-input>
         </div>
         <div class="filter-bar__col">
           <span class="filter-bar__label">状态：</span>
-          <el-select v-model="searchStatus" class="filter-bar__input" style="width:150px" clearable aria-label="状态" placeholder="全部状态" @change="onStatusChange">
+          <el-select v-model="searchStatus" class="filter-bar__input" size="small" style="width:130px" clearable aria-label="状态" placeholder="全部状态" @change="onStatusChange">
             <el-option value="WAITING" label="等待中"></el-option>
             <el-option value="CALLED" label="已叫号"></el-option>
             <el-option value="SEATED" label="已入座"></el-option>
@@ -98,7 +122,7 @@
         >叫下一位</el-button>
         <div class="call-bar__seat">
           <span class="call-bar__seat-label">按座位数：</span>
-          <el-select v-model="callSeatCount" style="width:130px" clearable aria-label="按座位数筛选" size="small" placeholder="不限人数">
+          <el-select v-model="callSeatCount" style="width:110px" clearable aria-label="按座位数筛选" size="small" placeholder="不限人数">
             <el-option :value="2" label="2人"></el-option>
             <el-option :value="4" label="4人"></el-option>
             <el-option :value="6" label="6人"></el-option>
@@ -112,6 +136,7 @@
         <span class="call-bar__tip" v-if="callSeatCount">按 {{ callSeatCount }} 人桌筛选下一位</span>
         <span class="call-bar__tip" v-else>呼叫等待队列中的下一位顾客</span>
       </div>
+      </div><!-- /bar-row -->
 
       <!-- 数据表格 -->
       <crud-table
@@ -225,11 +250,11 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js"></script>
-  <script src="../../js/accessibility-utils.js"></script>
-  <script src="../../js/performance-utils.js"></script>
-  <script src="../../js/components.js?v=20260915b"></script>
-  <script src="../../api/dining.js"></script>
+  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../api/dining.js?v=20260915c"></script>
   <script>
     new Vue({
       el: '#queue-app',

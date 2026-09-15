@@ -8,6 +8,7 @@ import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -40,12 +41,22 @@ public class PlatformPullTask {
     @Autowired
     private TenantService tenantService;
 
+    /** 修改点(2026-09-15)：平台同步总开关（默认 false）。当前各平台适配器为占位协议（未按官方文档对接），
+     * 开关关闭时定时任务直接跳过，避免向占位网关空转外呼并每 30 秒刷 ERROR 日志 */
+    @Value("${reggie.platform.sync-enabled:false}")
+    private boolean syncEnabled;
+
     /**
      * 每 30 秒拉取一次启用平台的订单
      * 注意：实际拉单间隔应通过配置中心或数据库配置动态调整
      */
     @Scheduled(fixedDelay = 30000)
     public void pullAllEnabledPlatformOrders() {
+        // 修改点(2026-09-15)：总开关守卫——未开启真实平台对接前不执行任何外呼
+        if (!syncEnabled) {
+            log.debug("[平台拉单] reggie.platform.sync-enabled=false，跳过本次拉单");
+            return;
+        }
         List<Tenant> tenants = tenantService.listActiveTenants();
         if (tenants == null || tenants.isEmpty()) {
             return;

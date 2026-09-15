@@ -23,11 +23,12 @@ import java.util.Map;
 import java.lang.NumberFormatException;
 
 /**
- * 美团外卖开放平台适配器（真实对接）
+ * 美团外卖开放平台适配器（占位协议，待按官方文档对接）
  * <p>
  * 实现美团订单拉取与状态回传。美团开放平台响应通常包裹在 {@code {code,data,...}} 结构中，
- * 订单数据在 data 内；签名与接口路径以美团开放平台文档为准，当前按通用约定实现，
- * 如不一致仅需调整 {@link #buildSign(Map, String)} 与请求路径。
+ * 订单数据在 data 内。注意（2026-09-15 如实标注）：当前 BASE_URL/接口路径/签名 buildSign
+ * 均为占位"通用约定"，非美团外卖开放平台（developer.waimai.meituan.com）官方协议，
+ * buildSign 亦未被调用；正式对接前必须入驻并按文档重写协议层。
  * </p>
  *
  * @author reggie

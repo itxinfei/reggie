@@ -38,7 +38,9 @@
 
 **部署形态**：面向连锁加盟品牌总部的**私有化部署**方案——1 台云服务器 + 1 个数据库，总部统一运维，各门店终端直连总部（对标：银豹 / 二维火 / 美团收银本地版）。系统同时在数据层保留**行级租户隔离**能力（MyBatis-Plus 租户插件自动注入 `tenant_id`），一套实例可服务多品牌/多门店，数据互不穿透。
 
-**渠道接入**：私域（自有 H5）与多平台渠道（美团 / 饿了么 / 抖音）同步运营——平台订单自动拉单 → 落库 → 自动打印 → 失败重试 → 日结对账全链路打通。
+**渠道接入**：系统设计了私域（自有 H5）与多平台外卖渠道（美团 / 京东 / 饿了么 / 抖音）的对接**骨架**——工厂模式 + 适配器（Factory + Adapter），统一 `PlatformAdapter` 接口，定时任务（拉单 30s / 重试 2min / 恢复 5min / 对账每日）已就位。
+
+> ⚠️ **平台外卖对接当前为"占位脚手架"，尚未接通真实开放平台 API**：4 个适配器（JD / Meituan / Eleme / Douyin）的接口路径、鉴权与签名（`buildSign`）均为 AI 生成的"通用约定"，**`buildSign` 未被实际调用**，且京东原网关域名 `openo2o.jddj.com` 为不存在的假域名（已修正为真实网关 `openapi.jddj.com`）。因此默认配置下**定时任务不会真正外呼**——总开关 `reggie.platform.sync-enabled` 默认为 `false`，4 个任务入口直接 `return`。要真正对接某家平台，需入驻其开放平台（美团 developer.waimai.meituan.com、京东 opendj.jd.com、饿了么 open.faas.ele.me、抖音 developer.open-douyin.com），按官方文档重写对应适配器的协议层（含真正调用签名），再于 `application.yml` 置 `reggie.platform.sync-enabled: true`。
 
 系统核心创新在于 **AI 智能引擎**，通过接入大语言模型实现智能点餐推荐、菜品描述生成、经营分析等能力。
 
@@ -62,7 +64,7 @@
 | 📋 **order** | 订单管理 | 下单、状态流转、订单明细 |
 | 📍 **address** | 地址管理 | 收货地址 CRUD、默认地址 |
 | 🚚 **delivery** | 配送管理 | 配送范围、配送费规则、骑手 |
-| 🌐 **platform** | 平台外卖 | 美团/饿了么/抖音拉单、落库、对账、失败重试 |
+| 🌐 **platform** | 平台外卖（对接骨架） | 美团/京东/饿了么/抖音适配器 + 工厂模式；拉单/落库/重试/对账任务已搭好，协议层待按官方文档对接（默认关闭） |
 | 🪑 **dining** | 堂食管理 | 桌台区域、排队取号、预约、叫号 |
 | 💰 **payment** | 支付管理 | 支付单、退款、回调、多支付渠道 |
 | 💳 **cashier** | 收银管理 | 收银记录、日结对账 |
@@ -93,27 +95,66 @@
 
 </details>
 
-- 后台管理系统
+## 📸 界面预览
 
-<div align="center">
-<img src="docs/imgs/后台管理系统.png" width="80%" alt="后台管理系统">
+### 🖥️ 后台管理系统
 
-- 前端用户
+<p align="center">
+  <img src="docs/imgs/后台管理系统.png" width="85%" alt="瑞吉外卖后台管理系统"
+       style="border-radius:10px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);">
+</p>
 
-<img src="docs/imgs/前端用户.png" width="40%" alt="移动端用户界面">
+### 📱 移动端（C 端用户）
 
-</div>
+> 登录 → 点餐 → 选地址 → 支付 → 查订单：移动端共 16 个页面，以下为代表性流程。
+
+<table align="center">
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/imgs/前端用户.png" width="92%" alt="移动端首页 / 登录"
+           style="border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);"><br>
+      <sub>🏠 首页 / 登录</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/imgs/review-user.png" width="92%" alt="用户中心"
+           style="border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);"><br>
+      <sub>👤 用户中心</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/imgs/review-address.png" width="92%" alt="地址管理"
+           style="border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);"><br>
+      <sub>📍 地址管理</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="docs/imgs/review-paysuccess.png" width="92%" alt="支付成功"
+           style="border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);"><br>
+      <sub>💳 支付成功</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="docs/imgs/review-order.png" width="92%" alt="订单详情"
+           style="border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);"><br>
+      <sub>📋 订单详情</sub>
+    </td>
+    <td align="center" width="50%">
+      <sub>🌟 共 16 个移动端页面<br>完整流程见上方说明</sub>
+    </td>
+  </tr>
+</table>
 
 <div align="center">
 
 | 亮点 | 说明 |
 |------|------|
 | 🏢 **企业级架构** | Spring Boot 2.4.5 + MyBatis Plus 3.4.2，RESTful API，39 个领域模块分层清晰 |
-| 📱 **双端覆盖** | 管理后台（Element UI，76 页）+ 移动端（Vant UI H5，16 页）+ 多平台渠道（美团/饿了么/抖音） |
+| 📱 **双端覆盖** | 管理后台（Element UI，76 页）+ 移动端（Vant UI H5，16 页）+ 多平台渠道对接骨架（美团/京东/饿了么/抖音） |
 | 🔐 **行级租户隔离** | MyBatis-Plus 租户插件自动注入 `tenant_id`，多品牌/多门店数据互不穿透 |
 | ⚡ **前后端一体** | 前端页面内嵌于 Spring Boot，单 Jar 部署，无需分离部署 |
 | 📦 **全业务覆盖** | 堂食 + 外卖配送 + 进销存 + 会员营销 + 支付 + 打印 + 发票 + 报表 + 加盟 + 多平台渠道 |
-| 🌐 **平台外卖全链路** | 拉单 → 落库去重 → 自动打印 → 失败重试 → 日结对账，全自动化 |
+| 🌐 **平台外卖对接骨架** | 适配器 + 工厂模式 + 拉单/重试/对账定时任务已就位；协议层与签名待按官方文档实现，开关默认关闭（不空转外呼） |
 | 🖨️ **门店本地打印** | Python 打印代理（可打包 exe）跑在门店 PC，心跳拉任务 → 调本地打印机，无需服务器装打印机 |
 | 🏪 **多门店管理** | 门店 CRUD、数据同步、门店仪表盘、员工权限隔离 |
 | 🤝 **加盟连锁** | 加盟商管理、合同签署、分账结算 |
@@ -161,13 +202,15 @@
    └──────────────┘ └──────────┘ └─────────────────┘
 
    ┌───────────────────────────────────────────────┐
-   │        多平台渠道对接层（工厂模式 + 适配器）      │
-   │    ┌──────┐    ┌──────┐    ┌──────┐           │
-   │    │ 美团 │    │饿了么 │    │ 抖音 │           │
-   │    └──┬───┘    └──┬───┘    └──┬───┘           │
+   │   多平台渠道对接层（工厂模式 + 适配器，占位协议）  │
+   │    ┌──────┐    ┌──────┐    ┌──────┐    ┌──────┐ │
+   │    │ 美团 │    │ 京东 │    │饿了么 │    │ 抖音 │ │
+   │    └──┬───┘    └──┬───┘    └──┬───┘    └──┬───┘ │
    │       └───────────┼───────────┘                │
-   │     拉单 → 落库去重 → 自动打印 → 对账重试         │
+   │   拉单 → 落库去重 → 自动打印 → 对账重试（默认关闭）│
    └───────────────────────────────────────────────┘
+   ⚠️ 4 个适配器为占位脚手架：接口/签名未接官方文档，buildSign 未调用；
+      定时任务受 reggie.platform.sync-enabled（默认 false）控制，不实际外呼。
 
    ┌───────────────────────────────────────────────┐
    │   第三方服务：支付 / 短信 / 推送 / 地图 / 发票    │
@@ -288,7 +331,7 @@ python -m PyInstaller --onefile --clean --noupx --icon assets/reggie-agent.ico -
 
 | 模块 | 功能 |
 |------|------|
-| 🌐 **平台外卖** | 美团/饿了么/抖音拉单、幂等落库、自动打印、失败重试、日结对账、同步日志 |
+| 🌐 **平台外卖（对接骨架）** | 美团/京东/饿了么/抖音适配器 + 工厂模式；拉单/幂等落库/自动打印/失败重试/日结对账/同步日志任务已搭好，协议层待按官方文档对接（默认 `sync-enabled: false` 不实际外呼） |
 | 🖨️ **打印管理** | 打印终端注册/启停、任务队列（PENDING→PULLED→SUCCESS/FAILED）、小票/后厨/外卖单模板、门店 PC 代理 |
 | 🚚 **外卖配送** | 配送范围围栏、配送费规则、配送订单管理、平台对接 |
 | 🍽️ **堂食管理** | 桌台/区域管理、预订跟踪、取号排队、桌台状态实时看板 |
@@ -381,7 +424,7 @@ reggie/
 │   ├── enums/            # 状态枚举
 │   ├── filter/           # 登录拦截过滤器（LoginCheckFilter）
 │   ├── module/           # 🧩 业务模块（39 个，各含 controller/service/mapper/model）
-│   │   ├── platform/     #   🌐 平台外卖（拉单/幂等落库/失败重试/日结对账）
+│   │   ├── platform/     #   🌐 平台外卖对接骨架（美团/京东/饿了么/抖音适配器，默认关闭，协议层待对接）
 │   │   ├── printer/      #   🖨️ 打印（终端注册/任务队列/模板，门店 PC 代理出票）
 │   │   ├── invoice/      #   🧾 发票（抬头管理/开票申请/开具作废）
 │   │   ├── urgency/      #   ⏱️ 未接单预警（30s 实时扫描/分级告警/语音播报）
@@ -441,7 +484,7 @@ reggie/
 | 🏗️ **基础框架** | Spring Boot + MyBatis Plus 分层架构、多租户拦截器、统一响应与全局异常处理 |
 | 🧑‍💼 **核心业务** | 员工/分类/菜品/套餐/订单/购物车/地址 完整 CRUD |
 | 🔐 **安全加固** | CSRF 防护、API 限流、日志脱敏、BCrypt 密码、租户行级隔离、越权防护 |
-| 🌐 **平台外卖全链路** | 美团/饿了么/抖音工厂模式对接 → 拉单 → 幂等落库 → 自动打印 → 失败重试 → 日结对账 |
+| 🌐 **平台外卖对接骨架** | 美团/京东/饿了么/抖音工厂模式 + 适配器 + 拉单/重试/恢复/对账定时任务（默认关闭，协议层待按官方文档实现） |
 | 🖨️ **门店本地打印** | 打印终端 + 任务队列 + Python 打印代理（可打包 exe），服务器无需安装打印机 |
 | ⏱️ **未接单预警** | 30s 实时扫描分级告警（Redis 锁防重、每单每级仅告警一次）+ 接单大屏语音播报 |
 | 🧾 **发票与资金** | 发票抬头管理、开票申请、开具/作废状态机；提现申请、审核、打款 |
@@ -462,6 +505,7 @@ reggie/
 | 🐳 **Docker 部署** | 一键 Docker Compose 部署方案 |
 | 🧾 **C 端开票** | 用户端发票申请与抬头管理页（后台已支持，用户端待补） |
 | 🎙️ **语音点餐** | 接入语音识别，支持语音下单 |
+| 🌐 **平台外卖真实对接** | 入驻美团/京东/饿了么/抖音开放平台，按官方文档实现签名与协议层，开启 `sync-enabled` 接通真实订单 |
 
 ---
 
@@ -680,6 +724,22 @@ spring:
 5. 排障可临时设 `reggie.ai.enabled: false` 回退到 Mock 模式
 
 > ⚠️ AI 配置以**数据库 `ai_provider_config` 表**为准；`application.yml` 的 `reggie.ai.*` 已废弃，仅作兜底。
+</details>
+
+<details>
+<summary><b>平台外卖定时任务一直报「拉单失败 / UnknownHostException」？</b></summary>
+
+这是**预期行为（旧版本的噪音日志）**，不是真故障。当前平台外卖为对接骨架：
+
+- 4 个适配器（京东/美团/饿了么/抖音）的接口路径、鉴权与签名均为占位协议，**未接通真实开放平台 API**；京东原网关 `openo2o.jddj.com` 甚至是不存在的假域名（已修正为 `openapi.jddj.com`，但协议仍是占位）。
+- 定时任务（拉单 30s / 重试 2min / 恢复 5min）默认受总开关 `reggie.platform.sync-enabled`（默认 `false`）控制——**关闭时任务入口直接跳过，不会再外呼、不再刷 ERROR**。
+- 若看到该日志，说明 `sync-enabled` 被误设为 `true`：要么改回 `false`（推荐，未对接前），要么按各平台官方文档重写适配器协议层后再启用。
+
+```yaml
+reggie:
+  platform:
+    sync-enabled: false   # 未真正对接某平台前保持 false，避免空转外呼刷日志
+```
 </details>
 
 <details>

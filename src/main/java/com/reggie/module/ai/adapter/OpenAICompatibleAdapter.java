@@ -111,7 +111,13 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
         } catch (Exception e) {
             // 基类 chat() 方法已处理 SocketTimeout 和 ConnectException
             // 这里捕获其他检查型异常
-            log.error("AI请求[{} / {}]未预期异常", config.getProviderCode(), FORMAT_ID, e);
+            // 修改点(2026-09-15)：外网不可达属运行环境问题，降为 WARN 且不打全量堆栈，避免刷屏
+            if (AiNetworkFailureUtils.isNetworkFailure(e)) {
+                log.warn("AI请求[{} / {}]外部服务不可达（网络环境问题，非应用缺陷）：{}",
+                        config.getProviderCode(), FORMAT_ID, e.getMessage());
+            } else {
+                log.error("AI请求[{} / {}]未预期异常", config.getProviderCode(), FORMAT_ID, e);
+            }
             return errorResponse("AI服务连接失败（" + config.getProviderName() + "）：" + e.getMessage(), config);
         } finally {
             if (conn != null) {
@@ -252,7 +258,13 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             return null;
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("AI流式请求[{}]异常", config.getProviderCode(), e);
+            // 修改点(2026-09-15)：外网不可达属运行环境问题，降为 WARN 且不打全量堆栈，避免刷屏
+            if (AiNetworkFailureUtils.isNetworkFailure(e)) {
+                log.warn("AI流式请求[{}]外部服务不可达（网络环境问题，非应用缺陷）：{}",
+                        config.getProviderCode(), e.getMessage());
+            } else {
+                log.error("AI流式请求[{}]异常", config.getProviderCode(), e);
+            }
             callback.onToken("流式输出异常：" + e.getMessage(), true);
             return null;
         } finally {

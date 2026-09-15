@@ -118,4 +118,48 @@ public class AsyncConfig {
         log.info("[线程池] 推荐引擎异步线程池初始化完成：core=4, max=16, queue=500");
         return executor;
     }
+
+    /**
+     * AI 健康检查探活线程池
+     * <p>
+     * 用途：AI 健康探活（/api/ai/health）需要在「有界时间」内拿到结果，
+     * 不能让 HTTP 请求线程直接等待外部 AI 接口的完整超时（供应商配置 30s，Ollama 60s）。
+     * 该线程池配合 Future.get(timeout) 使用，超时后调用方立即返回「不可用」。
+     * <p>
+     * 拒绝策略必须为 AbortPolicy：若误用 CallerRunsPolicy，任务会回退到请求线程执行，
+     * 探活将重新变成同步阻塞，失去超时保护的意义。
+     */
+    @Bean("aiHealthProbeExecutor")
+    public ThreadPoolTaskExecutor aiHealthProbeExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(50);
+        executor.setKeepAliveSeconds(60);
+        executor.setThreadNamePrefix("ai-health-probe-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
+        executor.setWaitForTasksToCompleteOnShutdown(false);
+        executor.setAwaitTerminationSeconds(5);
+        // 传递ThreadLocal上下文，确保探活线程能获取BaseContext中的userId和tenantId
+        executor.setTaskDecorator(runnable -> {
+            Long currentId = com.reggie.common.BaseContext.getCurrentId();
+            Long currentTenantId = com.reggie.common.BaseContext.getCurrentTenantId();
+            return () -> {
+                try {
+                    if (currentId != null) {
+                        com.reggie.common.BaseContext.setCurrentId(currentId);
+                    }
+                    if (currentTenantId != null) {
+                        com.reggie.common.BaseContext.setCurrentTenantId(currentTenantId);
+                    }
+                    runnable.run();
+                } finally {
+                    com.reggie.common.BaseContext.remove();
+                }
+            };
+        });
+        executor.initialize();
+        log.info("[线程池] AI健康探活线程池初始化完成：core=2, max=4, queue=50");
+        return executor;
+    }
 }

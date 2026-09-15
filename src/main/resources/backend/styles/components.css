@@ -404,5 +404,13 @@
 /* 菜品图片列：保持原始比例，避免 Element 固定 40px 宽导致变形（M8） */
 .cell-img { width: auto; height: 40px; border: none; border-radius: 4px; cursor: pointer; }
 
+/* 内置只读查看弹窗（crud-table viewable）：通用 标签:值 详情 */
+.crud-view-dialog .crud-view-body { padding: 4px 2px; }
+.crud-view-row { display: flex; align-items: flex-start; padding: 11px 4px; border-bottom: 1px solid var(--el-border-lighter, #ebeef5); }
+.crud-view-row:last-child { border-bottom: none; }
+.crud-view-label { flex: none; width: 128px; padding-right: 16px; color: var(--el-text-secondary, #909399); text-align: right; line-height: 1.5; }
+.crud-view-value { flex: 1; min-width: 0; color: var(--el-text-primary, #303133); line-height: 1.5; word-break: break-all; white-space: pre-wrap; }
+.crud-view-dialog .dialog-footer { text-align: right; }
+
 
 

@@ -78,6 +78,14 @@ reggie:
     # 推送服务商：mock / jpush / getui / fcm
     provider: mock
 
+  # 修改点(2026-09-15)：平台对接（美团/京东/饿了么/抖音）同步总开关
+  # 当前各平台适配器为占位协议（接口路径/签名未按官方开放平台文档实现），默认 false：
+  # 关闭后定时拉单(30s)/重试(2min)/恢复(5min)/对账(每日)任务直接跳过，不再向占位网关空转外呼刷 ERROR 日志。
+  # 完成平台入驻（美团 developer.waimai.meituan.com、京东 opendj.jd.com、饿了么 open.faas.ele.me、
+  # 抖音 developer.open-douyin.com）并按官方文档重写协议层后，再置为 true
+  platform:
+    sync-enabled: false
+
   # 支付回调签名校验配置
   # 安全约定：mock-mode=true（默认，开发/演示）跳过回调验签仅告警；
   # 生产环境必须设为 false 并配置支付宝公钥/微信API密钥做真实签名校验，密钥缺失则拒绝回调（fail-closed）

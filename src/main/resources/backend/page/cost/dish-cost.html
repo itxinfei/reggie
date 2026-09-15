@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>菜品成本管理 - 瑞吉外卖管理端</title>
 
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-    <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <!-- ==================== 菜品成本管理 ==================== -->
   <!-- 功能说明：核算单菜品的食材/人工/其他成本与售价，计算毛利率，支持新增/编辑/删除/导出 -->
   <style>
@@ -95,7 +95,7 @@
         :data="filteredTableData"
         :columns="columns"
         :loading="loading"
-        :show-actions="true"
+        :show-actions="true" :viewable="true"
         :actions-width="160"
         border
         stripe
@@ -168,13 +168,13 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js"></script>
-  <script src="../../js/components.js?v=20260915b"></script>
-  <script src="../../js/accessibility-utils.js"></script>
-  <script src="../../js/performance-utils.js"></script>
-  <script src="../../js/common.js"></script>
-  <script src="../../api/cost.js"></script>
-  <script src="../../api/food.js"></script>
+  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/common.js?v=20260915c"></script>
+  <script src="../../api/cost.js?v=20260915c"></script>
+  <script src="../../api/food.js?v=20260915c"></script>
   <script>
     new Vue({
       el: '#app',

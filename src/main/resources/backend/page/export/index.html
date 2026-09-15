@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>数据导出 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css" />
-    <link rel="stylesheet" href="../../styles/main.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: var(--bg-page); color: var(--el-text-primary); font-family: var(--font-family-base); }
 
-        /* ds-page-header 对齐 */
         .dashboard-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5); }
 
         /* 卡片网格 */
@@ -44,82 +43,79 @@
         .filter-row:last-child { margin-bottom: 0; }
         .filter-label { font-size:var(--font-size-sm); color: var(--el-text-regular); white-space: nowrap; min-width: 50px; }
 
-        .filter-row input, .filter-row select {
-            padding: 6px 10px; border: 1px solid var(--el-border-default); border-radius: var(--radius-sm);
-            font-size:var(--font-size-sm); outline: none; transition: border-color 0.2s;
-        }
-        .filter-row input:focus, .filter-row select:focus { border-color: var(--el-color-primary); }
-
-        .quick-range { display: flex; gap: 4px; }
-        .quick-range span {
-            padding: 4px 10px; font-size:var(--font-size-xs); border-radius: var(--radius-sm);
-            background: var(--bg-surface); border: 1px solid var(--el-border-default); cursor: pointer;
-            transition: all 0.2s; color: var(--el-text-regular);
-        }
-        .quick-range span:hover { color: var(--el-color-primary); border-color: var(--el-color-primary); }
-        .quick-range span.active { background: var(--el-color-primary); color: var(--bg-surface); border-color: var(--el-color-primary); }
-
-        /* 按钮行 */
+        /* 按钮行（与营业日报 table-bar 一致：Excel=success / PDF=warning 的 el-button） */
         .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
 
-        /* Loading 遮罩 */
-        .btn-loading {
-            position: relative; overflow: hidden;
+        /* ========== 导出记录折叠面板（与营业日报同款样式与布局） ========== */
+        .export-records-panel {
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--el-border-light);
+            margin-top: 24px;
+            overflow: hidden;
+            transition: all 0.3s;
         }
-        .btn-loading::after {
-            content: ''; position: absolute; top: 50%; left: 50%;
-            width: 14px; height: 14px; margin: -7px 0 0 -7px;
-            border: 2px solid transparent; border-top-color: currentColor;
-            border-radius: 50%; animation: spin 0.6s linear infinite;
+        .export-records-panel:hover { box-shadow: var(--shadow-xl); }
+        .export-records-panel .panel-header {
+            display: flex; align-items: center;
+            padding: 18px 24px; cursor: pointer;
+            transition: background 0.2s; user-select: none;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .export-records-panel .panel-header:hover { background: var(--el-bg-ghost); }
+        .export-records-panel .panel-title {
+            font-size: var(--font-size-md); font-weight: 600; color: var(--el-text-primary);
+            flex: 1; display: flex; align-items: center; gap: 8px;
+        }
+        .export-records-panel .record-count-badge {
+            background: var(--el-color-primary); color: var(--bg-surface);
+            font-size: var(--font-size-xs); padding: 2px 10px;
+            border-radius: var(--radius-md); font-weight: 600;
+        }
+        .export-records-panel .expand-icon {
+            transition: transform 0.3s; color: var(--text-muted); font-size: var(--font-size-base);
+        }
+        .export-records-panel .expand-icon.is-expanded { transform: rotate(180deg); }
+        .export-records-panel .panel-body { padding: 0 24px 20px; }
 
-        /* 导出记录 */
-        .history-section { margin-top: 24px; }
-        .history-title { font-size:var(--font-size-base); font-weight: 600; margin-bottom: 12px; color: var(--el-text-regular); }
-        .history-list { background: var(--bg-surface); border-radius: var(--radius-md); border: 1px solid var(--el-border-light); }
-        .history-item {
-            display: flex; align-items: center; padding: 12px 20px;
-            border-bottom: 1px solid var(--el-bg-lighter); font-size:var(--font-size-sm);
+        /* ========== 导出记录表格（与营业日报同款） ========== */
+        .record-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
+        .record-table thead th {
+            background: var(--el-bg-ghost); color: var(--color-info);
+            font-weight: 600; font-size: var(--font-size-xs);
+            text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 12px 16px; text-align: center;
+            border-bottom: 2px solid var(--el-bg-page);
         }
-        .history-item:last-child { border-bottom: none; }
-        .history-icon { font-size:var(--font-size-xl); margin-right: 12px; }
-        .history-info { flex: 1; }
-        .history-name { font-weight: 500; color: var(--el-text-primary); }
-        .history-meta { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 2px; }
-        .history-size { font-size:var(--font-size-xs); color: var(--color-success); margin-left: 12px; white-space: nowrap; }
-        .history-status {
-            padding: 3px 10px; border-radius: var(--radius-md); font-size:var(--font-size-xs); font-weight: 500;
+        .record-table tbody td {
+            padding: 14px 16px; text-align: center;
+            border-bottom: 1px solid var(--el-bg-light);
+            color: var(--el-text-regular); vertical-align: middle;
         }
-        .history-status.success { background: var(--color-success-light); color: var(--color-success); }
-        .history-status.fail { background: var(--color-danger-light); color: var(--color-danger); }
+        .record-table tbody tr { transition: all 0.2s; }
+        .record-table tbody tr:hover { background: var(--el-bg-ghost); }
+        .record-table tbody tr:last-child td { border-bottom: none; }
+        .format-tag {
+            display: inline-flex; align-items: center;
+            padding: 3px 10px; border-radius: var(--radius-md);
+            font-size: var(--font-size-xs); font-weight: 600;
+        }
+        .format-tag.excel { background: var(--el-color-primary-lighter); color: var(--el-color-primary); }
+        .format-tag.pdf { background: var(--color-danger-light); color: var(--color-danger); }
+        .status-tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: var(--radius-md);
+            font-size: var(--font-size-xs); font-weight: 600;
+        }
+        .status-tag.success { background: var(--color-success-light); color: var(--color-success); }
+        .status-tag.failed { background: var(--color-danger-light); color: var(--color-danger); }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+        .status-dot.success { background: var(--color-success); }
+        .status-dot.failed { background: var(--color-danger); }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+        .empty-state .empty-icon { font-size: var(--font-size-4xl); margin-bottom: 12px; opacity: 0.4; }
+        .empty-state .empty-text { font-size: var(--font-size-base); }
 
-        .empty-history { text-align: center; padding: 40px; color: var(--text-muted); font-size:var(--font-size-sm); }
-
-        /* Toast */
-        .toast {
-            position: fixed; top: 20px; right: 20px; padding: 14px 24px; border-radius: var(--radius-md);
-            color: var(--bg-surface); font-size:var(--font-size-base); z-index: 9999; max-width: 400px;
-            box-shadow: var(--shadow-lg); animation: slideIn 0.3s;
-            display: none;
-        }
-        .toast-success { background: var(--color-success); }
-        .toast-error { background: var(--color-danger); }
-        .toast-info { background: var(--el-color-primary); }
-
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes fadeOut {
-            to { opacity: 0; transform: translateX(100%); }
-        }
-
-        /* ---- 内联样式抽离的工具类 ---- */
-        .date-sep { color: var(--text-muted); }                              /* 日期范围"至"字 */
-        .filter-hint { font-size: var(--font-size-sm); color: var(--text-muted); } /* 数据范围提示文字 */
-        .history-header { display: flex; justify-content: space-between; align-items: center; }
-        .history-count { font-size: var(--font-size-xs); color: var(--text-muted); font-weight: 400; }
         .empty-icon-large { font-size: var(--font-size-4xl); margin-bottom: var(--space-2); }
 
         @media (max-width: 1200px) {
@@ -150,32 +146,37 @@
                     </div>
                 </div>
                 <div class="filter-section">
+                    <!-- 修改点(2026-09-15)：与营业日报统一为 el-date-picker（含今天/近7天/近30天快捷项），替换原生 input type=date -->
                     <div class="filter-row">
                         <span class="filter-label">日期范围</span>
-                        <input type="date" v-model="orderFilter.startDate" />
-                        <span class="date-sep">至</span>
-                        <input type="date" v-model="orderFilter.endDate" />
-                        <div class="quick-range">
-                            <span :class="{active: orderRange === 'today'}" role="button" tabindex="0" @click="setOrderRange('today')" @keydown.enter="setOrderRange('today')" :aria-pressed="orderRange === 'today'">今天</span>
-                            <span :class="{active: orderRange === 'week'}" role="button" tabindex="0" @click="setOrderRange('week')" @keydown.enter="setOrderRange('week')" :aria-pressed="orderRange === 'week'">近7天</span>
-                            <span :class="{active: orderRange === 'month'}" role="button" tabindex="0" @click="setOrderRange('month')" @keydown.enter="setOrderRange('month')" :aria-pressed="orderRange === 'month'">近30天</span>
-                        </div>
+                        <el-date-picker
+                            v-model="orderFilter.dateRange"
+                            type="daterange"
+                            range-separator="至"
+                            start-placeholder="开始日期"
+                            end-placeholder="结束日期"
+                            value-format="yyyy-MM-dd"
+                            :shortcuts="dateShortcuts"
+                            size="small"
+                            @change="onOrderRangeChange"
+                        ></el-date-picker>
                     </div>
                     <div class="filter-row">
                         <span class="filter-label">订单状态</span>
-                        <select v-model="orderFilter.status">
-                            <option value="">全部状态</option>
-                            <option value="2">待接单</option>
-                            <option value="3">已接单</option>
-                            <option value="4">派送中</option>
-                            <option value="5">已完成</option>
-                            <option value="6">已取消</option>
-                        </select>
+                        <!-- 修改点(2026-09-15)：与全站统一为 el-select，替换原生 select -->
+                        <el-select v-model="orderFilter.status" size="small" clearable placeholder="全部状态" style="width:160px">
+                            <el-option label="全部状态" value=""></el-option>
+                            <el-option label="待接单" value="2"></el-option>
+                            <el-option label="已接单" value="3"></el-option>
+                            <el-option label="派送中" value="4"></el-option>
+                            <el-option label="已完成" value="5"></el-option>
+                            <el-option label="已取消" value="6"></el-option>
+                        </el-select>
                     </div>
                 </div>
                 <div class="btn-row">
-                    <button class="app-btn app-btn-excel" :class="{'btn-loading': orderExport.loading}" :disabled="orderExport.loading" @click="exportOrder('excel')">导出 Excel</button>
-                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': orderExport.loading}" :disabled="orderExport.loading" @click="exportOrder('pdf')">导出 PDF</button>
+                    <el-button type="success" size="small" icon="el-icon-download" :loading="orderExport.loading" @click="exportOrder('excel')">导出 Excel</el-button>
+                    <el-button type="warning" size="small" icon="el-icon-download" :loading="orderExport.loading" @click="exportOrder('pdf')">导出 PDF</el-button>
                 </div>
             </div>
 
@@ -195,8 +196,8 @@
                     </div>
                 </div>
                 <div class="btn-row">
-                    <button class="app-btn app-btn-excel" :class="{'btn-loading': dishExport.loading}" :disabled="dishExport.loading" @click="exportDish('excel')">导出 Excel</button>
-                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': dishExport.loading}" :disabled="dishExport.loading" @click="exportDish('pdf')">导出 PDF</button>
+                    <el-button type="success" size="small" icon="el-icon-download" :loading="dishExport.loading" @click="exportDish('excel')">导出 Excel</el-button>
+                    <el-button type="warning" size="small" icon="el-icon-download" :loading="dishExport.loading" @click="exportDish('pdf')">导出 PDF</el-button>
                 </div>
             </div>
 
@@ -216,8 +217,8 @@
                     </div>
                 </div>
                 <div class="btn-row">
-                    <button class="app-btn app-btn-excel" :class="{'btn-loading': empExport.loading}" :disabled="empExport.loading" @click="exportEmp('excel')">导出 Excel</button>
-                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': empExport.loading}" :disabled="empExport.loading" @click="exportEmp('pdf')">导出 PDF</button>
+                    <el-button type="success" size="small" icon="el-icon-download" :loading="empExport.loading" @click="exportEmp('excel')">导出 Excel</el-button>
+                    <el-button type="warning" size="small" icon="el-icon-download" :loading="empExport.loading" @click="exportEmp('pdf')">导出 PDF</el-button>
                 </div>
             </div>
 
@@ -231,262 +232,313 @@
                     </div>
                 </div>
                 <div class="filter-section">
+                    <!-- 修改点(2026-09-15)：与营业日报统一为 el-date-picker + 快捷项 -->
                     <div class="filter-row">
                         <span class="filter-label">日期范围</span>
-                        <input type="date" v-model="reportFilter.startDate" />
-                        <span class="date-sep">至</span>
-                        <input type="date" v-model="reportFilter.endDate" />
-                        <div class="quick-range">
-                            <span :class="{active: reportRange === 'today'}" role="button" tabindex="0" @click="setReportRange('today')" @keydown.enter="setReportRange('today')" :aria-pressed="reportRange === 'today'">今天</span>
-                            <span :class="{active: reportRange === 'week'}" role="button" tabindex="0" @click="setReportRange('week')" @keydown.enter="setReportRange('week')" :aria-pressed="reportRange === 'week'">近7天</span>
-                            <span :class="{active: reportRange === 'month'}" role="button" tabindex="0" @click="setReportRange('month')" @keydown.enter="setReportRange('month')" :aria-pressed="reportRange === 'month'">近30天</span>
-                        </div>
+                        <el-date-picker
+                            v-model="reportFilter.dateRange"
+                            type="daterange"
+                            range-separator="至"
+                            start-placeholder="开始日期"
+                            end-placeholder="结束日期"
+                            value-format="yyyy-MM-dd"
+                            :shortcuts="dateShortcuts"
+                            size="small"
+                        ></el-date-picker>
                     </div>
                 </div>
                 <div class="btn-row">
-                    <button class="app-btn app-btn-excel" :class="{'btn-loading': reportExport.loading}" :disabled="reportExport.loading" @click="exportReport('excel')">导出 Excel</button>
-                    <button class="app-btn app-btn-pdf" :class="{'btn-loading': reportExport.loading}" :disabled="reportExport.loading" @click="exportReport('pdf')">导出 PDF</button>
+                    <el-button type="success" size="small" icon="el-icon-download" :loading="reportExport.loading" @click="exportReport('excel')">导出 Excel</el-button>
+                    <el-button type="warning" size="small" icon="el-icon-download" :loading="reportExport.loading" @click="exportReport('pdf')">导出 PDF</el-button>
                 </div>
             </div>
         </div>
 
-        <!-- 导出记录 -->
-        <div class="history-section">
-            <div class="history-title history-header">
-                <span><i class="ri-history-line" aria-hidden="true"></i> 导出记录 <span class="history-count">（最近 {{ history.length }} 条）</span></span>
-                <button v-if="history.length > 0" @click="clearHistory" class="app-btn app-btn-danger app-btn-sm">清空记录</button>
-            </div>
-            <div class="history-list" v-if="history.length > 0">
-                <div class="history-item" v-for="(item, idx) in history" :key="idx">
-                    <i class="history-icon" :class="item.icon" aria-hidden="true"></i>
-                    <div class="history-info">
-                        <div class="history-name">{{ item.name }}</div>
-                        <div class="history-meta">{{ item.time }}</div>
-                    </div>
-                    <span class="history-size">{{ item.size }}</span>
-                    <span class="history-status" :class="item.success ? 'success' : 'fail'">
-                        {{ item.success ? '✓ 成功' : '✗ 失败' }}
-                    </span>
+        <!-- ========== 导出记录折叠面板（与营业日报同款样式与布局） ========== -->
+        <div class="export-records-panel">
+            <div class="panel-header" role="button" tabindex="0" @click="toggleRecords" @keydown.enter="toggleRecords" :aria-expanded="recordsExpanded" aria-label="导出记录面板">
+                <div class="panel-title">
+                    <i class="el-icon-s-order" style="color:var(--color-success);"></i>
+                    导出记录
+                    <span class="record-count-badge" v-if="history.length > 0">{{ history.length }}</span>
                 </div>
+                <el-button v-if="history.length > 0" type="danger" size="mini" plain @click.stop="clearHistory">清空记录</el-button>
+                <i :class="['el-icon-arrow-down expand-icon', { 'is-expanded': recordsExpanded }]"></i>
             </div>
-            <div class="history-list empty-history" v-else>
-                <div class="empty-icon-large"><i class="ri-inbox-line" aria-hidden="true"></i></div>
-                暂无导出记录，点击上方按钮开始导出
+            <div class="panel-body" v-show="recordsExpanded">
+                <div v-if="history.length === 0" class="empty-state">
+                    <div class="empty-icon"><i class="ri-inbox-line" aria-hidden="true"></i></div>
+                    <div class="empty-text">暂无导出记录，点击上方按钮开始导出</div>
+                </div>
+                <div v-else style="overflow-x:auto;">
+                    <table class="record-table">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>导出时间</th>
+                                <th>数据类型</th>
+                                <th>日期范围</th>
+                                <th>格式</th>
+                                <th>文件大小</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, index) in history" :key="item.id">
+                                <td>{{ index + 1 }}</td>
+                                <td>{{ item.exportTime }}</td>
+                                <td>{{ item.dataType }}</td>
+                                <td>{{ item.dateRange }}</td>
+                                <td>
+                                    <span :class="['format-tag', item.format]">{{ item.format.toUpperCase() }}</span>
+                                </td>
+                                <td>{{ item.fileSize }}</td>
+                                <td>
+                                    <span :class="['status-tag', item.status]">
+                                        <span :class="['status-dot', item.status]"></span>
+                                        {{ item.status === 'success' ? '成功' : '失败' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <template v-if="item.status === 'success'">
+                                        <el-button type="text" size="mini" icon="el-icon-download" @click="reDownload(item)">重新下载</el-button>
+                                        <el-button type="text" size="mini" icon="el-icon-delete" style="color:var(--color-danger);" @click="deleteRecord(index)">删除</el-button>
+                                    </template>
+                                    <span v-else style="color:var(--text-muted);font-size:var(--font-size-xs);">--</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
       </div>
     </div>
 
-    <div id="toast" class="toast"></div>
+    <!-- ========== 全屏导出 Loading 遮罩（与营业日报一致） ========== -->
+    <div v-loading="anyExporting" element-loading-text="正在导出..." element-loading-background="rgba(0,0,0,0.5)"></div>
 
     <script src="../../plugins/vue/vue.js"></script>
+    <!-- 修改点(2026-09-15)：补引 element-ui，与全站统一控件（此前页面用原生 input/select + 自写按钮/toast，风格割裂） -->
+    <script src="../../plugins/element-ui/index.js?v=20260915"></script>
     <script src="../../plugins/axios/axios.min.js"></script>
-    <script src="../../js/request.js"></script>
-  <script src="../../js/components.js?v=20260915b"></script>
-  <script src="../../js/accessibility-utils.js"></script>
-  <script src="../../js/performance-utils.js"></script>
-    <script src="../../api/export.js"></script>
+    <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+  <script src="../../js/performance-utils.js?v=20260915c"></script>
+    <script src="../../api/export.js?v=20260915c"></script>
     <script>
         new Vue({
             el: '#app',
             data: {
-                orderFilter: { startDate: '', endDate: '', status: '' },
-                orderRange: 'week',
+                orderFilter: { dateRange: [], status: '' },
                 orderExport: { loading: false },
 
                 dishExport: { loading: false },
 
                 empExport: { loading: false },
 
-                reportFilter: { startDate: '', endDate: '' },
-                reportRange: 'week',
+                reportFilter: { dateRange: [] },
                 reportExport: { loading: false },
 
-                history: []
+                recordsExpanded: false,
+                // 成功导出的 Blob 缓存（用于"重新下载"，与营业日报同机制）
+                blobCache: {},
+                history: [],
+                // 日期快捷项（与营业日报一致）
+                dateShortcuts: [
+                    { text: '今天', onClick: function(picker) { var d = new Date(); picker.$emit('pick', [d, d]); } },
+                    { text: '近7天', onClick: function(picker) { var end = new Date(); var start = new Date(); start.setDate(start.getDate() - 6); picker.$emit('pick', [start, end]); } },
+                    { text: '近30天', onClick: function(picker) { var end = new Date(); var start = new Date(); start.setDate(start.getDate() - 29); picker.$emit('pick', [start, end]); } }
+                ]
+            },
+            computed: {
+                // 任一导出进行中即展示全屏遮罩
+                anyExporting: function() {
+                    return this.orderExport.loading || this.dishExport.loading
+                        || this.empExport.loading || this.reportExport.loading;
+                }
             },
             mounted: function() {
-                this.setOrderRange('week');
-                this.setReportRange('week');
+                // 修改点(2026-09-15)：默认范围改为近7天（原页面无默认值，日期控件为空）
+                this.orderFilter.dateRange = this.rangeDays(6);
+                this.reportFilter.dateRange = this.rangeDays(6);
             },
             methods: {
-                // ==================== 日期快捷选择 ====================
-                setOrderRange(range) {
-                    this.orderRange = range;
+                // ========== 日期工具（与营业日报同口径） ==========
+                formatDate: function(d) {
+                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                },
+                rangeDays: function(offset) {
+                    var end = new Date();
+                    var start = new Date();
+                    start.setDate(start.getDate() - offset);
+                    return [this.formatDate(start), this.formatDate(end)];
+                },
+                getNowStr: function() {
                     var now = new Date();
-                    if (range === 'today') {
-                        this.orderFilter.startDate = this.formatDate(now);
-                        this.orderFilter.endDate = this.formatDate(now);
-                    } else if (range === 'week') {
-                        var d = new Date(now.getTime() - 6 * 86400000);
-                        this.orderFilter.startDate = this.formatDate(d);
-                        this.orderFilter.endDate = this.formatDate(now);
-                    } else if (range === 'month') {
-                        var d = new Date(now.getTime() - 29 * 86400000);
-                        this.orderFilter.startDate = this.formatDate(d);
-                        this.orderFilter.endDate = this.formatDate(now);
-                    }
+                    var pad = function(n) { return String(n).padStart(2, '0'); };
+                    return now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
+                        + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
                 },
-                setReportRange(range) {
-                    this.reportRange = range;
-                    var now = new Date();
-                    if (range === 'today') {
-                        this.reportFilter.startDate = this.formatDate(now);
-                        this.reportFilter.endDate = this.formatDate(now);
-                    } else if (range === 'week') {
-                        var d = new Date(now.getTime() - 6 * 86400000);
-                        this.reportFilter.startDate = this.formatDate(d);
-                        this.reportFilter.endDate = this.formatDate(now);
-                    } else if (range === 'month') {
-                        var d = new Date(now.getTime() - 29 * 86400000);
-                        this.reportFilter.startDate = this.formatDate(d);
-                        this.reportFilter.endDate = this.formatDate(now);
-                    }
+                formatFileSize: function(bytes) {
+                    if (!bytes) return '0 B';
+                    var k = 1024;
+                    var sizes = ['B', 'KB', 'MB', 'GB'];
+                    var i = Math.floor(Math.log(bytes) / Math.log(k));
+                    var idx = Math.min(i, sizes.length - 1);
+                    return (bytes / Math.pow(k, idx)).toFixed(idx > 0 ? 2 : 0) + ' ' + sizes[idx];
                 },
-                formatDate(d) {
-                    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+                genId: function() {
+                    return Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
                 },
+                onOrderRangeChange: function() { /* 选择即生效，无需额外处理 */ },
+                toggleRecords: function() { this.recordsExpanded = !this.recordsExpanded; },
 
                 // ==================== 导出操作 ====================
-                exportOrder(format) {
+                /**
+                 * 通用导出执行器：发起请求 → 下载 → 记录历史 → 右上角富文本通知（与营业日报一致）
+                 * @param {Promise} apiCall 导出接口调用（responseType=blob）
+                 * @param {String} dataType 数据类型名称（订单数据/菜品数据/员工数据/经营报表）
+                 * @param {String} dateRange 日期范围文案
+                 * @param {Object} stateRef 对应的 loading 状态对象
+                 * @param {String} icon 记录图标类名
+                 */
+                doExport: function(apiCall, dataType, dateRange, stateRef, icon) {
                     var self = this;
-                    self.orderExport.loading = true;
+                    stateRef.loading = true;
+                    return apiCall.then(function(res) {
+                        var blob = res.data instanceof Blob ? res.data : new Blob([res.data]);
+                        // 交给 downloadFile 下载（传入已解析的 response，避免重复请求）
+                        return exportApi.downloadFile(Promise.resolve(res), dataType).then(function() {
+                            return blob;
+                        });
+                    }).then(function(blob) {
+                        var now = self.getNowStr();
+                        var ext = (blob && blob.type && blob.type.indexOf('pdf') !== -1) ? 'pdf' : 'xlsx';
+                        var record = {
+                            id: self.genId(),
+                            exportTime: now,
+                            dataType: dataType,
+                            dateRange: dateRange || '全部',
+                            format: ext,
+                            fileSize: self.formatFileSize(blob ? blob.size : 0),
+                            status: 'success'
+                        };
+                        self.history.unshift(record);
+                        self.blobCache[record.id] = { blob: blob, fileName: dataType + '.' + ext };
+                        if (self.history.length > 50) {
+                            var removed = self.history.pop();
+                            delete self.blobCache[removed.id];
+                        }
+                        self.recordsExpanded = true;
+                        ReggieUI.notify({
+                            title: '导出成功',
+                            dangerouslyUseHTMLString: true,
+                            message: '<div style="line-height:1.8;">'
+                                + '<div><i class="el-icon-document" style="margin-right:6px;color:var(--el-color-primary);"></i>文件：' + dataType + '.' + ext + '</div>'
+                                + '<div><i class="el-icon-coin" style="margin-right:6px;color:var(--color-success);"></i>大小：' + record.fileSize + '</div>'
+                                + '<div><i class="el-icon-time" style="margin-right:6px;color:var(--color-warning);"></i>时间：' + now + '</div>'
+                                + '</div>',
+                            type: 'success', duration: 5000, position: 'top-right'
+                        });
+                    }).catch(function(err) {
+                        var now = self.getNowStr();
+                        self.history.unshift({
+                            id: self.genId(), exportTime: now, dataType: dataType,
+                            dateRange: dateRange || '全部', format: 'excel', fileSize: '--', status: 'failed'
+                        });
+                        self.recordsExpanded = true;
+                        ReggieUI.notify({
+                            title: '导出失败',
+                            dangerouslyUseHTMLString: true,
+                            message: '<div style="line-height:1.8;">'
+                                + '<div><i class="el-icon-info" style="margin-right:6px;color:var(--color-info);"></i>原因：' + (err.message || String(err)) + '</div>'
+                                + '<div style="color:var(--text-muted);font-size:var(--font-size-xs);">时间：' + now + '</div>'
+                                + '</div>',
+                            type: 'error', duration: 8000, position: 'top-right'
+                        });
+                    }).finally(function() { stateRef.loading = false; });
+                },
+
+                exportOrder: function(format) {
+                    var range = this.orderFilter.dateRange || [];
                     var params = {};
-                    if (self.orderFilter.startDate) params.startDate = self.orderFilter.startDate;
-                    if (self.orderFilter.endDate) params.endDate = self.orderFilter.endDate;
-                    if (self.orderFilter.status) params.status = self.orderFilter.status;
-
-                    var ext = format === 'excel' ? 'xlsx' : 'pdf';
-                    var apiCall = format === 'excel'
-                        ? exportApi.exportOrdersExcel(params)
-                        : exportApi.exportOrdersPdf(params);
-
-                    var label = '订单数据 (' + self.orderFilter.startDate + '~' + self.orderFilter.endDate + ')';
-                    exportApi.downloadFile(apiCall, '订单数据.' + ext)
-                        .then(function() {
-                            self.addHistory(label, 'ri-file-list-3-line', ext, true);
-                            showToast('订单数据导出成功，文件已开始下载', 'success');
-                        })
-                        .catch(function(err) {
-                            self.addHistory(label, 'ri-file-list-3-line', ext, false);
-                            showToast(err.message || '订单数据导出失败', 'error');
-                        })
-                        .finally(function() { self.orderExport.loading = false; });
+                    if (range[0]) params.startDate = range[0];
+                    if (range[1]) params.endDate = range[1];
+                    if (this.orderFilter.status) params.status = this.orderFilter.status;
+                    var call = format === 'excel' ? exportApi.exportOrdersExcel(params) : exportApi.exportOrdersPdf(params);
+                    this.doExport(call, '订单数据', range.length === 2 ? range[0] + ' ~ ' + range[1] : '全部', this.orderExport, 'ri-file-list-3-line');
                 },
 
-                exportDish(format) {
-                    var self = this;
-                    self.dishExport.loading = true;
-                    var ext = format === 'excel' ? 'xlsx' : 'pdf';
-                    var apiCall = format === 'excel'
-                        ? exportApi.exportDishesExcel({})
-                        : exportApi.exportDishesPdf({});
-
-                    exportApi.downloadFile(apiCall, '菜品数据.' + ext)
-                        .then(function() {
-                            self.addHistory('菜品数据', 'ri-restaurant-line', ext, true);
-                            showToast('菜品数据导出成功', 'success');
-                        })
-                        .catch(function(err) {
-                            self.addHistory('菜品数据', 'ri-restaurant-line', ext, false);
-                            showToast(err.message || '菜品数据导出失败', 'error');
-                        })
-                        .finally(function() { self.dishExport.loading = false; });
+                exportDish: function(format) {
+                    var call = format === 'excel' ? exportApi.exportDishesExcel({}) : exportApi.exportDishesPdf({});
+                    this.doExport(call, '菜品数据', '全部', this.dishExport, 'ri-restaurant-line');
                 },
 
-                exportEmp(format) {
-                    var self = this;
-                    self.empExport.loading = true;
-                    var ext = format === 'excel' ? 'xlsx' : 'pdf';
-                    var apiCall = format === 'excel'
-                        ? exportApi.exportEmployeesExcel({})
-                        : exportApi.exportEmployeesPdf({});
-
-                    exportApi.downloadFile(apiCall, '员工数据.' + ext)
-                        .then(function() {
-                            self.addHistory('员工数据', 'ri-user-line', ext, true);
-                            showToast('员工数据导出成功', 'success');
-                        })
-                        .catch(function(err) {
-                            self.addHistory('员工数据', 'ri-user-line', ext, false);
-                            showToast(err.message || '员工数据导出失败', 'error');
-                        })
-                        .finally(function() { self.empExport.loading = false; });
+                exportEmp: function(format) {
+                    var call = format === 'excel' ? exportApi.exportEmployeesExcel({}) : exportApi.exportEmployeesPdf({});
+                    this.doExport(call, '员工数据', '全部', this.empExport, 'ri-user-line');
                 },
 
-                exportReport(format) {
-                    var self = this;
-                    self.reportExport.loading = true;
+                exportReport: function(format) {
+                    var range = this.reportFilter.dateRange || [];
                     var params = {};
-                    if (self.reportFilter.startDate) params.startDate = self.reportFilter.startDate;
-                    if (self.reportFilter.endDate) params.endDate = self.reportFilter.endDate;
-                    var ext = format === 'excel' ? 'xlsx' : 'pdf';
-                    var apiCall = format === 'excel'
-                        ? exportApi.exportReportExcel(params)
-                        : exportApi.exportReportPdf(params);
-
-                    var label = '经营报表 (' + self.reportFilter.startDate + '~' + self.reportFilter.endDate + ')';
-                    exportApi.downloadFile(apiCall, '经营报表.' + ext)
-                        .then(function() {
-                            self.addHistory(label, 'ri-bar-chart-line', ext, true);
-                            showToast('经营报表导出成功', 'success');
-                        })
-                        .catch(function(err) {
-                            self.addHistory(label, 'ri-bar-chart-line', ext, false);
-                            showToast(err.message || '经营报表导出失败', 'error');
-                        })
-                        .finally(function() { self.reportExport.loading = false; });
+                    if (range[0]) params.startDate = range[0];
+                    if (range[1]) params.endDate = range[1];
+                    var call = format === 'excel' ? exportApi.exportReportExcel(params) : exportApi.exportReportPdf(params);
+                    this.doExport(call, '经营报表', range.length === 2 ? range[0] + ' ~ ' + range[1] : '全部', this.reportExport, 'ri-bar-chart-line');
                 },
 
-                // ==================== 导出记录 ====================
-                addHistory(name, icon, ext, success) {
-                    var now = new Date();
-                    var time = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0')
-                        + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
-                    this.history.unshift({
-                        name: name + '.' + ext,
-                        icon: icon,
-                        time: time,
-                        size: ext.toUpperCase() + ' 文件',
-                        success: success
-                    });
-                    if (this.history.length > 50) this.history.pop();
+                // ==================== 导出记录操作 ====================
+                reDownload: function(item) {
+                    var cached = this.blobCache[item.id];
+                    if (!cached || !cached.blob) {
+                        ReggieUI.warning('文件数据已过期，请重新导出');
+                        return;
+                    }
+                    try {
+                        var url = window.URL.createObjectURL(cached.blob);
+                        var a = document.createElement('a');
+                        a.href = url;
+                        a.download = cached.fileName;
+                        a.style.display = 'none';
+                        document.body.appendChild(a);
+                        a.click();
+                        setTimeout(function() {
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+                        }, 200);
+                        ReggieUI.success('正在下载：' + cached.fileName);
+                    } catch (err) {
+                        ReggieUI.error('下载失败：' + err.message);
+                    }
                 },
-                clearHistory() {
-                    // 修改点：清空导出记录属批量删除操作，补二次确认（此前直接清空无提示，误点不可恢复）
+                deleteRecord: function(index) {
+                    var self = this;
+                    ReggieUI.confirm('确认删除该导出记录？', '提示', {
+                        confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
+                    }).then(function() {
+                        var item = self.history[index];
+                        if (item && item.id) { delete self.blobCache[item.id]; }
+                        self.history.splice(index, 1);
+                        ReggieUI.success('记录已删除');
+                    }).catch(function() { /* 用户取消 */ });
+                },
+                clearHistory: function() {
                     if (!this.history || this.history.length === 0) return;
                     var self = this;
-                    if (window.ReggieUI && typeof window.ReggieUI.confirm === 'function') {
-                        window.ReggieUI.confirm('确定清空全部导出记录吗？', '清空导出记录', {
-                            confirmButtonText: '清空', type: 'warning'
-                        }).then(function() {
-                            self.history = [];
-                            showToast('导出记录已清空', 'info');
-                        }).catch(function() {
-                            // 用户取消，不做任何操作
-                        });
-                    } else {
-                        this.history = [];
-                        showToast('导出记录已清空', 'info');
-                    }
+                    ReggieUI.confirm('确定清空全部导出记录吗？', '清空导出记录', {
+                        confirmButtonText: '清空', type: 'warning'
+                    }).then(function() {
+                        self.history = [];
+                        self.blobCache = {};
+                        ReggieUI.success('导出记录已清空');
+                    }).catch(function() { /* 用户取消 */ });
                 }
             }
         });
-
-        var toastTimer = null;
-        function showToast(msg, type) {
-            var toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.className = 'toast toast-' + type;
-            toast.style.display = 'block';
-            if (toastTimer) clearTimeout(toastTimer);
-            toastTimer = setTimeout(function() {
-                toast.style.animation = 'fadeOut 0.3s forwards';
-                setTimeout(function() { toast.style.display = 'none'; toast.style.animation = ''; }, 300);
-            }, 3000);
-        }
     </script>
 </body>
 </html>
-
-
-
