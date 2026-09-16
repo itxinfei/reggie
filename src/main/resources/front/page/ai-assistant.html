@@ -495,9 +495,6 @@
                 },
 
                 // ==================== 消息操作菜单 ====================
-                // 移动端长按计时器（长按 600ms 弹出菜单，滑动即取消）
-                msgPressTimer: null,
-                msgPressT0: 0,
                 // 修改点：移动端长按无法触发原生 contextmenu，
                 // 改用 touchstart 启动 600ms 计时器，touchend/touchmove 取消。
                 // 仅在触摸事件回调（含自定义属性）中执行 preventDefault，避免拦截页面滚动。

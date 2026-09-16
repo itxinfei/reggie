@@ -3,6 +3,7 @@ package com.reggie.module.dining.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.reggie.module.dining.model.DiningTable;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
@@ -27,6 +28,6 @@ public interface DiningTableMapper extends BaseMapper<DiningTable> {
      */
     @Select("SELECT dt.area_id AS areaId, ta.name AS areaName, COUNT(*) AS cnt "
             + "FROM dining_table dt LEFT JOIN dining_area ta ON ta.id = dt.area_id "
-            + "WHERE 1=1 GROUP BY dt.area_id, ta.name")
-    List<Map<String, Object>> statByArea();
+            + "WHERE dt.tenant_id = #{tenantId} GROUP BY dt.area_id, ta.name")
+    List<Map<String, Object>> statByArea(@Param("tenantId") Long tenantId);
 }

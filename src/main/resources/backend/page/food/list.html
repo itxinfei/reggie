@@ -468,9 +468,9 @@
             if (String(res.code) === '1' && res.data) {
               this.stats = {
                 totalDishes: (res.data.total || 0),
-                activeDishes: (res.data.active || 0),
-                inactiveDishes: (res.data.inactive || 0),
-                deletedDishes: 0 // @TableLogic 下无法统计已删除数量，置 0
+                activeDishes: (res.data.activeDishes || 0),
+                inactiveDishes: (res.data.inactiveDishes || 0),
+                deletedDishes: (res.data.deleted || 0) // 后端原生 SQL 绕过 @TableLogic 统计已删除数量
               }
             }
           } catch (err) { console.warn('加载菜品统计数据失败:', err) }

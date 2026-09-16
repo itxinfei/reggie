@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -106,19 +107,21 @@ public class KitchenTicketServiceImpl
     }
 
     @Override
-    public KitchenBoardVO getBoard(boolean autoPull) {
+    public KitchenBoardVO getBoard(boolean autoPull, String stationCode) {
         KitchenBoardVO board = new KitchenBoardVO();
         if (autoPull) {
             board.setPulledCount(pullPendingOrders());
         }
         LocalDateTime now = LocalDateTime.now();
 
-        // 在制工单：待制作/制作中/待取餐
+        // 在制工单：待制作/制作中/待取餐（可选档口筛选）
         List<KitchenTicket> active = list(new LambdaQueryWrapper<KitchenTicket>()
                 .in(KitchenTicket::getStatus,
                         KitchenTicket.STATUS_PENDING,
                         KitchenTicket.STATUS_COOKING,
                         KitchenTicket.STATUS_READY)
+                .eq(stationCode != null && !stationCode.isEmpty(),
+                        KitchenTicket::getStationCode, stationCode)
                 .orderByAsc(KitchenTicket::getReceiveTime));
         Map<Long, List<OrderDetail>> detailMap = loadDetails(
                 active.stream().map(KitchenTicket::getOrderId).collect(Collectors.toList()));
@@ -229,11 +232,13 @@ public class KitchenTicketServiceImpl
     }
 
     @Override
-    public Page<KitchenTicket> pageTickets(int page, int pageSize, Integer status) {
+    public Page<KitchenTicket> pageTickets(int page, int pageSize, Integer status, String stationCode) {
         requireTenant();
         Page<KitchenTicket> p = PageUtils.of(page, pageSize);
         return lambdaQuery()
                 .eq(status != null, KitchenTicket::getStatus, status)
+                .eq(stationCode != null && !stationCode.isEmpty(),
+                        KitchenTicket::getStationCode, stationCode)
                 .orderByDesc(KitchenTicket::getId)
                 .page(p);
     }
@@ -252,10 +257,14 @@ public class KitchenTicketServiceImpl
         if (id == null) {
             throw new CustomException("工单ID不能为空");
         }
-        requireTenant();
+        Long tenantId = requireTenant();
         KitchenTicket ticket = getById(id);
         if (ticket == null) {
             throw new CustomException("后厨工单不存在");
+        }
+        // 修改点：显式租户比对（不依赖 MP 租户拦截器），ticket 归属其他租户时抛异常防越权
+        if (!Objects.equals(ticket.getTenantId(), tenantId)) {
+            throw new CustomException("无权操作该后厨工单");
         }
         return ticket;
     }

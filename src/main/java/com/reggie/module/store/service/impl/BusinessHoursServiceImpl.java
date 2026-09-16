@@ -51,14 +51,16 @@ public class BusinessHoursServiceImpl implements BusinessHoursService {
             return;
         }
 
-        // 解析格式：HH:mm-HH:mm（如 "09:00-22:00"）
-        String[] parts = businessHours.split("-");
-        if (parts.length != 2) {
-            log.warn("[营业时间] 格式异常，跳过校验: tenantId={}, businessHours={}", tenantId, businessHours);
-            return;
-        }
-
+        // 解析格式：HH:mm-HH:mm（如 "09:00-22:00"）。
+        // 配置异常（格式无法解析）时降级跳过校验，不阻断正常下单——
+        // 原实现把解析异常重新抛出，导致门店改错一次营业时间格式后，全店所有时段无法下单。
         try {
+            String[] parts = businessHours.split("-");
+            if (parts.length != 2) {
+                log.warn("[营业时间] 格式异常，跳过校验: tenantId={}, businessHours={}", tenantId, businessHours);
+                return;
+            }
+
             LocalTime openTime = LocalTime.parse(parts[0].trim(), HH_MM);
             LocalTime closeTime = LocalTime.parse(parts[1].trim(), HH_MM);
             LocalTime now = LocalTime.now();

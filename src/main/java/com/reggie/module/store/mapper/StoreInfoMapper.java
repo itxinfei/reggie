@@ -30,7 +30,7 @@ public interface StoreInfoMapper extends BaseMapper<StoreInfo> {
      * @param tenantId 租户ID
      * @return 门店信息
      */
-    @Select("SELECT * FROM store_info WHERE tenant_id = #{tenantId}")
+    @Select("SELECT * FROM store_info WHERE tenant_id = #{tenantId} LIMIT 1")
     StoreInfo findByTenantId(@Param("tenantId") Long tenantId);
 
     /**

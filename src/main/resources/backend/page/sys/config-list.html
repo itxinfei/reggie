@@ -206,16 +206,10 @@
         },
         async loadConfigStats() {
           try {
-            const res = await sysApi.configPage({ page: 1, pageSize: 1 })
+            // 修改点：使用后端 /sys/config/stats 聚合端点（原 pageSize:1 只拿 1 条记录做统计，永远不准）
+            const res = await sysApi.configStats()
             if (res && res.code === 1) {
-              const all = (res.data.records || []).map(function(item) { return item })
-              const stats = {}
-              all.forEach(function(item) {
-                const t = String(item.configType || '4')
-                if (Object.prototype.hasOwnProperty.call(stats, 'type' + t)) stats['type' + t]++
-              })
-              stats.total = all.length
-              return { code: 1, data: stats }
+              return { code: 1, data: res.data }
             }
           } catch (err) { console.warn('加载配置统计失败:', err) }
           return { code: 0 }

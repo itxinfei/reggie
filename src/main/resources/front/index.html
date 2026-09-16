@@ -20,7 +20,7 @@
     <!-- 引入样式  -->
     <link rel="stylesheet" href="styles/index.css?v=20260914" />
     <!--本页面内容的样式-->
-    <link rel="stylesheet" href="styles/main.css?v=20260915" />
+    <link rel="stylesheet" href="styles/main.css?v=20260916" />
     <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
     <link rel="stylesheet" href="styles/tabbar.css" />
     <!-- 骨架屏样式 -->
@@ -189,33 +189,33 @@
           </div>
         </div>
 
-        <!-- 右侧菜品列表 -->
+        <!-- 右侧菜品列表（修改点 2026-09-16：改为按分类分组的单页长列表，支持左右滚动联动） -->
         <div class="dish-panel" ref="dishPanel">
-          <div
-            class="dish-item"
-            v-for="(item,index) in dishList"
-            :key="index"
-          >
-            <div class="di-image" @click="dishDetails(item)">
-              <img :src="imgPath(item.image)" @error="imgError" loading="lazy">
-              <div class="di-tag" v-if="item.saleNum > 100">热卖</div>
-            </div>
-            <div class="di-info" @click="dishDetails(item)">
-              <div class="di-name">{{ item.name }}</div>
-              <div class="di-desc" v-if="item.description">{{ item.description }}</div>
-              <div class="di-sales">月售{{ item.saleNum || 0 }}<span v-if="item.saleNum > 50"> · 好评率98%</span></div>
-              <div class="di-price-row">
-                <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
+          <van-loading v-if="loadingAll" size="24px" vertical class="dish-loading">正在加载菜单...</van-loading>
+          <template v-for="(item,index) in dishList" :key="index">
+            <div v-if="item._title" class="category-dish-title" :data-category-id="item._categoryId">{{ item.name }}</div>
+            <div v-else class="dish-item">
+              <div class="di-image" @click="previewDishImage(imgPath(item.image))">
+                <img :src="imgPath(item.image)" @error="imgError" loading="lazy">
+                <div class="di-tag" v-if="item.saleNum > 100">热卖</div>
+              </div>
+              <div class="di-info" @click="dishDetails(item)">
+                <div class="di-name">{{ item.name }}</div>
+                <div class="di-desc" v-if="item.description">{{ item.description }}</div>
+                <div class="di-sales">月售{{ item.saleNum || 0 }}<span v-if="item.saleNum > 50"> · 好评率98%</span></div>
+                <div class="di-price-row">
+                  <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
+                </div>
+              </div>
+              <div class="di-action">
+                <i class="ri-subtract-line" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"></i>
+                <span class="di-num" v-if="item.number">{{ item.number }}</span>
+                <span class="di-spec" v-if="item.flavors && item.flavors.length > 0 && !item.number" @click.prevent.stop="chooseFlavorClick(item)">选规格</span>
+                <i class="ri-add-line" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"></i>
               </div>
             </div>
-            <div class="di-action">
-              <i class="ri-subtract-line" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"></i>
-              <span class="di-num" v-if="item.number">{{ item.number }}</span>
-              <span class="di-spec" v-if="item.flavors && item.flavors.length > 0 && !item.number" @click.prevent.stop="chooseFlavorClick(item)">选规格</span>
-              <i class="ri-add-line" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"></i>
-            </div>
-          </div>
-          <div class="empty-tip" v-if="!dishList || dishList.length === 0">
+          </template>
+          <div class="empty-tip" v-if="!loadingAll && (!dishList || dishList.length === 0)">
             <img src="./images/noImg.png"/>
             <p>暂无菜品</p>
           </div>
@@ -312,7 +312,7 @@
       >
         <div class="divContainer">
           <!-- 修改点：菜品图加点击预览（van-image-preview 大图），解决小图看不清问题 -->
-          <img :src="imgPath(detailsDialog.item.image)" @error="imgError" class="dialog-img" @click.stop="previewDishImage(imgPath(detailsDialog.item.image))">
+          <img :src="imgPath(detailsDialog.item.image)" @error="imgError" class="dialog-img" @click.stop="previewDishImage(imgPath(detailsDialog.item.image))" loading="lazy">
           <div class="title">{{ detailsDialog.item.name }}</div>
           <div class="content">{{ detailsDialog.item.description }}</div>
           <!-- 评价展示 -->
@@ -369,7 +369,7 @@
           <div class="title">{{ setMealDialog.item.name }}</div>
           <div class="item" v-for="(item,index) in setMealDialog.item.list" :key="index">
             <!-- 修改点：套餐子项图加点击预览，与菜品详情一致 -->
-            <img :src="imgPath(item.image)" @error="imgError" class="meal-img" @click.stop="previewDishImage(imgPath(item.image))" loading="lazy">
+            <img :src="imgPath(item.image)" @error="imgError" class="meal-img" @click.stop="previewDishImage(imgPath(item.image), setMealDialog.item.list.map(s => imgPath(s.image)), index)" loading="lazy">
             <div class="divSubTitle">{{ item.name + '(' + item.copies + '份)' }}
               <div class="divPrice">
                 <span>￥</span><span>{{ Number(item.price || 0).toFixed(2) }}</span>
@@ -404,6 +404,7 @@
         :show.sync="previewShow"
         :images="previewImages"
         :start-position="previewIndex"
+        closeable
       ></van-image-preview>
 
       <!-- ====== 底部 Tab 导航（点餐 / 订单 / 我的） ====== -->
@@ -501,7 +502,7 @@
             v-for="(item, idx) in searchDishList"
             :key="'d' + idx"
           >
-            <div class="di-image" @click="dishDetails(item)">
+            <div class="di-image" @click="previewDishImage(imgPath(item.image))">
               <img :src="imgPath(item.image)" @error="imgError" loading="lazy">
             </div>
             <div class="di-info" @click="dishDetails(item)">
@@ -527,7 +528,7 @@
             v-for="(item, idx) in searchMealList"
             :key="'m' + idx"
           >
-            <div class="di-image" @click="dishDetails(item)">
+            <div class="di-image" @click="previewDishImage(imgPath(item.image))">
               <img :src="imgPath(item.image)" @error="imgError" loading="lazy">
             </div>
             <div class="di-info" @click="dishDetails(item)">
@@ -642,6 +643,8 @@
               previewShow: false,
               previewImages: [],
               previewIndex: 0,
+              // 修改点(2026-09-16)：全量加载所有分类菜品时的 loading 态
+              loadingAll: false,
               // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
               activeTab: 0,
             }
@@ -725,11 +728,18 @@
               if (e.target.src.indexOf('/front/images/noImg.png') >= 0) return
               e.target.src = './images/noImg.png'
             },
-            // 修改点：菜品/套餐图片大图预览（van-image-preview），复用 my-evaluations.html 权威模式
-            previewDishImage(url){
-              if (!url) return
-              this.previewImages = [url]
-              this.previewIndex = 0
+            // 修改点(2026-09-16)：支持单图与多图预览——
+            // 列表缩略图直接调起（单图）；套餐详情子项传整个套餐图集 + 当前索引（可左右滑动浏览）。
+            // 复用 my-evaluations.html 权威模式（van-image-preview + closeable）。
+            previewDishImage(url, images, index){
+              if(images && images.length){
+                this.previewImages = images
+                this.previewIndex = (typeof index === 'number') ? index : 0
+              }else{
+                if(!url) return
+                this.previewImages = [url]
+                this.previewIndex = 0
+              }
               this.previewShow = true
             },
             // 修改点：加载智能推荐菜品
@@ -1058,11 +1068,9 @@
                   this.categoryList = res[0].data
                   if(Array.isArray(res[0].data) && res[0].data.length > 0){
                     this.categoryId = res[0].data[0].id
-                    if(res[0].data[0].type === 1){
-                      this.getDishList()
-                    }else{
-                      this.getSetmealData()
-                    }
+                    this.activeType = 0
+                    // 修改点(2026-09-16)：改为一次性加载所有分类，支持右侧滚动联动左侧高亮
+                    this.loadAllDishes()
                   }
                 }else{
                   vant.Toast.fail(res[0].msg || '加载分类失败');
@@ -1095,13 +1103,22 @@
               }, 1000)
             },
             //分类点击
+            // 修改点(2026-09-16)：分组长列表模式下，点击分类改为滚动右栏到对应分类标题（不再重新加载）
             categoryClick(index,id,type){
               this.activeType = index
               this.categoryId = id
-              // 修改点：切换分类时滚动右侧列表到顶部，并滚动左侧分类使选中项可见
               this.$nextTick(() => {
                 const panel = this.$refs.dishPanel
-                if(panel) panel.scrollTop = 0
+                if(panel){
+                  // 修改点：若在搜索态，先关闭搜索浮层再滚动到分类
+                  if(this.searchShow || this.searchKeyword){ this.closeSearch() }
+                  const titles = panel.querySelectorAll('.category-dish-title')
+                  const target = Array.prototype.find.call(titles, t => String(t.getAttribute('data-category-id')) === String(id))
+                  if(target){
+                    const top = target.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop
+                    panel.scrollTo({ top: top, behavior: 'smooth' })
+                  }
+                }
                 const sidebar = this.$refs.categorySidebar
                 if(sidebar){
                   const activeItem = sidebar.children[index]
@@ -1110,13 +1127,9 @@
                   }
                 }
               })
-              if(type === 1){//菜品
-                this.getDishList()
-              }else{
-                this.getSetmealData()
-              }
             },
             // 修改点：右侧面板滚动时自动高亮对应分类（美团小程序左右联动）
+            // 修改点(2026-09-16)：改用 getBoundingClientRect 计算标题相对面板位置，修正 offsetTop 受 offsetParent 影响的偏差
             onDishPanelScroll(){
               // 防抖处理：100ms内只执行一次高亮更新
               if(this._scrollTimer) return
@@ -1125,25 +1138,63 @@
                 // 根据当前可视区域第一个菜品所属分类，更新左侧分类高亮
                 const panel = this.$refs.dishPanel
                 if(!panel || this.dishList.length === 0) return
-                const scrollTop = panel.scrollTop
-                const categoryHeaders = panel.querySelectorAll('.category-dish-title')
+                const panelTop = panel.getBoundingClientRect().top
+                const titles = panel.querySelectorAll('.category-dish-title')
                 let activeIdx = 0
-                for(let i = 0; i < categoryHeaders.length; i++){
-                  const el = categoryHeaders[i]
-                  // 使用offsetTop并考虑面板滚动偏移
-                  if(el.offsetTop - 20 <= scrollTop){
-                    // 查找该分类标题对应的categoryId
+                Array.prototype.forEach.call(titles, el => {
+                  const top = el.getBoundingClientRect().top - panelTop
+                  if(top <= 1){
                     const catId = el.getAttribute('data-category-id')
-                    if(catId){
-                      const idx = this.categoryList.findIndex(c => String(c.id) === String(catId))
-                      if(idx >= 0) activeIdx = idx
-                    }
+                    const idx = this.categoryList.findIndex(c => String(c.id) === String(catId))
+                    if(idx >= 0) activeIdx = idx
                   }
-                }
+                })
                 if(this.activeType !== activeIdx){
                   this.activeType = activeIdx
                 }
               }, 100)
+            },
+            // 修改点(2026-09-16)：一次性加载所有分类的菜品/套餐，拼成「分类标题+菜品」扁平数组，
+            // 使右侧成为单页长列表，支持滚动联动（点击左侧分类滚动到右栏对应标题；右栏滚动高亮左侧）。
+            // 购物车数量在此统一回填；syncCartNumber/addCart/subtractCart 遍历 dishList 匹配 id，
+            // 标题项无 id 会被自动跳过，无需改动。
+            async loadAllDishes(){
+              if(!this.categoryList || this.categoryList.length === 0) return
+              this.loadingAll = true
+              try {
+                const requests = this.categoryList.map(cat => {
+                  if(cat.type === 1){
+                    return dishListApi({ categoryId: cat.id, status: 1 })
+                  }
+                  return setmealListApi({ categoryId: cat.id, status: 1 })
+                })
+                const results = await Promise.all(requests)
+                const cartData = this.cartData || []
+                const flat = []
+                this.categoryList.forEach((cat, i) => {
+                  const res = results[i]
+                  flat.push({ _title: true, _categoryId: cat.id, name: cat.name, type: cat.type })
+                  if(res && res.code === 1 && res.data && res.data.length){
+                    res.data.forEach(d => {
+                      let num = 0
+                      if(cat.type === 1){
+                        const c = cartData.find(c => c.dishId === d.id)
+                        num = c ? (c.number || 0) : 0
+                      }else{
+                        const c = cartData.find(c => c.setmealId === d.id)
+                        num = c ? (c.number || 0) : 0
+                      }
+                      d.number = num > 0 ? num : undefined
+                      flat.push(d)
+                    })
+                  }
+                })
+                this.dishList = flat
+              } catch(e){
+                vant.Toast.fail('加载菜单失败')
+              } finally {
+                this.loadingAll = false
+              }
             },
             //获取菜品数据
             async getDishList(){

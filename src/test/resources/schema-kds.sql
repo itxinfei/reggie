@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS kitchen_ticket (
   finish_time datetime DEFAULT NULL COMMENT '出餐完成时间',
   cancel_time datetime DEFAULT NULL COMMENT '取消时间',
   cook_duration_seconds bigint DEFAULT NULL COMMENT '制作耗时（秒）',
+  station_code varchar(20) DEFAULT NULL COMMENT '档口编码（如 HOT/COLD/DRINK/DESSERT）',
   remark varchar(255) DEFAULT NULL COMMENT '备注',
   create_time datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   update_time datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',

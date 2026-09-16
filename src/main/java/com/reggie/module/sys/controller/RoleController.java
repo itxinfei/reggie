@@ -78,11 +78,16 @@ public class RoleController {
     public R<Page<Role>> page(
                         @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,
             @Parameter(description = "每页条数") @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
-            @Parameter(description = "角色名称") @RequestParam(required = false) String roleName) {
+            @Parameter(description = "角色名称") @RequestParam(required = false) String roleName,
+            @Parameter(description = "状态：1=启用 0=禁用") @RequestParam(required = false) Integer status) {
+        // 修改点：补 status 精确筛选（原仅支持 roleName，前端 stat-cards 点击「已启用/已禁用」无效）
         Page<Role> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
         if (roleName != null && !roleName.isEmpty()) {
             wrapper.like(Role::getRoleName, roleName);
+        }
+        if (status != null) {
+            wrapper.eq(Role::getStatus, status);
         }
         wrapper.eq(Role::getIsDeleted, 0)
                .orderByDesc(Role::getSort);

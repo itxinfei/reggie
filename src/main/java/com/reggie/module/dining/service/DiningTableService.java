@@ -32,6 +32,13 @@ public interface DiningTableService extends IService<DiningTable> {
     void changeStatus(Long tableId, String status);
 
     /**
+     * 绑定桌台当前订单ID（堂食下单后调用，结账依赖此字段）
+     * @param tableId 桌台ID
+     * @param orderId 订单ID
+     */
+    void bindOrderId(Long tableId, Long orderId);
+
+    /**
      * 开台：绑定订单到桌台，桌台状态改为占用
      *
      * @param dto 开台请求
@@ -106,4 +113,14 @@ public interface DiningTableService extends IService<DiningTable> {
      * @param dto 分账请求
      */
     void splitBill(SplitBillDTO dto);
+
+    /**
+     * 一键开台：创建占位订单 + 绑定桌台（在同一事务中执行，保证原子性）
+     *
+     * @param tableId       桌台ID
+     * @param customerCount 用餐人数（可选）
+     * @param remark        备注（可选）
+     * @return 包含 tableId/orderId/orderNumber 的结果 Map
+     */
+    Map<String, Object> openWithOrder(Long tableId, Integer customerCount, String remark);
 }

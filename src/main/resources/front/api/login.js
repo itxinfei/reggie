@@ -28,4 +28,13 @@ function getUserInfoApi() {
     'method': 'get',
   })
 }
+
+// 修改点(2026-09-16)：更新当前用户基本信息（昵称/性别/头像），个人中心编辑资料与更换头像复用
+function updateUserInfoApi(data) {
+  return $axios({
+    'url': '/user/info',
+    'method': 'put',
+    data
+  })
+}
   

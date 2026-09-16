@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.reggie.module.dish.model.Dish;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.math.BigDecimal;
@@ -34,5 +35,11 @@ public interface DishMapper extends BaseMapper<Dish> {
     @Update("UPDATE dish SET stock_qty = IFNULL(stock_qty, 0) + #{qty}, update_time = NOW() " +
             "WHERE id = #{id}")
     int addStock(@Param("id") Long id, @Param("qty") BigDecimal qty);
+
+    /**
+     * 统计已删除菜品数量（原生 SQL 绕过 @TableLogic，只查 is_deleted=1 的记录）
+     */
+    @Select("SELECT COUNT(*) FROM dish WHERE is_deleted = 1 AND tenant_id = #{tenantId}")
+    long countDeleted(@Param("tenantId") Long tenantId);
 }
 

@@ -35,7 +35,7 @@ public class QueueRecord implements Serializable {
     /** 需要座位数 */
     private Integer seatCount;
 
-    /** 排队状态：WAITING-等待中，CALLED-已叫号，COMPLETED-已完成，CANCELLED-已取消 */
+    /** 排队状态：WAITING-等待中，CALLED-已叫号，SEATED-已入座，CANCELLED-已取消 */
     private String status;
 
     /** 创建时间 */

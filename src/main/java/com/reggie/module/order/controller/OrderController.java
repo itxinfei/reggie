@@ -194,6 +194,8 @@ public class OrderController {
             return R.error("订单不属于当前租户");
         }
         // 用户端查询他人订单详情拦截（防 IDOR 越权，参照 userCancel 归属校验模式）
+        // 修改点：仅当请求方是 C 端用户（currentUserId 非空）时校验归属；
+        // 管理后台员工端 BaseContext.getCurrentId() 为 null 放行，避免后台管理端被误拦截。
         Long currentUserId = BaseContext.getCurrentId();
         if (currentUserId != null && !Objects.equals(currentUserId, orders.getUserId())) {
             return R.error("无权操作此订单");
@@ -340,6 +342,8 @@ public class OrderController {
             return R.error("订单不存在或不属于当前租户");
         }
         // 用户端再来一单越权拦截：防止把他人订单商品加入自己购物车（防 IDOR）
+        // 修改点：仅当请求方是 C 端用户（currentUserId 非空）时校验归属；
+        // 管理后台员工端 BaseContext.getCurrentId() 为 null 放行，避免后台管理端被误拦截。
         Long currentUserId = BaseContext.getCurrentId();
         if (currentUserId != null && !Objects.equals(currentUserId, existing.getUserId())) {
             return R.error("无权操作此订单");

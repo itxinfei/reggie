@@ -1,5 +1,6 @@
 package com.reggie.module.marketing.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.common.annotation.RequireEmployee;
@@ -207,6 +208,32 @@ public class MarketingToolController {
         Long tenantId = BaseContext.getCurrentTenantId();
         List<FlashSale> list = marketingToolService.getFlashSales(tenantId);
         return R.success(list);
+    }
+
+    /**
+     * 分页查询限时抢购列表。
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @param status   状态筛选（可选：0草稿/1进行中/2暂停/3已结束）
+     * @return 分页结果
+     */
+    @GetMapping("/flash-sale/page")
+    @Operation(summary = "限时抢购分页")
+    public R<Page<FlashSale>> pageFlashSales(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) Integer status) {
+        return R.success(marketingToolService.pageFlashSales(page, pageSize, status));
+    }
+
+    /**
+     * 限时抢购统计（各状态数量）。
+     * @return 统计数据
+     */
+    @GetMapping("/flash-sale/stats")
+    @Operation(summary = "限时抢购统计")
+    public R<Map<String, Object>> flashSaleStats() {
+        return R.success(marketingToolService.getFlashSaleStats());
     }
 
     /**

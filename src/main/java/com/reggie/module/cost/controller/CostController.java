@@ -427,6 +427,35 @@ public class CostController {
         List<Map<String, Object>> alerts = costService.getCostAlert(threshold, tenantId);
         return R.success(alerts);
     }
+
+    // ==================== 采购价联动 ====================
+
+    /**
+     * 根据采购价计算菜品食材成本。
+     * @param dishId 菜品ID
+     * @return 计算出的食材成本
+     */
+    @GetMapping("/dish/calculate-material-cost/{dishId}")
+    @Operation(summary = "根据采购价计算菜品食材成本")
+    public R<BigDecimal> calculateMaterialCostFromPurchase(
+            @Parameter(description = "菜品ID", required = true) @PathVariable Long dishId) {
+        Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
+        BigDecimal cost = costService.calculateMaterialCostFromPurchase(dishId, tenantId);
+        return R.success(cost);
+    }
+
+    /**
+     * 批量同步所有菜品的食材成本（从采购价）。
+     * @return 更新的菜品数量
+     */
+    @PostMapping("/dish/sync-material-cost")
+    @RateLimit(maxRequestsPerSecond = 1)
+    @Operation(summary = "批量同步菜品食材成本（从采购价）")
+    public R<Integer> syncMaterialCostFromPurchase() {
+        Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
+        int updated = costService.syncMaterialCostFromPurchase(tenantId);
+        return R.success(updated);
+    }
 }
 
 

@@ -404,8 +404,8 @@
           const s = this.stats || {}
           return [
             { key: 'sessions', icon: 'ri-chat-smile-3-line', label: '总会话数', value: s.totalSessions || 0, color: 'primary', subText: '今日累计' },
-            { key: 'active', icon: 'ri-chat-check-line', label: '进行中', value: s.activeSessions || 0, color: 'success', subText: '未结束会话' },
-            { key: 'firstResp', icon: 'ri-timer-line', label: '平均首响(秒)', value: s.avgFirstResponse || 0, color: 'warning', subText: '客服响应速度' },
+            { key: 'active', icon: 'ri-chat-check-line', label: '进行中', value: s.activeSessions || (s.totalSessions - s.closedSessions - s.waitingSessions) || 0, color: 'success', subText: '未结束会话' },
+            { key: 'firstResp', icon: 'ri-timer-line', label: '平均首响(分)', value: s.avgFirstResponse || s.avgResponseTime || 0, color: 'warning', subText: '客服响应速度' },
             { key: 'rating', icon: 'ri-star-line', label: '平均评分', value: s.avgSatisfaction || 0, color: 'danger', subText: '满意度评价' }
           ]
         },
@@ -468,11 +468,15 @@
             }
             var resp = await getCustomerServiceStatistics(params)
             if (resp.code === 1 && resp.data) {
+              // 修改点：字段名对齐后端 getCustomerServiceStatistics 返回值
+              // 后端返回 waitingSessions/avgResponseTime，前端原用 activeSessions/avgFirstResponse 导致恒 0
+              var d = resp.data
+              var activeSessions = (d.totalSessions || 0) - (d.closedSessions || 0) - (d.waitingSessions || 0)
               this.stats = {
-                totalSessions: resp.data.totalSessions || 0,
-                activeSessions: resp.data.activeSessions || 0,
-                avgFirstResponse: resp.data.avgFirstResponse || 0,
-                avgSatisfaction: resp.data.avgSatisfaction || 0
+                totalSessions: d.totalSessions || 0,
+                activeSessions: activeSessions > 0 ? activeSessions : 0,
+                avgFirstResponse: d.avgResponseTime || 0,
+                avgSatisfaction: d.avgSatisfaction || 0
               }
               this.complaintStats = {
                 totalComplaints: resp.data.totalComplaints || 0,

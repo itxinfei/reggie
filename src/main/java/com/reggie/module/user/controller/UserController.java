@@ -264,6 +264,41 @@ public class UserController {
     }
 
     /**
+     * 更新当前登录用户基本信息（昵称 / 性别 / 头像）
+     * <p>
+     * 修改点(2026-09-16)：C 端个人中心需要编辑资料与更换头像，原 {@code UserController} 仅提供
+     * GET /info，无更新入口，导致前端无法持久化修改。此处补充 PUT /info。
+     * <b>安全约束</b>：忽略请求体中的 {@code id}，强制使用会话中的当前用户，杜绝通过传入他人 id 越权改资料。
+     * 仅更新 name / sex / avatar 三个非敏感字段（{@code updateUserBaseInfo} 本身已做非空判空，不会清空其它列）。
+     *
+     * @param user   待更新字段（name / sex / avatar 可部分为空）
+     * @param session HTTP 会话
+     * @return 更新后的脱敏用户信息
+     */
+    @PutMapping("/info")
+    @Operation(summary = "更新当前登录用户基本信息", description = "更新昵称/性别/头像，仅作用于当前登录用户自身，忽略请求体中的 id 防止越权")
+    public R<User> updateCurrentUser(@RequestBody User user, HttpSession session) {
+        Long userId = (Long) session.getAttribute("user");
+        if (userId == null) {
+            return R.error("NOTLOGIN");
+        }
+        if (user == null) {
+            return R.error("参数不能为空");
+        }
+        // 强制绑定会话用户，禁止通过传入 id 修改他人资料（越权防护）
+        user.setId(userId);
+        userService.updateUserBaseInfo(user);
+        User updated = userService.getById(userId);
+        if (updated == null) {
+            return R.error("用户不存在");
+        }
+        // 脱敏：返回前清除敏感字段
+        updated.setIdNumber(null);
+        updated.setPhone(updated.getPhone() != null ? maskPhone(updated.getPhone()) : null);
+        return R.success(updated);
+    }
+
+    /**
      * 用户分页查询
      *
      * @param page 页码

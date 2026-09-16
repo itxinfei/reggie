@@ -91,6 +91,9 @@ public class KitchenTicket implements Serializable {
     @Schema(description = "制作耗时（秒）：开始制作到叫号")
     private Long cookDurationSeconds;
 
+    @Schema(description = "档口编码（如 HOT=热菜, COLD=凉菜, DRINK=饮品, DESSERT=甜点）")
+    private String stationCode;
+
     @Schema(description = "备注（订单备注快照）")
     private String remark;
 

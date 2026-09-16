@@ -85,6 +85,9 @@
       <el-button type="primary" icon="el-icon-search" aria-label="搜索" @click="fetchData">查询</el-button>
       <el-button icon="el-icon-refresh" aria-label="重置" @click="resetSearch">重置</el-button>
       <div class="toolbar-spacer"></div>
+      <el-tooltip content="根据菜品BOM配方和原料采购价，自动计算食材成本" placement="top">
+        <el-button type="warning" icon="el-icon-refresh-right" :loading="syncLoading" @click="handleSyncFromPurchase">从采购价同步</el-button>
+      </el-tooltip>
       <el-button type="primary" icon="el-icon-plus" aria-label="新增" @click="handleAdd">新增菜品成本</el-button>
       <el-button type="success" icon="el-icon-download" @click="handleExport">导出</el-button>
     </div>
@@ -212,7 +215,8 @@
             salePrice: [{ required: true, message: '请输入售价', trigger: 'blur' }]
           },
           dishOptions: [],
-          dishLoading: false
+          dishLoading: false,
+          syncLoading: false
         }
       },
       computed: {
@@ -367,6 +371,26 @@
           }).finally(function() {
             self.submitLoading = false
           })
+        },
+        // ========== 采购价同步 ==========
+        handleSyncFromPurchase() {
+          var self = this
+          ReggieUI.confirm('确认根据菜品BOM配方和原料采购价，重新计算所有菜品的食材成本？', '同步确认', { type: 'warning' }).then(function() {
+            self.syncLoading = true
+            syncMaterialCostFromPurchase().then(function(res) {
+              if (String(res.code) === '1') {
+                var count = res.data || 0
+                ReggieUI.success('同步完成，更新了 ' + count + ' 个菜品的食材成本')
+                self.fetchData()
+              } else {
+                ReggieUI.error(res.msg || '同步失败')
+              }
+            }).catch(function() {
+              ReggieUI.error('同步失败，请重试')
+            }).finally(function() {
+              self.syncLoading = false
+            })
+          }).catch(function() {})
         },
         handleExport() {
           ReggieUI.info('导出功能开发中...')

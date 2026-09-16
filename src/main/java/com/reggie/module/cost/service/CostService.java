@@ -214,5 +214,25 @@ public interface CostService extends IService<DishCost> {
      * @return 成本预警列表
      */
     List<Map<String, Object>> getCostAlert(BigDecimal threshold, Long tenantId);
+
+    /**
+     * 根据采购价自动计算菜品食材成本
+     * 通过 DishMaterial（BOM）关联原料，使用原料最新采购价计算：
+     * 食材成本 = Σ(原料采购价 × 用量)
+     *
+     * @param dishId   菜品ID
+     * @param tenantId 租户ID
+     * @return 计算出的食材成本，无配方返回 null
+     */
+    BigDecimal calculateMaterialCostFromPurchase(Long dishId, Long tenantId);
+
+    /**
+     * 批量同步所有菜品的食材成本（从采购价）
+     * 遍历所有有 BOM 配方的菜品，重新计算食材成本并更新
+     *
+     * @param tenantId 租户ID
+     * @return 更新的菜品数量
+     */
+    int syncMaterialCostFromPurchase(Long tenantId);
 }
 

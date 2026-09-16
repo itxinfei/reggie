@@ -77,7 +77,7 @@
         <logger name="com.reggie.module.member" level="DEBUG"/>
     -->
     <springProfile name="dev">
-        <root level="ERROR">
+        <root level="INFO">
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="ASYNC_FILE"/>
             <appender-ref ref="ASYNC_ERROR_FILE"/>

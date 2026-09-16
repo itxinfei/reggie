@@ -35,3 +35,7 @@ const getCostRanking = getDishCostRanking // 别名：页面调用 getCostRankin
 const calculateProfitRate = (dishId) => $axios({ url: `/cost/dish/profit-rate/${dishId}`, method: 'get' })
 const getCostAlert = (params) => $axios({ url: '/cost/alert', method: 'get', params })
 const getCostAlerts = getCostAlert // 别名：页面调用 getCostAlerts
+
+// 采购价联动
+const calculateMaterialCostFromPurchase = (dishId) => $axios({ url: `/cost/dish/calculate-material-cost/${dishId}`, method: 'get' })
+const syncMaterialCostFromPurchase = () => $axios({ url: '/cost/dish/sync-material-cost', method: 'post' })

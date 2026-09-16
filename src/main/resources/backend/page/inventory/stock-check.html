@@ -641,7 +641,11 @@
               ReggieUI.warning('请先录入实盘数量再完成盘点');
               return;
             }
-            ReggieUI.confirm('确认完成盘点？完成后将自动调整库存并生成盈亏记录。', function() {
+            ReggieUI.confirm('确认完成盘点？完成后将自动调整库存并生成盈亏记录。', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }).then(function() {
               completeStockCheck(row.id, { items: items }).then(function(res) {
                 if (String(res.code) === '1') {
                   ReggieUI.success('盘点完成，库存已调整');
@@ -650,7 +654,7 @@
                   ReggieUI.error(res.msg || '完成失败');
                 }
               }).catch(function(err) { ReggieUI.error('完成失败：' + err); });
-            });
+            }).catch(function() {});
           };
           if (row.details && row.details.length) {
             doComplete(row.details);
@@ -665,7 +669,11 @@
         /* ── 删除 ── */
         deleteHandle: function(row) {
           var self = this;
-          ReggieUI.confirm('确认删除盘点单 ' + row.checkNo + '？', function() {
+          ReggieUI.confirm('确认删除盘点单 ' + row.checkNo + '？', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(function() {
             deleteStockCheck(row.id).then(function(res) {
               if (String(res.code) === '1') {
                 ReggieUI.success('删除成功');
@@ -674,7 +682,7 @@
                 ReggieUI.error(res.msg || '删除失败');
               }
             }).catch(function(err) { ReggieUI.error('删除失败：' + err); });
-          });
+          }).catch(function() {});
         }
       }
     });

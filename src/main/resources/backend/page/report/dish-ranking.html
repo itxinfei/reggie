@@ -206,7 +206,7 @@
         loadData: function() {
           const self = this;
           self.loading = true;
-          const params = {};
+          const params = { limit: self.limit };
           if (self.dateRange && self.dateRange.length >= 2) {
             params.startDate = self.dateRange[0]; params.endDate = self.dateRange[1];
           }
@@ -227,8 +227,8 @@
         },
         loadDishRankingStats: function() {
           const self = this;
-          // 修改点：limit 1000 → 200，统计口径按分页数据计算（此前拉全量 1000 条前端聚合，大列表性能隐患）
-          return reportDishRanking({ limit: 200, startDate: self.dateRange ? self.dateRange[0] : '', endDate: self.dateRange ? self.dateRange[1] : '' }).then(function(res) {
+          // 修改点：使用 self.limit（用户可配置 5~50），不再硬编码 200
+          return reportDishRanking({ limit: self.limit, startDate: self.dateRange ? self.dateRange[0] : '', endDate: self.dateRange ? self.dateRange[1] : '' }).then(function(res) {
             if (String(res.code) === '1') {
               const data = res.data || [];
               var totalSales = data.reduce(function(s, i) { return s + (i.count || 0); }, 0);

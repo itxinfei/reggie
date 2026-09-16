@@ -297,51 +297,42 @@
           this.loading = true
           const self = this
           try {
-            // 修改点：后端 list 不接收任何参数且返回全量（无分页），
-            // 改为一次拉取全量，由前端完成名称搜索、状态筛选与切片
-            const res = await getFlashSales({})
-            const list = (String(res.code) === '1' && Array.isArray(res.data)) ? res.data : []
-            self.allData = list
-            self.applyFilter()
-            self.loadStats()
+            // 修改点：使用后端分页接口，支持状态筛选 + 分页
+            const params = {
+              page: self.page,
+              pageSize: self.pageSize
+            }
+            if (self.activeFilter !== '' && self.activeFilter != null) {
+              params.status = Number(self.activeFilter)
+            }
+            const res = await pageFlashSales(params)
+            if (String(res.code) === '1' && res.data) {
+              self.tableData = res.data.records || []
+              self.counts = res.data.total || 0
+            } else {
+              self.tableData = []
+              self.counts = 0
+            }
           } catch (err) {
             ReggieUI.error('获取秒杀活动列表失败')
           }
           self.loading = false
         },
-        // 修改点：活动名称搜索 + 状态卡片筛选 + 前端切片分页
-        applyFilter: function() {
-          const self = this
-          let list = self.allData || []
-          if (self.lastSearch.name) {
-            const kw = String(self.lastSearch.name).toLowerCase()
-            list = list.filter(function(r) {
-              return r.name && String(r.name).toLowerCase().indexOf(kw) !== -1
-            })
-          }
-          if (self.activeFilter !== '' && self.activeFilter != null) {
-            const st = Number(self.activeFilter)
-            list = list.filter(function(r) { return Number(r.status) === st })
-          }
-          self.counts = list.length
-          const start = (self.page - 1) * self.pageSize
-          self.tableData = list.slice(start, start + self.pageSize)
-        },
-        // 修改点：统计基于全量数据本地计算（原按 status 发三次请求，后端忽略 status 导致三个数字都等于总数）
+        // 修改点：使用后端统计接口获取各状态数量
         loadStats: function() {
-          const list = this.allData || []
-          const countBy = function(status) {
-            return list.filter(function(r) { return Number(r.status) === status }).length
-          }
-          const active = countBy(1)
-          const paused = countBy(2)
-          const ended = countBy(3)
-          this.stats = {
-            total: list.length,
-            active: active,
-            paused: paused,
-            ended: ended
-          }
+          const self = this
+          flashSaleStats().then(function(res) {
+            if (String(res.code) === '1' && res.data) {
+              self.stats = {
+                total: res.data.total || 0,
+                active: res.data.active || 0,
+                paused: res.data.paused || 0,
+                ended: res.data.ended || 0
+              }
+            }
+          }).catch(function(err) {
+            console.warn('加载秒杀统计失败:', err)
+          })
         },
         // ========== 筛选/分页事件 ==========
         onCardClick: function(payload) {
@@ -369,14 +360,14 @@
           }
         },
         onPageChange: function(payload) {
-          // 修改点：数据已在本地全量缓存，翻页直接切片，无需重新请求
+          // 修改点：使用后端分页，翻页需重新请求
           this.page = payload.page
-          this.applyFilter()
+          this.init()
         },
         onSizeChange: function(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.page = 1
-          this.applyFilter()
+          this.init()
         },
         // ========== 新增/编辑 ==========
         onDishChange: function(id) {

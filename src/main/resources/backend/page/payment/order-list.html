@@ -217,6 +217,7 @@
           tableData: [],
           // 统计数据
           stats: { todayPayments: 0, successPayments: 0, pendingPayments: 0, failedPayments: 0 },
+          reconcilePendingCount: 0, // 对账待办数量
           activeFilter: '',
           refundRules: {
             amount: [{ required: true, type: 'number', message: '请输入有效的退款金额', trigger: 'blur' }],
@@ -261,7 +262,8 @@
             { key: '今日', icon: 'ri-money-cny-circle-line', label: '今日支付订单', value: self.stats.todayPayments, color: 'primary', clickable: true, active: self.activeFilter === '今日' },
             { key: '成功', icon: 'ri-checkbox-circle-line', label: '支付成功', value: self.stats.successPayments, color: 'success', clickable: true, active: self.activeFilter === '成功' },
             { key: '待支付', icon: 'ri-time-line', label: '待支付', value: self.stats.pendingPayments, color: 'warning', clickable: true, active: self.activeFilter === '待支付' },
-            { key: '失败', icon: 'ri-close-circle-line', label: '支付失败', value: self.stats.failedPayments, color: 'danger', clickable: true, active: self.activeFilter === '失败' }
+            { key: '失败', icon: 'ri-close-circle-line', label: '支付失败', value: self.stats.failedPayments, color: 'danger', clickable: true, active: self.activeFilter === '失败' },
+            { key: 'reconcile', icon: 'ri-error-warning-line', label: '对账待办', value: self.reconcilePendingCount, color: 'warning', clickable: true, active: self.activeFilter === 'reconcile', subText: '需人工核对' }
           ]
         }
       },
@@ -274,7 +276,7 @@
           // 修改点：列表请求带上 lastSearch 筛选条件与分页参数（此前遗漏导致搜索/卡片筛选/分页全部失效）
           const params = Object.assign({}, self.lastSearch, { page: self.page, pageSize: self.pageSize })
           const requests = [paymentPage(params)]
-          if (reloadStats) { requests.push(self.loadPaymentStats()) }
+          if (reloadStats) { requests.push(self.loadPaymentStats()); requests.push(self.loadReconcileCount()) }
           const results = await Promise.all(requests)
           const paymentRes = results[0]
           if (String(paymentRes.code) === '1') {
@@ -284,6 +286,8 @@
           if (reloadStats) {
             const statsRes = results[1]
             if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+            const reconcileRes = results[2]
+            if (reconcileRes && String(reconcileRes.code) === '1') { self.reconcilePendingCount = (reconcileRes.data && reconcileRes.data.pendingCount) || 0 }
           }
           self.loading = false
         },
@@ -307,6 +311,14 @@
           } catch (err) { console.warn('加载支付统计数据失败:', err) }
           return { code: 0 }
         },
+        async loadReconcileCount() {
+          try {
+            const res = await reconcilePendingCount()
+            if (String(res.code) === '1' && res.data) {
+              this.reconcilePendingCount = res.data.pendingCount || 0
+            }
+          } catch (err) { console.warn('加载对账待办数量失败:', err) }
+        },
         // stat-cards 点击
         onCardClick: function(payload) {
           const self = this
@@ -316,6 +328,9 @@
             self.lastSearch = { beginTime: todayStr + ' 00:00:00', endTime: todayStr + ' 23:59:59' }
           } else if (payload.activeKey === '成功' || payload.activeKey === '待支付' || payload.activeKey === '失败') {
             self.lastSearch = { status: payload.activeKey }
+          } else if (payload.activeKey === 'reconcile') {
+            // 对账待办：筛选状态为 REFUNDED 的记录（对账待办痕迹的 status 为 PENDING，但展示为退款相关）
+            self.lastSearch = { status: '已退款' }
           } else {
             self.lastSearch = {}
           }

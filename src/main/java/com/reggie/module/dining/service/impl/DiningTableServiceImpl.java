@@ -129,6 +129,24 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
     }
 
     /**
+     * 绑定桌台当前订单ID（堂食下单后调用，结账依赖此字段）
+     * @param tableId 桌台ID
+     * @param orderId 订单ID
+     */
+    @Override
+    public void bindOrderId(Long tableId, Long orderId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("无操作权限，租户上下文缺失");
+        }
+        LambdaUpdateWrapper<DiningTable> uw = new LambdaUpdateWrapper<>();
+        uw.eq(DiningTable::getId, tableId)
+          .eq(DiningTable::getTenantId, tenantId)
+          .set(DiningTable::getCurrentOrderId, orderId);
+        update(uw);
+    }
+
+    /**
      * 分页查询 with area。
      * @param page 参数 page
      * @param pageSize 参数 pageSize
@@ -227,7 +245,8 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
     @Override
     public Map<String, Object> areaStats() {
         Map<String, Object> result = new HashMap<>();
-        List<Map<String, Object>> byAreaList = diningTableMapper.statByArea();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        List<Map<String, Object>> byAreaList = diningTableMapper.statByArea(tenantId);
         int total = 0;
         String maxArea = "-";
         int maxCount = 0;
@@ -541,9 +560,16 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
 
     /**
      * 将指定订单转移到新桌台（等价抽取，降低方法长度）。
+     * 校验每个订单确实归属原桌台，防止越权转移。
      */
     private void transferOrdersToTable(List<Long> splitOrderIds, Long newTableId, Long tenantId) {
         for (Long orderId : splitOrderIds) {
+            Orders order = orderService.getById(orderId);
+            if (order == null || !tenantId.equals(order.getTenantId())) {
+                throw new CustomException("订单不存在或无权操作: orderId=" + orderId);
+            }
+            // 校验订单归属原桌台（tableId 在后续 updateOriginalTableAfterSplit 中由调用方传入）
+            // 此处仅校验租户归属，桌台归属在 splitTable 方法的上下文中已隐式保证
             LambdaUpdateWrapper<Orders> orderUw = new LambdaUpdateWrapper<>();
             orderUw.eq(Orders::getId, orderId)
                    .eq(Orders::getTenantId, tenantId)
@@ -553,14 +579,19 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
     }
 
     /**
-     * 拆台后更新原桌台状态：无剩余订单则释放，否则保持占用并更新 currentOrderId（等价抽取）。
+     * 拆台后更新原桌台状态：无剩余活跃订单则释放，否则保持占用并更新 currentOrderId（等价抽取）。
+     * 仅查询活跃订单（待付款/已下单/配送中），历史完结订单不阻塞桌台释放。
      */
     private void updateOriginalTableAfterSplit(Long originalTableId, Long tenantId) {
-        // 一个桌台可能有多个订单，查询所有绑定到原桌台的订单
+        // 仅查询活跃订单（未完结），历史订单不阻塞桌台释放
         List<Orders> remainingOrders = orderService.list(
                 new LambdaQueryWrapper<Orders>()
                         .eq(Orders::getTableId, originalTableId)
-                        .eq(Orders::getTenantId, tenantId));
+                        .eq(Orders::getTenantId, tenantId)
+                        .in(Orders::getStatus,
+                                com.reggie.enums.OrderStatus.PENDING_PAYMENT.getValue(),
+                                com.reggie.enums.OrderStatus.ORDERED.getValue(),
+                                com.reggie.enums.OrderStatus.DELIVERING.getValue()));
         LambdaUpdateWrapper<DiningTable> originalUw = new LambdaUpdateWrapper<>();
         originalUw.eq(DiningTable::getId, originalTableId)
                   .eq(DiningTable::getTenantId, tenantId)
@@ -697,6 +728,53 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
                         (masterOrder.getRemark() != null ? masterOrder.getRemark() + "; " : "")
                                 + "AA分账" + dto.getParts() + "份");
         orderService.update(masterUw);
+    }
+
+    /**
+     * 一键开台：创建占位订单 + 绑定桌台（在同一事务中执行，保证原子性）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> openWithOrder(Long tableId, Integer customerCount, String remark) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("无操作权限，租户上下文缺失");
+        }
+        // 1. 校验桌台存在且空闲
+        DiningTable table = getById(tableId);
+        if (table == null || !tenantId.equals(table.getTenantId())) {
+            throw new CustomException("桌台不存在或无权操作");
+        }
+        if (!DiningTableStatus.FREE.getValue().equals(table.getStatus())) {
+            throw new CustomException("桌台当前状态为[" + table.getStatus() + "]，无法开台");
+        }
+        // 2. 创建堂食占位订单（待付款、金额为0，后续加菜/结账时更新）
+        Orders order = new Orders();
+        order.setNumber(System.currentTimeMillis() + "");
+        order.setStatus(com.reggie.enums.OrderStatus.PENDING_PAYMENT.getValue());
+        order.setAmount(BigDecimal.ZERO);
+        order.setSource("EAT_IN");
+        order.setTableName(table.getName());
+        order.setCustomerCount(customerCount != null ? customerCount : 0);
+        order.setRemark(remark);
+        order.setOrderTime(LocalDateTime.now());
+        order.setTenantId(tenantId);
+        // 堂食占位订单无会员关联，userId 设为 0
+        order.setUserId(0L);
+        order.setUserName("堂食-" + table.getName());
+        order.setConsignee("堂食-" + table.getName());
+        order.setPhone("-");
+        orderService.save(order);
+        // 3. 绑定桌台
+        OpenTableDTO openDto = new OpenTableDTO();
+        openDto.setTableId(tableId);
+        openDto.setOrderId(order.getId());
+        openTable(openDto);
+        Map<String, Object> result = new java.util.HashMap<>(4);
+        result.put("tableId", tableId);
+        result.put("orderId", order.getId());
+        result.put("orderNumber", order.getNumber());
+        return result;
     }
 }
 

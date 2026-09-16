@@ -76,6 +76,14 @@ public class DashboardServiceImpl implements DashboardService {
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    /**
+     * StringRedisTemplate：用于 ZSet 等存储原始字符串的场景。
+     * GenericJackson2JsonRedisSerializer 无法反序列化非 JSON 格式的原始字节（如中文菜品名），
+     * 使用 StringRedisSerializer 可正确处理。
+     */
+    @Autowired(required = false)
+    private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
+
     // ==================== 概览数据 ====================
 
     /**
@@ -435,16 +443,17 @@ public class DashboardServiceImpl implements DashboardService {
         String cacheKey = tenantId != null ? KEY_HOT_DISHES + tenantId : null;
 
         // [Redis ZSet] 尝试从缓存获取（仅当tenantId不为null时）
-        if (isRedisAvailable() && cacheKey != null) {
+        // 使用 StringRedisTemplate 避免 GenericJackson2JsonRedisSerializer 反序列化原始字节失败
+        if (isRedisAvailable() && cacheKey != null && stringRedisTemplate != null) {
             try {
-                Set<ZSetOperations.TypedTuple<Object>> topSet =
-                        redisTemplate.opsForZSet().reverseRangeWithScores(cacheKey, 0, limit - 1);
+                Set<org.springframework.data.redis.core.ZSetOperations.TypedTuple<String>> topSet =
+                        stringRedisTemplate.opsForZSet().reverseRangeWithScores(cacheKey, 0, limit - 1);
                 if (topSet != null && !topSet.isEmpty()) {
                     log.debug("[Dashboard] Redis命中 - 热销菜品 ZSet key={}", cacheKey);
                     List<Map<String, Object>> result = new ArrayList<>();
-                    for (ZSetOperations.TypedTuple<Object> tuple : topSet) {
+                    for (org.springframework.data.redis.core.ZSetOperations.TypedTuple<String> tuple : topSet) {
                         Map<String, Object> item = new LinkedHashMap<>();
-                        item.put("name", String.valueOf(tuple.getValue()));
+                        item.put("name", tuple.getValue());
                         item.put("count", tuple.getScore() != null ? tuple.getScore().intValue() : 0);
                         result.add(item);
                     }
@@ -472,12 +481,18 @@ public class DashboardServiceImpl implements DashboardService {
             try {
                 // 使用新Key写入，完成后rename，避免中间状态被读取
                 String tempKey = cacheKey + ":temp";
-                redisTemplate.delete(tempKey);
+                if (stringRedisTemplate != null) {
+                    stringRedisTemplate.delete(tempKey);
+                } else {
+                    redisTemplate.delete(tempKey);
+                }
 
                 // 修改点：final引用确保lambda中可用（hotDishes在catch中可能被重赋值）
                 final List<Map<String, Object>> finalHotDishes = hotDishes;
 
                 // 使用Pipeline批量写入，减少网络往返
+                // 统一使用 UTF-8 编码，与 StringRedisSerializer 一致（修复 Windows GBK 导致反序列化失败）
+                final byte[] keyBytes = tempKey.getBytes(java.nio.charset.StandardCharsets.UTF_8);
                 List<Object> results = redisTemplate.executePipelined((org.springframework.data.redis.core
                         .RedisCallback<Object>) connection -> {
                     for (Map<String, Object> dish : finalHotDishes) {
@@ -485,16 +500,21 @@ public class DashboardServiceImpl implements DashboardService {
                         Object countObj = dish.get("count");
                         double score = countObj instanceof Integer ? (Integer) countObj
                                 : countObj instanceof Long ? ((Long) countObj).doubleValue() : 0;
-                        connection.zAdd(tempKey.getBytes(), score, name.getBytes());
+                        connection.zAdd(keyBytes, score, name.getBytes(java.nio.charset.StandardCharsets.UTF_8));
                     }
-                    connection.expire(tempKey.getBytes(), java.util.concurrent.TimeUnit.MINUTES
+                    connection.expire(keyBytes, java.util.concurrent.TimeUnit.MINUTES
                             .toSeconds(TTL_HOT_DISHES));
                     return null;
                 });
 
                 // Pipeline成功后，使用RENAME原子替换（Redis RENAME命令会原子覆盖目标Key）
                 // 修改点：移除多余的delete操作，RENAME本身已原子替换目标Key
-                redisTemplate.rename(tempKey, cacheKey);
+                // 使用 StringRedisTemplate 的 rename 确保 key 编码一致
+                if (stringRedisTemplate != null) {
+                    stringRedisTemplate.rename(tempKey, cacheKey);
+                } else {
+                    redisTemplate.rename(tempKey, cacheKey);
+                }
 
                 log.info("[Dashboard] 热销菜品已缓存至Redis ZSet key={}", cacheKey);
             } catch (Exception e) {

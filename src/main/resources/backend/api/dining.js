@@ -38,9 +38,15 @@ const recallQueue = (id) => $axios({ url: `/api/dining/queue/recall/${id}`, meth
 const reactivateQueue = (id) => $axios({ url: `/api/dining/queue/reactivate/${id}`, method: 'put' })
 
 const reservationPage = (params) => $axios({ url: '/api/dining/reservation/page', method: 'get', params })
+const reservationStats = () => $axios({ url: '/api/dining/reservation/stats', method: 'get' })
 const addReservation = (params) => $axios({ url: '/api/dining/reservation', method: 'post', data: params })
 const confirmReservation = (id) => $axios({ url: `/api/dining/reservation/confirm/${id}`, method: 'put' })
 const cancelReservation = (id) => $axios({ url: `/api/dining/reservation/cancel/${id}`, method: 'put' })
 const arriveReservation = (id) => $axios({ url: `/api/dining/reservation/arrive/${id}`, method: 'put' })
+const updateReservation = (params) => $axios({ url: '/api/dining/reservation', method: 'put', data: params })
+const deleteReservation = (id) => $axios({ url: `/api/dining/reservation/${id}`, method: 'delete' })
+const getReservation = (id) => $axios({ url: `/api/dining/reservation/${id}`, method: 'get' })
+// 桌台列表（不分页，预订选桌台用）
+const tableListAll = () => $axios({ url: '/api/dining/table/list', method: 'get' })
 
 

@@ -36,15 +36,22 @@ public class KdsController {
     private KitchenTicketService kitchenTicketService;
 
     /**
-     * 出餐大屏看板（默认自动拉取新订单）。
+     * 出餐大屏看板。
      *
-     * @param autoPull 是否先拉取新订单，默认 true
+     * <p>修改点：autoPull 默认由 true 改为 false。GET 是幂等只读语义，此前默认触发
+     * saveBatch 写库且看板 10s 轮询会放大写入；需要拉取新订单时显式传 autoPull=true
+     * 或使用独立 POST /pull 端点。</p>
+     *
+     * @param autoPull   是否先拉取新订单，默认 false
+     * @param stationCode 档口编码筛选（可选，如 HOT/COLD/DRINK/DESSERT）
      * @return 看板数据
      */
     @GetMapping("/board")
     @Operation(summary = "出餐大屏看板")
-    public R<KitchenBoardVO> board(@RequestParam(defaultValue = "true") boolean autoPull) {
-        return R.success(kitchenTicketService.getBoard(autoPull));
+    public R<KitchenBoardVO> board(
+            @RequestParam(defaultValue = "false") boolean autoPull,
+            @RequestParam(required = false) String stationCode) {
+        return R.success(kitchenTicketService.getBoard(autoPull, stationCode));
     }
 
     /**
@@ -112,7 +119,8 @@ public class KdsController {
     public R<Page<KitchenTicket>> page(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize,
-            @RequestParam(required = false) Integer status) {
-        return R.success(kitchenTicketService.pageTickets(page, pageSize, status));
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String stationCode) {
+        return R.success(kitchenTicketService.pageTickets(page, pageSize, status, stationCode));
     }
 }

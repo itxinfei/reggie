@@ -45,6 +45,9 @@ const sysApi = {
     configPage(params) {
         return $axios.get('/sys/config/page', { params })
     },
+    configStats() {
+        return $axios.get('/sys/config/stats')
+    },
     configList() {
         return $axios.get('/sys/config/list')
     },

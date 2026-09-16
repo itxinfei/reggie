@@ -213,7 +213,7 @@ public class KdsServiceTest {
         addDetail(9603, "套餐C", null, 1);
 
         // 用看板自动拉取
-        KitchenBoardVO pulled = kitchenTicketService.getBoard(true);
+        KitchenBoardVO pulled = kitchenTicketService.getBoard(true, null);
         assertEquals(3, pulled.getPendingCount());
         assertEquals(3, pulled.getPulledCount());
 
@@ -230,7 +230,7 @@ public class KdsServiceTest {
 
         kitchenTicketService.toggleUrgent(t3.getId());
 
-        KitchenBoardVO board = kitchenTicketService.getBoard(false);
+        KitchenBoardVO board = kitchenTicketService.getBoard(false, null);
         assertEquals(1, board.getPendingCount());   // t3
         assertEquals(1, board.getCookingCount());   // t2
         assertEquals(0, board.getReadyCount());

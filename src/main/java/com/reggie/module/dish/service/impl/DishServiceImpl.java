@@ -324,12 +324,16 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
         // 已售罄（stockQty = 0）
         long soldOut = countDishes(tenantId, null, "soldOut");
 
+        // 已删除（@TableLogic 下 MP 查询自动过滤 is_deleted=1，用原生 SQL 绕过）
+        long deleted = baseMapper.countDeleted(tenantId);
+
         Map<String, Object> stats = new HashMap<>();
         stats.put("total", total);
         stats.put("activeDishes", active);
         stats.put("inactiveDishes", inactive);
         stats.put("lowStock", lowStock);
         stats.put("soldOut", soldOut);
+        stats.put("deleted", deleted);
         return stats;
     }
 

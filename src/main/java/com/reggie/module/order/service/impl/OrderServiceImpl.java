@@ -795,11 +795,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      * 堂食订单落库后续处理：更新桌台状态为占用 + 自动打印（等价抽取）。
      */
     private void afterEatInOrderSaved(Long tableId, long orderId) {
-        // 更新桌台状态为占用
+        // 更新桌台状态为占用，并绑定当前订单（结账依赖 currentOrderId）
         if (diningTableService != null) {
             try {
                 diningTableService.changeStatus(tableId, com.reggie.enums.DiningTableStatus.OCCUPIED.getValue());
-                log.info("[堂食] 桌台已标记为占用: tableId={}, orderId={}", tableId, orderId);
+                // 绑定 currentOrderId，使结账按钮能正确跳转收银台
+                diningTableService.bindOrderId(tableId, orderId);
+                log.info("[堂食] 桌台已标记为占用并绑定订单: tableId={}, orderId={}", tableId, orderId);
             } catch (Exception e) {
                 // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[堂食] 更新桌台状态失败: tableId={}, error={}", tableId, e.getMessage(), e);

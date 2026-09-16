@@ -45,7 +45,7 @@ public class Reservation implements Serializable {
     /** 预订座位数 */
     private Integer seatCount;
 
-    /** 预订状态：PENDING-待确认，CONFIRMED-已确认，CANCELLED-已取消 */
+    /** 预订状态：PENDING-待确认，CONFIRMED-已确认，ARRIVED-已到店，CANCELLED-已取消 */
     private String status;
 
     /** 备注信息 */

@@ -6,24 +6,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>预约管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
-
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260916" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260916" />
 </head>
 <body>
-  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
- <a href="#main-content" class="skip-link">跳转到主内容</a>
- <div class="dashboard-container" id="reservation-app">
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container" id="reservation-app">
     <div class="container" id="main-content" role="main" aria-label="页面主要内容">
-      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+      <!-- 页头 -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
           <h1 class="ds-page-header__title" id="page-title">桌台预订</h1>
-          <p class="ds-page-header__subtitle">管理桌台预订记录</p>
+          <p class="ds-page-header__subtitle">管理桌台预订记录，支持电话预订、确认、到店等全流程</p>
         </div>
-        <div class="ds-page-header__actions"></div>
+        <div class="ds-page-header__actions">
+          <el-button type="primary" icon="ri-add-line" size="small" @click="addHandle">新增预订</el-button>
+        </div>
       </header>
-      <!-- 数据统计卡片 -->
+
+      <!-- 统计卡片 -->
       <stat-cards
         :cards="statsCards"
         :active-key.sync="activeFilter"
@@ -41,7 +42,7 @@
       <!-- 数据表格 -->
       <crud-table
         ref="crudTable"
-        empty-hint="试试调整筛选条件"
+        empty-hint="试试调整筛选条件或新增预订"
         :data="tableData"
         :columns="columns"
         :loading="loading"
@@ -50,47 +51,160 @@
         :total="counts"
         :show-index="true"
         :show-actions="true"
-        :actions-width="200"
+        :actions-width="240"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
         <template #col-status="{ row }">
-          <!-- 修改点：ARRIVED 分支 primary 是非法 el-tag type，改为 info -->
-          <el-tag :type="row.status === 'PENDING' ? 'warning' : row.status === 'CONFIRMED' ? 'success' : row.status === 'ARRIVED' ? 'info' : 'info'" size="small">
-            {{ row.status === 'PENDING' ? '待确认' : row.status === 'CONFIRMED' ? '已确认' : row.status === 'ARRIVED' ? '已到店' : '已取消' }}
+          <el-tag :type="statusTagType(row.status)" size="small">
+            {{ statusLabel(row.status) }}
           </el-tag>
         </template>
         <template #actions="{ row }">
-          <el-button type="text" size="small" class="btn-view" @click="confirmHandle(row.id)" v-if="row.status === 'PENDING'">确认</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="arriveHandle(row.id)" v-if="row.status === 'CONFIRMED'">到店</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(row.id)" v-if="row.status !== 'ARRIVED' && row.status !== 'CANCELLED'">取消</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="viewHandle(row)">详情</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="editHandle(row)"
+            v-if="row.status === 'PENDING' || row.status === 'CONFIRMED'">编辑</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="confirmHandle(row.id)"
+            v-if="row.status === 'PENDING'">确认</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="arriveHandle(row.id)"
+            v-if="row.status === 'CONFIRMED'">到店</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(row.id)"
+            v-if="row.status !== 'ARRIVED' && row.status !== 'CANCELLED'">取消</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)"
+            v-if="row.status === 'CANCELLED'">删除</el-button>
         </template>
       </crud-table>
     </div>
+
+    <!-- 新增/编辑弹窗 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :title="dialog.title"
+      :visible.sync="dialog.visible"
+      :submit-loading="submitting"
+      size="md"
+      @submit="submitForm"
+    >
+      <el-form ref="reservationForm" :model="form" :rules="formRules" label-width="100px" size="small">
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="客户姓名：" prop="customerName">
+              <el-input v-model="form.customerName" placeholder="请输入客户姓名" maxlength="50" />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="手机号：" prop="phone">
+              <el-input v-model="form.phone" placeholder="请输入手机号" maxlength="11" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="预订时间：" prop="reservedTime">
+              <el-date-picker
+                v-model="form.reservedTime"
+                type="datetime"
+                placeholder="选择预订时间"
+                value-format="yyyy-MM-dd HH:mm:ss"
+                :picker-options="datePickerOptions"
+                style="width:100%"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="人数：" prop="seatCount">
+              <el-input-number v-model="form.seatCount" :min="1" :max="100" placeholder="就餐人数" style="width:100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="桌台：" prop="tableId">
+              <el-select v-model="form.tableId" placeholder="选择桌台（可留空）" clearable filterable style="width:100%">
+                <el-option v-for="t in freeTableOptions" :key="t.id"
+                  :label="t.name + '（' + t.seatCount + '人，' + (t.areaName || '未分区') + '）'"
+                  :value="t.id" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="备注：">
+              <el-input v-model="form.remark" placeholder="如：靠窗、生日宴等" maxlength="200" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 详情查看弹窗（只读，仅有关闭按钮） -->
+    <crud-dialog :show-submit="false" :show-cancel="true" cancel-text="关闭"
+      title="预订详情"
+      :visible.sync="detailVisible"
+      size="md"
+    >
+      <el-descriptions :column="2" border size="small" v-if="detailData">
+        <el-descriptions-item label="客户姓名">{{ detailData.customerName }}</el-descriptions-item>
+        <el-descriptions-item label="手机号">{{ detailData.phone }}</el-descriptions-item>
+        <el-descriptions-item label="预订时间">{{ detailData.reservedTime }}</el-descriptions-item>
+        <el-descriptions-item label="人数">{{ detailData.seatCount || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="桌台">{{ detailData.tableName || '未指定' }}</el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag :type="statusTagType(detailData.status)" size="small">
+            {{ statusLabel(detailData.status) }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="备注" :span="2">{{ detailData.remark || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ detailData.createdTime || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="更新时间">{{ detailData.updateTime || '-' }}</el-descriptions-item>
+      </el-descriptions>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../js/components.js?v=20260915c"></script>
-  <script src="../../api/dining.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260916"></script>
+  <script src="../../js/accessibility-utils.js?v=20260916"></script>
+  <script src="../../js/performance-utils.js?v=20260916"></script>
+  <script src="../../js/components.js?v=20260916"></script>
+  <script src="../../api/dining.js?v=20260916"></script>
   <script>
     new Vue({
       el: '#reservation-app',
       data() {
         return {
           loading: false,
+          submitting: false,
           counts: 0,
           page: 1,
           pageSize: 10,
           tableData: [],
-          // 统计数据
+          // 统计
           stats: { totalReservations: 0, pendingCount: 0, confirmedCount: 0, arrivedCount: 0, cancelledCount: 0 },
           activeFilter: '',
-          // 搜索配置（日期范围拆分为 beginTime/endTime）
+          // 弹窗状态
+          dialog: { title: '新增预订', visible: false, isEdit: false },
+          detailVisible: false,
+          detailData: null,
+          // 表单
+          form: { id: null, customerName: '', phone: '', reservedTime: '', seatCount: 2, tableId: null, remark: '' },
+          formRules: {
+            customerName: [{ required: true, message: '请输入客户姓名', trigger: 'blur' }],
+            phone: [
+              { required: true, message: '请输入手机号', trigger: 'blur' },
+              { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
+            ],
+            reservedTime: [{ required: true, message: '请选择预订时间', trigger: 'change' }],
+            seatCount: [{ required: true, message: '请输入人数', trigger: 'blur' }]
+          },
+          // 桌台选项
+          tableList: [],
+          // 日期选择器：禁选过去时间
+          datePickerOptions: {
+            disabledDate: function(date) {
+              return date.getTime() < Date.now() - 86400000
+            }
+          },
+          // 搜索配置
           searchConfig: [
             { type: 'input', field: 'customerName', placeholder: '请输入客户姓名', width: '200px' },
             { type: 'input', field: 'phone', placeholder: '请输入手机号', width: '180px', hideSearchIcon: true },
@@ -104,14 +218,15 @@
             { type: 'date', field: 'reserveTime', placeholder: '选择预订时间', width: '360px',
               beginField: 'beginTime', endField: 'endTime' }
           ],
-          // 表格列配置
+          // 表格列
           columns: [
             { prop: 'customerName', label: '客户姓名', width: 100, align: 'center' },
             { prop: 'phone', label: '手机号', width: 120, align: 'center' },
-            { prop: 'tableName', label: '桌台', width: 80, align: 'center' },
+            { prop: 'tableName', label: '桌台', width: 100, align: 'center',
+              formatter: function(row) { return row.tableName || '未指定' } },
             { prop: 'reservedTime', label: '预订时间', width: 160, align: 'center' },
             { prop: 'seatCount', label: '人数', width: 60, type: 'number' },
-            { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
+            { prop: 'status', label: '状态', slot: true, width: 80, align: 'center' },
             { prop: 'remark', label: '备注', minWidth: 100 }
           ],
           lastSearch: {}
@@ -119,37 +234,54 @@
       },
       created() {
         this.init(true)
+        this.loadTableList()
       },
       computed: {
         statsCards: function() {
-          const self = this
+          var self = this
           return [
             { key: '', icon: 'ri-file-list-3-line', label: '预约总数', value: self.stats.totalReservations, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: 'PENDING', icon: 'ri-time-line', label: '待确认', value: self.stats.pendingCount, color: 'warning', clickable: true, active: self.activeFilter === 'PENDING' },
             { key: 'CONFIRMED', icon: 'ri-checkbox-circle-line', label: '已确认', value: self.stats.confirmedCount, color: 'success', clickable: true, active: self.activeFilter === 'CONFIRMED' },
             { key: 'ARRIVED', icon: 'ri-map-pin-line', label: '已到店', value: self.stats.arrivedCount, color: 'info', clickable: true, active: self.activeFilter === 'ARRIVED' }
           ]
+        },
+        // 空闲桌台选项（过滤出 FREE 状态）
+        freeTableOptions: function() {
+          var editing = this.dialog.isEdit && this.form.tableId
+          return this.tableList.filter(function(t) {
+            return t.status === 'FREE' || t.id === editing
+          })
         }
       },
       methods: {
+        /* ── 状态映射 ── */
+        statusLabel: function(status) {
+          var map = { PENDING: '待确认', CONFIRMED: '已确认', ARRIVED: '已到店', CANCELLED: '已取消' }
+          return map[status] || status
+        },
+        statusTagType: function(status) {
+          var map = { PENDING: 'warning', CONFIRMED: 'success', ARRIVED: 'info', CANCELLED: 'info' }
+          return map[status] || 'info'
+        },
         /* ── 数据加载 ── */
-        async init(reloadStats = true) {
+        async init(reloadStats) {
+          if (reloadStats === undefined) { reloadStats = true }
           this.loading = true
-          const ls = this.lastSearch || {};
-          const params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
-          // 修改点：F9 性能 — 全局统计与分页列表分离，仅数据突变后重载，翻页/搜索不重算
-          const requests = [reservationPage(params)]
+          var ls = this.lastSearch || {}
+          var params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
+          var requests = [reservationPage(params)]
           if (reloadStats) { requests.push(this.loadReservationStats()) }
-          const results = await Promise.all(requests)
-          const resvRes = results[0]
+          var results = await Promise.all(requests)
+          var resvRes = results[0]
           if (String(resvRes.code) === '1') {
             this.tableData = resvRes.data.records || []
             this.counts = resvRes.data.total
           } else {
             ReggieUI.error(resvRes.msg || '操作失败')
           }
-          if (reloadStats) {
-            const statsRes = results[1]
+          if (reloadStats && results[1]) {
+            var statsRes = results[1]
             if (statsRes && String(statsRes.code) === '1') {
               this.stats = statsRes.data || this.stats
             }
@@ -158,23 +290,21 @@
         },
         async loadReservationStats() {
           try {
-            // 修改点：使用 pageSize=1 × 5 轻量查询替代 pageSize=1000 拉全量，直接取 total 避免数据截断
-            const results = await Promise.all([
-              reservationPage({ page: 1, pageSize: 1 }),
-              reservationPage({ page: 1, pageSize: 1, status: 'PENDING' }),
-              reservationPage({ page: 1, pageSize: 1, status: 'CONFIRMED' }),
-              reservationPage({ page: 1, pageSize: 1, status: 'ARRIVED' }),
-              reservationPage({ page: 1, pageSize: 1, status: 'CANCELLED' })
-            ])
-            return { code: 1, data: {
-              totalReservations: (String(results[0].code) === '1') ? (results[0].data.total || 0) : 0,
-              pendingCount: (String(results[1].code) === '1') ? (results[1].data.total || 0) : 0,
-              confirmedCount: (String(results[2].code) === '1') ? (results[2].data.total || 0) : 0,
-              arrivedCount: (String(results[3].code) === '1') ? (results[3].data.total || 0) : 0,
-              cancelledCount: (String(results[4].code) === '1') ? (results[4].data.total || 0) : 0
-            }}
+            // 修改点：使用后端 /reservation/stats 聚合端点（原 5 次 pageSize:1 调用浪费带宽）
+            var res = await reservationStats()
+            if (String(res.code) === '1' && res.data) {
+              return { code: 1, data: res.data }
+            }
           } catch (err) { console.warn('加载预约统计失败:', err) }
           return { code: 0 }
+        },
+        async loadTableList() {
+          try {
+            var res = await tableListAll()
+            if (String(res.code) === '1') {
+              this.tableList = res.data || []
+            }
+          } catch (err) { console.warn('加载桌台列表失败:', err) }
         },
         /* ── 筛选与分页 ── */
         onCardClick: function(payload) {
@@ -183,56 +313,124 @@
           this.page = 1
           this.init(false)
         },
-        onSearch(searchParams) {
+        onSearch: function(searchParams) {
           this.activeFilter = ''
           this.lastSearch = searchParams
           this.page = 1
           this.init(false)
         },
-        onReset() {
+        onReset: function() {
           this.activeFilter = ''
           this.lastSearch = {}
           this.page = 1
           this.init(false)
         },
-        onPageChange(payload) {
+        onPageChange: function(payload) {
           this.page = payload.page
           this.init(false)
         },
-        onSizeChange(payload) {
+        onSizeChange: function(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.page = 1
           this.init(false)
         },
-        /* ── 预订状态操作 ── */
-        confirmHandle(id) {
-          const self = this
+        /* ── 表单操作 ── */
+        resetForm: function() {
+          this.form = { id: null, customerName: '', phone: '', reservedTime: '', seatCount: 2, tableId: null, remark: '' }
+          if (this.$refs.reservationForm) {
+            this.$refs.reservationForm.clearValidate()
+          }
+        },
+        addHandle: function() {
+          this.resetForm()
+          this.dialog.title = '新增预订'
+          this.dialog.isEdit = false
+          this.dialog.visible = true
+          this.loadTableList()
+        },
+        editHandle: function(row) {
+          this.resetForm()
+          this.dialog.title = '编辑预订'
+          this.dialog.isEdit = true
+          this.form = {
+            id: row.id,
+            customerName: row.customerName,
+            phone: row.phone,
+            reservedTime: row.reservedTime,
+            seatCount: row.seatCount,
+            tableId: row.tableId,
+            remark: row.remark || ''
+          }
+          this.dialog.visible = true
+          this.loadTableList()
+        },
+        viewHandle: function(row) {
+          this.detailData = row
+          this.detailVisible = true
+        },
+        submitForm: function() {
+          var self = this
+          this.$refs.reservationForm.validate(function(valid) {
+            if (!valid) { return }
+            self.submitting = true
+            var action = self.dialog.isEdit ? updateReservation : addReservation
+            var payload = Object.assign({}, self.form)
+            // 桌台未选时置 null
+            if (!payload.tableId) { payload.tableId = null }
+            action(payload).then(function(res) {
+              if (String(res.code) === '1') {
+                ReggieUI.success(self.dialog.isEdit ? '修改成功' : '新增成功')
+                self.dialog.visible = false
+                self.init(true)
+              } else {
+                ReggieUI.error(res.msg || '操作失败')
+              }
+            }).catch(function(err) {
+              ReggieUI.error('请求失败：' + err)
+            }).finally(function() {
+              self.submitting = false
+            })
+          })
+        },
+        /* ── 状态操作 ── */
+        confirmHandle: function(id) {
+          var self = this
           ReggieUI.confirm('确认该预订?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
-              confirmReservation(id).then(res => {
-                if (res.code === 1) { ReggieUI.success('已确认！'); self.init() }
+              confirmReservation(id).then(function(res) {
+                if (String(res.code) === '1') { ReggieUI.success('已确认！'); self.init() }
                 else { ReggieUI.error(res.msg || '操作失败') }
-              }).catch(err => { ReggieUI.error('请求失败：' + err) })
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
         },
-        arriveHandle(id) {
-          const self = this
+        arriveHandle: function(id) {
+          var self = this
           ReggieUI.confirm('确认该客户已到店?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
-              arriveReservation(id).then(res => {
-                if (res.code === 1) { ReggieUI.success('已到店！'); self.init() }
+              arriveReservation(id).then(function(res) {
+                if (String(res.code) === '1') { ReggieUI.success('已到店！'); self.init() }
                 else { ReggieUI.error(res.msg || '操作失败') }
-              }).catch(err => { ReggieUI.error('请求失败：' + err) })
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
         },
-        cancelHandle(id) {
-          const self = this
+        cancelHandle: function(id) {
+          var self = this
           ReggieUI.confirm('确认取消该预订?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
-              cancelReservation(id).then(res => {
-                if (res.code === 1) { ReggieUI.success('已取消！'); self.init() }
+              cancelReservation(id).then(function(res) {
+                if (String(res.code) === '1') { ReggieUI.success('已取消！'); self.init(true) }
                 else { ReggieUI.error(res.msg || '操作失败') }
-              }).catch(err => { ReggieUI.error('请求失败：' + err) })
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
+            })
+        },
+        deleteHandle: function(id) {
+          var self = this
+          ReggieUI.confirm('确认删除该预订记录？删除后不可恢复。', '删除确认', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' })
+            .then(function() {
+              deleteReservation(id).then(function(res) {
+                if (String(res.code) === '1') { ReggieUI.success('已删除！'); self.init(true) }
+                else { ReggieUI.error(res.msg || '操作失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
         }
       }
@@ -240,20 +438,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

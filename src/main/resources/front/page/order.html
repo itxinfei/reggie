@@ -65,7 +65,7 @@
                         <!-- 菜品列表：左侧缩略图 + 名称数量 + 右侧价格 -->
                         <div class="dish-list">
                             <div v-for="(item,dIdx) in (order.orderDetails || []).slice(0,3)" :key="dIdx" class="dish-item">
-                                <img v-if="item.image || item.dishImage" :src="item.image || item.dishImage" class="dish-img" @error="$event.target.style.display='none'"/>
+                                <img v-if="item.image || item.dishImage" :src="item.image || item.dishImage" class="dish-img" @error="$event.target.src='./../images/noImg.png'"/>
                                 <div v-else class="dish-img dish-img-placeholder"><i class="ri-restaurant-line"></i></div>
                                 <div class="dish-info">
                                     <span class="dish-name">{{item.name}}</span>

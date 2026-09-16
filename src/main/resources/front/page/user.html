@@ -93,6 +93,71 @@
         .skeleton-w50 { width: 50%; }
         .skeleton-w60 { width: 60%; }
         @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* 修改点(2026-09-16)：头像上传交互样式（点击/拖拽、即时预览、上传遮罩） */
+        .avatar-wrap {
+            position: relative;
+            width: 56rem; height: 56rem;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+            cursor: pointer;
+            border: 2rem solid rgba(255,255,255,0.9);
+            box-shadow: 0 2rem 6rem rgba(0,0,0,0.12);
+            transition: transform .15s ease;
+            background: #f2f2f2;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .avatar-wrap:active { transform: scale(0.97); }
+        .avatar-wrap.dragging { border-color: var(--color-primary, #e94e3c); border-style: dashed; }
+        .avatar-wrap .avatar-img {
+            width: 100%; height: 100%;
+            object-fit: cover; display: block;
+            border-radius: 50%;
+        }
+        .avatar-edit-hint {
+            position: absolute; right: 0; bottom: 0;
+            width: 20rem; height: 20rem;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.45);
+            color: #fff; font-size: 12rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .avatar-mask {
+            position: absolute; inset: 0;
+            background: rgba(0,0,0,0.45);
+            color: #fff; font-size: 24rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .rotating { animation: avatar-spin 0.9s linear infinite; }
+        @keyframes avatar-spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+        .avatar-input {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            opacity: 0; cursor: pointer; font-size: 0;
+        }
+        .edit-profile-icon {
+            margin-left: 8rem; font-size: 15rem; color: var(--gold-text, #b87d00);
+            cursor: pointer; vertical-align: middle;
+        }
+        .edit-profile-body { padding: 8rem 16rem 4rem; }
+        .ep-field { display: flex; align-items: center; margin-bottom: 14rem; }
+        .ep-label { width: 44rem; flex-shrink: 0; font-size: 14rem; color: #666; }
+        .ep-input {
+            flex: 1; height: 36rem; padding: 0 10rem;
+            border: 1px solid #e5e5e5; border-radius: 6rem;
+            font-size: 14rem; outline: none; box-sizing: border-box;
+        }
+        .ep-input:focus { border-color: var(--color-primary, #e94e3c); }
+        .ep-gender { display: flex; gap: 10rem; }
+        .ep-gender-opt {
+            padding: 6rem 16rem; border: 1px solid #e5e5e5; border-radius: 18rem;
+            font-size: 13rem; color: #666; cursor: pointer;
+        }
+        .ep-gender-opt.active {
+            background: var(--color-primary, #e94e3c); color: #fff;
+            border-color: var(--color-primary, #e94e3c);
+        }
     </style>
 </head>
 <body>
@@ -129,7 +194,23 @@
                 <i class="ri-arrow-left-s-line" @click="goBack"></i>个人中心
             </div>
             <div class="divUser">
-                <img :src="userAvatar || './../images/headPage.png'" alt="用户头像"/>
+                <!-- 修改点(2026-09-16)：头像支持点击选择 / 拖拽上传，本地即时预览，上传中显示遮罩 -->
+                <div class="avatar-wrap"
+                     :class="{ dragging: avatarDragging, uploading: avatarUploading }"
+                     role="button" tabindex="0" aria-label="点击或拖拽图片以更换头像"
+                     @click="triggerAvatarInput"
+                     @keydown.enter.prevent="triggerAvatarInput"
+                     @dragover.prevent="onAvatarDragOver"
+                     @dragleave.prevent="onAvatarDragLeave"
+                     @drop.prevent="onAvatarDrop">
+                    <img class="avatar-img" :src="userAvatar || './../images/headPage.png'" alt="用户头像" @error="imgError"/>
+                    <div v-if="avatarUploading" class="avatar-mask">
+                        <i class="ri-loader-4-line rotating"></i>
+                    </div>
+                    <div v-else class="avatar-edit-hint"><i class="ri-camera-line"></i></div>
+                    <input ref="avatarInput" class="avatar-input" type="file"
+                           accept="image/jpeg,image/png,image/gif" @change="onAvatarChange"/>
+                </div>
                 <div class="desc">
                     <div class="divName">
                         {{ userName || '用户' }}
@@ -141,6 +222,8 @@
                             <i class="ri-women-line"></i>
                         </span>
                         <span v-if="memberInfo && memberInfo.isMember" class="member-tag"><i class="ri-vip-crown-2-fill"></i>会员</span>
+                        <!-- 修改点(2026-09-16)：编辑资料入口 -->
+                        <i class="ri-pencil-line edit-profile-icon" @click.stop="openEditProfile" aria-label="编辑资料" role="button"></i>
                     </div>
                     <div class="divPhone">{{ maskedPhone }}</div>
                 </div>
@@ -221,6 +304,12 @@
                 <div class="item" @click="goMemberCenter">
                     <i class="ri-vip-crown-2-line link-icon" aria-hidden="true"></i>
                     <span>会员中心</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="openEditProfile">
+                    <i class="ri-edit-box-line link-icon" aria-hidden="true"></i>
+                    <span>编辑资料</span>
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
@@ -313,6 +402,30 @@
         <!-- 修改点：Vue2 下 van-* 禁自闭合，:show.sync 替代 v-model:show（my-evaluations.html 权威写法） -->
         <van-image-preview :show.sync="previewShow" :images="previewImages" :start-position="previewIndex"></van-image-preview>
 
+        <!-- ====== 编辑资料弹窗（修改点 2026-09-16：昵称 + 性别，复用 PUT /user/info） ====== -->
+        <van-dialog
+            v-model="editProfileShow"
+            title="编辑资料"
+            show-cancel-button
+            confirm-button-text="保存"
+            cancel-button-text="取消"
+            :before-close="onEditProfileBeforeClose">
+            <div class="edit-profile-body">
+                <div class="ep-field">
+                    <label class="ep-label">昵称</label>
+                    <input v-model.trim="editName" class="ep-input" maxlength="20" placeholder="请输入昵称" aria-label="昵称"/>
+                </div>
+                <div class="ep-field">
+                    <label class="ep-label">性别</label>
+                    <div class="ep-gender">
+                        <span :class="['ep-gender-opt', editSex === '1' ? 'active' : '']" @click="editSex = '1'">男</span>
+                        <span :class="['ep-gender-opt', editSex === '0' ? 'active' : '']" @click="editSex = '0'">女</span>
+                        <span :class="['ep-gender-opt', editSex === '' ? 'active' : '']" @click="editSex = ''">保密</span>
+                    </div>
+                </div>
+            </div>
+        </van-dialog>
+
         <!-- ====== 底部 Tab 导航（点餐 / 订单 / 我的） ====== -->
         <van-tabbar v-model="activeTab" class="app-tabbar" @change="onTabChange">
             <van-tabbar-item>
@@ -357,7 +470,10 @@
                     // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
                     activeTab: 2,
                     // 修改点：最新订单菜品图大图预览（van-image-preview）
-                    previewShow: false, previewImages: [], previewIndex: 0
+                    previewShow: false, previewImages: [], previewIndex: 0,
+                    // 修改点(2026-09-16)：头像上传与编辑资料状态
+                    avatarUploading: false, avatarDragging: false, prevAvatar: '',
+                    editProfileShow: false, editName: '', editSex: ''
                 }
             },
             computed:{
@@ -374,8 +490,11 @@
             methods:{
                 // 修改点：下拉刷新
                 onRefresh(){
-                    this.loadData()
-                    setTimeout(() => { this.refreshing = false }, 1000)
+                    var self = this
+                    this.loadData().finally(function(){
+                        self.refreshing = false
+                        vant.Toast('刷新成功')
+                    })
                 },
                 async loadData(){
                     this.pageLoading = true
@@ -567,6 +686,112 @@
                             this.logoutLoading = false
                         }
                     } catch(e) { this.logoutLoading = false }
+                },
+                // ===== 修改点(2026-09-16)：头像上传（点击 / 拖拽 + 即时预览 + 持久化） =====
+                triggerAvatarInput: function(){
+                    if(this.avatarUploading) return;
+                    if(this.$refs.avatarInput) this.$refs.avatarInput.click();
+                },
+                onAvatarDragOver: function(){ this.avatarDragging = true; },
+                onAvatarDragLeave: function(){ this.avatarDragging = false; },
+                onAvatarChange: function(e){
+                    var f = e.target.files && e.target.files[0];
+                    if(f) this.uploadAndSaveAvatar(f);
+                    // 清空 value，保证再次选择同一文件也能触发 change
+                    if(e.target) e.target.value = '';
+                },
+                onAvatarDrop: function(e){
+                    this.avatarDragging = false;
+                    var dt = e.dataTransfer;
+                    var f = dt && dt.files && dt.files[0];
+                    if(f) this.uploadAndSaveAvatar(f);
+                },
+                // 校验图片格式与大小（与后端 /common/upload 一致：JPG/PNG/GIF，≤5MB）
+                validateAvatar: function(file){
+                    if(!file) return { ok: false, msg: '未选择文件' };
+                    var type = file.type || '';
+                    var name = file.name || '';
+                    var ext = name.indexOf('.') >= 0 ? name.split('.').pop().toLowerCase() : '';
+                    var okType = type === 'image/jpeg' || type === 'image/png' || type === 'image/gif'
+                        || ['jpg','jpeg','png','gif'].indexOf(ext) >= 0;
+                    if(!okType) return { ok: false, msg: '仅支持 JPG / PNG / GIF 格式' };
+                    if(file.size > 5 * 1024 * 1024) return { ok: false, msg: '图片大小不能超过 5MB' };
+                    return { ok: true };
+                },
+                uploadAndSaveAvatar: function(file){
+                    var self = this;
+                    var v = self.validateAvatar(file);
+                    if(!v.ok){ vant.Toast(v.msg); return; }
+                    self.prevAvatar = self.userAvatar;
+                    self.avatarUploading = true;
+                    // 修改点：本地即时预览（不等上传完成即可看到效果）
+                    try {
+                        var reader = new FileReader();
+                        reader.onload = function(ev){ self.userAvatar = ev.target.result; };
+                        reader.readAsDataURL(file);
+                    } catch(e) { /* 个别环境无 FileReader 时走上传后回显 */ }
+                    var fd = new FormData();
+                    fd.append('file', file);
+                    $axios({ url: '/common/upload', method: 'post', data: fd })
+                        .then(function(up){
+                            if(up && up.code === 1 && up.data){
+                                return updateUserInfoApi({ avatar: up.data }).then(function(res){
+                                    if(res && res.code === 1 && res.data){
+                                        self.userAvatar = res.data.avatar || up.data;
+                                        try { sessionStorage.setItem('userAvatar', self.userAvatar); } catch(e) {}
+                                        vant.Toast.success('头像已更新');
+                                    } else {
+                                        throw new Error((res && res.msg) || '更新失败');
+                                    }
+                                });
+                            }
+                            throw new Error((up && up.msg) || '上传失败');
+                        })
+                        .catch(function(err){
+                            vant.Toast.fail((err && err.message) ? err.message : '上传失败，请重试');
+                            self.userAvatar = self.prevAvatar;
+                        })
+                        .finally(function(){ self.avatarUploading = false; });
+                },
+                // ===== 修改点(2026-09-16)：编辑资料（昵称 + 性别） =====
+                openEditProfile: function(){
+                    this.editName = this.userName || '';
+                    this.editSex = (this.userGender === undefined || this.userGender === null) ? '' : String(this.userGender);
+                    this.editProfileShow = true;
+                },
+                // van-dialog before-close：校验昵称非空并异步保存
+                onEditProfileBeforeClose: function(action, done){
+                    var self = this;
+                    if(action === 'confirm'){
+                        if(!self.editName || !self.editName.trim()){
+                            vant.Toast('昵称不能为空');
+                            done(false);
+                            return;
+                        }
+                        self.saveProfile(done);
+                    } else {
+                        done();
+                    }
+                },
+                saveProfile: function(done){
+                    var self = this;
+                    updateUserInfoApi({ name: self.editName.trim(), sex: self.editSex })
+                        .then(function(res){
+                            if(res && res.code === 1 && res.data){
+                                self.userName = res.data.name || self.userName;
+                                self.userGender = res.data.sex !== undefined ? res.data.sex : self.userGender;
+                                try { sessionStorage.setItem('userName', self.userName); } catch(e) {}
+                                if(done) done();
+                                vant.Toast.success('资料已保存');
+                            } else {
+                                vant.Toast.fail((res && res.msg) || '保存失败');
+                                if(done) done(false);
+                            }
+                        })
+                        .catch(function(){
+                            vant.Toast.fail('保存失败，请重试');
+                            if(done) done(false);
+                        });
                 },
                 fmtThousand: function(v){
                     if (v == null || v === '') return '0'

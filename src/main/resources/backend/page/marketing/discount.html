@@ -84,6 +84,9 @@
         <template #col-perUserLimit="{ row }">
           <span>{{ row.perUserLimit || '不限' }}</span>
         </template>
+        <template #col-dailyLimit="{ row }">
+          <span>{{ row.dailyLimit || '不限' }}</span>
+        </template>
         <!-- 状态列 -->
         <template #col-status="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
@@ -156,6 +159,10 @@
           <el-input-number v-model="formData.perUserLimit" :min="0" style="width: 100%;"></el-input-number>
           <div class="form-tip">0表示不限制</div>
         </el-form-item>
+        <el-form-item label="每日限用次数">
+          <el-input-number v-model="formData.dailyLimit" :min="0" style="width: 100%;"></el-input-number>
+          <div class="form-tip">0表示不限制</div>
+        </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="formData.sortOrder" :min="0" style="width: 100%;"></el-input-number>
         </el-form-item>
@@ -208,6 +215,7 @@
             { prop: 'maxDiscountAmount', label: '最大优惠', slot: true, width: 120, type: 'money' },
             { prop: 'minConsumption', label: '最低消费', slot: true, width: 120, type: 'money' },
             { prop: 'perUserLimit', label: '每人限用', slot: true, width: 100, align: 'center' },
+            { prop: 'dailyLimit', label: '每日限用', slot: true, width: 100, align: 'center' },
             { prop: 'status', label: '状态', slot: true, width: 100, align: 'center' }
           ],
           // 统计
@@ -229,6 +237,7 @@
             dishId: null,
             setmealId: null,
             perUserLimit: 0,
+            dailyLimit: 0,
             sortOrder: 0,
             status: 1
           },
@@ -393,6 +402,7 @@
             dishId: null,
             setmealId: null,
             perUserLimit: 0,
+            dailyLimit: 0,
             sortOrder: 0,
             status: 1
           }

@@ -49,4 +49,26 @@ public interface ReservationService extends IService<Reservation> {
      * @param id 预订记录ID
      */
     void arrive(Long id);
+
+    /**
+     * 更新预订记录（仅允许待确认和已确认状态修改）
+     *
+     * @param id           预订记录ID
+     * @param customerName 客户姓名
+     * @param phone        客户手机号
+     * @param reservedTime 预订时间
+     * @param seatCount    就座人数
+     * @param tableId      指定桌台ID（可为null）
+     * @param remark       备注
+     * @return 更新后的预订记录
+     */
+    Reservation updateReservation(Long id, String customerName, String phone,
+            LocalDateTime reservedTime, Integer seatCount, Long tableId, String remark);
+
+    /**
+     * 删除预订记录（仅允许取消状态删除）
+     *
+     * @param id 预订记录ID
+     */
+    void deleteReservation(Long id);
 }

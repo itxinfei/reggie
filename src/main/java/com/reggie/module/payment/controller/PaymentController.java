@@ -25,6 +25,7 @@ import static com.reggie.module.payment.model.PaymentOrder.STATUS_REFUND;
 import static com.reggie.module.payment.model.PaymentOrder.STATUS_SUCCESS;
 import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.payment.service.RefundRecordService;
+import com.reggie.enums.RefundStatus;
 import com.reggie.module.dashboard.service.DashboardService;
 import com.reggie.module.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,6 +50,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Objects;
 import java.util.Map;
 import java.util.UUID;
@@ -874,6 +876,24 @@ public class PaymentController {
         qw.orderByDesc(PaymentOrder::getCreatedTime);
         paymentOrderService.page(pageInfo, qw);
         return R.success(pageInfo);
+    }
+
+    /**
+     * 对账待办统计：查询 reason 以 [对账待办] 开头的退款记录数量
+     */
+    @RequireEmployee
+    @GetMapping("/reconcile/pending-count")
+    @Operation(summary = "对账待办数量", description = "统计待人工核对的对账待办退款记录数量")
+    public R<Map<String, Object>> reconcilePendingCount() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        LambdaQueryWrapper<RefundRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(RefundRecord::getTenantId, tenantId)
+          .likeRight(RefundRecord::getReason, "[对账待办]")
+          .eq(RefundRecord::getStatus, RefundStatus.PENDING.getCode());
+        long count = refundRecordService.count(qw);
+        Map<String, Object> result = new HashMap<>();
+        result.put("pendingCount", count);
+        return R.success(result);
     }
 
     /**

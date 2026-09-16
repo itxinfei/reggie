@@ -80,12 +80,19 @@
 <a href="#kds-main" class="skip-link">跳转到主内容</a>
 <div id="app">
   <div class="kds-wrap" id="kds-main">
-    <!-- 顶栏：页面标题/实时时钟/上次更新时间/刷新/自动刷新/语音叫号/全屏 -->
+    <!-- 顶栏：页面标题/实时时钟/上次更新时间/档口筛选/刷新/自动刷新/语音叫号/全屏 -->
     <div class="top-bar">
       <div class="top-bar__title"><i class="ri-restaurant-2-line"></i>后厨出餐大屏</div>
       <div class="top-bar__tools">
         <span class="meta-chip"><i class="ri-time-line"></i> {{ clock }}</span>
         <span class="meta-chip">更新 <b>{{ lastUpdate || '--' }}</b></span>
+        <el-select v-model="stationFilter" placeholder="全部档口" clearable size="small" style="width: 120px" @change="onStationChange">
+          <el-option label="全部档口" value=""></el-option>
+          <el-option label="热菜" value="HOT"></el-option>
+          <el-option label="凉菜" value="COLD"></el-option>
+          <el-option label="饮品" value="DRINK"></el-option>
+          <el-option label="甜点" value="DESSERT"></el-option>
+        </el-select>
         <button class="tool-btn" @click="loadData(true)"><i class="ri-refresh-line"></i> 刷新拉单</button>
         <button class="tool-btn" :class="{ on: autoRefresh }" @click="toggleAuto">{{ autoRefresh ? '自动刷新 开' : '自动刷新 关' }}</button>
         <button class="tool-btn" :class="{ on: soundOn }" @click="toggleSound">{{ soundOn ? '语音叫号 开' : '语音叫号 关' }}</button>
@@ -159,7 +166,7 @@
       <div class="kds-col ready">
         <div class="kds-col__head"><span><i class="ri-bell-line"></i> 待取餐（叫号）</span><span class="badge">{{ board.readyCount }}</span></div>
         <div class="col-body">
-          <div class="ticket urgent" v-for="t in board.ready" :key="t.id">
+          <div class="ticket" :class="{ urgent: t.urgent===1 }" v-for="t in board.ready" :key="t.id">
             <div class="ticket__head">
               <span class="ticket__no">#{{ tail(t.orderNo) }}</span>
               <span class="ticket__tags">
@@ -196,6 +203,7 @@
         lastUpdate: '',
         autoRefresh: true,
         soundOn: true,
+        stationFilter: '',
         pollTimer: null,
         clockTimer: null,
         spokenReady: {}
@@ -204,11 +212,11 @@
     mounted: function () {
       var self = this
       this.tickClock()
-      this.loadData(true)
+      this.loadData()
       // 每秒走表（等待时长实时跳动）
       this.clockTimer = setInterval(function () { self.tickClock() }, 1000)
-      // 每 10 秒自动拉新并刷新看板
-      this.pollTimer = setInterval(function () { if (self.autoRefresh) self.loadData(true) }, 10000)
+      // 每 10 秒自动刷新看板（只读，不拉单；拉新走独立「刷新拉单」按钮 loadData(true)）
+      this.pollTimer = setInterval(function () { if (self.autoRefresh) self.loadData() }, 10000)
     },
     beforeDestroy: function () {
       if (this.pollTimer) clearInterval(this.pollTimer)
@@ -224,7 +232,7 @@
       // ========== 数据加载 ==========
       loadData: function (autoPull) {
         var self = this
-        window.kdsApi.board(autoPull !== false).then(function (res) {
+        window.kdsApi.board(autoPull !== false, self.stationFilter || undefined).then(function (res) {
           if (res && String(res.code) === '1' && res.data) {
             self.board = res.data
             self.lastUpdate = new Date().toLocaleTimeString('zh-CN', { hour12: false })
@@ -233,6 +241,10 @@
         }).catch(function (err) {
           if (err && err.message !== 'NOTLOGIN') { console.warn('[KDS] 看板加载失败', err) }
         })
+      },
+      // ========== 档口筛选 ==========
+      onStationChange: function () {
+        this.loadData(false)
       },
       // ========== 语音叫号 ==========
       // 待取餐新增工单语音叫号（每单只播报一次）

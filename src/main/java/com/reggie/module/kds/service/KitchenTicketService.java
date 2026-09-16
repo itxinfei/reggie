@@ -23,10 +23,11 @@ public interface KitchenTicketService extends IService<KitchenTicket> {
     /**
      * 获取出餐大屏看板（按状态分栏 + 统计）。
      *
-     * @param autoPull 是否先自动拉取新订单
+     * @param autoPull   是否先自动拉取新订单
+     * @param stationCode 档口编码筛选（可选，null=全部档口）
      * @return 看板数据
      */
-    KitchenBoardVO getBoard(boolean autoPull);
+    KitchenBoardVO getBoard(boolean autoPull, String stationCode);
 
     /**
      * 开始制作：待制作 → 制作中。
@@ -71,10 +72,11 @@ public interface KitchenTicketService extends IService<KitchenTicket> {
     /**
      * 工单历史分页。
      *
-     * @param page     页码
-     * @param pageSize 每页条数
-     * @param status   状态（可选）
+     * @param page       页码
+     * @param pageSize   每页条数
+     * @param status     状态（可选）
+     * @param stationCode 档口编码筛选（可选）
      * @return 分页结果
      */
-    Page<KitchenTicket> pageTickets(int page, int pageSize, Integer status);
+    Page<KitchenTicket> pageTickets(int page, int pageSize, Integer status, String stationCode);
 }

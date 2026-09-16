@@ -15,6 +15,10 @@ import com.reggie.module.member.model.CouponAvailableDTO;
 import com.reggie.module.member.service.CouponUserService;
 import com.reggie.module.member.service.MemberRewardService;
 import com.reggie.module.order.service.OrderService;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.cost.service.CostService;
+import com.reggie.module.cost.model.DishCost;
 import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.printer.service.PrinterService;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +58,12 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private OrderDetailService orderDetailService;
+
+    @Autowired
+    private CostService costService;
 
     @Autowired
     private PaymentOrderService paymentOrderService;
@@ -515,7 +525,16 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
 
             // 5. 计算净收入、成本、毛利润
             BigDecimal netIncome = settlement.getTotalRevenue().subtract(settlement.getRefundAmount());
-            BigDecimal totalCost = BigDecimal.ZERO;
+
+            // 从 DishCost 表聚合当日已完成订单的材料/人工/其他成本
+            // DishCost 按菜品维度记录单位成本（materialCost/laborCost/otherCost），
+            // 乘以订单明细数量后汇总，得到当日总成本
+            Map<String, BigDecimal> costBreakdown = aggregateDailyCosts(orders, tenantId);
+            BigDecimal materialCost = costBreakdown.get("materialCost");
+            BigDecimal laborCost = costBreakdown.get("laborCost");
+            BigDecimal otherCost = costBreakdown.get("otherCost");
+            BigDecimal totalCost = materialCost.add(laborCost).add(otherCost);
+
             BigDecimal grossProfit = netIncome.subtract(totalCost);
             BigDecimal profitRate = BigDecimal.ZERO;
             if (netIncome.compareTo(BigDecimal.ZERO) > 0) {
@@ -523,9 +542,9 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
             }
 
             settlement.setNetIncome(netIncome);
-            settlement.setMaterialCost(BigDecimal.ZERO);
-            settlement.setLaborCost(BigDecimal.ZERO);
-            settlement.setOtherCost(BigDecimal.ZERO);
+            settlement.setMaterialCost(materialCost);
+            settlement.setLaborCost(laborCost);
+            settlement.setOtherCost(otherCost);
             settlement.setTotalCost(totalCost);
             settlement.setGrossProfit(grossProfit);
             settlement.setProfitRate(profitRate);
@@ -603,6 +622,51 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         settlement.setOrderCount(orderCount);
         settlement.setRefundAmount(refundAmount);
         settlement.setRefundCount(refundCount);
+    }
+
+    /**
+     * 聚合当日已完成订单的菜品成本（材料/人工/其他）。
+     * 遍历已完成订单的明细，按 dishId 查 DishCost 表获取单位成本，乘以数量后汇总。
+     * 未配置成本的菜品按 0 处理（不阻断日结流程）。
+     */
+    private Map<String, BigDecimal> aggregateDailyCosts(List<Orders> orders, Long tenantId) {
+        BigDecimal materialCost = BigDecimal.ZERO;
+        BigDecimal laborCost = BigDecimal.ZERO;
+        BigDecimal otherCost = BigDecimal.ZERO;
+
+        // 收集已完成订单的 ID
+        List<Long> completedOrderIds = new ArrayList<>();
+        for (Orders order : orders) {
+            if (order.getStatus() == Orders.STATUS_COMPLETED) {
+                completedOrderIds.add(order.getId());
+            }
+        }
+
+        if (!completedOrderIds.isEmpty()) {
+            // 批量查订单明细（按 orderId IN 查询）
+            for (Long orderId : completedOrderIds) {
+                List<OrderDetail> details = orderDetailService.listByOrderId(orderId);
+                for (OrderDetail detail : details) {
+                    if (detail.getDishId() == null) { continue; }
+                    int qty = detail.getNumber() != null ? detail.getNumber() : 1;
+                    // 查该菜品的单位成本
+                    DishCost dc = costService.getDishCostByDishId(detail.getDishId(), tenantId);
+                    if (dc == null) { continue; }
+                    BigDecimal mc = dc.getMaterialCost() != null ? dc.getMaterialCost() : BigDecimal.ZERO;
+                    BigDecimal lc = dc.getLaborCost() != null ? dc.getLaborCost() : BigDecimal.ZERO;
+                    BigDecimal oc = dc.getOtherCost() != null ? dc.getOtherCost() : BigDecimal.ZERO;
+                    materialCost = materialCost.add(mc.multiply(new BigDecimal(qty)));
+                    laborCost = laborCost.add(lc.multiply(new BigDecimal(qty)));
+                    otherCost = otherCost.add(oc.multiply(new BigDecimal(qty)));
+                }
+            }
+        }
+
+        Map<String, BigDecimal> result = new HashMap<>();
+        result.put("materialCost", materialCost);
+        result.put("laborCost", laborCost);
+        result.put("otherCost", otherCost);
+        return result;
     }
 
     /**

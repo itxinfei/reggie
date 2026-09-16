@@ -18,6 +18,9 @@ import java.time.LocalDateTime;
 @Data
 public class CreateReservationDTO {
 
+    @Schema(description = "预订ID（编辑时传入）")
+    private Long id;
+
     @Schema(description = "客户姓名", required = true, example = "张三")
     @NotBlank(message = "客户姓名不能为空")
     private String customerName;

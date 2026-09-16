@@ -11,6 +11,13 @@ import com.reggie.module.cost.mapper.LaborCostMapper;
 import com.reggie.module.cost.mapper.OtherCostMapper;
 import com.reggie.module.cost.mapper.DishCostMapper;
 import com.reggie.module.cost.service.CostService;
+import com.reggie.module.inventory.mapper.DishMaterialMapper;
+import com.reggie.module.inventory.mapper.MaterialMapper;
+import com.reggie.module.inventory.mapper.PurchaseOrderDetailMapper;
+import com.reggie.module.inventory.model.DishMaterial;
+import com.reggie.module.inventory.model.Material;
+import com.reggie.module.inventory.model.PurchaseOrderDetail;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +37,7 @@ import java.util.Map;
  * @author reggie
  * @since 2026-08-10
  */
+@Slf4j
 @Service
 public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> implements CostService {
 
@@ -44,6 +52,15 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
 
     @Autowired
     private OtherCostMapper otherCostMapper;
+
+    @Autowired
+    private DishMaterialMapper dishMaterialMapper;
+
+    @Autowired
+    private MaterialMapper materialMapper;
+
+    @Autowired
+    private PurchaseOrderDetailMapper purchaseOrderDetailMapper;
 
     // ==================== 菜品成本管理 ====================
 
@@ -628,6 +645,150 @@ public class CostServiceImpl extends ServiceImpl<DishCostMapper, DishCost> imple
      */
     private static int sanitizeLimit(int limit) {
         return Math.max(1, Math.min(limit, 100));
+    }
+
+    // ==================== 采购价联动 ====================
+
+    /**
+     * 根据采购价自动计算菜品食材成本。
+     * 通过 DishMaterial（BOM）关联原料，使用原料单价计算：
+     * 食材成本 = Σ(原料单价 × 用量)
+     * 优先使用 Material.unitPrice，若为 null 则尝试从最新采购单获取。
+     *
+     * @param dishId   菜品ID
+     * @param tenantId 租户ID
+     * @return 计算出的食材成本，无配方返回 null
+     */
+    @Override
+    public BigDecimal calculateMaterialCostFromPurchase(Long dishId, Long tenantId) {
+        if (dishId == null || tenantId == null) {
+            return null;
+        }
+
+        // 1. 查询菜品的 BOM 配方
+        List<DishMaterial> bomList = dishMaterialMapper.selectList(
+                new LambdaQueryWrapper<DishMaterial>()
+                        .eq(DishMaterial::getDishId, dishId)
+                        .eq(DishMaterial::getTenantId, tenantId)
+        );
+        if (bomList == null || bomList.isEmpty()) {
+            return null;
+        }
+
+        // 2. 遍历 BOM，累加（原料单价 × 用量）
+        BigDecimal totalMaterialCost = BigDecimal.ZERO;
+        for (DishMaterial bom : bomList) {
+            if (bom.getMaterialId() == null || bom.getUsageQty() == null) {
+                continue;
+            }
+            BigDecimal price = getMaterialPrice(bom.getMaterialId(), tenantId);
+            if (price != null) {
+                totalMaterialCost = totalMaterialCost.add(price.multiply(bom.getUsageQty()));
+            }
+        }
+
+        return totalMaterialCost;
+    }
+
+    /**
+     * 获取原料单价：优先使用 Material.unitPrice，若为 null 则从最新采购单获取。
+     */
+    private BigDecimal getMaterialPrice(Long materialId, Long tenantId) {
+        Material material = materialMapper.selectById(materialId);
+        if (material == null) {
+            return null;
+        }
+        // 优先使用物料主数据中的单价
+        if (material.getUnitPrice() != null && material.getUnitPrice().compareTo(BigDecimal.ZERO) > 0) {
+            return material.getUnitPrice();
+        }
+        // 兜底：从最新采购单明细获取单价
+        PurchaseOrderDetail latestDetail = purchaseOrderDetailMapper.selectOne(
+                new LambdaQueryWrapper<PurchaseOrderDetail>()
+                        .eq(PurchaseOrderDetail::getMaterialId, materialId)
+                        .eq(PurchaseOrderDetail::getTenantId, tenantId)
+                        .orderByDesc(PurchaseOrderDetail::getId)
+                        .last("LIMIT 1")
+        );
+        return latestDetail != null ? latestDetail.getUnitPrice() : null;
+    }
+
+    /**
+     * 批量同步所有菜品的食材成本（从采购价）。
+     * 遍历所有有 BOM 配方的菜品，重新计算食材成本并更新。
+     *
+     * @param tenantId 租户ID
+     * @return 更新的菜品数量
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int syncMaterialCostFromPurchase(Long tenantId) {
+        if (tenantId == null) {
+            return 0;
+        }
+
+        // 1. 查询所有 BOM 配方，按 dishId 分组
+        List<DishMaterial> allBom = dishMaterialMapper.selectList(
+                new LambdaQueryWrapper<DishMaterial>()
+                        .eq(DishMaterial::getTenantId, tenantId)
+        );
+        if (allBom == null || allBom.isEmpty()) {
+            return 0;
+        }
+
+        Map<Long, List<DishMaterial>> bomByDish = new HashMap<>();
+        for (DishMaterial bom : allBom) {
+            bomByDish.computeIfAbsent(bom.getDishId(), k -> new ArrayList<>()).add(bom);
+        }
+
+        // 2. 批量查询涉及的原料，构建价格缓存
+        List<Long> materialIds = new ArrayList<>();
+        for (DishMaterial bom : allBom) {
+            if (bom.getMaterialId() != null && !materialIds.contains(bom.getMaterialId())) {
+                materialIds.add(bom.getMaterialId());
+            }
+        }
+        Map<Long, BigDecimal> priceCache = new HashMap<>();
+        for (Long materialId : materialIds) {
+            BigDecimal price = getMaterialPrice(materialId, tenantId);
+            if (price != null) {
+                priceCache.put(materialId, price);
+            }
+        }
+
+        // 3. 逐菜品计算并更新
+        int updated = 0;
+        for (Map.Entry<Long, List<DishMaterial>> entry : bomByDish.entrySet()) {
+            Long dishId = entry.getKey();
+            List<DishMaterial> bomList = entry.getValue();
+
+            BigDecimal totalMaterialCost = BigDecimal.ZERO;
+            for (DishMaterial bom : bomList) {
+                BigDecimal price = priceCache.get(bom.getMaterialId());
+                if (price != null && bom.getUsageQty() != null) {
+                    totalMaterialCost = totalMaterialCost.add(price.multiply(bom.getUsageQty()));
+                }
+            }
+
+            // 查找或创建 DishCost 记录
+            DishCost dishCost = getDishCostByDishId(dishId, tenantId);
+            if (dishCost == null) {
+                dishCost = new DishCost();
+                dishCost.setDishId(dishId);
+                dishCost.setTenantId(tenantId);
+                dishCost.setMaterialCost(totalMaterialCost);
+                dishCost.setLaborCost(BigDecimal.ZERO);
+                dishCost.setOtherCost(BigDecimal.ZERO);
+                saveOrUpdateDishCost(dishCost);
+            } else {
+                dishCost.setMaterialCost(totalMaterialCost);
+                saveOrUpdateDishCost(dishCost);
+            }
+            updated++;
+        }
+
+        log.info("[成本同步] 租户{}：从采购价同步 {} 个菜品的食材成本", tenantId, updated);
+        return updated;
     }
 }
 

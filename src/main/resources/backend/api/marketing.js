@@ -48,6 +48,8 @@ const calculateBuyGetFreeGift = (params) => $axios({ url: '/marketing/tool/buy-g
 
 // 秒杀活动
 const getFlashSales = (params) => $axios({ url: '/marketing/tool/flash-sale/list', method: 'get', params })
+const pageFlashSales = (params) => $axios({ url: '/marketing/tool/flash-sale/page', method: 'get', params })
+const flashSaleStats = () => $axios({ url: '/marketing/tool/flash-sale/stats', method: 'get' })
 const saveFlashSale = (data) => $axios({ url: '/marketing/tool/flash-sale', method: 'post', data })
 const updateFlashSale = (data) => $axios({ url: '/marketing/tool/flash-sale', method: 'put', data })
 const deleteFlashSale = (id) => $axios({ url: `/marketing/tool/flash-sale/${id}`, method: 'delete' })

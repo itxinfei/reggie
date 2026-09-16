@@ -129,6 +129,10 @@ border-radius: var(--radius-sm);
         </div>
         <div class="ds-page-header__actions"></div>
       </header>
+
+      <!-- 统计卡片 - 使用统一的 <stat-cards> 组件 -->
+      <stat-cards :cards="statsCards"></stat-cards>
+
       <!-- 工具栏 -->
       <div class="tableBar">
         <span class="toolbar-label">日期范围：</span>
@@ -146,9 +150,6 @@ border-radius: var(--radius-sm);
         <div class="toolbar-spacer"></div>
         <el-button type="success" icon="el-icon-download" @click="exportReport">导出报表</el-button>
       </div>
-
-      <!-- 统计卡片 - 使用统一的 <stat-cards> 组件 -->
-      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- 图表行 -->
       <div class="chart-row">
@@ -323,38 +324,60 @@ border-radius: var(--radius-sm);
           try {
             const startDate = this.dateRange[0]
             const endDate = this.dateRange[1]
-            
-            const [summaryRes, trendRes, structureRes, rankingRes, alertRes] = await Promise.all([
-              getCostSummary({ startDate, endDate }),
-              getCostTrend({ startDate, endDate }),
-              getCostStructure({ startDate, endDate }),
-              getCostRanking({ startDate, endDate }),
-              getCostAlerts({ startDate, endDate })
+
+            // 使用 Promise.allSettled 避免单个接口失败导致整页无数据
+            // 注意：ranking 和 alert 接口参数与 summary/trend/structure 不同，不能传 startDate/endDate
+            var results = await Promise.allSettled([
+              getCostSummary({ startDate: startDate, endDate: endDate }),
+              getCostTrend({ startDate: startDate, endDate: endDate }),
+              getCostStructure({ startDate: startDate, endDate: endDate }),
+              getCostRanking({ limit: 10 }),
+              getCostAlerts({ threshold: 20 })
             ])
-            
-            if (summaryRes.code === 1) {
+
+            var summaryRes = results[0].status === 'fulfilled' ? results[0].value : null
+            var trendRes = results[1].status === 'fulfilled' ? results[1].value : null
+            var structureRes = results[2].status === 'fulfilled' ? results[2].value : null
+            var rankingRes = results[3].status === 'fulfilled' ? results[3].value : null
+            var alertRes = results[4].status === 'fulfilled' ? results[4].value : null
+
+            // 打印失败的接口，方便定位
+            results.forEach(function(r, i) {
+              if (r.status === 'rejected') {
+                console.error('[cost] 接口 #' + i + ' 失败:', r.reason)
+              }
+            })
+
+            if (summaryRes && summaryRes.code === 1) {
               this.summary = summaryRes.data
             }
-            
-            if (trendRes.code === 1) {
+
+            if (trendRes && trendRes.code === 1) {
               this.trendData = trendRes.data
               this.updateTrendChart()
             }
-            
-            if (structureRes.code === 1) {
-              this.structureData = structureRes.data
+
+            if (structureRes && structureRes.code === 1) {
+              this.structureData = structureRes.data.structure || []
               this.updateStructureChart()
             }
-            
-            if (rankingRes.code === 1) {
+
+            if (rankingRes && rankingRes.code === 1) {
               this.rankingData = rankingRes.data
               this.updateRankingChart()
             }
-            
-            if (alertRes.code === 1) {
+
+            if (alertRes && alertRes.code === 1) {
               this.alerts = alertRes.data || []
             }
+
+            // 全部失败才提示
+            var allFailed = results.every(function(r) { return r.status === 'rejected' })
+            if (allFailed) {
+              ReggieUI.error('获取数据失败，请检查网络或刷新重试')
+            }
           } catch (err) {
+            console.error('[cost] fetchData 异常:', err)
             ReggieUI.error('获取数据失败')
           } finally {
             this.loading = false

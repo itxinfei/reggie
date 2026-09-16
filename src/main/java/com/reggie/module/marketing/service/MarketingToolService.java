@@ -1,5 +1,6 @@
 package com.reggie.module.marketing.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.marketing.model.NewCustomerDiscount;
 import com.reggie.module.marketing.model.BuyGetFree;
@@ -98,6 +99,23 @@ public interface MarketingToolService extends IService<NewCustomerDiscount> {
      * @return Flash sale list
      */
     List<FlashSale> getFlashSales(Long tenantId);
+
+    /**
+     * 分页查询限时抢购列表
+     *
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @param status   状态筛选（可选）
+     * @return 分页结果
+     */
+    Page<FlashSale> pageFlashSales(int page, int pageSize, Integer status);
+
+    /**
+     * 限时抢购统计（各状态数量）
+     *
+     * @return 统计数据
+     */
+    Map<String, Object> getFlashSaleStats();
 
     /**
      * Save or update flash sale

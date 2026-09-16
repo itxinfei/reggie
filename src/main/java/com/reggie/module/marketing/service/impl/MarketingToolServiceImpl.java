@@ -1,7 +1,10 @@
 package com.reggie.module.marketing.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.module.marketing.mapper.NewCustomerDiscountMapper;
 import com.reggie.module.marketing.mapper.BuyGetFreeMapper;
 import com.reggie.module.marketing.mapper.FlashSaleMapper;
@@ -11,6 +14,7 @@ import com.reggie.module.marketing.model.FlashSale;
 import com.reggie.module.marketing.service.MarketingToolService;
 import com.reggie.module.user.model.User;
 import com.reggie.module.user.service.UserService;
+import com.reggie.common.utils.PageUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -266,6 +270,54 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         }
         qw.orderByDesc(FlashSale::getCreateTime);
         return flashSaleMapper.selectList(qw);
+    }
+
+    /**
+     * 分页查询限时抢购列表。
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @param status   状态筛选（可选）
+     * @return 分页结果
+     */
+    @Override
+    public Page<FlashSale> pageFlashSales(int page, int pageSize, Integer status) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文缺失");
+        }
+        Page<FlashSale> p = PageUtils.of(page, pageSize);
+        return flashSaleMapper.selectPage(p, new LambdaQueryWrapper<FlashSale>()
+                .eq(FlashSale::getTenantId, tenantId)
+                .eq(status != null, FlashSale::getStatus, status)
+                .orderByDesc(FlashSale::getCreateTime));
+    }
+
+    /**
+     * 限时抢购统计（各状态数量）。
+     * @return 统计数据
+     */
+    @Override
+    public Map<String, Object> getFlashSaleStats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文缺失");
+        }
+        Map<String, Object> stats = new HashMap<>();
+        // 0=草稿, 1=进行中, 2=暂停, 3=已结束
+        long draft = flashSaleMapper.selectCount(new LambdaQueryWrapper<FlashSale>()
+                .eq(FlashSale::getTenantId, tenantId).eq(FlashSale::getStatus, 0));
+        long active = flashSaleMapper.selectCount(new LambdaQueryWrapper<FlashSale>()
+                .eq(FlashSale::getTenantId, tenantId).eq(FlashSale::getStatus, 1));
+        long paused = flashSaleMapper.selectCount(new LambdaQueryWrapper<FlashSale>()
+                .eq(FlashSale::getTenantId, tenantId).eq(FlashSale::getStatus, 2));
+        long ended = flashSaleMapper.selectCount(new LambdaQueryWrapper<FlashSale>()
+                .eq(FlashSale::getTenantId, tenantId).eq(FlashSale::getStatus, 3));
+        stats.put("draft", draft);
+        stats.put("active", active);
+        stats.put("paused", paused);
+        stats.put("ended", ended);
+        stats.put("total", draft + active + paused + ended);
+        return stats;
     }
 
     /**
