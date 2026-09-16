@@ -366,6 +366,14 @@
         </el-form-item>
       </el-form>
     </crud-dialog>
+
+    <!-- 修改点(2026-09-16)：结账改为页内弹窗（iframe 嵌入收银台），不再 window.open 新窗口 -->
+    <el-dialog title="收银结账" :visible.sync="checkoutDialogVisible" width="92%" top="4vh"
+               :close-on-click-modal="false" append-to-body destroy-on-close
+               @close="checkoutDialogVisible = false">
+      <iframe v-if="checkoutDialogVisible" :src="cashierFrameUrl"
+              style="width:100%;height:78vh;border:0;display:block;"></iframe>
+    </el-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -383,6 +391,8 @@
         return {
           loading: false,
           submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
+          checkoutDialogVisible: false, // 修改点(2026-09-16)：结账弹窗显隐
+          cashierFrameUrl: '', // 修改点：弹窗内 iframe 加载的收银台地址
           areaList: [],
           counts: 0,
           page: 1,
@@ -476,7 +486,14 @@
           if (val === 'map') this.loadMapData()
         }
       },
-      created: function() { this.init(); this.loadAreaList(); this.loadMapData() },
+      created: function() {
+        this.init(); this.loadAreaList(); this.loadMapData()
+        // 修改点(2026-09-16)：监听收银台 iframe 收款成功消息，自动关闭弹窗并刷新桌台
+        window.addEventListener('message', this.onCashierMessage)
+        // 修改点：页面销毁时移除监听，避免重复绑定
+        var self = this
+        this.$on('hook:beforeDestroy', function() { window.removeEventListener('message', self.onCashierMessage) })
+      },
       methods: {
         // 修改点：F9 性能 — 列表与全局统计分离，reloadStats=true 才重算（默认 true，分页传 false）
         init: function(reloadStats) {
@@ -739,12 +756,21 @@
           const self = this
           tableInfo(row.id).then(function(res) {
             if (res.code === 1 && res.data && res.data.currentOrderId) {
-              // 修改点（2026-09-15）：同上加菜，改为站点绝对路径 + orderId 参数
-              window.open('/backend/page/cashier/index.html?orderId=' + res.data.currentOrderId, '_blank')
+              // 修改点(2026-09-16)：改为页内弹窗（iframe 嵌入收银台），不再打开新窗口
+              self.cashierFrameUrl = '/backend/page/cashier/index.html?orderId=' + res.data.currentOrderId
+              self.checkoutDialogVisible = true
             } else {
               ReggieUI.warning('该桌台未绑定订单，无法结账')
             }
           }).catch(function() { ReggieUI.error('获取桌台信息失败') })
+        },
+        // 修改点(2026-09-16)：收银台 iframe 收款成功后回调，关闭弹窗并刷新桌台列表
+        onCashierMessage: function(e) {
+          if (e && e.data && e.data.type === 'cashier-success') {
+            this.checkoutDialogVisible = false
+            this.init()
+            ReggieUI.success('结账成功，桌台状态已更新')
+          }
         },
         // 状态标签颜色
         tagType: function(status) {

@@ -284,15 +284,44 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         if (order == null) {
             throw new IllegalArgumentException("收银失败：订单不存在或已失效");
         }
-        BigDecimal orderAmount = order.getAmount();
-        if (orderAmount == null || orderAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("收银失败：订单金额异常");
+        BigDecimal originalDbAmount = order.getAmount();
+        BigDecimal orderAmount = originalDbAmount;
+        // 修改点(2026-09-16)：桌台/挂账占位订单 amount 初始为 0 且加菜/结账流程未回写，
+        // 从订单明细实时汇总应收金额兜底，使此类订单可正常收银（根治"订单金额异常"）
+        if (originalDbAmount == null || originalDbAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            BigDecimal detailSum = computeOrderDetailTotal(orderId);
+            if (detailSum != null && detailSum.compareTo(BigDecimal.ZERO) > 0) {
+                orderAmount = detailSum;
+                order.setAmount(detailSum);
+                orderService.updateById(order); // 回写，保证营收统计/幂等一致
+            } else {
+                throw new IllegalArgumentException("收银失败：订单金额异常");
+            }
         }
-        // 校验前端传入的应收金额与订单真实金额一致，防止篡改
-        if (orderAmount.compareTo(amount) != 0) {
+        // 防篡改：仅当 DB 原本金额有效时才校验前端传入金额；占位订单前端金额为 0，以服务端明细汇总为准
+        if (originalDbAmount != null && originalDbAmount.compareTo(BigDecimal.ZERO) > 0
+                && orderAmount.compareTo(amount) != 0) {
             throw new IllegalArgumentException("收银失败：订单金额与系统不一致，请刷新后重试");
         }
         return order;
+    }
+
+    /**
+     * 修改点(2026-09-16)：从订单明细实时汇总应收金额（兜底桌台/挂账占位订单 amount 未回写的场景）。
+     * order_detail.amount 为单项小计（= 单价 × 数量，见 OrderServiceImpl.buildOrderDetailsAndComputeAmount），直接求和即可。
+     */
+    private BigDecimal computeOrderDetailTotal(Long orderId) {
+        List<OrderDetail> details = orderDetailService.lambdaQuery()
+                .eq(OrderDetail::getOrderId, orderId).list();
+        BigDecimal total = BigDecimal.ZERO;
+        if (details != null) {
+            for (OrderDetail d : details) {
+                if (d.getAmount() != null) {
+                    total = total.add(d.getAmount());
+                }
+            }
+        }
+        return total;
     }
 
     /**

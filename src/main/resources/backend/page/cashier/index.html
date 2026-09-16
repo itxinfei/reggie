@@ -890,6 +890,10 @@
             const res = await cashPayment(params)
             if (res.code === 1) {
               ReggieUI.success('收款成功')
+              // 修改点(2026-09-16)：若收银台在弹窗 iframe 内，通知父页关闭弹窗
+              if (window.parent !== window) {
+                window.parent.postMessage({ type: 'cashier-success', orderId: this.selectedOrder ? this.selectedOrder.id : null }, '*')
+              }
               this.selectedOrder = null
               this.actualAmount = 0
               this.remark = ''
