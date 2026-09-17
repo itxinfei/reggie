@@ -821,25 +821,8 @@
   transform: scale(0.93);
 }
 
-/* 空状态 */
-.empty-tip {
-  text-align: center;
-  padding: 72rem 0;
-  color: var(--color-text-disabled);
-}
-
-.empty-tip img {
-  width: 96rem;
-  height: 96rem;
-  margin-bottom: 14rem;
-  opacity: 0.3;
-  filter: grayscale(1);
-}
-
-.empty-tip p {
-  font-size: 13rem;
-  color: var(--color-text-hint);
-}
+/* 修改点(2026-09-17)：删除 .empty-tip 自定义空态类——首页菜单空态已统一为全站标准 .empty-state，
+   该类已无页面引用（死代码），避免与 .empty-state 两套空态样式并存 */
 
 /* ================================================================
    底部购物车栏 — 美团经典深色固定栏

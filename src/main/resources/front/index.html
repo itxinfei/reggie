@@ -20,7 +20,7 @@
     <!-- 引入样式  -->
     <link rel="stylesheet" href="styles/index.css?v=20260914" />
     <!--本页面内容的样式-->
-    <link rel="stylesheet" href="styles/main.css?v=20260916" />
+    <link rel="stylesheet" href="styles/main.css?v=20260917" />
     <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
     <link rel="stylesheet" href="styles/tabbar.css?v=20260917" />
     <!-- 骨架屏样式 -->
@@ -219,9 +219,11 @@
               </div>
             </div>
           </template>
-          <div class="empty-tip" v-if="!loadingAll && (!dishList || dishList.length === 0)">
-            <img src="./images/noImg.png" alt="图片加载失败"/>
-            <p>暂无菜品</p>
+          <!-- 修改点(2026-09-17)：菜单空态统一为全站标准 .empty-state——
+               原用自定义 .empty-tip 且插图取 noImg.png（菜品缺图占位图）、alt 写成"图片加载失败"，语义错误 -->
+          <div class="empty-state" v-if="!loadingAll && (!dishList || dishList.length === 0)">
+            <img src="./images/no_order.png" alt="暂无菜品"/>
+            <p class="empty-text">暂无菜品</p>
           </div>
         </div>
       </div>
@@ -553,7 +555,8 @@
           <!-- 空结果 -->
           <!-- 修改点(2026-09-17 UX)：区分"搜索失败"与"真的没货"，失败给出可点击的重试入口 -->
           <div class="search-empty-result" v-if="!searchDishList.length && !searchMealList.length && searchSearched">
-            <img src="./images/noImg.png" alt="图片加载失败"/>
+            <!-- 修改点(2026-09-17)：空态插图改用 no_order.png（原 noImg.png 为菜品缺图占位，语义不符） -->
+            <img src="./images/no_order.png" alt="暂无搜索结果"/>
             <template v-if="searchFailed">
               <p>搜索失败，网络似乎开小差了</p>
               <p class="sub" @click="doSearch">点击重试</p>

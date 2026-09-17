@@ -32,6 +32,9 @@
   --login-card-border: rgba(255, 179, 0, 0.12);
   --login-input-border: #ece3d3;
   --login-input-bg: #fbfaf6;
+  /* 修改点(2026-09-17)：新增占位符聚焦色、图标暖灰色令牌，收敛剩余「使用态」硬编码 hex */
+  --login-text-placeholder-focus: #dfd0b8;
+  --login-icon-muted: #c3b79f;
   --login-shadow-card: 0 16rem 40rem rgba(180, 120, 0, 0.12), 0 4rem 12rem rgba(180, 120, 0, 0.06);
   --login-shadow-card-focus: 0 20rem 48rem rgba(255, 160, 0, 0.18), 0 4rem 14rem rgba(180, 120, 0, 0.08);
   --login-ring: 0 0 0 4rem rgba(255, 180, 0, 0.16);
@@ -183,7 +186,8 @@ body.login-page {
   width: calc(100% - 28rem);
   max-width: 420rem;
   box-sizing: border-box;
-  background: #ffffff;
+  /* 修改点(2026-09-17)：硬编码 #ffffff → --color-text-white */
+  background: var(--color-text-white);
   border-radius: var(--login-radius-card);
   border: 1px solid var(--login-card-border);
   box-shadow: var(--login-shadow-card);
@@ -253,21 +257,24 @@ body.login-page {
 }
 
 #login .divContainer .code-input::placeholder {
-  color: #b7ab93;
+  /* 修改点(2026-09-17)：硬编码 #b7ab93 → --login-text-placeholder */
+  color: var(--login-text-placeholder);
   font-size: 14rem;
   font-weight: 400;
   transition: color 0.25s;
 }
 
 #login .divContainer .input-wrapper input:focus .code-input::placeholder {
-  color: #dfd0b8;
+  /* 修改点(2026-09-17)：硬编码 #dfd0b8 → --login-text-placeholder-focus */
+  color: var(--login-text-placeholder-focus);
 }
 
 /* 修改点：图标定位改为相对于wrapper，用padding-left留空间 */
 /* 输入框前缀图标 */
 #login .divContainer .inputIcon {
   font-size: 20rem;
-  color: #c3b79f;
+  /* 修改点(2026-09-17)：硬编码 #c3b79f → --login-icon-muted */
+  color: var(--login-icon-muted);
   line-height: 56rem;
   flex-shrink: 0;
   padding-left: 14rem;

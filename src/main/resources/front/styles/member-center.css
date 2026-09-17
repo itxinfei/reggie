@@ -144,9 +144,12 @@
     .mc-coupon-right .c-name { font-size: 14rem; font-weight: 600; color: var(--color-text-primary); }
     .mc-coupon-right .c-cond { font-size: 11rem; color: var(--color-text-hint); margin-top: 4rem; }
     .mc-coupon-right .c-expire { font-size: 11rem; color: var(--color-warning); margin-top: 2rem; }
+    /* 修改点(2026-09-17)：点击热区对齐全站次要按钮规范（height 32rem，与 order .act-btn 一致），
+       原 padding:6rem 实际高度不足 30px，移动端误触率高 */
     .mc-claim-btn { background: var(--color-primary-gradient); border: none;
-      color: var(--color-text-primary); font-size: 12rem; padding: 6rem 14rem; border-radius: var(--radius-round);
-      cursor: pointer; font-weight: 600; white-space: nowrap; }
+      color: var(--color-text-primary); font-size: 12rem; padding: 0 14rem; height: 32rem;
+      border-radius: var(--radius-round); cursor: pointer; font-weight: 600; white-space: nowrap;
+      display: inline-flex; align-items: center; justify-content: center; }
     .mc-claim-btn:active { opacity: 0.8; }
     /* 修改点(2026-09-17)：空态统一使用全局 .empty-state，删除 mc-empty 自定义类 */
 
