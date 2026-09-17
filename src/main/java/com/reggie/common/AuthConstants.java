@@ -89,6 +89,10 @@ public final class AuthConstants {
         "/recommend/setmeals",
         // 外卖平台回调（平台服务端无会话，天然匿名）
         "/api/delivery/callback/**",
+        // 支付渠道异步回调（微信/支付宝服务端无会话，天然匿名；签名校验在 PaymentController 内独立完成）
+        // 修复 P2(2026-09-17)：此前遗漏白名单，导致真实支付回调被 LoginCheckFilter 以 NOTLOGIN(401) 拦截，
+        // 订单永远无法标记已支付。与 /api/delivery/callback 保持一致，必须匿名放行。
+        "/api/payment/notify/**",
         // 打印代理接口（门店 PC 本地打印，凭终端码+token 鉴权，无登录会话）
         "/printer/agent/**",
         // 静态资源目录（图片、上传文件）
