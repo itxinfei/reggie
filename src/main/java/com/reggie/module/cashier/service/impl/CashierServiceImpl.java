@@ -39,6 +39,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.math.RoundingMode;
+import com.reggie.enums.DiningTableStatus;
+import com.reggie.enums.OrderSource;
+import com.reggie.module.dining.service.DiningTableService;
+import com.reggie.module.member.model.Member;
+import com.reggie.module.member.model.MemberLevel;
+import com.reggie.module.member.service.MemberLevelService;
+import com.reggie.module.member.service.MemberService;
 
 /**
  * 收银服务实现
@@ -73,6 +81,21 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
 
     @Autowired
     private CouponUserService couponUserService;
+
+    /**
+     * 桌台服务（修改点 2026-09-18）：堂食结账完成后需释放桌台，否则结账闭环断裂
+     * （订单已收款但桌台仍占用、可重复结账）。可选依赖，避免与 dining 模块循环注入问题。
+     */
+    @Autowired(required = false)
+    private DiningTableService diningTableService;
+
+    /** 会员服务（会员等级折扣 / 券归属会员主键反查） */
+    @Autowired(required = false)
+    private MemberService memberService;
+
+    /** 会员等级服务（等级折扣率） */
+    @Autowired(required = false)
+    private MemberLevelService memberLevelService;
 
     /**
      * 收银支付幂等 Redis 模板（可选依赖，Redis 不可用时跳过幂等检查）
@@ -222,10 +245,13 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
                                         Long usedCouponId, Long memberUserId, String remark, String channel) {
 
         // 幂等返回：已存在收银记录则直接返回（覆盖并发场景下先插记录后落锁的顺序差）
+        // 修改点(2026-09-18)：幂等命中已收银记录时改为抛出明确业务异常。
+        // 原实现直接 return existingRecord → 前端收到 R.success 提示「收款成功」，
+        // 但实际未做任何事（桌台仍占用、可无限重复点击），属典型的「假成功」。
         CashierRecord existingRecord = cashierRecordMapper.selectOne(
                 new LambdaQueryWrapper<CashierRecord>().eq(CashierRecord::getOrderId, orderId));
         if (existingRecord != null) {
-            return existingRecord;
+            throw new CustomException("该订单已完成收银，请勿重复结账");
         }
 
         // 2. 加载订单并以服务端金额为准（防前端篡改应收金额）
@@ -234,8 +260,12 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
 
         // 2. 计算优惠券抵扣（服务端按券规则重算，不信任前端传入的折后金额）
         BigDecimal couponDiscount = resolveCouponDiscount(usedCouponId, memberUserId, orderAmount);
-        // 应付金额（扣券后），不应为负
-        BigDecimal payable = orderAmount.subtract(couponDiscount);
+        // 修改点(2026-09-18)：应用会员等级折扣——此前 MemberLevel.discount 在收银链路从未生效，
+        // 会员页展示「黄金会员 8.5 折」但收银台按原价收款，前后端金额不一致。
+        BigDecimal levelDiscount = resolveMemberLevelDiscount(memberUserId);
+        // 应付金额 = (订单金额 - 券抵扣) × 等级折扣，四舍五入到分
+        BigDecimal payable = orderAmount.subtract(couponDiscount).multiply(levelDiscount)
+                .setScale(2, RoundingMode.HALF_UP);
         if (payable.compareTo(BigDecimal.ZERO) < 0) {
             payable = BigDecimal.ZERO;
         }
@@ -335,7 +365,10 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
     private BigDecimal resolveCouponDiscount(Long usedCouponId, Long memberUserId, BigDecimal orderAmount) {
         BigDecimal couponDiscount = BigDecimal.ZERO;
         if (usedCouponId != null && memberUserId != null) {
-            List<CouponAvailableDTO> usable = couponUserService.availableCoupons(memberUserId, orderAmount);
+            // 修改点(2026-09-18)：coupon_user.member_id 存的是「会员主键 member.id」，
+            // 而收银台传入的是「user.id」，直接透传会导致券永远匹配不到 → 选了券但服务端不抵扣。
+            Long memberId = resolveMemberId(memberUserId);
+            List<CouponAvailableDTO> usable = couponUserService.availableCoupons(memberId, orderAmount);
             for (CouponAvailableDTO c : usable) {
                 if (usedCouponId.equals(c.getId())) {
                     couponDiscount = c.getCurrentDiscount();
@@ -344,6 +377,55 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
             }
         }
         return couponDiscount == null ? BigDecimal.ZERO : couponDiscount;
+    }
+
+    /**
+     * 修改点(2026-09-18)：按 user.id 反查会员主键 member.id（券归属与等级折扣均按会员主键）。
+     *
+     * @param userId 用户ID
+     * @return 会员主键；未找到或服务不可用时回退为原 userId
+     */
+    private Long resolveMemberId(Long userId) {
+        if (userId == null || memberService == null) {
+            return userId;
+        }
+        try {
+            Member member = memberService.getByUserId(userId);
+            return member != null ? member.getId() : userId;
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，会员查询失败不应阻断结账
+            log.warn("[收银] 会员信息查询失败，按原ID处理: userId={}", userId);
+            return userId;
+        }
+    }
+
+    /**
+     * 修改点(2026-09-18)：计算会员等级折扣率（无会员/无等级/折扣非法时返回 1，即不打折）。
+     *
+     * @param memberUserId 会员用户ID
+     * @return 折扣率（如 0.85 表示 8.5 折）
+     */
+    private BigDecimal resolveMemberLevelDiscount(Long memberUserId) {
+        if (memberUserId == null || memberService == null || memberLevelService == null) {
+            return BigDecimal.ONE;
+        }
+        try {
+            Member member = memberService.getByUserId(memberUserId);
+            if (member == null || member.getLevelId() == null) {
+                return BigDecimal.ONE;
+            }
+            MemberLevel level = memberLevelService.getById(member.getLevelId());
+            if (level == null || level.getDiscount() == null
+                    || level.getDiscount().compareTo(BigDecimal.ZERO) <= 0
+                    || level.getDiscount().compareTo(BigDecimal.ONE) > 0) {
+                return BigDecimal.ONE;
+            }
+            return level.getDiscount();
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，折扣查询失败按不打折处理（宁可少收不可错收）
+            log.warn("[收银] 会员等级折扣查询失败，按不打折处理: userId={}", memberUserId);
+            return BigDecimal.ONE;
+        }
     }
 
     /**
@@ -359,7 +441,11 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
                 throw new IllegalArgumentException("收银失败：现金实收金额低于应付金额");
             }
         } else {
-            if (actualAmount.compareTo(payable) != 0) {
+            // 修改点(2026-09-18)：允许 0.01 元容差——前端 JS 浮点减法
+            //（例如 0.30 - 0.10 = 0.19999999999999998）与服务端 BigDecimal 精确值比对时，
+            // 会偶发误报「实收金额与应付金额不一致」，导致用券后无法用非现金方式结账。
+            BigDecimal diff = actualAmount.subtract(payable).abs();
+            if (diff.compareTo(new BigDecimal("0.01")) > 0) {
                 throw new IllegalArgumentException("收银失败：实收金额与应付金额不一致");
             }
         }
@@ -414,12 +500,20 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
      * CAS 更新订单为已支付（待接单）（等价抽取）。
      */
     private void markOrderPaid(Long orderId, Orders order, Integer payType, Long usedCouponId, Long memberUserId) {
+        // 修改点(2026-09-18)：堂食订单收银完成即视为「已完成(4)」并在同一事务内释放桌台。
+        // 原实现一律置为「待接单(2)」，而堂食订单没有 2→3→4 的自动流转路径，
+        // 导致 OrderStatusFlowServiceImpl.releaseTableIfEatIn 永不触发——
+        // 结账后桌台始终是占用态、可再次点结账，结账业务闭环断裂（本次修复的核心缺陷）。
+        boolean eatIn = order.getTableId() != null
+                && OrderSource.EAT_IN.getValue().equals(order.getSource());
+        int targetStatus = eatIn ? Orders.STATUS_COMPLETED : Orders.STATUS_ORDERED;
+
         // CAS 状态机：仅 PENDING_PAY 状态的订单可收银，防止并发绕过状态机
         boolean updated = orderService.lambdaUpdate()
                 .eq(Orders::getId, orderId)
                 .eq(Orders::getTenantId, order.getTenantId())
                 .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
-                .set(Orders::getStatus, Orders.STATUS_ORDERED)
+                .set(Orders::getStatus, targetStatus)
                 .set(Orders::getPayMethod, payType)
                 .set(Orders::getCheckoutTime, LocalDateTime.now())
                 .set(usedCouponId != null, Orders::getUsedCouponId, usedCouponId)
@@ -427,6 +521,29 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
                 .update();
         if (!updated) {
             throw new CustomException("订单状态已变更，请刷新后重试");
+        }
+        // 桌台释放必须在主事务内同步执行：DiningTableService.changeStatus 为 fail-closed
+        // （依赖租户上下文），不能放到 afterCommit 异步回调里执行。
+        if (eatIn) {
+            releaseTableAfterCheckout(order);
+        }
+    }
+
+    /**
+     * 修改点(2026-09-18)：堂食结账完成后释放桌台为空闲（与订单取消/完成同策略）。
+     * 释放失败仅记录日志告警，不回滚已完成的收款（资金优先，桌台状态由人工核对补修正）。
+     */
+    private void releaseTableAfterCheckout(Orders order) {
+        if (diningTableService == null) {
+            log.warn("[收银] 桌台服务未注入，跳过桌台释放: tableId={}", order.getTableId());
+            return;
+        }
+        try {
+            diningTableService.changeStatus(order.getTableId(), DiningTableStatus.FREE.getValue());
+            log.info("[收银] 堂食结账完成，桌台{}已释放为空闲", order.getTableId());
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免桌台释放失败回滚已完成的收款
+            log.error("[收银] 桌台{}释放失败，需人工核查: {}", order.getTableId(), e.getMessage(), e);
         }
     }
 

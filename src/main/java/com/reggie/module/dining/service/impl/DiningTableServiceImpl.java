@@ -122,6 +122,12 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
           .eq(DiningTable::getTenantId, tenantId)
           .eq(DiningTable::getStatus, currentStatus)
           .set(DiningTable::getStatus, status);
+        // 修改点(2026-09-18)：置为「空闲」时一并清空当前订单绑定。
+        // 原实现只改状态，current_order_id 会残留 → 手动改空闲后「结账」按钮
+        // 仍能取到一张早已结束的订单跳转收银台，产生重复结账。
+        if (DiningTableStatus.FREE.getValue().equals(status)) {
+            uw.set(DiningTable::getCurrentOrderId, null);
+        }
         boolean success = update(uw);
         if (!success) {
             // update 返回 false 说明状态已被其他线程变更，存在并发冲突

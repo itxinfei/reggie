@@ -1036,6 +1036,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                         .or()
                         .eq(Orders::getStatus, Orders.STATUS_ORDERED)
                                   .isNull(Orders::getPayMethod))
+                // 修改点(2026-09-18)：排除「一键开台」产生的占位单（amount=0 且无订单明细）。
+                // 此前这类 ¥0.00 幽灵单会永久滞留在待结账列表，点进去结账还会报「订单金额异常」。
+                .gt(Orders::getAmount, BigDecimal.ZERO)
                 .orderByDesc(Orders::getOrderTime);
         List<Orders> orders = this.list(qw);
         // 二次过滤：排除已有收银记录的订单（payMethod 设 null 但有收银记录的情况）
