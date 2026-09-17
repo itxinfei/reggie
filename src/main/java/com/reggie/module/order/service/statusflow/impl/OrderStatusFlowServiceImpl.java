@@ -441,9 +441,14 @@ public class OrderStatusFlowServiceImpl
      * 标记库存已回退（拒单/取消共用）
      */
     private void markStockRefunded(Long id, Long tenantId) {
+        // 修复（2026-09-17 冒烟）：已支付订单取消/拒单走自动退款后订单状态为「已退款(6)」而非「已取消(5)」，
+        // 旧逻辑 WHERE status=CANCELLED 永不命中 → stock_refunded 标记置位失败，
+        // 导致 StockRefundCompensationTask 每 30 分钟把已退款订单库存再回退一次（重复恢复、库存膨胀）。
+        // 现同时匹配 CANCELLED 与 REFUNDED 两种终态，并加 ne(stock_refunded,1) 幂等保护。
         LambdaUpdateWrapper<Orders> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Orders::getId, id)
-                .eq(Orders::getStatus, Orders.STATUS_CANCELLED)
+                .in(Orders::getStatus, Orders.STATUS_CANCELLED, Orders.STATUS_REFUNDED)
+                .ne(Orders::getStockRefunded, 1)
                 .set(Orders::getStockRefunded, 1);
         this.update(null, wrapper);
     }
