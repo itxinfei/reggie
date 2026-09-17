@@ -30,8 +30,10 @@ public final class AiKeyEncryptor {
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
     private static final int GCM_TAG_BITS = 128;
     private static final int IV_LENGTH = 12;
-    /** 本地开发兜底密钥（生产环境必须通过 REGGIE_AI_KEY 环境变量覆盖） */
-    private static final String DEFAULT_KEY_BASE64 = "Y29tLnJlZ2dpZS5haS5wcm92aWRlci5kZWZhdWx0LmtleQ==";
+    // 修改点(2026-09-17)：默认密钥必须是合法 AES-256 长度（32 字节）。
+    // 原默认值解码为 "com.reggie.ai.provider.default.key"（34 字节），触发 Invalid AES key length。
+    /** 本地开发兜底密钥（32 字节，生产环境必须通过 REGGIE_AI_KEY 环境变量覆盖） */
+    private static final String DEFAULT_KEY_BASE64 = "UmVnZ2llQUlEZWZhdWx0S2V5MjAyNjA5MTdEZXYzMkI=";
 
     private AiKeyEncryptor() {
     }
