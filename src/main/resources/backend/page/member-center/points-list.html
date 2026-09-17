@@ -54,7 +54,7 @@
           <p class="ds-page-header__subtitle">查看会员积分变动记录</p>
         </div>
         <div class="ds-page-header__actions">
-          <el-button type="primary" size="small" icon="el-icon-plus" @click="openAdjust">积分调整</el-button>
+          <el-button type="primary" size="small" icon="ri-add-line" @click="openAdjust">积分调整</el-button>
         </div>
       </header>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
@@ -76,7 +76,7 @@
       <div class="filter-bar">
         <el-input v-model="input.phone" placeholder="请输入会员手机号" clearable
           @keyup.enter.native="handleQuery" style="width:200px;">
-          <i slot="prefix" class="el-input__icon el-icon-search"></i>
+          <i slot="prefix" class="el-input__icon ri-search-line"></i>
         </el-input>
         <span style="color:var(--color-info);font-size:var(--font-size-sm);">类型：</span>
         <span :class="['type-tag', input.type === '' ? 'active' : '']" role="button" tabindex="0" @click="setType('')" @keydown.enter="setType('')" :aria-pressed="input.type === ''">全部</span>

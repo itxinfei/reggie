@@ -326,13 +326,13 @@
         <div class="qrcode-img-wrap">
           <img v-if="qrcodeDialog.imageUrl" :src="qrcodeDialog.imageUrl" alt="桌台二维码" />
           <div v-else style="width:200px;height:200px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);">
-            <i class="el-icon-loading" style="font-size:var(--font-size-3xl);"></i>
+            <i class="ri-loader-4-line" style="font-size:var(--font-size-3xl);"></i>
           </div>
         </div>
         <div class="qrcode-tip">顾客扫码即可点餐</div>
         <div class="qrcode-actions">
           <el-button type="primary" size="small" @click="downloadQrcode" :disabled="!qrcodeDialog.imageUrl">
-            <i class="el-icon-download"></i> 下载二维码
+            <i class="ri-download-line"></i> 下载二维码
           </el-button>
         </div>
       </div>

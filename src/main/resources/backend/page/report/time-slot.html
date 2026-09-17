@@ -55,17 +55,15 @@
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 KPI 卡片 -->
       <stat-cards :cards="statsCards"></stat-cards>
 
-      <!-- ========== 工具栏 ========== -->
-      <div class="tableBar">
-        <span class="toolbar-label"><i class="el-icon-date" style="margin-right:4px;"></i>日期范围</span>
-        <el-date-picker v-model="dateRange" clearable value-format="yyyy-MM-dd"
-          type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
-          size="small"></el-date-picker>
-        <el-button type="primary" size="small" class="btn-query" icon="el-icon-search" @click="loadData">查询</el-button>
-        <el-button size="small" class="btn-reset" icon="el-icon-refresh" @click="reset">重置</el-button>
-        <span class="toolbar-spacer"></span>
-        <el-button type="success" size="small" icon="el-icon-download" @click="handleExport">导出 CSV</el-button>
-      </div>
+      <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
+      <table-bar
+        :search-items="searchItems"
+        :actions="searchActions"
+        :loading="loading"
+        @search="handleSearch"
+        @reset="handleReset"
+        @action="handleAction">
+      </table-bar>
 
 
 
@@ -124,6 +122,9 @@
         data: function() {
           return {
             loading: false, dateRange: [], tableData: [],
+            // 修改点：<table-bar> 统一组件配置
+            searchItems: [{ type: 'daterange', field: 'dateRange', placeholder: '日期范围' }],
+            searchActions: [{ key: 'export', text: '导出 CSV', type: 'success', icon: 'ri-download-line' }],
             // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
             timeSlotColumns: [
               { prop: 'name', label: '时段', width: 120, align: 'center' },
@@ -378,7 +379,14 @@
             document.body.appendChild(link); link.click(); document.body.removeChild(link);
             URL.revokeObjectURL(link.href);
             ReggieUI.success('导出成功');
-          }
+          },
+          // 修改点：<table-bar> 组件回调桥接
+          handleSearch: function(params) {
+            if (params && params.dateRange) this.dateRange = params.dateRange;
+            this.loadData();
+          },
+          handleReset: function() { this.dateRange = []; this.loadData(); },
+          handleAction: function(action) { if (action.key === 'export') this.handleExport(); }
         }
       })
     })();

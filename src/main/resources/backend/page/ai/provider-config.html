@@ -66,7 +66,7 @@
                 <el-button type="primary" size="small" @click="openAddDialog">
                     添加自定义模型
                 </el-button>
-                <el-button size="small" @click="loadData" icon="el-icon-refresh">
+                <el-button size="small" @click="loadData" icon="ri-refresh-line">
                     刷新
                 </el-button>
             </span>
@@ -328,7 +328,7 @@
                     type: 'info',
                     message: '正在测试 ' + provider.providerName + ' 连接...',
                     duration: 0,
-                    iconClass: 'el-icon-loading'
+                    iconClass: 'ri-loader-4-line'
                 });
                 const startTime = Date.now();
 

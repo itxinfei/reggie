@@ -97,23 +97,15 @@
     <!-- 统计卡片 - 使用统一的 <stat-cards> 组件 -->
     <stat-cards :cards="statsCards"></stat-cards>
 
-    <!-- 工具栏 -->
-    <div class="tableBar">
-      <span class="toolbar-label">日期范围：</span>
-      <el-date-picker
-        v-model="dateRange"
-        type="daterange"
-        range-separator="至"
-        start-placeholder="开始日期"
-        end-placeholder="结束日期"
-        value-format="yyyy-MM-dd"
-        style="width: 300px;">
-      </el-date-picker>
-      <el-button type="primary" icon="el-icon-search" aria-label="搜索" @click="fetchData">查询</el-button>
-      <el-button icon="el-icon-refresh" aria-label="重置" @click="resetQuery">重置</el-button>
-      <div class="toolbar-spacer"></div>
-      <el-button type="warning" icon="el-icon-date" @click="handleTodaySettlement">今日日结</el-button>
-    </div>
+    <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
+    <table-bar
+      :search-items="searchItems"
+      :actions="searchActions"
+      :loading="loading"
+      @search="handleSearch"
+      @reset="handleReset"
+      @action="handleAction">
+    </table-bar>
 
     <!-- 表格 -->
     <div class="table-card">
@@ -205,6 +197,9 @@
           loading: false,
           submitting: false, // 日结防重复提交守卫
           dateRange: [],
+          // 修改点：<table-bar> 统一组件配置
+          searchItems: [{ type: 'daterange', field: 'dateRange', placeholder: '日期范围', width: '300px' }],
+          searchActions: [{ key: 'settle', text: '今日日结', type: 'warning', icon: 'ri-calendar-line' }],
           tableData: [],
           columns: [
             { prop: 'settlementDate', label: '结算日期', width: 150, align: 'center' },
@@ -232,7 +227,7 @@
           return [
             {
               key: 'revenue',
-              icon: 'el-icon-money',
+              icon: 'ri-money-cny-circle-line',
               label: '总营业额',
               value: '¥' + this.formatMoney(this.summary.totalRevenue),
               color: 'primary',
@@ -240,7 +235,7 @@
             },
             {
               key: 'netIncome',
-              icon: 'el-icon-wallet',
+              icon: 'ri-wallet-line',
               label: '净收入',
               value: '¥' + this.formatMoney(this.summary.totalNetIncome),
               color: 'success',
@@ -248,7 +243,7 @@
             },
             {
               key: 'cost',
-              icon: 'el-icon-shopping-bag',
+              icon: 'ri-shopping-bag-line',
               label: '总成本',
               value: '¥' + this.formatMoney(this.summary.totalCost),
               color: 'warning',
@@ -256,7 +251,7 @@
             },
             {
               key: 'profit',
-              icon: 'el-icon-trend-charts',
+              icon: 'ri-line-chart-line',
               label: '毛利润',
               value: '¥' + this.formatMoney(this.summary.totalGrossProfit),
               color: this.summary.totalGrossProfit >= 0 ? 'success' : 'danger',
@@ -402,6 +397,18 @@
             console.warn('[daily-settlement] 删除失败:', err)
             ReggieUI.error('删除失败')
           }
+        },
+        // 修改点：<table-bar> 组件回调桥接
+        handleSearch(params) {
+          if (params && params.dateRange) this.dateRange = params.dateRange
+          this.fetchData()
+        },
+        handleReset() {
+          this.dateRange = []
+          this.fetchData()
+        },
+        handleAction(action) {
+          if (action.key === 'settle') this.handleTodaySettlement()
         }
       }
     })

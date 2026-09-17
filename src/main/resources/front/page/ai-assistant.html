@@ -16,16 +16,14 @@
 </head>
 <body>
     <div id="ai-app" class="ai-container" :class="{ 'dark-mode': darkModeEnabled }">
-        <!-- 顶部栏 -->
-        <div class="ai-header">
-            <div class="header-left">
-                <span class="status-dot" :class="{ offline: !isOnline }"></span>
-                <span class="title">AI 智能点餐助手</span>
+        <!-- 修改点(2026-09-17)：头部结构改用标准 .divHead 布局，左侧返回 + 标题 + 右侧功能按钮 -->
+        <div class="divHead ai-header--custom">
+            <div class="divTitle">
+                <i class="ri-close-line" @click="close"></i>AI 智能点餐助手
             </div>
-            <div class="header-actions">
-                <span class="header-btn" @click="toggleDarkMode" title="暗色模式"><i class="ri-moon-line" aria-hidden="true"></i></span>
-                <span class="header-btn" @click="toggleSidebar" title="对话历史"><i class="ri-menu-line" aria-hidden="true"></i></span>
-                <span class="header-btn" @click="close" title="关闭"><i class="ri-close-line" aria-hidden="true"></i></span>
+            <div class="ai-header-actions">
+                <span class="ai-header-btn" @click="toggleDarkMode" aria-label="切换暗色模式"><i class="ri-moon-line" aria-hidden="true"></i></span>
+                <span class="ai-header-btn" @click="toggleSidebar" aria-label="对话历史"><i class="ri-menu-line" aria-hidden="true"></i></span>
             </div>
         </div>
 

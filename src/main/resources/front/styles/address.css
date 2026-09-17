@@ -91,7 +91,8 @@ body.scrollable-page {
   box-shadow: 0 2rem 10rem var(--mask-light);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  border-left: 3px solid transparent;
+  /* 修改点(2026-09-17)：px→rem 统一（宽屏随根字号缩放） */
+  border-left: 3rem solid transparent;
 }
 
 /* 修改点：默认地址卡片 —— 金色左边框常驻 + 轻微金色投影，一眼可辨 */
@@ -266,54 +267,13 @@ body.scrollable-page {
   transform: scale(1.1);
 }
 
-/* ========== 空状态 ========== */
-/* 修改点：新增空状态提示样式 */
-#address .emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80rem 20rem 60rem;
-}
-
-#address .emptyState .emptyIcon {
-  width: 80rem;
-  height: 80rem;
-  border-radius: 50%;
-  background: var(--bg-page);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 20rem;
-}
-
-#address .emptyState .emptyIcon i {
-  font-size: 36rem;
-  color: var(--color-text-disabled);
-}
-
-#address .emptyState .emptyText {
-  font-size: 16rem;
-  font-family: var(--font-family-body);
-  color: var(--color-text-hint);
-  margin-bottom: 12rem;
-}
-
-/* 修改点(2026-09-14)：空态不再承载第二个「添加地址」入口（与底部固定按钮重复）。
-   这里降级为非交互的说明文案：去掉品牌色与下划线，避免视觉上像第二个 CTA。 */
-#address .emptyState .emptyHint {
-  font-size: 13rem;
-  font-family: var(--font-family-body);
-  color: var(--color-text-disabled);
-  cursor: default;
-  text-decoration: none;
-  line-height: 20rem;
-}
+/* 修改点(2026-09-17)：删除 #address .emptyState 自定义空态样式，统一使用全局 .empty-state */
 
 /* ========== 底部添加按钮 ========== */
 /* 修改点：bottom 追加 safe-area-inset-bottom，适配 iPhone 底部 Home Indicator（2026-09-01） */
 #address .divBottom {
-  height: 42rem;
+  /* 修改点(2026-09-17)：42→46rem，达到 44px+ 触控标准 */
+  height: 46rem;
   background: var(--color-primary-gradient);
   border-radius: var(--radius-xl);
   font-size: 15rem;
@@ -321,7 +281,7 @@ body.scrollable-page {
   font-weight: 600;
   text-align: center;
   color: var(--color-text-primary);
-  line-height: 42rem;
+  line-height: 46rem;
   letter-spacing: 1rem;
   position: absolute;
   bottom: calc(23rem + env(safe-area-inset-bottom, 0px));
@@ -381,7 +341,9 @@ body.scrollable-page {
   align-items: center;
   font-size: 10rem;
   font-weight: 600;
-  padding: 1rem 6rem;
+  /* 修改点(2026-09-17)：padding 1/6→2/8rem，与 addrTag 基线对齐且更饱满 */
+  padding: 2rem 8rem;
+  line-height: 16rem;
   border-radius: var(--radius-sm);
   background: var(--color-primary-tint);
   color: var(--color-primary-dark);
@@ -409,10 +371,11 @@ body.scrollable-page {
   color: var(--color-text-hint);
   cursor: pointer;
   user-select: none;
-  padding: 6rem 10rem;
+  /* 修改点(2026-09-17)：32→44rem 触控标准，编辑/删除不易误触 */
+  padding: 8rem 12rem;
+  min-height: 44rem;
   border-radius: var(--radius-sm);
   transition: all 0.2s;
-  min-height: 32rem; /* 保证触摸区域 */
 }
 
 #address .divContent .divItem .divActionBar .actionBtn i {

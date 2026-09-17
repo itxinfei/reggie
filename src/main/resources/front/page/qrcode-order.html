@@ -6,24 +6,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>扫码点餐 - 瑞吉外卖</title>
 
-  <link rel="stylesheet" href="../../backend/styles/tokens.css" />
+  <!-- 修改点(2026-09-17)：移除后端 Token 引用，改用前端 index.css 标准 Token -->
   <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
   <script src="./../js/icon-fallback.js"></script>
   <link rel="stylesheet" href="../styles/vant.min.css" />
   <link rel="stylesheet" href="../styles/index.css?v=20260914" />
   <style>
+    /* 修改点(2026-09-17)：后端 Token → 前端 Token 别名映射
+       目的：qrcode-order 原引用 ../../backend/styles/tokens.css，现改为对齐前端 index.css 标准 */
+    :root {
+      --color-brand-500: var(--color-primary);
+      --color-brand-400: var(--color-primary-dark);
+      --bg-surface: var(--bg-card);
+      --text-on-brand: var(--color-text-primary);
+      --text-primary: var(--color-text-primary);
+      --text-secondary: var(--color-text-secondary);
+      --text-muted: var(--color-text-hint);
+      --border-default: var(--border-light);
+      --color-danger: var(--color-danger);
+      --color-white: var(--color-text-white);
+      --font-size-base: var(--font-size-base);
+      --font-size-sm: var(--font-size-sm);
+      --font-size-md: var(--font-size-md);
+      --font-size-lg: var(--font-size-lg);
+      --font-size-xl: var(--font-size-lg);
+      --font-size-2xl: var(--font-size-title);
+      --font-size-xs: var(--font-size-xs);
+      --radius-sm: var(--radius-sm);
+      --radius-md: var(--radius-md);
+      --radius-lg: var(--radius-lg);
+      --shadow-xs: var(--shadow-sm);
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: var(--bg-page); font-family: var(--font-family-base); padding-bottom: 70px; min-height: 100vh; }
 
-    /* 页头 */
-    .header { background: var(--color-brand-500); color: var(--text-on-brand, #1f2937); padding: 16px 20px; text-align: center; }
-    .header .store-name { font-size: var(--font-size-xl); font-weight: 600; }
-    .header .table-info { font-size: var(--font-size-sm); opacity: 0.85; margin-top: 4px; }
+    /* 桌台信息条（位于 divHead 下方）*/
+    .table-info-bar { background: var(--bg-card); padding: 8rem 16rem; text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary); border-bottom: 1px solid var(--border-light); }
+    .table-info-bar i { color: var(--color-primary); margin-right: 4rem; }
 
     /* 加载中 */
-    .loading-wrap { text-align: center; padding: 60px 0; color: var(--text-muted); }
-    .loading-spinner { width: 32px; height: 32px; border: 3px solid var(--border-default); border-top-color: var(--color-brand-500); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-wrap { text-align: center; padding: 30rem 0; color: var(--color-text-hint); }
+    .loading-spinner { width: 16rem; height: 16rem; border: 2rem solid var(--border-light); border-top-color: var(--color-primary); border-radius: 50%; animation: loading-spin 0.8s linear infinite; margin: 0 auto 6rem; }
+    /* 修改点(2026-09-17)：复用全局 @keyframes loading-spin，删除本页重复定义 */
 
     /* 分类Tab */
     .category-tabs { display: flex; gap: 0; background: var(--bg-surface); border-bottom: 1px solid var(--border-default); overflow-x: auto; position: sticky; top: 0; z-index: 10; -webkit-overflow-scrolling: touch; }
@@ -107,10 +131,11 @@
 </head>
 <body>
   <div id="dine-app">
-    <!-- 页头 -->
-    <div class="header" v-if="tableInfo">
-      <div class="store-name">{{ storeInfo.name || '瑞吉外卖' }}</div>
-      <div class="table-info"><i class="ri-table-line"></i> {{ tableInfo.name }} · 可坐{{ tableInfo.seatCount }}人</div>
+    <!-- 修改点(2026-09-17)：头部统一为 .divHead > .divTitle（对齐全站标准）-->
+    <div class="divHead">
+      <div class="divTitle">
+        <i class="ri-store-2-line" style="margin-right:6rem;"></i>{{ storeInfo.name || '瑞吉外卖' }}
+      </div>
     </div>
 
     <!-- 加载中 -->

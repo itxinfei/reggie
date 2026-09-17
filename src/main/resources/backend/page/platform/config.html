@@ -204,9 +204,9 @@
       statsCards() {
         var s = this.stats || {}
         return [
-          { key: '', icon: 'el-icon-office-building', label: '平台总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
-          { key: '1', icon: 'el-icon-circle-check', label: '已启用', value: s.enabledCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
-          { key: '0', icon: 'el-icon-circle-close', label: '已停用', value: s.disabledCount || 0, color: 'info', clickable: true, active: this.activeFilter === '0' }
+          { key: '', icon: 'ri-building-line', label: '平台总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+          { key: '1', icon: 'ri-checkbox-circle-line', label: '已启用', value: s.enabledCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
+          { key: '0', icon: 'ri-close-circle-line', label: '已停用', value: s.disabledCount || 0, color: 'info', clickable: true, active: this.activeFilter === '0' }
         ]
       }
     },

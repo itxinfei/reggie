@@ -93,7 +93,7 @@
                 <p class="ds-page-header__subtitle">折扣 / 满减 / 秒杀 / 买赠 / 新客 / 智能营销 统一入口</p>
             </div>
             <div class="ds-page-header__actions">
-                <el-button type="primary" icon="el-icon-plus" @click="goCreate">新建{{ currentTabLabel }}</el-button>
+                <el-button type="primary" icon="ri-add-line" @click="goCreate">新建{{ currentTabLabel }}</el-button>
             </div>
         </header>
 
@@ -106,7 +106,7 @@
                 <el-tab-pane v-for="t in tabs" :key="t.key" :label="t.label" :name="t.key">
                     <div class="tab-header-line">
                         <span class="count-hint"><i :class="t.icon"></i> 共 {{ currentCards.length }} 个活动</span>
-                        <el-button size="small" icon="el-icon-right" @click="goManage">进入完整管理</el-button>
+                        <el-button size="small" icon="ri-arrow-right-s-line" @click="goManage">进入完整管理</el-button>
                     </div>
 
                     <!-- 修改点：P2-1 骨架屏——活动卡片加载态（脉冲骨架替代纯转圈），空态仅在非加载时显示 -->
@@ -131,8 +131,8 @@
                                 <div class="ac-line" v-for="(line, i) in act.lines" :key="i"><i class="ri ri-information-line" aria-hidden="true"></i> {{ line }}</div>
                             </div>
                             <div class="ac-actions">
-                                <el-button size="mini" icon="el-icon-view" @click="openManage(act)">管理</el-button>
-                                <el-button size="mini" type="primary" plain icon="el-icon-edit" @click="openCreate(act)">新建同类</el-button>
+                                <el-button size="mini" icon="ri-eye-line" @click="openManage(act)">管理</el-button>
+                                <el-button size="mini" type="primary" plain icon="ri-edit-line" @click="openCreate(act)">新建同类</el-button>
                             </div>
                         </div>
                     </div>

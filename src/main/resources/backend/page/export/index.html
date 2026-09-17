@@ -175,8 +175,8 @@
                     </div>
                 </div>
                 <div class="btn-row">
-                    <el-button type="success" size="small" icon="el-icon-download" :loading="orderExport.loading" @click="exportOrder('excel')">导出 Excel</el-button>
-                    <el-button type="warning" size="small" icon="el-icon-download" :loading="orderExport.loading" @click="exportOrder('pdf')">导出 PDF</el-button>
+                    <el-button type="success" size="small" icon="ri-download-line" :loading="orderExport.loading" @click="exportOrder('excel')">导出 Excel</el-button>
+                    <el-button type="warning" size="small" icon="ri-download-line" :loading="orderExport.loading" @click="exportOrder('pdf')">导出 PDF</el-button>
                 </div>
             </div>
 
@@ -196,8 +196,8 @@
                     </div>
                 </div>
                 <div class="btn-row">
-                    <el-button type="success" size="small" icon="el-icon-download" :loading="dishExport.loading" @click="exportDish('excel')">导出 Excel</el-button>
-                    <el-button type="warning" size="small" icon="el-icon-download" :loading="dishExport.loading" @click="exportDish('pdf')">导出 PDF</el-button>
+                    <el-button type="success" size="small" icon="ri-download-line" :loading="dishExport.loading" @click="exportDish('excel')">导出 Excel</el-button>
+                    <el-button type="warning" size="small" icon="ri-download-line" :loading="dishExport.loading" @click="exportDish('pdf')">导出 PDF</el-button>
                 </div>
             </div>
 
@@ -217,8 +217,8 @@
                     </div>
                 </div>
                 <div class="btn-row">
-                    <el-button type="success" size="small" icon="el-icon-download" :loading="empExport.loading" @click="exportEmp('excel')">导出 Excel</el-button>
-                    <el-button type="warning" size="small" icon="el-icon-download" :loading="empExport.loading" @click="exportEmp('pdf')">导出 PDF</el-button>
+                    <el-button type="success" size="small" icon="ri-download-line" :loading="empExport.loading" @click="exportEmp('excel')">导出 Excel</el-button>
+                    <el-button type="warning" size="small" icon="ri-download-line" :loading="empExport.loading" @click="exportEmp('pdf')">导出 PDF</el-button>
                 </div>
             </div>
 
@@ -248,8 +248,8 @@
                     </div>
                 </div>
                 <div class="btn-row">
-                    <el-button type="success" size="small" icon="el-icon-download" :loading="reportExport.loading" @click="exportReport('excel')">导出 Excel</el-button>
-                    <el-button type="warning" size="small" icon="el-icon-download" :loading="reportExport.loading" @click="exportReport('pdf')">导出 PDF</el-button>
+                    <el-button type="success" size="small" icon="ri-download-line" :loading="reportExport.loading" @click="exportReport('excel')">导出 Excel</el-button>
+                    <el-button type="warning" size="small" icon="ri-download-line" :loading="reportExport.loading" @click="exportReport('pdf')">导出 PDF</el-button>
                 </div>
             </div>
         </div>
@@ -258,12 +258,12 @@
         <div class="export-records-panel">
             <div class="panel-header" role="button" tabindex="0" @click="toggleRecords" @keydown.enter="toggleRecords" :aria-expanded="recordsExpanded" aria-label="导出记录面板">
                 <div class="panel-title">
-                    <i class="el-icon-s-order" style="color:var(--color-success);"></i>
+                    <i class="ri-file-list-line" style="color:var(--color-success);"></i>
                     导出记录
                     <span class="record-count-badge" v-if="history.length > 0">{{ history.length }}</span>
                 </div>
                 <el-button v-if="history.length > 0" type="danger" size="mini" plain @click.stop="clearHistory">清空记录</el-button>
-                <i :class="['el-icon-arrow-down expand-icon', { 'is-expanded': recordsExpanded }]"></i>
+                <i :class="['ri-arrow-down-s-line expand-icon', { 'is-expanded': recordsExpanded }]"></i>
             </div>
             <div class="panel-body" v-show="recordsExpanded">
                 <div v-if="history.length === 0" class="empty-state">
@@ -302,8 +302,8 @@
                                 </td>
                                 <td>
                                     <template v-if="item.status === 'success'">
-                                        <el-button type="text" size="mini" icon="el-icon-download" @click="reDownload(item)">重新下载</el-button>
-                                        <el-button type="text" size="mini" icon="el-icon-delete" style="color:var(--color-danger);" @click="deleteRecord(index)">删除</el-button>
+                                        <el-button type="text" size="mini" icon="ri-download-line" @click="reDownload(item)">重新下载</el-button>
+                                        <el-button type="text" size="mini" icon="ri-delete-bin-line" style="color:var(--color-danger);" @click="deleteRecord(index)">删除</el-button>
                                     </template>
                                     <span v-else style="color:var(--text-muted);font-size:var(--font-size-xs);">--</span>
                                 </td>
@@ -437,9 +437,9 @@
                             title: '导出成功',
                             dangerouslyUseHTMLString: true,
                             message: '<div style="line-height:1.8;">'
-                                + '<div><i class="el-icon-document" style="margin-right:6px;color:var(--el-color-primary);"></i>文件：' + dataType + '.' + ext + '</div>'
-                                + '<div><i class="el-icon-coin" style="margin-right:6px;color:var(--color-success);"></i>大小：' + record.fileSize + '</div>'
-                                + '<div><i class="el-icon-time" style="margin-right:6px;color:var(--color-warning);"></i>时间：' + now + '</div>'
+                                + '<div><i class="ri-file-text-line" style="margin-right:6px;color:var(--el-color-primary);"></i>文件：' + dataType + '.' + ext + '</div>'
+                                + '<div><i class="ri-coin-line" style="margin-right:6px;color:var(--color-success);"></i>大小：' + record.fileSize + '</div>'
+                                + '<div><i class="ri-time-line" style="margin-right:6px;color:var(--color-warning);"></i>时间：' + now + '</div>'
                                 + '</div>',
                             type: 'success', duration: 5000, position: 'top-right'
                         });
@@ -454,7 +454,7 @@
                             title: '导出失败',
                             dangerouslyUseHTMLString: true,
                             message: '<div style="line-height:1.8;">'
-                                + '<div><i class="el-icon-info" style="margin-right:6px;color:var(--color-info);"></i>原因：' + (err.message || String(err)) + '</div>'
+                                + '<div><i class="ri-information-line" style="margin-right:6px;color:var(--color-info);"></i>原因：' + (err.message || String(err)) + '</div>'
                                 + '<div style="color:var(--text-muted);font-size:var(--font-size-xs);">时间：' + now + '</div>'
                                 + '</div>',
                             type: 'error', duration: 8000, position: 'top-right'

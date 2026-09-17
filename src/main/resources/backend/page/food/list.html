@@ -201,7 +201,7 @@
             ref="upload"
           >
             <img v-if="dishForm.imageUrl" :src="dishForm.imageUrl" class="avatar" style="border-radius: var(--radius-sm);" alt="菜品图片">
-            <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+            <i v-else class="ri-add-line avatar-uploader-icon"></i>
           </el-upload>
         </el-form-item>
         <el-form-item label="菜品描述:">
@@ -210,7 +210,7 @@
         <el-form-item label="口味做法:">
           <div class="flavorBox-dialog">
             <div v-if="dishFlavors.length === 0" class="flavor-empty-dialog">
-              <el-button type="text" icon="el-icon-plus" @click="addDialogFlavor">添加口味配置</el-button>
+              <el-button type="text" icon="ri-add-line" @click="addDialogFlavor">添加口味配置</el-button>
             </div>
             <div v-else class="flavor-list-dialog">
               <div v-for="(item, index) in dishFlavors" :key="index" class="flavor-item-dialog">
@@ -225,10 +225,10 @@
                   <el-input v-if="item.inputVisible" v-model="item.inputValue" size="mini"
                     :ref="'dialogTagInput' + index" style="width: 80px;" maxlength="10"
                     @keyup.enter.native="confirmDialogTag(index)" @blur="confirmDialogTag(index)"></el-input>
-                  <el-button v-else size="mini" type="text" icon="el-icon-plus" @click="showDialogTagInput(index)">添加标签</el-button>
+                  <el-button v-else size="mini" type="text" icon="ri-add-line" @click="showDialogTagInput(index)">添加标签</el-button>
                 </div>
               </div>
-              <el-button type="text" icon="el-icon-plus" size="small" @click="addDialogFlavor" style="margin-top: 8px;">添加新口味</el-button>
+              <el-button type="text" icon="ri-add-line" size="small" @click="addDialogFlavor" style="margin-top: 8px;">添加新口味</el-button>
             </div>
           </div>
         </el-form-item>
@@ -291,7 +291,7 @@
       @submit="submitBOM"
     >
       <div style="margin-bottom: 12px;">
-        <el-button type="primary" size="small" icon="el-icon-plus" @click="addBOMItem">添加食材</el-button>
+        <el-button type="primary" size="small" icon="ri-add-line" @click="addBOMItem">添加食材</el-button>
         <el-button size="small" @click="loadBOMItems">刷新</el-button>
       </div>
       <el-table :data="bomItems" size="small" border style="width: 100%;">
@@ -371,7 +371,7 @@
             { key: 'batchStop', text: '批量停售', type: 'warning' },
             { key: 'batchCategory', text: '批量改分类', type: 'primary' },
             { key: 'add', text: '+ 新建菜品', type: 'primary' },
-            { key: 'export', text: '导出', type: 'success', icon: 'el-icon-download' }
+            { key: 'export', text: '导出', type: 'success', icon: 'ri-download-line' }
           ],
           // 表格列配置
           columns: [

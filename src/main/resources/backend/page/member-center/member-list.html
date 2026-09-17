@@ -131,10 +131,10 @@
           <div><span>注册时间</span>{{ selectedMember.createdTime || '-' }}</div>
         </div>
         <div class="member-detail__ops">
-          <el-button type="primary" size="small" icon="el-icon-plus" @click="showRecharge(selectedMember)">充值</el-button>
-          <el-button size="small" icon="el-icon-edit" @click="showEdit(selectedMember)">编辑</el-button>
-          <el-button size="small" :type="selectedMember.status === 1 ? 'warning' : 'success'" icon="el-icon-switch-button" @click="toggleStatus(selectedMember)">{{ selectedMember.status === 1 ? '禁用' : '启用' }}</el-button>
-          <el-button size="small" type="danger" icon="el-icon-delete" @click="handleDelete(selectedMember)">删除</el-button>
+          <el-button type="primary" size="small" icon="ri-add-line" @click="showRecharge(selectedMember)">充值</el-button>
+          <el-button size="small" icon="ri-edit-line" @click="showEdit(selectedMember)">编辑</el-button>
+          <el-button size="small" :type="selectedMember.status === 1 ? 'warning' : 'success'" icon="ri-toggle-line" @click="toggleStatus(selectedMember)">{{ selectedMember.status === 1 ? '禁用' : '启用' }}</el-button>
+          <el-button size="small" type="danger" icon="ri-delete-bin-line" @click="handleDelete(selectedMember)">删除</el-button>
         </div>
         <el-tabs v-model="detailTab">
           <el-tab-pane label="充值记录" name="recharge">
@@ -267,7 +267,7 @@
           searchInput: { name: '', phone: '', levelId: '' },
           // 修改点：会员新增/编辑表单（后端 update 仅允许修改 name/phone/status，等级由积分自动评定）
           actionConfig: [
-            { key: 'add', text: '新增会员', type: 'primary', icon: 'el-icon-plus' }
+            { key: 'add', text: '新增会员', type: 'primary', icon: 'ri-add-line' }
           ],
           editDialogVisible: false,
           editDialogTitle: '',

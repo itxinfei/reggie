@@ -41,7 +41,7 @@
         </div>
         <div class="ds-page-header__actions">
           <span class="ds-kbd-hint" title="Enter 接单 / F 完成（作用于当前高亮行）">
-            <i class="el-icon-key"></i>&nbsp;Enter 接单 · F 完成
+            <i class="ri-key-line"></i>&nbsp;Enter 接单 · F 完成
           </span>
         </div>
       </header>
@@ -142,7 +142,7 @@
               <div v-for="(item, idx) in diaForm.orderDetails" :key="idx" class="od-item">
                 <el-image v-if="item.image" :src="item.image" class="od-item-img" fit="cover"
                           :preview-src-list="[item.image]" alt="订单菜品图片"></el-image>
-                <div v-else class="od-item-img od-item-img--ph"><i class="el-icon-picture-outline"></i></div>
+                <div v-else class="od-item-img od-item-img--ph"><i class="ri-image-line"></i></div>
                 <div class="od-item-body">
                   <div class="od-item-name">{{ item.name }}</div>
                   <div class="od-item-meta">
@@ -280,8 +280,8 @@
           ],
           // 操作按钮配置
           actionConfig: [
-            { key: 'exportExcel', text: '导出Excel', type: 'success', icon: 'el-icon-download' },
-            { key: 'exportPdf', text: '导出PDF', type: 'danger', icon: 'el-icon-document' }
+            { key: 'exportExcel', text: '导出Excel', type: 'success', icon: 'ri-download-line' },
+            { key: 'exportPdf', text: '导出PDF', type: 'danger', icon: 'ri-file-text-line' }
           ],
           // 表格列配置
           columns: [

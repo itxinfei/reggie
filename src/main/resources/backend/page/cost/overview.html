@@ -21,33 +21,7 @@
       background: var(--bg-page);
       font-family: var(--font-family-base);
     }
-    .cost-container {
-      min-height: 100%;
-      display: flex;
-      flex-direction: column;
-    }
-    .cost-container .container {
-      flex: 1;
-      background: transparent;
-      padding: 24px 32px 32px;
-      min-width: 0;
-      max-width: 1400px;
-      margin: 0 auto;
-      width: 100%;
-    }
-    /* ── 工具栏 ── */
-    .tableBar {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      background: var(--bg-surface);
-      padding: 16px 24px;
-      border-radius: var(--radius-lg);
-      margin-bottom: 20px;
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--el-border-light);
-    }
+    /* ── 图表行布局 ── */
     /* ── 图表区域 ── */
     .chart-row {
       display: grid;
@@ -115,41 +89,29 @@ border-radius: var(--radius-sm);
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
-  <a href="#main-content" class="skip-link">跳转到主内容</a>
-
-  <!-- ====== 成本核算总览页 ====== -->
-  <!-- 功能：核算菜品成本与毛利，展示成本趋势/结构/排名图表与成本预警 -->
-  <div id="app" class="cost-container">
-    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
-      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+  <a href="#app" class="skip-link">跳转到主内容</a>
+  <div id="app" class="dashboard-container">
+    <main class="container ds-page" id="main-content" role="main" aria-label="页面主要内容">
+      <!-- 页头：标题 + 副标题 -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
           <h1 class="ds-page-header__title" id="page-title">成本核算</h1>
           <p class="ds-page-header__subtitle">核算菜品成本与毛利</p>
         </div>
-        <div class="ds-page-header__actions"></div>
       </header>
 
-      <!-- 统计卡片 - 使用统一的 <stat-cards> 组件 -->
+      <!-- 统计卡片 -->
       <stat-cards :cards="statsCards"></stat-cards>
 
-      <!-- 工具栏 -->
-      <div class="tableBar">
-        <span class="toolbar-label">日期范围：</span>
-        <el-date-picker
-          v-model="dateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          value-format="yyyy-MM-dd"
-          style="width: 300px;">
-        </el-date-picker>
-        <el-button type="primary" icon="el-icon-search" aria-label="搜索" @click="fetchData">查询</el-button>
-        <el-button icon="el-icon-refresh" aria-label="重置" @click="resetQuery">重置</el-button>
-        <div class="toolbar-spacer"></div>
-        <el-button type="success" icon="el-icon-download" @click="exportReport">导出报表</el-button>
-      </div>
+      <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
+      <table-bar
+        :search-items="searchItems"
+        :actions="searchActions"
+        :loading="loading"
+        @search="handleSearch"
+        @reset="handleReset"
+        @action="handleAction">
+      </table-bar>
 
       <!-- 图表行 -->
       <div class="chart-row">
@@ -184,7 +146,7 @@ border-radius: var(--radius-sm);
           </div>
         </div>
       </div>
-    </div>
+    </main>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -206,6 +168,13 @@ border-radius: var(--radius-sm);
         return {
           loading: false,
           dateRange: [],
+          // 修改点：<table-bar> 统一组件配置
+          searchItems: [
+            { type: 'daterange', field: 'dateRange', placeholder: '日期范围', width: '300px' }
+          ],
+          searchActions: [
+            { key: 'export', text: '导出报表', type: 'success', icon: 'ri-download-line' }
+          ],
           summary: {
             totalCost: 0,
             materialCost: 0,
@@ -233,7 +202,7 @@ border-radius: var(--radius-sm);
           return [
             {
               key: 'totalCost',
-              icon: 'el-icon-money',
+              icon: 'ri-money-cny-circle-line',
               label: '总成本',
               value: '¥' + this.formatMoney(this.summary.totalCost),
               color: 'primary',
@@ -241,7 +210,7 @@ border-radius: var(--radius-sm);
             },
             {
               key: 'materialCost',
-              icon: 'el-icon-food',
+              icon: 'ri-restaurant-line',
               label: '食材成本',
               value: '¥' + this.formatMoney(this.summary.materialCost),
               color: 'success',
@@ -249,7 +218,7 @@ border-radius: var(--radius-sm);
             },
             {
               key: 'laborCost',
-              icon: 'el-icon-user',
+              icon: 'ri-user-line',
               label: '人工成本',
               value: '¥' + this.formatMoney(this.summary.laborCost),
               color: 'warning',
@@ -257,7 +226,7 @@ border-radius: var(--radius-sm);
             },
             {
               key: 'otherCost',
-              icon: 'el-icon-more',
+              icon: 'ri-more-line',
               label: '其他成本',
               value: '¥' + this.formatMoney(this.summary.otherCost),
               color: 'info',
@@ -546,6 +515,21 @@ border-radius: var(--radius-sm);
         },
         exportReport() {
           ReggieUI.info('导出功能开发中...')
+        },
+        // 修改点：<table-bar> 组件回调桥接
+        handleSearch(params) {
+          if (params && params.dateRange) {
+            this.dateRange = params.dateRange
+          }
+          this.fetchData()
+        },
+        handleReset() {
+          this.resetQuery()
+        },
+        handleAction(action) {
+          if (action.key === 'export') {
+            this.exportReport()
+          }
         }
       }
     })

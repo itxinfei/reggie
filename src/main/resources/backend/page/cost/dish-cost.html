@@ -11,46 +11,6 @@
   <!-- ==================== 菜品成本管理 ==================== -->
   <!-- 功能说明：核算单菜品的食材/人工/其他成本与售价，计算毛利率，支持新增/编辑/删除/导出 -->
   <style>
-    /* ===== 页面基础 ===== */
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow-y: auto;
-      background: var(--el-bg-subtle);
-    }
-    .container {
-      padding: 24px 32px;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    /* ===== 搜索栏样式 ===== */
-    .tableBar {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      background: var(--bg-surface);
-      padding: 16px 24px;
-      border-radius: var(--radius-lg);
-      margin-bottom: 20px;
-      box-shadow: var(--shadow-sm);
-    }
-    .tableBar .toolbar-label {
-      font-size:var(--font-size-base);
-      color: var(--el-text-regular);
-      font-weight: 500;
-    }
-    .tableBar .toolbar-spacer {
-      flex: 1;
-    }
-    /* ===== 数据表格样式 ===== */
-    .table-card {
-      background: var(--bg-surface);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-    }
     /* ===== 毛利率等级样式（高>=30%/中>=10%/低<10%） ===== */
     .profit-rate {
       font-weight: 600;
@@ -68,33 +28,28 @@
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
- <a href="#app" class="skip-link">跳转到主内容</a>
- <div id="app" class="container" role="main" aria-label="页面主要内容">
-    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
+  <a href="#app" class="skip-link">跳转到主内容</a>
+  <div id="app" class="dashboard-container">
+    <main class="container ds-page" role="main" aria-label="页面主要内容">
+    <!-- 页头：标题 + 副标题 -->
     <header class="ds-page-header">
       <div class="ds-page-header__titles">
         <h1 class="ds-page-header__title" id="page-title">菜品成本管理</h1>
         <p class="ds-page-header__subtitle">核算单菜品成本与毛利</p>
       </div>
-      <div class="ds-page-header__actions"></div>
     </header>
-    <!-- 搜索栏：按菜品名称查询 + 新增/导出按钮 -->
-    <div class="tableBar">
-      <span class="toolbar-label">菜品名称：</span>
-      <el-input v-model="searchName" placeholder="请输入菜品名称" clearable style="width: 200px;"></el-input>
-      <el-button type="primary" icon="el-icon-search" aria-label="搜索" @click="fetchData">查询</el-button>
-      <el-button icon="el-icon-refresh" aria-label="重置" @click="resetSearch">重置</el-button>
-      <div class="toolbar-spacer"></div>
-      <el-tooltip content="根据菜品BOM配方和原料采购价，自动计算食材成本" placement="top">
-        <el-button type="warning" icon="el-icon-refresh-right" :loading="syncLoading" @click="handleSyncFromPurchase">从采购价同步</el-button>
-      </el-tooltip>
-      <el-button type="primary" icon="el-icon-plus" aria-label="新增" @click="handleAdd">新增菜品成本</el-button>
-      <el-button type="success" icon="el-icon-download" @click="handleExport">导出</el-button>
-    </div>
+    <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
+    <table-bar
+      :search-items="searchItems"
+      :actions="tableActions"
+      :loading="loading"
+      @search="handleSearch"
+      @reset="handleReset"
+      @action="handleAction">
+    </table-bar>
 
     <!-- 数据表格：菜品名称/各项成本/售价/毛利率/备注 -->
-    <div class="table-card">
-      <crud-table
+    <crud-table
         :data="filteredTableData"
         :columns="columns"
         :loading="loading"
@@ -113,7 +68,6 @@
           <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
         </template>
       </crud-table>
-    </div>
 
     <!-- 新增/编辑弹窗：选择菜品后自动带出BOM成本，手动填写人工/其他成本与售价 -->
     <crud-dialog :show-submit="true" :show-cancel="true" :title="dialogTitle" :visible.sync="dialogVisible" size="lg" @submit="handleSubmit">
@@ -166,6 +120,7 @@
         </el-form-item>
       </el-form>
     </crud-dialog>
+    </main>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -185,6 +140,15 @@
         return {
           loading: false,
           searchName: '',
+          // 修改点：<table-bar> 统一组件配置
+          searchItems: [
+            { type: 'input', field: 'dishName', placeholder: '请输入菜品名称', width: '200px' }
+          ],
+          tableActions: [
+            { key: 'sync', text: '从采购价同步', type: 'warning', icon: 'ri-refresh-line' },
+            { key: 'add', text: '新增菜品成本', type: 'primary', icon: 'ri-add-line' },
+            { key: 'export', text: '导出', type: 'success', icon: 'ri-download-line' }
+          ],
           tableData: [],
           columns: [
             { prop: 'dishName', label: '菜品名称', width: 160, align: 'center' },
@@ -260,6 +224,24 @@
         resetSearch() {
           this.searchName = ''
           this.fetchData()
+        },
+        // 修改点：<table-bar> 组件回调桥接
+        handleSearch(params) {
+          this.searchName = (params && params.dishName) || ''
+          this.fetchData()
+        },
+        handleReset() {
+          this.searchName = ''
+          this.fetchData()
+        },
+        handleAction(action) {
+          if (action.key === 'add') {
+            this.handleAdd()
+          } else if (action.key === 'sync') {
+            this.handleSyncFromPurchase()
+          } else if (action.key === 'export') {
+            this.handleExport()
+          }
         },
         // ========== 菜品远程搜索与选择 ==========
         async searchDishes(query) {

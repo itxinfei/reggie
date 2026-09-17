@@ -202,6 +202,11 @@
                         <span>优惠券</span>
                         <span>-￥{{Number(selectedCoupon.discountAmount || 0).toFixed(2)}}</span>
                     </div>
+                    <!-- 修改点(2026-09-17)：新增实付合计行 —— 最终金额不再只藏在底部栏小字 -->
+                    <div class="price-row total">
+                        <span>实付</span>
+                        <span>￥{{Number(finalPrice || 0).toFixed(2)}}</span>
+                    </div>
                 </div>
 
                 <!-- 修改点：优惠券选择 -->
@@ -637,7 +642,8 @@
                             amount: this.finalPrice,
                             expectDeliveryTime: this.expectDeliveryTime,
                             usedCouponId: this.selectedCoupon ? this.selectedCoupon.id : null,
-                            idempotencyKey: this.userId + '_' + Date.now()
+                            // 修改点(2026-09-17)：this.userId 未定义导致幂等键拼接出 "undefined_xxx"，改用 sessionStorage 手机号
+                            idempotencyKey: (sessionStorage.getItem("userPhone") || 'anon') + '_' + Date.now()
                         }
                         try {
                             const res = await addOrderApi(params)

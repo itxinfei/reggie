@@ -27,21 +27,21 @@
     <style>
       .skeleton-container { padding: 12rem; }
       .skeleton-restaurant { display: flex; align-items: center; padding: 16rem; background: #fff; border-radius: 8rem; margin-bottom: 12rem; }
-      .skeleton-logo { width: 60rem; height: 60rem; border-radius: 8rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; flex-shrink: 0; }
+      .skeleton-logo { width: 60rem; height: 60rem; border-radius: 8rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
       .skeleton-info { flex: 1; margin-left: 12rem; }
-      .skeleton-line { height: 14rem; border-radius: 4rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; margin-bottom: 8rem; }
+      .skeleton-line { height: 14rem; border-radius: 4rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; margin-bottom: 8rem; }
       .skeleton-line:last-child { margin-bottom: 0; }
       .skeleton-w30 { width: 30%; }
       .skeleton-w40 { width: 40%; }
       .skeleton-w60 { width: 60%; }
       .skeleton-w80 { width: 80%; }
       .skeleton-categories { display: flex; gap: 8rem; padding: 12rem; background: #fff; border-radius: 8rem; margin-bottom: 12rem; overflow: hidden; }
-      .skeleton-cat-item { width: 60rem; height: 28rem; border-radius: 14rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; flex-shrink: 0; }
+      .skeleton-cat-item { width: 60rem; height: 28rem; border-radius: 14rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
       .skeleton-dishes { display: flex; flex-direction: column; gap: 12rem; }
       .skeleton-dish-item { display: flex; padding: 12rem; background: #fff; border-radius: 8rem; }
-      .skeleton-dish-img { width: 100rem; height: 100rem; border-radius: 8rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; flex-shrink: 0; }
+      .skeleton-dish-img { width: 100rem; height: 100rem; border-radius: 8rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
       .skeleton-dish-info { flex: 1; margin-left: 12rem; display: flex; flex-direction: column; justify-content: center; }
-      @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+      /* 修改点(2026-09-17)：复用全局 @keyframes rg-skeleton-shine，删除本页独立定义 */
     </style>
   </head>
   <body>
@@ -72,7 +72,7 @@
             <i class="ai-icon ri-robot-line" aria-hidden="true"></i>
           </div>
           <div class="user-btn" @click="toUserPage">
-            <img :src="userAvatar || './images/headPage.png'" />
+            <img :src="userAvatar || './images/headPage.png'" alt="用户头像"/>
           </div>
         </div>
 
@@ -107,7 +107,7 @@
         <!-- 商家信息卡片 -->
         <div class="restaurant-card">
           <div class="rc-top">
-            <img src="./images/logo.png" class="rc-logo"/>
+            <img src="./images/logo.png" class="rc-logo" alt="瑞吉外卖"/>
             <div class="rc-info">
               <div class="rc-name-row">
                 <span class="rc-name">{{ restaurantInfo.name || '瑞吉外卖' }}</span>
@@ -157,7 +157,7 @@
           <div class="recommend-item" v-for="(dish, idx) in recommendDishes.slice(0, 8)" :key="'r'+idx"
                @click="recommendDishClick(dish)">
             <div class="ri-image">
-              <img :src="imgPath(dish.image)" @error="e => e.target.src='./images/noImg.png'" loading="lazy" />
+              <img :src="imgPath(dish.image)" @error="e => e.target.src='./images/noImg.png'" loading="lazy" :alt="dish.name || '菜品图片'"/>
             </div>
             <div class="ri-info">
               <div class="ri-name">{{ dish.name }}</div>
@@ -192,11 +192,12 @@
         <!-- 右侧菜品列表（修改点 2026-09-16：改为按分类分组的单页长列表，支持左右滚动联动） -->
         <div class="dish-panel" ref="dishPanel">
           <van-loading v-if="loadingAll" size="24px" vertical class="dish-loading">正在加载菜单...</van-loading>
-          <template v-for="(item,index) in dishList" :key="index">
-            <div v-if="item._title" class="category-dish-title" :data-category-id="item._categoryId">{{ item.name }}</div>
-            <div v-else class="dish-item">
+          <!-- 修改点(2026-09-17)：v-for 在 template 上不能带 :key，改为每个子元素 -->
+          <template v-for="(item,index) in dishList">
+            <div v-if="item._title" :key="'cat-'+index" class="category-dish-title" :data-category-id="item._categoryId">{{ item.name }}</div>
+            <div v-else :key="'dish-'+index" class="dish-item">
               <div class="di-image" @click="previewDishImage(imgPath(item.image))">
-                <img :src="imgPath(item.image)" @error="imgError" loading="lazy">
+                <img :src="imgPath(item.image)" @error="imgError" loading="lazy" :alt="item.name || '菜品图片'">
                 <div class="di-tag" v-if="item.saleNum > 100">热卖</div>
               </div>
               <div class="di-info" @click="dishDetails(item)">
@@ -216,7 +217,7 @@
             </div>
           </template>
           <div class="empty-tip" v-if="!loadingAll && (!dishList || dishList.length === 0)">
-            <img src="./images/noImg.png"/>
+            <img src="./images/noImg.png" alt="图片加载失败"/>
             <p>暂无菜品</p>
           </div>
         </div>
@@ -281,7 +282,7 @@
         </div>
         <div class="divCartContent">
           <div v-for="item in cartData" :key="item.id" class="divCartItem">
-            <img :src="imgPath(item.image)" @error="imgError" class="cart-img" loading="lazy">
+            <img :src="imgPath(item.image)" @error="imgError" class="cart-img" loading="lazy" :alt="item.name || '菜品图片'">
             <div class="divDesc">
               <div class="name">{{ item.name }}</div>
               <div class="price">
@@ -312,7 +313,7 @@
       >
         <div class="divContainer">
           <!-- 修改点：菜品图加点击预览（van-image-preview 大图），解决小图看不清问题 -->
-          <img :src="imgPath(detailsDialog.item.image)" @error="imgError" class="dialog-img" @click.stop="previewDishImage(imgPath(detailsDialog.item.image))" loading="lazy">
+          <img :src="imgPath(detailsDialog.item.image)" @error="imgError" class="dialog-img" @click.stop="previewDishImage(imgPath(detailsDialog.item.image))" loading="lazy" :alt="detailsDialog.item.name || '菜品大图'">
           <div class="title">{{ detailsDialog.item.name }}</div>
           <div class="content">{{ detailsDialog.item.description }}</div>
           <!-- 评价展示 -->
@@ -369,7 +370,7 @@
           <div class="title">{{ setMealDialog.item.name }}</div>
           <div class="item" v-for="(item,index) in setMealDialog.item.list" :key="index">
             <!-- 修改点：套餐子项图加点击预览，与菜品详情一致 -->
-            <img :src="imgPath(item.image)" @error="imgError" class="meal-img" @click.stop="previewDishImage(imgPath(item.image), setMealDialog.item.list.map(s => imgPath(s.image)), index)" loading="lazy">
+            <img :src="imgPath(item.image)" @error="imgError" class="meal-img" @click.stop="previewDishImage(imgPath(item.image), setMealDialog.item.list.map(s => imgPath(s.image)), index)" loading="lazy" :alt="item.name || '套餐菜品图'">
             <div class="divSubTitle">{{ item.name + '(' + item.copies + '份)' }}
               <div class="divPrice">
                 <span>￥</span><span>{{ Number(item.price || 0).toFixed(2) }}</span>
@@ -503,7 +504,7 @@
             :key="'d' + idx"
           >
             <div class="di-image" @click="previewDishImage(imgPath(item.image))">
-              <img :src="imgPath(item.image)" @error="imgError" loading="lazy">
+              <img :src="imgPath(item.image)" @error="imgError" loading="lazy" :alt="item.name || '菜品图片'">
             </div>
             <div class="di-info" @click="dishDetails(item)">
               <div class="di-name">{{ item.name }}</div>
@@ -529,7 +530,7 @@
             :key="'m' + idx"
           >
             <div class="di-image" @click="previewDishImage(imgPath(item.image))">
-              <img :src="imgPath(item.image)" @error="imgError" loading="lazy">
+              <img :src="imgPath(item.image)" @error="imgError" loading="lazy" :alt="item.name || '菜品图片'">
             </div>
             <div class="di-info" @click="dishDetails(item)">
               <div class="di-name">{{ item.name }}</div>
@@ -548,7 +549,7 @@
 
           <!-- 空结果 -->
           <div class="search-empty-result" v-if="!searchDishList.length && !searchMealList.length && searchSearched">
-            <img src="./images/noImg.png"/>
+            <img src="./images/noImg.png" alt="图片加载失败"/>
             <p>没有找到相关菜品或套餐</p>
             <p class="sub">试试其他关键词吧</p>
           </div>

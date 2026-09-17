@@ -82,7 +82,7 @@
             <!-- ===== 高级搜索 + 操作按钮 ===== -->
             <div class="toolbar">
                 <el-input v-model="search.keyword" placeholder="门店名称 / 编码" clearable size="small" @clear="doSearch" @keyup.enter.native="doSearch">
-                    <i slot="prefix" class="el-input__icon el-icon-search"></i>
+                    <i slot="prefix" class="el-input__icon ri-search-line"></i>
                 </el-input>
                 <el-select v-model="search.storeType" placeholder="门店类型" clearable size="small" @change="doSearch">
                     <el-option label="全部类型" :value="null"></el-option>
@@ -95,15 +95,15 @@
                     <el-option label="已启用" :value="1"></el-option>
                     <el-option label="已停用" :value="0"></el-option>
                 </el-select>
-                <el-button size="small" type="primary" icon="el-icon-search" @click="doSearch">搜索</el-button>
-                <el-button size="small" icon="el-icon-refresh-left" @click="resetSearch">重置</el-button>
+                <el-button size="small" type="primary" icon="ri-search-line" @click="doSearch">搜索</el-button>
+                <el-button size="small" icon="ri-refresh-line-left" @click="resetSearch">重置</el-button>
 
                 <span class="spacer"></span>
 
-                <el-button size="small" type="success" icon="el-icon-plus" @click="openCreateDialog">新建门店</el-button>
-                <el-button size="small" type="warning" icon="el-icon-upload2" @click="batchEnable" :disabled="selection.length === 0">批量启用</el-button>
-                <el-button size="small" type="info" icon="el-icon-download" @click="batchDisable" :disabled="selection.length === 0">批量停用</el-button>
-                <el-button size="small" icon="el-icon-download" @click="doExport">导出数据</el-button>
+                <el-button size="small" type="success" icon="ri-add-line" @click="openCreateDialog">新建门店</el-button>
+                <el-button size="small" type="warning" icon="ri-upload-line2" @click="batchEnable" :disabled="selection.length === 0">批量启用</el-button>
+                <el-button size="small" type="info" icon="ri-download-line" @click="batchDisable" :disabled="selection.length === 0">批量停用</el-button>
+                <el-button size="small" icon="ri-download-line" @click="doExport">导出数据</el-button>
             </div>
 
             <!-- ===== 数据表格 ===== -->
@@ -147,20 +147,20 @@
                     </template>
                     <template #col-pauseOrder="{ row }">
                         <el-tag v-if="row.pauseOrder === 1" type="warning" size="mini" effect="plain">
-                            <i class="el-icon-video-pause" style="margin-right:2px;"></i>暂停接单
+                            <i class="ri-pause-circle-line" style="margin-right:2px;"></i>暂停接单
                         </el-tag>
                         <el-tag v-else type="success" size="mini" effect="plain">
-                            <i class="el-icon-video-play" style="margin-right:2px;"></i>正常接单
+                            <i class="ri-play-circle-line" style="margin-right:2px;"></i>正常接单
                         </el-tag>
                     </template>
                     <template #actions="{ row }">
-                        <el-button type="text" size="mini" icon="el-icon-document" @click.stop="openDetail(row)">详情</el-button>
-                        <el-button type="text" size="mini" icon="el-icon-data-line" @click.stop="openDashboard(row)">看板</el-button>
-                        <el-button type="text" size="mini" icon="el-icon-edit" @click.stop="openEditDialog(row)">编辑</el-button>
-                        <el-button v-if="row.pauseOrder === 1" type="text" size="mini" icon="el-icon-video-play" @click.stop="togglePause(row, false)" style="color:var(--color-success);">恢复接单</el-button>
-                        <el-button v-else type="text" size="mini" icon="el-icon-video-pause" @click.stop="togglePause(row, true)" style="color:var(--color-warning);">暂停接单</el-button>
-                        <el-button type="text" size="mini" icon="el-icon-switch-button" @click.stop="switchToStore(row)">切换</el-button>
-                        <el-button type="text" size="mini" icon="el-icon-refresh" @click.stop="openSyncDialog(row)">同步</el-button>
+                        <el-button type="text" size="mini" icon="ri-file-text-line" @click.stop="openDetail(row)">详情</el-button>
+                        <el-button type="text" size="mini" icon="ri-bar-chart-line" @click.stop="openDashboard(row)">看板</el-button>
+                        <el-button type="text" size="mini" icon="ri-edit-line" @click.stop="openEditDialog(row)">编辑</el-button>
+                        <el-button v-if="row.pauseOrder === 1" type="text" size="mini" icon="ri-play-circle-line" @click.stop="togglePause(row, false)" style="color:var(--color-success);">恢复接单</el-button>
+                        <el-button v-else type="text" size="mini" icon="ri-pause-circle-line" @click.stop="togglePause(row, true)" style="color:var(--color-warning);">暂停接单</el-button>
+                        <el-button type="text" size="mini" icon="ri-toggle-line" @click.stop="switchToStore(row)">切换</el-button>
+                        <el-button type="text" size="mini" icon="ri-refresh-line" @click.stop="openSyncDialog(row)">同步</el-button>
                     </template>
                 </crud-table>
 
@@ -179,7 +179,7 @@
 
                 <!-- 空状态 -->
                 <div v-if="!loading && tableData.length === 0" class="empty-wrap">
-                    <i class="el-icon-s-shop" style="font-size: 48px"></i>
+                    <i class="ri-store-line" style="font-size: 48px"></i>
                     <p style="margin-top:12px;">暂无门店数据</p>
                     <el-button type="primary" size="small" style="margin-top:12px;" @click="openCreateDialog">创建第一家门店</el-button>
                 </div>
@@ -371,9 +371,9 @@
             </el-row>
 
             <div class="footer-actions">
-                <el-button size="small" type="primary" icon="el-icon-edit" @click="openEditDialog(detailData)">编辑</el-button>
-                <el-button size="small" icon="el-icon-switch-button" @click="switchToStore(detailData)">切换门店</el-button>
-                <el-button size="small" icon="el-icon-refresh" @click="openSyncDialog(detailData)">数据同步</el-button>
+                <el-button size="small" type="primary" icon="ri-edit-line" @click="openEditDialog(detailData)">编辑</el-button>
+                <el-button size="small" icon="ri-toggle-line" @click="switchToStore(detailData)">切换门店</el-button>
+                <el-button size="small" icon="ri-refresh-line" @click="openSyncDialog(detailData)">数据同步</el-button>
             </div>
         </div>
     </crud-dialog>
@@ -393,9 +393,9 @@
             将总部数据同步到 <b style="color:var(--el-text-primary);">{{ syncTargetName }}</b>
         </p>
         <div class="sync-section">
-            <el-button size="small" type="primary" @click="doSync('dishes')" :loading="syncing.dishes" icon="el-icon-sell">同步菜品</el-button>
-            <el-button size="small" type="success" @click="doSync('categories')" :loading="syncing.categories" icon="el-icon-menu">同步分类</el-button>
-            <el-button size="small" type="warning" @click="doSync('setmeals')" :loading="syncing.setmeals" icon="el-icon-s-grid">同步套餐</el-button>
+            <el-button size="small" type="primary" @click="doSync('dishes')" :loading="syncing.dishes" icon="ri-price-tag-line">同步菜品</el-button>
+            <el-button size="small" type="success" @click="doSync('categories')" :loading="syncing.categories" icon="ri-menu-line">同步分类</el-button>
+            <el-button size="small" type="warning" @click="doSync('setmeals')" :loading="syncing.setmeals" icon="ri-grid-line">同步套餐</el-button>
         </div>
         <el-alert
             v-if="syncResult"

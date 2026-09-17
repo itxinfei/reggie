@@ -331,7 +331,7 @@
       border-radius: var(--border-radius-base);
       line-height: 1.5;
     }
-    .pay-hint .el-icon-info {
+    .pay-hint .ri-information-line {
       color: var(--el-color-primary);
       margin-right: 4px;
     }
@@ -347,7 +347,7 @@
     <!-- 头部统计（统一 stat-cards 组件） -->
     <div class="cashier-header">
       <div class="cashier-title">
-        <i class="el-icon-shopping-cart-2" style="color: var(--el-color-primary); margin-right: var(--space-2);"></i>
+        <i class="ri-shopping-cart-line2" style="color: var(--el-color-primary); margin-right: var(--space-2);"></i>
         收银台
       </div>
       <stat-cards :cards="headerCards" :loading="false"></stat-cards>
@@ -358,7 +358,7 @@
       <!-- 订单面板 -->
       <div class="order-panel">
         <div class="panel-title">
-          <i class="el-icon-document"></i>
+          <i class="ri-file-text-line"></i>
           待结账订单
         </div>
         <div class="order-list">
@@ -389,7 +389,7 @@
       <!-- 支付面板 -->
       <div class="payment-panel">
         <div class="panel-title">
-          <i class="el-icon-money"></i>
+          <i class="ri-money-cny-circle-line"></i>
           结账信息
         </div>
 
@@ -503,35 +503,35 @@
               class="payment-method"
               :class="{ active: payType === 1 }"
               @click="selectPayType(1)">
-              <i class="el-icon-money" style="color: var(--el-color-success);"></i>
+              <i class="ri-money-cny-circle-line" style="color: var(--el-color-success);"></i>
               <span>现金</span>
             </div>
             <div
               class="payment-method"
               :class="{ active: payType === 2 }"
               @click="selectPayType(2)">
-              <i class="el-icon-chat-dot-round" style="color: var(--el-color-success);"></i>
+              <i class="ri-chat-3-line" style="color: var(--el-color-success);"></i>
               <span>微信</span>
             </div>
             <div
               class="payment-method"
               :class="{ active: payType === 3 }"
               @click="selectPayType(3)">
-              <i class="el-icon-s-platform" style="color: var(--el-color-primary);"></i>
+              <i class="ri-computer-line" style="color: var(--el-color-primary);"></i>
               <span>支付宝</span>
             </div>
             <div
               class="payment-method"
               :class="{ active: payType === 4 }"
               @click="selectPayType(4)">
-              <i class="el-icon-bank-card" style="color: var(--el-color-warning);"></i>
+              <i class="ri-bank-card-line" style="color: var(--el-color-warning);"></i>
               <span>银行卡</span>
             </div>
             <div
               class="payment-method"
               :class="{ active: payType === 5, disabled: !currentMember }"
               @click="currentMember ? selectPayType(5) : ReggieUI.warning('请先识别会员后使用储值支付')">
-              <i class="el-icon-wallet" style="color: var(--el-color-primary);"></i>
+              <i class="ri-wallet-line" style="color: var(--el-color-primary);"></i>
               <span>会员储值</span>
             </div>
           </div>
@@ -568,7 +568,7 @@
 
           <!-- 非现金支付说明：如实记录所选渠道，实收默认等于应付金额 -->
           <div v-if="payType !== 1" class="pay-hint">
-            <i class="el-icon-info"></i>
+            <i class="ri-information-line"></i>
             已选择「{{ payTypeText }}」收款，系统将按该渠道记录本次收款（在线支付网关接入后以实际到账为准）。
           </div>
 
@@ -584,7 +584,7 @@
             :loading="submitLoading"
             title="快捷键：Enter（未聚焦输入框时）"
             @click="handlePayment">
-            <i class="el-icon-check"></i>
+            <i class="ri-check-line"></i>
             确认收款 ¥{{ formatMoney(payableAmount) }}
           </el-button>
         </div>
@@ -593,7 +593,7 @@
 
     <!-- C.1：页内日结条（本日应收/实收/差异 + 一键日结，收敛 daily-settlement） -->
     <div class="settle-bar" v-if="todayStats">
-      <i class="el-icon-data-line settle-bar__icon" aria-hidden="true"></i>
+      <i class="ri-bar-chart-line settle-bar__icon" aria-hidden="true"></i>
       <span class="settle-bar__label">今日结账</span>
       <span class="settle-bar__item">应收 <b>¥{{ formatMoney(todayStats.totalAmount) }}</b></span>
       <span class="settle-bar__item">已结 <b>¥{{ formatMoney(settledAmount) }}</b></span>

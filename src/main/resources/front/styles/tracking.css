@@ -65,6 +65,18 @@
   color: var(--color-text-primary);
   line-height: 26rem;
 }
+/* 修改点(2026-09-17，自 tracking.html 内联块迁入)：大状态文字按状态语义着色；
+   并提升为页面第一层级(20rem/700) */
+#tracking .status-card .status-text {
+  font-size: 20rem;
+  font-weight: 700;
+  margin-top: 2rem;
+}
+#tracking .status-card .status-text.status-pending   { color: var(--status-pending); }
+#tracking .status-card .status-text.status-accepted  { color: var(--status-accepted); }
+#tracking .status-card .status-text.status-shipped   { color: var(--status-shipped); }
+#tracking .status-card .status-text.status-completed { color: var(--status-completed); }
+#tracking .status-card .status-text.status-cancelled { color: var(--status-cancelled); }
 #tracking .status-card .status-desc {
   font-size: var(--font-size-sm);
   color: var(--color-text-hint);
@@ -115,6 +127,22 @@
 #tracking .timeline-item.done .timeline-dot {
   background: var(--color-primary);
 }
+/* 修改点(2026-09-17，自 tracking.html 内联块迁入)：时间线圆点/连接线按步骤状态语义着色 */
+#tracking .timeline-item.done.tl-pending .timeline-dot,
+#tracking .timeline-item.active.tl-pending .timeline-dot { background: var(--status-pending); }
+#tracking .timeline-item.done.tl-accepted .timeline-dot,
+#tracking .timeline-item.done.tl-picking .timeline-dot,
+#tracking .timeline-item.active.tl-accepted .timeline-dot,
+#tracking .timeline-item.active.tl-picking .timeline-dot { background: var(--status-accepted); }
+#tracking .timeline-item.done.tl-delivering .timeline-dot,
+#tracking .timeline-item.done.tl-delivered .timeline-dot,
+#tracking .timeline-item.active.tl-delivering .timeline-dot,
+#tracking .timeline-item.active.tl-delivered .timeline-dot { background: var(--status-shipped); }
+#tracking .timeline-item.done.tl-pending .timeline-line { background: var(--status-pending); }
+#tracking .timeline-item.done.tl-accepted .timeline-line,
+#tracking .timeline-item.done.tl-picking .timeline-line { background: var(--status-accepted); }
+#tracking .timeline-item.done.tl-delivering .timeline-line,
+#tracking .timeline-item.done.tl-delivered .timeline-line { background: var(--status-shipped); }
 /* 配送中当前步骤：金色圆点放大 + 柔和光环 */
 #tracking .timeline-item.active .timeline-dot {
   width: 14rem;
@@ -206,18 +234,20 @@
   gap: 10rem;
 }
 #tracking .rider-action-btn {
-  width: 40rem;
-  height: 40rem;
+  width: 44rem;
+  height: 44rem;
   border-radius: 50%;
-  background: var(--bg-hover);
+  background: var(--color-primary-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: all var(--transition-fast);
+  box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
 }
 #tracking .rider-action-btn:active {
-  background: var(--bg-hover);
+  transform: scale(0.92);
+  box-shadow: 0 1rem 4rem var(--color-primary-tint-md);
 }
 #tracking .rider-action-btn i {
   font-size: 18rem;

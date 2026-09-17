@@ -285,7 +285,7 @@
       <div class="daily-two-col" style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
         <chart-panel style="margin-bottom:0;" padding="24px" margin-bottom="0">
           <template #title>
-            <i class="el-icon-data-line" style="color:var(--el-color-primary);"></i>
+            <i class="ri-bar-chart-line" style="color:var(--el-color-primary);"></i>
             营收趋势
             <span style="font-size:var(--font-size-xs);color:var(--text-muted);font-weight:400;margin-left:4px;">（近7日）</span>
           </template>
@@ -293,7 +293,7 @@
         </chart-panel>
         <chart-panel style="margin-bottom:0;" padding="24px" margin-bottom="0">
           <template #title>
-            <i class="el-icon-pie-chart" style="color:var(--color-warning);"></i>
+            <i class="ri-pie-chart-line" style="color:var(--color-warning);"></i>
             菜品分类销售占比
             <span style="font-size:var(--font-size-xs);color:var(--text-muted);font-weight:400;margin-left:4px;">（基于已选日期）</span>
           </template>
@@ -305,12 +305,12 @@
       <div class="export-records-panel">
         <div class="panel-header" role="button" tabindex="0" @click="toggleRecords" @keydown.enter="toggleRecords" :aria-expanded="recordsExpanded" aria-label="导出记录面板">
           <div class="panel-title">
-            <i class="el-icon-s-order" style="color:var(--color-success);"></i>
+            <i class="ri-file-list-line" style="color:var(--color-success);"></i>
             导出记录
             <span class="record-count-badge" v-if="exportRecords.length > 0">{{ exportRecords.length }}</span>
           </div>
           <i
-            :class="['el-icon-arrow-down expand-icon', { 'is-expanded': recordsExpanded }]"
+            :class="['ri-arrow-down-s-line expand-icon', { 'is-expanded': recordsExpanded }]"
           ></i>
         </div>
         <div class="panel-body" v-show="recordsExpanded">
@@ -353,13 +353,13 @@
                       <el-button
                         type="text"
                         size="mini"
-                        icon="el-icon-download"
+                        icon="ri-download-line"
                         @click="reDownload(record)"
                       >重新下载</el-button>
                       <el-button
                         type="text"
                         size="mini"
-                        icon="el-icon-delete"
+                        icon="ri-delete-bin-line"
                         style="color:var(--color-danger);"
                         @click="deleteRecord(index)"
                       >删除</el-button>
@@ -807,9 +807,9 @@
               title: '导出成功',
               dangerouslyUseHTMLString: true,
               message: '<div style="line-height:1.8;">'
-                + '<div><i class="el-icon-document" style="margin-right:6px;color:var(--el-color-primary);"></i>文件：' + fileName + '</div>'
-                + '<div><i class="el-icon-coin" style="margin-right:6px;color:var(--color-success);"></i>大小：' + sizeStr + '</div>'
-                + '<div><i class="el-icon-time" style="margin-right:6px;color:var(--color-warning);"></i>时间：' + now + '</div>'
+                + '<div><i class="ri-file-text-line" style="margin-right:6px;color:var(--el-color-primary);"></i>文件：' + fileName + '</div>'
+                + '<div><i class="ri-coin-line" style="margin-right:6px;color:var(--color-success);"></i>大小：' + sizeStr + '</div>'
+                + '<div><i class="ri-time-line" style="margin-right:6px;color:var(--color-warning);"></i>时间：' + now + '</div>'
                 + '</div>',
               type: 'success',
               duration: 5000,
@@ -837,8 +837,8 @@
               title: '导出失败',
               dangerouslyUseHTMLString: true,
               message: '<div style="line-height:1.8;">'
-                + '<div><i class="el-icon-warning-outline" style="margin-right:6px;color:var(--color-danger);"></i>格式：' + format.toUpperCase() + '</div>'
-                + '<div><i class="el-icon-info" style="margin-right:6px;color:var(--color-info);"></i>原因：' + (err.message || String(err)) + '</div>'
+                + '<div><i class="ri-alert-line" style="margin-right:6px;color:var(--color-danger);"></i>格式：' + format.toUpperCase() + '</div>'
+                + '<div><i class="ri-information-line" style="margin-right:6px;color:var(--color-info);"></i>原因：' + (err.message || String(err)) + '</div>'
                 + '<div style="color:var(--text-muted);font-size:var(--font-size-xs);">时间：' + now + '</div>'
                 + '</div>',
               type: 'error',

@@ -84,18 +84,24 @@
   font-family: "PingFangSC", "PingFangSC-Regular";
   font-weight: 400;
   text-align: left;
-  color: var(--color-text-primary);
+  /* 修改点(2026-09-17)：与大地址同色同级无主次 → 降为二级色，突出地址本身 */
+  color: var(--color-text-secondary);
   line-height: 17rem;
 }
 
 #add_order .divContent .divAddress .name span:first-child {
-  margin-right: 2rem;
+  /* 修改点(2026-09-17)：姓名与电话间距 2→8rem，阅读节奏更清晰 */
+  margin-right: 8rem;
 }
 
 #add_order .divContent .divAddress i {
   position: absolute;
   right: 14rem;
-  top: 32rem;
+  /* 修改点(2026-09-17)：top:32rem 硬编码，地址行数变化时箭头偏移 → 垂直居中 */
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-hint);
+  font-size: 18rem;
 }
 
 #add_order .divContent .divAddress .divSplit {
@@ -192,7 +198,8 @@
 }
 
 #add_order .divContent .order .itemList .item .desc .numPrice span {
-  margin-left: 12rem;
+  /* 修改点(2026-09-17)：数量缩进 12→10rem，与菜名左缘同基准线对齐 */
+  margin-left: 10rem;
   height: 20rem;
   opacity: 1;
   font-size: 14rem;
@@ -203,6 +210,11 @@
   line-height: 20rem;
   letter-spacing: 0;
   display: inline-block;
+}
+
+/* 修改点(2026-09-17)：数量数字用 DIN 等宽字体 */
+#add_order .divContent .order .itemList .item .desc .numPrice .num {
+  font-family: DIN, DIN-Medium;
 }
 
 #add_order .divContent .order .itemList .item .desc .numPrice .price {
@@ -231,8 +243,9 @@
   opacity: 1;
   background: var(--bg-card);
   border-radius: var(--radius-md);
-  margin-top: 11rem;
-  padding: 3rem 10rem 10rem 11rem;
+  /* 修改点(2026-09-17)：区块间距统一 12rem 节奏（原 11rem 与其他区块不一致） */
+  margin-top: 12rem;
+  padding: 3rem 10rem 10rem 16rem;
   box-shadow: 0 1rem 4rem var(--border-hair);
 }
 
@@ -246,7 +259,8 @@
   color: var(--color-text-primary);
   line-height: 56rem;
   letter-spacing: 0px;
-  border-bottom: 2rem solid var(--bg-hover);
+  /* 修改点(2026-09-17)：2rem → 1px，与其他分割线粗细一致（2rem 在高分屏过粗） */
+  border-bottom: 1px solid var(--border-light);
 }
 
 #add_order .divContent .note .van-cell {
@@ -299,22 +313,25 @@
 }
 
 #add_order .divCart .divNum span:last-child {
-  font-size: 20rem;
+  /* 修改点(2026-09-17)：实付金额 20→24rem/600，底部栏视觉锚点更强 */
+  font-size: 24rem;
+  font-weight: 600;
 }
 
 #add_order .divCart > div:last-child {
-  width: 102rem;
-  height: 36rem;
+  /* 修改点(2026-09-17)：支付按钮 102×36 → 116×40，达到 44px 级触达区 */
+  width: 116rem;
+  height: 40rem;
   opacity: 1;
   border-radius: var(--radius-xl);
   font-size: 15rem;
   font-family: "PingFangSC", "PingFangSC-Regular";
   font-weight: 500;
   text-align: center;
-  line-height: 36rem;
+  line-height: 40rem;
   position: absolute;
   right: 5rem;
-  top: 4rem;
+  top: 2rem;
 }
 
 #add_order .divCart .btnSubmit {
@@ -525,6 +542,22 @@
   color: var(--color-danger);
 }
 
+/* 修改点(2026-09-17)：实付合计行 —— 分隔线隔开中间行，金额 DIN 大号红价 */
+#add_order .price-row.total {
+  border-top: 1px solid var(--border-light);
+  margin-top: 4rem;
+  padding: 10rem 0 4rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+#add_order .price-row.total span:last-child {
+  font-family: DIN, DIN-Medium;
+  font-size: 20rem;
+  font-weight: 600;
+  color: var(--color-price);
+}
+
 /* 修改点：优惠券选择 */
 #add_order .divContent .coupon-section {
   background: var(--bg-card);
@@ -570,16 +603,22 @@
   position: relative;
   overflow: hidden;
 }
+#add_order .divContent .coupon-section .coupon-card:active {
+  transform: scale(0.98);
+  border-color: var(--color-primary);
+}
 
 #add_order .divContent .coupon-section .coupon-card.active {
   border-color: var(--color-primary);
   background: linear-gradient(135deg, var(--color-primary-light), var(--add-order-coupon-active-end));
+  box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
 }
 
 #add_order .divContent .coupon-section .coupon-left {
   width: 72rem;
   text-align: center;
-  border-right: 2px dashed var(--color-text-disabled);
+  /* 修改点(2026-09-17)：2px dashed 移动端渲染成密集方块且灰色抢戏 → 1px 浅色虚线 */
+  border-right: 1px dashed var(--border-light);
   padding-right: 12rem;
   margin-right: 12rem;
 }
@@ -751,7 +790,7 @@
 }
 #add_order .delivery-mode .mode-tabs {
   display: flex;
-  border-bottom: 2px solid var(--bg-hover);
+  border-bottom: 1px solid var(--border-light);
 }
 #add_order .delivery-mode .mode-tab {
   flex: 1;
@@ -766,8 +805,10 @@
   position: relative;
 }
 #add_order .delivery-mode .mode-tab.active {
-  color: var(--color-primary);
+  color: var(--color-primary-dark);
   font-weight: 600;
+  /* 修改点(2026-09-17)：补浅金面反馈，选中态从「仅下划线」升级为「面+线」 */
+  background: var(--color-primary-tint);
 }
 #add_order .delivery-mode .mode-tab.active::after {
   content: '';

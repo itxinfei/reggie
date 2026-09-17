@@ -299,7 +299,7 @@
     <!-- 阶梯规则对话框（只读，仅有关闭按钮） -->
     <crud-dialog title="配送费阶梯规则" :visible.sync="feeStepVisible" size="xl" show-close :show-submit="false" :show-cancel="true" cancel-text="关 闭">
       <div style="margin-bottom: 16px;">
-        <el-button type="primary" size="small" icon="el-icon-plus" @click="handleAddFeeStep">新增阶梯</el-button>
+        <el-button type="primary" size="small" icon="ri-add-line" @click="handleAddFeeStep">新增阶梯</el-button>
       </div>
       <el-table aria-label="数据表格" :data="feeSteps" border stripe style="width: 100%">
         <el-table-column prop="startDistance" label="起始距离(米)" width="120" align="center" :header-align="'center'"></el-table-column>
@@ -370,7 +370,7 @@
           ],
           // 操作按钮配置
           actionItems: [
-            { key: 'add', label: '新增配送范围规则', type: 'primary', icon: 'el-icon-plus' }
+            { key: 'add', label: '新增配送范围规则', type: 'primary', icon: 'ri-add-line' }
           ],
           // 表格列配置
           columns: [
@@ -454,10 +454,10 @@
         },
         statsCards() {
           return [
-            { key: 'total', icon: 'el-icon-shopping-cart-full', label: '配送规则', value: this.allData.length, color: 'primary' },
-            { key: 'circle', icon: 'el-icon-circle-check', label: '圆形范围', value: this.allData.filter(function(r){ return r.rangeType === 1 }).length, color: 'success' },
-            { key: 'polygon', icon: 'el-icon-office-building', label: '多边形范围', value: this.allData.filter(function(r){ return r.rangeType === 2 }).length, color: 'info' },
-            { key: 'active', icon: 'el-icon-time', label: '启用中', value: this.allData.filter(function(r){ return r.status === 1 }).length, color: 'warning' }
+            { key: 'total', icon: 'ri-shopping-cart-2-line', label: '配送规则', value: this.allData.length, color: 'primary' },
+            { key: 'circle', icon: 'ri-checkbox-circle-line', label: '圆形范围', value: this.allData.filter(function(r){ return r.rangeType === 1 }).length, color: 'success' },
+            { key: 'polygon', icon: 'ri-building-line', label: '多边形范围', value: this.allData.filter(function(r){ return r.rangeType === 2 }).length, color: 'info' },
+            { key: 'active', icon: 'ri-time-line', label: '启用中', value: this.allData.filter(function(r){ return r.status === 1 }).length, color: 'warning' }
           ]
         },
         pagedData() {

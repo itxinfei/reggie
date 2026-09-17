@@ -23,7 +23,8 @@
    ================================================================ */
 /* 修改点：padding-top 使用 safe-area-inset-top 适配 iPhone 灵动岛 / 刘海屏 */
 .header-section {
-  background: var(--color-primary-gradient);
+  /* 修改点(2026-09-17)：斜向渐变在窄屏左右色差明显 → 垂直渐变，浅金起手更接近主流外卖 App 质感 */
+  background: linear-gradient(180deg, #ffd54f 0%, #ffc200 70%, #ffb300 100%);
   flex-shrink: 0;
   padding: env(safe-area-inset-top, 0px) 12rem 0 12rem;
   position: relative;
@@ -33,7 +34,8 @@
 .header-section::after {
   content: '';
   display: block;
-  height: 12rem;
+  /* 修改点(2026-09-17)：12→20rem，头部与内容区之间的呼吸带更充足 */
+  height: 20rem;
 }
 
 /* ---- 顶部导航栏 ---- */
@@ -121,7 +123,8 @@
 }
 
 .top-bar .search-box i {
-  color: var(--color-text-primary);
+  /* 修改点(2026-09-17)：搜索图标同步降权重，与占位文字形成「入口感」 */
+  color: var(--gold-text);
   font-size: 15rem;
   margin-right: 5rem;
 }
@@ -146,8 +149,9 @@
 }
 
 .top-bar .search-box span {
-  color: var(--color-text-primary);
-  font-size: 13rem;
+  /* 修改点(2026-09-17)：占位文字降权重（主文字色→金底弱化档），区分「未输入」与「已输入」状态 */
+  color: var(--gold-text);
+  font-size: 12rem;
   /* 修改点：flex-shrink:0 防止占位文字在窄屏被压缩换行 */
   flex-shrink: 0;
 }
@@ -370,9 +374,10 @@
 .notice-bar {
   display: flex;
   align-items: center;
-  background: var(--color-primary-light);
-  border-radius: 8rem;
-  padding: 8rem 10rem;
+  /* 修改点(2026-09-17)：金底叠金头层次淹没 → 白透胶囊造型，与头部拉开明度差 */
+  background: var(--surface-white-85);
+  border-radius: 999rem;
+  padding: 8rem 12rem;
   margin-top: 10rem;
   font-size: 11rem;
   color: var(--color-text-primary);
@@ -384,6 +389,8 @@
   font-size: 13rem;
   margin-right: 6rem;
   flex-shrink: 0;
+  /* 修改点(2026-09-17)：图标用深金提层次 */
+  color: var(--color-primary-dark);
 }
 
 .notice-bar .notice-text {
@@ -512,9 +519,10 @@
 }
 
 .category-sidebar .cat-item.active .cat-text {
-  font-size: 14rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
+  /* 修改点(2026-09-17)：去掉字号跳变(12→14rem 会使相邻项视觉抖动)，改用字重+主色区分 */
+  font-size: 12rem;
+  font-weight: 600;
+  color: var(--color-primary-dark);
 }
 
 .category-sidebar .cat-item.active::before {
@@ -524,7 +532,7 @@
   top: 50%;
   transform: translateY(-50%);
   width: 3rem;
-  height: 20rem;
+  height: 16rem;
   background: var(--color-primary);
   border-radius: 0 3rem 3rem 0;
 }
@@ -694,8 +702,9 @@
 }
 
 .dish-item .di-sales {
-  font-size: 10rem;
-  color: var(--color-text-disabled);
+  /* 修改点(2026-09-17)：10rem/#ccc 白底几乎不可见 → 11rem/#999 保证可读 */
+  font-size: 11rem;
+  color: var(--color-text-hint);
   margin-bottom: 5rem;
 }
 
@@ -869,6 +878,10 @@
   cursor: pointer;
   transition: transform 0.15s;
   display: block;
+  /* 修改点(2026-09-17)：深色描边环让圆形图标从深色栏中「切割」凸起（外卖 App 标志性造型） */
+  border: 5rem solid var(--bg-cart-bar);
+  box-sizing: border-box;
+  box-shadow: 0 2rem 6rem rgba(0, 0, 0, 0.25);
 }
 
 .cart-bar .cart-icon-img:active {

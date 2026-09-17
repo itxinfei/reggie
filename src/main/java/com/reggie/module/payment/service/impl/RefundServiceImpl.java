@@ -116,6 +116,13 @@ public class RefundServiceImpl implements RefundService {
             return false;
         }
 
+        // 离线支付通道（现金/银行卡/储值/货到付款等）无法走渠道 API 退款：线下支付的退款由人工完成，
+        // 系统仅做本地记账闭环（标记支付单 REFUND + 订单 REFUNDED + 回退权益），避免 getChannel 抛
+        // “不支持的支付通道”导致自动退款失败、已支付订单取消/拒单后卡死在待接单（Defect B）。
+        if (!isOnlineChannel(paymentOrder.getChannel())) {
+            return doLocalManualRefund(paymentOrder, paymentAmount, reason, orderId, paymentOrderId);
+        }
+
         // === 2. Redis 分布式锁串行化同一支付单的退款发起 ===
         // P0 修复（双重扣款根因）：此前"查询校验（阶段1）→ 渠道调用（阶段2）→ FOR UPDATE 落库（阶段3）"三段式中，
         // 渠道调用发生在 FOR UPDATE 行锁之前。两个并发退款都通过阶段1校验后双双调用渠道，
@@ -171,6 +178,89 @@ public class RefundServiceImpl implements RefundService {
                 unlock(lockKey, lockValue);
             }
         }
+    }
+
+    /**
+     * 判断是否为可走渠道 API 的在线支付通道（微信/支付宝）。
+     * 现金/银行卡/储值/货到付款等线下通道无法调渠道退款 API，须走本地手动退款记账。
+     *
+     * @param channel 渠道
+     * @return 是否在线通道
+     */
+    public boolean isOnlineChannel(String channel) {
+        if (channel == null) {
+            return false;
+        }
+        String c = channel.toUpperCase();
+        return "WECHAT".equals(c) || "ALIPAY".equals(c);
+    }
+
+    /**
+     * 线下支付通道本地手动退款（Defect B 修复）。
+     * <p>现金/银行卡/储值/货到付款等线下支付的退款由人工完成，系统仅做本地记账闭环：
+     * 创建退款记录（成功）→ 支付单 SUCCESS→REFUND → 订单联动为已退款(6) 并回退会员权益。
+     * 不调用任何渠道 API，避免 paymentChannelFactory.getChannel 抛“不支持的支付通道”导致自动退款失败、
+     * 已支付订单取消/拒单后卡死在“待接单(2)”（既没取消也没退款）。
+     * 幂等：支付单已非 SUCCESS 或累计已退足则直接返回成功。</p>
+     *
+     * @return 是否成功
+     */
+    private boolean doLocalManualRefund(PaymentOrder paymentOrder, BigDecimal amount, String reason,
+            Long orderId, Long paymentOrderId) {
+        final String fReason = (reason != null && !reason.trim().isEmpty()) ? reason : "线下支付手动退款";
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+        txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        try {
+            txTemplate.execute(status -> {
+                PaymentOrder latest = paymentOrderService.getById(paymentOrderId);
+                if (latest == null || !STATUS_SUCCESS.equals(latest.getStatus())) {
+                    throw new CustomException("支付单状态已变更，退款失败");
+                }
+                BigDecimal refunded = refundRecordService.sumRefundedAmount(latest.getId());
+                if (refunded.compareTo(latest.getAmount()) >= 0) {
+                    return null; // 已全额退款，幂等跳过
+                }
+                RefundRecord record = refundRecordService.createRefund(latest.getId(), amount, fReason,
+                        generateRefundNo());
+                refundRecordService.markRefundSuccess(record.getRefundNo());
+                paymentOrderService.lambdaUpdate()
+                        .eq(PaymentOrder::getId, latest.getId())
+                        .eq(PaymentOrder::getStatus, STATUS_SUCCESS)
+                        .set(PaymentOrder::getStatus, STATUS_REFUND)
+                        .set(PaymentOrder::getUpdateTime, LocalDateTime.now())
+                        .update();
+                Orders order = orderService.getById(latest.getOrderId());
+                if (order != null) {
+                    updateOrderOnFullRefund(order, latest);
+                }
+                return null;
+            });
+            log.info("[线下退款] 本地记账退款成功: orderId={}, channel={}, amount={}", orderId,
+                    paymentOrder.getChannel(), amount);
+            return true;
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("[线下退款] 本地记账退款失败，需人工核查: orderId={}, paymentOrderId={}, amount={}",
+                    orderId, paymentOrderId, amount, e);
+            return false;
+        }
+    }
+
+    /**
+     * 按支付单ID执行线下支付本地手动退款（供员工手动退款/售后退款路径复用）。
+     *
+     * @return 是否成功
+     */
+    @Override
+    public boolean refundOfflineByPaymentOrderId(Long paymentOrderId, BigDecimal amount, String reason) {
+        if (paymentOrderId == null) {
+            return false;
+        }
+        PaymentOrder po = paymentOrderService.getById(paymentOrderId);
+        if (po == null || !STATUS_SUCCESS.equals(po.getStatus())) {
+            return false;
+        }
+        return doLocalManualRefund(po, amount, reason, po.getOrderId(), paymentOrderId);
     }
 
     /**

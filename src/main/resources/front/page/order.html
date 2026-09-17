@@ -65,7 +65,7 @@
                         <!-- 菜品列表：左侧缩略图 + 名称数量 + 右侧价格 -->
                         <div class="dish-list">
                             <div v-for="(item,dIdx) in (order.orderDetails || []).slice(0,3)" :key="dIdx" class="dish-item">
-                                <img v-if="item.image || item.dishImage" :src="item.image || item.dishImage" class="dish-img" @error="$event.target.src='./../images/noImg.png'"/>
+                                <img v-if="item.image || item.dishImage" :src="item.image || item.dishImage" class="dish-img" :alt="item.name || '菜品图片'" @error="$event.target.src='./../images/noImg.png'"/>
                                 <div v-else class="dish-img dish-img-placeholder"><i class="ri-restaurant-line"></i></div>
                                 <div class="dish-info">
                                     <span class="dish-name">{{item.name}}</span>
@@ -114,13 +114,11 @@
                 <!-- 修改点：首屏加载骨架屏覆盖层（van-list 始终渲染，避免阻断其 @load 触发） -->
                 <van-skeleton v-if="firstLoading" class="list-skeleton" :row="5" title :avatar="true" />
             </div>
-            <!-- 修改点：空状态增加引导按钮 -->
-            <div class="divNoData has-tabbar" v-else>
-                <div class="divContainer">
-                    <img src="./../images/no_order.png" alt="暂无订单"/>
-                    <div>暂无订单</div>
-                    <div class="goShopBtn" @click="goHome">去逛逛</div>
-                </div>
+            <!-- 修改点(2026-09-17)：空态统一为全站标准 .empty-state -->
+            <div class="empty-state has-tabbar" v-else>
+                <img src="./../images/no_order.png" alt="暂无订单"/>
+                <p class="empty-text">暂无订单</p>
+                <div class="empty-action" @click="goHome">去逛逛</div>
             </div>
 
             <!-- ====== 底部 Tab 导航（点餐 / 订单 / 我的） ====== -->
@@ -192,6 +190,23 @@
                 } else {
                     this.initData()
                 }
+            },
+            mounted(){
+                // 修改点(2026-09-17)：状态Tab滚动粘滞阴影
+                var self = this
+                this.$nextTick(function(){
+                    var tabs = document.querySelector('#order .status-tabs')
+                    var body = document.querySelector('#order .divBody')
+                    if (tabs && body) {
+                        body.addEventListener('scroll', function(){
+                            if (body.scrollTop > 5) {
+                                tabs.classList.add('is-scrolled')
+                            } else {
+                                tabs.classList.remove('is-scrolled')
+                            }
+                        }, { passive: true })
+                    }
+                })
             },
             methods:{
                 goBack(){

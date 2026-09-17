@@ -21,7 +21,7 @@
       </div>
       <div class="ds-page-header__actions">
         <el-button type="primary" size="small" :loading="pulling" @click="openPull">
-          <i class="el-icon-refresh"></i> 即时拉单
+          <i class="ri-refresh-line"></i> 即时拉单
         </el-button>
       </div>
     </header>
@@ -241,10 +241,10 @@
       statsCards() {
         const s = this.platformStats || {}
         return [
-          { key: 'total', icon: 'el-icon-shopping-cart-full', label: '订单总数', value: (s.totalOrders != null ? s.totalOrders : this.counts) || 0, color: 'primary' },
-          { key: 'pending', icon: 'el-icon-time', label: '待接单', value: (s.pendingOrders != null ? s.pendingOrders : 0) || 0, color: 'warning' },
-          { key: 'completed', icon: 'el-icon-circle-check', label: '已完成', value: (s.completedOrders != null ? s.completedOrders : 0) || 0, color: 'success' },
-          { key: 'amount', icon: 'el-icon-money', label: '已完成金额', value: '¥' + this.formatMoney(s.amount), color: 'info' }
+          { key: 'total', icon: 'ri-shopping-cart-2-line', label: '订单总数', value: (s.totalOrders != null ? s.totalOrders : this.counts) || 0, color: 'primary' },
+          { key: 'pending', icon: 'ri-time-line', label: '待接单', value: (s.pendingOrders != null ? s.pendingOrders : 0) || 0, color: 'warning' },
+          { key: 'completed', icon: 'ri-checkbox-circle-line', label: '已完成', value: (s.completedOrders != null ? s.completedOrders : 0) || 0, color: 'success' },
+          { key: 'amount', icon: 'ri-money-cny-circle-line', label: '已完成金额', value: '¥' + this.formatMoney(s.amount), color: 'info' }
         ]
       }
     },

@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="../styles/frequent-orders.css" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js"></script>
+    <!-- 修改点(2026-09-17)：原裸 CSS 未包裹 <style>，在 <head> 中会被当作文本渲染到页面顶部 -->
+    <style>
         .frequent-container {
             height: calc(100vh - var(--header-height));
             overflow-y: auto;
@@ -251,6 +253,7 @@
             background-size: 200% 100%;
             animation: skeleton-shine 1.5s ease-in-out infinite;
         }
+    </style>
 </head>
 <body>
     <div id="frequent" class="app">
@@ -307,7 +310,7 @@
             <template v-if="filteredItems.length > 0">
                 <div class="group-title">按点餐频率排序</div>
                 <div class="dish-card" v-for="item in filteredItems" :key="item.key">
-                    <img v-if="item.image" :src="item.image" class="dish-img" @error="$event.target.src='./../images/noImg.png'"/>
+                    <img v-if="item.image" :src="item.image" class="dish-img" :alt="item.name || '菜品图片'" @error="$event.target.src='./../images/noImg.png'"/>
                     <div v-else class="dish-img-placeholder">
                         <i class="ri-restaurant-line"></i>
                     </div>

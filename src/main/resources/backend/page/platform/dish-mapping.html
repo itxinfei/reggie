@@ -141,10 +141,10 @@
       statsCards() {
         var s = this.stats || {}
         return [
-          { key: '', icon: 'el-icon-shopping-cart-full', label: '映射总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
-          { key: '1', icon: 'el-icon-circle-check', label: '已上架', value: s.onlineCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
-          { key: '0', icon: 'el-icon-circle-close', label: '已下架', value: s.offlineCount || 0, color: 'info', clickable: true, active: this.activeFilter === '0' },
-          { key: '', icon: 'el-icon-office-building', label: '覆盖平台', value: s.platformCount || 0, color: 'warning' }
+          { key: '', icon: 'ri-shopping-cart-2-line', label: '映射总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+          { key: '1', icon: 'ri-checkbox-circle-line', label: '已上架', value: s.onlineCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
+          { key: '0', icon: 'ri-close-circle-line', label: '已下架', value: s.offlineCount || 0, color: 'info', clickable: true, active: this.activeFilter === '0' },
+          { key: '', icon: 'ri-building-line', label: '覆盖平台', value: s.platformCount || 0, color: 'warning' }
         ]
       }
     },

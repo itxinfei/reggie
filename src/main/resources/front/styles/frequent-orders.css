@@ -221,8 +221,8 @@
 #frequent .skeleton-container .skeleton-btn,
 #frequent .skeleton-container .skeleton-line,
 #frequent .skeleton-container .skeleton-tab {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background: var(--skeleton-gradient);
   background-size: 200% 100%;
-  animation: skeleton-shine 1.5s ease-in-out infinite;
+  animation: rg-skeleton-shine 1.5s ease-in-out infinite;
 }
-@keyframes skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+/* 修改点(2026-09-17)：复用全局 @keyframes rg-skeleton-shine */

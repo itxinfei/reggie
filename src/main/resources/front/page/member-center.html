@@ -6,217 +6,11 @@
   <title>会员中心 - 瑞吉外卖</title>
   <link rel="stylesheet" href="../styles/vant.min.css">
   <link rel="stylesheet" href="../styles/index.css?v=20260914">
+  <link rel="stylesheet" href="../styles/member-center.css">
   <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css">
   <!-- 修改点：emoji 兜底不再静态引入 —— fallback 在真字体之后加载会覆盖 ::before，导致权益图标渲染为彩色 emoji；
        字体加载失败时改由 js/icon-fallback.js 动态注入 remixicon-fallback.css 降级，避免空白方块 -->
   <script src="../js/icon-fallback.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: var(--bg-page); font-family: var(--font-family-base); -webkit-font-smoothing: antialiased; }
-
-    /* ---- 头部 ---- */
-    /* 修改点：ri-* 权益图标主题色收敛。金色图标 --color-primary-dark（金底上深金，对比 4.5+ 可读）；
-       绿/紫为权益语义 tint 对应文字色（成功绿/装饰紫），仅点缀色，无对应令牌保留局部 hex 并注释 */
-.mc-header { position: relative; overflow: hidden; }
-    .mc-header-bg {
-      background: var(--color-primary-gradient-deep);
-      padding: 30rem 16rem 50rem; position: relative; z-index: 1;
-    }
-    .mc-header-bg::after {
-      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 28rem;
-      background: var(--bg-page); border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    }
-    .mc-header-top { display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 20rem; position: relative; z-index: 2; }
-    .mc-back { width: 32rem; height: 32rem; display: flex; align-items: center;
-      justify-content: center; cursor: pointer; }
-    .mc-back::before { content: '‹'; color: var(--color-text-primary); font-size: 28rem; font-weight: 300; line-height: 1; }
-    .mc-title { font-size: 17rem; font-weight: 600; color: var(--color-text-primary); letter-spacing: 1rem; }
-    .mc-rule { font-size: 12rem; color: var(--gold-text); cursor: pointer; }
-
-    /* ---- 会员卡 ---- */
-    .mc-card {
-      margin: -10rem 16rem 16rem; background: var(--color-primary-gradient-card);
-      /* 修改点(2026-09-14)：16rem → --radius-xl 令牌（值相同，统一走令牌便于换肤） */
-      border-radius: var(--radius-xl); padding: 20rem 20rem 16rem; position: relative; z-index: 3;
-      /* 修改点：硬编码 rgba(224,144,0,0.3) → 令牌化金色阴影（阴影色为金褐色，属品牌色系，可加局部声明） */
-      box-shadow: 0 8rem 30rem rgba(224, 144, 0, 0.3); overflow: hidden;
-    }
-    .mc-card::before {
-      content: ''; position: absolute; top: -60rem; right: -40rem;
-      width: 200rem; height: 200rem; border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%);
-    }
-    .mc-card::after {
-      content: ''; position: absolute; bottom: -30rem; left: -20rem;
-      width: 120rem; height: 120rem; border-radius: 50%;
-      background: radial-gradient(circle, rgba(255,255,255,0.25) 0%, transparent 70%);
-    }
-    .mc-card-top { display: flex; align-items: center; justify-content: space-between;
-      position: relative; z-index: 1; margin-bottom: 16rem; }
-    .mc-level-name { font-size: 14rem; font-weight: 600; color: var(--gold-text-strong); }
-    .mc-level-tag { padding: 4rem 12rem; border-radius: var(--radius-round); font-size: 11rem;
-      font-weight: 600; letter-spacing: 0.5rem; background: rgba(255,255,255,0.5);
-      color: var(--color-text-primary); }
-    .mc-card-stats { display: flex; position: relative; z-index: 1; }
-    .mc-card-stat { flex: 1; text-align: center; }
-    .mc-card-stat .val { font-size: 24rem; font-weight: 700; color: var(--color-text-primary);
-      font-family: var(--font-family-number); line-height: 1.2; }
-    .mc-card-stat .lbl { font-size: 11rem; color: var(--gold-text-muted); margin-top: 4rem; }
-    .mc-card-stat-divider { width: 1rem; background: var(--gold-text); margin: 4rem 0; }
-    .mc-card-progress { margin-top: 14rem; position: relative; z-index: 1; }
-    .mc-prog-label { display: flex; justify-content: space-between; font-size: 11rem;
-      color: var(--gold-text-muted); margin-bottom: 6rem; }
-    .mc-prog-label .next { color: var(--color-text-primary); font-weight: 500; }
-    .mc-prog-bar { height: 5rem; background: var(--gold-text-muted); border-radius: var(--radius-sm); overflow: hidden; }
-    .mc-prog-fill { height: 100%; background: var(--gold-text-strong);
-      border-radius: var(--radius-sm); transition: width 0.6s ease; }
-    .mc-non-member { text-align: center; padding: 12rem 0; position: relative; z-index: 1;
-      color: var(--gold-text-muted); font-size: 13rem; }
-
-    /* ---- 版块 ---- */
-    .mc-section { margin: 0 16rem 14rem; background: var(--bg-card); border-radius: var(--radius-lg);
-      overflow: hidden; box-shadow: var(--shadow-card); }
-    .mc-section-title { font-size: 15rem; font-weight: 600; color: var(--color-text-primary);
-      padding: 16rem 18rem 12rem; border-bottom: 1rem solid var(--bg-hover);
-      display: flex; align-items: center; gap: 8rem; }
-    .mc-section-title .count { font-size: 12rem; color: var(--color-text-hint); font-weight: 400; }
-
-    /* ---- 权益 ---- */
-    /* 修改点(2026-09-15)：4 个权益改为一行 4 列网格，避免原先 flex 三列换行导致第 4 个「生日礼遇」单独成行、视觉失衡 */
-    .mc-benefits { display: grid; grid-template-columns: repeat(4, 1fr); padding: 14rem 12rem; gap: 10rem; }
-    .mc-benefit { min-width: 0; text-align: center; padding: 10rem 4rem; }
-    .mc-benefit-icon { width: 48rem; height: 48rem; margin: 0 auto 8rem; border-radius: var(--radius-lg);
-      display: flex; align-items: center; justify-content: center; font-size: 24rem; }
-    .mc-benefit-icon.locked { opacity: 0.4; filter: grayscale(0.8); }
-    /* 修改点(2026-09-15)：权益图标统一为品牌金（原 gold/green/purple 混色，且 green(#52a33e)/purple(#7b5ce6) 不在令牌体系），
-       与个人中心订单入口、首页加购按钮保持同一套视觉语言 */
-    .mc-benefit-icon--gold,
-    .mc-benefit-icon--green,
-    .mc-benefit-icon--purple { background: var(--color-primary-tint-strong); color: var(--color-primary-dark); }
-    .mc-benefit-name { font-size: 12rem; color: var(--color-text-primary); font-weight: 500; }
-    .mc-benefit-desc { font-size: 10rem; color: var(--color-text-hint); margin-top: 2rem; }
-
-    /* ---- Tab ---- */
-    .mc-tabs { display: flex; border-bottom: 1rem solid var(--bg-hover); }
-    .mc-tab { flex: 1; text-align: center; padding: 14rem 0; font-size: 14rem;
-      color: var(--color-text-hint); cursor: pointer; transition: color 0.2s;
-      position: relative; user-select: none; }
-    .mc-tab.active { color: var(--color-text-primary); font-weight: 600; }
-    .mc-tab.active::after { content: ''; position: absolute; bottom: 0; left: 50%;
-      transform: translateX(-50%); width: 24rem; height: 3rem;
-      background: var(--color-primary); border-radius: 2rem 2rem 0 0; }
-
-    /* ---- 积分列表 ----
-       修改点(2026-09-01)：移除 max-height + overflow-y 截断，全量展示所有积分记录，
-       避免数据被遮挡；由页面整体滚动承载。 */
-    .mc-points-list { padding: 0 16rem; }
-    .mc-point-item { display: flex; align-items: center; padding: 12rem 0;
-      border-bottom: 1rem solid var(--bg-hover); }
-    .mc-point-item:last-child { border-bottom: none; }
-    .mc-point-icon { width: 36rem; height: 36rem; border-radius: var(--radius-md);
-      display: flex; align-items: center; justify-content: center; font-size: 16rem;
-      flex-shrink: 0; margin-right: 12rem; }
-    /* 修改点：绿/黄为积分增减语义 tint（增=成功绿，减=警告黄），无对应令牌，保留局部 rgba 并注明语义；箭头色与右侧数值色一致 */
-    .mc-point-icon.in { background: rgba(7,193,96,0.1); color: var(--color-success); }
-    .mc-point-icon.out { background: rgba(255,179,0,0.1); color: var(--color-warning); }
-    .mc-point-info { flex: 1; }
-    .mc-point-info .p-title { font-size: 14rem; color: var(--color-text-primary); }
-    .mc-point-info .p-time { font-size: 11rem; color: var(--color-text-hint); margin-top: 2rem; }
-    .mc-point-val { font-size: 15rem; font-weight: 600; }
-    .mc-point-val.in { color: var(--color-success); }
-    .mc-point-val.out { color: var(--color-warning); }
-
-    /* ---- 优惠券 ----
-       修改点(2026-09-01)：移除 max-height + overflow-y 截断，全量展示所有优惠券。 */
-    .mc-coupons { padding: 12rem 16rem; display: flex; flex-direction: column; gap: 10rem; }
-    .mc-coupon { display: flex; border-radius: var(--radius-lg); overflow: hidden;
-      box-shadow: var(--shadow-card); position: relative; background: var(--bg-card); }
-    .mc-coupon.used { opacity: 0.55; }
-    .mc-coupon-left { width: 100rem; padding: 14rem 12rem; display: flex;
-      flex-direction: column; align-items: center; justify-content: center;
-      border-right: 1rem dashed var(--bg-hover); flex-shrink: 0; position: relative; }
-    .mc-coupon-left::before,.mc-coupon-left::after {
-      content: ''; position: absolute; right: -5rem; width: 10rem; height: 10rem;
-      border-radius: 50%; background: var(--bg-page); }
-    .mc-coupon-left::before { top: -5rem; }
-    .mc-coupon-left::after { bottom: -5rem; }
-    .mc-coupon-left .c-amount { font-size: 20rem; font-weight: 700; color: var(--color-primary-dark); }
-    .mc-coupon-left .c-type { font-size: 11rem; color: var(--color-text-hint); margin-top: 2rem; }
-    .mc-coupon-right { flex: 1; padding: 12rem 14rem; display: flex;
-      flex-direction: column; justify-content: center; }
-    .mc-coupon-right .c-name { font-size: 14rem; font-weight: 600; color: var(--color-text-primary); }
-    .mc-coupon-right .c-cond { font-size: 11rem; color: var(--color-text-hint); margin-top: 4rem; }
-    .mc-coupon-right .c-expire { font-size: 11rem; color: var(--color-warning); margin-top: 2rem; }
-    .mc-claim-btn { background: var(--color-primary-gradient); border: none;
-      color: var(--color-text-primary); font-size: 12rem; padding: 6rem 14rem; border-radius: var(--radius-round);
-      cursor: pointer; font-weight: 600; white-space: nowrap; }
-    .mc-claim-btn:active { opacity: 0.8; }
-    .mc-empty { text-align: center; padding: 40rem 0; color: var(--color-text-hint); font-size: 14rem; }
-
-    /* ---- 充值记录 ----
-       修改点(2026-09-01)：移除 max-height + overflow-y 截断，全量展示所有充值记录。 */
-    .mc-recharge-list { padding: 0 16rem; }
-    .mc-recharge-item { display: flex; align-items: center; padding: 12rem 0;
-      border-bottom: 1rem solid var(--bg-hover); }
-    .mc-recharge-item:last-child { border-bottom: none; }
-    .mc-recharge-amount { font-size: 16rem; font-weight: 600; color: var(--color-primary-dark);
-      margin-right: 12rem; min-width: 80rem; }
-    .mc-recharge-info { flex: 1; }
-    .mc-recharge-info .r-time { font-size: 13rem; color: var(--color-text-primary); }
-    .mc-recharge-info .r-gift { font-size: 11rem; color: var(--color-success); margin-top: 2rem; }
-    /* 内联样式抽离为类 */
-    #member-center { min-height: 100vh; }
-    .mc-loading-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
-    .mc-activate-btn { margin-left: 8rem; }
-    .mc-coupon-section-title { padding-left: 0; margin-bottom: 0; font-size: 13rem; }
-    .mc-coupon-section-title--gap { margin-top: 8rem; }
-    .mc-coupon-empty { padding: 24rem 0; }
-    .mc-coupon-actions { display: flex; justify-content: flex-end; margin-top: 4rem; }
-    .mc-bottom-spacer { height: 30rem; }
-
-    /* 修改点：骨架屏样式 */
-    .skeleton-container { background: var(--bg-page); min-height: 100vh; }
-    .skeleton-header { height: 200rem; background: var(--color-primary-gradient); }
-    .skeleton-card {
-      margin: -40rem 16rem 16rem; background: var(--bg-card); border-radius: var(--radius-lg);
-      padding: 20rem; box-shadow: var(--shadow-card); position: relative; z-index: 1;
-    }
-    .skeleton-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16rem; }
-    .skeleton-card-bottom { padding-top: 12rem; border-top: 1rem dashed var(--bg-hover); }
-    .skeleton-benefits {
-      display: flex; gap: 10rem; padding: 16rem; background: var(--bg-card);
-      margin: 0 16rem 14rem; border-radius: var(--radius-lg);
-    }
-    .skeleton-benefit { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8rem; }
-    .skeleton-circle { width: 48rem; height: 48rem; border-radius: var(--radius-lg); }
-    .skeleton-section {
-      margin: 0 16rem 14rem; background: var(--bg-card); border-radius: var(--radius-lg);
-      padding: 16rem 18rem; box-shadow: var(--shadow-card);
-    }
-    .skeleton-section-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16rem; }
-    .skeleton-row { display: flex; align-items: center; justify-content: space-between; padding: 12rem 0; border-bottom: 1rem solid var(--bg-hover); }
-    .skeleton-row:last-child { border-bottom: none; }
-    .skeleton-tag { width: 50rem; height: 20rem; border-radius: var(--radius-round); }
-    .skeleton-line { height: 14rem; border-radius: var(--radius-sm); }
-    .skeleton-w20 { width: 20%; }
-    .skeleton-w30 { width: 30%; }
-    .skeleton-w40 { width: 40%; }
-    .skeleton-w50 { width: 50%; }
-    .skeleton-w80 { width: 80%; }
-    .skeleton-container .skeleton-header,
-    .skeleton-container .skeleton-card,
-    .skeleton-container .skeleton-benefit,
-    .skeleton-container .skeleton-section,
-    .skeleton-container .skeleton-line,
-    .skeleton-container .skeleton-tag,
-    .skeleton-container .skeleton-circle {
-      background: linear-gradient(90deg, var(--bg-hover) 25%, #e8e8e8 50%, var(--bg-hover) 75%);
-      background-size: 200% 100%;
-      animation: skeleton-shine 1.5s ease-in-out infinite;
-    }
-    @keyframes skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-  </style>
 </head>
 <body class="scrollable-page">
   <div id="member-center">
@@ -341,8 +135,8 @@
       </div>
 
       <!-- 积分记录 -->
-      <div class="mc-points-list" v-if="activeTab==='points'">
-        <div v-if="pointsData.length===0" class="mc-empty">暂无积分记录</div>
+      <div class="mc-points-list mc-tab-pane" v-if="activeTab==='points'">
+        <div v-if="pointsData.length===0" class="empty-state"><i class="ri-coin-line"></i><p class="empty-text">暂无积分记录</p></div>
         <div class="mc-point-item" v-for="item in pointsData" :key="item.id||item.createdTime">
           <div :class="['mc-point-icon', item.type==='ACQUIRE'||item.type==='IN' ? 'in' : 'out']">
             {{ item.type==='ACQUIRE'||item.type==='IN' ? '↑' : '↓' }}
@@ -358,11 +152,11 @@
       </div>
 
       <!-- 我的优惠券 -->
-      <div class="mc-coupons" v-if="activeTab==='coupons'">
+      <div class="mc-coupons mc-tab-pane" v-if="activeTab==='coupons'">
         <div class="mc-section-title mc-coupon-section-title">
           可领取 <span class="count">({{ availCoupons.length }}张)</span>
         </div>
-        <div v-if="availCoupons.length===0" class="mc-empty mc-coupon-empty">暂无可领取的优惠券</div>
+        <div v-if="availCoupons.length===0" class="empty-state"><i class="ri-coupon-line"></i><p class="empty-text">暂无可领取的优惠券</p></div>
         <div class="mc-coupon" v-for="c in availCoupons" :key="'avail-'+c.id">
           <div class="mc-coupon-left">
             <div class="c-amount">￥{{ Number(c.discountAmount||0).toFixed(2) }}</div>
@@ -380,7 +174,7 @@
         <div class="mc-section-title mc-coupon-section-title mc-coupon-section-title--gap">
           我的优惠券 <span class="count">({{ myCoupons.length }}张)</span>
         </div>
-        <div v-if="myCoupons.length===0" class="mc-empty mc-coupon-empty">暂无优惠券</div>
+        <div v-if="myCoupons.length===0" class="empty-state"><i class="ri-coupon-line"></i><p class="empty-text">暂无优惠券</p></div>
         <div :class="['mc-coupon', c.status==='USED'||c.status==='EXPIRED' ? 'used' : '']" v-for="c in myCoupons" :key="'my-'+c.id">
           <div class="mc-coupon-left">
             <div class="c-amount">￥{{ Number(c.amount||0).toFixed(2) }}</div>
@@ -395,8 +189,8 @@
       </div>
 
       <!-- 充值记录 -->
-      <div class="mc-recharge-list" v-if="activeTab==='recharge'">
-        <div v-if="rechargeData.length===0" class="mc-empty">暂无充值记录</div>
+      <div class="mc-recharge-list mc-tab-pane" v-if="activeTab==='recharge'">
+        <div v-if="rechargeData.length===0" class="empty-state"><i class="ri-wallet-line"></i><p class="empty-text">暂无充值记录</p></div>
         <div class="mc-recharge-item" v-for="item in rechargeData" :key="item.id||item.createdTime">
           <div class="mc-recharge-amount">+￥{{ Number(item.amount || 0).toFixed(2) }}</div>
           <div class="mc-recharge-info">

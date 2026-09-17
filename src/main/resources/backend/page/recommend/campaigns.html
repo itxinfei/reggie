@@ -83,7 +83,7 @@
             <p class="ds-page-header__subtitle">管理推荐营销活动</p>
           </div>
           <div class="ds-page-header__actions">
-            <el-button type="primary" size="small" icon="el-icon-plus" @click="openDialog('create')">新建活动</el-button>
+            <el-button type="primary" size="small" icon="ri-add-line" @click="openDialog('create')">新建活动</el-button>
           </div>
         </header>
 
@@ -184,8 +184,8 @@
                 <el-dropdown trigger="click" @command="(cmd) => handleRowCommand(cmd, row)">
                     <el-button type="text" size="small" class="text-info">更多</el-button>
                     <el-dropdown-menu slot="dropdown">
-                        <el-dropdown-item command="stats" icon="el-icon-data-line">活动统计</el-dropdown-item>
-                        <el-dropdown-item command="delete" icon="el-icon-delete" style="color:var(--color-danger);">删除</el-dropdown-item>
+                        <el-dropdown-item command="stats" icon="ri-bar-chart-line">活动统计</el-dropdown-item>
+                        <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
                     </el-dropdown-menu>
                 </el-dropdown>
             </template>

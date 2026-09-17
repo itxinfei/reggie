@@ -47,7 +47,8 @@
   height: 64rem;
   border-radius: var(--radius-round);
   margin-right: var(--spacing-lg);
-  border: 3px solid rgba(255, 255, 255, 0.7);
+  /* 修改点(2026-09-17)：px→rem 统一（宽屏下随根字号缩放） */
+  border: 3rem solid rgba(255, 255, 255, 0.7);
   background: var(--bg-hover);
   object-fit: cover;
   box-shadow: 0 2rem 8rem rgba(0, 0, 0, 0.15);
@@ -122,7 +123,8 @@
 
 #user .divLinks .divSplit {
   height: 1px;
-  background-color: var(--bg-hover);
+  /* 修改点(2026-09-17)：分割线统一用 --border-light，与全站一致 */
+  background-color: var(--border-light);
   border: 0;
 }
 
@@ -157,7 +159,8 @@
    与箭头重叠，导致"菜单图标跑到右侧"。改为只作用于箭头（排除 .link-icon）。 */
 #user .divLinks .item > i:not(.link-icon) {
   position: absolute;
-  right: 0;
+  /* 修改点(2026-09-17)：箭头 right:0 贴边与卡片内边距不对称 → right:4rem */
+  right: 4rem;
   top: 50%;
   transform: translate(0, -50%);
   color: var(--color-text-hint);
@@ -184,7 +187,7 @@
   font-weight: 600;
   text-align: left;
   color: var(--color-text-primary);
-  border-bottom: 2px solid var(--bg-hover);
+  border-bottom: 2rem solid var(--bg-hover);
 }
 
 #user .divOrders .timeStatus {
@@ -322,8 +325,9 @@
 
 /* ---- 退出登录 ---- */
 #user .quitLogin {
+  /* 修改点(2026-09-17)：加大触达区（纵向 12rem + 水平 48rem），降低误触率 */
   margin: var(--spacing-xl) auto var(--spacing-lg);
-  padding: var(--spacing-sm) 0;
+  padding: 12rem 48rem;
   font-size: 13rem;
   font-family: var(--font-family-body);
   font-weight: 400;
@@ -356,11 +360,13 @@
   font-weight: 600;
   padding: 2rem 8rem;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.5);
+  /* 修改点(2026-09-17)：0.5 白透叠金底对比不足 → 0.9 近实底 + 微投影 */
+  background: rgba(255, 255, 255, 0.9);
   color: var(--color-text-primary);
   letter-spacing: 0.5rem;
   white-space: nowrap;
   flex-shrink: 0;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.08);
 }
 
 #user .divHead .divUser .desc .divName .member-tag i {
@@ -374,23 +380,55 @@
   display: flex;
   align-items: center;
   justify-content: space-around;
+  /* 修改点(2026-09-17)：新增区块标题行，改为 wrap 两行布局 */
+  flex-wrap: wrap;
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   /* 修改点(2026-09-14)：统一为「下边距」节奏（原 margin-bottom:0，依赖下一块的 margin-top，
      一旦下一块缺失就会贴底）。全站区块统一：左右 12rem、下方 12rem */
   margin: 0 var(--spacing-md) var(--spacing-md);
-  padding: var(--spacing-lg) 0;
+  padding: 0 0 var(--spacing-lg);
   box-shadow: var(--shadow-card);
 }
 
+/* 修改点(2026-09-17)：区块标题行「我的订单 · 全部订单 >」 */
+#user .order-quick-grid .order-quick-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-md) var(--spacing-sm);
+  cursor: pointer;
+}
+#user .order-quick-grid .order-quick-header .oqh-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+#user .order-quick-grid .order-quick-header .oqh-more {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+  display: inline-flex;
+  align-items: center;
+}
+#user .order-quick-grid .order-quick-header .oqh-more i {
+  font-size: 14rem;
+  margin-left: 2rem;
+}
+#user .order-quick-grid .order-quick-header:active .oqh-more {
+  color: var(--color-primary-dark);
+}
+
+/* 修改点(2026-09-17)：入口行占满剩余宽度（与标题行区分）；合并原重复规则 */
 #user .order-quick-item {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6rem;
   cursor: pointer;
   position: relative;
-  flex: 1;
   transition: transform var(--transition-fast);
 }
 
@@ -443,7 +481,8 @@
 #user .order-quick-item .oq-label {
   font-size: 12rem;
   font-family: var(--font-family-body);
-  color: var(--color-text-secondary);
+  /* 修改点(2026-09-17)：#666 → #333 提升入口标签可读性 */
+  color: var(--color-text-primary);
   white-space: nowrap;
 }
 
@@ -484,16 +523,4 @@
   line-height: 1;
 }
 
-/* ================================================================
-   新增：订单状态颜色
-   ================================================================ */
-/* 订单状态颜色 —— 修改点(2026-09-14)：统一引用共享层状态色令牌（--status-*），与历史订单页一致 */
-#user .divOrders .timeStatus .status-pending   { color: var(--status-pending); font-weight: 600; }
-#user .divOrders .timeStatus .status-accepted  { color: var(--status-accepted); font-weight: 600; }
-#user .divOrders .timeStatus .status-shipped,
-#user .divOrders .timeStatus .status-delivering { color: var(--status-shipped); font-weight: 600; }
-#user .divOrders .timeStatus .status-completed,
-#user .divOrders .timeStatus .status-complete   { color: var(--status-completed); font-weight: 600; }
-#user .divOrders .timeStatus .status-cancelled,
-#user .divOrders .timeStatus .status-cancel     { color: var(--status-cancelled); }
-#user .divOrders .timeStatus .status-refunding  { color: var(--status-refunding); font-weight: 600; }
+/* 订单状态色：HTML 直接使用 index.css 共享层 .status-xxx 类，无需页面级重复定义 */

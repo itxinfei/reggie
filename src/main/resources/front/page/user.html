@@ -19,12 +19,13 @@
         .member-card {
             /* 修改点(2026-09-14)：顶部留 12rem 与金色头部拉开层次（原 margin-top:0 与头部糊在一起） */
             margin: 12rem 12rem 12rem;
-            background: var(--color-primary-gradient-deep);
+            /* 修改点(2026-09-17)：土棕深金渐变与头部亮金割裂 → 亮金卡片渐变，与头部色彩体系连贯 */
+            background: var(--color-primary-gradient-card);
             border-radius: var(--radius-xl);
             padding: 16rem 18rem;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 6rem 18rem rgba(184, 125, 0, 0.28);
+            box-shadow: 0 4rem 12rem rgba(184, 125, 0, 0.18);
         }
         .member-card::before {
             content: ''; position: absolute; top: -30rem; right: -30rem;
@@ -77,22 +78,22 @@
         /* 骨架屏样式 */
         .skeleton-container { padding: 12rem; }
         .skeleton-user { display: flex; align-items: center; padding: 20rem 12rem; background: var(--color-primary-gradient); border-radius: var(--radius-xl); margin-bottom: 12rem; }
-        .skeleton-avatar { width: 60rem; height: 60rem; border-radius: 50%; background: linear-gradient(90deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; flex-shrink: 0; }
+        .skeleton-avatar { width: 60rem; height: 60rem; border-radius: 50%; background: linear-gradient(90deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
         .skeleton-user-info { flex: 1; margin-left: 12rem; }
         .skeleton-member-card { padding: 16rem 18rem; background: var(--color-primary-gradient); border-radius: var(--radius-xl); margin-bottom: 12rem; }
         .skeleton-stats { display: flex; gap: 16rem; margin-top: 12rem; }
-        .skeleton-stat { flex: 1; height: 40rem; border-radius: var(--radius-md); background: linear-gradient(90deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; }
+        .skeleton-stat { flex: 1; height: 40rem; border-radius: var(--radius-md); background: linear-gradient(90deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; }
         .skeleton-links { background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; }
         .skeleton-link-item { display: flex; align-items: center; padding: 16rem; border-bottom: 1px solid var(--border-light); }
         .skeleton-link-item:last-child { border-bottom: none; }
-        .skeleton-icon { width: 24rem; height: 24rem; border-radius: var(--radius-sm); background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; flex-shrink: 0; margin-right: 12rem; }
-        .skeleton-line { height: 14rem; border-radius: 4rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; margin-bottom: 8rem; }
+        .skeleton-icon { width: 24rem; height: 24rem; border-radius: var(--radius-sm); background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; margin-right: 12rem; }
+        .skeleton-line { height: 14rem; border-radius: 4rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; margin-bottom: 8rem; }
         .skeleton-line:last-child { margin-bottom: 0; }
         .skeleton-w30 { width: 30%; }
         .skeleton-w40 { width: 40%; }
         .skeleton-w50 { width: 50%; }
         .skeleton-w60 { width: 60%; }
-        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        /* 修改点(2026-09-17)：复用全局 @keyframes rg-skeleton-shine */
 
         /* 修改点(2026-09-16)：头像上传交互样式（点击/拖拽、即时预览、上传遮罩） */
         .avatar-wrap {
@@ -264,7 +265,12 @@
             </div>
 
             <!-- 订单快捷入口网格 -->
+            <!-- 修改点(2026-09-17)：补区块标题行「我的订单 >」，对齐主流外卖信息架构 -->
             <div class="order-quick-grid">
+                <div class="order-quick-header" @click="toOrderPage">
+                    <span class="oqh-title">我的订单</span>
+                    <span class="oqh-more">全部订单 <i class="ri-arrow-right-s-line"></i></span>
+                </div>
                 <div class="order-quick-item" @click="toOrderPageWithStatus(1)">
                     <span class="oq-icon oq-pending">
                         <i class="ri-time-line"></i>

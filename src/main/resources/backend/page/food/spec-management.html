@@ -250,8 +250,8 @@
         <p class="ds-page-header__subtitle">统一维护菜品规格组与规格选项，支持加价、必选、单选/多选等配置</p>
       </div>
       <div class="ds-page-header__actions">
-        <el-button icon="el-icon-refresh" @click="refreshAll">刷新</el-button>
-        <el-button type="primary" icon="el-icon-plus" @click="openGroupDialog()">新增规格组</el-button>
+        <el-button icon="ri-refresh-line" @click="refreshAll">刷新</el-button>
+        <el-button type="primary" icon="ri-add-line" @click="openGroupDialog()">新增规格组</el-button>
       </div>
     </header>
 
@@ -273,13 +273,13 @@
                 <el-input
                   v-model="groupKeyword"
                   class="spec-search"
-                  prefix-icon="el-icon-search"
+                  prefix-icon="ri-search-line"
                   placeholder="搜索规格组"
                   clearable
                   size="small"
                   aria-label="搜索规格组">
                 </el-input>
-                <el-button type="primary" icon="el-icon-plus" size="small" @click="openGroupDialog()">新增</el-button>
+                <el-button type="primary" icon="ri-add-line" size="small" @click="openGroupDialog()">新增</el-button>
               </div>
             </div>
 
@@ -296,7 +296,7 @@
               </div>
               <!-- 空态 -->
               <div v-else-if="filteredGroups.length === 0" class="spec-empty-guide">
-                <i class="el-icon-menu" aria-hidden="true"></i>
+                <i class="ri-menu-line" aria-hidden="true"></i>
                 <span>{{ groupKeyword ? '未找到匹配的规格组' : '暂无规格组，点击「新增」创建' }}</span>
               </div>
               <!-- 规格组导航列表 -->
@@ -378,9 +378,9 @@
                   <el-option label="启用" :value="1"></el-option>
                   <el-option label="禁用" :value="0"></el-option>
                 </el-select>
-                <el-button size="small" icon="el-icon-edit" @click="openGroupDialog(currentGroup)">编辑组</el-button>
-                <el-button type="danger" plain size="small" icon="el-icon-delete" @click="handleDeleteGroup(currentGroup)">删除组</el-button>
-                <el-button type="primary" size="small" icon="el-icon-plus" @click="openOptionDialog()">新增选项</el-button>
+                <el-button size="small" icon="ri-edit-line" @click="openGroupDialog(currentGroup)">编辑组</el-button>
+                <el-button type="danger" plain size="small" icon="ri-delete-bin-line" @click="handleDeleteGroup(currentGroup)">删除组</el-button>
+                <el-button type="primary" size="small" icon="ri-add-line" @click="openOptionDialog()">新增选项</el-button>
               </div>
             </div>
             <!-- 未选中组 -->
@@ -392,7 +392,7 @@
 
             <div class="spec-panel__body">
               <div v-if="!currentGroup" class="spec-empty-guide">
-                <i class="el-icon-mouse" aria-hidden="true"></i>
+                <i class="ri-cursor-line" aria-hidden="true"></i>
                 <span>从左侧选择规格组后，在此维护该组下的规格选项</span>
               </div>
               <template v-else>
@@ -408,7 +408,7 @@
                 </div>
                 <!-- 空态 -->
                 <div v-else-if="filteredOptions.length === 0" class="spec-empty-guide">
-                  <i class="el-icon-plus" aria-hidden="true"></i>
+                  <i class="ri-add-line" aria-hidden="true"></i>
                   <span>{{ optionStatusFilter === '' ? '该规格组暂无选项，点击「新增选项」添加' : '没有匹配的规格选项' }}</span>
                 </div>
                 <template v-else>
@@ -442,8 +442,8 @@
                     <el-table-column label="操作" width="120" :align="resolveColAlign({})" :header-align="resolveColAlign({})" fixed="right">
                       <template slot-scope="scope">
                         <div class="spec-row-actions">
-                          <el-button type="text" size="small" icon="el-icon-edit" @click.stop="openOptionDialog(scope.row)">编辑</el-button>
-                          <el-button type="text" size="small" class="btn-danger-text" icon="el-icon-delete" @click.stop="handleDeleteOption(scope.row)">删除</el-button>
+                          <el-button type="text" size="small" icon="ri-edit-line" @click.stop="openOptionDialog(scope.row)">编辑</el-button>
+                          <el-button type="text" size="small" class="btn-danger-text" icon="ri-delete-bin-line" @click.stop="handleDeleteOption(scope.row)">删除</el-button>
                         </div>
                       </template>
                     </el-table-column>

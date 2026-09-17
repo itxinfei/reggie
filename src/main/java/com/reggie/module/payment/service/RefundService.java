@@ -1,5 +1,7 @@
 package com.reggie.module.payment.service;
 
+import java.math.BigDecimal;
+
 /**
  * 退款服务：提供"按业务订单全额退款"能力。
  * <p>
@@ -25,4 +27,22 @@ public interface RefundService {
      * @return true=退款已成功发起并完成本地记账；false=无已支付支付单或退款失败（调用方应记录告警）
      */
     boolean refundByOrder(Long orderId, String reason);
+
+    /**
+     * 判断是否为可走渠道 API 的在线支付通道（微信/支付宝）。
+     * 现金/银行卡/储值/货到付款等线下通道返回 false（须走本地手动退款记账）。
+     *
+     * @param channel 渠道
+     * @return 是否在线通道
+     */
+    boolean isOnlineChannel(String channel);
+
+    /**
+     * 按支付单ID执行线下支付本地手动退款（现金/银行卡/储值/货到付款）。
+     * <p>由人工完成实际退款，系统仅做本地记账闭环：标记支付单 REFUND + 订单 REFUNDED + 回退会员权益。
+     * 供 {@code PaymentController.refund}（员工手动退款）等路径复用，避免 getChannel 抛“不支持的支付通道”。</p>
+     *
+     * @return true=记账成功；false=支付单不存在/非 SUCCESS/记账失败
+     */
+    boolean refundOfflineByPaymentOrderId(Long paymentOrderId, BigDecimal amount, String reason);
 }

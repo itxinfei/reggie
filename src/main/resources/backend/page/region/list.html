@@ -176,10 +176,10 @@
         statsCards() {
           var s = this.stats || {}
           return [
-            { key: '', icon: 'el-icon-location-outline', label: '地区总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
-            { key: '1', icon: 'el-icon-place', label: '省份', value: s.provinceCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
-            { key: '2', icon: 'el-icon-office-building', label: '城市', value: s.cityCount || 0, color: 'warning', clickable: true, active: this.activeFilter === '2' },
-            { key: '3', icon: 'el-icon-school', label: '区/县', value: s.districtCount || 0, color: 'danger', clickable: true, active: this.activeFilter === '3' }
+            { key: '', icon: 'ri-map-pin-2-line', label: '地区总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+            { key: '1', icon: 'ri-map-pin-line', label: '省份', value: s.provinceCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
+            { key: '2', icon: 'ri-building-line', label: '城市', value: s.cityCount || 0, color: 'warning', clickable: true, active: this.activeFilter === '2' },
+            { key: '3', icon: 'ri-book-open-line', label: '区/县', value: s.districtCount || 0, color: 'danger', clickable: true, active: this.activeFilter === '3' }
           ]
         }
       },

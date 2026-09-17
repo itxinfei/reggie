@@ -47,7 +47,7 @@
           <p class="ds-page-header__subtitle">查看会员充值流水</p>
         </div>
         <div class="ds-page-header__actions">
-          <el-button type="primary" size="small" icon="el-icon-plus" @click="openRecharge">手动充值</el-button>
+          <el-button type="primary" size="small" icon="ri-add-line" @click="openRecharge">手动充值</el-button>
         </div>
       </header>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
@@ -69,7 +69,7 @@
       <div class="filter-bar">
         <el-input v-model="input.phone" placeholder="请输入会员手机号" clearable
           @keyup.enter.native="handleQuery" style="width:200px;">
-          <i slot="prefix" class="el-input__icon el-icon-search"></i>
+          <i slot="prefix" class="el-input__icon ri-search-line"></i>
         </el-input>
         <el-select v-model="input.paymentMethod" placeholder="支付方式" clearable @change="handleQuery">
           <el-option label="微信支付" value="WECHAT"></el-option>

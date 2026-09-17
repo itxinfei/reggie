@@ -18,15 +18,15 @@
         .skeleton-container { padding: 12rem; }
         .skeleton-eval-card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 16rem; margin-bottom: 12rem; }
         .skeleton-eval-header { display: flex; align-items: center; margin-bottom: 12rem; }
-        .skeleton-dish-img { width: 60rem; height: 60rem; border-radius: var(--radius-md); background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; flex-shrink: 0; }
+        .skeleton-dish-img { width: 60rem; height: 60rem; border-radius: var(--radius-md); background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
         .skeleton-dish-info { flex: 1; margin-left: 12rem; }
         .skeleton-eval-content { padding-top: 8rem; }
-        .skeleton-line { height: 14rem; border-radius: 4rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite; margin-bottom: 8rem; }
+        .skeleton-line { height: 14rem; border-radius: 4rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; margin-bottom: 8rem; }
         .skeleton-line:last-child { margin-bottom: 0; }
         .skeleton-w40 { width: 40%; }
         .skeleton-w60 { width: 60%; }
         .skeleton-w80 { width: 80%; }
-        @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        /* 修改点(2026-09-17)：复用全局 @keyframes rg-skeleton-shine */
     </style>
 </head>
 <body>

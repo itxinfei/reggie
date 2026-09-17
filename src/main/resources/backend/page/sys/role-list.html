@@ -162,7 +162,7 @@
           v-model="permFilterText"
           size="small"
           clearable
-          prefix-icon="el-icon-search"
+          prefix-icon="ri-search-line"
           placeholder="搜索权限名称或标识"
         ></el-input>
         <el-button size="mini" @click="toggleExpand">{{ expanded ? '折叠全部' : '展开全部' }}</el-button>
@@ -628,9 +628,9 @@
         },
         // 节点图标：模块 / 菜单页 / 按钮
         nodeIcon(data) {
-          if (data.permissionType == 2) { return 'el-icon-more perm-header__icon--btn' }
-          if (data.children && data.children.length) { return 'el-icon-folder perm-header__icon--module' }
-          return 'el-icon-document perm-header__icon--menu'
+          if (data.permissionType == 2) { return 'ri-more-line perm-header__icon--btn' }
+          if (data.children && data.children.length) { return 'ri-folder-line perm-header__icon--module' }
+          return 'ri-file-text-line perm-header__icon--menu'
         },
         // 拍平权限树为数组
         flatNodes(nodes) {

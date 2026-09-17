@@ -141,7 +141,7 @@
     cancel-text="关 闭"
   >
     <div v-if="purchaseList.length === 0" class="ds-table-empty">
-      <i class="el-icon-document"></i>
+      <i class="ri-file-text-line"></i>
       <p>该供应商暂无采购记录</p>
     </div>
     <el-table v-else :data="purchaseList" stripe border size="small" :loading="purchaseLoading">

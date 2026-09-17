@@ -37,7 +37,7 @@
     .title-item .ops { display: flex; align-items: center; gap: 16rem; }
     .title-item .icon-btn { color: var(--color-text-disabled); font-size: 18rem; padding: 4rem; }
     .title-item .icon-btn.edit { color: var(--color-primary); }
-    .empty-tip { text-align: center; color: var(--color-text-hint); font-size: 13rem; padding: 20rem 0 12rem; }
+    /* 修改点(2026-09-17)：空态统一使用全局 .empty-state，删除 .empty-tip 自定义类 */
     .new-title-title { font-size: 14rem; font-weight: 600; color: var(--color-text-primary); margin: 18rem 0 4rem; }
     .apply-btn { margin-top: 20rem; }
     .tip { font-size: 12rem; color: var(--color-text-hint); margin-top: 10rem; line-height: 1.6; }
@@ -49,8 +49,12 @@
 </head>
 <body>
   <div id="invoice-app">
-    <!-- 修改点(2026-09-01)：van-* 自定义元素禁止自闭合 />，否则浏览器解析吞掉后续内容，Vue 挂载后内容丢失 -->
-    <van-nav-bar title="开发票" left-arrow @click-left="goBack"></van-nav-bar>
+    <!-- 修改点(2026-09-17)：头部统一为 .divHead > .divTitle（对齐全站 13 个子页面标准）-->
+    <div class="divHead">
+      <div class="divTitle">
+        <i class="ri-arrow-left-s-line" @click="goBack"></i>开发票
+      </div>
+    </div>
 
     <div class="inv-container">
       <!-- 订单信息 -->
@@ -88,7 +92,8 @@
             </div>
           </div>
         </van-radio-group>
-        <div v-if="titles.length === 0" class="empty-tip">暂无发票抬头，请先在下方新增</div>
+        <!-- 修改点(2026-09-17)：空态统一为全站标准 .empty-state -->
+        <div v-if="titles.length === 0" class="empty-state"><i class="ri-file-list-line"></i><p class="empty-text">暂无发票抬头，请先在下方新增</p></div>
 
         <div class="new-title-title">新增抬头</div>
         <van-field v-model="form.type" label="抬头类型" readonly is-link @click="typePickerShow = true" :placeholder="form.type === 1 ? '个人' : '企业'"></van-field>

@@ -203,7 +203,7 @@
           ref="comboUpload"
         >
           <img v-if="comboForm.imageUrl" :src="comboForm.imageUrl" class="avatar" style="border-radius: var(--radius-sm);" alt="套餐图片">
-          <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+          <i v-else class="ri-add-line avatar-uploader-icon"></i>
         </el-upload>
       </el-form-item>
       <el-form-item label="套餐描述:">
@@ -236,7 +236,7 @@
       @input="debounceSearch"
       @keydown.esc="handleSearchEsc"
     >
-      <i slot="prefix" class="el-input__icon el-icon-search" @click="searchDish" role="button" aria-label="搜索菜品" tabindex="0"></i>
+      <i slot="prefix" class="el-input__icon ri-search-line" @click="searchDish" role="button" aria-label="搜索菜品" tabindex="0"></i>
     </el-input>
 
     <div class="dishSelectContent">

@@ -290,7 +290,8 @@ body.login-page {
 }
 #login .divContainer .input-wrapper.is-valid:focus-within {
   border-color: var(--color-success);
-  box-shadow: 0 0 0 3px var(--color-success-tint);
+  /* 修改点(2026-09-17)：3px→4rem，与默认 --login-ring 环粗细一致，聚焦时不再跳变 */
+  box-shadow: 0 0 0 4rem var(--color-success-tint);
 }
 #login .divContainer .input-wrapper.is-valid .inputIcon {
   color: var(--color-success);
@@ -316,7 +317,8 @@ body.login-page {
 }
 #login .divContainer .input-wrapper.is-error:focus-within {
   border-color: var(--color-danger);
-  box-shadow: 0 0 0 3px rgba(245, 34, 45, 0.12);
+  /* 修改点(2026-09-17)：3px→4rem，与默认 --login-ring 环粗细一致 */
+  box-shadow: 0 0 0 4rem var(--login-danger-ring, rgba(245, 34, 45, 0.12));
 }
 #login .divContainer .input-wrapper.is-error .inputIcon {
   color: var(--color-danger);
@@ -366,6 +368,11 @@ body.login-page {
   color: var(--login-text-placeholder) !important;
   cursor: not-allowed !important;
 }
+/* 修改点(2026-09-17)：禁用态禁用 hover/active 反馈，倒计时中点击不再「闪一下」误导已触发 */
+#login .codeBtn.codeDisabled:hover,
+#login .codeBtn.codeDisabled:active {
+  opacity: 1;
+}
 
 /* ---- 错误提示 ---- */
 #login .divMsg {
@@ -406,6 +413,8 @@ body.login-page {
   font-weight: 600;
   text-align: center;
   letter-spacing: 3rem;
+  /* 修改点(2026-09-17)：letter-spacing 会在末字后追加空隙使文字左偏，补 text-indent 抵消 */
+  text-indent: 3rem;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   margin-bottom: 20rem;
   position: relative;
@@ -563,7 +572,8 @@ body.login-page {
 #login .agreementText {
   font-size: 12rem;
   font-family: "PingFangSC", Microsoft YaHei, sans-serif;
-  color: rgba(120, 80, 20, 0.65);
+  /* 修改点(2026-09-17)：0.65 叠米白底有效对比约 3:1，低于 AA 4.5:1 → 0.85 */
+  color: rgba(120, 80, 20, 0.85);
   line-height: 20rem;
   user-select: none;
 }
@@ -791,10 +801,6 @@ body.login-page {
     letter-spacing: 2rem;
   }
 
-  #login .brandSlogan {
-    font-size: 11rem;
-  }
-
   #login .divContainer,
   #login .btnLogin,
   #login .agreementRow,
@@ -869,11 +875,6 @@ body.login-page {
     font-size: 22px;
     letter-spacing: 2px;
     margin-bottom: 2px;
-  }
-
-  #login .brandSlogan {
-    font-size: 11px;
-    letter-spacing: 1px;
   }
 
   /* 登录标题 */

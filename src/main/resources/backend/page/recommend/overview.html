@@ -65,7 +65,7 @@
         <p class="ds-page-header__subtitle">基于销量聚合的菜品热门排行，浏览行为趋势实时分析</p>
       </div>
       <div class="ds-page-header__actions">
-        <el-button type="primary" size="small" icon="el-icon-refresh" @click="refreshAll" :loading="loadingAll">刷新数据</el-button>
+        <el-button type="primary" size="small" icon="ri-refresh-line" @click="refreshAll" :loading="loadingAll">刷新数据</el-button>
       </div>
     </header>
 
@@ -77,14 +77,14 @@
         <!-- 推荐反馈分布 -->
         <div class="chart-panel">
             <div class="panel-title">
-                <i class="el-icon-data-analysis"></i> 推荐反馈分布（近7天）
+                <i class="ri-bar-chart-box-line"></i> 推荐反馈分布（近7天）
             </div>
             <div class="chart-box" id="feedbackChart"></div>
         </div>
         <!-- 用户偏好分布 -->
         <div class="chart-panel">
             <div class="panel-title">
-                <i class="el-icon-pie-chart"></i> 用户口味偏好分布
+                <i class="ri-pie-chart-line"></i> 用户口味偏好分布
             </div>
             <div class="chart-box" id="preferenceChart"></div>
         </div>
@@ -94,14 +94,14 @@
         <!-- 推荐算法效果对比 -->
         <div class="chart-panel">
             <div class="panel-title">
-                <i class="el-icon-s-data"></i> 推荐算法效果对比
+                <i class="ri-database-line"></i> 推荐算法效果对比
             </div>
             <div class="chart-box" id="algoChart"></div>
         </div>
         <!-- 浏览行为趋势 -->
         <div class="chart-panel">
             <div class="panel-title">
-                <i class="el-icon-data-line"></i> 用户浏览行为趋势（近7天）
+                <i class="ri-bar-chart-line"></i> 用户浏览行为趋势（近7天）
             </div>
             <div class="chart-box" id="browseChart"></div>
         </div>
@@ -110,7 +110,7 @@
     <!-- 热门排行 -->
     <div class="hot-section">
         <div class="panel-title">
-            <i class="el-icon-star-on" style="color:var(--color-warning);"></i> 今日热门菜品排行
+            <i class="ri-star-fill" style="color:var(--color-warning);"></i> 今日热门菜品排行
             <el-button type="primary" size="small" @click="refreshHotRank" :loading="loadingHot">刷新排行</el-button>
         </div>
         <!-- 修改点：后端 /recommend/hot 仅按销量聚合排序，不支持 cf/content 算法维度；
@@ -132,11 +132,11 @@
             </div>
         </div>
         <div v-else class="loading-wrap">
-            <i class="el-icon-loading" style="font-size:var(--font-size-4xl); color:var(--color-info);"></i>
+            <i class="ri-loader-4-line" style="font-size:var(--font-size-4xl); color:var(--color-info);"></i>
             <p>加载热门数据中...</p>
         </div>
         <div v-if="!loadingHot && hotDishes.length === 0" class="loading-wrap">
-            <i class="el-icon-document" style="font-size:var(--font-size-4xl); color:var(--text-muted);"></i>
+            <i class="ri-file-text-line" style="font-size:var(--font-size-4xl); color:var(--text-muted);"></i>
             <p>暂无数据，请先确保有订单和浏览数据</p>
         </div>
     </div>

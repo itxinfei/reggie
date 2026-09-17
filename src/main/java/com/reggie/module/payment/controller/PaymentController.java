@@ -25,6 +25,7 @@ import static com.reggie.module.payment.model.PaymentOrder.STATUS_REFUND;
 import static com.reggie.module.payment.model.PaymentOrder.STATUS_SUCCESS;
 import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.payment.service.RefundRecordService;
+import com.reggie.module.payment.service.RefundService;
 import com.reggie.enums.RefundStatus;
 import com.reggie.module.dashboard.service.DashboardService;
 import com.reggie.module.order.service.OrderService;
@@ -80,6 +81,9 @@ public class PaymentController {
 
     @Autowired
     private PaymentChannelFactory paymentChannelFactory;
+
+    @Autowired
+    private RefundService refundService;
 
     @Autowired
     private DashboardService dashboardService;
@@ -488,6 +492,20 @@ public class PaymentController {
         R<String> validationError = validateRefundRequest(dto, paymentOrder, refundAmount, paymentAmount);
         if (validationError != null) {
             return validationError;
+        }
+
+        // 离线支付通道（现金/银行卡/储值/货到付款）退款由人工完成，系统仅做本地记账闭环，不调渠道 API。
+        // 避免 paymentChannelFactory.getChannel 抛“不支持的支付通道”导致员工手动退款 500（Defect B）。
+        if (!refundService.isOnlineChannel(paymentOrder.getChannel())) {
+            boolean offlineOk = refundService.refundOfflineByPaymentOrderId(paymentOrder.getId(), refundAmount,
+                    dto.getReason());
+            if (!offlineOk) {
+                return R.error("线下支付退款记账失败，需人工核查");
+            }
+            clearDashboardCache();
+            log.info("[退款] 线下支付本地记账退款成功: paymentOrderId={}, channel={}, amount={}",
+                    paymentOrder.getId(), paymentOrder.getChannel(), refundAmount);
+            return R.success("退款成功（线下支付，已记录手动退款）");
         }
 
         // === 1.5 Redis 分布式锁串行化同一支付单的退款发起 ===
