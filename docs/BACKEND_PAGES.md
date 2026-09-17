@@ -607,17 +607,19 @@ actions: [
 ### 7.7 配套须一并修复的已知问题（重构时顺手处理）
 
 > **核实修正（2026-08-30 复核）**：以下条目中，部分此前误报的问题经查真实代码后**已修正/降级**，真实存在的问题保留。详见逐条说明。
+>
+> **复核结论（2026-09-17 审计）**：逐条比对当前代码后，原 7 项中原 4 项（取消自动退款 / 购物车幽灵菜品 / 就餐方式映射 / request.js 反馈）已在本月历次修复中解决，支付方式字典已与实体注释一致，列对齐已统一；仅"38 页 empty-hint"为部分覆盖（低优）。**本表不再作为待修清单**，剩余 empty-hint 补充见空状态专项。
 
 | 问题 | 核实状态 | 归属 |
 |---|---|---|
-| 用户端订单 Tab 2/3 语义颠倒、缺"已退款" | **误报，已修复**：`front/page/order.html:104-115` 注释明确"重要 Bug 修复，现严格对齐后端 1=待付款…6=已退款"，Tab 值与后端一致且含已退款。删除原误报。 | — |
-| 支付方式三套定义打架（实体注释 / 实际行为 / MetaController 字典缺 3 货到付款） | **真实**，需统一为 1=微信/2=支付宝/3=货到付款，并同步实体注释与字典 | 字典统一 |
-| 就餐方式前端映射 key 与后端枚举不一致（TAKEAWAY vs TAKEOUT，前端永远显示英文） | **真实**，需对齐 `OrderSource` 枚举（TAKEOUT/EAT_IN/QUEUE/RESERVATION） | 字典统一 |
-| 取消订单后已支付款项无自动退款（支付单 SUCCESS 与订单 CANCELLED 并存） | **真实且为资金问题**：`handlePaymentSuccess` 回查订单状态，仅 `eq(status,PENDING_PAY)` 才联动更新（状态不会被覆盖，这点做对），但订单已取消时**不触发自动退款**，钱收单消无退款 | 资金闭环 |
-| 购物车金额校验（幽灵菜品风险） | **须精确化**：真实在售菜品会被 `ShoppingCartController.add` 服务端回写真实价格，无法 0.01 买；但**不存在/下架的 dishId 会保留客户端 amount**，存在"幽灵菜品低价下单"校验缺失 | 资金安全 |
-| `request.js` records→list 别名是死代码 + 网络错双 toast、业务错单 toast | **真实**（别名操作层级错误永不执行；双/单 toast 反馈不一致） | 反馈统一 |
-| 38 个 crud 页面缺 `empty-hint` 覆盖 | **真实**（报表/日志位查询页误显"点击右上角新建"） | 空状态 |
-| 手写表格页列对齐默认不一致 | **真实**（urgency/retention 等无 align 列左对齐） | 一致性 |
+| 用户端订单 Tab 2/3 语义颠倒、缺"已退款" | 误报→已修复：`front/page/order.html` 已严格对齐后端 1=待付款…6=已退款（含已退款），删除原误报 | — |
+| 支付方式三套定义打架（实体注释 / 实际行为 / MetaController 字典缺 3 货到付款） | ✅ 已一致（2026-09-17 复核）：`Orders.payMethod` 注释与 `MetaController.enums()` 均为 1=现金/2=微信/3=支付宝/4=银行卡/5=会员储值/6=货到付款，货到付款=6 已补，两端统一走 `/api/meta/enums` | 字典统一 |
+| 就餐方式前端映射 key 与后端枚举不一致（TAKEAWAY vs TAKEOUT，前端永远显示英文） | ✅ 已修复（2026-09-17 复核）：`backend/page/order/list.html` 的 `formatDiningType` 用 TAKEOUT/EAT_IN/QUEUE/RESERVATION 正确映射中文，与 `/api/meta/enums` 一致 | 字典统一 |
+| 取消订单后已支付款项无自动退款（支付单 SUCCESS 与订单 CANCELLED 并存） | ✅ 已修复（P0-2，2026-09-17 复核）：`OrderStatusFlowServiceImpl.cancelOrder` 检测 `hasSuccessPaymentOrder`→`registerAutoRefund`；`PaymentOrderServiceImpl.handlePaymentSuccess` 在订单已取消时 `registerAutoRefundOnCancelled`，双侧闭环 | 资金闭环 |
+| 购物车金额校验（幽灵菜品风险） | ✅ 已修复（2026-09-17 复核）：`ShoppingCartController.applyServerSideDishInfo` 对不存在/停售 dishId 抛错，并强制以服务端价格覆盖 `amount`，无法幽灵低价下单 | 资金安全 |
+| `request.js` records→list 别名死代码 + 网络错双 toast、业务错单 toast | ✅ 已修复（2026-09-17 复核）：当前 `front/js/request.js` 仅单 `vant.Notify` toast，401/NOTLOGIN 统一跳登录，无死代码 | 反馈统一 |
+| 38 个 crud 页面缺 `empty-hint` 覆盖 | 🟡 部分已覆盖（2026-09-17 复核）：grep 显示 21 个页面已含 `empty-hint`；报表/日志类查询页仍为占位"新建"误导，低优待补 | 空状态 |
+| 手写表格页列对齐默认不一致 | ✅ 已统一（2026-09-17 复核）：列对齐走 `js/components.js` 的 `resolveColAlign`（全站居中），手写页已校验 | 一致性 |
 
 ---
 
