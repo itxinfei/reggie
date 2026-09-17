@@ -308,6 +308,15 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
         record.setRefundType(1); // 1=整单退款
         record.setApplyUserId(currentUserId);
         record.setCreatedTime(LocalDateTime.now());
+        // 回填支付单ID：refund_record.payment_order_id 为 NOT NULL，必须关联成功支付单，否则插入失败
+        PaymentOrder paymentOrder = paymentOrderMapper.selectOne(new LambdaQueryWrapper<PaymentOrder>()
+                .eq(PaymentOrder::getOrderId, orderId)
+                .eq(PaymentOrder::getStatus, "SUCCESS")
+                .last("LIMIT 1"));
+        if (paymentOrder == null) {
+            throw new CustomException("未找到该订单对应的成功支付单，无法申请售后");
+        }
+        record.setPaymentOrderId(paymentOrder.getId());
         this.save(record);
         return record;
     }
