@@ -305,6 +305,140 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
     }
 
     /**
+     * 修改点(2026-09-18)：按桌台合并结账——一次性结清该桌台所有待付款堂食订单。
+     * 解决「一桌多单时只收最后一单的钱」的资金缺口（扫码加菜每次新建独立订单，
+     * 而 dining_table.current_order_id 只指向最后一单）。
+     *
+     * @param tableId      桌台ID
+     * @param actualAmount 实收金额
+     * @param payType      支付方式
+     * @param cashierId    收银员ID
+     * @param cashierName  收银员姓名
+     * @param usedCouponId 使用的优惠券ID
+     * @param memberUserId 会员用户ID
+     * @param remark       备注
+     * @return 收银记录
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public CashierRecord cashPaymentByTable(Long tableId, BigDecimal actualAmount, Integer payType,
+                                            Long cashierId, String cashierName,
+                                            Long usedCouponId, Long memberUserId, String remark) {
+        if (tableId == null) {
+            throw new CustomException("桌台ID不能为空");
+        }
+        // 1. 查询该桌台所有待付款堂食订单（租户隔离由拦截器 + 显式条件双重保证）
+        List<Orders> orders = orderService.lambdaQuery()
+                .eq(Orders::getTenantId, BaseContext.getCurrentTenantId())
+                .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
+                .eq(Orders::getSource, OrderSource.EAT_IN.getValue())
+                .eq(Orders::getTableId, tableId)
+                .orderByAsc(Orders::getOrderTime)
+                .list();
+        if (orders == null || orders.isEmpty()) {
+            throw new CustomException("该桌台没有待结账订单");
+        }
+        // 2. 幂等：任一张单已收银则整单拒绝，避免重复收款
+        for (Orders o : orders) {
+            CashierRecord exist = cashierRecordMapper.selectOne(
+                    new LambdaQueryWrapper<CashierRecord>().eq(CashierRecord::getOrderId, o.getId()));
+            if (exist != null) {
+                throw new CustomException("该桌台存在已结账订单，请勿重复结账");
+            }
+        }
+        // 3. 合并金额：逐单以服务端金额为准（占位单用订单明细汇总兜底）
+        BigDecimal orderAmount = BigDecimal.ZERO;
+        for (Orders o : orders) {
+            BigDecimal amt = o.getAmount();
+            if (amt == null || amt.compareTo(BigDecimal.ZERO) <= 0) {
+                amt = computeOrderDetailTotal(o.getId());
+            }
+            if (amt != null && amt.compareTo(BigDecimal.ZERO) > 0) {
+                orderAmount = orderAmount.add(amt);
+            }
+        }
+        if (orderAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CustomException("该桌台尚未点单，请先加菜后再结账");
+        }
+        // 4. 券抵扣 + 会员等级折扣（与普通收银同一口径）
+        BigDecimal couponDiscount = resolveCouponDiscount(usedCouponId, memberUserId, orderAmount);
+        BigDecimal levelDiscount = resolveMemberLevelDiscount(memberUserId);
+        BigDecimal payable = orderAmount.subtract(couponDiscount).multiply(levelDiscount)
+                .setScale(2, RoundingMode.HALF_UP);
+        if (payable.compareTo(BigDecimal.ZERO) < 0) {
+            payable = BigDecimal.ZERO;
+        }
+        // 5. 实收校验 + 储值扣减
+        validateActualAmount(payType, actualAmount, payable);
+        deductStoredBalanceIfNeeded(payType, memberUserId, payable);
+
+        // 6. 找零（仅现金）
+        BigDecimal changeAmount = BigDecimal.ZERO;
+        if (payType != null && payType == 1 && actualAmount.compareTo(payable) > 0) {
+            changeAmount = actualAmount.subtract(payable);
+        }
+        // 7. 写一条收银记录（主单取最早一张，备注标注合并笔数）
+        Orders main = orders.get(0);
+        String mergedRemark = (remark == null ? "" : remark)
+                + "【按桌台合并结账，共" + orders.size() + "笔订单】";
+        CashierRecord record = buildCashierRecord(main.getId(), main.getNumber(), payType, orderAmount,
+                actualAmount, changeAmount, cashierId, cashierName, mergedRemark);
+        cashierRecordMapper.insert(record);
+
+        // 8. 所有订单统一置「已完成(4)」并写支付记录（堂食无 2→3→4 流转，直接完成）
+        String channel = resolvePayChannel(payType);
+        for (Orders o : orders) {
+            boolean updated = orderService.lambdaUpdate()
+                    .eq(Orders::getId, o.getId())
+                    .eq(Orders::getTenantId, o.getTenantId())
+                    .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
+                    .set(Orders::getStatus, Orders.STATUS_COMPLETED)
+                    .set(Orders::getPayMethod, payType)
+                    .set(Orders::getCheckoutTime, LocalDateTime.now())
+                    .set(usedCouponId != null, Orders::getUsedCouponId, usedCouponId)
+                    .set(memberUserId != null, Orders::getUserId, memberUserId)
+                    .update();
+            if (!updated) {
+                throw new CustomException("订单状态已变更，请刷新后重试");
+            }
+            BigDecimal paidAmount = o.getAmount() != null && o.getAmount().compareTo(BigDecimal.ZERO) > 0
+                    ? o.getAmount() : computeOrderDetailTotal(o.getId());
+            saveSuccessPaymentOrder(o.getId(), channel, paidAmount);
+        }
+        // 9. 释放桌台（与订单更新同一事务，fail-closed 依赖租户上下文，不能异步）
+        if (diningTableService != null) {
+            try {
+                diningTableService.changeStatus(tableId, DiningTableStatus.FREE.getValue());
+                log.info("[收银] 桌台{}合并结账完成，已释放为空闲（共{}笔订单）", tableId, orders.size());
+            } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免桌台释放失败回滚已完成的收款
+                log.error("[收银] 桌台{}释放失败，需人工核查: {}", tableId, e.getMessage(), e);
+            }
+        }
+        printBillQuietly(main.getId());
+        return record;
+    }
+
+    /**
+     * 修改点(2026-09-18)：支付方式 → 支付渠道映射（与 saveSuccessPaymentOrder 的 channel 口径一致）。
+     *
+     * @param payType 支付方式
+     * @return 渠道标识
+     */
+    private String resolvePayChannel(Integer payType) {
+        if (payType == null) {
+            return "CASH";
+        }
+        switch (payType) {
+            case 2: return "WECHAT";
+            case 3: return "ALIPAY";
+            case 4: return "BANKCARD";
+            case 5: return "MEMBER_BALANCE";
+            default: return "CASH";
+        }
+    }
+
+    /**
      * 修改点(2026-09-18)：结算预览——服务端权威计算应付金额，供收银台展示与提交使用。
      *
      * @param orderId      订单ID

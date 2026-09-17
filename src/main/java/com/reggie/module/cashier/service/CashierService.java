@@ -69,6 +69,26 @@ public interface CashierService extends IService<CashierRecord> {
                               Long usedCouponId, Long memberUserId, String remark);
 
     /**
+     * 修改点(2026-09-18)：按桌台合并结账——一桌可能存在多张待付款堂食订单
+     * （扫码加菜每次会新建独立订单，而 dining_table.current_order_id 只指向最后一单），
+     * 单订单结账只能收最后一单的钱，前面的订单会永久挂在待结账列表，形成资金缺口。
+     * 本方法一次性结清该桌台所有待付款堂食订单，并在同一事务内释放桌台。
+     *
+     * @param tableId      桌台ID
+     * @param actualAmount 实收金额
+     * @param payType      支付方式（1现金 2微信 3支付宝 4银行卡 5会员储值）
+     * @param cashierId    收银员ID
+     * @param cashierName  收银员姓名
+     * @param usedCouponId 使用的优惠券ID
+     * @param memberUserId 会员用户ID
+     * @param remark       备注
+     * @return 收银记录（以最早一张订单为主单）
+     */
+    CashierRecord cashPaymentByTable(Long tableId, BigDecimal actualAmount, Integer payType,
+                                     Long cashierId, String cashierName,
+                                     Long usedCouponId, Long memberUserId, String remark);
+
+    /**
      * 修改点(2026-09-18)：结算预览——服务端权威计算「订单金额 / 券抵扣 / 会员等级折扣 / 应付金额」。
      * 此前收银台由前端自行 `amount - discount` 计算应付，与服务端 BigDecimal 口径不一致
      * （浮点误差、会员等级折扣未纳入），改为由本接口统一下发。

@@ -188,6 +188,63 @@ public class CashierController {
     }
 
     /**
+     * 修改点(2026-09-18)：按桌台合并结账——一次性结清该桌台所有待付款堂食订单并释放桌台。
+     * 用于「一桌多单」（扫码加菜会生成多张独立订单）场景，避免只收最后一单的钱。
+     *
+     * @param tableId      桌台ID
+     * @param actualAmount 实收金额
+     * @param payType      支付方式
+     * @param usedCouponId 使用的优惠券ID
+     * @param memberUserId 会员用户ID
+     * @param remark       备注
+     * @return 收银记录
+     */
+    @PostMapping("/table-payment")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "按桌台合并结账", description = "一次性结清该桌台所有待付款堂食订单，并在同一事务内释放桌台")
+    public R<CashierRecord> tablePayment(
+            @Parameter(description = "桌台ID") @RequestParam Long tableId,
+            @Parameter(description = "实收金额（现金可多收，其他支付方式等于应付金额）") @RequestParam BigDecimal actualAmount,
+            @Parameter(description = "支付方式 1现金 2微信 3支付宝 4银行卡 5会员储值") @RequestParam(required = false, defaultValue = "1") Integer payType,
+            @Parameter(description = "使用的优惠券ID") @RequestParam(required = false) Long usedCouponId,
+            @Parameter(description = "会员关联用户ID") @RequestParam(required = false) Long memberUserId,
+            @Parameter(description = "备注") @RequestParam(required = false) String remark) {
+        Long userId = BaseContext.getCurrentId();
+        String cashierName = resolveCashierName(userId);
+        try {
+            CashierRecord record = cashierService.cashPaymentByTable(tableId, actualAmount, payType,
+                    userId, cashierName, usedCouponId, memberUserId, remark);
+            return R.success(record);
+        } catch (CustomException e) {
+            log.warn("按桌台结账业务错误：{}", e.getMessage(), e);
+            return R.error(e.getMessage());
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("按桌台结账失败", e);
+            return R.error("结账失败，请稍后重试");
+        }
+    }
+
+    /**
+     * 修改点(2026-09-18)：从员工表解析收银员姓名（等价抽取，供收款与按桌台结账复用）。
+     *
+     * @param userId 当前登录员工ID
+     * @return 收银员姓名，取不到时返回「收银员」
+     */
+    private String resolveCashierName(Long userId) {
+        try {
+            Employee emp = employeeService.getById(userId);
+            if (emp != null && emp.getName() != null) {
+                return emp.getName();
+            }
+        } catch (Exception ex) {
+            // 宽异常兜底：有意捕获 Exception，避免姓名查询失败影响收款
+            log.warn("查询收银员姓名失败，userId={}", userId, ex);
+        }
+        return "收银员";
+    }
+
+    /**
      * 删除 cashier record。
      * @param id 参数 id
      * @return 返回结果

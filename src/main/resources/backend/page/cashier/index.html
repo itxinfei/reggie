@@ -916,6 +916,34 @@
 
           this.submitLoading = true
           try {
+            // 修改点(2026-09-18)：订单属于桌台时走「按桌台合并结账」——
+            // 扫码加菜会产生多张独立订单，单订单结账只能收最后一单的钱，
+            // 合并接口会一次性结清该桌所有待付款订单并在同一事务内释放桌台。
+            if (this.selectedOrder.tableId) {
+              const tableParams = {
+                tableId: this.selectedOrder.tableId,
+                actualAmount: this.payType === 1 ? this.actualAmount : this.payableAmount,
+                payType: this.payType,
+                usedCouponId: this.selectedCouponId,
+                memberUserId: this.currentMember ? this.currentMember.userId : null,
+                remark: this.remark
+              }
+              const tableRes = await tablePayment(tableParams)
+              if (tableRes.code === 1) {
+                ReggieUI.success('结账成功，桌台已释放')
+                if (window.parent !== window) {
+                  window.parent.postMessage({ type: 'cashier-success', orderId: this.selectedOrder ? this.selectedOrder.id : null }, '*')
+                }
+                this.selectedOrder = null
+                this.actualAmount = 0
+                this.remark = ''
+                this.fetchData()
+              } else {
+                ReggieUI.error(tableRes.msg || '结账失败')
+              }
+              return
+            }
+
             const params = {
               orderId: this.selectedOrder.id,
               orderNumber: this.selectedOrder.number,

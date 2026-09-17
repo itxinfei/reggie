@@ -6,6 +6,10 @@ const getCashierRecordByOrderId = (orderId) => $axios({ url: `/cashier/record/or
 const saveCashierRecord = (data) => $axios({ url: '/cashier/record', method: 'post', data })
 const cashPayment = (params) => $axios({ url: '/cashier/cash-payment', method: 'post', params })
 const deleteCashierRecord = (id) => $axios({ url: `/cashier/record/${id}`, method: 'delete' })
+// 修改点(2026-09-18)：结算预览（服务端权威下发应付金额，消除前端自算与后端 BigDecimal 的口径/浮点差异）
+const previewCheckout = (params) => $axios({ url: '/cashier/preview', method: 'get', params })
+// 修改点(2026-09-18)：按桌台合并结账（一桌多单时一次性结清全部待付款订单并释放桌台）
+const tablePayment = (params) => $axios({ url: '/cashier/table-payment', method: 'post', params })
 
 // 日结管理
 const getDailySettlementList = (params) => $axios({ url: '/cashier/settlement/list', method: 'get', params })
