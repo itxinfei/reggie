@@ -36,7 +36,9 @@
 
         <!-- 对话管理侧边栏 -->
         <div class="sidebar-overlay" :class="{active: sidebarOpen}" @click="toggleSidebar"></div>
-        <div class="conversation-sidebar" :class="{active: sidebarOpen}">
+        <!-- 修改点(2026-09-17)：可访问性——历史抽屉为非模态补充区域，用 complementary 语义并标注名称 -->
+        <div class="conversation-sidebar" :class="{active: sidebarOpen}"
+             role="complementary" aria-label="对话历史">
             <div class="sidebar-header">
                 <h3><i class="ri-chat-1-line" aria-hidden="true"></i> 对话历史</h3>
                 <button class="new-chat-btn" @click="newConversation">+ 新对话</button>

@@ -190,7 +190,9 @@
     </div>
 
     <!-- 购物车弹窗 -->
-    <van-popup v-model="cartDialogVisible" position="bottom" round :style="{ maxHeight: '60vh' }">
+    <!-- 修改点(2026-09-17)：可访问性——底部弹层补充 dialog 语义（Vant Popup 透传属性到根元素） -->
+    <van-popup v-model="cartDialogVisible" position="bottom" round :style="{ maxHeight: '60vh' }"
+               role="dialog" aria-modal="true" aria-label="购物车">
       <div class="cart-popup">
         <div class="cart-popup-header">
           <span class="cart-popup-title">购物车</span>
@@ -215,7 +217,8 @@
     </van-popup>
 
     <!-- 确认订单弹窗 -->
-    <van-popup v-model="submitDialogVisible" position="bottom" round :style="{ maxHeight: '80vh' }">
+    <van-popup v-model="submitDialogVisible" position="bottom" round :style="{ maxHeight: '80vh' }"
+               role="dialog" aria-modal="true" aria-label="确认订单">
       <div class="order-popup">
         <div class="order-section">
           <div class="order-section-title"><i class="ri-table-line"></i> 桌台信息</div>

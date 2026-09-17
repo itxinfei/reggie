@@ -99,7 +99,9 @@
             </div>
 
             <!-- 修改点：用户协议弹窗——el-dialog 替换为纯CSS模态框 -->
-            <div v-if="dialogVisible" class="agreementModal">
+            <!-- 修改点(2026-09-17)：可访问性——自定义协议弹窗补充 dialog 语义与 ESC 关闭 -->
+            <div v-if="dialogVisible" class="agreementModal" role="dialog" aria-modal="true"
+                 :aria-label="dialogTitle || '用户协议'" tabindex="-1" @keydown.esc="dialogVisible = false">
                 <div class="agreementDialog">
                     <div class="modal-header">
                         <h3 class="modal-title">{{ dialogTitle }}</h3>

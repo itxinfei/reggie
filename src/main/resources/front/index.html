@@ -73,7 +73,8 @@
   <body>
     <div id="main" class="app">
       <!-- ====== 美团：渐变色头部区域 ====== -->
-      <div class="header-section">
+      <!-- 修改点(2026-09-17)：可访问性——页面地标（landmark），便于屏幕阅读器快速跳转 -->
+      <div class="header-section" role="banner">
         <!-- 顶部导航：定位 | 搜索 | 用户 -->
         <div class="top-bar">
           <div class="location" @click="toAddressPage">
@@ -195,7 +196,7 @@
 
       <!-- ====== 核心区域：左侧分类 + 右侧菜品 ====== -->
       <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
-      <div class="content-area">
+      <div class="content-area" role="main">
         <!-- 左侧分类栏 -->
         <div class="category-sidebar" ref="categorySidebar">
           <div
@@ -440,7 +441,7 @@
 
       <!-- ====== 底部 Tab 导航（点餐 / 订单 / 我的） ====== -->
       <!-- 修改点：全站此前无任何全局导航，跨页只能靠顶部头像/返回箭头，路径过长 -->
-      <van-tabbar v-model="activeTab" class="app-tabbar" @change="onTabChange">
+      <van-tabbar v-model="activeTab" class="app-tabbar" role="navigation" aria-label="主导航" @change="onTabChange">
         <van-tabbar-item>
           <span>点餐</span>
           <i slot="icon" class="ri-restaurant-line"></i>
