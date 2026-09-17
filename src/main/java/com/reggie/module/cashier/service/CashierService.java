@@ -96,9 +96,10 @@ public interface CashierService extends IService<CashierRecord> {
      * @param orderId      订单ID
      * @param usedCouponId 使用的优惠券ID（可空）
      * @param memberUserId 会员用户ID（可空）
-     * @return 预览结果：orderAmount / couponDiscount / levelDiscount / payable
+     * @param tableId      桌台ID（可空；传入时按「该桌台所有待付款堂食订单」合计预览）
+     * @return 预览结果：orderAmount / couponDiscount / levelDiscount / payable / orderCount / merged
      */
-    Map<String, Object> previewCheckout(Long orderId, Long usedCouponId, Long memberUserId);
+    Map<String, Object> previewCheckout(Long orderId, Long usedCouponId, Long memberUserId, Long tableId);
 
     /**
      * 删除收银记录

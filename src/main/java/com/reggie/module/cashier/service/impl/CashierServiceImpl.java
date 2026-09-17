@@ -447,9 +447,38 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
      * @return 预览结果（orderAmount / couponDiscount / levelDiscount / payable）
      */
     @Override
-    public Map<String, Object> previewCheckout(Long orderId, Long usedCouponId, Long memberUserId) {
-        Orders order = loadOrderForPreview(orderId);
-        BigDecimal orderAmount = order.getAmount();
+    public Map<String, Object> previewCheckout(Long orderId, Long usedCouponId, Long memberUserId, Long tableId) {
+        BigDecimal orderAmount;
+        int orderCount = 1;
+        boolean merged = false;
+        Orders mainOrder;
+        // 修改点(2026-09-18)：传入桌台ID时按「该桌台所有待付款堂食订单」合计预览，
+        // 与按桌台合并结账保持同一口径（避免前端按单订单金额显示、后端按多单收款的落差）
+        if (tableId != null) {
+            List<Orders> orders = resolvePendingEatInOrders(tableId);
+            if (orders == null || orders.isEmpty()) {
+                throw new CustomException("该桌台没有待结账订单");
+            }
+            orderCount = orders.size();
+            merged = orderCount > 1;
+            mainOrder = orders.get(0);
+            orderAmount = BigDecimal.ZERO;
+            for (Orders o : orders) {
+                BigDecimal amt = o.getAmount();
+                if (amt == null || amt.compareTo(BigDecimal.ZERO) <= 0) {
+                    amt = computeOrderDetailTotal(o.getId());
+                }
+                if (amt != null && amt.compareTo(BigDecimal.ZERO) > 0) {
+                    orderAmount = orderAmount.add(amt);
+                }
+            }
+            if (orderAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new CustomException("该桌台尚未点单，请先加菜后再结账");
+            }
+        } else {
+            mainOrder = loadOrderForPreview(orderId);
+            orderAmount = mainOrder.getAmount();
+        }
         BigDecimal couponDiscount = resolveCouponDiscount(usedCouponId, memberUserId, orderAmount);
         BigDecimal levelDiscount = resolveMemberLevelDiscount(memberUserId);
         BigDecimal payable = orderAmount.subtract(couponDiscount).multiply(levelDiscount)
@@ -458,12 +487,31 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
             payable = BigDecimal.ZERO;
         }
         Map<String, Object> data = new HashMap<>();
-        data.put("orderId", orderId);
+        data.put("orderId", mainOrder != null ? mainOrder.getId() : orderId);
+        data.put("tableId", tableId);
         data.put("orderAmount", orderAmount);
         data.put("couponDiscount", couponDiscount);
         data.put("levelDiscount", levelDiscount);
         data.put("payable", payable);
+        data.put("orderCount", orderCount);
+        data.put("merged", merged);
         return data;
+    }
+
+    /**
+     * 修改点(2026-09-18)：查询指定桌台所有待付款堂食订单（按单时间升序，最早一张为主单）。
+     *
+     * @param tableId 桌台ID
+     * @return 待付款堂食订单列表
+     */
+    private List<Orders> resolvePendingEatInOrders(Long tableId) {
+        return orderService.lambdaQuery()
+                .eq(Orders::getTenantId, BaseContext.getCurrentTenantId())
+                .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
+                .eq(Orders::getSource, OrderSource.EAT_IN.getValue())
+                .eq(Orders::getTableId, tableId)
+                .orderByAsc(Orders::getOrderTime)
+                .list();
     }
 
     /**

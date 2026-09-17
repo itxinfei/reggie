@@ -403,6 +403,13 @@
             <span class="summary-label">下单时间</span>
             <span class="summary-value">{{ selectedOrder.orderTime }}</span>
           </div>
+          <!-- 修改点(2026-09-18)：按桌台合并结账提示——本桌存在多笔未结订单时明确告知，
+               避免店员以为只收当前这一单的钱（后端已按桌台合并收款） -->
+          <div class="summary-row" v-if="previewMerged"
+               style="margin-bottom: 8px; padding: 8px; border-radius: 4px; background: var(--el-color-primary-light-9, #fdf6e3);">
+            <span class="summary-label">本桌共 {{ previewOrderCount }} 笔未结订单</span>
+            <span class="summary-value" style="color: var(--el-color-primary, #ffc200);">将合并结账</span>
+          </div>
           <div class="summary-row">
             <span class="summary-label">订单金额</span>
             <span class="summary-value total">¥{{ formatMoney(selectedOrder.amount) }}</span>
@@ -653,7 +660,10 @@
           settleLoading: false,
           // 修改点(2026-09-18)：服务端结算预览下发的应付金额（权威值，含券抵扣与会员等级折扣）
           previewPayable: null,
-          previewLoading: false
+          previewLoading: false,
+          // 修改点(2026-09-18)：按桌台合并结账提示（本桌未结订单笔数 / 是否多笔合并）
+          previewOrderCount: 1,
+          previewMerged: false
         }
       },
       // 修改点(2026-09-18)：订单/优惠券/会员变化时向服务端请求权威结算预览，
@@ -806,11 +816,15 @@
           try {
             const res = await previewCheckout({
               orderId: this.selectedOrder.id,
+              // 修改点(2026-09-18)：带桌台ID时按该桌所有待付款订单合计预览，与合并结账同口径
+              tableId: this.selectedOrder.tableId || null,
               usedCouponId: this.selectedCouponId || null,
               memberUserId: this.currentMember ? this.currentMember.userId : null
             })
             if (res && res.code === 1 && res.data) {
               this.previewPayable = Number(res.data.payable)
+              this.previewOrderCount = Number(res.data.orderCount) || 1
+              this.previewMerged = !!res.data.merged
               // 非现金支付：实收默认等于服务端下发的应付金额
               if (this.payType !== 1) this.actualAmount = this.previewPayable
             } else {

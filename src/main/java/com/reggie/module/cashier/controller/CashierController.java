@@ -173,11 +173,15 @@ public class CashierController {
     @RateLimit(maxRequestsPerSecond = 20)
     @Operation(summary = "结算预览", description = "服务端权威计算订单金额、优惠券抵扣、会员等级折扣与应付金额")
     public R<Map<String, Object>> preview(
-            @Parameter(description = "订单ID") @RequestParam Long orderId,
+            @Parameter(description = "订单ID") @RequestParam(required = false) Long orderId,
             @Parameter(description = "使用的优惠券ID") @RequestParam(required = false) Long usedCouponId,
-            @Parameter(description = "会员关联用户ID") @RequestParam(required = false) Long memberUserId) {
+            @Parameter(description = "会员关联用户ID") @RequestParam(required = false) Long memberUserId,
+            @Parameter(description = "桌台ID（传入时按该桌台所有待付款订单合计预览）") @RequestParam(required = false) Long tableId) {
+        if (orderId == null && tableId == null) {
+            return R.error("订单ID与桌台ID不能同时为空");
+        }
         try {
-            return R.success(cashierService.previewCheckout(orderId, usedCouponId, memberUserId));
+            return R.success(cashierService.previewCheckout(orderId, usedCouponId, memberUserId, tableId));
         } catch (CustomException e) {
             return R.error(e.getMessage());
         } catch (Exception e) {
