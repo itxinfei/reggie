@@ -296,3 +296,28 @@
 }
 
 /* 空状态 — 使用全局 .empty-state 组件（index.css） */
+/* 修改点(2026-09-17)：预计送达卡片（实时层增强，消费后端 estimatedMinutes/distance） */
+.eta-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.eta-card .eta-main { display: flex; align-items: baseline; gap: 4rem; }
+.eta-card .eta-num {
+  font-size: 32rem;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  line-height: 1;
+}
+.eta-card .eta-unit { font-size: var(--font-size-md); color: var(--color-text-primary); }
+.eta-card .eta-sub {
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+}
+.eta-card .eta-sep { margin: 0 6rem; }

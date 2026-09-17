@@ -663,3 +663,38 @@ select:focus-visible,
     scroll-behavior: auto !important;
   }
 }
+
+/* ================================================================
+   二级页「回首页」入口（修改点 2026-09-17）
+   底部 Tab 仅覆盖 点餐/订单/我的 三个一级页，二级页（我的评价/常购清单/配送追踪等）
+   此前只能靠左上角返回箭头，深层路径易迷路。对齐大厂做法：二级页提供回到首页入口。
+   依赖 .divHead 为定位元素（sticky/relative 均可作为绝对定位包含块）。
+   ================================================================ */
+.head-home-btn {
+  position: absolute;
+  right: 12rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32rem;
+  height: 32rem;
+  font-size: 18rem;
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius-round);
+  cursor: pointer;
+  z-index: 2;
+}
+.head-home-btn:active { opacity: 0.7; }
+
+/* 修改点(2026-09-17)：尊重系统「减少动态效果」偏好（可访问性 WCAG 2.3.3） */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -8,7 +8,7 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css?v=20260914" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260917" />
     <link rel="stylesheet" href="../styles/frequent-orders.css?v=20260917" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
@@ -277,10 +277,13 @@
             </div>
         </div>
 
+        <!-- 修改点(2026-09-17)：二级页补「回首页」入口（底部 Tab 仅覆盖一级页，深层路径易迷路） -->
         <div class="divHead">
             <div class="divTitle">
                 <i class="ri-arrow-left-s-line" @click="goBack"></i>常购清单
             </div>
+            <i class="ri-home-5-line head-home-btn" @click="window.location.href='/front/index.html'"
+               aria-label="回到首页" title="回到首页"></i>
         </div>
 
         <!-- 修改点：van-pull-refresh 包裹内容实现下拉刷新 -->
