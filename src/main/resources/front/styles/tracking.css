@@ -321,3 +321,32 @@
   color: var(--color-text-hint);
 }
 .eta-card .eta-sep { margin: 0 6rem; }
+
+/* 修改点(2026-09-17)：配送地图卡片——未配置地图 Key 时该块不渲染，样式不影响既有布局 */
+.map-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  box-shadow: var(--shadow-card);
+}
+.map-card .map-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+}
+.map-card .map-container {
+  width: 100%;
+  height: 200rem;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.map-card .map-tip {
+  margin-top: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+}

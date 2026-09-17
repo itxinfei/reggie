@@ -8,9 +8,18 @@
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css?v=20260917b" />
-    <link rel="stylesheet" href="../styles/tracking.css?v=20260917b" />
+    <link rel="stylesheet" href="../styles/tracking.css?v=20260917c" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
+    <!-- 修改点(2026-09-17)：配送地图配置——申请到「高德 Web 端(JS API)」Key 后填入 amapKey 并将 enabled 改为 true 即可生效。
+         未配置（enabled=false 或 amapKey 为空）时页面自动降级为「ETA + 距离 + 位置新鲜度」文字版，
+         不加载地图 SDK、不渲染地图容器，配送追踪主流程完全不受影响。 -->
+    <script>
+        window.DELIVERY_MAP_CONFIG = {
+            enabled: false,
+            amapKey: ''
+        };
+    </script>
     <!-- 修改点(2026-09-17)：删除 300 行内联样式块 —— 其在 tracking.css 之后加载，
          覆盖了 CSS 中的骑手按钮金色渐变/时间线入场动画（真实视觉回归）。
          状态色变体等独有规则已迁入 tracking.css，其余由 CSS 原样覆盖 -->
@@ -91,6 +100,14 @@
                 </div>
             </div>
 
+            <!-- 修改点(2026-09-17)：配送地图（骑手实时位置）——未配置地图 Key 时 mapEnabled 为 false，
+                 整块不渲染，自动降级为上方 ETA 文字版；Key 配置后自动启用 -->
+            <div class="map-card" v-if="isDelivering && mapEnabled">
+                <div class="map-title"><i class="ri-map-pin-range-line"></i> 骑手位置</div>
+                <div id="deliveryMap" class="map-container"></div>
+                <div class="map-tip" v-if="!riderHasLocation">骑手位置获取中…</div>
+            </div>
+
             <!-- 骑手信息（仅存在真实骑手数据时展示，避免以顾客信息冒充骑手） -->
             <div class="rider-card" v-if="isDelivering && hasRiderInfo">
                 <div class="rider-avatar">
@@ -144,7 +161,13 @@
                     pageLoading: false,
                     refreshing: false,
                     trackingData: null,
-                    orderId: null
+                    orderId: null,
+                    // 修改点(2026-09-17)：配送地图相关状态（未配置 Key 时 mapEnabled 恒为 false）
+                    mapEnabled: false,
+                    mapReady: false,
+                    mapInstance: null,
+                    riderMarker: null,
+                    riderHasLocation: false
                 };
             },
             computed: {
@@ -333,6 +356,12 @@
                                 clearInterval(this._pollTimer);
                                 this._pollTimer = null;
                             }
+                            // 修改点(2026-09-17)：地图初始化与骑手标记刷新（未配置 Key 时内部直接返回）
+                            var self = this;
+                            this.$nextTick(function () {
+                                self.initDeliveryMap();
+                                self.updateRiderMarker();
+                            });
                         } else {
                             vant.Toast.fail(res.msg || '加载配送信息失败');
                         }
@@ -364,6 +393,51 @@
                     const curIdx = order.indexOf(this.trackingData.status);
                     const stepIdx = order.indexOf(stepStatus);
                     return curIdx >= 0 && stepIdx >= 0 && stepIdx <= curIdx;
+                },
+                // 修改点(2026-09-17)：初始化配送地图（动态加载高德 JS API，失败自动降级为文字版）
+                initDeliveryMap() {
+                    var cfg = window.DELIVERY_MAP_CONFIG || {};
+                    if (!cfg.enabled || !cfg.amapKey) {
+                        this.mapEnabled = false;
+                        return;
+                    }
+                    if (this.mapReady || this._mapLoading) return;
+                    this.mapEnabled = true;
+                    var self = this;
+                    this._mapLoading = true;
+                    var script = document.createElement('script');
+                    script.src = 'https://webapi.amap.com/maps?v=2.0&key=' + encodeURIComponent(cfg.amapKey);
+                    script.onload = function () {
+                        self._mapLoading = false;
+                        if (!window.AMap) {
+                            self.mapEnabled = false;
+                            return;
+                        }
+                        self.mapInstance = new window.AMap.Map('deliveryMap', { zoom: 15 });
+                        self.mapReady = true;
+                        self.updateRiderMarker();
+                    };
+                    script.onerror = function () {
+                        // SDK 加载失败（网络/Key 无效）：降级为文字版，不影响配送追踪主流程
+                        self._mapLoading = false;
+                        self.mapEnabled = false;
+                    };
+                    document.head.appendChild(script);
+                },
+                // 修改点(2026-09-17)：骑手位置标记刷新（随 15s 轮询同步移动）
+                updateRiderMarker() {
+                    if (!this.mapReady || !this.mapInstance || !window.AMap) return;
+                    var loc = this.trackingData && this.trackingData.riderLocation;
+                    if (!loc || loc.longitude == null || loc.latitude == null) return;
+                    this.riderHasLocation = true;
+                    var lngLat = [Number(loc.longitude), Number(loc.latitude)];
+                    if (this.riderMarker) {
+                        this.riderMarker.setPosition(lngLat);
+                    } else {
+                        this.riderMarker = new window.AMap.Marker({ position: lngLat, title: '骑手位置' });
+                        this.mapInstance.add(this.riderMarker);
+                    }
+                    this.mapInstance.setCenter(lngLat);
                 },
                 callRider() {
                     if (this.trackingData && this.trackingData.riderPhone) {

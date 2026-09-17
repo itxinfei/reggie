@@ -125,7 +125,10 @@
         <!-- 修改点(2026-09-17 UX)：移除 van-pagination（PC 风格页码），分页改由 van-list 上拉加载承担 -->
 
         <!-- 提交评价弹窗——el-dialog 替换为纯CSS模态框 -->
-        <div v-if="submitVisible" class="submit-modal">
+        <!-- 修改点(2026-09-17)：可访问性——自定义弹窗补充 dialog 语义（role/aria-modal/aria-label）
+             并支持 ESC 关闭；tabindex="-1" 使容器可被脚本聚焦承接键盘事件 -->
+        <div v-if="submitVisible" class="submit-modal" role="dialog" aria-modal="true"
+             aria-label="评价菜品" tabindex="-1" @keydown.esc="submitVisible = false">
             <div class="submit-dialog">
                 <div class="submit-modal-header">
                     <h3>评价菜品</h3>
