@@ -164,7 +164,8 @@
     /* 内联样式抽离为类 */
     #member-center { min-height: 100vh; }
     .mc-loading-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
-    .mc-activate-btn { margin-left: 8rem; }
+    /* 修改点(2026-09-17 UX)：立即开通按钮由 Vant warning 橙色改为品牌金主色，与全站 CTA 体系一致 */
+    .mc-activate-btn { margin-left: 8rem; background: var(--color-primary-gradient); border: none; color: var(--color-text-primary); font-weight: 600; }
     .mc-coupon-section-title { padding-left: 0; margin-bottom: 0; font-size: 13rem; }
     .mc-coupon-section-title--gap { margin-top: 8rem; }
     .mc-coupon-empty { padding: 24rem 0; }

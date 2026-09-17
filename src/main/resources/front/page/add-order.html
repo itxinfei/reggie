@@ -251,7 +251,8 @@
                     <span class="divDiscount" v-if="discountAmount > 0">已优惠¥{{ Number(discountAmount).toFixed(2) }}</span>
                 </div>
                 <div class="divPrice"></div>
-                <div :class="{btnSubmitActive: cartData && cartData.length > 0, btnSubmit:!cartData || cartData.length<1, isLoading: loading}" @click="goToPaySuccess">去支付</div>
+                <!-- 修改点(2026-09-17 UX)：提交中按钮文案变为"支付中…"，配合 isLoading 样式给出明确提交反馈 -->
+                <div :class="{btnSubmitActive: cartData && cartData.length > 0, btnSubmit:!cartData || cartData.length<1, isLoading: loading}" @click="goToPaySuccess">{{ loading ? '支付中…' : '去支付' }}</div>
               </div>
         </div>
         <!-- 开发环境版本，包含了有帮助的命令行警告 -->
@@ -286,6 +287,9 @@
                         cartData:[],
                         note:'',//备注信息
                         loading:false,
+                        // 修改点(2026-09-17 UX)：下单幂等键——每次进入结算页生成一次，网络失败重试/快速双击
+                        // 复用同一键交由后端幂等去重；原实现每次点击 Date.now() 生成新键，幂等机制完全失效
+                        idempotencyKey:'',
                         // 支付方式 — 6=货到付款（权威枚举：2=微信，3=支付宝，6=货到付款）
                         payMethod: 6,
                         // 餐具数量（0=无需餐具，1-4=对应数量）
@@ -314,11 +318,12 @@
                         showSchedulePicker: false,
                         scheduleDate: null,
                         selectedScheduleSlot: 'LUNCH',
+                        // 修改点(2026-09-17 UX)：时段按一天时间顺序排列（原 午餐→晚餐→下午茶→早餐 乱序）
                         scheduleTimeSlots: [
+                            { value: 'MORNING', label: '早餐', time: '07:30-09:00' },
                             { value: 'LUNCH', label: '午餐', time: '11:30-12:30' },
-                            { value: 'DINNER', label: '晚餐', time: '17:30-19:00' },
                             { value: 'AFTERNOON', label: '下午茶', time: '14:00-16:00' },
-                            { value: 'MORNING', label: '早餐', time: '07:30-09:00' }
+                            { value: 'DINNER', label: '晚餐', time: '17:30-19:00' }
                         ]
                     }
                 },
@@ -369,14 +374,12 @@
                         return Math.round(raw * 100) / 100
                     },
                     // 修改点：送达时间显示标签
+                    // 修改点(2026-09-17 UX)：只展示预计送达时刻，去掉「18:30 约30分钟」时间+相对时长的重复文案
                     selectedTimeLabel(){
                         if(this.deliveryMode === 1) return this.scheduleLabel
-                        if(this.selectedTimeIdx === 0){
-                            return this.finishTime + ' 尽快送达'
-                        }
                         const option = this.timeOptions[this.selectedTimeIdx]
                         if(option && option.time){
-                            return option.time + ' ' + option.label
+                            return '预计 ' + option.time + ' 送达'
                         }
                         return this.finishTime
                     },
@@ -480,6 +483,12 @@
                                { label: '约60分钟', time: add(60) }
                            ]
                         }else{
+                            // 修改点(2026-09-17 UX)：仅「新建订单」路径引导去添加地址；
+                            // 续付(reorderId)场景用户只需为已有订单支付，强跳地址编辑会打断支付且流程回不来
+                            if(this.reorderId){
+                                this.finishTime = getFinishTime()
+                                return
+                            }
                             window.requestAnimationFrame(()=>{
                                 window.location.href = '/front/page/address-edit.html'
                             })
@@ -596,6 +605,15 @@
                         this.showSchedulePicker = false
                         vant.Toast.success('预约时间已设置')
                     },
+                    // 修改点(2026-09-17 UX)：生成/复用下单幂等键——同一次下单意图（含网络失败重试、快速双击）
+                    // 复用同一键由后端幂等去重；重新进入页面（新的下单意图）才生成新键
+                    ensureIdempotencyKey(){
+                        if(!this.idempotencyKey){
+                            var rand = Math.random().toString(36).slice(2, 10)
+                            this.idempotencyKey = (sessionStorage.getItem("userPhone") || 'anon') + '_' + Date.now() + '_' + rand
+                        }
+                        return this.idempotencyKey
+                    },
                     async goToPaySuccess(){
                         // 修改点（P2-11）：reorderId 表示为已有待付款订单发起支付，
                         // 跳过 addOrderApi 直接调用支付，避免创建重复订单
@@ -642,8 +660,9 @@
                             amount: this.finalPrice,
                             expectDeliveryTime: this.expectDeliveryTime,
                             usedCouponId: this.selectedCoupon ? this.selectedCoupon.id : null,
-                            // 修改点(2026-09-17)：this.userId 未定义导致幂等键拼接出 "undefined_xxx"，改用 sessionStorage 手机号
-                            idempotencyKey: (sessionStorage.getItem("userPhone") || 'anon') + '_' + Date.now()
+                            // 修改点(2026-09-17)：this.userId 未定义导致幂等键拼接出 "undefined_xxx"，改用 sessionStorage 手机号；
+                            // 修改点(2026-09-17 UX)：键改为页面会话级生成、失败重试复用（见 ensureIdempotencyKey）
+                            idempotencyKey: this.ensureIdempotencyKey()
                         }
                         try {
                             const res = await addOrderApi(params)

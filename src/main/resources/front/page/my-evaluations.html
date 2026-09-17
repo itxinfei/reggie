@@ -248,7 +248,9 @@
                             vant.Toast.fail(res.msg || '加载失败')
                         }
                     } catch (err) {
-                        vant.Toast.fail('请求失败：' + (err.message || err))
+                        // 修改点(2026-09-17 UX)：技术错误细节进 console，用户只见友好文案
+                        console.error('[my-evaluations] 加载评价失败:', err)
+                        vant.Toast.fail('加载失败，请稍后重试')
                     } finally {
                         this.loading = false
                     }
@@ -301,7 +303,9 @@
                                 vant.Toast.fail(res.msg || '删除失败')
                             }
                         } catch (err) {
-                            vant.Toast.fail('删除失败：' + (err.message || err))
+                            // 修改点(2026-09-17 UX)：技术错误细节进 console，用户只见友好文案
+                            console.error('[my-evaluations] 删除评价失败:', err)
+                            vant.Toast.fail('删除失败，请稍后重试')
                         }
                     } catch (e) { /* 用户取消 */ }
                 },
@@ -470,7 +474,9 @@
                         this.loadData()
                         this.checkPendingEvaluation()
                     } catch (err) {
-                        vant.Toast.fail('提交失败：' + (err.message || err))
+                        // 修改点(2026-09-17 UX)：技术错误细节进 console，用户只见友好文案
+                        console.error('[my-evaluations] 提交评价失败:', err)
+                        vant.Toast.fail('提交失败，请稍后重试')
                     } finally {
                         this.submitLoading = false
                     }

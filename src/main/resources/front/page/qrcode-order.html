@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <!-- 修改点(2026-09-17 UX)：移除 maximum-scale/user-scalable，恢复双指缩放（可访问性基本要求，全站其余页面均允许缩放） -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>扫码点餐 - 瑞吉外卖</title>
 
   <!-- 修改点(2026-09-17)：移除后端 Token 引用，改用前端 index.css 标准 Token -->
@@ -156,7 +157,7 @@
     <div class="dish-list" v-if="!loading">
       <div class="dish-card" v-for="dish in filteredDishes" :key="dish.id" :class="{'sold-out': dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)}" @click="addToCart(dish)">
         <div class="dish-img-wrap">
-          <img :src="getImage(dish.image)" class="dish-img" :alt="dish.name || '菜品图片'" @error="$event.target.src='../images/noImg.png'" />
+          <img :src="getImage(dish.image)" loading="lazy" class="dish-img" :alt="dish.name || '菜品图片'" @error="$event.target.src='../images/noImg.png'" />
           <div v-if="dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)" class="sold-out-overlay">
             <span class="sold-out-text">售罄</span>
           </div>
@@ -371,9 +372,17 @@
         showCartDialog: function() {
           this.cartDialogVisible = true
         },
+        // 修改点(2026-09-17 UX)：清空购物车增加二次确认（扫码场景误触代价高），空车直接关闭弹层
         clearCart: function() {
-          this.cart = []
-          this.cartDialogVisible = false
+          var self = this
+          if (!this.cart.length) { this.cartDialogVisible = false; return }
+          vant.Dialog.confirm({
+            title: '清空购物车',
+            message: '确定清空已选的 ' + this.cartTotal() + ' 件商品吗？'
+          }).then(function() {
+            self.cart = []
+            self.cartDialogVisible = false
+          }).catch(function() {})
         },
         showSubmitDialog: function() {
           if (this.cart.length === 0) {
@@ -432,7 +441,9 @@
               vant.Toast.fail((res ? res.msg : '') || '下单失败')
             }
           }).catch(function(err) {
-            vant.Toast.fail('下单失败：' + err)
+            // 修改点(2026-09-17 UX)：技术错误不再直接展示给用户（原会把 err 对象拼成 [object Object]）
+            console.error('[qrcode-order] 下单失败:', err)
+            vant.Toast.fail('下单失败，请稍后重试')
           }).finally(function() {
             self.submitting = false
           })

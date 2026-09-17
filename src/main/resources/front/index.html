@@ -27,19 +27,19 @@
     <style>
       .skeleton-container { padding: 12rem; }
       .skeleton-restaurant { display: flex; align-items: center; padding: 16rem; background: #fff; border-radius: 8rem; margin-bottom: 12rem; }
-      .skeleton-logo { width: 60rem; height: 60rem; border-radius: 8rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
+      .skeleton-logo { width: 60rem; height: 60rem; border-radius: 8rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
       .skeleton-info { flex: 1; margin-left: 12rem; }
-      .skeleton-line { height: 14rem; border-radius: 4rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; margin-bottom: 8rem; }
+      .skeleton-line { height: 14rem; border-radius: 4rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; margin-bottom: 8rem; }
       .skeleton-line:last-child { margin-bottom: 0; }
       .skeleton-w30 { width: 30%; }
       .skeleton-w40 { width: 40%; }
       .skeleton-w60 { width: 60%; }
       .skeleton-w80 { width: 80%; }
       .skeleton-categories { display: flex; gap: 8rem; padding: 12rem; background: #fff; border-radius: 8rem; margin-bottom: 12rem; overflow: hidden; }
-      .skeleton-cat-item { width: 60rem; height: 28rem; border-radius: 14rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
+      .skeleton-cat-item { width: 60rem; height: 28rem; border-radius: 14rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
       .skeleton-dishes { display: flex; flex-direction: column; gap: 12rem; }
       .skeleton-dish-item { display: flex; padding: 12rem; background: #fff; border-radius: 8rem; }
-      .skeleton-dish-img { width: 100rem; height: 100rem; border-radius: 8rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
+      .skeleton-dish-img { width: 100rem; height: 100rem; border-radius: 8rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
       .skeleton-dish-info { flex: 1; margin-left: 12rem; display: flex; flex-direction: column; justify-content: center; }
       /* 修改点(2026-09-17)：复用全局 @keyframes rg-skeleton-shine，删除本页独立定义 */
     </style>
@@ -548,10 +548,17 @@
           </div>
 
           <!-- 空结果 -->
+          <!-- 修改点(2026-09-17 UX)：区分"搜索失败"与"真的没货"，失败给出可点击的重试入口 -->
           <div class="search-empty-result" v-if="!searchDishList.length && !searchMealList.length && searchSearched">
             <img src="./images/noImg.png" alt="图片加载失败"/>
-            <p>没有找到相关菜品或套餐</p>
-            <p class="sub">试试其他关键词吧</p>
+            <template v-if="searchFailed">
+              <p>搜索失败，网络似乎开小差了</p>
+              <p class="sub" @click="doSearch">点击重试</p>
+            </template>
+            <template v-else>
+              <p>没有找到相关菜品或套餐</p>
+              <p class="sub">试试其他关键词吧</p>
+            </template>
           </div>
         </div>
 
@@ -633,6 +640,7 @@
               searchMealList: [],
               searchLoading: false,
               searchSearched: false,
+              searchFailed: false, // 修改点(2026-09-17 UX)：区分搜索接口失败与真实无结果
               searchHistory: [],
               searchTimer: null,
               // 修改点：搜索联想建议
@@ -968,11 +976,16 @@
                 } else {
                   this.searchMealList = []
                 }
+                this.searchFailed = false
                 // 保存搜索历史
                 this.addSearchHistory(kw)
               } catch(e) {
+                // 修改点(2026-09-17 UX)：搜索接口异常不再静默渲染成"没有找到相关菜品"误导用户
+                console.error('[index] 搜索失败:', e)
                 this.searchDishList = []
                 this.searchMealList = []
+                this.searchFailed = true
+                vant.Toast.fail('搜索失败，请稍后重试')
               } finally {
                 this.searchLoading = false
               }

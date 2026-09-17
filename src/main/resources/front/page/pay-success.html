@@ -133,8 +133,7 @@
                     })   
                 },
                 toOrderPage(){
-                    // 修改点：设置标志位供order.html的goBack使用，替代不可靠的document.referrer
-                    sessionStorage.setItem('orderFromPaySuccess', '1')
+                    // 修改点(2026-09-17)：移除 orderFromPaySuccess 标志——order.html 从未读取，属死标志
                     window.requestAnimationFrame(()=>{
                         window.location.replace('/front/page/order.html')
                     })  
@@ -143,29 +142,8 @@
                     window.requestAnimationFrame(()=>{
                         window.location.replace('/front/index.html')
                     })
-                },
-                shareOrder(){
-                    const shareData = {
-                        title: '我在瑞吉外卖下单了',
-                        text: '美味生活，即刻送达！快来瑞吉外卖点餐吧～',
-                        url: window.location.origin + '/front/index.html'
-                    }
-                    if(navigator.share){
-                        navigator.share(shareData).catch((e) => { console.warn('[pay-success.html] 分享订单失败:', e) })
-                    } else {
-                        const ta = document.createElement('textarea')
-                        ta.value = shareData.url
-                        document.body.appendChild(ta)
-                        ta.select()
-                        try {
-                            document.execCommand('copy')
-                            vant.Toast.success('链接已复制，快去分享吧')
-                        } catch(e) {
-                            vant.Toast.fail('分享失败，请手动复制链接')
-                        }
-                        document.body.removeChild(ta)
-                    }
                 }
+                // 修改点(2026-09-17)：移除 shareOrder 死代码——模板无任何按钮调用该方法
             }
         })
         </script>

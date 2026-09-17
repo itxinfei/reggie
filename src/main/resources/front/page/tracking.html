@@ -104,9 +104,11 @@
         </div>
 
         <!-- 空状态 / 加载失败 -->
+        <!-- 修改点(2026-09-17 UX)：加载失败/无数据空态补充"重新加载"入口（原失败后只能干等 30s 轮询） -->
         <div class="empty-state" v-else-if="!pageLoading && !trackingData">
             <i class="ri-map-pin-time-line"></i>
             <p class="empty-text">暂无配送信息</p>
+            <van-button size="small" round style="margin-top: 12rem;" @click="loadTracking">重新加载</van-button>
         </div>
     </div>
 

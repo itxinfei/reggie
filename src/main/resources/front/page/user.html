@@ -363,12 +363,7 @@
                     <span>联系客服</span>
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
-                <div class="divSplit"></div>
-                <div class="item" @click="toSettings">
-                    <i class="ri-settings-3-line link-icon" aria-hidden="true"></i>
-                    <span>设置</span>
-                    <i class="ri-arrow-right-s-line"></i>
-                </div>
+                <!-- 修改点(2026-09-17 UX)：移除"设置"占位入口（点击仅提示开发中，正式菜单不应挂未上线功能） -->
             </div>
             <div class="divOrders" v-if="order[0]">
                 <div class="title">最新订单</div>
@@ -379,7 +374,7 @@
                 <div class="dishList">
                     <!-- 修改点：对齐美团订单卡片——菜品小图+名称+x数量，点击小图可全屏放大预览（van-image-preview） -->
                     <div v-for="(item,index) in order[0].orderDetails" :key="index" class="item" @click="previewDishImage(imgPath(item.image), index)">
-                        <img v-if="item.image" :src="imgPath(item.image)" :alt="item.name || '菜品'" @error="imgError" class="dish-thumb" />
+                        <img v-if="item.image" :src="imgPath(item.image)" loading="lazy" :alt="item.name || '菜品'" @error="imgError" class="dish-thumb" />
                         <span class="dish-name">{{item.name}}</span>
                         <span class="dish-count">x{{item.number}}</span>
                     </div>
@@ -621,11 +616,12 @@
                 contactService: function(){
                     vant.Dialog.confirm({
                         title: '联系客服',
-                        message: '客服电话：400-123-4567\n服务时间：09:00-22:00',
+                        // 修改点(2026-09-17 UX)：客服电话与 login.html 协议中的号码统一为 400-8820-888
+                        message: '客服电话：400-8820-888\n服务时间：09:00-22:00',
                         confirmButtonText: '拨打',
                         cancelButtonText: '取消'
                     }).then(function(){
-                        window.location.href = 'tel:4001234567'
+                        window.location.href = 'tel:4008820888'
                     }).catch(function(){})
                 },
                 // 设置页（暂用 toast 提示）

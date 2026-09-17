@@ -249,9 +249,11 @@
         .skeleton-container .skeleton-btn,
         .skeleton-container .skeleton-line,
         .skeleton-container .skeleton-tab {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+            /* 修改点(2026-09-17 UX)：改用全局令牌与全局动画——原动画名 skeleton-shine 未定义
+               （全局为 rg-skeleton-shine），骨架屏完全静止；硬编码渐变改为 var(--skeleton-gradient) 主题联动 */
+            background: var(--skeleton-gradient);
             background-size: 200% 100%;
-            animation: skeleton-shine 1.5s ease-in-out infinite;
+            animation: rg-skeleton-shine 1.5s ease-in-out infinite;
         }
     </style>
 </head>
@@ -310,7 +312,7 @@
             <template v-if="filteredItems.length > 0">
                 <div class="group-title">按点餐频率排序</div>
                 <div class="dish-card" v-for="item in filteredItems" :key="item.key">
-                    <img v-if="item.image" :src="item.image" class="dish-img" :alt="item.name || '菜品图片'" @error="$event.target.src='./../images/noImg.png'"/>
+                    <img v-if="item.image" :src="item.image" loading="lazy" class="dish-img" :alt="item.name || '菜品图片'" @error="$event.target.src='./../images/noImg.png'"/>
                     <div v-else class="dish-img-placeholder">
                         <i class="ri-restaurant-line"></i>
                     </div>

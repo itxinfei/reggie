@@ -12,7 +12,9 @@
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css">
     <script src="../js/icon-fallback.js"></script>
     <link rel="stylesheet" href="../styles/ai-assistant.css">
-    <link rel="stylesheet" href="../styles/ai-assistant-dark.css">
+    <!-- 修改点(2026-09-17)：移除 ai-assistant-dark.css 引用——该文件为空壳（仅注释，媒体查询体为空），
+         暗色样式实际由 ai-assistant.css 的 .dark-mode 类承担，引用属死重 -->
+
 </head>
 <body>
     <div id="ai-app" class="ai-container" :class="{ 'dark-mode': darkModeEnabled }">
@@ -170,7 +172,7 @@
                         <!-- 推荐菜品卡片 -->
                         <div class="dish-recommendations" v-if="msg.dishes && msg.dishes.length > 0">
                             <div class="dish-card" v-for="dish in msg.dishes" :key="dish.dishId" @click="addToCart(dish)">
-                                <img :src="dish.image || '/front/images/noImg.png'" :alt="dish.name" @error="imgError">
+                                <img :src="dish.image || '/front/images/noImg.png'" loading="lazy" :alt="dish.name" @error="imgError">
                                 <div class="dish-info">
                                     <div class="dish-name">{{ dish.name }}</div>
                                     <div class="dish-reason" v-if="dish.reason">{{ dish.reason }}</div>

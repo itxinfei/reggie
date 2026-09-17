@@ -243,8 +243,9 @@
             },
             computed:{
                 // 修改点：登录按钮可用条件：手机号+验证码+同意协议
+                // 修改点(2026-09-17 UX)：验证码增加 6 位数字格式校验
                 canLogin(){
-                    return this.form.phone && this.form.code && this.agreed
+                    return this.phoneValid && /^\d{6}$/.test(this.form.code) && this.agreed
                 },
                 // 修改点：手机号格式校验（实时，用于绿色勾显隐）
                 phoneValid(){
@@ -262,6 +263,14 @@
                 this.$nextTick(() => {
                     if (this.$refs.phoneInput) this.$refs.phoneInput.focus()
                 })
+                // 修改点(2026-09-17 UX)：恢复持久化的验证码倒计时（防刷新绕过防刷间隔）
+                var savedDeadline = null
+                try { savedDeadline = sessionStorage.getItem('smsCodeDeadline') } catch(e) {}
+                if(savedDeadline && Number(savedDeadline) > Date.now()){
+                    this.startCountdown(Number(savedDeadline))
+                } else {
+                    try { sessionStorage.removeItem('smsCodeDeadline') } catch(e) {}
+                }
             },
             beforeDestroy(){
                 if(this.countdownTimer){
@@ -275,28 +284,44 @@
                     this.msgFlag = false
                     if(!this.phoneTouched) this.phoneTouched = true
                 },
+                // 修改点(2026-09-17 UX)：按截止时间戳驱动倒计时（支持刷新页面后恢复剩余秒数）
+                startCountdown(deadline){
+                    var self = this
+                    var tick = function(){
+                        var left = Math.ceil((deadline - Date.now()) / 1000)
+                        if(left <= 0){
+                            self.countdown = 0
+                            if(self.countdownTimer){ clearInterval(self.countdownTimer); self.countdownTimer = null }
+                            try { sessionStorage.removeItem('smsCodeDeadline') } catch(e) {}
+                        } else {
+                            self.countdown = left
+                        }
+                    }
+                    tick()
+                    if(this.countdownTimer){ clearInterval(this.countdownTimer) }
+                    this.countdownTimer = setInterval(tick, 1000)
+                },
                 // 修改点：等待API响应后再倒计时，避免请求失败仍倒计时
                 async getCode(){
-                    this.form.code = ''
                     this.phoneTouched = true
                     const regex = /^1[3-9]\d{9}$/;
                     if (!regex.test(this.form.phone)) {
                         this.msgFlag = true
                         return
                     }
+                    // 修改点(2026-09-17 UX)：清空已输入验证码移到手机号校验通过之后，
+                    // 避免手机号非法时用户已输入的验证码被无谓清空
+                    this.form.code = ''
                     this.msgFlag = false
                     if (this.countdown > 0) return;
                     try {
                         const res = await sendMsgApi({phone: this.form.phone})
                         if(res.code === 1){
-                            this.countdown = 60;
-                            this.countdownTimer = setInterval(() => {
-                                this.countdown--;
-                                if (this.countdown <= 0) {
-                                    clearInterval(this.countdownTimer);
-                                    this.countdownTimer = null;
-                                }
-                            }, 1000);
+                            // 修改点(2026-09-17 UX)：倒计时截止时间戳持久化 sessionStorage，
+                            // 刷新/重进页面恢复剩余秒数，防止刷页面绕过 60s 防刷间隔
+                            var deadline = Date.now() + 60 * 1000
+                            try { sessionStorage.setItem('smsCodeDeadline', String(deadline)) } catch(e) {}
+                            this.startCountdown(deadline)
                         } else {
                             vant.Notify({ type:'warning', message: res.msg || '验证码发送失败'});
                         }

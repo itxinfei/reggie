@@ -37,7 +37,12 @@
                     @click="switchTab(tab.value)"
                 >{{ tab.label }}</div>
             </div>
-            <div class="divBody has-tabbar" v-if="orderList.length > 0">
+            <!-- 修改点(2026-09-17 UX)：首屏骨架屏移出列表 v-if 容器独立渲染——原放在 v-if="orderList.length > 0"
+                 容器内部，首屏列表为空时整个容器不渲染，骨架屏永不出现（首屏白屏无任何反馈） -->
+            <div v-if="firstLoading" class="has-tabbar" style="padding: 16rem 12rem;">
+                <van-skeleton :row="5" title :avatar="true" />
+            </div>
+            <div class="divBody has-tabbar" v-if="!firstLoading && orderList.length > 0">
                 <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
                 <van-list
                     v-model="loading"
@@ -65,7 +70,7 @@
                         <!-- 菜品列表：左侧缩略图 + 名称数量 + 右侧价格 -->
                         <div class="dish-list">
                             <div v-for="(item,dIdx) in (order.orderDetails || []).slice(0,3)" :key="dIdx" class="dish-item">
-                                <img v-if="item.image || item.dishImage" :src="item.image || item.dishImage" class="dish-img" :alt="item.name || '菜品图片'" @error="$event.target.src='./../images/noImg.png'"/>
+                                <img v-if="item.image || item.dishImage" :src="item.image || item.dishImage" loading="lazy" class="dish-img" :alt="item.name || '菜品图片'" @error="$event.target.src='./../images/noImg.png'"/>
                                 <div v-else class="dish-img dish-img-placeholder"><i class="ri-restaurant-line"></i></div>
                                 <div class="dish-info">
                                     <span class="dish-name">{{item.name}}</span>
@@ -111,11 +116,10 @@
                     </van-cell>
                 </van-list>
                 </van-pull-refresh>
-                <!-- 修改点：首屏加载骨架屏覆盖层（van-list 始终渲染，避免阻断其 @load 触发） -->
-                <van-skeleton v-if="firstLoading" class="list-skeleton" :row="5" title :avatar="true" />
             </div>
             <!-- 修改点(2026-09-17)：空态统一为全站标准 .empty-state -->
-            <div class="empty-state has-tabbar" v-else>
+            <!-- 修改点(2026-09-17 UX)：空态需排除首屏加载中，避免骨架屏与"暂无订单"同时出现 -->
+            <div class="empty-state has-tabbar" v-else-if="!firstLoading">
                 <img src="./../images/no_order.png" alt="暂无订单"/>
                 <p class="empty-text">暂无订单</p>
                 <div class="empty-action" @click="goHome">去逛逛</div>
