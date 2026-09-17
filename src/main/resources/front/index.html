@@ -221,30 +221,42 @@
              （capture 先于目标元素 @click.stop 执行，无需改动 addCart 签名与所有调用点） -->
         <div class="dish-panel" ref="dishPanel" @click.capture="onDishPanelClick">
           <van-loading v-if="loadingAll" size="24px" vertical class="dish-loading">正在加载菜单...</van-loading>
-          <!-- 修改点(2026-09-17)：v-for 在 template 上不能带 :key，改为每个子元素 -->
-          <template v-for="(item,index) in dishList">
-            <div v-if="item._title" :key="'cat-'+index" class="category-dish-title" :data-category-id="item._categoryId">{{ item.name }}</div>
-            <div v-else :key="'dish-'+index" class="dish-item">
-              <div class="di-image" @click="previewDishImage(imgPath(item.image))">
-                <img :src="imgPath(item.image)" @error="imgError" loading="lazy" :alt="item.name || '菜品图片'">
-                <div class="di-tag" v-if="item.saleNum > 100">热卖</div>
-              </div>
-              <div class="di-info" @click="dishDetails(item)">
-                <div class="di-name">{{ item.name }}</div>
-                <div class="di-desc" v-if="item.description">{{ item.description }}</div>
-                <div class="di-sales">月售{{ item.saleNum || 0 }}<span v-if="item.saleNum > 50"> · 好评率98%</span></div>
-                <div class="di-price-row">
-                  <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
+          <!-- 修改点(2026-09-17)：菜单虚拟化重构——按「分类区块」分段渲染，降低 DOM 数量。
+               每个分类渲染一个常驻 .cat-section（分类标题 + 未渲染时的高度占位），其下菜品仅在
+               进入视口附近时由 IntersectionObserver 标记渲染（一次性，渲染后不再卸载，避免滚动抖动）。
+               区块容器常驻 ⇒ 右侧滚动联动左侧高亮改按 .cat-section 计算，不再依赖菜品 DOM 是否存在。
+               注：渲染用的对象与 dishList 中为同一引用，购物车数量同步（syncCartNumber）仍可正常生效。 -->
+          <div
+            v-for="cat in categoryList"
+            :key="'sec-'+cat.id"
+            class="cat-section"
+            :data-category-id="cat.id"
+          >
+            <div class="category-dish-title" :data-category-id="cat.id">{{ cat.name }}</div>
+            <template v-if="visibleCats[cat.id]">
+              <div v-for="(item,idx) in catItems(cat.id)" :key="'dish-'+(item.id||idx)" class="dish-item">
+                <div class="di-image" @click="previewDishImage(imgPath(item.image))">
+                  <img :src="imgPath(item.image)" @error="imgError" loading="lazy" :alt="item.name || '菜品图片'">
+                  <div class="di-tag" v-if="item.saleNum > 100">热卖</div>
+                </div>
+                <div class="di-info" @click="dishDetails(item)">
+                  <div class="di-name">{{ item.name }}</div>
+                  <div class="di-desc" v-if="item.description">{{ item.description }}</div>
+                  <div class="di-sales">月售{{ item.saleNum || 0 }}<span v-if="item.saleNum > 50"> · 好评率98%</span></div>
+                  <div class="di-price-row">
+                    <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
+                  </div>
+                </div>
+                <div class="di-action">
+                  <i class="ri-subtract-line" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"></i>
+                  <span class="di-num" v-if="item.number">{{ item.number }}</span>
+                  <span class="di-spec" v-if="item.flavors && item.flavors.length > 0 && !item.number" @click.prevent.stop="chooseFlavorClick(item)">选规格</span>
+                  <i class="ri-add-line" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"></i>
                 </div>
               </div>
-              <div class="di-action">
-                <i class="ri-subtract-line" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"></i>
-                <span class="di-num" v-if="item.number">{{ item.number }}</span>
-                <span class="di-spec" v-if="item.flavors && item.flavors.length > 0 && !item.number" @click.prevent.stop="chooseFlavorClick(item)">选规格</span>
-                <i class="ri-add-line" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"></i>
-              </div>
-            </div>
-          </template>
+            </template>
+            <div v-else class="cat-section-placeholder" :style="{ height: catPlaceholderHeight(cat.id) }"></div>
+          </div>
           <!-- 修改点(2026-09-17)：菜单空态统一为全站标准 .empty-state——
                原用自定义 .empty-tip 且插图取 noImg.png（菜品缺图占位图）、alt 写成"图片加载失败"，语义错误 -->
           <div class="empty-state" v-if="!loadingAll && (!dishList || dishList.length === 0)">
@@ -631,6 +643,10 @@
               categoryList:[],
               categoryId:undefined,
               dishList:[],
+              // 修改点(2026-09-17)：菜单虚拟化——分类ID → 菜品数组（模板按区块渲染；与 dishList 为同一对象引用）
+              catDishesMap:{},
+              // 修改点(2026-09-17)：已进入视口、需要真实渲染的分类（true = 渲染其下菜品）
+              visibleCats:{},
               cartData:[],
               // 修改点：存储当前登录用户信息
               userPhone: '',
@@ -1243,6 +1259,39 @@
             // 使右侧成为单页长列表，支持滚动联动（点击左侧分类滚动到右栏对应标题；右栏滚动高亮左侧）。
             // 购物车数量在此统一回填；syncCartNumber/addCart/subtractCart 遍历 dishList 匹配 id，
             // 标题项无 id 会被自动跳过，无需改动。
+            // 修改点(2026-09-17)：取指定分类的菜品（供分段模板渲染；与 dishList 为同一对象引用）
+            catItems(catId){
+              return this.catDishesMap[catId] || []
+            },
+            // 修改点(2026-09-17)：未渲染分类的占位高度——与 .dish-item 的 contain-intrinsic-size(120rem)
+            // 对齐，保证滚动条长度与联动位置基本稳定；区块真实渲染后以实际高度为准
+            catPlaceholderHeight(catId){
+              const list = this.catDishesMap[catId] || []
+              return (list.length * 120 + 40) + 'rem'
+            },
+            // 修改点(2026-09-17)：菜单虚拟化——分类区块接近视口时才渲染其下菜品
+            initCatVisibilityObserver(){
+              var self = this
+              var panel = this.$refs.dishPanel
+              if(!panel || typeof IntersectionObserver === 'undefined'){
+                // 浏览器不支持时退化为全量渲染，功能不受影响
+                this.categoryList.forEach(function(cat){ self.$set(self.visibleCats, cat.id, true) })
+                return
+              }
+              if(this._catObserver) this._catObserver.disconnect()
+              this._catObserver = new IntersectionObserver(function(entries){
+                entries.forEach(function(entry){
+                  if(!entry.isIntersecting) return
+                  var id = entry.target.getAttribute('data-category-id')
+                  if(id == null) return
+                  // 一次性渲染：标记可见后取消观察，避免反复挂载/卸载造成滚动抖动
+                  self.$set(self.visibleCats, id, true)
+                  if(self._catObserver) self._catObserver.unobserve(entry.target)
+                })
+              }, { root: panel, rootMargin: '400px 0px' })
+              var sections = panel.querySelectorAll('.cat-section')
+              Array.prototype.forEach.call(sections, function(sec){ self._catObserver.observe(sec) })
+            },
             async loadAllDishes(){
               if(!this.categoryList || this.categoryList.length === 0) return
               this.loadingAll = true
@@ -1266,6 +1315,7 @@
                   batch.forEach((cat, i) => {
                     const res = results[i]
                     flat.push({ _title: true, _categoryId: cat.id, name: cat.name, type: cat.type })
+                    const items = []
                     if(res && res.code === 1 && res.data && res.data.length){
                       res.data.forEach(d => {
                         let num = 0
@@ -1277,12 +1327,17 @@
                           num = c ? (c.number || 0) : 0
                         }
                         d.number = num > 0 ? num : undefined
+                        items.push(d)
                         flat.push(d)
                       })
                     }
+                    // 修改点(2026-09-17)：按分类建索引，供分段虚拟化渲染
+                    this.$set(this.catDishesMap, cat.id, items)
                   })
                   // 增量渲染：本批完成即刷新，无需等待剩余分类
                   this.dishList = flat.slice()
+                  // 本批区块已进入 DOM，重建可见性观察（新分类靠近视口时才渲染其菜品）
+                  this.$nextTick(() => { this.initCatVisibilityObserver() })
                 }
               } catch(e){
                 vant.Toast.fail('加载菜单失败')
