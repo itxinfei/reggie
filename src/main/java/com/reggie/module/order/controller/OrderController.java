@@ -194,11 +194,19 @@ public class OrderController {
             return R.error("订单不属于当前租户");
         }
         // 用户端查询他人订单详情拦截（防 IDOR 越权，参照 userCancel 归属校验模式）
-        // 修改点：仅当请求方是 C 端用户（currentUserId 非空）时校验归属；
-        // 管理后台员工端 BaseContext.getCurrentId() 为 null 放行，避免后台管理端被误拦截。
-        Long currentUserId = BaseContext.getCurrentId();
-        if (currentUserId != null && !Objects.equals(currentUserId, orders.getUserId())) {
-            return R.error("无权操作此订单");
+        // 修改点：仅当请求方是 C 端用户时校验归属；管理后台员工端放行。
+        // 判断方式：session 中有 "employee" 属性 → 员工端，跳过用户归属校验；
+        // session 中有 "user" 属性 → C 端用户，校验 userId 归属。
+        org.springframework.web.context.request.ServletRequestAttributes attrs =
+                (org.springframework.web.context.request.ServletRequestAttributes)
+                        org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        javax.servlet.http.HttpSession session = attrs != null ? attrs.getRequest().getSession(false) : null;
+        boolean isEmployeeSession = session != null && session.getAttribute("employee") != null;
+        if (!isEmployeeSession) {
+            Long currentUserId = BaseContext.getCurrentId();
+            if (currentUserId != null && !Objects.equals(currentUserId, orders.getUserId())) {
+                return R.error("无权操作此订单");
+            }
         }
         orderService.backfillUserInfo(orders);
         OrderDto orderDto = new OrderDto();

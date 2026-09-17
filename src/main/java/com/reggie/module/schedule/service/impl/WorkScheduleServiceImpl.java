@@ -212,13 +212,28 @@ public class WorkScheduleServiceImpl extends ServiceImpl<WorkScheduleMapper, Wor
     }
 
     /**
-     * 解析月份字符串，默认当月
+     * 解析月份字符串，默认当月。
+     * 支持格式：yyyy-MM（标准）、M 或 MM（仅月份，取当前年）
      */
     private YearMonth parseMonth(String month) {
-        if (month != null && !month.isEmpty()) {
-            return YearMonth.parse(month, MONTH_FMT);
+        if (month == null || month.isEmpty()) {
+            return YearMonth.now();
         }
-        return YearMonth.now();
+        try {
+            return YearMonth.parse(month, MONTH_FMT);
+        } catch (java.time.format.DateTimeParseException e) {
+            // 兼容仅传月份数字（如 "9"、"09"），自动补当前年
+            try {
+                int m = Integer.parseInt(month.trim());
+                if (m >= 1 && m <= 12) {
+                    return YearMonth.of(YearMonth.now().getYear(), m);
+                }
+            } catch (NumberFormatException ignored) {
+                // fall through
+            }
+            log.warn("无效的月份格式：{}，使用当前月", month);
+            return YearMonth.now();
+        }
     }
 
     /**

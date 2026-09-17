@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.common.LogMaskUtils;
 import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.LogMaskUtils;
@@ -112,6 +113,10 @@ public class MemberController {
         memberService.page(pageInfo, qw);
         // 修改点：分页结果填充会员等级名称，供前端等级列展示
         memberService.fillLevelName(pageInfo.getRecords());
+        // 修改点：会员手机号脱敏，与员工管理保持一致（139****0001）
+        for (Member m : pageInfo.getRecords()) {
+            m.setPhone(LogMaskUtils.maskPhone(m.getPhone()));
+        }
         return R.success(pageInfo);
     }
 

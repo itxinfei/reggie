@@ -149,20 +149,27 @@ public class ReportServiceImpl implements ReportService {
             detailQw.in(OrderDetail::getOrderId, orderIds);
             List<OrderDetail> details = orderDetailService.list(detailQw);
 
-            Map<String, Integer> dishCount = new LinkedHashMap<>();
+            // 修改点：同时统计销量和销售额，供前端排行展示
+            Map<String, int[]> dishStats = new LinkedHashMap<>(); // [count, amountCents]
             for (OrderDetail d : details) {
                 if (d.getName() != null) {
-                    dishCount.merge(d.getName(), d.getNumber() != null ? d.getNumber() : 0, Integer::sum);
+                    int count = d.getNumber() != null ? d.getNumber() : 0;
+                    int amountCents = (int) ((d.getAmount() != null ? d.getAmount() : BigDecimal.ZERO)
+                            .multiply(BigDecimal.valueOf(100)).intValue());
+                    dishStats.merge(d.getName(), new int[]{count, amountCents},
+                            (a, b) -> new int[]{a[0] + b[0], a[1] + b[1]});
                 }
             }
 
-            dishCount.entrySet().stream()
-                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+            dishStats.entrySet().stream()
+                    .sorted((a, b) -> Integer.compare(b.getValue()[0], a.getValue()[0]))
                     .limit(limit)
                     .forEach(e -> {
                         Map<String, Object> item = new HashMap<>();
                         item.put("name", e.getKey());
-                        item.put("count", e.getValue());
+                        item.put("count", e.getValue()[0]);
+                        item.put("revenue", BigDecimal.valueOf(e.getValue()[1])
+                                .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP));
                         ranking.add(item);
                     });
         } finally {

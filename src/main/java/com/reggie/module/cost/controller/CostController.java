@@ -344,9 +344,16 @@ public class CostController {
     @GetMapping("/summary")
     @Operation(summary = "获取成本汇总统计")
     public R<Map<String, Object>> getCostSummary(
-                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern =
+                        @Parameter(description = "开始日期（可选，默认近30天）") @RequestParam(required = false) @DateTimeFormat(pattern =
                                 "yyyy-MM-dd") LocalDate startDate,
-            @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+            @Parameter(description = "结束日期（可选，默认当前）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+        // 修改点：未传日期时默认近30天
+        if (endDate == null) {
+            endDate = LocalDate.now();
+        }
+        if (startDate == null) {
+            startDate = endDate.minusDays(30);
+        }
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         Map<String, Object> summary = costService.getCostSummary(startDate, endDate, tenantId);
         return R.success(summary);
@@ -361,9 +368,16 @@ public class CostController {
     @GetMapping("/trend")
     @Operation(summary = "获取成本趋势分析")
     public R<Map<String, Object>> getCostTrend(
-                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern =
+                        @Parameter(description = "开始日期（可选，默认近30天）") @RequestParam(required = false) @DateTimeFormat(pattern =
                                 "yyyy-MM-dd") LocalDate startDate,
-            @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+            @Parameter(description = "结束日期（可选，默认当前）") @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+        // 修改点：未传日期时默认近30天
+        if (endDate == null) {
+            endDate = LocalDate.now();
+        }
+        if (startDate == null) {
+            startDate = endDate.minusDays(30);
+        }
         Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
         Map<String, Object> trend = costService.getCostTrend(startDate, endDate, tenantId);
         return R.success(trend);

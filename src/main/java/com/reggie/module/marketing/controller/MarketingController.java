@@ -334,10 +334,17 @@ public class MarketingController {
     @GetMapping("/statistics")
     @Operation(summary = "营销统计")
     public R<Map<String, Object>> getMarketingStatistics(
-            @Parameter(description = "开始日期", required = true) @RequestParam @DateTimeFormat(pattern =
+            @Parameter(description = "开始日期（可选，默认近30天）") @RequestParam(required = false) @DateTimeFormat(pattern =
                     "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "结束日期", required = true) @RequestParam @DateTimeFormat(pattern =
+            @Parameter(description = "结束日期（可选，默认当前）") @RequestParam(required = false) @DateTimeFormat(pattern =
                     "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+        // 修改点：未传日期时默认近30天，降低前端调用门槛
+        if (endDate == null) {
+            endDate = LocalDateTime.now();
+        }
+        if (startDate == null) {
+            startDate = endDate.minusDays(30);
+        }
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = marketingService.getMarketingStatistics(startDate, endDate, tenantId);
         return R.success(statistics);

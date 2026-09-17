@@ -284,10 +284,17 @@ public class CashierController {
     @GetMapping("/statistics")
     @Operation(summary = "获取收银统计")
     public R<Map<String, Object>> getCashierStatistics(
-                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern =
+                        @Parameter(description = "开始日期（可选，默认近30天）") @RequestParam(required = false) @DateTimeFormat(pattern =
                                 "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern =
+            @Parameter(description = "结束日期（可选，默认当前）") @RequestParam(required = false) @DateTimeFormat(pattern =
                     "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+        // 修改点：未传日期时默认近30天
+        if (endDate == null) {
+            endDate = LocalDateTime.now();
+        }
+        if (startDate == null) {
+            startDate = endDate.minusDays(30);
+        }
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = cashierService.getCashierStatistics(startDate, endDate, tenantId);
         return R.success(statistics);
@@ -302,10 +309,17 @@ public class CashierController {
     @GetMapping("/statistics/payment-type")
     @Operation(summary = "获取支付方式统计")
     public R<Map<String, Object>> getPaymentTypeStatistics(
-                        @Parameter(description = "开始日期") @RequestParam @DateTimeFormat(pattern =
+                        @Parameter(description = "开始日期（可选，默认近30天）") @RequestParam(required = false) @DateTimeFormat(pattern =
                                 "yyyy-MM-dd HH:mm:ss") LocalDateTime startDate,
-            @Parameter(description = "结束日期") @RequestParam @DateTimeFormat(pattern =
+            @Parameter(description = "结束日期（可选，默认当前）") @RequestParam(required = false) @DateTimeFormat(pattern =
                     "yyyy-MM-dd HH:mm:ss") LocalDateTime endDate) {
+        // 修改点：未传日期时默认近30天
+        if (endDate == null) {
+            endDate = LocalDateTime.now();
+        }
+        if (startDate == null) {
+            startDate = endDate.minusDays(30);
+        }
         Long tenantId = BaseContext.getCurrentTenantId();
         Map<String, Object> statistics = cashierService.getPaymentTypeStatistics(startDate, endDate, tenantId);
         return R.success(statistics);
