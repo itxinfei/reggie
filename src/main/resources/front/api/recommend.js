@@ -96,6 +96,15 @@ var recommendApi = {
         return $axios.put('/recommend/messages/' + id + '/read');
     },
 
+    /**
+     * 修改点(2026-09-17)：批量标记当前用户全部消息为已读
+     * 原“全部已读”对每条未读各发一次请求（N+1，消息多时慢且易触发限流），改为单次批量接口
+     * @returns {Promise<Object>} data 为更新条数
+     */
+    markAllMessagesRead: function() {
+        return $axios.put('/recommend/messages/read-all');
+    },
+
     // 修改点：新增消息列表和未读数查询API
 
     /**

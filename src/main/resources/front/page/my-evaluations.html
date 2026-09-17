@@ -6,13 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>我的评价 - 瑞吉外卖</title>
     <link rel="icon" href="./../images/favico.ico">
-    <script src="./../js/base.js"></script>
+    <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css?v=20260914" />
     <!-- 修改点：加载 RemixIcon 真字体（emoji 兜底改由 js/icon-fallback.js 按需注入） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
-    <script src="./../js/icon-fallback.js"></script>
-    <link rel="stylesheet" href="./../styles/evaluation.css" />
+    <script src="./../js/icon-fallback.js?v=20260917"></script>
+    <link rel="stylesheet" href="./../styles/evaluation.css?v=20260917" />
     <!-- 骨架屏样式 -->
     <style>
         .skeleton-container { padding: 12rem; }
@@ -66,6 +66,8 @@
         <!-- 评价列表 -->
         <!-- 修改点：van-pull-refresh 包裹列表实现下拉刷新 -->
         <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+        <!-- 修改点(2026-09-17 UX)：移动端改用 van-list 上拉加载（原 van-pagination 为 PC 风格页码） -->
+        <van-list v-model="loading" :finished="finished" finished-text="没有更多了" @load="onLoad">
         <div class="eval-list" v-if="evalList.length > 0">
             <div v-for="item in evalList" :key="item.id" class="eval-card">
                 <div class="eval-header">
@@ -115,17 +117,9 @@
             <!-- 修改点：el-button 替换为原生button -->
             <button class="btn-primary" @click="goToOrder">去下单</button>
         </div>
+        </van-list>
         </van-pull-refresh>
-
-        <!-- 分页 -->
-        <van-pagination
-            v-if="total > pageSize"
-            v-model="page"
-            :total-items="total"
-            :items-per-page="pageSize"
-            @change="onPageChange"
-            class="pagination-wrap"
-        />
+        <!-- 修改点(2026-09-17 UX)：移除 van-pagination（PC 风格页码），分页改由 van-list 上拉加载承担 -->
 
         <!-- 提交评价弹窗——el-dialog 替换为纯CSS模态框 -->
         <div v-if="submitVisible" class="submit-modal">
@@ -182,15 +176,16 @@
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
-    <script src="./../js/request.js"></script>
-    <script src="../api/evaluation.js"></script>
-    <script src="./../api/order.js"></script>
+    <script src="./../js/request.js?v=20260917"></script>
+    <script src="../api/evaluation.js?v=20260917"></script>
+    <script src="./../api/order.js?v=20260917"></script>
     <script>
         new Vue({
             el: '#eval-app',
             data() {
                 return {
                     loading: false,
+                    finished: false, // 修改点(2026-09-17 UX)：van-list 上拉加载结束标记
                     evalList: [],
                     total: 0,
                     page: 1,
@@ -213,7 +208,7 @@
                 }
             },
             created() {
-                this.loadData()
+                // 修改点(2026-09-17 UX)：首屏数据交由 van-list 的 @load 驱动，避免与 created 重复请求第一页
                 this.checkPendingEvaluation()
                 // 修改点：从 order.html「评价」入口跳转时携带 ?orderId=xxx，此时自动打开提交弹窗
                 // （此前仅由用户手动点击"去评价"触发，入口跳转后评价流断裂）
@@ -237,13 +232,27 @@
                     this.loadData()
                     setTimeout(() => { this.refreshing = false }, 1000)
                 },
-                async loadData() {
+                // 修改点(2026-09-17 UX)：分页由 PC 风格 van-pagination 改为移动端 van-list 上拉加载，
+                // 加载逻辑抽出为 loadEvaluations(isRefresh)：isRefresh=true 重置列表，false 追加下一页
+                async loadEvaluations(isRefresh){
+                    if(isRefresh){
+                        this.evalList = []
+                        this.finished = false
+                    }
+                    if(this.finished || this.loading){
+                        return
+                    }
                     this.loading = true
                     try {
                         const res = await getMyEvaluations({ page: this.page, pageSize: this.pageSize })
                         if (res.code === 1) {
-                            this.evalList = res.data.records || []
+                            const records = res.data.records || []
                             this.total = res.data.total || 0
+                            this.evalList = isRefresh ? records : this.evalList.concat(records)
+                            this.page = this.page + 1
+                            if(this.evalList.length >= this.total || records.length === 0){
+                                this.finished = true
+                            }
                         } else {
                             vant.Toast.fail(res.msg || '加载失败')
                         }
@@ -255,10 +264,16 @@
                         this.loading = false
                     }
                 },
-                onPageChange(p) {
-                    this.page = p
-                    this.loadData()
+                // van-list 上拉加载回调（追加下一页）
+                onLoad(){
+                    this.loadEvaluations(false)
                 },
+                // 下拉刷新 / 删除或提交后刷新：重置分页重新加载第一页
+                loadData(){
+                    this.page = 1
+                    this.loadEvaluations(true)
+                },
+                // 修改点(2026-09-17)：移除 onPageChange（van-pagination 已改为 van-list 上拉加载）
                 // 修改评价（删除后自动引导用户到订单页重新评价）
                 editEvaluation(item) {
                     var self = this;

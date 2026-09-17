@@ -65,6 +65,18 @@ public interface MarketingCampaignService extends IService<MarketingCampaign> {
     void markMessageRead(Long messageId);
 
     /**
+     * 批量将指定用户的全部未读消息标记为已读
+     * <p>
+     * 修改点(2026-09-17)：消息中心「全部已读」原先对每条未读消息各发一次单条已读请求（N+1，
+     * 消息多时响应慢且容易触发接口限流），改为本方法一条 SQL 批量更新。
+     * </p>
+     *
+     * @param userId 用户ID
+     * @return 实际被标记为已读的消息条数
+     */
+    int markAllMessagesRead(Long userId);
+
+    /**
      * 获取用户所有消息列表（分页，包含已读和未读）
      *
      * @param userId   用户ID

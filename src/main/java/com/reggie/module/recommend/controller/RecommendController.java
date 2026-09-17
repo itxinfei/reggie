@@ -276,6 +276,26 @@ public class RecommendController {
     }
 
     /**
+     * 批量将当前用户的全部未读消息标记为已读
+     * <p>
+     * 修改点(2026-09-17)：供消息中心「全部已读」使用，避免前端对每条未读消息各发一次单条已读请求（N+1）。
+     * </p>
+     * @param session HTTP会话
+     * @return 被标记为已读的消息条数（未登录返回 0）
+     */
+    @PutMapping("/messages/read-all")
+    @RateLimit(maxRequestsPerSecond = 5)
+    @Operation(summary = "全部消息标记已读", description = "批量将当前用户所有未读营销消息标记为已读，返回更新条数")
+    public R<Integer> markAllMessagesRead(HttpSession session) {
+        Long userId = getUserId(session);
+        if (userId == null) {
+            return R.success(0);
+        }
+        int count = marketingCampaignService.markAllMessagesRead(userId);
+        return R.success(count);
+    }
+
+    /**
      * 获取当前用户的所有营销消息列表
      * @param page 页码
      * @param pageSize 每页数量

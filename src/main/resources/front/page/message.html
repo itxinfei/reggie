@@ -9,10 +9,10 @@
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css?v=20260914" />
     <!-- 修改点：提取内联样式到独立CSS文件 -->
-    <link rel="stylesheet" href="./../styles/message.css" />
+    <link rel="stylesheet" href="./../styles/message.css?v=20260917" />
     <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
-    <script src="./../js/icon-fallback.js"></script>
+    <script src="./../js/icon-fallback.js?v=20260917"></script>
     <style>
         /* 修改点：骨架屏样式 */
         .skeleton-container { padding: 12rem 16rem; }
@@ -108,11 +108,11 @@
 
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
-    <script src="./../js/base.js"></script>
+    <script src="./../js/base.js?v=20260917"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
-    <script src="./../js/request.js"></script>
-    <script src="./../api/recommend.js"></script>
-    <script src="./../js/common.js"></script>
+    <script src="./../js/request.js?v=20260917"></script>
+    <script src="./../api/recommend.js?v=20260917"></script>
+    <script src="./../js/common.js?v=20260917"></script>
     <script>
         // 修改点：用户消息中心页面 - 允许用户查看、阅读营销消息
         new Vue({
@@ -237,16 +237,23 @@
                         title: '全部已读',
                         message: '确定将所有未读消息标记为已读？'
                     }).then(function() {
-                        var promises = unreadMsgs.map(function(m) {
-                            return recommendApi.markMessageRead(m.id).then(function(res) {
-                                if (res && res.code === 1) { m.status = 2; }
-                            }).catch(function() {});
-                        });
-                        Promise.all(promises).then(function() {
+                        // 修改点(2026-09-17)：改为单次批量已读接口（原对每条未读各发一次请求，N+1 且易触发限流）
+                        vant.Toast.loading({ message: '处理中…', forbidClick: true, duration: 0 });
+                        return recommendApi.markAllMessagesRead();
+                    }).then(function(res) {
+                        vant.Toast.clear();
+                        if (res && res.code === 1) {
+                            self.messages.forEach(function(m) { if (m.status === 1) { m.status = 2; } });
                             self.unreadCount = 0;
                             vant.Toast.success('已全部标记为已读');
-                        });
-                    }).catch(function() {});
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '标记已读失败');
+                        }
+                    }).catch(function(e) {
+                        vant.Toast.clear();
+                        console.error('[message] 批量已读失败:', e);
+                        vant.Toast.fail('操作失败，请稍后重试');
+                    });
                 },
 
                 pushTypeName: function(type) {

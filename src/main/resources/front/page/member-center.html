@@ -6,14 +6,14 @@
   <title>会员中心 - 瑞吉外卖</title>
   <!-- 修改点(2026-09-17 UX)：base.js 移到 head 首位并升样式版本——原在 body 尾部加载，
        首屏先按默认根字号渲染再跳变（FOUC）；全站其余页均在 head 加载 base.js -->
-  <script src="../js/base.js"></script>
+  <script src="../js/base.js?v=20260917"></script>
   <link rel="stylesheet" href="../styles/vant.min.css">
   <link rel="stylesheet" href="../styles/index.css?v=20260914">
   <link rel="stylesheet" href="../styles/member-center.css?v=20260917">
   <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css">
   <!-- 修改点：emoji 兜底不再静态引入 —— fallback 在真字体之后加载会覆盖 ::before，导致权益图标渲染为彩色 emoji；
        字体加载失败时改由 js/icon-fallback.js 动态注入 remixicon-fallback.css 降级，避免空白方块 -->
-  <script src="../js/icon-fallback.js"></script>
+  <script src="../js/icon-fallback.js?v=20260917"></script>
 </head>
 <body class="scrollable-page">
   <div id="member-center">
@@ -211,9 +211,9 @@
   <script src="../../backend/plugins/vue/vue.js"></script>
   <script src="../js/vant.min.js"></script>
   <script src="../../backend/plugins/axios/axios.min.js"></script>
-  <script src="../js/request.js"></script>
-  <script src="../api/member-center.js"></script>
-  <script src="../api/coupon.js"></script>
+  <script src="../js/request.js?v=20260917"></script>
+  <script src="../api/member-center.js?v=20260917"></script>
+  <script src="../api/coupon.js?v=20260917"></script>
   <script>
     new Vue({
       el: '#member-center',

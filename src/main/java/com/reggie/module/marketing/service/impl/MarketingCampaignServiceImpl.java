@@ -2,6 +2,7 @@ package com.reggie.module.marketing.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
@@ -287,6 +288,31 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
             message.setReadTime(LocalDateTime.now());
             messageMapper.updateById(message);
         }
+    }
+
+    /**
+     * 处理 mark all messages read。
+     * <p>
+     * 修改点(2026-09-17)：批量已读——一条 UPDATE（WHERE user_id=? AND status=未读）
+     * 替代「逐条 selectById + updateById」，避免消息多时的 N+1 请求与限流风险。
+     * 租户条件由 TenantLineInnerInterceptor 自动注入，无需手动拼接。
+     * </p>
+     * @param userId 参数 userId
+     * @return 更新条数
+     */
+    @Override
+    public int markAllMessagesRead(Long userId) {
+        if (userId == null) {
+            return 0;
+        }
+        LambdaUpdateWrapper<MarketingMessage> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(MarketingMessage::getUserId, userId)
+               .eq(MarketingMessage::getStatus, MarketingMessage.STATUS_SENT)
+               .set(MarketingMessage::getStatus, MarketingMessage.STATUS_READ)
+               .set(MarketingMessage::getReadTime, LocalDateTime.now());
+        int updated = messageMapper.update(null, wrapper);
+        log.info("[营销消息] 用户{}批量已读，更新{}条", userId, updated);
+        return updated;
     }
 
     /**
