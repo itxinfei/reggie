@@ -1247,34 +1247,43 @@
               if(!this.categoryList || this.categoryList.length === 0) return
               this.loadingAll = true
               try {
-                const requests = this.categoryList.map(cat => {
-                  if(cat.type === 1){
-                    return dishListApi({ categoryId: cat.id, status: 1 })
-                  }
-                  return setmealListApi({ categoryId: cat.id, status: 1 })
-                })
-                const results = await Promise.all(requests)
                 const cartData = this.cartData || []
                 const flat = []
-                this.categoryList.forEach((cat, i) => {
-                  const res = results[i]
-                  flat.push({ _title: true, _categoryId: cat.id, name: cat.name, type: cat.type })
-                  if(res && res.code === 1 && res.data && res.data.length){
-                    res.data.forEach(d => {
-                      let num = 0
-                      if(cat.type === 1){
-                        const c = cartData.find(c => c.dishId === d.id)
-                        num = c ? (c.number || 0) : 0
-                      }else{
-                        const c = cartData.find(c => c.setmealId === d.id)
-                        num = c ? (c.number || 0) : 0
-                      }
-                      d.number = num > 0 ? num : undefined
-                      flat.push(d)
-                    })
-                  }
-                })
-                this.dishList = flat
+                // 修改点(2026-09-17)：分批并发（每批 3 个分类）+ 增量渲染——
+                // 原实现用 Promise.all 一次性并发全部分类，分类多时瞬时连接数高，
+                // 且必须等「全部分类都返回」才渲染，首屏长时间空白（只有一个 loading）。
+                // 现每批返回后立即 push 并刷新列表，首屏更快可见、峰值并发更低；
+                // 仍会为每个分类生成标题项，右侧滚动联动左侧高亮不受影响。
+                const BATCH_SIZE = 3
+                for(let start = 0; start < this.categoryList.length; start += BATCH_SIZE){
+                  const batch = this.categoryList.slice(start, start + BATCH_SIZE)
+                  const results = await Promise.all(batch.map(cat => {
+                    if(cat.type === 1){
+                      return dishListApi({ categoryId: cat.id, status: 1 })
+                    }
+                    return setmealListApi({ categoryId: cat.id, status: 1 })
+                  }))
+                  batch.forEach((cat, i) => {
+                    const res = results[i]
+                    flat.push({ _title: true, _categoryId: cat.id, name: cat.name, type: cat.type })
+                    if(res && res.code === 1 && res.data && res.data.length){
+                      res.data.forEach(d => {
+                        let num = 0
+                        if(cat.type === 1){
+                          const c = cartData.find(c => c.dishId === d.id)
+                          num = c ? (c.number || 0) : 0
+                        }else{
+                          const c = cartData.find(c => c.setmealId === d.id)
+                          num = c ? (c.number || 0) : 0
+                        }
+                        d.number = num > 0 ? num : undefined
+                        flat.push(d)
+                      })
+                    }
+                  })
+                  // 增量渲染：本批完成即刷新，无需等待剩余分类
+                  this.dishList = flat.slice()
+                }
               } catch(e){
                 vant.Toast.fail('加载菜单失败')
               } finally {
