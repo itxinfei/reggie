@@ -18,9 +18,9 @@
     <link rel="stylesheet" href="../backend/plugins/remixicon/remixicon.css"/>
     <script src="js/icon-fallback.js"></script>
     <!-- 引入样式  -->
-    <link rel="stylesheet" href="styles/index.css?v=20260917" />
+    <link rel="stylesheet" href="styles/index.css?v=20260917b" />
     <!--本页面内容的样式-->
-    <link rel="stylesheet" href="styles/main.css?v=20260917" />
+    <link rel="stylesheet" href="styles/main.css?v=20260917b" />
     <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
     <link rel="stylesheet" href="styles/tabbar.css?v=20260917" />
     <!-- 骨架屏样式 -->
@@ -45,6 +45,29 @@
       /* 修改点(2026-09-17 UX)：长列表渲染优化——视口外菜品条目跳过渲染，降低首屏渲染与内存开销。
          菜品条目高度 ≈ 缩略图 90rem + 上下内边距 28rem，contain-intrinsic-size 取 120rem 减少滚动跳动 */
       .dish-item { content-visibility: auto; contain-intrinsic-size: auto 120rem; }
+      /* 修改点(2026-09-17)：加购飞入购物车抛物线动效（情感化微交互，对标大厂）
+         两段式合成抛物线：外层 X 轴匀速，内层 Y 轴 ease-in 下落 */
+      .fly-ball-x {
+        position: fixed;
+        z-index: 3000;
+        pointer-events: none;
+        transition: transform 0.6s linear;
+      }
+      .fly-ball {
+        width: 16rem;
+        height: 16rem;
+        margin: -8rem 0 0 -8rem;
+        border-radius: 50%;
+        background: var(--color-primary-gradient);
+        box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
+        transition: transform 0.6s cubic-bezier(0.5, -0.5, 1, 1);
+      }
+      .cart-bump { animation: cart-bump 0.42s ease; }
+      @keyframes cart-bump {
+        0%   { transform: scale(1); }
+        40%  { transform: scale(1.08); }
+        100% { transform: scale(1); }
+      }
     </style>
   </head>
   <body>
@@ -193,7 +216,9 @@
         </div>
 
         <!-- 右侧菜品列表（修改点 2026-09-16：改为按分类分组的单页长列表，支持左右滚动联动） -->
-        <div class="dish-panel" ref="dishPanel">
+        <!-- 修改点(2026-09-17)：捕获阶段委托监听加购点击，用于触发飞入购物车动效
+             （capture 先于目标元素 @click.stop 执行，无需改动 addCart 签名与所有调用点） -->
+        <div class="dish-panel" ref="dishPanel" @click.capture="onDishPanelClick">
           <van-loading v-if="loadingAll" size="24px" vertical class="dish-loading">正在加载菜单...</van-loading>
           <!-- 修改点(2026-09-17)：v-for 在 template 上不能带 :key，改为每个子元素 -->
           <template v-for="(item,index) in dishList">
@@ -742,6 +767,45 @@
             imgError(e){
               if (e.target.src.indexOf('/front/images/noImg.png') >= 0) return
               e.target.src = './images/noImg.png'
+            },
+            // 修改点(2026-09-17)：加购飞入购物车动效——捕获阶段识别加号图标，避免侵入 addCart
+            onDishPanelClick(e){
+              var t = e && e.target
+              if (t && t.classList && t.classList.contains('ri-add-line')) {
+                this.flyToCart(t)
+              }
+            },
+            // 修改点(2026-09-17)：抛物线飞入 + 落点购物车弹跳（情感化微交互）
+            flyToCart(fromEl){
+              var cart = document.querySelector('.cart-bar')
+              if (!cart || !fromEl || !fromEl.getBoundingClientRect) return
+              // 尊重系统「减少动态效果」偏好，开启后不进行飞入动效
+              if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+              var from = fromEl.getBoundingClientRect()
+              var to = cart.getBoundingClientRect()
+              var startX = from.left + from.width / 2
+              var startY = from.top + from.height / 2
+              var endX = to.left + 34
+              var endY = to.top + to.height / 2
+              var outer = document.createElement('div')
+              outer.className = 'fly-ball-x'
+              var inner = document.createElement('div')
+              inner.className = 'fly-ball'
+              outer.appendChild(inner)
+              outer.style.left = startX + 'px'
+              outer.style.top = startY + 'px'
+              document.body.appendChild(outer)
+              requestAnimationFrame(function(){
+                outer.style.transform = 'translateX(' + (endX - startX) + 'px)'
+                inner.style.transform = 'translateY(' + (endY - startY) + 'px)'
+              })
+              setTimeout(function(){
+                if (outer.parentNode) outer.parentNode.removeChild(outer)
+                // 到达后购物车轻弹，强化"已加入"反馈（先移除再强制重排以重启动画）
+                cart.classList.remove('cart-bump')
+                void cart.offsetWidth
+                cart.classList.add('cart-bump')
+              }, 620)
             },
             // 修改点(2026-09-16)：支持单图与多图预览——
             // 列表缩略图直接调起（单图）；套餐详情子项传整个套餐图集 + 当前索引（可左右滑动浏览）。

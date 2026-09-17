@@ -698,3 +698,23 @@ select:focus-visible,
     scroll-behavior: auto !important;
   }
 }
+
+/* 修改点(2026-09-17)：暗色模式（跟随系统）——仅覆盖中性色令牌，品牌金主色保持不变以维持品牌识别度 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page: #121212;
+    --bg-card: #1e1e1e;
+    --bg-hover: #2a2a2a;
+    --color-text-primary: #f5f5f5;
+    --color-text-secondary: #b0b0b0;
+    --color-text-hint: #8c8c8c;
+    --border-light: #2f2f2f;
+  }
+}
+
+/* 修改点(2026-09-17)：键盘可见焦点（可访问性）——仅键盘聚焦时显示轮廓，鼠标点击不显示 */
+:focus-visible {
+  outline: 2px solid var(--color-primary-dark);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

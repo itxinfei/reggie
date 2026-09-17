@@ -1106,3 +1106,16 @@ body.login-page {
     padding-bottom: 44px;
   }
 }
+
+/* 修改点(2026-09-17)：登录页为品牌暖色主题，不跟随系统暗色（与主流 App 登录页一致，
+   全局暗色令牌在此按子树覆盖回浅色） */
+@media (prefers-color-scheme: dark) {
+  #login {
+    --bg-page: #ffffff;
+    --bg-card: #ffffff;
+    --color-text-primary: #333333;
+    --color-text-secondary: #666666;
+    --color-text-hint: #999999;
+    --border-light: #eeeeee;
+  }
+}

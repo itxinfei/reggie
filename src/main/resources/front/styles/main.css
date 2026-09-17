@@ -197,7 +197,7 @@
   box-sizing: border-box;
   background: var(--color-danger);
   color: var(--color-text-white);
-  font-size: 10rem;
+  font-size: 12rem;
   font-style: normal;
   line-height: 16rem;
   text-align: center;
@@ -271,7 +271,7 @@
 }
 
 .restaurant-card .rc-brand {
-  font-size: 10rem;
+  font-size: 12rem;
   font-weight: 600;
   /* 修改点：浅金底(#ffd54f)上金字(#ff9a00)对比度仅约 1.5:1（金底金字），违反 WCAG；改深字 */
   color: var(--color-text-primary);
@@ -282,7 +282,7 @@
 }
 
 .restaurant-card .rc-meta {
-  font-size: 11rem;
+  font-size: 12rem;
   color: var(--color-text-secondary);
   margin-bottom: 5rem;
   display: flex;
@@ -302,7 +302,7 @@
 }
 
 .restaurant-card .rc-delivery {
-  font-size: 11rem;
+  font-size: 12rem;
   color: var(--color-text-hint);
   display: flex;
   align-items: center;
@@ -342,7 +342,7 @@
 }
 
 .coupon-bar .coupon-item .coupon-tag {
-  font-size: 10rem;
+  font-size: 12rem;
   font-weight: 700;
   color: var(--color-text-white);
   background: var(--color-price);
@@ -353,7 +353,7 @@
 }
 
 .coupon-bar .coupon-item .coupon-text {
-  font-size: 10rem;
+  font-size: 12rem;
   color: var(--color-price);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
@@ -379,7 +379,7 @@
   border-radius: 999rem;
   padding: 8rem 12rem;
   margin-top: 10rem;
-  font-size: 11rem;
+  font-size: 12rem;
   color: var(--color-text-primary);
   cursor: pointer;
   line-height: 16rem;
@@ -544,7 +544,7 @@
   line-height: 16rem;
   background: var(--color-price);
   color: var(--color-text-white);
-  font-size: 10rem;
+  font-size: 12rem;
   font-weight: 600;
   border-radius: var(--radius-md);
   text-align: center;
@@ -692,7 +692,7 @@
 }
 
 .dish-item .di-desc {
-  font-size: 11rem;
+  font-size: 12rem;
   color: var(--color-text-hint);
   line-height: 15rem;
   overflow: hidden;
@@ -703,7 +703,7 @@
 
 .dish-item .di-sales {
   /* 修改点(2026-09-17)：10rem/#ccc 白底几乎不可见 → 11rem/#999 保证可读 */
-  font-size: 11rem;
+  font-size: 12rem;
   color: var(--color-text-hint);
   margin-bottom: 5rem;
 }
@@ -805,7 +805,7 @@
   justify-content: center;
   background: var(--color-primary);
   color: var(--color-text-primary);
-  font-size: 10rem;
+  font-size: 12rem;
   font-weight: 700;
   padding: 0 10rem;
   border-radius: 999rem;
@@ -885,7 +885,7 @@
   right: -6rem;
   background: var(--color-price);
   color: var(--color-text-white);
-  font-size: 10rem;
+  font-size: 12rem;
   font-weight: 700;
   min-width: 18rem;
   height: 18rem;
@@ -905,7 +905,7 @@
 }
 
 .cart-bar .cart-symbol {
-  font-size: 11rem;
+  font-size: 12rem;
   margin-right: 1rem;
   opacity: 0.75;
 }
@@ -917,7 +917,7 @@
 
 /* 起送门槛提示 */
 .cart-bar .cart-min-order {
-  font-size: 11rem;
+  font-size: 12rem;
   font-weight: 400;
   margin-left: 6rem;
   opacity: 0.8;
@@ -1210,7 +1210,7 @@
 }
 
 #main .dialogCart .divCartContent .divDesc .price .spanMoney {
-  font-size: 11rem;
+  font-size: 12rem;
 }
 
 #main .dialogCart .divCartContent .divCartItem .divNum {
@@ -1483,7 +1483,7 @@
 }
 
 #main .detailsDialog .eval-review-time {
-  font-size: 11rem;
+  font-size: 12rem;
   color: var(--color-text-disabled);
 }
 
@@ -1547,7 +1547,7 @@
 }
 
 #main .setMealDetailsDialog .divContainer .item .divSubTitle .divPrice span:first-child {
-  font-size: 11rem;
+  font-size: 12rem;
 }
 
 #main .setMealDetailsDialog .content {
@@ -1893,7 +1893,7 @@
 }
 
 .search-suggestions .suggestion-item .suggestion-type {
-  font-size: 11rem;
+  font-size: 12rem;
   color: var(--color-text-disabled);
   flex-shrink: 0;
   margin-left: 8rem;
@@ -1924,7 +1924,7 @@
   color: var(--color-text-primary);
 }
 .recommend-sub {
-  font-size: 11rem;
+  font-size: 12rem;
   color: var(--color-text-hint);
   margin-left: 8rem;
 }

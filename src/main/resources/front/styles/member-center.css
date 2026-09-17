@@ -47,17 +47,17 @@
     .mc-card-top { display: flex; align-items: center; justify-content: space-between;
       position: relative; z-index: 1; margin-bottom: 16rem; }
     .mc-level-name { font-size: 14rem; font-weight: 600; color: var(--gold-text-strong); }
-    .mc-level-tag { padding: 4rem 12rem; border-radius: var(--radius-round); font-size: 11rem;
+    .mc-level-tag { padding: 4rem 12rem; border-radius: var(--radius-round); font-size: 12rem;
       font-weight: 600; letter-spacing: 0.5rem; background: rgba(255,255,255,0.5);
       color: var(--color-text-primary); }
     .mc-card-stats { display: flex; position: relative; z-index: 1; }
     .mc-card-stat { flex: 1; text-align: center; }
     .mc-card-stat .val { font-size: 24rem; font-weight: 700; color: var(--color-text-primary);
       font-family: var(--font-family-number); line-height: 1.2; }
-    .mc-card-stat .lbl { font-size: 11rem; color: var(--gold-text-muted); margin-top: 4rem; }
+    .mc-card-stat .lbl { font-size: 12rem; color: var(--gold-text-muted); margin-top: 4rem; }
     .mc-card-stat-divider { width: 1rem; background: var(--gold-text); margin: 4rem 0; }
     .mc-card-progress { margin-top: 14rem; position: relative; z-index: 1; }
-    .mc-prog-label { display: flex; justify-content: space-between; font-size: 11rem;
+    .mc-prog-label { display: flex; justify-content: space-between; font-size: 12rem;
       color: var(--gold-text-muted); margin-bottom: 6rem; }
     .mc-prog-label .next { color: var(--color-text-primary); font-weight: 500; }
     .mc-prog-bar { height: 5rem; background: var(--gold-text-muted); border-radius: var(--radius-sm); overflow: hidden; }
@@ -87,7 +87,7 @@
     .mc-benefit-icon--green,
     .mc-benefit-icon--purple { background: var(--color-primary-tint-strong); color: var(--color-primary-dark); }
     .mc-benefit-name { font-size: 12rem; color: var(--color-text-primary); font-weight: 500; }
-    .mc-benefit-desc { font-size: 10rem; color: var(--color-text-hint); margin-top: 2rem; }
+    .mc-benefit-desc { font-size: 12rem; color: var(--color-text-hint); margin-top: 2rem; }
 
     /* ---- Tab ---- */
     .mc-tabs { display: flex; border-bottom: 1rem solid var(--bg-hover); }
@@ -118,7 +118,7 @@
     .mc-point-icon.out { background: rgba(255,179,0,0.1); color: var(--color-warning); }
     .mc-point-info { flex: 1; }
     .mc-point-info .p-title { font-size: 14rem; color: var(--color-text-primary); }
-    .mc-point-info .p-time { font-size: 11rem; color: var(--color-text-hint); margin-top: 2rem; }
+    .mc-point-info .p-time { font-size: 12rem; color: var(--color-text-hint); margin-top: 2rem; }
     .mc-point-val { font-size: 15rem; font-weight: 600; }
     .mc-point-val.in { color: var(--color-success); }
     .mc-point-val.out { color: var(--color-warning); }
@@ -138,12 +138,12 @@
     .mc-coupon-left::before { top: -5rem; }
     .mc-coupon-left::after { bottom: -5rem; }
     .mc-coupon-left .c-amount { font-size: 20rem; font-weight: 700; color: var(--color-primary-dark); }
-    .mc-coupon-left .c-type { font-size: 11rem; color: var(--color-text-hint); margin-top: 2rem; }
+    .mc-coupon-left .c-type { font-size: 12rem; color: var(--color-text-hint); margin-top: 2rem; }
     .mc-coupon-right { flex: 1; padding: 12rem 14rem; display: flex;
       flex-direction: column; justify-content: center; }
     .mc-coupon-right .c-name { font-size: 14rem; font-weight: 600; color: var(--color-text-primary); }
-    .mc-coupon-right .c-cond { font-size: 11rem; color: var(--color-text-hint); margin-top: 4rem; }
-    .mc-coupon-right .c-expire { font-size: 11rem; color: var(--color-warning); margin-top: 2rem; }
+    .mc-coupon-right .c-cond { font-size: 12rem; color: var(--color-text-hint); margin-top: 4rem; }
+    .mc-coupon-right .c-expire { font-size: 12rem; color: var(--color-warning); margin-top: 2rem; }
     /* 修改点(2026-09-17)：点击热区对齐全站次要按钮规范（height 32rem，与 order .act-btn 一致），
        原 padding:6rem 实际高度不足 30px，移动端误触率高 */
     .mc-claim-btn { background: var(--color-primary-gradient); border: none;
@@ -163,7 +163,7 @@
       margin-right: 12rem; min-width: 80rem; }
     .mc-recharge-info { flex: 1; }
     .mc-recharge-info .r-time { font-size: 13rem; color: var(--color-text-primary); }
-    .mc-recharge-info .r-gift { font-size: 11rem; color: var(--color-success); margin-top: 2rem; }
+    .mc-recharge-info .r-gift { font-size: 12rem; color: var(--color-success); margin-top: 2rem; }
     /* 内联样式抽离为类 */
     #member-center { min-height: 100vh; }
     .mc-loading-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
