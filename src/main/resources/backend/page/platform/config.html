@@ -278,7 +278,8 @@
       },
       // 修改点：翻页/改页大小（不重算统计，仅刷新当前页数据）
       handlePageChange(p) {
-        this.page = p
+        // 修改点：crud-table emit 的是 {page, pageSize} 对象，需提取 page 数字
+        this.page = p.page
         this.fetchData(false)
       },
       handleSizeChange(s) {

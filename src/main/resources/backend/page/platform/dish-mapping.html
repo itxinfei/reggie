@@ -214,7 +214,8 @@
         this.fetchData()
       },
       handlePageChange(p) {
-        this.page = p
+        // 修改点：crud-table emit 的是 {page, pageSize} 对象，需提取 page 数字
+        this.page = p.page
         this.fetchData(false)
       },
       handleSizeChange(s) {
