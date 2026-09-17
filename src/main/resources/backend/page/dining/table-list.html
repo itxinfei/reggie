@@ -490,9 +490,13 @@
         this.init(); this.loadAreaList(); this.loadMapData()
         // 修改点(2026-09-16)：监听收银台 iframe 收款成功消息，自动关闭弹窗并刷新桌台
         window.addEventListener('message', this.onCashierMessage)
-        // 修改点：页面销毁时移除监听，避免重复绑定
+        // 修改点：30秒定时轮询桌台状态，扫码下单/收银结账后自动刷新，无需手动操作
         var self = this
-        this.$on('hook:beforeDestroy', function() { window.removeEventListener('message', self.onCashierMessage) })
+        this._pollTimer = setInterval(function() { self.init(false) }, 30000)
+        this.$on('hook:beforeDestroy', function() {
+          window.removeEventListener('message', self.onCashierMessage)
+          if (self._pollTimer) { clearInterval(self._pollTimer); self._pollTimer = null }
+        })
       },
       methods: {
         // 修改点：F9 性能 — 列表与全局统计分离，reloadStats=true 才重算（默认 true，分页传 false）
@@ -737,15 +741,14 @@
             ReggieUI.error('转台失败：' + (err.message || err))
           })
         },
-        // 修改点：加菜（占用桌跳转收银台订单页继续点餐）
+        // 修改点(2026-09-18)：加菜改为打开「顾客端扫码点餐页」并带上桌台ID。
+        // 原实现跳转收银台（收款页），页面内根本没有点餐/加菜 UI，等于「加菜」功能形同虚设；
+        // 顾客端点餐页支持按桌台选菜并下单（submitEatInOrder），店员可代客加菜。
         addDishHandle: function(row) {
           const self = this
           tableInfo(row.id).then(function(res) {
             if (res.code === 1 && res.data && res.data.currentOrderId) {
-              // 修改点（2026-09-15）：原相对路径 'cashier/index.html' 会被拼成
-              // /backend/page/dining/cashier/index.html（不存在）→ 404 Whitelabel；
-              // 改为站点绝对路径 + ?orderId= 参数，收银台据此自动选中订单
-              window.open('/backend/page/cashier/index.html?orderId=' + res.data.currentOrderId, '_blank')
+              window.open('/front/page/qrcode-order.html?tableId=' + row.id, '_blank')
             } else {
               ReggieUI.warning('该桌台未绑定订单，无法加菜')
             }

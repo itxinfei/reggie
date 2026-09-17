@@ -161,6 +161,33 @@ public class CashierController {
     }
 
     /**
+     * 修改点(2026-09-18)：结算预览——由服务端权威计算金额构成（订单金额/券抵扣/会员等级折扣/应付），
+     * 前端不再自行相减，避免前后端口径与浮点误差不一致。
+     *
+     * @param orderId      订单ID
+     * @param usedCouponId 使用的优惠券ID
+     * @param memberUserId 会员用户ID
+     * @return 预览结果
+     */
+    @GetMapping("/preview")
+    @RateLimit(maxRequestsPerSecond = 20)
+    @Operation(summary = "结算预览", description = "服务端权威计算订单金额、优惠券抵扣、会员等级折扣与应付金额")
+    public R<Map<String, Object>> preview(
+            @Parameter(description = "订单ID") @RequestParam Long orderId,
+            @Parameter(description = "使用的优惠券ID") @RequestParam(required = false) Long usedCouponId,
+            @Parameter(description = "会员关联用户ID") @RequestParam(required = false) Long memberUserId) {
+        try {
+            return R.success(cashierService.previewCheckout(orderId, usedCouponId, memberUserId));
+        } catch (CustomException e) {
+            return R.error(e.getMessage());
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("结算预览失败", e);
+            return R.error("结算预览失败，请稍后重试");
+        }
+    }
+
+    /**
      * 删除 cashier record。
      * @param id 参数 id
      * @return 返回结果

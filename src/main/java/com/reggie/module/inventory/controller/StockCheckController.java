@@ -3,8 +3,14 @@ import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.common.annotation.RequireEmployee;
+// 修改点(2026-09-18)：原 import 路径 com.reggie.common.annotation.RateLimit /
+// com.reggie.common.enums.RateLimitType 均不存在（全项目统一在 com.reggie.common 包），
+// 会导致该控制器无法编译，进而阻断整个工程构建。
+import com.reggie.common.RateLimit;
+import com.reggie.common.RateLimitType;
 import com.reggie.dto.CompleteStockCheckDTO;
 import com.reggie.dto.CreateStockCheckDTO;
 import com.reggie.dto.StockCheckItemDTO;
@@ -34,6 +40,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import com.reggie.module.inventory.model.StockCheckDetail;
 
 /**
@@ -195,6 +202,34 @@ public class StockCheckController {
         }
         stockCheckService.removeById(id);
         return R.success("删除成功");
+    }
+
+    /**
+     * 盘点冲正：将已完成的盘点单回退到进行中，允许重新录入实盘数量
+     * 场景：盘点录入有误（如实盘数量填错），无需新建盘点单，直接回退修正
+     */
+    @PutMapping("/{id}/rollback")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
+    @Operation(summary = "盘点冲正", description = "将已完成的盘点单回退到进行中状态，允许重新录入")
+    @Parameter(name = "id", description = "盘点单ID", required = true)
+    public R<String> rollback(@PathVariable Long id) {
+        StockCheck existing = stockCheckService.getById(id);
+        if (existing == null) {
+            return R.error("盘点单不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId == null || !Objects.equals(currentTenantId, existing.getTenantId())) {
+            return R.error("盘点单不属于当前租户");
+        }
+        if (!StockCheckStatus.DONE.getValue().equals(existing.getStatus())) {
+            return R.error("仅已完成的盘点单可冲正");
+        }
+        // 回退状态到进行中，清空盈亏记录
+        existing.setStatus(StockCheckStatus.IN_PROGRESS.getValue());
+        existing.setProfitLoss(null);
+        stockCheckService.updateById(existing);
+        return R.success("已回退到进行中，请重新录入实盘数量");
     }
 }
 

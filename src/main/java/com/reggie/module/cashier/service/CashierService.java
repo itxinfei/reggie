@@ -69,6 +69,18 @@ public interface CashierService extends IService<CashierRecord> {
                               Long usedCouponId, Long memberUserId, String remark);
 
     /**
+     * 修改点(2026-09-18)：结算预览——服务端权威计算「订单金额 / 券抵扣 / 会员等级折扣 / 应付金额」。
+     * 此前收银台由前端自行 `amount - discount` 计算应付，与服务端 BigDecimal 口径不一致
+     * （浮点误差、会员等级折扣未纳入），改为由本接口统一下发。
+     *
+     * @param orderId      订单ID
+     * @param usedCouponId 使用的优惠券ID（可空）
+     * @param memberUserId 会员用户ID（可空）
+     * @return 预览结果：orderAmount / couponDiscount / levelDiscount / payable
+     */
+    Map<String, Object> previewCheckout(Long orderId, Long usedCouponId, Long memberUserId);
+
+    /**
      * 删除收银记录
      *
      * @param id 主键ID

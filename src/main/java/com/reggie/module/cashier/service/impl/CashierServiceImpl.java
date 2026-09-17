@@ -40,6 +40,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.math.RoundingMode;
+import java.util.HashMap;
+import java.util.Map;
 import com.reggie.enums.DiningTableStatus;
 import com.reggie.enums.OrderSource;
 import com.reggie.module.dining.service.DiningTableService;
@@ -300,6 +302,55 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         //    避免收银支付与订单完成事件重复发放。此处不再发放。
 
         return cashierRecord;
+    }
+
+    /**
+     * 修改点(2026-09-18)：结算预览——服务端权威计算应付金额，供收银台展示与提交使用。
+     *
+     * @param orderId      订单ID
+     * @param usedCouponId 使用的优惠券ID
+     * @param memberUserId 会员用户ID
+     * @return 预览结果（orderAmount / couponDiscount / levelDiscount / payable）
+     */
+    @Override
+    public Map<String, Object> previewCheckout(Long orderId, Long usedCouponId, Long memberUserId) {
+        Orders order = loadOrderForPreview(orderId);
+        BigDecimal orderAmount = order.getAmount();
+        BigDecimal couponDiscount = resolveCouponDiscount(usedCouponId, memberUserId, orderAmount);
+        BigDecimal levelDiscount = resolveMemberLevelDiscount(memberUserId);
+        BigDecimal payable = orderAmount.subtract(couponDiscount).multiply(levelDiscount)
+                .setScale(2, RoundingMode.HALF_UP);
+        if (payable.compareTo(BigDecimal.ZERO) < 0) {
+            payable = BigDecimal.ZERO;
+        }
+        Map<String, Object> data = new HashMap<>();
+        data.put("orderId", orderId);
+        data.put("orderAmount", orderAmount);
+        data.put("couponDiscount", couponDiscount);
+        data.put("levelDiscount", levelDiscount);
+        data.put("payable", payable);
+        return data;
+    }
+
+    /**
+     * 修改点(2026-09-18)：预览场景加载订单（不做前端金额防篡改校验，占位单用明细汇总兜底）。
+     *
+     * @param orderId 订单ID
+     * @return 订单
+     */
+    private Orders loadOrderForPreview(Long orderId) {
+        Orders order = orderService.getById(orderId);
+        if (order == null) {
+            throw new CustomException("订单不存在或已失效");
+        }
+        if (order.getAmount() == null || order.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            BigDecimal detailSum = computeOrderDetailTotal(orderId);
+            if (detailSum == null || detailSum.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new CustomException("该桌台尚未点单，请先加菜后再结账");
+            }
+            order.setAmount(detailSum);
+        }
+        return order;
     }
 
     /**

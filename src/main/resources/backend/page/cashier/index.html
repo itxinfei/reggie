@@ -650,8 +650,18 @@
           couponLoading: false,
           // C.1：今日日结状态 + 一键日结
           settlementInfo: null,
-          settleLoading: false
+          settleLoading: false,
+          // 修改点(2026-09-18)：服务端结算预览下发的应付金额（权威值，含券抵扣与会员等级折扣）
+          previewPayable: null,
+          previewLoading: false
         }
+      },
+      // 修改点(2026-09-18)：订单/优惠券/会员变化时向服务端请求权威结算预览，
+      // 保证页面展示的应付金额与服务端 BigDecimal 计算完全一致（消除前端自算的口径与浮点误差）
+      watch: {
+        selectedOrder: function() { this.loadPreview() },
+        selectedCouponId: function() { this.loadPreview() },
+        currentMember: function() { this.loadPreview() }
       },
       computed: {
         discountAmount() {
@@ -660,9 +670,12 @@
           return coupon ? Number(coupon.currentDiscount) || 0 : 0
         },
         payableAmount() {
+          // 修改点(2026-09-18)：优先使用服务端结算预览的应付金额（已含券抵扣 + 会员等级折扣），
+          // 避免前端 JS 相减与服务端 BigDecimal 口径不一致；预览未就绪时回退为本地估算
+          if (this.previewPayable != null) return this.previewPayable
           if (!this.selectedOrder) return 0
           const payable = Number(this.selectedOrder.amount) - this.discountAmount
-          return payable > 0 ? payable : 0
+          return payable > 0 ? Math.round(payable * 100) / 100 : 0
         },
         payTypeText() {
           const map = { 1: '现金', 2: '微信', 3: '支付宝', 4: '银行卡', 5: '会员储值' }
@@ -782,6 +795,33 @@
           this.currentMember = null
           this.availableCoupons = []
           this.selectedCouponId = null
+        },
+        // 修改点(2026-09-18)：拉取服务端结算预览（订单金额 / 券抵扣 / 会员等级折扣 / 应付）
+        async loadPreview() {
+          if (!this.selectedOrder || !this.selectedOrder.id) {
+            this.previewPayable = null
+            return
+          }
+          this.previewLoading = true
+          try {
+            const res = await previewCheckout({
+              orderId: this.selectedOrder.id,
+              usedCouponId: this.selectedCouponId || null,
+              memberUserId: this.currentMember ? this.currentMember.userId : null
+            })
+            if (res && res.code === 1 && res.data) {
+              this.previewPayable = Number(res.data.payable)
+              // 非现金支付：实收默认等于服务端下发的应付金额
+              if (this.payType !== 1) this.actualAmount = this.previewPayable
+            } else {
+              this.previewPayable = null
+            }
+          } catch (e) {
+            console.warn('[cashier] 结算预览失败，回退本地计算:', e)
+            this.previewPayable = null
+          } finally {
+            this.previewLoading = false
+          }
         },
         selectPayType(value) {
           this.payType = value
