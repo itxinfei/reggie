@@ -1,7 +1,9 @@
 package com.reggie.module.dining.mapper;
 
+import com.baomidou.mybatisplus.annotation.InterceptorIgnore;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.reggie.module.dining.model.DiningTable;
+import com.reggie.module.dining.vo.DiningTablePublicVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -30,4 +32,18 @@ public interface DiningTableMapper extends BaseMapper<DiningTable> {
             + "FROM dining_table dt LEFT JOIN dining_area ta ON ta.id = dt.area_id "
             + "WHERE dt.tenant_id = #{tenantId} GROUP BY dt.area_id, ta.name")
     List<Map<String, Object>> statByArea(@Param("tenantId") Long tenantId);
+
+    /**
+     * 扫码点餐公开查询：按 id 返回桌台安全展示字段（名称/座位数/状态/区域），
+     * 绕过租户拦截器（顾客扫码为匿名请求，无租户上下文）。
+     * 仅返回非敏感展示信息，避免暴露 tenant_id/订单等内部数据；显式 is_deleted = 0 过滤已删除。
+     *
+     * @param id 桌台ID
+     * @return 公开桌台视图，不存在返回 null
+     */
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT dt.id AS id, dt.name AS name, dt.seat_count AS seatCount, dt.status AS status, "
+            + "ta.name AS areaName FROM dining_table dt LEFT JOIN dining_area ta ON ta.id = dt.area_id "
+            + "WHERE dt.id = #{id} AND dt.is_deleted = 0")
+    DiningTablePublicVO selectPublicById(@Param("id") Long id);
 }

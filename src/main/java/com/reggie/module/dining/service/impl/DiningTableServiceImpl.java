@@ -18,6 +18,7 @@ import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.model.TableArea;
 import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.module.dining.service.TableAreaService;
+import com.reggie.module.dining.vo.DiningTablePublicVO;
 import com.reggie.module.dining.vo.TableStatsVO;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.service.OrderService;
@@ -775,6 +776,19 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
         result.put("orderId", order.getId());
         result.put("orderNumber", order.getNumber());
         return result;
+    }
+
+    /**
+     * 扫码点餐公开查询：按 id 返回桌台安全展示字段（名称/座位数/状态/区域）。
+     * <p>供 C 端顾客扫码后匿名访问，绕过租户拦截（顾客无租户上下文），
+     * 仅返回非敏感展示信息，不暴露 tenant_id/订单等内部数据。</p>
+     *
+     * @param tableId 桌台ID
+     * @return 公开桌台视图，不存在返回 null
+     */
+    @Override
+    public DiningTablePublicVO getPublicById(Long tableId) {
+        return diningTableMapper.selectPublicById(tableId);
     }
 }
 

@@ -87,6 +87,9 @@ public final class AuthConstants {
         "/recommend/hot",
         "/recommend/new-arrivals",
         "/recommend/setmeals",
+        // 扫码点餐桌台信息公开端点（顾客用任意扫码工具打开浏览器后匿名访问，
+        // 仅返回名称/座位数/状态/区域等非敏感展示字段，不暴露 tenantId/订单等内部数据）
+        "/api/dining/table/public/**",
         // 外卖平台回调（平台服务端无会话，天然匿名）
         "/api/delivery/callback/**",
         // 支付渠道异步回调（微信/支付宝服务端无会话，天然匿名；签名校验在 PaymentController 内独立完成）

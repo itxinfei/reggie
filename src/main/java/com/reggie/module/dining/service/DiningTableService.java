@@ -7,6 +7,7 @@ import com.reggie.module.dining.dto.OpenTableDTO;
 import com.reggie.module.dining.dto.SplitBillDTO;
 import com.reggie.module.dining.dto.TransferTableDTO;
 import com.reggie.module.dining.model.DiningTable;
+import com.reggie.module.dining.vo.DiningTablePublicVO;
 import com.reggie.module.dining.vo.TableStatsVO;
 
 import java.util.List;
@@ -123,4 +124,13 @@ public interface DiningTableService extends IService<DiningTable> {
      * @return 包含 tableId/orderId/orderNumber 的结果 Map
      */
     Map<String, Object> openWithOrder(Long tableId, Integer customerCount, String remark);
+
+    /**
+     * 扫码点餐公开查询：按 id 返回桌台安全展示字段（名称/座位数/状态/区域）
+     * <p>供 C 端顾客扫码后匿名访问，绕过租户拦截，仅返回非敏感信息。</p>
+     *
+     * @param tableId 桌台ID
+     * @return 公开桌台视图，不存在返回 null
+     */
+    DiningTablePublicVO getPublicById(Long tableId);
 }
