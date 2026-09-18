@@ -360,11 +360,17 @@
         showRules: function() {
           vant.Dialog.alert({
             title: '会员规则',
-            message: '1. 消费即可获取积分\n2. 积分达到门槛自动升级\n3. 等级越高，折扣越大\n4. 积分可用于兑换优惠券\n5. 会员等级长期有效',
+            // 修改点(2026-09-18)：删除「积分可用于兑换优惠券」——系统无积分兑换功能，属虚假承诺；
+            // 积分实际仅用于按门槛自动升级，规则条目重排为 1-4。
+            message: '1. 消费即可获取积分\n2. 积分达到门槛自动升级\n3. 等级越高，折扣越大\n4. 会员等级长期有效',
             confirmButtonText: '知道了'
           })
         },
-        goBack: function() { history.go(-1) },
+        goBack: function() {
+          // 修改点(2026-09-18)：深链接直接进入无历史记录时，history.go(-1) 无效，兜底回首页
+          if (history.length > 1) { history.go(-1) }
+          else { window.location.href = '/front/index.html' }
+        },
         fmtNum: function(n) {
           if (n == null) return '0'
           return Number(n).toLocaleString()
