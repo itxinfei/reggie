@@ -225,6 +225,23 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
         if (currentTenantId != null && !currentTenantId.equals(member.getTenantId())) {
             throw new CustomException("无权操作其他租户的会员积分");
         }
+
+        // 幂等短路：与 addPoints 对齐，仅对携带业务ID的扣减生效（唯一索引 uq_points_biz 语义，
+        // bizId=null 的手动调整不受影响，可重复扣减）。
+        // 已存在相同 (bizType,bizId,OUT) 流水则直接跳过，杜绝消息重投/重试导致的重复扣分；
+        // 先查后插的极小竞态由下方 save 的唯一索引冲突兜底，异常回滚本事务（扣分与流水都不落库）。
+        if (bizId != null) {
+            boolean alreadyDeducted = pointsRecordService.lambdaQuery()
+                    .eq(PointsRecord::getType, PointsRecordType.OUT.getValue())
+                    .eq(PointsRecord::getBizType, bizType)
+                    .eq(PointsRecord::getBizId, bizId)
+                    .count() > 0;
+            if (alreadyDeducted) {
+                log.info("积分扣减幂等跳过：memberId={}, bizType={}, bizId={}", memberId, bizType, bizId);
+                return;
+            }
+        }
+
         // 原子扣减积分（不低于 0），避免并发回退导致积分为负
         baseMapper.decrementPointsById(memberId, points);
 
