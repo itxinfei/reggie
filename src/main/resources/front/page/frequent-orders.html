@@ -328,7 +328,8 @@
                             </div>
                         </div>
                         <div class="dish-price-row">
-                            <div class="dish-price">{{ item.price ? '¥' + Number(item.price).toFixed(2) : '¥0.00' }}</div>
+                            <!-- 修改点：删除模板内 ¥，货币符号统一由 .dish-price::before 提供，避免双¥ -->
+                            <div class="dish-price">{{ item.price ? Number(item.price).toFixed(2) : '0.00' }}</div>
                             <button class="reorder-btn"
                                     :disabled="submitting === item.key"
                                     @click="reorder(item)">

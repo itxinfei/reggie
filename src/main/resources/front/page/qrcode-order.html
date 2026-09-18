@@ -45,6 +45,17 @@
     .table-info-bar { background: var(--bg-card); padding: 8rem 16rem; text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary); border-bottom: 1px solid var(--border-light); }
     .table-info-bar i { color: var(--color-primary); margin-right: 4rem; }
 
+    /* 头部返回首页出口（绝对定位于 divHead 右侧，热区≥44px） */
+    .divHead { position: relative; }
+    .qr-home-btn { position: absolute; right: 8px; top: 0; height: 46px; min-width: 44px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--color-text-primary); text-decoration: none; }
+    /* 无效/破损二维码错误态 */
+    .invalid-table { padding: 80px 32px; text-align: center; }
+    .invalid-icon { font-size: 64px; line-height: 1; color: var(--color-text-hint); display: block; margin-bottom: 16px; }
+    .invalid-title { font-size: 18px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 8px; }
+    .invalid-desc { font-size: 14px; line-height: 1.6; color: var(--color-text-hint); margin-bottom: 28px; }
+    .invalid-btn { display: inline-block; height: 44px; line-height: 44px; padding: 0 40px; border-radius: 22px; background: var(--color-primary); color: #4a3500; font-size: 16px; font-weight: 600; text-decoration: none; }
+    .invalid-btn:active { opacity: .85; }
+
     /* 加载中 */
     .loading-wrap { text-align: center; padding: 30rem 0; color: var(--color-text-hint); }
     .loading-spinner { width: 16rem; height: 16rem; border: 2rem solid var(--border-light); border-top-color: var(--color-primary); border-radius: 50%; animation: loading-spin 0.8s linear infinite; margin: 0 auto 6rem; }
@@ -137,6 +148,8 @@
       <div class="divTitle">
         <i class="ri-store-2-line" style="margin-right:6rem;"></i>{{ storeInfo.name || '瑞吉外卖' }}
       </div>
+      <!-- 无效二维码/任意情况下的返回首页出口，避免落地页成为死胡同 -->
+      <a class="qr-home-btn" href="/front/index.html" aria-label="返回首页"><i class="ri-home-4-line"></i></a>
     </div>
 
     <!-- 加载中 -->
@@ -145,8 +158,16 @@
       <div>加载中...</div>
     </div>
 
+    <!-- 无效/破损二维码错误态（缺少 tableId）：提供说明与返回首页出口 -->
+    <div v-if="invalidTable" class="invalid-table">
+      <i class="ri-qr-scan-2-line invalid-icon" aria-hidden="true"></i>
+      <p class="invalid-title">无效的桌台二维码</p>
+      <p class="invalid-desc">请扫描餐桌上的二维码重新点餐</p>
+      <a class="invalid-btn" href="/front/index.html">返回首页</a>
+    </div>
+
     <!-- 分类Tab -->
-    <div class="category-tabs" v-if="!loading">
+    <div class="category-tabs" v-if="!loading && !invalidTable">
       <div class="category-tab" :class="{active: activeCategory === 0}" @click="switchCategory(0)">全部</div>
       <div class="category-tab" v-for="cat in categories" :key="cat.id" :class="{active: activeCategory === cat.id}" @click="switchCategory(cat.id)">
         {{ cat.name }}
@@ -154,7 +175,7 @@
     </div>
 
     <!-- 菜品列表 -->
-    <div class="dish-list" v-if="!loading">
+    <div class="dish-list" v-if="!loading && !invalidTable">
       <div class="dish-card" v-for="dish in filteredDishes" :key="dish.id" :class="{'sold-out': dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)}" @click="addToCart(dish)">
         <div class="dish-img-wrap">
           <img :src="getImage(dish.image)" loading="lazy" class="dish-img" :alt="dish.name || '菜品图片'" @error="$event.target.src='../images/noImg.png'" />
@@ -177,7 +198,7 @@
     </div>
 
     <!-- 购物车栏 -->
-    <div class="cart-bar" v-if="!loading && cartTotal() > 0">
+    <div class="cart-bar" v-if="!loading && !invalidTable && cartTotal() > 0">
       <div class="cart-icon" @click="showCartDialog">
         <i class="ri-shopping-cart-2-line"></i>
         <div class="cart-badge" v-if="cartTotal() > 0">{{ cartTotal() }}</div>
@@ -264,6 +285,8 @@
       data: function() {
         return {
           tableId: null,
+          // 无效/破损二维码（缺少 tableId）标志：显示错误态而非空白菜单
+          invalidTable: false,
           tableInfo: null,
           storeInfo: {},
           dishes: [],
@@ -291,8 +314,9 @@
           this.loadData()
           this.loadTableInfo()
         } else {
+          // 缺少 tableId（无效/破损二维码）：展示带出口的错误态，避免空白页卡死
           this.loading = false
-          vant.Toast.fail('无效的桌台二维码')
+          this.invalidTable = true
         }
       },
       methods: {

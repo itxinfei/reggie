@@ -276,14 +276,14 @@
                     // 修改点：30秒自动轮询刷新（仅页面可见时）
                     this._pollTimer = setInterval(function(){
                         if(!document.hidden && this.orderId){
-                            this.loadTracking();
+                            this.loadTracking(true);
                         }
                     // 修改点(2026-09-17)：轮询 30s → 15s，配送中状态变化感知更及时
                     // （终态会在 loadTracking 内自动停止轮询，不会产生无效请求）
                     }.bind(this), 15000);
                     this._onVisibility = function(){
                         if(!document.hidden && this.orderId){
-                            this.loadTracking();
+                            this.loadTracking(true);
                         }
                     }.bind(this);
                     document.addEventListener('visibilitychange', this._onVisibility);
@@ -302,7 +302,7 @@
                 },
                 // 下拉刷新
                 async onRefresh(){
-                    await this.loadTracking();
+                    await this.loadTracking(true);
                     this.refreshing = false;
                 },
                 getUrlParam(name) {
@@ -338,10 +338,14 @@
                     if (mins < 60) return mins + '分钟前更新';
                     return '位置更新较慢';
                 },
-                async loadTracking() {
-                    // 修改点(2026-09-17)：记录刷新前状态，用于状态变更时主动提示
+                async loadTracking(silent) {
+                    // 修改点：记录刷新前状态，用于状态变更时主动提示
                     const prevStatus = this.trackingData ? this.trackingData.status : null;
-                    this.pageLoading = true;
+                    // silent=true（15s 轮询/可见性刷新/下拉刷新）走静默更新，不弹全屏遮罩、不打断阅读；
+                    // 仅首屏加载显示遮罩
+                    if (!silent) {
+                        this.pageLoading = true;
+                    }
                     try {
                         const res = await queryDeliveryTracking(this.orderId);
                         if (res.code === 1) {
@@ -362,13 +366,18 @@
                                 self.initDeliveryMap();
                                 self.updateRiderMarker();
                             });
-                        } else {
+                        } else if (!silent) {
+                            // 后台静默轮询的业务失败不打扰用户，下次轮询自动恢复
                             vant.Toast.fail(res.msg || '加载配送信息失败');
                         }
                     } catch (e) {
-                        vant.Toast.fail('网络异常，请稍后重试');
+                        if (!silent) {
+                            vant.Toast.fail('网络异常，请稍后重试');
+                        }
                     } finally {
-                        this.pageLoading = false;
+                        if (!silent) {
+                            this.pageLoading = false;
+                        }
                     }
                 },
                 getStepClass(stepStatus) {

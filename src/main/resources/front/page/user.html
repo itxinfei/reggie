@@ -296,7 +296,8 @@
                     </span>
                     <span class="oq-label">待评价</span>
                 </div>
-                <div class="order-quick-item" @click="toOrderPageWithStatus(5)">
+                <!-- 修改点：退款入口应传状态 6=已退款/退款中（原误传 5=已取消，点进去是错误列表） -->
+                <div class="order-quick-item" @click="toOrderPageWithStatus(6)">
                     <span class="oq-icon oq-refund">
                         <i class="ri-refund-2-line"></i>
                     </span>
