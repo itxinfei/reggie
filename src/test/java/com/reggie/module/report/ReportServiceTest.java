@@ -127,7 +127,7 @@ public class ReportServiceTest {
     @Test
     void testDishRanking() {
         Long tenantId = BaseContext.getCurrentTenantId();
-        List<Map<String, Object>> ranking = reportService.getDishRanking("2026-07-01", "2026-07-01", 10, tenantId);
+        List<Map<String, Object>> ranking = reportService.getDishRanking("2026-07-01", "2026-07-01", 10, tenantId, null);
 
         assertEquals(2, ranking.size());
         assertEquals("鱼香肉丝", ranking.get(0).get("name"));
