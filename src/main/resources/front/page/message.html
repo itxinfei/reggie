@@ -82,10 +82,16 @@
                 <div class="msg-time">{{ formatTime(msg.createTime) }}</div>
             </div>
 
-            <!-- 空状态 -->
-            <div class="empty-state" v-if="messages.length === 0 && !loading">
+            <!-- 空状态（仅在非加载、非错误时展示，避免首屏失败误显示"暂无消息"） -->
+            <div class="empty-state" v-if="messages.length === 0 && !loading && !loadError">
                 <i class="ri-chat-3-line"></i>
                 <p class="empty-text">暂无消息</p>
+            </div>
+
+            <!-- 修改点(2026-09-18)：首屏加载失败错误态，点击可重试，不再误报"暂无消息" -->
+            <div class="empty-state" v-if="messages.length === 0 && !loading && loadError" @click="retryLoad">
+                <i class="ri-wifi-off-line"></i>
+                <p class="empty-text">消息加载失败，点击重试</p>
             </div>
 
             <!-- 加载更多 -->
@@ -125,6 +131,8 @@
                     loading: false,
                     refreshing: false,
                     hasMore: true,
+                    // 修改点(2026-09-18)：区分「真的无消息」与「首屏加载失败」，避免失败误显示空状态
+                    loadError: false,
                     unreadCount: 0,
                     detail: {
                         show: false,
@@ -160,6 +168,7 @@
                 onRefresh: function() {
                     this.page = 1;
                     this.hasMore = true;
+                    this.loadError = false;
                     this.loadMessages();
                 },
 
@@ -167,6 +176,8 @@
                     var self = this;
                     if (self.loading) return;
                     self.loading = true;
+                    // 修改点：进入请求即清错误态（首屏）
+                    if (self.page === 1) self.loadError = false;
 
                     recommendApi.getUserMessages(self.page, self.pageSize).then(function(res) {
                         if (res && res.code === 1 && res.data) {
@@ -177,9 +188,17 @@
                                 self.messages = self.messages.concat(records);
                             }
                             self.hasMore = records.length >= self.pageSize;
+                            // 修改点(2026-09-18)：仅在成功且确有下一页后才推进页码。
+                            // 原 loadMore 先 page++ 再请求，一旦请求失败页码已前进，下次重试永久跳过该页
+                            if (self.hasMore) self.page++;
+                        } else {
+                            if (self.page === 1) self.loadError = true;
+                            vant.Toast.fail((res && res.msg) || '加载消息失败');
                         }
                     }).catch(function(err) {
                         console.error('加载消息失败:', err);
+                        // 修改点：首屏失败置错误态；翻页失败停留本页，"加载更多"可重试同一页
+                        if (self.page === 1) self.loadError = true;
                         vant.Toast.fail('加载消息失败');
                     }).finally(function() {
                         self.loading = false;
@@ -189,7 +208,15 @@
                 },
 
                 loadMore: function() {
-                    this.page++;
+                    // 修改点(2026-09-18)：不再在此预先 page++，页码由 loadMessages 成功后推进
+                    if (this.loading || !this.hasMore) return;
+                    this.loadMessages();
+                },
+
+                // 修改点(2026-09-18)：首屏失败点击重试
+                retryLoad: function() {
+                    this.page = 1;
+                    this.hasMore = true;
                     this.loadMessages();
                 },
 
