@@ -75,7 +75,7 @@
             <div v-for="item in evalList" :key="item.id" class="eval-card">
                 <div class="eval-header">
                     <div class="dish-info">
-                        <img v-if="item.dishImage" :src="getImageUrl(item.dishImage)" class="dish-img" :alt="item.dishName || '菜品'" loading="lazy" @error="$event.target.src='images/noImg.png'" />
+                        <img v-if="item.dishImage" :src="getImageUrl(item.dishImage)" class="dish-img" :alt="item.dishName || '菜品'" loading="lazy" @error="$event.target.src='./../images/noImg.png'" />
                         <div class="dish-text">
                             <div class="dish-name">{{ item.dishName || '未知菜品' }}</div>
                             <div class="eval-meta">
@@ -94,7 +94,7 @@
                 <!-- 评价图片 -->
                 <div class="eval-imgs" v-if="item.images && item.images.length > 0">
                     <img v-for="(img, idx) in getImageList(item.images)" :key="idx"
-                         :src="getImageUrl(img)" :alt="'评价图片' + (idx + 1)" @click="previewImage(getImageUrl(img))" loading="lazy" @error="$event.target.src='images/noImg.png'" />
+                         :src="getImageUrl(img)" :alt="'评价图片' + (idx + 1)" @click="previewImage(getImageUrl(img))" loading="lazy" @error="$event.target.src='./../images/noImg.png'" />
                 </div>
 
                 <!-- 商家回复 -->
@@ -255,13 +255,21 @@
                 // 修改点(2026-09-17 UX)：分页由 PC 风格 van-pagination 改为移动端 van-list 上拉加载，
                 // 加载逻辑抽出为 loadEvaluations(isRefresh)：isRefresh=true 重置列表，false 追加下一页
                 async loadEvaluations(isRefresh){
+                    // 防重只用独立标志，不能用 this.loading 守卫：van-list 触发 @load 前会先经
+                    // v-model 把 loading 置为 true，若此处再判 this.loading 必然拦截首屏，导致永久骨架。
+                    // onLoad 的单飞由 van-list 内部保证；该标志额外防止程序化 loadData/onRefresh 重入。
+                    if(this._loadingData){
+                        return
+                    }
                     if(isRefresh){
                         this.evalList = []
                         this.finished = false
-                    }
-                    if(this.finished || this.loading){
+                    } else if(this.finished){
+                        // 已加载完（理论上 van-list 不会再触发 load），复位 loading 避免卡在加载态
+                        this.loading = false
                         return
                     }
+                    this._loadingData = true
                     this.loading = true
                     try {
                         const res = await getMyEvaluations({ page: this.page, pageSize: this.pageSize })
@@ -281,6 +289,7 @@
                         console.error('[my-evaluations] 加载评价失败:', err)
                         vant.Toast.fail('加载失败，请稍后重试')
                     } finally {
+                        this._loadingData = false
                         this.loading = false
                         // 修改点：下拉刷新与实际加载同步
                         this.refreshing = false
