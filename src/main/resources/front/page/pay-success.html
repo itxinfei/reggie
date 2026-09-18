@@ -110,6 +110,9 @@
                     if(!this.reorderId) return
                     var maxRetries = 5
                     var retryDelay = 2000
+                    // 修改点：轮询期间展示持续 loading（duration:0 不自动关闭，由成功/最终提示替换），
+                    // forbidClick:false 不拦截「查看订单」按钮，用户仍可主动跳转
+                    vant.Toast.loading({ message: '支付结果确认中...', duration: 0, forbidClick: false })
                     for(var attempt = 1; attempt <= maxRetries; attempt++){
                         try {
                             const res = await getOrderDetailApi(this.reorderId)
