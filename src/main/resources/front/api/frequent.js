@@ -3,8 +3,3 @@
 function getFrequentOrders(params) {
   return orderPagingApi(params)
 }
-
-// 再来一单（复用已有接口）
-function reorderAgain(data) {
-  return orderAgainApi(data)
-}

@@ -358,6 +358,8 @@
     <script src="./../js/common.js?v=20260917"></script>
     <script src="./../api/order.js?v=20260917"></script>
     <script src="./../api/frequent.js?v=20260917"></script>
+    <!-- 修改点(2026-09-18)：单菜复购改用购物车 addCartApi，需引入 main.js -->
+    <script src="./../api/main.js?v=20260918"></script>
     <script>
         new Vue({
             el: '#frequent',
@@ -438,7 +440,10 @@
                                             category: cat,
                                             lastOrderTime: order.orderTime,
                                             orderId: order.id,
-                                            image: detail.image || detail.dishImage || ''
+                                            image: detail.image || detail.dishImage || '',
+                                            // 修改点(2026-09-18)：保留真实菜品/套餐ID，供单菜加购使用
+                                            dishId: detail.dishId || null,
+                                            setmealId: detail.setmealId || null
                                         });
                                     }
                                 }
@@ -455,19 +460,30 @@
                 },
                 async reorder(item) {
                     if (this.submitting) return;
-                    if (!item.orderId) {
-                        vant.Toast.fail('无法复购该菜品');
+                    // 修改点(2026-09-18)：原实现调 /order/again 把「整单」加入购物车，
+                    // 但卡片是单个菜品、按钮却在该菜品上，用户预期只复购这一道菜。改为调购物车加购单品。
+                    if (!item.dishId && !item.setmealId) {
+                        vant.Toast.fail('该菜品暂不支持单独复购');
                         return;
                     }
                     this.submitting = item.key;
                     try {
-                        const res = await reorderAgain({ id: item.orderId });
-                        if (res.code === 1) {
+                        var isSetmeal = !!item.setmealId;
+                        var params = {
+                            amount: parseFloat(Number(item.price || 0).toFixed(2)),
+                            name: item.name,
+                            image: item.image || '',
+                            dishId: isSetmeal ? undefined : item.dishId,
+                            setmealId: isSetmeal ? item.setmealId : undefined
+                        };
+                        const res = await addCartApi(params);
+                        if (res && res.code === 1) {
                             vant.Toast.success('已加入购物车');
                         } else {
-                            vant.Toast.fail(res.msg || '复购失败');
+                            vant.Toast.fail((res && res.msg) || '添加失败');
                         }
                     } catch (e) {
+                        console.error('单菜复购失败:', e);
                         vant.Toast.fail('网络异常，请稍后重试');
                     } finally {
                         this.submitting = null;
