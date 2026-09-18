@@ -48,7 +48,7 @@
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="business-report-app">
-    <div class="container br-container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container br-container" id="main-content" role="main" aria-labelledby="page-title">
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
           <h1 class="ds-page-header__title" id="page-title">经营报表</h1>
@@ -167,7 +167,7 @@
           </div>
         </el-tab-pane>
       </el-tabs>
-    </div>
+    </main>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -208,6 +208,8 @@
           // Tab1 总览
           overviewLoading: false,
           trendData: {},
+          // 修改点：同比/环比数据
+          comparisonData: {},
           detailRows: [],
           detailColumns: [
             { prop: 'date', label: '日期', minWidth: 110 },
@@ -254,9 +256,21 @@
           var rev = revs.reduce(function(s, v) { return s + (Number(v) || 0) }, 0)
           var ord = ords.reduce(function(s, v) { return s + (Number(v) || 0) }, 0)
           var days = revs.length || 0
+          // 修改点：同比/环比增长标注
+          var cd = self.comparisonData || {}
+          var momRev = (cd.mom && cd.mom.revenueGrowth != null) ? Number(cd.mom.revenueGrowth) : null
+          var yoyRev = (cd.yoy && cd.yoy.revenueGrowth != null) ? Number(cd.yoy.revenueGrowth) : null
+          var momOrd = (cd.mom && cd.mom.orderGrowth != null) ? Number(cd.mom.orderGrowth) : null
+          var fmtGrowth = function(g) { return g == null ? '' : (g >= 0 ? '↑' : '↓') + Math.abs(g).toFixed(1) + '%' }
+          var subRev = []
+          if (momRev != null) subRev.push('环比' + fmtGrowth(momRev))
+          if (yoyRev != null) subRev.push('同比' + fmtGrowth(yoyRev))
+          var subOrd = momOrd != null ? '环比' + fmtGrowth(momOrd) : ''
           return [
-            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '总营业额', value: '￥' + self.formatMoney(rev), color: 'primary' },
-            { key: 'orders', icon: 'ri-shopping-bag-3-line', label: '总订单数', value: self.formatNumber(ord), color: 'success' },
+            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '总营业额', value: '￥' + self.formatMoney(rev), color: 'primary',
+              subText: subRev.join('  ') },
+            { key: 'orders', icon: 'ri-shopping-bag-3-line', label: '总订单数', value: self.formatNumber(ord), color: 'success',
+              subText: subOrd },
             { key: 'avg', icon: 'ri-coupon-3-line', label: '客单价', value: ord > 0 ? '￥' + self.formatMoney(rev / ord) : '￥0.00', color: 'warning' },
             { key: 'daily', icon: 'ri-calendar-check-line', label: '日均营业额', value: days > 0 ? '￥' + self.formatMoney(rev / days) : '￥0.00', color: 'info' }
           ]
@@ -331,6 +345,7 @@
           if (this.rankingLoaded) this.loadRanking()
         },
         // ===== 总览 + 销售明细（趋势接口聚合） =====
+        // 修改点：并行获取同比/环比数据
         async loadTrend() {
           this.overviewLoading = true
           this.detailLoading = true
@@ -341,21 +356,42 @@
             this.detailLoading = false
             return
           }
+          var self = this
           try {
-            var res = await getSalesTrend({ period: 'day', startDate: startDate, endDate: endDate })
+            // 计算环比（上一个相同天数的区间）和同比（去年同期）
+            var startD = new Date(startDate.replace(/-/g, '/'))
+            var endD = new Date(endDate.replace(/-/g, '/'))
+            var dayMs = 86400000
+            var periodDays = Math.round((endD - startD) / dayMs) + 1
+            // 环比：当前区间前 N 天
+            var prevEnd = new Date(startD.getTime() - dayMs)
+            var prevStart = new Date(prevEnd.getTime() - (periodDays - 1) * dayMs)
+            var fmtD = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') }
+            // 同比：去年同区间
+            var yoyStart = new Date(startD); yoyStart.setFullYear(yoyStart.getFullYear() - 1)
+            var yoyEnd = new Date(endD); yoyEnd.setFullYear(yoyEnd.getFullYear() - 1)
+            var trendPromise = getSalesTrend({ period: 'day', startDate: startDate, endDate: endDate })
+            var momPromise = getSalesComparison({ period1Start: fmtD(prevStart), period1End: fmtD(prevEnd), period2Start: startDate, period2End: endDate })
+            var yoyPromise = getSalesComparison({ period1Start: fmtD(yoyStart), period1End: fmtD(yoyEnd), period2Start: startDate, period2End: endDate })
+            var results = await Promise.all([trendPromise, momPromise, yoyPromise])
+            var res = results[0]
             if (String(res.code) === '1') {
-              this.trendData = res.data || {}
-              this.buildDetailRows()
-              this.dateLabel = startDate + ' ~ ' + endDate
-              this.$nextTick(function() { this.renderTrend() })
+              self.trendData = res.data || {}
+              self.buildDetailRows()
+              self.dateLabel = startDate + ' ~ ' + endDate
+              self.$nextTick(function() { self.renderTrend() })
             } else {
               ReggieUI.error(res.msg || '加载失败')
             }
+            // 合并同比/环比
+            var momData = (results[1] && String(results[1].code) === '1') ? results[1].data || {} : {}
+            var yoyData = (results[2] && String(results[2].code) === '1') ? results[2].data || {} : {}
+            self.comparisonData = { mom: momData, yoy: yoyData }
           } catch (e) {
             console.warn('加载销售趋势失败:', e)
           } finally {
-            this.overviewLoading = false
-            this.detailLoading = false
+            self.overviewLoading = false
+            self.detailLoading = false
           }
         },
         buildDetailRows: function() {

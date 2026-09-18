@@ -86,7 +86,7 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="eval-app-wrap" id="eval-app" v-loading="loading">
-    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
 
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
@@ -217,7 +217,7 @@
           </div>
         </template>
       </crud-table>
-    </div>
+    </main>
 
     <!-- ========== 详情弹窗（只读，仅有关闭按钮） ========== -->
     <crud-dialog
@@ -365,24 +365,17 @@
           },
           loadStats: function() {
             const self = this;
-            // 修改点：并行请求各状态总数（复用列表接口 total），修复此前 `const ps = [];` 恒为空导致统计卡片永远为 0
-            // 请求顺序对应 stats 字段：''=全部 / '0'=待审核 / '1'=已通过 / '2'=已拒绝
-            const requests = [null, '0', '1', '2'].map(function(status) {
-              const params = { page: 1, pageSize: 1 };
-              if (status !== null) params.status = Number(status);
-              return getEvaluationPage(params).catch(function() { return null; });
-            });
-            Promise.all(requests).then(function(results) {
-              const fields = ['total', 'pending', 'approved', 'rejected'];
-              for (let i = 0; i < results.length; i++) {
-                const r = results[i];
-                if (r && String(r.code) === '1' && r.data) {
-                  self.stats[fields[i]] = r.data.total || 0;
-                }
+            // 修改点：使用聚合接口替代4次分页查询
+            getEvaluationStats().then(function(res) {
+              if (res && String(res.code) === '1' && res.data) {
+                self.stats.total = res.data.total || 0;
+                self.stats.pending = res.data.pending || 0;
+                self.stats.approved = res.data.approved || 0;
+                self.stats.rejected = res.data.rejected || 0;
               }
             }).catch(function(err) {
               if (err && err.message === 'NOTLOGIN') return;
-              ReggieUI.error('加载评价统计失败');
+              console.warn('加载评价统计失败:', err);
             });
           },
           /* ========== 搜索与筛选 ========== */

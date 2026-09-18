@@ -26,6 +26,8 @@ const addPurchase = (params) => $axios({ url: '/api/inventory/purchase-order', m
 const getPurchase = (id) => $axios({ url: `/api/inventory/purchase-order/${id}`, method: 'get' })
 const addPurchaseDetail = (params) => $axios({ url: '/api/inventory/purchase-order/addDetail', method: 'post', data: params })
 const receivePurchase = (id) => $axios({ url: `/api/inventory/purchase-order/receive/${id}`, method: 'put' })
+// 修改点：部分收货——按明细指定数量收货
+const receivePartialPurchase = (id, receiveQtys) => $axios({ url: `/api/inventory/purchase-order/receive-partial/${id}`, method: 'put', data: receiveQtys })
 const approvePurchase = (id) => $axios({ url: `/api/inventory/purchase-order/approve/${id}`, method: 'put' })
 const cancelPurchase = (id) => $axios({ url: `/api/inventory/purchase-order/cancel/${id}`, method: 'put' })
 const purchaseDetailList = (orderId) => $axios({ url: `/api/inventory/purchase-order/detail/${orderId}`, method: 'get' })
@@ -46,6 +48,8 @@ const stockCheckStats = () => $axios({ url: '/api/inventory/stock-check/stats', 
 const stockCheckDetails = (id) => $axios({ url: `/api/inventory/stock-check/${id}/details`, method: 'get' })
 const setStockCheckItems = (id, items) => $axios({ url: `/api/inventory/stock-check/${id}/items`, method: 'put', data: items })
 const recordStockCheckQty = (id, items) => $axios({ url: `/api/inventory/stock-check/${id}/record`, method: 'put', data: items })
+// 修改点：盘点冲正 — 将已完成的盘点单回退到进行中，允许重新录入实盘数量
+const rollbackStockCheck = (id) => $axios({ url: `/api/inventory/stock-check/${id}/rollback`, method: 'put' })
 
 // 库存预警与补货（域⑨）
 const materialWarningPage = (params) => $axios({ url: '/api/inventory/material/warning/page', method: 'get', params })

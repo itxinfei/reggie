@@ -60,8 +60,10 @@
   </style>
 </head>
 <body>
-<a href="#app" class="skip-link">跳转到主内容</a>
-  <div id="app">
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+  <div class="dashboard-container">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <div id="app">
     <div class="monitor-wrap">
       <!-- ========== 顶部工具栏：标题/更新时间/预警阈值/语音开关/全屏 ========== -->
       <div class="top-bar">
@@ -98,6 +100,15 @@
           <div class="order-card__row" v-if="o.amount">¥ {{ o.amount }} <span v-if="o.source">· {{ sourceText(o.source) }}</span></div>
           <div class="order-card__row" v-if="o.tableNo && o.tableNo !== '--'">桌台 {{ o.tableNo }}</div>
           <div class="order-card__dishes">{{ o.dishNames || '--' }}</div>
+          <!-- 修改点：订单卡片增加操作按钮，店员可直接接单/拒绝，无需跳转订单列表 -->
+          <div class="order-card__actions" style="margin-top:var(--space-3);display:flex;gap:var(--space-2)">
+            <el-button type="success" size="mini" @click="confirmOne(o)" :loading="o._confirming" :aria-label="'接单 ' + (o.orderNo || '')">
+              <i class="ri-check-line"></i> 接单
+            </el-button>
+            <el-button type="danger" size="mini" plain @click="rejectOne(o)" :loading="o._rejecting" :aria-label="'拒绝 ' + (o.orderNo || '')">
+              <i class="ri-close-line"></i> 拒绝
+            </el-button>
+          </div>
         </div>
       </div>
       <!-- ========== 空状态：无待接单订单 ========== -->
@@ -106,6 +117,8 @@
         <div>暂无待接单订单，接单很及时 <i class="ri-thumb-up-line emoji-inline" aria-hidden="true"></i></div>
       </div>
     </div>
+      </div>
+    </main>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -116,6 +129,7 @@
   <script src="../../js/performance-utils.js?v=20260915c"></script>
   <script src="../../js/components.js?v=20260915c"></script>
   <script src="../../api/urgency.js?v=20260915c"></script>
+  <script src="../../api/order.js?v=20260915c"></script>
   <script>
     new Vue({
       el: '#app',
@@ -218,6 +232,43 @@
           if (s === 'QUEUE') return '排队'
           if (s === 'RESERVATION') return '预订'
           return s || ''
+        },
+        /* 修改点：接单操作 — 直接在监控卡片上完成，无需跳转订单列表 */
+        confirmOne: function (o) {
+          if (o._confirming) return
+          var self = this
+          this.$set(o, '_confirming', true)
+          confirmOrder({ id: o.id }).then(function (res) {
+            if (res && res.code === 1) {
+              self.$message && self.$message.success('接单成功')
+              self.loadData()
+            } else {
+              self.$message && self.$message.error((res && res.msg) || '接单失败')
+            }
+          }).catch(function (err) {
+            self.$message && self.$message.error('接单请求失败')
+            console.warn('[order-monitor] 接单失败:', err)
+          }).finally(function () { self.$set(o, '_confirming', false) })
+        },
+        rejectOne: function (o) {
+          if (o._rejecting) return
+          var self = this
+          this.$confirm('确认拒绝订单 #' + this.tail(o.orderNo) + '？拒绝后不可恢复。', '拒绝确认', {
+            confirmButtonText: '确认拒绝', cancelButtonText: '取消', type: 'warning'
+          }).then(function () {
+            self.$set(o, '_rejecting', true)
+            rejectOrder({ id: o.id }).then(function (res) {
+              if (res && res.code === 1) {
+                self.$message && self.$message.success('已拒绝')
+                self.loadData()
+              } else {
+                self.$message && self.$message.error((res && res.msg) || '拒绝失败')
+              }
+            }).catch(function (err) {
+              self.$message && self.$message.error('拒绝请求失败')
+              console.warn('[order-monitor] 拒绝失败:', err)
+            }).finally(function () { self.$set(o, '_rejecting', false) })
+          }).catch(function () { /* 用户取消 */ })
         }
       }
     })

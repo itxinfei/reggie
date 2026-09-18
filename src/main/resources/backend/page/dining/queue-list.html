@@ -79,7 +79,7 @@
   <!-- 功能：堂食排队取号、叫号、入座全流程管理，支持按手机号/状态筛选、统计卡片快速过滤 -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="queue-app">
-    <div class="container queue-container" id="main-content" role="main" aria-label="排队叫号看板">
+    <main class="container queue-container" id="main-content" role="main" aria-label="排队叫号看板">
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
           <h1 class="ds-page-header__title" id="page-title">排队叫号</h1>
@@ -176,7 +176,7 @@
         <div class="empty-state__icon"><i class="ri-file-list-3-line" aria-hidden="true"></i></div>
         <div>暂无排队记录</div>
         <div class="empty-state__desc">点击上方"取号"为顾客创建排队记录</div>
-      </div>
+      </main>
     </div>
 
     <!-- 取号弹窗 -->
@@ -388,13 +388,22 @@
           // 传 200 会触发参数校验 400，桌台下拉选项加载直接失败（且 PageUtils.cap 亦封顶 100）
           tablePage({ page: 1, pageSize: 100 }).then(function(res) {
             if (res.code === 1 && res.data && res.data.records) {
-              self.tableOptions = res.data.records.map(function(t) {
-                return {
-                  value: t.id,
-                  label: (t.name || '桌台') + '（' + (t.areaName || '未知区域') + '，' + (t.seatCount || 0) + '座）',
-                  disabled: t.status !== 'FREE'
-                }
-              })
+              // 修改点：根据当前排队人数过滤桌台，仅显示座位数 >= 就餐人数的空闲桌台
+              // seatCount 在 seatHandle 中设置，loadTableOptions 可能在 seatHandle 之前加载，
+              // 此时 seatForm.seatCount=0 不过滤；seatHandle 会再次调用 loadTableOptions 刷新
+              var minSeat = self.seatForm.seatCount || 0
+              self.tableOptions = res.data.records
+                .filter(function(t) {
+                  if (t.status !== 'FREE') return false
+                  if (minSeat > 0 && (t.seatCount || 0) < minSeat) return false
+                  return true
+                })
+                .map(function(t) {
+                  return {
+                    value: t.id,
+                    label: (t.name || '桌台') + '（' + (t.areaName || '未知区域') + '，' + (t.seatCount || 0) + '座）'
+                  }
+                })
             }
           }).catch(function() { /* 桌台加载失败不影响主流程 */ })
         },
@@ -494,6 +503,8 @@
           this.seatForm.createdTimeDisplay = row.createdTime || ''
           this.seatForm.tableId = null
           this.seatForm.dialogVisible = true
+          // 修改点：入座时按就餐人数重新过滤桌台，仅显示座位数足够且空闲的桌台
+          this.loadTableOptions()
         },
         handleSeatClose: function() {
           this.seatForm.dialogVisible = false

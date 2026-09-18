@@ -88,9 +88,10 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-3);
   flex-wrap: wrap;
-  margin-bottom: var(--space-5);
+  /* 管理后台以数据密度优先，页头与内容间距从 20px 收紧至 12px */
+  margin-bottom: var(--space-3);
 }
 .ds-page-header__titles {
   display: flex;

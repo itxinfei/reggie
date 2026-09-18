@@ -101,4 +101,6 @@ reggie:
       regeocode-url: https://restapi.amap.com/v3/geocode/regeo
       # 请求超时（毫秒）
       timeout-ms: 3000
+  image:
+    download-real-images: false
 

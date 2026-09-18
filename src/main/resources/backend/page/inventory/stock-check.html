@@ -91,7 +91,7 @@
   <!-- 功能：分步盘点流程（创建盘点单→选择食材→录入实盘→完成盘点），支持展开行查看明细差异 -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="stock-check-app">
-    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头 -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -230,11 +230,16 @@
             </el-button>
             <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row)">删除</el-button>
           </template>
-          <!-- 已完成：无操作 -->
-          <span v-else style="color:var(--text-muted);font-size:var(--font-size-xs);">已完成</span>
+          <!-- 已完成：冲正（回退到进行中，允许重新录入修正） -->
+          <template v-else-if="row.status === 'DONE'">
+            <el-button type="text" size="small" style="color:var(--color-warning);" @click="rollbackHandle(row)" :aria-label="'冲正盘点单 ' + (row.checkNo || '')">
+              <i class="ri-refresh-line" style="margin-right:4px;"></i>冲正
+            </el-button>
+          </template>
+          <span v-else style="color:var(--text-muted);font-size:var(--font-size-xs);">--</span>
         </template>
       </crud-table>
-    </div>
+    </main>
 
     <!-- ═══════ 弹窗1：新增盘点单 ═══════ -->
     <crud-dialog :show-submit="true" :show-cancel="true"
@@ -682,6 +687,24 @@
                 ReggieUI.error(res.msg || '删除失败');
               }
             }).catch(function(err) { ReggieUI.error('删除失败：' + err); });
+          }).catch(function() {});
+        },
+        /* 修改点：盘点冲正 — 已完成的盘点单回退到进行中，允许重新录入修正 */
+        rollbackHandle: function(row) {
+          var self = this;
+          ReggieUI.confirm('确认冲正盘点单 ' + row.checkNo + '？冲正后可重新录入实盘数量。', '盘点冲正', {
+            confirmButtonText: '确认冲正',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(function() {
+            rollbackStockCheck(row.id).then(function(res) {
+              if (String(res.code) === '1') {
+                ReggieUI.success('已回退到进行中，请重新录入实盘数量');
+                self.init(true);
+              } else {
+                ReggieUI.error(res.msg || '冲正失败');
+              }
+            }).catch(function(err) { ReggieUI.error('冲正失败：' + err); });
           }).catch(function() {});
         }
       }

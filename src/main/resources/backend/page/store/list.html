@@ -67,7 +67,7 @@
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div id="app">
     <div class="dashboard-container">
-        <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+        <main class="container" id="main-content" role="main" aria-label="页面主要内容">
             <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
             <header class="ds-page-header">
                 <div class="ds-page-header__titles">
@@ -396,7 +396,7 @@
             <el-button size="small" type="primary" @click="doSync('dishes')" :loading="syncing.dishes" icon="ri-price-tag-line">同步菜品</el-button>
             <el-button size="small" type="success" @click="doSync('categories')" :loading="syncing.categories" icon="ri-menu-line">同步分类</el-button>
             <el-button size="small" type="warning" @click="doSync('setmeals')" :loading="syncing.setmeals" icon="ri-grid-line">同步套餐</el-button>
-        </div>
+        </main>
         <el-alert
             v-if="syncResult"
             :title='同步完成：成功 ' + syncResult.synced + ' 条，失败 ' + syncResult.failed + ' 条'

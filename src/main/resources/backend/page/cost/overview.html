@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260915c" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
     /* ── 全局基础 ── */
@@ -21,75 +20,55 @@
       background: var(--bg-page);
       font-family: var(--font-family-base);
     }
-    /* ── 图表行布局 ── */
-    /* ── 图表区域 ── */
-    .chart-row {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-    .chart-card {
-      background: var(--bg-surface);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--el-border-light);
-    }
+    /* ── 图表卡片内标题 ── */
     .chart-title {
-      font-size:var(--font-size-lg);
+      font-size: var(--font-size-lg);
       font-weight: 600;
-      color: var(--el-text-primary);
-      margin-bottom: 16px;
+      color: var(--text-primary);
+      margin-bottom: var(--space-4);
     }
     .chart-container {
       height: 300px;
     }
-    /* ── 成本预警列表 ── */
-    .alert-list {
-      background: var(--bg-surface);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--el-border-light);
-    }
+    /* ── 预警条目（自定义语义色，使用设计令牌） ── */
     .alert-item {
       display: flex;
       align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--el-border-lighter);
+      padding: var(--space-3) 0;
+      border-bottom: 1px solid var(--border-default);
     }
     .alert-item:last-child {
       border-bottom: none;
     }
     .alert-level {
       padding: 4px 8px;
-border-radius: var(--radius-sm);
-      font-size:var(--font-size-xs);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-xs);
       font-weight: 600;
-      margin-right: 12px;
+      margin-right: var(--space-3);
+      flex-shrink: 0;
     }
     .alert-level.critical {
-      background: var(--el-color-danger-lighter);
-      color: var(--el-color-danger);
+      background: var(--color-danger-light);
+      color: var(--color-danger);
     }
     .alert-level.warning {
-      background: var(--el-color-warning-lighter);
-      color: var(--el-color-warning);
+      background: var(--color-warning-light);
+      color: var(--color-warning);
     }
     .alert-level.info {
-      background: var(--el-color-info-lighter);
-      color: var(--el-color-info);
+      background: var(--color-info-light);
+      color: var(--color-info);
     }
     .alert-level.normal {
-      background: var(--el-color-success-lighter);
-      color: var(--el-color-success);
+      background: var(--color-success-light);
+      color: var(--color-success);
     }
   </style>
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
-  <a href="#app" class="skip-link">跳转到主内容</a>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div id="app" class="dashboard-container">
     <main class="container ds-page" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题 -->
@@ -100,10 +79,10 @@ border-radius: var(--radius-sm);
         </div>
       </header>
 
-      <!-- 统计卡片 -->
+      <!-- 统计卡片（统一 <stat-cards> 组件） -->
       <stat-cards :cards="statsCards"></stat-cards>
 
-      <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
+      <!-- 搜索栏（统一 <table-bar> 组件） -->
       <table-bar
         :search-items="searchItems"
         :actions="searchActions"
@@ -113,30 +92,32 @@ border-radius: var(--radius-sm);
         @action="handleAction">
       </table-bar>
 
-      <!-- 图表行 -->
-      <div class="chart-row">
-        <!-- 成本趋势图 -->
-        <div class="chart-card">
-          <div class="chart-title">成本趋势分析</div>
-          <div id="trendChart" class="chart-container"></div>
-        </div>
-        <!-- 成本结构图 -->
-        <div class="chart-card">
-          <div class="chart-title">成本结构分析</div>
-          <div id="structureChart" class="chart-container"></div>
-        </div>
-      </div>
+      <!-- 图表区（el-row/el-col 24 栅格，小屏自动折叠为单列） -->
+      <el-row :gutter="12" style="margin-bottom: var(--space-4);">
+        <el-col :xs="24" :sm="12">
+          <el-card shadow="never" body-style="padding: var(--space-4);">
+            <div class="chart-title">成本趋势分析</div>
+            <div id="trendChart" class="chart-container"></div>
+          </el-card>
+        </el-col>
+        <el-col :xs="24" :sm="12">
+          <el-card shadow="never" body-style="padding: var(--space-4);">
+            <div class="chart-title">成本结构分析</div>
+            <div id="structureChart" class="chart-container"></div>
+          </el-card>
+        </el-col>
+      </el-row>
 
-      <!-- 成本排名 -->
-      <div class="chart-card" style="margin-bottom: var(--space-5);">
+      <!-- 成本排名（整行卡片） -->
+      <el-card shadow="never" body-style="padding: var(--space-4);" style="margin-bottom: var(--space-5);">
         <div class="chart-title">菜品成本排名</div>
         <div id="rankingChart" class="chart-container"></div>
-      </div>
+      </el-card>
 
-      <!-- 成本预警 -->
-      <div class="alert-list">
+      <!-- 成本预警（整行卡片） -->
+      <el-card shadow="never" body-style="padding: var(--space-4);">
         <div class="chart-title">成本预警</div>
-        <div v-if="alerts.length === 0" style="text-align: center; padding: var(--space-5); color: var(--el-text-secondary);">
+        <div v-if="alerts.length === 0" style="text-align: center; padding: var(--space-5); color: var(--text-secondary);">
           暂无预警信息
         </div>
         <div v-else>
@@ -145,7 +126,7 @@ border-radius: var(--radius-sm);
             <span>{{ alert.message }}</span>
           </div>
         </div>
-      </div>
+      </el-card>
     </main>
   </div>
 

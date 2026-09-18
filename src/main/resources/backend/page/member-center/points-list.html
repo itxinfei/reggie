@@ -46,7 +46,7 @@
   <!-- 功能：查看会员积分变动记录，支持按手机号/类型筛选，含趋势图与饼图统计，支持手动积分调整 -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="points-app">
-    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -115,7 +115,7 @@
           <span style="font-weight:600;">{{ row.balance != null ? row.balance : '-' }}</span>
         </template>
       </crud-table>
-    </div>
+    </main>
 
     <!-- ===== 积分调整弹窗（8.4.3：发放/扣减/说明） ===== -->
     <crud-dialog :show-submit="true" :show-cancel="true" title="积分调整" :visible.sync="adjustForm.dialogVisible" :submit-loading="adjustLoading" size="md" @submit="submitAdjust">

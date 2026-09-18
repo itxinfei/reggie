@@ -415,7 +415,7 @@
   <a class="skip-link" href="#main-content">跳到主内容</a>
   <!-- 修改点：P2-1 骨架屏——移除根 v-loading 全屏转圈遮罩，加载态改由页面级骨架屏呈现 -->
   <div class="overview-container" id="dashboard-app" v-cloak>
-    <div class="container" id="main-content" role="main" tabindex="-1">
+    <main class="container" id="main-content" role="main" aria-labelledby="page-title">
 
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
@@ -465,7 +465,15 @@
       </section>
 
       <!-- ========== KPI 指标卡片（点击下钻） ========== -->
-      <stat-cards :cards="kpiCards" :loading="loading" @card-click="onKpiClick"></stat-cards>
+      <div style="position:relative;">
+        <stat-cards :cards="kpiCards" :loading="loading" @card-click="onKpiClick"></stat-cards>
+        <!-- 修改点：营收目标设置入口 -->
+        <el-tooltip content="设置营收目标" placement="top">
+          <el-button size="mini" circle style="position:absolute;top:8px;right:8px;" @click="openTargetDialog">
+            <i class="ri-settings-3-line"></i>
+          </el-button>
+        </el-tooltip>
+      </div>
 
       <!-- ========== 库存预警提示 ========== -->
       <!-- 修改点：集成库存预警，显示低库存食材名称 -->
@@ -487,8 +495,16 @@
       <!-- ========== 图表区域: 趋势图 + 订单状态饼图 ========== -->
       <div class="charts-row">
         <div class="chart-panel">
-          <div class="chart-title"><i class="ri-line-chart-line" aria-hidden="true"></i> 近7日订单与营收趋势</div>
-          <div class="chart-box" id="trendChart" role="img" aria-label="近7日订单与营收趋势图表"></div>
+          <div class="chart-title" style="display:flex;align-items:center;justify-content:space-between;">
+            <span><i class="ri-line-chart-line" aria-hidden="true"></i> 近{{ trendDays }}日订单与营收趋势</span>
+            <!-- 修改点：趋势图时间范围切换 -->
+            <el-radio-group v-model="trendDays" size="mini" @change="switchTrendDays" style="margin-left:12px;">
+              <el-radio-button :label="7">7天</el-radio-button>
+              <el-radio-button :label="14">14天</el-radio-button>
+              <el-radio-button :label="30">30天</el-radio-button>
+            </el-radio-group>
+          </div>
+          <div class="chart-box" id="trendChart" role="img" :aria-label="'近' + trendDays + '日订单与营收趋势图表'"></div>
         </div>
         <div class="chart-panel">
           <div class="chart-title"><i class="ri-pie-chart-line" aria-hidden="true"></i> 今日订单状态分布</div>
@@ -577,7 +593,26 @@
         </div>
       </div>
 
-    </div>
+    </main>
+
+    <!-- 修改点：营收目标设置弹窗 -->
+    <crud-dialog
+      :visible.sync="targetDialogVisible"
+      title="设置营收目标"
+      size="sm"
+      :show-submit="true"
+      submit-text="保存"
+      @submit="saveTargets"
+    >
+      <el-form label-width="100px">
+        <el-form-item label="日目标（元）">
+          <el-input-number v-model="targetForm.daily" :min="0" :step="500" :precision="2" controls-position="right" style="width:100%;" placeholder="如 5000"></el-input-number>
+        </el-form-item>
+        <el-form-item label="月目标（元）">
+          <el-input-number v-model="targetForm.monthly" :min="0" :step="5000" :precision="2" controls-position="right" style="width:100%;" placeholder="如 150000"></el-input-number>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
   </div>
 
   <!-- JS依赖 -->
@@ -617,6 +652,8 @@
           loading: false,
           overview: {},
           trend: [],
+          // 修改点：趋势图天数切换（7/14/30天）
+          trendDays: 7,
           orderStatus: {},
           hotDishes: [],
           inventoryAlert: null,
@@ -636,6 +673,11 @@
           _resizeHandler: null,
           // 修改点：昨日对比数据
           yesterdayOrders: 0,
+          // 修改点：营收目标（localStorage 持久化）
+          dailyTarget: 0,
+          monthlyTarget: 0,
+          targetDialogVisible: false,
+          targetForm: { daily: '', monthly: '' },
           yesterdayRevenue: 0,
           orderTrendClass: 'neutral',
           orderTrendText: '--',
@@ -649,9 +691,16 @@
           const ov = this.overview || {};
           const orderTrend = this.yesterdayOrders > 0 ? ' · ' + this.orderTrendText : '';
           const revenueTrend = this.yesterdayRevenue > 0 ? ' · ' + this.revenueTrendText : '';
+          // 修改点：营收目标进度
+          var revSub = '客单价 ¥' + (ov.avgAmount || '0.00') + revenueTrend;
+          if (this.dailyTarget > 0) {
+            var curRev = Number(ov.totalRevenue) || 0;
+            var pct = Math.min(100, Math.round(curRev / this.dailyTarget * 100));
+            revSub = '目标 ¥' + this.formatMoney(this.dailyTarget) + ' · 完成 ' + pct + '%' + revenueTrend;
+          }
           return [
             { key: 'orders', icon: 'ri-file-list-3-line', label: '今日订单数', value: ov.totalOrders || 0, color: 'primary', clickable: true, subText: '完成率 ' + (ov.completionRate || 0) + '%' + orderTrend },
-            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '今日营业额 (元)', value: this.formatMoney(ov.totalRevenue), color: 'success', clickable: true, subText: '客单价 ¥' + (ov.avgAmount || '0.00') + revenueTrend },
+            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '今日营业额 (元)', value: this.formatMoney(ov.totalRevenue), color: 'success', clickable: true, subText: revSub },
             { key: 'pending', icon: 'ri-time-line', label: '待处理订单', value: ov.pendingOrders || 0, color: 'warning', clickable: true, subText: '已完成 ' + (ov.completedOrders || 0) + ' | 已取消 ' + (ov.cancelledOrders || 0) },
             { key: 'users', icon: 'ri-group-line', label: '注册用户 / 在职员工', value: (ov.totalUsers || 0) + ' / ' + (ov.activeEmployees || 0), color: 'info', clickable: true, subText: '数据来源: ' + (ov.cacheSource || 'MySQL') }
           ];
@@ -676,6 +725,11 @@
       created() {
         // 提前触发 ECharts 懒加载，使其与首屏数据请求并行下载
         loadEchartsScript();
+        // 修改点：从 localStorage 加载营收目标
+        try {
+          this.dailyTarget = Number(localStorage.getItem('rg_dashboard_dailyTarget')) || 0;
+          this.monthlyTarget = Number(localStorage.getItem('rg_dashboard_monthlyTarget')) || 0;
+        } catch (e) { /* 静默 */ }
         this.loadAllData();
       },
       mounted() {
@@ -753,6 +807,37 @@
           } finally {
             this.loading = false;
           }
+        },
+
+        // 修改点：切换趋势图天数，重新加载趋势数据
+        async switchTrendDays(days) {
+          try {
+            var res = await dashboardTrend({ days: days });
+            if (String(res.code) === '1') {
+              this.trend = res.data || [];
+              this.renderTrendChart();
+            }
+          } catch (e) {
+            console.warn('切换趋势图天数失败:', e);
+          }
+        },
+
+        // 修改点：打开营收目标设置弹窗
+        openTargetDialog() {
+          this.targetForm.daily = this.dailyTarget || '';
+          this.targetForm.monthly = this.monthlyTarget || '';
+          this.targetDialogVisible = true;
+        },
+        // 修改点：保存营收目标到 localStorage
+        saveTargets() {
+          this.dailyTarget = Number(this.targetForm.daily) || 0;
+          this.monthlyTarget = Number(this.targetForm.monthly) || 0;
+          try {
+            localStorage.setItem('rg_dashboard_dailyTarget', String(this.dailyTarget));
+            localStorage.setItem('rg_dashboard_monthlyTarget', String(this.monthlyTarget));
+          } catch (e) { /* 静默 */ }
+          this.targetDialogVisible = false;
+          ReggieUI.success('营收目标已保存');
         },
 
         // 修改点：从趋势数据计算昨日对比

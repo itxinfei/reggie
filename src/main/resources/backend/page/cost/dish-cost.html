@@ -28,9 +28,9 @@
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
-  <a href="#app" class="skip-link">跳转到主内容</a>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div id="app" class="dashboard-container">
-    <main class="container ds-page" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
     <!-- 页头：标题 + 副标题 -->
     <header class="ds-page-header">
       <div class="ds-page-header__titles">
@@ -120,6 +120,26 @@
         </el-form-item>
       </el-form>
     </crud-dialog>
+
+    <!-- 修改点：批量导入弹窗 -->
+    <crud-dialog
+      :visible.sync="importDialogVisible"
+      title="批量导入菜品成本"
+      size="lg"
+      :show-submit="true"
+      submit-text="导入"
+      :submit-loading="importLoading"
+      @submit="submitImport"
+    >
+      <el-alert type="info" :closable="false" style="margin-bottom:16px;">
+        <div slot="title">
+          粘贴 CSV 格式数据，第一行为表头。支持列名：<b>菜品名称, 食材成本, 人工成本, 其他成本, 售价, 备注</b>
+          <br/>示例：<code>菜品名称,食材成本,人工成本,其他成本,售价,备注</code>
+        </div>
+      </el-alert>
+      <el-input type="textarea" v-model="importCsvText" :rows="12" placeholder="菜品名称,食材成本,人工成本,其他成本,售价,备注&#10;宫保鸡丁,8.50,2.00,1.00,28.00,&#10;鱼香肉丝,7.00,2.00,0.50,25.00,热销"></el-input>
+    </crud-dialog>
+
     </main>
   </div>
 
@@ -147,6 +167,7 @@
           tableActions: [
             { key: 'sync', text: '从采购价同步', type: 'warning', icon: 'ri-refresh-line' },
             { key: 'add', text: '新增菜品成本', type: 'primary', icon: 'ri-add-line' },
+            { key: 'import', text: '批量导入', type: 'info', icon: 'ri-upload-2-line' },
             { key: 'export', text: '导出', type: 'success', icon: 'ri-download-line' }
           ],
           tableData: [],
@@ -180,7 +201,11 @@
           },
           dishOptions: [],
           dishLoading: false,
-          syncLoading: false
+          syncLoading: false,
+          // 修改点：批量导入
+          importDialogVisible: false,
+          importCsvText: '',
+          importLoading: false
         }
       },
       computed: {
@@ -241,6 +266,68 @@
             this.handleSyncFromPurchase()
           } else if (action.key === 'export') {
             this.handleExport()
+          } else if (action.key === 'import') {
+            this.importCsvText = ''
+            this.importDialogVisible = true
+          }
+        },
+        // ========== 批量导入 ==========
+        parseCsvToRows(csvText) {
+          var lines = csvText.trim().split(/\r?\n/);
+          if (lines.length < 2) return [];
+          var header = lines[0].split(',').map(function(h) { return h.trim(); });
+          var rows = [];
+          for (var i = 1; i < lines.length; i++) {
+            var cols = lines[i].split(',').map(function(c) { return c.trim(); });
+            if (cols.length < 1 || !cols[0]) continue;
+            var obj = {};
+            for (var j = 0; j < header.length; j++) {
+              obj[header[j]] = cols[j] || '';
+            }
+            rows.push(obj);
+          }
+          return rows;
+        },
+        async submitImport() {
+          if (!this.importCsvText.trim()) {
+            ReggieUI.warning('请粘贴 CSV 数据');
+            return;
+          }
+          var parsed = this.parseCsvToRows(this.importCsvText);
+          if (parsed.length === 0) {
+            ReggieUI.warning('未解析到有效数据行');
+            return;
+          }
+          // 将 CSV 字段映射到 DishCost 对象
+          var dishCosts = parsed.map(function(row) {
+            return {
+              dishName: row['菜品名称'] || row['dishName'] || '',
+              materialCost: parseFloat(row['食材成本'] || row['materialCost'] || 0) || 0,
+              laborCost: parseFloat(row['人工成本'] || row['laborCost'] || 0) || 0,
+              otherCost: parseFloat(row['其他成本'] || row['otherCost'] || 0) || 0,
+              salePrice: parseFloat(row['售价'] || row['salePrice'] || 0) || 0,
+              remark: row['备注'] || row['remark'] || ''
+            };
+          }).filter(function(d) { return !!d.dishName; });
+
+          if (dishCosts.length === 0) {
+            ReggieUI.warning('未解析到有效菜品数据，请检查 CSV 格式');
+            return;
+          }
+          this.importLoading = true;
+          try {
+            var res = await batchUpdateDishCost(dishCosts);
+            if (String(res.code) === '1') {
+              ReggieUI.success('批量导入成功，共 ' + dishCosts.length + ' 条');
+              this.importDialogVisible = false;
+              this.fetchData();
+            } else {
+              ReggieUI.error(res.msg || '导入失败');
+            }
+          } catch (e) {
+            ReggieUI.error('导入请求失败：' + (e.message || e));
+          } finally {
+            this.importLoading = false;
           }
         },
         // ========== 菜品远程搜索与选择 ==========

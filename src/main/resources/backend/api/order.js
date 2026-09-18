@@ -130,3 +130,12 @@ const editOrderDetail = (params) => {
     data: { ...params }
   })
 }
+
+// 修改点：更新订单内部备注（仅后台可见）
+const updateInternalRemark = (id, remark) => {
+  return $axios({
+    url: '/order/internal-remark',
+    method: 'put',
+    params: { id: id, remark: remark }
+  })
+}

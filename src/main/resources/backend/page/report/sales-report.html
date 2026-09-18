@@ -50,8 +50,8 @@
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
- <a href="#app" class="skip-link">跳转到主内容</a>
- <div id="app" class="container ds-page" role="main" aria-label="页面主要内容">
+ <a href="#main-content" class="skip-link">跳转到主内容</a>
+ <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
     <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
     <header class="ds-page-header">
       <div class="ds-page-header__titles">
@@ -123,7 +123,7 @@
       empty-hint="暂无数据，试试调整筛选条件"
     >
     </crud-table>
-  </div>
+ </main>
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>

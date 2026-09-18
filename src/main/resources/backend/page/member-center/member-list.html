@@ -45,7 +45,7 @@
   <!-- 功能：管理会员信息、等级与余额，支持新增/编辑/充值/启禁用/删除会员，详情弹窗展示充值记录与优惠券 -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="member-app">
-    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -102,7 +102,7 @@
           <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
         </template>
       </crud-table>
-    </div>
+    </main>
 
     <!-- ===== 会员详情弹窗（2026-09-01：原 8.4.1 双栏右卡迁移为弹窗式详情） ===== -->
     <crud-dialog :show-submit="false" :show-cancel="true"

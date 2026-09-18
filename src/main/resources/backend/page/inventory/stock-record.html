@@ -15,7 +15,7 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="stock-record-app">
-    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -77,7 +77,7 @@
         <template #col-unitPrice="{ row }">￥{{ row.unitPrice }}</template>
         <template #col-totalAmount="{ row }">￥{{ row.totalAmount }}</template>
       </crud-table>
-    </div>
+    </main>
 
     <!-- C.4：入库/出库操作（流水页内新增，不再跳独立页） -->
     <crud-dialog :show-submit="true" :show-cancel="true"

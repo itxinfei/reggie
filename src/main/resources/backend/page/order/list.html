@@ -190,6 +190,14 @@
               <div class="od-kv"><span>下单时间</span><span>{{ diaForm.orderTime || '-' }}</span></div>
               <div class="od-kv" v-if="diaForm.checkoutTime"><span>结账时间</span><span>{{ diaForm.checkoutTime }}</span></div>
               <div class="od-kv" v-if="diaForm.remark"><span>备注</span><span>{{ diaForm.remark }}</span></div>
+              <!-- 修改点：内部备注可编辑，店员可补充运营信息（如"少辣""骑手已联系"） -->
+              <div class="od-kv" style="align-items:flex-start">
+                <span>内部备注</span>
+                <div style="flex:1;display:flex;gap:8px;align-items:flex-start">
+                  <el-input v-model="internalNote" type="textarea" :rows="2" size="small" placeholder="仅后台可见，用于记录运营信息" style="flex:1"></el-input>
+                  <el-button type="primary" size="mini" @click="saveNote" :loading="noteSaving" style="flex-shrink:0;margin-top:2px">保存</el-button>
+                </div>
+              </div>
             </div>
           </aside>
         </div>
@@ -215,7 +223,7 @@
         </div>
         <div class="item-box">
           <span class="label">退款金额：</span>
-          <el-input v-model="refundForm.amount" type="number" size="small" :max="refundForm.maxAmount" :min="0.01" :step="0.01"></el-input>
+          <el-input-number v-model="refundForm.amount" size="small" :max="refundForm.maxAmount" :min="0.01" :step="0.01" :precision="2" controls-position="right" style="width:180px"></el-input-number>
         </div>
         <div class="item-box">
           <span class="label">可退上限：</span>
@@ -305,7 +313,10 @@
           diaForm: {},
           refundVisible: false,
           refundLoading: false,
-          refundForm: { id: null, number: '', amount: 0, maxAmount: 0, reasonType: '', reasonDetail: '' }
+          refundForm: { id: null, number: '', amount: 0, maxAmount: 0, reasonType: '', reasonDetail: '' },
+          // 修改点：内部备注（仅后台可见，用于店员记录运营信息）
+          internalNote: '',
+          noteSaving: false
         }
       },
       computed: {
@@ -499,13 +510,36 @@
           this.dialogVisible = true
           // 修改点：用当前行数据预填充 diaForm（表格已有完整字段），避免弹窗从空内容膨胀导致抖动
           this.diaForm = { ...row }
+          // 修改点：加载内部备注（remark 字段已含客户备注，内部备注用 internalRemark 字段）
+          this.internalNote = row.internalRemark || ''
+          this.noteSaving = false
           // 异步获取完整订单详情（含 orderDetails 菜品明细），静默更新不触发额外重排
           const self = this
           queryOrderDetailById(row.id).then(function(res) {
             if (res && res.code === 1 && res.data) {
               self.diaForm = res.data
+              self.internalNote = res.data.internalRemark || ''
             }
           }).catch(function(err) { console.warn('[order] 获取订单详情失败:', err) })
+        },
+        /* 修改点：保存内部备注（仅后台可见） */
+        saveNote: function() {
+          if (this.noteSaving) return
+          if (!this.diaForm || !this.diaForm.id) return
+          var self = this
+          self.noteSaving = true
+          updateInternalRemark(self.diaForm.id, self.internalNote || '').then(function(res) {
+            if (res && res.code === 1) {
+              ReggieUI.success('备注已保存')
+              // 同步更新 diaForm 避免再次打开弹窗时数据过期
+              self.diaForm.internalRemark = self.internalNote
+            } else {
+              ReggieUI.error((res && res.msg) || '保存失败')
+            }
+          }).catch(function(err) {
+            ReggieUI.error('保存失败')
+            console.warn('[order] 保存内部备注失败:', err)
+          }).finally(function() { self.noteSaving = false })
         },
         cancelOrder: function(row) {
           const self = this
@@ -536,6 +570,11 @@
           // 修改点：防重保护（原无守卫，快速双击可并发退款）
           if (self.refundLoading) return
           if (!self.refundForm.amount || parseFloat(self.refundForm.amount) <= 0) { ReggieUI.warning('请输入有效的退款金额'); return }
+          // 修改点：前端硬限制退款金额不超过可退上限，避免用户误输入超限金额
+          if (parseFloat(self.refundForm.amount) > parseFloat(self.refundForm.maxAmount)) {
+            ReggieUI.warning('退款金额不能超过可退上限 ￥' + self.refundForm.maxAmount)
+            return
+          }
           let reason = self.refundForm.reasonType
           if (!reason) { ReggieUI.warning('请选择退款原因'); return }
           if (reason === '其他原因') {

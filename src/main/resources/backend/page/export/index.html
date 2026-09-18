@@ -125,8 +125,8 @@
 </head>
 <body>
     <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
-    <a href="#app" class="skip-link">跳转到主内容</a>
-    <div id="app" role="main" aria-label="页面主要内容">
+    <a href="#main-content" class="skip-link">跳转到主内容</a>
+    <main class="container ds-page" id="main-content" role="main" aria-label="页面主要内容">
       <div class="dashboard-container">
           <header class="ds-page-header">
             <div class="ds-page-header__titles">
@@ -314,7 +314,7 @@
             </div>
         </div>
       </div>
-    </div>
+    </main>
 
     <!-- ========== 全屏导出 Loading 遮罩（与营业日报一致） ========== -->
     <div v-loading="anyExporting" element-loading-text="正在导出..." element-loading-background="rgba(0,0,0,0.5)"></div>
@@ -330,7 +330,7 @@
     <script src="../../api/export.js?v=20260915c"></script>
     <script>
         new Vue({
-            el: '#app',
+            el: '#main-content',
             data: {
                 orderFilter: { dateRange: [], status: '' },
                 orderExport: { loading: false },

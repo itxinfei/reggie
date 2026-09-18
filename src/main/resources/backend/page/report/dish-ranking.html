@@ -135,6 +135,7 @@
   <script src="../../js/accessibility-utils.js?v=20260915c"></script>
   <script src="../../js/performance-utils.js?v=20260915c"></script>
   <script src="../../api/report.js?v=20260915c"></script>
+  <script src="../../api/category.js?v=20260918"></script>
   <script src="../../js/components.js?v=20260915c"></script>
   <script src="../../js/chart-panel.js?v=20260915c"></script>
   <script>
@@ -142,9 +143,12 @@
       el: '#report-dish-app',
       data: function() {
         return {
-          loading: false, dateRange: [], limit: 10, tableData: [],
-          // 搜索配置（分类筛选已由报表接口按日期/数量聚合，无需分类下拉）
-          searchConfig: [],
+          loading: false, dateRange: [], limit: 10, tableData: [], categoryId: null,
+          // 修改点：分类筛选下拉
+          categoryOptions: [],
+          searchConfig: [
+            { type: 'select', field: 'categoryId', placeholder: '全部分类', clearable: true, options: [] }
+          ],
           // 操作按钮配置
           actionConfig: [
             { key: 'export', text: '导出 CSV', type: 'success', icon: 'ri-download-line' }
@@ -181,6 +185,16 @@
         const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
         var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
         self.dateRange = [fmt(first), fmt(last)];
+        // 修改点：加载分类列表供筛选下拉使用
+        categoryList().then(function(res) {
+          if (res && res.code === 1 && res.data) {
+            self.categoryOptions = res.data;
+            // table-bar 的 select 选项需要 [{label, value}] 格式，用 $set 触发响应式更新
+            self.$set(self.searchConfig[0], 'options',
+              res.data.map(function(c) { return { label: c.name, value: c.id } })
+            );
+          }
+        }).catch(function() {});
       },
       mounted: function() {
         const self = this;
@@ -219,6 +233,8 @@
           if (self.dateRange && self.dateRange.length >= 2) {
             params.startDate = self.dateRange[0]; params.endDate = self.dateRange[1];
           }
+          // 修改点：传递分类筛选参数
+          if (self.categoryId) { params.categoryId = self.categoryId; }
 
           Promise.all([reportDishRanking(params), self.loadDishRankingStats()])
             .then(function(results) {
@@ -236,8 +252,9 @@
         },
         loadDishRankingStats: function() {
           const self = this;
-          // 修改点：使用 self.limit（用户可配置 5~50），不再硬编码 200
-          return reportDishRanking({ limit: self.limit, startDate: self.dateRange ? self.dateRange[0] : '', endDate: self.dateRange ? self.dateRange[1] : '' }).then(function(res) {
+          const statsParams = { limit: self.limit, startDate: self.dateRange ? self.dateRange[0] : '', endDate: self.dateRange ? self.dateRange[1] : '' };
+          if (self.categoryId) { statsParams.categoryId = self.categoryId; }
+          return reportDishRanking(statsParams).then(function(res) {
             if (String(res.code) === '1') {
               const data = res.data || [];
               var totalSales = data.reduce(function(s, i) { return s + (i.count || 0); }, 0);

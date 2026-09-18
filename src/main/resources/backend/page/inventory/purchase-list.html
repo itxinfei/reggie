@@ -28,7 +28,7 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="purchase-app">
-    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -111,7 +111,7 @@
           <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(row)" v-if="row.status === 'DRAFT' || row.status === 'ORDERED'">取消</el-button>
         </template>
       </crud-table>
-    </div>
+    </main>
 
     <!-- 新增采购单对话框 -->
     <crud-dialog
@@ -177,6 +177,38 @@
         </el-form-item>
       </el-form>
     </crud-dialog>
+
+    <!-- 修改点：部分收货弹窗——按明细指定收货数量 -->
+    <crud-dialog
+      :visible.sync="partialDialogVisible"
+      title="收货确认"
+      size="lg"
+      :show-submit="true"
+      submit-text="确认收货"
+      :submit-loading="partialLoading"
+      @submit="submitPartialReceive"
+    >
+      <el-alert type="info" :closable="false" style="margin-bottom:16px;">
+        <div slot="title">修改「本次收货」数量，支持部分收货。未收货的明细可在下次继续收货。</div>
+      </el-alert>
+      <el-table :data="partialItems" border size="small" style="width:100%;">
+        <el-table-column prop="materialId" label="食材ID" width="100" align="center" :header-align="'center'" />
+        <el-table-column label="采购数量" width="100" align="center" :header-align="'center'">
+          <template slot-scope="scope">{{ scope.row.qty }}</template>
+        </el-table-column>
+        <el-table-column label="已收货" width="100" align="center" :header-align="'center'">
+          <template slot-scope="scope">{{ scope.row.receivedQty }}</template>
+        </el-table-column>
+        <el-table-column label="剩余" width="100" align="center" :header-align="'center'">
+          <template slot-scope="scope">{{ scope.row.remainQty }}</template>
+        </el-table-column>
+        <el-table-column label="本次收货" min-width="150" align="center" :header-align="'center'">
+          <template slot-scope="scope">
+            <el-input-number v-model="scope.row.receiveQty" :min="0" :max="scope.row.remainQty" size="small" controls-position="right" style="width:120px;" />
+          </template>
+        </el-table-column>
+      </el-table>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -233,7 +265,12 @@
           purchaseRules: {
             supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
             operator: [{ required: true, whitespace: true, message: '请输入操作员', trigger: 'blur' }]
-          }
+          },
+          // 修改点：部分收货弹窗
+          partialDialogVisible: false,
+          partialOrderId: null,
+          partialItems: [],
+          partialLoading: false
         }
       },
       created() { this.init() },
@@ -386,15 +423,62 @@
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
           }).catch((err) => { console.warn('[purchase-list] 审核操作取消或失败:', err) })
         },
-        receiveHandle(row) {
-          ReggieUI.confirm('确认收货该采购单? 收货后将自动入库增加库存。', '提示', {
-            confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
-          }).then(() => {
-            receivePurchase(row.id).then(res => {
-              if (res.code === 1) { ReggieUI.success('收货成功！库存已更新'); this.handleQuery() }
-              else ReggieUI.error(res.msg || '操作失败')
-            }).catch(err => { ReggieUI.error('请求失败：' + err) })
-          }).catch((err) => { console.warn('[purchase-list] 收货操作取消或失败:', err) })
+        // 修改点：收货——展示部分收货弹窗，支持按明细指定数量收货
+        async receiveHandle(row) {
+          const self = this;
+          self.partialOrderId = row.id;
+          self.partialItems = [];
+          self.partialDialogVisible = true;
+          try {
+            const res = await getPurchase(row.id);
+            if (res.code === 1 && res.data) {
+              const details = res.data.details || [];
+              self.partialItems = details.map(function(d) {
+                var qty = Number(d.qty) || 0;
+                var received = Number(d.receivedQty) || 0;
+                var remain = Math.max(0, qty - received);
+                return {
+                  id: d.id,
+                  materialId: d.materialId,
+                  qty: qty,
+                  receivedQty: received,
+                  remainQty: remain,
+                  receiveQty: remain // 默认收满剩余数量
+                };
+              });
+            }
+          } catch (e) {
+            ReggieUI.error('加载采购明细失败');
+            self.partialDialogVisible = false;
+          }
+        },
+        // 修改点：提交部分收货
+        async submitPartialReceive() {
+          const self = this;
+          var hasQty = self.partialItems.some(function(it) { return it.receiveQty > 0; });
+          if (!hasQty) {
+            ReggieUI.warning('请至少填写一项收货数量');
+            return;
+          }
+          self.partialLoading = true;
+          try {
+            var qtys = {};
+            self.partialItems.forEach(function(it) {
+              if (it.receiveQty > 0) { qtys[it.id] = it.receiveQty; }
+            });
+            var res = await receivePartialPurchase(self.partialOrderId, qtys);
+            if (String(res.code) === '1') {
+              ReggieUI.success('收货成功！库存已更新');
+              self.partialDialogVisible = false;
+              self.handleQuery();
+            } else {
+              ReggieUI.error(res.msg || '收货失败');
+            }
+          } catch (e) {
+            ReggieUI.error('请求失败：' + (e.message || e));
+          } finally {
+            self.partialLoading = false;
+          }
         },
         cancelHandle(row) {
           ReggieUI.confirm('确认取消该采购单?', '提示', {

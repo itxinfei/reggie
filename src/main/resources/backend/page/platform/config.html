@@ -14,7 +14,7 @@
 <!-- 功能：统一管理外卖平台接入，支持新增/编辑/启停用/删除平台配置，按状态统计卡片快速筛选 -->
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="platform-app">
-  <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+  <main class="container" id="main-content" role="main" aria-label="页面主要内容">
     <!-- 页头：标题 + 主操作 -->
     <header class="ds-page-header">
       <div class="ds-page-header__titles">
@@ -75,7 +75,7 @@
         暂无平台配置，点击右上角「添加平台」开始接入外卖平台
       </div>
     </el-card>
-  </div>
+  </main>
 
   <!-- 新增/编辑对话框 -->
   <crud-dialog :show-submit="true" :show-cancel="true"

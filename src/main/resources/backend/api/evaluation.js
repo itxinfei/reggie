@@ -36,3 +36,11 @@ const replyEvaluation = (id, replyContent) => {
     data: { replyContent }
   })
 }
+
+// 修改点：评价统计聚合（1次请求替代4次分页查询）
+const getEvaluationStats = () => {
+  return $axios({
+    url: '/api/dish-evaluation/stats',
+    method: 'get'
+  })
+}

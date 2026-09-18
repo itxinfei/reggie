@@ -33,7 +33,8 @@ body:not(.login-page) {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: var(--space-4) var(--space-5);
+  /* 管理后台以数据密度优先，收紧内边距（12px 纵向 / 16px 横向） */
+  padding: var(--space-3) var(--space-4);
 }
 
 /* 兼容非 dashboard-container 的页面容器（overview-container 等） */
@@ -45,7 +46,8 @@ body:not(.login-page) {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: var(--space-4) var(--space-5);
+  /* 管理后台以数据密度优先，收紧内边距（12px 纵向 / 16px 横向） */
+  padding: var(--space-3) var(--space-4);
 }
 
 /* ========== 3b. 裸 .container 兜底（body 直下，无 dashboard-container 包裹） ========== */
@@ -59,9 +61,10 @@ body > .container {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: var(--space-4) var(--space-5);
+  /* 管理后台以数据密度优先，收紧内边距（12px 纵向 / 16px 横向） */
+  padding: var(--space-3) var(--space-4);
   max-width: 1400px;
-  margin: 20px auto;   /* 页面留白：与 .dashboard-container 的 20px padding 对齐 */
+  margin: 12px auto;   /* 页面留白：与 .dashboard-container 的 20px padding 对齐 */
   min-width: 0;
 }
 
@@ -71,7 +74,15 @@ body > .container {
    防止 Element UI 默认 left / 其他样式文件的同特异性规则覆盖。
    修改点(2026-09-01)：全站表格表头与内容必须居中——crud-table resolveColAlign 默认已全 center，
    金额/数字列不再右对齐；.is-right/.is-left 仅作为页面显式覆盖的兜底通道。
-   三态对齐均 !important 保证一致性。 */
+   三态对齐均 !important 保证一致性。
+   修改点(2026-09-17)：新增默认居中规则 .el-table__cell .cell（无类目）——全站所有无显式 align
+   的表格单元格一律居中，手写 el-table 不再需要在列配置里零散写 align: 'center'，
+   页面显式 align（生成 is-left/is-right class）仍优先覆盖默认。 */
+/* 默认居中：所有无 align class 的表格单元格 */
+.el-table .el-table__cell:not(.is-left):not(.is-right):not(.is-center) .cell {
+  text-align: center !important;
+}
+/* 显式三态覆盖（页面 align prop 生成的 class） */
 .el-table td.is-left .cell,
 .el-table th.is-left .cell {
   text-align: left !important;

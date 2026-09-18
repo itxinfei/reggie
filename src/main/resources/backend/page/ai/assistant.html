@@ -12,7 +12,7 @@
     <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
    <a href="#main-content" class="skip-link">跳转到主内容</a>
    <div class="dashboard-container" id="ai-app">
-        <div class="container ai-chat-layout" id="main-content" role="main" aria-label="AI 助手">
+        <main class="container ai-chat-layout" id="main-content" role="main" aria-label="AI 助手">
             <!-- 左侧边栏：对话历史 -->
             <div class="ai-sidebar" :class="{ open: sidebarOpen }">
                 <div class="sidebar-header">
@@ -178,7 +178,7 @@
                     发送
                 </button>
             </div>
-        </div>
+        </main>
     </div>
   </div><!-- 修改点：补回 #ai-app 根容器漏写的 </div>。
        原缺失导致后续 <script> 标签被算作 Vue 模板内容，
@@ -702,6 +702,7 @@
     </script>
 </body>
 </html>
+
 
 
 

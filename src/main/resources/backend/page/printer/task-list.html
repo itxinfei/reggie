@@ -16,7 +16,7 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="printer-task-app">
-    <div class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头 -->
       <header class="ds-page-header">
         <div class="ds-page-header__titles">
@@ -94,7 +94,7 @@
           <el-button type="text" size="small" class="btn-view" @click="showDetail(row)">查看</el-button>
         </template>
       </crud-table>
-    </div>
+    </main>
 
     <!-- 任务详情弹窗（只读，仅有关闭按钮） -->
     <crud-dialog :title="dialog.title" :visible.sync="dialog.visible" size="lg" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
