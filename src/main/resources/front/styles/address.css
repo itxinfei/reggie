@@ -215,6 +215,10 @@ body.scrollable-page {
   color: var(--color-text-hint);
   cursor: pointer;
   user-select: none;
+  /* 修改点(2026-09-18)：补齐 44rem 触控热区，与右侧编辑/删除按钮对齐，负外边距补偿视觉位置 */
+  min-height: 44rem;
+  padding: 0 6rem;
+  margin-left: -6rem;
   transition: color 0.2s;
 }
 /* 修改点：默认地址行 —— 选中态整行金色 + 文案加粗 */

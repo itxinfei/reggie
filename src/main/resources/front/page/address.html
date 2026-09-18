@@ -239,6 +239,9 @@
                                 } catch(e) { /* 静默处理，始终返回 */ }
                                 history.go(-1)
                             })()
+                        } else {
+                            // 修改点：地址管理场景点击整张卡片进入编辑（原实现非结算入口点击无任何反应）
+                            this.toAddressEditPage(item)
                         }
                     }
 
