@@ -744,11 +744,24 @@
 }
 
 .dish-item .di-action i {
+  position: relative;
   font-size: 20rem;
   cursor: pointer;
   transition: transform 0.1s;
   flex-shrink: 0;
   color: var(--color-primary);
+}
+
+/* 修改点(2026-09-18)：圆按钮视觉仅 24rem，低于触控标准。用透明 ::after 把命中区扩到 40rem
+   （图标字形占用 ::before，::after 空闲），不改视觉大小，快速加/减购不易点偏。 */
+.dish-item .di-action i::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40rem;
+  height: 40rem;
+  transform: translate(-50%, -50%);
 }
 
 .dish-item .di-action i:active {
