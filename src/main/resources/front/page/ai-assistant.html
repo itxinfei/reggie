@@ -991,12 +991,20 @@
                         return;
                     }
                     if (this.isRecording) {
-                        this.recognition.stop();
+                        try { this.recognition.stop(); } catch (e) { console.warn('语音停止异常:', e); }
                         this.isRecording = false;
                     } else {
-                        this.recognition.start();
-                        this.isRecording = true;
-                        vant.Notify({ type: 'success', message: '请说话...', duration: 2000 });
+                        // 修改点：start() 为异步且可能抛 InvalidStateError（连点/上一次未结束），
+                        // try-catch 失败时复位录音态并提示，避免按钮卡在 recording 无响应
+                        try {
+                            this.recognition.start();
+                            this.isRecording = true;
+                            vant.Notify({ type: 'success', message: '请说话...', duration: 2000 });
+                        } catch (e) {
+                            console.warn('语音启动异常:', e);
+                            this.isRecording = false;
+                            vant.Notify({ type: 'warning', message: '语音启动中，请稍候再试' });
+                        }
                     }
                 },
 

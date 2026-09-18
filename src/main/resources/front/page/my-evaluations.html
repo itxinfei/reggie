@@ -222,6 +222,21 @@
                     this.openSubmitModal()
                 }
             },
+            // 修改点：弹窗打开时锁定 body 滚动，关闭时还原，修复弹窗背景滚动穿透
+            watch: {
+                submitVisible: function (visible) {
+                    if (visible) {
+                        this._savedBodyOverflow = document.body.style.overflow
+                        document.body.style.overflow = 'hidden'
+                    } else {
+                        document.body.style.overflow = this._savedBodyOverflow || ''
+                    }
+                }
+            },
+            beforeDestroy() {
+                // 组件卸载时兜底还原，避免异常路径下弹窗销毁后背景仍无法滚动
+                document.body.style.overflow = this._savedBodyOverflow || ''
+            },
             methods: {
                 // 快捷标签切换（追加/移除到评价内容）
                 toggleQuickTag(dish, tag){

@@ -60,7 +60,11 @@
                     <!-- 修改点：el-input 替换为原生input；获取验证码按钮移入同一框内 -->
                     <div class="input-wrapper">
                         <i class="inputIcon ri-lock-line input-prefix"></i>
-                        <input type="text" class="code-input" placeholder="输入验证码" v-model="form.code" maxlength="6">
+                        <!-- 修改点：inputmode=numeric 移动端弹数字键盘（仍用 text 避免 number 类型的 e/上下箭头问题），
+                             autocomplete=one-time-code 支持短信验证码自动填充，@input 实时过滤非数字字符 -->
+                        <input type="text" class="code-input" placeholder="输入验证码" v-model="form.code"
+                               maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"
+                               @input="form.code = form.code.replace(/\D/g, '')">
                         <span class="codeBtn"
                               @click='getCode'
                               :class="{codeDisabled: countdown > 0}">
