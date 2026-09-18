@@ -701,8 +701,9 @@
               previewIndex: 0,
               // 修改点(2026-09-16)：全量加载所有分类菜品时的 loading 态
               loadingAll: false,
-              // 修改点：加购防重复提交（快速连点多次触发 addCartApi 导致数量异常）
-              addingCart: false,
+              // 修改点(2026-09-18)：加购防重由全局布尔锁改为按「菜品/套餐+口味」维度的锁表，
+              // 同一菜品在飞时忽略连点（防数量异常），不同菜品可并发加购（原全局锁会静默丢弃快速加购）。
+              cartLoadingMap: {},
               // 修改点：菜单加载失败状态（显示重试按钮而非空态误导）
               loadFailed: false,
               // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
@@ -1433,12 +1434,14 @@
             //菜单中往购物车中添加商品
             // 修改点：修复菜品/套餐误判 — item.flavors !== undefined 可靠区分（菜品有flavors字段，套餐无）
             async addCart(item){
-              // 修改点：防重复提交（快速连点时忽略后续请求，避免数量异常累加）
-              if(this.addingCart) return
-              this.addingCart = true
+              // 修改点：按菜品维度防重复提交——同一菜品（含口味）在飞时忽略连点，避免数量异常；
+              // 不同菜品各自独立加锁，不再因全局锁静默丢弃用户对其他菜品的快速加购。
+              var cartKey = (item.flavors !== undefined ? 'd' : 's') + '_' + item.id + '_' + (item.dishFlavor || '')
+              if(this.cartLoadingMap[cartKey]) return
+              this.$set(this.cartLoadingMap, cartKey, true)
               // 修改点：未登录时跳转登录页
               if(!this.userPhone){
-                this.addingCart = false
+                this.$set(this.cartLoadingMap, cartKey, false)
                 vant.Toast.fail('请先登录');
                 window.requestAnimationFrame(()=>{
                   window.location.href = '/front/page/login.html'
@@ -1474,7 +1477,7 @@
                   vant.Toast.fail(res.msg || '添加失败')
                 }
               } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
-              finally { this.addingCart = false }
+              finally { this.$set(this.cartLoadingMap, cartKey, false) }
             },
 
             //菜单中减少选中的商品
