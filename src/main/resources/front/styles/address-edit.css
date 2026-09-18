@@ -20,9 +20,12 @@
   --addr-tag-company-shadow: var(--color-primary-dark-tint);
   --addr-tag-company-fg: var(--color-primary-dark);
 
-  --addr-tag-home-gradient: linear-gradient(135deg, var(--color-primary-light), var(--color-primary-light));
-  --addr-tag-home-border: var(--color-primary);
-  --addr-tag-home-shadow: var(--color-primary-dark-tint);
+  /* 修改点(2026-09-18)：家标签原与公司标签同为品牌金（无区分度），对齐 address.css 列表页的橙色系，
+     保证同一地址标签在列表页与编辑页颜色一致 */
+  --addr-tag-home-gradient: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  --addr-tag-home-border: #ff9800;
+  --addr-tag-home-shadow: rgba(255, 152, 0, 0.12);
+  --addr-tag-home-fg: #e65100;
 
   --addr-tag-school-gradient: linear-gradient(135deg, #e6faf3, #ccf0e2);
   --addr-tag-school-border: #7fd4b0;

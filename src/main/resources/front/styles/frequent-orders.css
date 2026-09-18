@@ -203,7 +203,7 @@
 #frequent .skeleton-freq-tabs { display: flex; gap: 8rem; margin-bottom: 16rem; }
 #frequent .skeleton-tab { width: 60rem; height: 28rem; border-radius: 14rem; }
 #frequent .skeleton-freq-card {
-  background: #fff; border-radius: 8rem; padding: 14rem 16rem; margin-bottom: 12rem;
+  background: var(--bg-card); border-radius: 8rem; padding: 14rem 16rem; margin-bottom: 12rem;
 }
 #frequent .skeleton-freq-row { display: flex; align-items: center; gap: 12rem; }
 #frequent .skeleton-img { width: 60rem; height: 60rem; border-radius: 8rem; flex-shrink: 0; }

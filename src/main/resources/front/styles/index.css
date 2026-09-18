@@ -11,6 +11,8 @@
   /* 会员中心专属深金渐变（头图 / 会员卡），收敛硬编码为令牌，视觉与 v5 一致 */
   --color-primary-gradient-deep: linear-gradient(160deg, #e0a800 0%, #d89b00 40%, #b87d00 100%);
   --color-primary-gradient-card: linear-gradient(135deg, #ffd54f 0%, #ffb300 50%, #e09000 100%);
+  /* 首页头部纵向品牌渐变（main.css 头部背景，收敛硬编码） */
+  --color-primary-gradient-header: linear-gradient(180deg, #ffd54f 0%, #ffc200 70%, #ffb300 100%);
 
   /* ---- 金色表面（金底上的文字/点缀，替代页面硬编码 rgba） ---- */
   /* 金底文字三档层级：强（标题）/ 常规（正文）/ 弱（说明），alpha 让金底透出 */
@@ -79,6 +81,8 @@
   /* ---- 背景色 ---- */
   --bg-page: #f3f2f7;
   --bg-card: #ffffff;
+  /* 桌面端宽屏视口底色（手机预览外框留白） */
+  --bg-viewport: #e9e9ef;
   --bg-input: #f8f9fa;
   --bg-hover: #f5f5f5;
 
@@ -533,7 +537,7 @@ i {
    ================================================================ */
 @media screen and (min-width: 751px) {
   html {
-    background: #e9e9ef;
+    background: var(--bg-viewport);
   }
   #main {
     max-width: 750px;

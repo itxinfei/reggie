@@ -11,7 +11,7 @@
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css?v=20260917b" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260918" />
         <!--本页面内容的样式-->
         <!-- 修改点：加载 RemixIcon 真字体（emoji 兜底改由 js/icon-fallback.js 按需注入） -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
@@ -413,7 +413,9 @@
                     // 提示用户直接重新发起支付；订单号透传 goToPaySuccess 供支付成功页回查结果
                     const reorderId = this.getUrlParam('reorderId')
                     if(reorderId){
-                        this.payMethod = 6
+                        // 修改点：续付默认选微信支付（而非货到付款），
+                        // 避免用户不改直接点"去支付"走入货到付款分支、订单仍待付款却显示"下单成功"
+                        this.payMethod = 2
                         this.reorderId = reorderId
                         vant.Dialog.alert({
                             title: '继续支付',
@@ -456,12 +458,8 @@
                     initData(){
                         //获取默认的地址
                         this.defaultAddress()
-                        //获取购物车的商品
+                        //获取购物车的商品（异步，回调中加载优惠券确保 goodsPrice 就绪）
                         this.getCartData()
-                        // 修改点：加载当前用户下单可用券（依赖 goodsPrice，先拉一次）
-                        this.$nextTick(function(){
-                            this.loadUsableCoupons()
-                        }.bind(this))
                     },
                     //获取默认地址
                     async defaultAddress(){
@@ -513,6 +511,8 @@
                         }else{
                             vant.Toast.fail(res.msg || '加载购物车失败');
                         }
+                        // 修改点：购物车数据就绪后再加载可用优惠券，避免 $nextTick 时 goodsPrice 仍为 0
+                        this.loadUsableCoupons()
                     },
                     // 修改点：选择优惠券（传入券对象，再次点击相同券取消选中）
                     selectCoupon(coupon){

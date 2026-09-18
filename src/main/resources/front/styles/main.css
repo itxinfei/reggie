@@ -24,7 +24,8 @@
 /* 修改点：padding-top 使用 safe-area-inset-top 适配 iPhone 灵动岛 / 刘海屏 */
 .header-section {
   /* 修改点(2026-09-17)：斜向渐变在窄屏左右色差明显 → 垂直渐变，浅金起手更接近主流外卖 App 质感 */
-  background: linear-gradient(180deg, #ffd54f 0%, #ffc200 70%, #ffb300 100%);
+  /* 修改点(2026-09-18)：渐变收敛为 --color-primary-gradient-header 令牌 */
+  background: var(--color-primary-gradient-header);
   flex-shrink: 0;
   padding: env(safe-area-inset-top, 0px) 12rem 0 12rem;
   position: relative;

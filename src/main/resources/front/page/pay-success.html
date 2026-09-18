@@ -10,7 +10,7 @@
         <script src="./../js/base.js?v=20260917"></script>
         <!-- 引入样式  -->
         <link rel="stylesheet" href="../styles/vant.min.css" />
-        <link rel="stylesheet" href="../styles/index.css?v=20260917b" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260918" />
         <!-- 修改点：补充加载 remixicon.css（此前仅加载 fallback，ri-share-line 等图标可能不渲染） -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js?v=20260917"></script>
@@ -105,27 +105,35 @@
             methods:{
                 // 修改点（P2-11）：根据订单号回查支付结果。查询成功/失败均为幂等操作，
                 // 结果通过 Toast 展示，不阻塞页面；错误静默（网络抖动）不影响主流程
+                // 修改点：轮询查询支付结果（最多5次，间隔2秒），异步支付回调可能延迟到达
                 async checkPayResult(){
                     if(!this.reorderId) return
-                    try {
-                        // 修改点：回查订单状态判断支付结果（status !== 1 表示已支付）
-                        // 不再调用 paymentCreateApi 避免重复创建支付单
-                        const res = await getOrderDetailApi(this.reorderId)
-                        if(res && res.code === 1 && res.data){
-                            var d = res.data
-                            this.orderNo = d.number || d.orderNo || ''
-                            this.amount = Number(d.amount || d.actualAmount || 0)
-                            var orderStatus = d.status || d.orderStatus
-                            if(orderStatus && orderStatus !== 1){
-                                vant.Toast.success('支付成功')
-                            }else{
-                                vant.Toast.fail('支付未完成，请在订单列表中继续支付')
+                    var maxRetries = 5
+                    var retryDelay = 2000
+                    for(var attempt = 1; attempt <= maxRetries; attempt++){
+                        try {
+                            const res = await getOrderDetailApi(this.reorderId)
+                            if(res && res.code === 1 && res.data){
+                                var d = res.data
+                                this.orderNo = d.number || d.orderNo || ''
+                                this.amount = Number(d.amount || d.actualAmount || 0)
+                                var orderStatus = d.status || d.orderStatus
+                                if(orderStatus && orderStatus !== 1){
+                                    // 支付成功，更新页面状态
+                                    vant.Toast.success('支付成功')
+                                    return
+                                }
                             }
+                        } catch (e) {
+                            console.warn('[pay-success] 第' + attempt + '次回查失败:', e)
                         }
-                    } catch (e) {
-                        // 网络异常：保持页面可用，用户可到订单列表查看
-                        console.error('支付结果回查失败:', e)
+                        // 未确认成功且还有重试次数，等待后重试
+                        if(attempt < maxRetries){
+                            await new Promise(function(resolve){ setTimeout(resolve, retryDelay) })
+                        }
                     }
+                    // 所有重试均未确认成功
+                    vant.Toast('支付结果未确认，请在订单列表中查看', { duration: 3000 })
                 },
                 goBack(){
                     window.requestAnimationFrame(()=>{
