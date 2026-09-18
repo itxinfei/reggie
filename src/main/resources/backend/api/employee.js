@@ -56,11 +56,13 @@ function queryEmployeeById (id) {
   })
 }
 
-// 删除员工（支持批量）
+// 管理员编辑回填用（返回未脱敏手机号与身份证）
+function queryEmployeeByIdRaw (id) {
+  return $axios({ url: `/employee/${id}?raw=true`, method: 'get' })
+}
+
+// 删除员工（支持单个 id 或 id 数组；后端 @RequestParam List<Long> ids 按逗号拆分）
 function deleteEmployee (ids) {
-  return $axios({
-    url: '/employee',
-    method: 'delete',
-    params: { ids: ids }
-  })
+  if (Array.isArray(ids)) ids = ids.join(',')
+  return $axios({ url: '/employee?ids=' + ids, method: 'delete' })
 }
