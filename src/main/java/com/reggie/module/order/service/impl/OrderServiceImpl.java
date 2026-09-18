@@ -965,7 +965,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      * @return 订单分页结果
      */
     @Override
-    public Page<?> userPage(int page, int pageSize, Integer status) {
+    public Page<OrderDto> userPage(int page, int pageSize, Integer status) {
         Page<Orders> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Orders> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Orders::getUserId, BaseContext.getCurrentId());

@@ -324,7 +324,7 @@ public class OrderController {
     @Parameter(name = "page", description = "页码", required = true)
     @Parameter(name = "pageSize", description = "每页数量", required = true)
     @Parameter(name = "status", description = "订单状态（可选：1待付款 2待接单/处理中 3已接单/派送中 4已完成 5已取消 6已退款，不传则查全部）")
-    public R<?> userPage(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
+    public R<Page<OrderDto>> userPage(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
             "10") @Min(1) @Max(100) int pageSize,
                          @RequestParam(required = false) Integer status) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext

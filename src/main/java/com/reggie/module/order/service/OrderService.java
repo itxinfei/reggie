@@ -1,6 +1,7 @@
 package com.reggie.module.order.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.reggie.dto.OrderDto;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
@@ -60,7 +61,7 @@ public interface OrderService extends IService<Orders> {
      * @param pageSize 每页条数
      * @param status 订单状态（可选，为null则查询全部）
      */
-    Page<?> userPage(int page, int pageSize, Integer status);
+    Page<OrderDto> userPage(int page, int pageSize, Integer status);
 
     /**
      * 查询当前用户的历史订单列表
