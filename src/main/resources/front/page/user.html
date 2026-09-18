@@ -244,11 +244,11 @@
                 </div>
                 <div class="card-stats" v-if="memberInfo.isMember && memberInfo.member">
                     <div class="card-stat">
-                        <div class="val">{{ fmtThousand(memberInfo.member.points) }}</div>
+                        <div class="val">{{ fmtPoints(memberInfo.member.points) }}</div>
                         <div class="lbl">积分</div>
                     </div>
                     <div class="card-stat">
-                        <div class="val">{{ fmtThousand(memberInfo.member.balance) }}</div>
+                        <div class="val">{{ fmtMoney(memberInfo.member.balance) }}</div>
                         <div class="lbl">余额</div>
                     </div>
                     <div class="card-stat">
@@ -796,12 +796,19 @@
                             if(done) done(false);
                         });
                 },
-                fmtThousand: function(v){
+                // 修改点(2026-09-18)：积分精确显示（千分位整数），不再缩写成 w/k 让用户无法得知准确积分
+                fmtPoints: function(v){
                     if (v == null || v === '') return '0'
                     var n = Number(v)
-                    if (n >= 10000) return (n/10000).toFixed(1) + 'w'
-                    if (n >= 1000) return (n/1000).toFixed(1) + 'k'
-                    return String(n)
+                    return isNaN(n) ? '0' : n.toLocaleString('zh-CN')
+                },
+                // 修改点(2026-09-18)：余额是金额，必须精确到分（千分位+两位小数），
+                // 原 fmtThousand 把 1234.56 缩写成 1.2k、15600 缩写成 1.6w，金额严重失真
+                fmtMoney: function(v){
+                    if (v == null || v === '') return '0.00'
+                    var n = Number(v)
+                    return isNaN(n) ? '0.00'
+                        : n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                 }
             }
         })
