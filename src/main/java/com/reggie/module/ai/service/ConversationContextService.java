@@ -50,6 +50,9 @@ public class ConversationContextService {
     /** 单轮上下文最大 token 预算 */
     private static final int MAX_CONTEXT_TOKENS = 3000;
 
+    /** 关键信息条数上限（超长会话防止 keyFacts 无界增长） */
+    private static final int MAX_KEY_FACTS = 200;
+
     /** 对话上下文缓存（conversationId → ContextState） */
     private final Map<String, ContextState> contextCache = new ConcurrentHashMap<>();
 
@@ -110,6 +113,7 @@ public class ConversationContextService {
         // 提取关键信息
         if ("user".equals(role)) {
             state.keyFacts.addAll(extractKeyFacts(content));
+            capKeyFacts(state.keyFacts);
         }
 
         // 触发压缩
@@ -168,6 +172,7 @@ public class ConversationContextService {
                 state.keyFacts.addAll(extractKeyFacts(msg.getContent()));
             }
         }
+        capKeyFacts(state.keyFacts);
         state.lastActive = System.currentTimeMillis();
 
         // 如果历史消息过多，立即压缩
@@ -237,6 +242,20 @@ public class ConversationContextService {
         }
 
         return facts;
+    }
+
+    /**
+     * 关键信息条数封顶：LinkedHashSet 保持插入顺序，超限时移除最早条目
+     */
+    private void capKeyFacts(Set<String> facts) {
+        if (facts.size() <= MAX_KEY_FACTS) {
+            return;
+        }
+        Iterator<String> it = facts.iterator();
+        while (facts.size() > MAX_KEY_FACTS && it.hasNext()) {
+            it.next();
+            it.remove();
+        }
     }
 
     // ==================== 上下文压缩 ====================

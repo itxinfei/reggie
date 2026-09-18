@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
+import com.reggie.module.ai.util.AiSecretMaskUtils;
+import com.reggie.module.ai.util.AiUrlUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
@@ -61,9 +63,8 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                                      double temperature, AiProviderConfig config) {
         HttpURLConnection conn = null;
         try {
-            // 1) 构建 URL
-            String baseUrl = normalizeBaseUrl(config.getBaseUrl());
-            String apiUrl = baseUrl + "/chat/completions";
+            // 1) 构建 URL（修改点(2026-09-18)：统一走 AiUrlUtils，裸域名自动补 /v1）
+            String apiUrl = AiUrlUtils.resolveEndpoint(config.getBaseUrl(), "/chat/completions");
 
             // 2) 创建连接
             Map<String, String> headers = new LinkedHashMap<>();
@@ -87,7 +88,7 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
 
             String jsonBody = getObjectMapper().writeValueAsString(requestBody);
             log.info("AI请求[{} / {}]: url={}, model={}, messages={}, maxTokens={}, temp={}",
-                    config.getProviderCode(), FORMAT_ID, apiUrl, config.getModelName(),
+                    config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(apiUrl), config.getModelName(),
                     msgList.size(), resolveMaxTokens(maxTokens, config));
 
             // 4) 发送请求
@@ -103,7 +104,7 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
 // 即使截断 500 字仍会泄露用户输入原文；同时截断 errorBody 到 200 字，
 // 防止 token 回显或超长响应体落盘。
                 log.error("AI请求[{} / {}]失败: url={}, code={}, error={}",
-                        config.getProviderCode(), FORMAT_ID, apiUrl, responseCode,
+                        config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(apiUrl), responseCode,
                         truncate(errorBody, 200));
                 String userMsg = buildUserFriendlyError(config.getProviderName(), errorBody);
                 return errorResponse(userMsg, config);
@@ -160,6 +161,12 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                 }
             }
 
+            // 修改点(2026-09-18)：Anthropic 原生格式（网关将请求路由到 Claude 上游且未按 OpenAI 格式转换）
+            String anthropicContent = extractAnthropicContent(root);
+            if (!anthropicContent.isEmpty()) {
+                return successResponse(anthropicContent, config.getModelName(), 0);
+            }
+
             // Ollama 兼容：可能 response 字段
             JsonNode responseNode = root.get("response");
             if (responseNode != null && responseNode.isTextual()) {
@@ -208,8 +215,8 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
         HttpURLConnection conn = null;
         StringBuilder fullContent = new StringBuilder();
         try {
-            String baseUrl = normalizeBaseUrl(config.getBaseUrl());
-            String apiUrl = baseUrl + "/chat/completions";
+            // 修改点(2026-09-18)：统一走 AiUrlUtils，裸域名自动补 /v1
+            String apiUrl = AiUrlUtils.resolveEndpoint(config.getBaseUrl(), "/chat/completions");
 
             // 启用流式输出
             Map<String, String> headers = new LinkedHashMap<>();
@@ -233,7 +240,7 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
 
             String jsonBody = getObjectMapper().writeValueAsString(requestBody);
             log.info("AI流式请求[{} / {}]: url={}, model={}, messages={}",
-                    config.getProviderCode(), FORMAT_ID, apiUrl, config.getModelName(), msgList.size());
+                    config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(apiUrl), config.getModelName(), msgList.size());
 
             sendRequestBody(conn, jsonBody);
 
@@ -246,7 +253,15 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             }
 
             // 逐行读取 SSE 流（JDK 1.8 兼容：分开 try-with-resources）
-            readSseStream(conn, fullContent, callback);
+            // 修改点(2026-09-18)：部分网关（如将请求路由到 Claude 上游）不按 SSE 返回，
+            // 而是整包 application/json —— 按响应类型分流解析
+            String contentType = conn.getContentType();
+            if (contentType != null && contentType.toLowerCase().contains("application/json")) {
+                String body = readResponseBody(conn);
+                extractContentFromJson(body, fullContent, config, callback);
+            } else {
+                readSseStream(conn, fullContent, callback);
+            }
 
             if (fullContent.length() > 0) {
                 log.info("AI流式响应[{} / {}]: totalLength={}",
@@ -254,7 +269,10 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                 callback.onToken("", true);
                 return fullContent.toString();
             }
-            callback.onToken("模型返回了空响应", true);
+            // 修改点(2026-09-18)：流式无内容不直接报「模型返回了空响应」，
+            // 返回 null 由 AiProviderManager 降级为非流式重试（非流式解析兼容更多格式）
+            log.warn("AI流式响应[{} / {}]为空，将降级为非流式重试: url={}, model={}",
+                    config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(apiUrl), config.getModelName());
             return null;
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
@@ -322,17 +340,101 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                 if (line.isEmpty() || line.startsWith(":")) {
                     continue;
                 }
-                if (!line.startsWith("data: ")) {
+                // 修改点(2026-09-18)：兼容 "data:{...}"（冒号后无空格）的网关写法
+                if (!line.startsWith("data:")) {
                     continue;
                 }
-                String data = line.substring(6);
-                if (!"[DONE]".equals(data)) {
-                    handleSseDelta(data, fullContent, callback);
+                String data = line.substring(5).trim();
+                if (data.isEmpty() || "[DONE]".equals(data)) {
+                    continue;
                 }
+                handleSseDelta(data, fullContent, callback);
             }
         } finally {
             reader.close();
         }
+    }
+
+    /**
+     * 从整包 JSON 响应中提取文本内容（网关未按 SSE 流式返回时使用）。
+     * <p>兼容 OpenAI 标准格式与 Anthropic 原生格式（网关将请求路由到 Claude 上游时常见）。</p>
+     *
+     * @param body 响应体 JSON 字符串
+     * @param fullContent 已累积的完整内容
+     * @param config 供应商配置
+     * @param callback 流式回调（内容一次性整包回吐）
+     */
+    private void extractContentFromJson(String body, StringBuilder fullContent, AiProviderConfig config,
+                                        StreamCallback callback) {
+        try {
+            JsonNode root = getObjectMapper().readTree(body);
+            String content = extractTextFromRoot(root);
+            if (!content.isEmpty()) {
+                fullContent.append(content);
+                callback.onToken(content, false);
+            }
+        } catch (Exception e) {
+            // 宽异常兜底：非 JSON 响应体留待降级重试
+            log.warn("AI流式响应[{} / {}]整包解析失败: {}", config.getProviderCode(), FORMAT_ID,
+                    truncate(e.getMessage(), 100));
+        }
+    }
+
+    /**
+     * 从根节点提取文本（OpenAI choices / Anthropic content 两种形态）。
+     */
+    private String extractTextFromRoot(JsonNode root) {
+        // OpenAI 标准：choices[0].message.content
+        JsonNode choices = root.get("choices");
+        if (choices != null && choices.isArray() && choices.size() > 0) {
+            JsonNode message = choices.get(0).get("message");
+            if (message != null) {
+                String content = message.path("content").asText("");
+                if (content.isEmpty()) {
+                    content = message.path("reasoning_content").asText("");
+                }
+                if (!content.isEmpty()) {
+                    return content;
+                }
+            }
+            JsonNode textNode = choices.get(0).get("text");
+            if (textNode != null && textNode.isTextual()) {
+                return textNode.asText("");
+            }
+            JsonNode contentNode = choices.get(0).get("content");
+            if (contentNode != null && contentNode.isTextual()) {
+                return contentNode.asText("");
+            }
+        }
+        // Anthropic 原生：content: [ { type: "text", text: "..." } ]
+        String anthropic = extractAnthropicContent(root);
+        if (!anthropic.isEmpty()) {
+            return anthropic;
+        }
+        // Ollama 兼容：response 字段
+        JsonNode responseNode = root.get("response");
+        if (responseNode != null && responseNode.isTextual()) {
+            return responseNode.asText("");
+        }
+        return "";
+    }
+
+    /**
+     * 提取 Anthropic 原生格式的文本内容。
+     * <pre>{ content: [ { type: "text", text: "..." }, ... ] }</pre>
+     */
+    private String extractAnthropicContent(JsonNode root) {
+        JsonNode contentArr = root.get("content");
+        if (contentArr == null || !contentArr.isArray()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (JsonNode block : contentArr) {
+            if ("text".equals(block.path("type").asText(""))) {
+                sb.append(block.path("text").asText(""));
+            }
+        }
+        return sb.toString();
     }
 
     /**
@@ -346,19 +448,34 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
         try {
             JsonNode root = getObjectMapper().readTree(data);
             JsonNode choices = root.get("choices");
-            if (choices == null || !choices.isArray() || choices.size() == 0) {
+            if (choices != null && choices.isArray() && choices.size() > 0) {
+                JsonNode delta = choices.get(0).get("delta");
+                if (delta == null) {
+                    return;
+                }
+                String token = delta.path("content").asText("");
+                if (token.isEmpty()) {
+                    return;
+                }
+                fullContent.append(token);
+                callback.onToken(token, false);
                 return;
             }
-            JsonNode delta = choices.get(0).get("delta");
-            if (delta == null) {
-                return;
+            // 修改点(2026-09-18)：Anthropic 原生 SSE 事件（网关透传 Claude 上游时常见）：
+            // {"type":"content_block_delta","delta":{"type":"text_delta","text":"..."}}
+            if ("content_block_delta".equals(root.path("type").asText(""))) {
+                JsonNode delta = root.get("delta");
+                if (delta == null) {
+                    return;
+                }
+                String token = delta.path("text").asText("");
+                if (token.isEmpty()) {
+                    // 思考模型（extended thinking）的思考块，跳过不推送
+                    return;
+                }
+                fullContent.append(token);
+                callback.onToken(token, false);
             }
-            String token = delta.path("content").asText("");
-            if (token.isEmpty()) {
-                return;
-            }
-            fullContent.append(token);
-            callback.onToken(token, false);
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.debug("SSE行解析跳过: {}", truncate(data, 100));

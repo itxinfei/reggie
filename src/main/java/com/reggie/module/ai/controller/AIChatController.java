@@ -1,13 +1,11 @@
 package com.reggie.module.ai.controller;
 import com.reggie.common.utils.PageUtils;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.RateLimitType;
-import com.reggie.module.ai.mapper.AIConversationMapper;import com.reggie.module.ai.model.AIChatRequest;
+import com.reggie.module.ai.model.AIChatRequest;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIConversation;
 import com.reggie.module.ai.model.AIMessage;
@@ -32,11 +30,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.validation.annotation.Validated;
 
 import javax.annotation.Resource;
 import javax.validation.Valid;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Max;
+import javax.validation.constraints.Size;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -63,6 +63,7 @@ import java.util.concurrent.TimeoutException;
  */
 @Slf4j
 @RestController
+@Validated
 @RequestMapping("/api/ai")
 @Tag(name = "AI智能助手", description = "AI智能点餐推荐、菜品描述生成、经营分析、流式对话")
 public class AIChatController {
@@ -129,7 +130,8 @@ public class AIChatController {
     @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
     @Operation(summary = "AI流式对话", description = "SSE流式输出，逐字显示AI回复")
     @Parameter(description = "用户消息")
-    public SseEmitter chatStream(@RequestParam String message, @RequestParam(required = false) String scene,
+    public SseEmitter chatStream(@RequestParam @Size(max = 2000, message = "消息长度不能超过2000字符") String message,
+                                  @RequestParam(required = false) String scene,
                                   @Parameter(description = "对话ID")
                                   @RequestParam(required = false) String conversationId) {
         Long userId = BaseContext.getCurrentId();
@@ -194,7 +196,7 @@ public class AIChatController {
     @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
     @Operation(summary = "智能点餐助手（流式）", description = "SSE流式输出推荐结果")
     @Parameter(description = "用户消息")
-    public SseEmitter orderAssistantStream(@RequestParam String message,
+    public SseEmitter orderAssistantStream(@RequestParam @Size(max = 2000, message = "消息长度不能超过2000字符") String message,
                                             @Parameter(description = "对话ID")
                                             @RequestParam(required = false) String conversationId) {
         Long userId = BaseContext.getCurrentId();
@@ -259,6 +261,7 @@ public class AIChatController {
      * 避免管理端页面出现悬挂请求。
      */
     @GetMapping("/health")
+    @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.IP)
     @Operation(summary = "AI服务健康检查", description = "检查AI服务是否可用（探活上限3秒，超时判定不可用）")
     public R<Map<String, Object>> health() {
         Map<String, Object> result = new HashMap<>();
@@ -330,14 +333,9 @@ public class AIChatController {
     @Operation(summary = "获取对话详情", description = "获取指定对话的消息历史")
     @Parameter(description = "对话ID")
     public R<List<AIMessageRecord>> getConversationDetail(@PathVariable String conversationId) {
-        // 修复 P2-9：校验 conversationId 属于当前用户，防止 IDOR 越权
+        // 修复 P2-9：校验 conversationId 属于当前用户，防止 IDOR 越权（统一走 Service 层）
         Long userId = BaseContext.getCurrentId();
-        LambdaQueryWrapper<AIConversation> convWrapper = new LambdaQueryWrapper<>();
-        convWrapper.select(AIConversation::getUserId)
-                .eq(AIConversation::getConversationId, conversationId)
-                .eq(AIConversation::getIsDeleted, 0);
-        AIConversation conv = conversationMapper.selectOne(convWrapper);
-        if (conv == null || !userId.equals(conv.getUserId())) {
+        if (userId == null || !userId.equals(aiChatService.validateConversationOwnership(conversationId))) {
             return R.error("对话不存在或无权访问");
         }
         List<AIMessageRecord> messages = aiChatService.getConversationMessages(conversationId);
@@ -462,17 +460,8 @@ public class AIChatController {
                                                        @RequestParam(defaultValue =
                                                                "20") @Min(1) @Max(100) int pageSize) {
         Long userId = BaseContext.getCurrentId();
-        LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AIConversation::getUserId, userId)
-                .eq(AIConversation::getIsDeleted, 0)
-                .and(keyword != null && !keyword.isEmpty(), w -> w
-                        .like(AIConversation::getTitle, keyword)
-                        .or()
-                        .like(AIConversation::getScene, keyword))
-                .orderByDesc(AIConversation::getUpdateTime);
-        Page<AIConversation> pageObj = PageUtils.of(page, pageSize);
-        conversationMapper.selectPage(pageObj, wrapper);
-        return R.success(pageObj.getRecords());
+        // 修改点(2026-09-18)：对话查询下沉 Service 层（Controller 不再直接操作 Mapper）
+        return R.success(aiChatService.searchConversations(userId, keyword, page, PageUtils.cap(pageSize)));
     }
 
     /**
@@ -485,13 +474,8 @@ public class AIChatController {
     @Parameter(description = "对话ID")
     public R<String> resetConversationContext(@PathVariable String conversationId) {
         Long userId = BaseContext.getCurrentId();
-        // 验证所有权
-        LambdaQueryWrapper<AIConversation> convWrapper = new LambdaQueryWrapper<>();
-        convWrapper.select(AIConversation::getUserId)
-                .eq(AIConversation::getConversationId, conversationId)
-                .eq(AIConversation::getIsDeleted, 0);
-        AIConversation conv = conversationMapper.selectOne(convWrapper);
-        if (conv == null || !userId.equals(conv.getUserId())) {
+        // 验证所有权（统一走 Service 层）
+        if (userId == null || !userId.equals(aiChatService.validateConversationOwnership(conversationId))) {
             return R.error("对话不存在或无权访问");
         }
         aiChatService.resetContext(conversationId);
@@ -533,10 +517,6 @@ public class AIChatController {
         return R.success(status);
     }
 
-    // ==================== 依赖注入 ====================
-
-    @Resource
-    private AIConversationMapper conversationMapper;
 }
 
 

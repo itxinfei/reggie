@@ -41,6 +41,9 @@ public class AIConfigProperties {
     /** 是否启用AI功能 */
     private boolean enabled = true;
 
+    /** 为 true 时必须配置 REGGIE_AI_KEY 环境变量才允许启动（生产 fail-fast，防止代码内置兜底密钥被用于解库内密钥） */
+    private boolean requireEnvKey = false;
+
     /** 点餐助手System Prompt */
     private String orderAssistantPrompt = "你是一个专业的餐饮推荐助手，名叫「小吉」。"
             + "你的任务是根据用户的需求和偏好，从当前门店的菜品中智能推荐最合适的菜品。\n"

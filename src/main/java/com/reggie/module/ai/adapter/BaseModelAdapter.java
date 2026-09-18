@@ -27,6 +27,13 @@ public abstract class BaseModelAdapter implements AiModelAdapter {
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
     private static final int DEFAULT_TIMEOUT_SECONDS = 60;
 
+    static {
+        // 启用 HTTP keep-alive 连接复用（JDK 内置 KeepAliveCache），
+        // 避免高并发下每次 AI 调用都新建 TCP/TLS 握手
+        System.setProperty("http.keepAlive", "true");
+        System.setProperty("http.maxConnections", "10");
+    }
+
     // ==================== 子类必须实现 ====================
 
     /**
@@ -85,7 +92,7 @@ public abstract class BaseModelAdapter implements AiModelAdapter {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Connection", "close");
+        // 不设置 Connection: close，交由 JDK KeepAliveCache 复用连接
         conn.setDoOutput(true);
 
         // 自定义请求头

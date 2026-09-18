@@ -989,7 +989,10 @@
                     try {
                         if (typeof aiApi !== 'undefined' && aiApi.recordFeedback) {
                             aiApi.recordFeedback({
-                                messageId: msg.id, feedbackType: type, scene: self.currentScene
+                                messageId: msg.id,
+                                // 修改点(2026-09-18)：后端校验只接受 positive/negative，原直发 'good' 被 400 拒绝
+                                feedbackType: type === 'good' ? 'positive' : 'negative',
+                                scene: self.currentScene
                             }).catch(function(e) { console.warn('[ai-assistant] recordFeedback 失败:', e) });
                         }
                     } catch (e) { console.warn('[ai-assistant] recordFeedback 异常:', e) }

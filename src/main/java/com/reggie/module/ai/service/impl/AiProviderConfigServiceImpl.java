@@ -12,6 +12,8 @@ import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.provider.AiProviderManager;
 import com.reggie.module.ai.service.AiProviderConfigService;
 import com.reggie.module.ai.util.AiKeyEncryptor;
+import com.reggie.module.ai.util.AiSecretMaskUtils;
+import com.reggie.module.ai.util.AiUrlUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -197,7 +199,8 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
 
         HttpURLConnection conn = null;
         try {
-            String testUrl = normalizedUrl + "/chat/completions";
+            // 修改点(2026-09-18)：统一走 AiUrlUtils，裸域名自动补 /v1（与实际对话请求保持一致）
+            String testUrl = AiUrlUtils.resolveEndpoint(normalizedUrl, "/chat/completions");
             URL url = new URL(testUrl);
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
@@ -407,7 +410,9 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             // 复用已有 ID，保留现有激活状态，避免唯一键冲突
             config.setId(existing.getId());
             config.setIsActive(existing.getIsActive() != null ? existing.getIsActive() : false);
-            if (config.getApiKey() == null || config.getApiKey().trim().isEmpty()) {
+            // 修改点(2026-09-18)：含掩码 **** 的值视为「不修改密钥」，防止前端回传脱敏值覆盖真实 Key
+            if (config.getApiKey() == null || config.getApiKey().trim().isEmpty()
+                    || config.getApiKey().contains("****")) {
                 config.setApiKey(existing.getApiKey());
             } else {
                 // 修复 P0-6：存入数据库前加密 apiKey
@@ -425,8 +430,9 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             config.setProviderCode(providerCode);
             config.setIsActive(config.getIsActive() != null ? config.getIsActive() : false);
             config.setIsDeleted(0);
-            // 修复 P0-6：新增时也加密 apiKey
-            if (config.getApiKey() != null && !config.getApiKey().trim().isEmpty()) {
+            // 修复 P0-6：新增时也加密 apiKey（掩码值不是合法密钥，忽略）
+            if (config.getApiKey() != null && !config.getApiKey().trim().isEmpty()
+                    && !config.getApiKey().contains("****")) {
                 String encrypted = AiKeyEncryptor.encrypt(config.getApiKey());
                 if (encrypted == null) {
                     throw new CustomException("API密钥加密失败，请检查 REGGIE_AI_KEY 环境变量");

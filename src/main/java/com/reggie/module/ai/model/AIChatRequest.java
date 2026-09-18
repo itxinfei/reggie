@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -28,9 +27,6 @@ public class AIChatRequest {
 
     /** 上下文数据（菜品数据、经营数据等） */
     private Map<String, Object> context;
-
-    /** 历史对话消息 */
-    private List<AIMessage> history;
 
     /** 会话ID */
     private String conversationId;

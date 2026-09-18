@@ -59,7 +59,6 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@SuppressWarnings("unchecked")
 public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConversation> implements AIChatService {
 
     /** AI供应商管理器 */
@@ -100,9 +99,6 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
     /** JSON序列化工具 */
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
-
-    /** 单次对话携带的最大历史消息数 */
-    private static final int MAX_HISTORY_MESSAGES = 20;
 
     /** AI异步任务线程池 */
     @Resource
@@ -146,7 +142,6 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         emitter.onError((e) -> log.warn("SSE连接错误: conversationId={}", conversationId, e));
         emitter.onCompletion(() -> log.debug("SSE连接完成: conversationId={}", conversationId));
 
-        saveUserMessage(request);
         final AiProviderConfig providerConfig = aiProviderManager.getActiveConfig();
         final Long tenantId = BaseContext.getCurrentTenantId();
 
@@ -162,6 +157,9 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     private void doStreamChat(AIChatRequest request, SseEmitter emitter, AiProviderConfig providerConfig,
             Long tenantId, Long userId, String conversationId, String scene, String userMessage) {
         try {
+            // 修改点(2026-09-18)：用户消息持久化移入异步线程，
+            // 原先在请求线程同步执行会拖慢 SSE 连接建立
+            saveUserMessage(request);
             List<AIMessage> messages = buildMessages(request);
             int maxTokens = (providerConfig != null && providerConfig.getMaxTokens() != null)
                     ? providerConfig.getMaxTokens() : aiConfig.getMaxTokens();
@@ -174,6 +172,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             // 使用真流式输出（适配器直接支持 SSE 或降级分块）
             StringBuilder fullContent = new StringBuilder();
             final Long[] savedAiMsgId = new Long[1];
+            @SuppressWarnings("unchecked")
             final List<AIRecommendedDish>[] parsedDishes = new List[]{null};
 
             StreamCallback callback = new StreamCallback() {
@@ -186,9 +185,17 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 public void onToken(String token, boolean isLast) {
                     try {
                         if (isLast) {
-                            // 最后一块：持久化并发送完成信号
-                            handleStreamComplete(emitter, fullContent, scene, tenantId, parsedDishes,
-                                    savedAiMsgId, conversationId, userId, userMessage);
+                            // 修改点(2026-09-18)：错误提示（Key 无效/请求失败/熔断等）以 isLast token
+                            // 形式返回且 fullContent 为空，原实现经 handleStreamComplete 静默 return，
+                            // 导致 SSE 挂起至超时（AsyncRequestTimeoutException）、用户端永远转圈；
+                            // 现推送 error 事件并完成连接（前端 assistant.html 已监听 error 事件）
+                            if (fullContent.length() == 0) {
+                                completeWithError(emitter, token, conversationId);
+                            } else {
+                                // 最后一块：持久化并发送完成信号
+                                handleStreamComplete(emitter, fullContent, scene, tenantId, parsedDishes,
+                                        savedAiMsgId, conversationId, userId, userMessage);
+                            }
                         } else {
                             // 中间 token：累积内容并推送
                             fullContent.append(token);
@@ -259,6 +266,26 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
         updateConversationTitle(conversationId, userMessage);
         emitter.complete();
+    }
+
+    /**
+     * 流式无内容时推送错误事件并完成连接（等价抽取）。
+     * <p>供应商返回的错误提示（如 Key 无效、请求失败）走 isLast token 但未累积内容，
+     * 必须显式发送 error 事件并 complete，否则 SSE 挂起至超时。</p>
+     */
+    private void completeWithError(SseEmitter emitter, String errorMessage, String conversationId) {
+        try {
+            Map<String, Object> errorData = new HashMap<>();
+            errorData.put("message", (errorMessage == null || errorMessage.isEmpty())
+                    ? "AI服务返回了空响应" : errorMessage);
+            emitter.send(SseEmitter.event().name("error").data(errorData));
+            emitter.complete();
+            log.warn("SSE流式无内容完成（错误提示已推送）: conversationId={}, message={}",
+                    conversationId, errorMessage);
+        } catch (Exception e) {
+            // 宽异常兜底：连接可能已被客户端断开
+            log.warn("SSE错误事件推送失败: conversationId={}", conversationId, e);
+        }
     }
 
     /**

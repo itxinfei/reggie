@@ -104,6 +104,10 @@ mybatis-plus:
 
 # 生产环境短信和推送配置
 reggie:
+  ai:
+    # 生产环境 fail-fast：必须配置 REGGIE_AI_KEY 环境变量才允许启动
+    # （防止使用代码内置兜底密钥解密数据库中的供应商 API Key）
+    require-env-key: true
   sms:
     sign-name: ${SMS_SIGN_NAME:瑞吉外卖}
     template-code: ${SMS_TEMPLATE_CODE:}

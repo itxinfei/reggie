@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
@@ -133,7 +134,10 @@ public class AiProviderController {
             return R.error("供应商配置不存在");
         }
         config.setIsActive(existing.getIsActive());
-        if (config.getApiKey() == null || config.getApiKey().trim().isEmpty()) {
+        // 修改点(2026-09-18)：空值或含掩码 **** 的值均视为「不修改密钥」，保留库中加密密钥。
+        // 原实现：前端编辑时回填脱敏值（sk-1****abcd），提交后非空即加密入库，导致真实 Key 被脱敏串覆盖损坏
+        if (config.getApiKey() == null || config.getApiKey().trim().isEmpty()
+                || config.getApiKey().contains("****")) {
             config.setApiKey(existing.getApiKey());
         } else {
             // 修复 P0-6：存入数据库前加密 apiKey
@@ -200,17 +204,27 @@ public class AiProviderController {
 
     /**
      * 获取 detail。
+     * <p>修改点(2026-09-18)：支持 reveal=true 返回解密后的明文 API 密钥（管理员编辑时直接显示，
+     * 查看行为记录审计日志）；默认仍脱敏。</p>
      * @param id 参数 id
+     * @param reveal 是否返回明文密钥
      * @return 返回结果
      */
     @GetMapping("/get/{id}")
-    @Operation(summary = "获取单个供应商", description = "获取指定供应商的配置（API密钥已脱敏）")
-    public R<AiProviderConfig> getDetail(@Parameter(description = "供应商配置ID", required = true) @PathVariable Long id) {
+    @Operation(summary = "获取单个供应商", description = "获取指定供应商的配置（默认脱敏，reveal=true 返回明文密钥）")
+    public R<AiProviderConfig> getDetail(@Parameter(description = "供应商配置ID", required = true) @PathVariable Long id,
+            @Parameter(description = "是否返回明文API密钥") @RequestParam(value = "reveal", required = false,
+                    defaultValue = "false") boolean reveal) {
         AiProviderConfig config = providerConfigService.getById(id);
         if (config == null) {
             return R.error("供应商配置不存在");
         }
-        maskSensitiveFields(config);
+        if (reveal) {
+            AiKeyEncryptor.decryptApiKeyInPlace(config);
+            log.info("[审计] 管理员查看AI供应商明文API密钥: id={}, code={}", config.getId(), config.getProviderCode());
+        } else {
+            maskSensitiveFields(config);
+        }
         return R.success(config);
     }
 

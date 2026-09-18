@@ -73,8 +73,6 @@ public final class AuthConstants {
         "/restaurant/status",
         // 枚举字典（后台与C端共用，匿名可访问；字典不含业务隐私数据）
         "/api/meta/enums",
-        // AI模块健康检查（匿名访问）
-        "/api/ai/health",
         // 公开菜品/套餐接口（C端菜单浏览）
         "/category/list",
         "/category/options",

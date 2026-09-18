@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
+import com.reggie.module.ai.util.AiSecretMaskUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.HttpURLConnection;
@@ -55,8 +56,9 @@ public class BaiduAdapter extends BaseModelAdapter {
                                      double temperature, AiProviderConfig config) {
         HttpURLConnection conn = null;
         try {
-            // 1) 构建 URL（百度用 access_token 鉴权）
+            // 1) 构建 URL（百度旧版 ERNIE 原生 API 要求 access_token 放查询参数，无法改请求头）
             String baseUrl = normalizeBaseUrl(config.getBaseUrl());
+            // 安全约束：apiUrl 含明文密钥，严禁写入任何日志/用户可见消息（访问日志由运维侧脱敏）
             String apiUrl = baseUrl + "?access_token=" + config.getApiKey();
 
             // 2) 创建连接（百度无额外请求头）
@@ -104,12 +106,15 @@ public class BaiduAdapter extends BaseModelAdapter {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             // 修改点(2026-09-15)：外网不可达属运行环境问题，降为 WARN 且不打全量堆栈，避免刷屏
             if (AiNetworkFailureUtils.isNetworkFailure(e)) {
+                // 异常消息可能携带含 access_token 的完整 URL，日志前脱敏
                 log.warn("AI请求[{} / {}]外部服务不可达（网络环境问题，非应用缺陷）：{}",
-                        config.getProviderCode(), FORMAT_ID, e.getMessage());
+                        config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(e.getMessage()));
             } else {
                 log.error("AI请求[{} / {}]未预期异常", config.getProviderCode(), FORMAT_ID, e);
             }
-            return errorResponse("百度AI连接失败（" + config.getProviderName() + "）：" + e.getMessage(), config);
+            // 异常消息可能携带完整 URL（含 access_token 查询参数），回显前脱敏
+            return errorResponse("百度AI连接失败（" + config.getProviderName() + "）："
+                    + AiSecretMaskUtils.maskUrl(e.getMessage()), config);
         } finally {
             if (conn != null) {
                 conn.disconnect();

@@ -41,9 +41,6 @@ public class AIConversationManagementServiceImpl
     @Resource
     private ConversationContextService conversationContextService;
 
-    /** 单次对话携带的最大历史消息数 */
-    private static final int MAX_HISTORY_MESSAGES = 20;
-
     /**
      * 获取 user conversations。
      * @param userId 参数 userId
@@ -194,8 +191,10 @@ public class AIConversationManagementServiceImpl
                 .eq(AIConversation::getIsDeleted, 0)
                 .eq(AIConversation::getTenantId, BaseContext.getCurrentTenantId());
         if (keyword != null && !keyword.isEmpty()) {
-            wrapper.and(w -> w.like(AIConversation::getTitle, keyword)
-                    .or().like(AIConversation::getScene, keyword));
+            // 转义 LIKE 通配符（% _ \），用户输入按字面量匹配，防止通配符注入
+            String escaped = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+            wrapper.and(w -> w.like(AIConversation::getTitle, escaped)
+                    .or().like(AIConversation::getScene, escaped));
         }
         wrapper.orderByDesc(AIConversation::getUpdateTime);
         Page<AIConversation> pageObj = PageUtils.of(page, pageSize);
@@ -219,66 +218,4 @@ public class AIConversationManagementServiceImpl
         return conversation != null ? conversation.getUserId() : null;
     }
 
-    // ==================== 私有辅助方法 ====================
-
-    /**
-     * 从数据库加载会话最近的历史消息（用于多轮对话上下文）
-     */
-    private List<AIMessageRecord> getRecentMessages(String conversationId) {
-        if (conversationId == null || conversationId.isEmpty()) {
-            return Collections.emptyList();
-        }
-        LambdaQueryWrapper<AIMessageRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AIMessageRecord::getConversationId, conversationId)
-                .eq(AIMessageRecord::getIsDeleted, 0)
-                .eq(AIMessageRecord::getTenantId, BaseContext.getCurrentTenantId())
-                .orderByDesc(AIMessageRecord::getCreateTime);
-        Page<AIMessageRecord> pageObj = PageUtils.of(1, MAX_HISTORY_MESSAGES);
-        messageRecordMapper.selectPage(pageObj, wrapper);
-        List<AIMessageRecord> records = pageObj.getRecords();
-        Collections.reverse(records);
-        return records;
-    }
-
-    /**
-     * 更新对话的消息计数和最后更新时间（原子递增，避免竞态条件）
-     */
-    private void updateMessageCount(String conversationId) {
-        try {
-            LambdaUpdateWrapper<AIConversation> wrapper = new LambdaUpdateWrapper<>();
-            wrapper.eq(AIConversation::getConversationId, conversationId)
-                    .eq(AIConversation::getIsDeleted, 0)
-                    .setSql("message_count = IFNULL(message_count, 0) + 1")
-                    .set(AIConversation::getUpdateTime, LocalDateTime.now());
-            conversationMapper.update(null, wrapper);
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.warn("更新消息计数失败: conversationId={}", conversationId, e);
-        }
-    }
-
-    /**
-     * 更新对话标题（取用户首条消息的前20字符作为标题）
-     */
-    private void updateConversationTitle(String conversationId, String firstMessage) {
-        if (conversationId == null || firstMessage == null) {
-            return;
-        }
-        try {
-            LambdaQueryWrapper<AIConversation> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(AIConversation::getConversationId, conversationId)
-                    .eq(AIConversation::getIsDeleted, 0);
-            AIConversation conv = conversationMapper.selectOne(wrapper);
-            if (conv != null && ("新对话".equals(conv.getTitle()) || conv.getTitle() == null)) {
-                String title = firstMessage.length() > 20
-                        ? firstMessage.substring(0, 20) + "..."
-                        : firstMessage;
-                conv.setTitle(title);
-                conversationMapper.updateById(conv);
-            }
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.warn("更新对话标题失败: conversationId={}", conversationId, e);
-        }
-    }
 }

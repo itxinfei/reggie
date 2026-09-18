@@ -136,8 +136,9 @@
         providerDelete: function(id) {
             return $axios.delete('/admin/ai/provider/delete/' + id);
         },
-        providerGet: function(id) {
-            return $axios.get('/admin/ai/provider/get/' + id);
+        // 修改点(2026-09-18)：reveal=true 返回明文API密钥（编辑弹窗直接显示）
+        providerGet: function(id, reveal) {
+            return $axios({ url: '/admin/ai/provider/get/' + id, method: 'get', params: reveal ? { reveal: true } : {} });
         },
         providerUpdate: function(data) {
             return $axios.post('/admin/ai/provider/update', data);

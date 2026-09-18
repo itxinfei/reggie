@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
+import com.reggie.module.ai.util.AiSecretMaskUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.HttpURLConnection;
@@ -102,7 +103,7 @@ public class AnthropicAdapter extends BaseModelAdapter {
 
             String jsonBody = getObjectMapper().writeValueAsString(requestBody);
             log.info("AI请求[{} / {}]: url={}, model={}, messages={}, systemPrompt={}, maxTokens={}",
-                    config.getProviderCode(), FORMAT_ID, apiUrl, config.getModelName(),
+                    config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(apiUrl), config.getModelName(),
                     msgList.size(), systemPrompt != null, resolvedMaxTokens);
 
             // 4) 发送请求
@@ -116,7 +117,7 @@ public class AnthropicAdapter extends BaseModelAdapter {
                 String errorBody = readErrorBody(conn);
                 // 修改点：errorBody 截断 200 字，防止 token 回显或超长响应体落盘
                 log.error("AI请求[{} / {}]失败: url={}, code={}, error={}",
-                        config.getProviderCode(), FORMAT_ID, apiUrl, responseCode,
+                        config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(apiUrl), responseCode,
                         truncate(errorBody, 200));
                 String userMsg = buildUserFriendlyError(config.getProviderName(),
                         parseAnthropicErrorMessage(errorBody));

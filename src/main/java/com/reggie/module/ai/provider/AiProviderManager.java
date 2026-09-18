@@ -34,7 +34,7 @@ import java.util.Map;
  */
 @Slf4j
 @Component
-public class AiProviderManager implements AIClient {
+public class AiProviderManager {
 
     @Resource
     private AiProviderConfigMapper providerConfigMapper;
@@ -175,8 +175,6 @@ public class AiProviderManager implements AIClient {
         return null;
     }
 
-    // ==================== AIClient 接口实现 ====================
-
     /**
      * 处理 chat。
      * @param messages 参数 messages
@@ -184,7 +182,6 @@ public class AiProviderManager implements AIClient {
      * @param temperature 参数 temperature
      * @return 返回结果
      */
-    @Override
     public AIChatResponse chat(List<AIMessage> messages, int maxTokens, double temperature) {
         AiProviderConfig config = getActiveConfig();
 
@@ -292,7 +289,13 @@ public class AiProviderManager implements AIClient {
             throws Exception {
         if (adapter.supportsStreaming()) {
             try {
-                return adapter.chatStream(messages, maxTokens, temperature, config, callback);
+                String content = adapter.chatStream(messages, maxTokens, temperature, config, callback);
+                if (content != null && !content.isEmpty()) {
+                    return content;
+                }
+                // 修改点(2026-09-18)：流式返回空内容（如网关路由到 Claude 等非标上游），
+                // 不直接报「模型返回了空响应」，降级为非流式重试
+                log.warn("AI流式返回空内容，降级为非流式重试: provider={}", config.getProviderCode());
             } catch (Exception e) {
                 // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("真流式失败，降级为分块流式: provider={}", config.getProviderCode(), e);
@@ -324,26 +327,6 @@ public class AiProviderManager implements AIClient {
             result[i] = text.substring(start, end);
         }
         return result;
-    }
-
-    /**
-     * 获取 provider name。
-     * @return 返回结果
-     */
-    @Override
-    public String getProviderName() {
-        AiProviderConfig config = getActiveConfig();
-        return config != null ? config.getProviderCode() : aiConfig.getProvider();
-    }
-
-    /**
-     * 获取 default model。
-     * @return 返回结果
-     */
-    @Override
-    public String getDefaultModel() {
-        AiProviderConfig config = getActiveConfig();
-        return config != null ? config.getModelName() : aiConfig.getModel();
     }
 
     // ==================== 配置获取 ====================
