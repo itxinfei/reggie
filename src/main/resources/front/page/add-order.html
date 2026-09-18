@@ -507,15 +507,25 @@
                     },
                     //获取购物车数据
                     async getCartData(){
-                        const res = await cartListApi({})
-                        if(res.code === 1){
-                            // 修改点：防御 res.data 为 null（异常返回）导致模板 toFixed 报错
-                            this.cartData = res.data || []
-                        }else{
-                            vant.Toast.fail(res.msg || '加载购物车失败');
+                        // 修改点(2026-09-18)：包裹 try/catch/finally——原实现无容错，网络错误/拦截器抛错时
+                        // 产生未捕获 Promise rejection，且其后 loadUsableCoupons 不会执行
+                        try {
+                            const res = await cartListApi({})
+                            if(res.code === 1){
+                                // 修改点：防御 res.data 为 null（异常返回）导致模板 toFixed 报错
+                                this.cartData = res.data || []
+                            }else{
+                                this.cartData = []
+                                vant.Toast.fail(res.msg || '加载购物车失败');
+                            }
+                        } catch(e){
+                            console.error('加载购物车失败:', e)
+                            this.cartData = []
+                            vant.Toast.fail('加载购物车失败，请稍后重试')
+                        } finally {
+                            // 修改点：购物车数据就绪后再加载可用优惠券，避免 $nextTick 时 goodsPrice 仍为 0
+                            this.loadUsableCoupons()
                         }
-                        // 修改点：购物车数据就绪后再加载可用优惠券，避免 $nextTick 时 goodsPrice 仍为 0
-                        this.loadUsableCoupons()
                     },
                     // 修改点：选择优惠券（传入券对象，再次点击相同券取消选中）
                     selectCoupon(coupon){
@@ -655,8 +665,13 @@
                         }
                         if(this.loading) return;
                         this.loading = true
+                        // 修改点(2026-09-18)：餐具选择原先仅 UI 绑定、从未提交。并入备注随订单落库，
+                        // 后端复用 orders.remark 字段，无需加表字段；后厨/小票可见
+                        var remarkParts = []
+                        if(this.note){ remarkParts.push(this.note) }
+                        remarkParts.push(this.utensils === 0 ? '无需餐具' : this.utensils + '份餐具')
                         const params = {
-                            remark:this.note,
+                            remark: remarkParts.join('，'),
                             payMethod:this.payMethod,
                             addressBookId:this.address.id,
                             amount: this.finalPrice,

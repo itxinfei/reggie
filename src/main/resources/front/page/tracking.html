@@ -80,7 +80,9 @@
                     </div>
                     <div class="timeline-content">
                         <div class="timeline-title">{{ step.label }}</div>
-                        <div class="timeline-time" v-if="isStepDone(step.status)">{{ updateTimeText }}</div>
+                        <!-- 修改点(2026-09-18)：后端仅返回「当前状态」的单一 updateTime，
+                             只在当前状态对应节点显示；原实现每个已完成节点都渲染同一时间，等于虚构历史节点时间 -->
+                        <div class="timeline-time" v-if="isCurrentStep(step.status)">{{ updateTimeText }}</div>
                     </div>
                 </div>
             </div>
@@ -392,16 +394,12 @@
                     }
                     return '';
                 },
-                isStepDone(stepStatus) {
-                    if (!this.trackingData || !this.trackingData.status) return false;
-                    // 修改点：已送达/已取消（终态）视为全部步骤完成，不再用 timeline active 高亮
-                    if (this.trackingData.status === 'DELIVERED' || this.trackingData.status === 'CANCELLED') {
-                        return this.trackingData.status === 'DELIVERED';
-                    }
-                    const order = ['PENDING', 'ACCEPTED', 'PICKING', 'DELIVERING', 'DELIVERED'];
-                    const curIdx = order.indexOf(this.trackingData.status);
-                    const stepIdx = order.indexOf(stepStatus);
-                    return curIdx >= 0 && stepIdx >= 0 && stepIdx <= curIdx;
+                // 修改点(2026-09-18)：判断是否为订单当前所处步骤——唯一与 trackingData.updateTime 对应的节点。
+                // 已取消订单时间线不展示时间；其余状态仅当前步骤显示更新时刻
+                isCurrentStep(stepStatus){
+                    if(!this.trackingData || !this.trackingData.status) return false;
+                    if(this.trackingData.status === 'CANCELLED') return false;
+                    return stepStatus === this.trackingData.status;
                 },
                 // 修改点(2026-09-17)：初始化配送地图（动态加载高德 JS API，失败自动降级为文字版）
                 initDeliveryMap() {
