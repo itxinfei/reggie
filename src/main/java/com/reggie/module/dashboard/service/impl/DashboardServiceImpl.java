@@ -221,16 +221,26 @@ public class DashboardServiceImpl implements DashboardService {
     // ==================== 趋势数据 ====================
 
     /**
-     * 获取最近7天订单趋势数据
+     * 获取最近7天订单趋势数据（向后兼容）
+     */
+    @Override
+    public List<Map<String, Object>> getTrend(Long tenantId) {
+        return getTrend(tenantId, 7);
+    }
+
+    /**
+     * 获取最近N天订单趋势数据（支持7/14/30天）
      *
      * @param tenantId 租户ID
+     * @param days 天数
      * @return 趋势数据列表
      */
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"}) // Redis缓存返回Object类型，需要泛型转换
-    public List<Map<String, Object>> getTrend(Long tenantId) {
+    public List<Map<String, Object>> getTrend(Long tenantId, int days) {
+        if (days != 7 && days != 14 && days != 30) { days = 7; }
         // tenantId为null时不使用缓存（超级管理员视图，避免数据串租户）
-        String cacheKey = tenantId != null ? KEY_TREND + tenantId : null;
+        String cacheKey = tenantId != null ? KEY_TREND + tenantId + ":" + days : null;
 
         // [Redis] 尝试从缓存获取（仅当tenantId不为null时）
         if (isRedisAvailable() && cacheKey != null) {
@@ -252,7 +262,7 @@ public class DashboardServiceImpl implements DashboardService {
         log.info("[Dashboard] Redis未命中，查询MySQL计算趋势 key={}", cacheKey);
         List<Map<String, Object>> trend;
         try {
-            trend = computeTrend(tenantId);
+            trend = computeTrend(tenantId, days);
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[Dashboard] 计算趋势异常", e);
@@ -275,14 +285,23 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     /**
-     * 计算最近7天趋势（通过 DashboardMapper 按日聚合，单次 SQL 查询完成）
+     * 计算最近7天趋势（向后兼容）
      */
     private List<Map<String, Object>> computeTrend(Long tenantId) {
+        return computeTrend(tenantId, 7);
+    }
+
+    /**
+     * 计算最近N天趋势（通过 DashboardMapper 按日聚合，单次 SQL 查询完成）
+     *
+     * @param tenantId 租户ID
+     * @param days 天数（7/14/30）
+     */
+    private List<Map<String, Object>> computeTrend(Long tenantId, int days) {
         List<Map<String, Object>> trend = new ArrayList<>();
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM-dd");
         try {
-            // 查询近7天按日聚合数据
-            LocalDate rangeStart = LocalDate.now().minusDays(6);
+            LocalDate rangeStart = LocalDate.now().minusDays(days - 1);
             LocalDate rangeEnd = LocalDate.now();
             List<Map<String, Object>> dayStats = dashboardMapper.getRevenueTrend(tenantId, rangeStart, rangeEnd);
 
@@ -306,8 +325,8 @@ public class DashboardServiceImpl implements DashboardService {
                 byDate.put(day, m);
             }
 
-            // 按日期逆序填充（从今天往前7天）
-            for (int i = 0; i <= 6; i++) {
+            // 按日期逆序填充（从今天往前N天）
+            for (int i = 0; i <= days - 1; i++) {
                 LocalDate date = rangeStart.plusDays(i);
                 Map<String, Object> dayData = byDate.get(date);
                 int count = dayData != null ? (int) dayData.get("orderCount") : 0;

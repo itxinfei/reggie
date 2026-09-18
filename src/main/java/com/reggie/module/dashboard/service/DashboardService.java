@@ -33,6 +33,17 @@ public interface DashboardService {
     List<Map<String, Object>> getTrend(Long tenantId);
 
     /**
+     * 获取最近N天趋势数据（支持7/14/30天）
+     * Redis缓存Key: dashboard:trend:{tenantId}:{days}
+     * 缓存TTL: 30分钟（历史数据不频繁变动）
+     *
+     * @param tenantId 租户ID
+     * @param days 天数（7/14/30），默认7
+     * @return 每日的订单数和营业额列表
+     */
+    List<Map<String, Object>> getTrend(Long tenantId, int days);
+
+    /**
      * 获取当前订单状态分布
      * Redis缓存Key: dashboard:order-status:{tenantId}
      * 缓存TTL: 2分钟（订单状态变动较频繁）

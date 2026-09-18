@@ -117,5 +117,13 @@ public interface DishEvaluationService extends IService<DishEvaluation> {
      * @return 是否删除成功
      */
     boolean deleteMyEvaluation(Long id, Long userId, Long tenantId);
+
+    /**
+     * 评价统计聚合（1次SQL返回total/pending/approved/rejected四个计数）
+     *
+     * @param tenantId 租户ID
+     * @return 包含 total, pending, approved, rejected 的 Map
+     */
+    Map<String, Object> getStatsAggregation(Long tenantId);
 }
 

@@ -30,4 +30,17 @@ public interface PurchaseOrderDetailMapper extends BaseMapper<PurchaseOrderDetai
     @Update("UPDATE purchase_order_detail SET received_qty = #{qty} " +
             "WHERE id = #{id} AND IFNULL(received_qty, 0) < #{qty}")
     int receiveFully(@Param("id") Long id, @Param("qty") BigDecimal qty);
+
+    /**
+     * 部分收货：增量更新 received_qty += #{receiveQty}，上限为 qty。
+     * CAS 保证不超收：仅当 IFNULL(received_qty,0) + #{receiveQty} <= qty 时才更新。
+     *
+     * @param id         明细ID
+     * @param receiveQty 本次收货数量
+     * @return 受影响行数，0 表示超收或已满
+     */
+    @Update("UPDATE purchase_order_detail " +
+            "SET received_qty = IFNULL(received_qty, 0) + #{receiveQty} " +
+            "WHERE id = #{id} AND IFNULL(received_qty, 0) + #{receiveQty} <= qty")
+    int receivePartial(@Param("id") Long id, @Param("receiveQty") BigDecimal receiveQty);
 }

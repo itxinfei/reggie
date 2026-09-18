@@ -424,6 +424,38 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         }
         return result;
     }
+
+    /**
+     * 评价统计聚合：1次查询返回total/pending/approved/rejected
+     * 用 LambdaQueryWrapper 分组计数，替代此前4次分页查询
+     */
+    @Override
+    public Map<String, Object> getStatsAggregation(Long tenantId) {
+        Map<String, Object> stats = new java.util.LinkedHashMap<>();
+        stats.put("total", 0);
+        stats.put("pending", 0);
+        stats.put("approved", 0);
+        stats.put("rejected", 0);
+
+        LambdaQueryWrapper<DishEvaluation> qw = new LambdaQueryWrapper<>();
+        qw.eq(DishEvaluation::getTenantId, tenantId)
+          .select(DishEvaluation::getStatus);
+        List<DishEvaluation> all = this.list(qw);
+
+        int total = all.size();
+        int pending = 0, approved = 0, rejected = 0;
+        for (DishEvaluation e : all) {
+            Integer s = e.getStatus();
+            if (s == null || s == 0) { pending++; }
+            else if (s == 1) { approved++; }
+            else if (s == 2) { rejected++; }
+        }
+        stats.put("total", total);
+        stats.put("pending", pending);
+        stats.put("approved", approved);
+        stats.put("rejected", rejected);
+        return stats;
+    }
 }
 
 

@@ -32,7 +32,7 @@ public interface ReportService {
      * @param tenantId  租户ID
      * @return 菜品排行列表
      */
-    List<Map<String, Object>> getDishRanking(String startDate, String endDate, int limit, Long tenantId);
+    List<Map<String, Object>> getDishRanking(String startDate, String endDate, int limit, Long tenantId, Long categoryId);
 
     /**
      * 获取时段客流分析

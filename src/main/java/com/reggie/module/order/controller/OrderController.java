@@ -444,6 +444,29 @@ public class OrderController {
     }
 
     /**
+     * 更新内部备注（仅后台可见，店员运营信息）
+     */
+    @PutMapping("/internal-remark")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10, type = RateLimitType.USER)
+    @Operation(summary = "更新内部备注", description = "更新订单内部备注，仅后台可见")
+    public R<String> updateInternalRemark(@RequestParam Long id, @RequestParam(required = false) String remark) {
+        if (id == null) {
+            return R.error("订单ID不能为空");
+        }
+        Orders existing = orderService.getById(id);
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (existing == null || currentTenantId == null || !Objects.equals(currentTenantId, existing.getTenantId())) {
+            return R.error("订单不存在或不属于当前租户");
+        }
+        Orders update = new Orders();
+        update.setId(id);
+        update.setInternalRemark(remark);
+        orderService.updateById(update);
+        return R.success("备注已保存");
+    }
+
+    /**
      * 订单统计：今日各状态订单数量、营业额
      */
     @GetMapping("/statistics")

@@ -65,4 +65,12 @@ public interface PurchaseOrderService extends IService<PurchaseOrder> {
      * @return 明细列表
      */
     List<PurchaseOrderDetail> getDetailsByOrderId(Long orderId);
+
+    /**
+     * 部分收货：按明细指定数量收货入库
+     *
+     * @param orderId       采购订单ID
+     * @param receiveQtys   明细ID → 本次收货数量 的映射
+     */
+    void receivePartialOrder(Long orderId, java.util.Map<Long, BigDecimal> receiveQtys);
 }

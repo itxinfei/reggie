@@ -129,13 +129,23 @@ public class ReportServiceImpl implements ReportService {
      * @return 返回结果
      */
     @Override
-    public List<Map<String, Object>> getDishRanking(String startDate, String endDate, int limit, Long tenantId) {
+    public List<Map<String, Object>> getDishRanking(String startDate, String endDate, int limit, Long tenantId, Long categoryId) {
         List<Map<String, Object>> ranking = new ArrayList<>();
 
         // 租户隔离
         Long originalTenantId = BaseContext.getCurrentTenantId();
         try {
             BaseContext.setCurrentTenantId(tenantId);
+
+            // 修改点：分类筛选 — 查出该分类下所有菜品ID，用于后续过滤 orderDetail
+            Set<Long> categoryDishIds = null;
+            if (categoryId != null) {
+                LambdaQueryWrapper<Dish> dishQw = new LambdaQueryWrapper<>();
+                dishQw.eq(Dish::getCategoryId, categoryId).select(Dish::getId);
+                categoryDishIds = dishService.list(dishQw).stream()
+                        .map(Dish::getId).collect(Collectors.toSet());
+                if (categoryDishIds.isEmpty()) return ranking;
+            }
 
             LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
             orderQw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
@@ -147,6 +157,10 @@ public class ReportServiceImpl implements ReportService {
             List<Long> orderIds = orders.stream().map(Orders::getId).collect(Collectors.toList());
             LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
             detailQw.in(OrderDetail::getOrderId, orderIds);
+            // 修改点：按分类筛选 dishId
+            if (categoryDishIds != null) {
+                detailQw.in(OrderDetail::getDishId, categoryDishIds);
+            }
             List<OrderDetail> details = orderDetailService.list(detailQw);
 
             // 修改点：同时统计销量和销售额，供前端排行展示

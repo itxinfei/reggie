@@ -66,15 +66,18 @@ public class DashboardController {
     }
 
     /**
-     * 获取最近7天趋势数据
-     * <p>Redis: String key=dashboard:trend:{tenantId}, TTL=30min
+     * 获取最近N天趋势数据
+     * <p>Redis: String key=dashboard:trend:{tenantId}:{days}, TTL=30min
      */
     @GetMapping("/trend")
-    @Operation(summary = "7日趋势", description = "获取最近7天订单数和营业额趋势")
-    public R<List<Map<String, Object>>> trend() {
+    @Operation(summary = "趋势数据", description = "获取最近N天订单数和营业额趋势（默认7天，可选7/14/30）")
+    public R<List<Map<String, Object>>> trend(
+            @Parameter(description = "天数（7/14/30）", required = false, example = "7")
+            @RequestParam(defaultValue = "7") int days) {
         Long tenantId = BaseContext.getCurrentTenantId();
-        log.info("[Dashboard] 获取趋势数据 tenantId={}", tenantId);
-        List<Map<String, Object>> data = dashboardService.getTrend(tenantId);
+        if (days != 7 && days != 14 && days != 30) { days = 7; }
+        log.info("[Dashboard] 获取趋势数据 tenantId={}, days={}", tenantId, days);
+        List<Map<String, Object>> data = dashboardService.getTrend(tenantId, days);
         return R.success(data);
     }
 

@@ -310,6 +310,21 @@ public class DishEvaluationController {
     }
 
     /**
+     * 获取评价统计聚合数据（1次请求替代4次分页查询）
+     * @return total/pending/approved/rejected 四项计数
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "评价统计聚合", description = "一次返回全部/待审核/已通过/已拒绝四个计数，1次SQL替代4次分页查询")
+    public R<Map<String, Object>> getStats() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("租户信息缺失");
+        }
+        Map<String, Object> stats = dishEvaluationService.getStatsAggregation(tenantId);
+        return R.success(stats);
+    }
+
+    /**
      * 删除自己的评价（仅未审核且本人评价可删）
      *
      * @param params 包含 id 的请求体

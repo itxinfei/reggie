@@ -146,6 +146,20 @@ public class PurchaseOrderController {
     }
 
     /**
+     * 部分收货：按明细指定数量收货入库
+     * @param id 采购单ID
+     * @param receiveQtys 明细ID → 收货数量的映射
+     * @return 操作结果
+     */
+    @PutMapping("/receive-partial/{id}")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "部分收货", description = "按明细指定数量收货入库，未收完的采购单状态变更为部分收货")
+    public R<String> receivePartial(@PathVariable Long id, @RequestBody java.util.Map<Long, java.math.BigDecimal> receiveQtys) {
+        purchaseOrderService.receivePartialOrder(id, receiveQtys);
+        return R.success("部分收货成功");
+    }
+
+    /**
      * 取消采购单
      * @param id 采购单ID
      * @return 操作结果

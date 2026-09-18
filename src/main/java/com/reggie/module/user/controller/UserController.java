@@ -118,7 +118,9 @@ public class UserController {
             return R.error("请" + remaining + "秒后再试");
         }
 
-        int code = SECURE_RANDOM.nextInt(9000) + 1000;
+        // 修改点(2026-09-18)：验证码由 4 位改为 6 位，与 C 端登录页前端正则 /^\d{6}$/ 对齐
+        // （此前后端 4 位 + 前端要求 6 位，输入框永远不满足 canLogin 条件，登录按钮永久禁用，无法登录）
+        int code = SECURE_RANDOM.nextInt(900000) + 100000;
         String codeStr = String.valueOf(code);
 
         // 存储验证码及生成时间到Session

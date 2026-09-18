@@ -66,16 +66,17 @@ public class ReportController {
      * @return 菜品排行列表
      */
     @GetMapping("/dish-ranking")
-    @Operation(summary = "菜品排行", description = "获取指定时间段的菜品销售排行，支持限制返回数量")
+    @Operation(summary = "菜品排行", description = "获取指定时间段的菜品销售排行，支持限制返回数量和分类筛选")
     public R<List<Map<String, Object>>> dishRanking(
             @Parameter(description = "开始日期，格式：yyyy-MM-dd", required = true, example =
                     "2026-07-01") @RequestParam String startDate,
             @Parameter(description = "结束日期，格式：yyyy-MM-dd", required = true, example =
                     "2026-07-08") @RequestParam String endDate,
             @Parameter(description = "返回前N条排行", required = false, example = "10") @RequestParam(defaultValue =
-                    "10") int limit) {
+                    "10") int limit,
+            @Parameter(description = "分类ID（可选，按分类筛选）", required = false) @RequestParam(required = false) Long categoryId) {
         Long tenantId = BaseContext.getCurrentTenantId();
-        List<Map<String, Object>> data = reportService.getDishRanking(startDate, endDate, limit, tenantId);
+        List<Map<String, Object>> data = reportService.getDishRanking(startDate, endDate, limit, tenantId, categoryId);
         return R.success(data);
     }
 

@@ -20,6 +20,8 @@ import com.reggie.module.auth.model.Employee;
 import com.reggie.enums.EmployeeRole;
 import com.reggie.enums.UserStatus;
 import com.reggie.module.auth.service.EmployeeService;
+import com.reggie.module.sys.model.Role;
+import com.reggie.module.sys.service.RoleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -63,6 +65,9 @@ public class EmployeeController {
 
     @Autowired
     private EmployeeService employeeService;
+
+    @Autowired
+    private RoleService roleService;
 
     @Autowired(required = false)
     private com.reggie.utils.SMSUtils smsUtils;
@@ -176,17 +181,26 @@ public class EmployeeController {
         // 重新从数据库查询最新信息，确保租户上下文准确
         Employee freshEmp = employeeService.getById(emp.getId());
         String sessionRoleKey;
+        Long sessionEmployeeId;
+        Long sessionTenantId;
+        Integer legacyRole;
         if (freshEmp != null) {
-            request.getSession().setAttribute("employee", freshEmp.getId());
-            request.getSession().setAttribute("tenantId", freshEmp.getTenantId());
-            sessionRoleKey = resolveRoleKey(freshEmp.getRole());
+            sessionEmployeeId = freshEmp.getId();
+            sessionTenantId = freshEmp.getTenantId();
+            legacyRole = freshEmp.getRole();
         } else {
             // 如果查询失败，使用原信息（降级处理）
-            request.getSession().setAttribute("employee", emp.getId());
-            request.getSession().setAttribute("tenantId", emp.getTenantId());
-            sessionRoleKey = resolveRoleKey(emp.getRole());
+            sessionEmployeeId = emp.getId();
+            sessionTenantId = emp.getTenantId();
+            legacyRole = emp.getRole();
             log.warn("员工登录后无法刷新数据，使用内存中的租户信息可能已过期 - empId: {}", emp.getId());
         }
+        // 登录态建立租户上下文：RBAC 角色查询受租户插件过滤，BaseContext 为空时 fail-closed 追加
+        // tenant_id=-1 导致查空，故先设置再查询（与 logout 的 BaseContext.remove() 对称）
+        BaseContext.setCurrentTenantId(sessionTenantId);
+        request.getSession().setAttribute("employee", sessionEmployeeId);
+        request.getSession().setAttribute("tenantId", sessionTenantId);
+        sessionRoleKey = resolveRoleKey(sessionEmployeeId, sessionTenantId, legacyRole);
 
         request.getSession().setAttribute("roleKey", sessionRoleKey);
 
@@ -353,16 +367,45 @@ public class EmployeeController {
     }
 
     /**
-     * 根据员工角色整数值解析角色标识
-     * 1=admin(超级管理员), 2=manager(店长/普通员工)
+     * 解析登录会话的角色标识
+     * <p>优先取 employee_role 显式关联角色的 role_key（SUPER_ADMIN 优先），
+     * 无关联或异常时回退旧数字字段（1=SUPER_ADMIN，其他=STORE_MANAGER）。</p>
+     * @param employeeId 员工ID
+     * @param tenantId 租户ID
+     * @param legacyRole 员工表旧 role 字段（兜底）
+     * @return 角色标识
      */
-    private String resolveRoleKey(Integer role) {
-        // 修改点：登录角色标识需与 role 表的 role_key 保持一致（SUPER_ADMIN / STORE_MANAGER）。
-        // 原实现返回 admin/manager，而 role 表实际存的是 SUPER_ADMIN/STORE_MANAGER，
-        // 导致 PermissionAspect.loadPermissionsFromDb 通过 roleKey 查不到角色，
-        // RBAC 实际失效（非管理员永远无权限）。现对齐为数据库角色标识。
-        if (role == null) return "STORE_MANAGER";
-        return role == 1 ? "SUPER_ADMIN" : "STORE_MANAGER";
+    private String resolveRoleKey(Long employeeId, Long tenantId, Integer legacyRole) {
+        // 修改点（2026-09-18）：优先查 employee_role 显式关联角色的 role_key（RBAC 正解，
+        // 与 PermissionAspect.loadPermissionsFromDb 同源）。原实现按 employee.role 数字映射，
+        // 但 RBAC 改造后该字段不再表达管理员身份（全员为 2，admin 实际通过 employee_role
+        // 绑定 SUPER_ADMIN 角色 id=18），导致超管登录 roleKey 被误判为 STORE_MANAGER，
+        // 角色管理等 @RequiresAdmin 接口全部"权限不足"。
+        // 多角色时 SUPER_ADMIN 优先；无显式关联或查询异常时回退旧数字字段，保持兼容。
+        try {
+            List<Long> roleIds = roleService.getEmployeeRoleIds(employeeId, tenantId);
+            if (roleIds != null && !roleIds.isEmpty()) {
+                List<Role> roles = roleService.listByIds(roleIds);
+                String firstKey = null;
+                for (Role r : roles) {
+                    if (r == null || r.getRoleKey() == null || r.getRoleKey().isEmpty()) {
+                        continue;
+                    }
+                    if ("SUPER_ADMIN".equals(r.getRoleKey())) {
+                        return "SUPER_ADMIN";
+                    }
+                    if (firstKey == null) {
+                        firstKey = r.getRoleKey();
+                    }
+                }
+                if (firstKey != null) {
+                    return firstKey;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[登录] 查询员工 RBAC 角色失败，回退旧字段判定 - employeeId={}", employeeId, e);
+        }
+        return legacyRole != null && legacyRole == 1 ? "SUPER_ADMIN" : "STORE_MANAGER";
     }
 
     /**

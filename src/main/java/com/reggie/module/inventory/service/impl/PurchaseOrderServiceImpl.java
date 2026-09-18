@@ -28,6 +28,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -232,6 +233,71 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         if (updated == 0) {
             throw new CustomException("采购单已被他人收货或状态已变更");
         }
+    }
+
+    /**
+     * 部分收货：按指定数量逐项入库，满收明细自动跳过，全部满收后整单变更为 RECEIVED
+     *
+     * @param orderId     采购订单ID
+     * @param receiveQtys 明细ID → 本次收货数量
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void receivePartialOrder(Long orderId, Map<Long, BigDecimal> receiveQtys) {
+        PurchaseOrder po = getById(orderId);
+        if (po == null) {
+            throw new CustomException("采购单不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(po.getTenantId())) {
+            throw new CustomException("无权操作其他租户的采购单");
+        }
+        if (!PurchaseOrderStatus.ORDERED.getValue().equals(po.getStatus())
+                && !PurchaseOrderStatus.PARTIAL.getValue().equals(po.getStatus())) {
+            throw new CustomException("采购单状态不允许收货");
+        }
+
+        List<PurchaseOrderDetail> details = detailService.list(
+            new LambdaQueryWrapper<PurchaseOrderDetail>()
+                .eq(PurchaseOrderDetail::getPurchaseOrderId, orderId));
+
+        for (PurchaseOrderDetail detail : details) {
+            BigDecimal receiveQty = receiveQtys.get(detail.getId());
+            if (receiveQty == null || receiveQty.compareTo(BigDecimal.ZERO) <= 0) {
+                continue; // 跳过未指定或0数量的明细
+            }
+            int rows = purchaseOrderDetailMapper.receivePartial(detail.getId(), receiveQty);
+            if (rows > 0) {
+                stockRecordService.stockIn(detail.getMaterialId(), receiveQty,
+                        detail.getUnitPrice(), po.getId(),
+                        "采购单收货（部分）：" + po.getId(),
+                        String.valueOf(BaseContext.getCurrentId()));
+            }
+            // rows==0 表示超收或已满，跳过
+        }
+
+        // 检查是否全部满收
+        boolean allReceived = true;
+        for (PurchaseOrderDetail detail : details) {
+            BigDecimal qty = detail.getQty() != null ? detail.getQty() : BigDecimal.ZERO;
+            BigDecimal received = detail.getReceivedQty() != null ? detail.getReceivedQty() : BigDecimal.ZERO;
+            // 重新查询最新的 receivedQty（上面可能已更新）
+            PurchaseOrderDetail fresh = detailService.getById(detail.getId());
+            BigDecimal freshReceived = (fresh != null && fresh.getReceivedQty() != null) ? fresh.getReceivedQty() : BigDecimal.ZERO;
+            if (freshReceived.compareTo(qty) < 0) {
+                allReceived = false;
+                break;
+            }
+        }
+
+        // 更新采购单状态
+        String newStatus = allReceived ? PurchaseOrderStatus.RECEIVED.getValue() : PurchaseOrderStatus.PARTIAL.getValue();
+        LambdaUpdateWrapper<PurchaseOrder> uw = new LambdaUpdateWrapper<>();
+        uw.eq(PurchaseOrder::getId, orderId)
+          .in(PurchaseOrder::getStatus, PurchaseOrderStatus.ORDERED.getValue(), PurchaseOrderStatus.PARTIAL.getValue())
+          .set(PurchaseOrder::getStatus, newStatus)
+          .set(PurchaseOrder::getTotalAmount, calcTotalAmount(orderId));
+        baseMapper.update(null, uw);
     }
 
     /**

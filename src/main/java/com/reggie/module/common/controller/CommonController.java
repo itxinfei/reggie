@@ -2,7 +2,6 @@ package com.reggie.module.common.controller;
 
 import com.reggie.common.R;
 import com.reggie.common.RateLimit;
-import com.reggie.common.annotation.RequireEmployee;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,7 +39,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/common")
 @Slf4j
-@RequireEmployee
 @Tag(name = "公共接口", description = "文件上传下载等公共接口")
 public class CommonController {
 
