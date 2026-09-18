@@ -60,6 +60,9 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
     @Autowired
     private DiningTableMapper diningTableMapper;
 
+    @Autowired
+    private com.reggie.module.order.service.OrderDetailService orderDetailService;
+
     /** 桌台状态流转白名单：每个状态允许的合法目标状态 */
     private static final Map<String, Set<String>> ALLOWED_TABLE_TRANSITIONS = new LinkedHashMap<>();
 
@@ -416,11 +419,12 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
             throw new CustomException("目标桌台状态已被变更，请刷新后重试");
         }
 
-        // 5. 更新订单的 tableId
+        // 5. 更新订单的 tableId + tableName（转台后同步桌台名称）
         LambdaUpdateWrapper<Orders> orderUw = new LambdaUpdateWrapper<>();
         orderUw.eq(Orders::getId, orderId)
                .eq(Orders::getTenantId, tenantId)
-               .set(Orders::getTableId, dto.getToTableId());
+               .set(Orders::getTableId, dto.getToTableId())
+               .set(Orders::getTableName, toTable.getName());
         orderService.update(orderUw);
 
         log.info("转台成功: fromTableId={}, toTableId={}, orderId={}", dto.getFromTableId(), dto.getToTableId(), orderId);
@@ -478,12 +482,13 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
             mergeOrderIds.add(mergeTable.getCurrentOrderId());
         }
 
-        // 3. 将被合并桌台的订单转移到主桌台
+        // 3. 将被合并桌台的订单转移到主桌台（同步 tableName）
         for (Long orderId : mergeOrderIds) {
             LambdaUpdateWrapper<Orders> orderUw = new LambdaUpdateWrapper<>();
             orderUw.eq(Orders::getId, orderId)
                    .eq(Orders::getTenantId, tenantId)
-                   .set(Orders::getTableId, dto.getMasterTableId());
+                   .set(Orders::getTableId, dto.getMasterTableId())
+                   .set(Orders::getTableName, masterTable.getName());
             orderService.update(orderUw);
         }
 
@@ -552,8 +557,8 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
             throw new CustomException("新桌台当前状态为[" + newTable.getStatus() + "]，无法转入");
         }
 
-        // 3. 将指定订单转移到新桌台（等价抽取）
-        transferOrdersToTable(splitOrderIds, newTableId, tenantId);
+        // 3. 将指定订单转移到新桌台（等价抽取，同步 tableName）
+        transferOrdersToTable(splitOrderIds, newTableId, tenantId, newTable.getName());
 
         // 4. 更新原桌台状态（等价抽取）
         updateOriginalTableAfterSplit(originalTableId, tenantId);
@@ -568,8 +573,13 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
     /**
      * 将指定订单转移到新桌台（等价抽取，降低方法长度）。
      * 校验每个订单确实归属原桌台，防止越权转移。
+     *
+     * @param splitOrderIds 需要转移的订单ID列表
+     * @param newTableId    目标桌台ID
+     * @param tenantId      租户ID
+     * @param newTableName  目标桌台名称（同步更新到订单 table_name 列）
      */
-    private void transferOrdersToTable(List<Long> splitOrderIds, Long newTableId, Long tenantId) {
+    private void transferOrdersToTable(List<Long> splitOrderIds, Long newTableId, Long tenantId, String newTableName) {
         for (Long orderId : splitOrderIds) {
             Orders order = orderService.getById(orderId);
             if (order == null || !tenantId.equals(order.getTenantId())) {
@@ -580,7 +590,8 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
             LambdaUpdateWrapper<Orders> orderUw = new LambdaUpdateWrapper<>();
             orderUw.eq(Orders::getId, orderId)
                    .eq(Orders::getTenantId, tenantId)
-                   .set(Orders::getTableId, newTableId);
+                   .set(Orders::getTableId, newTableId)
+                   .set(Orders::getTableName, newTableName);
             orderService.update(orderUw);
         }
     }
@@ -795,6 +806,75 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
     @Override
     public DiningTablePublicVO getPublicById(Long tableId) {
         return diningTableMapper.selectPublicById(tableId);
+    }
+
+    /**
+     * 桌台明细查询（收银台用）：桌台信息 + 关联订单 + 订单菜品明细
+     */
+    @Override
+    public com.reggie.module.dining.vo.TableDetailVO getTableDetail(Long tableId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("无操作权限，租户上下文缺失");
+        }
+
+        // 1. 查桌台
+        LambdaQueryWrapper<DiningTable> qw = new LambdaQueryWrapper<>();
+        qw.eq(DiningTable::getId, tableId).eq(DiningTable::getTenantId, tenantId);
+        DiningTable table = getOne(qw);
+        if (table == null) {
+            throw new CustomException("桌台不存在或无权操作");
+        }
+
+        // 2. 组装 VO
+        com.reggie.module.dining.vo.TableDetailVO vo = new com.reggie.module.dining.vo.TableDetailVO();
+        vo.setTableId(table.getId());
+        vo.setTableName(table.getName());
+        vo.setSeatCount(table.getSeatCount());
+        vo.setStatus(table.getStatus());
+        // 区域名称
+        if (table.getAreaId() != null) {
+            TableArea area = tableAreaService.getById(table.getAreaId());
+            if (area != null) { vo.setAreaName(area.getName()); }
+        }
+
+        // 3. 查该桌台的活跃订单（未完结）
+        LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
+        orderQw.eq(Orders::getTableId, tableId)
+               .eq(Orders::getTenantId, tenantId)
+               .in(Orders::getStatus,
+                       OrderStatus.PENDING_PAYMENT.getValue(),
+                       OrderStatus.ORDERED.getValue(),
+                       OrderStatus.DELIVERING.getValue())
+               .orderByDesc(Orders::getOrderTime);
+        List<Orders> orders = orderService.list(orderQw);
+
+        java.util.List<com.reggie.module.dining.vo.TableDetailVO.TableOrder> tableOrders =
+                new java.util.ArrayList<>();
+        Integer customerCount = null;
+        for (Orders o : orders) {
+            com.reggie.module.dining.vo.TableDetailVO.TableOrder to =
+                    new com.reggie.module.dining.vo.TableDetailVO.TableOrder();
+            to.setOrderId(o.getId());
+            to.setOrderNumber(o.getNumber());
+            to.setStatus(o.getStatus());
+            to.setAmount(o.getAmount());
+            to.setOrderTime(o.getOrderTime());
+            to.setRemark(o.getRemark());
+            // 用餐人数取第一个订单的值
+            if (customerCount == null && o.getCustomerCount() != null) {
+                customerCount = o.getCustomerCount();
+            }
+            // 查该订单的菜品明细
+            LambdaQueryWrapper<com.reggie.module.order.model.OrderDetail> detailQw =
+                    new LambdaQueryWrapper<>();
+            detailQw.eq(com.reggie.module.order.model.OrderDetail::getOrderId, o.getId());
+            to.setDetails(orderDetailService.list(detailQw));
+            tableOrders.add(to);
+        }
+        vo.setCustomerCount(customerCount);
+        vo.setOrders(tableOrders);
+        return vo;
     }
 }
 

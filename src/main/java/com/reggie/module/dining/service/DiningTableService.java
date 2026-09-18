@@ -133,4 +133,12 @@ public interface DiningTableService extends IService<DiningTable> {
      * @return 公开桌台视图，不存在返回 null
      */
     DiningTablePublicVO getPublicById(Long tableId);
+
+    /**
+     * 桌台明细查询（收银台用）：返回桌台信息 + 关联订单 + 订单菜品明细
+     *
+     * @param tableId 桌台ID
+     * @return 桌台明细 VO
+     */
+    com.reggie.module.dining.vo.TableDetailVO getTableDetail(Long tableId);
 }

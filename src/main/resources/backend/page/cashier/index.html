@@ -335,15 +335,68 @@
       color: var(--el-color-primary);
       margin-right: 4px;
     }
+    /* ====== 桌台网格 ====== */
+    .table-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      max-height: 420px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+    .table-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--el-border-lighter);
+      border-radius: var(--radius-md);
+      padding: 14px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition-base, 0.2s);
+      position: relative;
+    }
+    .table-card:hover { border-color: var(--el-color-primary); box-shadow: var(--shadow-sm); }
+    .table-card.active { border-color: var(--el-color-primary); background: var(--el-color-primary-lighter); }
+    .table-card.status-FREE { border-color: var(--el-border-lighter); }
+    .table-card.status-OCCUPIED { border-color: var(--el-color-success); }
+    .table-card.status-OCCUPIED .table-name { color: var(--el-color-success); font-weight: 700; }
+    .table-card.status-RESERVED { border-color: var(--el-color-info); }
+    .table-card .table-name { font-size: var(--font-size-xl); font-weight: 600; margin-bottom: 4px; }
+    .table-card .table-meta { font-size: var(--font-size-xs); color: var(--el-text-muted); }
+    .table-card .table-amount {
+      font-size: var(--font-size-lg); font-weight: 700; color: var(--el-color-danger);
+      margin-top: 6px;
+    }
+    .table-filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    /* ====== 桌台详情 ====== */
+    .table-detail { max-height: 480px; overflow-y: auto; }
+    .detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .detail-header h3 { margin: 0; font-size: var(--font-size-lg); }
+    .detail-order { margin-bottom: 16px; padding: 12px; background: var(--el-bg-page); border-radius: var(--radius-md); }
+    .detail-order .order-title { font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .detail-items { margin-top: 8px; }
+    .detail-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--el-border-lighter); font-size: var(--font-size-sm); }
+    .detail-item:last-child { border-bottom: none; }
+    .detail-item .item-name { flex: 1; }
+    .detail-item .item-qty { width: 40px; text-align: center; color: var(--el-text-secondary); }
+    .detail-item .item-amount { width: 80px; text-align: right; font-weight: 500; }
+    .table-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--el-border-lighter); }
+    /* ====== 加菜弹窗 ====== */
+    .add-items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 360px; overflow-y: auto; padding: 4px; }
+    .dish-pick-card { padding: 10px; border: 1px solid var(--el-border-lighter); border-radius: var(--radius-md); cursor: pointer; transition: all var(--transition-base, 0.2s); }
+    .dish-pick-card:hover { border-color: var(--el-color-primary); }
+    .dish-pick-card.selected { border-color: var(--el-color-primary); background: var(--el-color-primary-lighter); }
+    .dish-pick-card .dish-name { font-weight: 500; margin-bottom: 4px; }
+    .dish-pick-card .dish-price { color: var(--el-color-danger); font-weight: 600; }
+    .dish-pick-card .dish-qty { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
   </style>
 </head>
 <body>
   <!-- ====== 收银台主页面 ====== -->
   <!-- 功能：线下收银结账，支持选择待结账订单、会员识别与优惠券抵扣、多种支付方式、现金找零、一键日结 -->
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
-  <a href="#app" class="skip-link">跳转到主内容</a>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
 
-  <div id="app" class="cashier-container" role="main" aria-label="页面主要内容">
+  <div id="main-content" class="cashier-container" role="main" aria-label="页面主要内容">
     <!-- 头部统计（统一 stat-cards 组件） -->
     <div class="cashier-header">
       <div class="cashier-title">
@@ -355,33 +408,88 @@
 
     <!-- 主要内容区 -->
     <div class="cashier-main">
-      <!-- 订单面板 -->
+      <!-- 左侧：桌台网格 + 桌台详情 -->
       <div class="order-panel">
-        <div class="panel-title">
-          <i class="ri-file-text-line"></i>
-          待结账订单
-        </div>
-        <div class="order-list">
-          <div v-if="pendingOrders.length === 0" style="text-align: center; padding: var(--space-10); color: var(--el-text-secondary);">
-            暂无待结账订单
+        <!-- 桌台列表视图（未选中桌台时显示） -->
+        <div v-if="!selectedTable">
+          <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">
+            <span><i class="ri-layout-grid-line"></i> 桌台总览</span>
+            <span style="font-size:var(--font-size-sm);color:var(--el-text-muted);">
+              共 {{ tables.length }} 桌 / {{ occupiedCount }} 桌在用
+            </span>
           </div>
-          <div
-            v-for="(order, index) in pendingOrders"
-            :key="order.id"
-            class="order-item"
-            :class="{ active: selectedOrder && selectedOrder.id === order.id }"
-            role="button" tabindex="0"
-            @click="selectOrder(order)" @keydown.enter="selectOrder(order)"
-            :aria-label="'订单 ' + order.number" :aria-pressed="selectedOrder && selectedOrder.id === order.id">
-            <div class="order-info">
-              <div class="order-header">
-                <span class="order-number">{{ order.number }}</span>
-                <span v-if="order.tableName" class="table-chip">{{ order.tableName }}</span>
-                <span v-else-if="order.phone" class="phone-chip">{{ last4(order.phone) }}</span>
+          <div class="table-filter-bar">
+            <el-button size="mini" :type="tableFilter===''?'primary':'default'" @click="tableFilter=''">全部</el-button>
+            <el-button size="mini" :type="tableFilter==='OCCUPIED'?'success':'default'" @click="tableFilter='OCCUPIED'">在用</el-button>
+            <el-button size="mini" :type="tableFilter==='FREE'?'info':'default'" @click="tableFilter='FREE'">空闲</el-button>
+          </div>
+          <div v-if="filteredTables.length===0" style="text-align:center;padding:var(--space-10);color:var(--el-text-secondary);">
+            暂无{{ tableFilter==='OCCUPIED'?'在用':'' }}桌台
+          </div>
+          <div class="table-grid">
+            <div v-for="t in filteredTables" :key="t.id"
+              class="table-card" :class="['status-'+t.status, {active: selectedTable && selectedTable.tableId===t.id}]"
+              role="button" tabindex="0"
+              @click="selectTable(t)" @keydown.enter="selectTable(t)"
+              :aria-label="'桌台 '+t.name">
+              <div class="table-name">{{ t.name }}</div>
+              <div class="table-meta">{{ t.areaName || '' }} · {{ t.seatCount }}人</div>
+              <div v-if="t.status==='OCCUPIED'" class="table-amount">
+                {{ tableAmountMap[t.id] != null ? '¥'+formatMoney(tableAmountMap[t.id]) : '...' }}
               </div>
-              <div class="order-time">{{ order.orderTime }}</div>
+              <div v-else-if="t.status==='FREE'" class="table-meta" style="color:var(--el-color-success);">空闲</div>
+              <div v-else class="table-meta">{{ t.status }}</div>
             </div>
-            <div class="order-amount">¥{{ formatMoney(order.amount) }}</div>
+          </div>
+        </div>
+
+        <!-- 桌台详情视图（选中桌台后显示） -->
+        <div v-if="selectedTable">
+          <div class="detail-header">
+            <h3>
+              <i class="ri-arrow-left-line" style="cursor:pointer;margin-right:8px;" @click="clearTableSelection" title="返回桌台列表"></i>
+              {{ selectedTable.tableName }}
+              <span style="font-size:var(--font-size-sm);color:var(--el-text-muted);margin-left:8px;">
+                {{ selectedTable.areaName || '' }} · {{ selectedTable.seatCount }}人
+              </span>
+            </h3>
+            <el-button type="primary" size="small" @click="openAddItemsDialog" :disabled="!selectedTable.orders||selectedTable.orders.length===0">
+              <i class="ri-add-line"></i> 加菜
+            </el-button>
+          </div>
+
+          <div v-if="detailLoading" style="text-align:center;padding:var(--space-10);">
+            <i class="ri-loader-4-line" style="font-size:24px;color:var(--el-color-primary);animation:spin 1s linear infinite;"></i>
+          </div>
+          <div v-else-if="!selectedTable.orders||selectedTable.orders.length===0" class="table-detail" style="text-align:center;padding:var(--space-10);color:var(--el-text-secondary);">
+            暂无订单
+          </div>
+          <div v-else class="table-detail">
+            <div v-for="order in selectedTable.orders" :key="order.orderId" class="detail-order">
+              <div class="order-title">
+                <span>{{ order.orderNumber }}</span>
+                <el-tag size="mini" :type="order.status===1?'warning':'success'">{{ order.status===1?'待付款':'已下单' }}</el-tag>
+                <span style="margin-left:auto;font-weight:700;color:var(--el-color-danger);">¥{{ formatMoney(order.amount) }}</span>
+              </div>
+              <div class="detail-items">
+                <div class="detail-item" v-for="d in order.details" :key="d.id">
+                  <span class="item-name">{{ d.name }}{{ d.dishFlavor ? '（'+d.dishFlavor+'）' : '' }}</span>
+                  <span class="item-qty">×{{ d.number }}</span>
+                  <span class="item-amount">¥{{ formatMoney(d.amount * d.number) }}</span>
+                </div>
+              </div>
+              <div style="font-size:var(--font-size-xs);color:var(--el-text-muted);margin-top:6px;">{{ order.orderTime }}</div>
+            </div>
+          </div>
+
+          <div class="table-actions">
+            <el-button size="small" @click="showTransferDialog=true" :disabled="!selectedTable.orders||selectedTable.orders.length===0">
+              <i class="ri-arrow-left-right-line"></i> 转台
+            </el-button>
+            <el-button size="small" @click="handleCheckout" :disabled="!selectedTable.orders||selectedTable.orders.length===0"
+              type="primary">
+              <i class="ri-money-cny-circle-line"></i> 结账（¥{{ formatMoney(tableTotalAmount) }}）
+            </el-button>
           </div>
         </div>
       </div>
@@ -598,6 +706,55 @@
       </div>
     </div>
 
+    <!-- 加菜弹窗 -->
+    <el-dialog title="加菜" :visible.sync="addItemsVisible" width="720px" custom-class="el-dialog--lg" :close-on-click-modal="false">
+      <div v-if="addItemsLoading" style="text-align:center;padding:var(--space-10);">
+        <i class="ri-loader-4-line" style="font-size:24px;color:var(--el-color-primary);animation:spin 1s linear infinite;"></i>
+      </div>
+      <div v-else>
+        <el-input v-model="dishSearch" placeholder="搜索菜品名称" size="small" style="margin-bottom:12px;" clearable>
+          <i slot="prefix" class="ri-search-line"></i>
+        </el-input>
+        <div class="add-items-grid">
+          <div v-for="d in filteredDishes" :key="d.id" class="dish-pick-card"
+            :class="{selected: addItemsSelection[d.id]}" @click="toggleDishSelect(d)">
+            <div class="dish-name">{{ d.name }}</div>
+            <div class="dish-price">¥{{ formatMoney(d.price) }}</div>
+            <div class="dish-qty" v-if="addItemsSelection[d.id]" @click.stop>
+              <el-button size="mini" icon="el-icon-minus" circle @click="adjustDishQty(d.id,-1)"></el-button>
+              <span style="min-width:24px;text-align:center;font-weight:600;">{{ addItemsSelection[d.id].qty }}</span>
+              <el-button size="mini" icon="el-icon-plus" circle @click="adjustDishQty(d.id,1)"></el-button>
+            </div>
+          </div>
+        </div>
+        <div v-if="Object.keys(addItemsSelection).length>0"
+          style="margin-top:12px;padding:12px;background:var(--el-bg-page);border-radius:var(--radius-md);display:flex;justify-content:space-between;align-items:center;">
+          <span>已选 <b>{{ Object.keys(addItemsSelection).length }}</b> 个菜品</span>
+          <span style="font-weight:700;color:var(--el-color-danger);">合计 ¥{{ formatMoney(addItemsTotal) }}</span>
+        </div>
+      </div>
+      <div slot="footer">
+        <el-button @click="addItemsVisible=false">取消</el-button>
+        <el-button type="primary" :loading="addItemsSubmitting" :disabled="Object.keys(addItemsSelection).length===0"
+          @click="submitAddItems">确认加菜</el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 转台弹窗 -->
+    <el-dialog title="转台" :visible.sync="showTransferDialog" width="420px" custom-class="el-dialog--sm">
+      <el-form label-width="80px">
+        <el-form-item label="目标桌台">
+          <el-select v-model="transferToTableId" placeholder="选择空闲桌台" style="width:100%;">
+            <el-option v-for="t in freeTables" :key="t.id" :label="t.name + '（'+t.seatCount+'人）'" :value="t.id"></el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <div slot="footer">
+        <el-button @click="showTransferDialog=false">取消</el-button>
+        <el-button type="primary" :loading="transferLoading" :disabled="!transferToTableId" @click="handleTransfer">确认转台</el-button>
+      </div>
+    </el-dialog>
+
     <!-- C.1：页内日结条（本日应收/实收/差异 + 一键日结，收敛 daily-settlement） -->
     <div class="settle-bar" v-if="todayStats">
       <i class="ri-bar-chart-line settle-bar__icon" aria-hidden="true"></i>
@@ -631,9 +788,11 @@
   <script src="../../api/cashier.js?v=20260915c"></script>
   <script src="../../api/order.js?v=20260915c"></script>
   <script src="../../api/member-center.js?v=20260915c"></script>
+  <script src="../../api/dining.js?v=20260918"></script>
+  <script src="../../api/food.js?v=20260915c"></script>
   <script>
     new Vue({
-      el: '#app',
+      el: '#main-content',
       data() {
         return {
           currentTime: '',
@@ -663,7 +822,24 @@
           previewLoading: false,
           // 修改点(2026-09-18)：按桌台合并结账提示（本桌未结订单笔数 / 是否多笔合并）
           previewOrderCount: 1,
-          previewMerged: false
+          previewMerged: false,
+          // ====== 桌台视图 ======
+          tables: [],
+          tableFilter: '',
+          selectedTable: null,
+          detailLoading: false,
+          tableAmountMap: {},
+          // 加菜弹窗
+          addItemsVisible: false,
+          addItemsLoading: false,
+          addItemsSubmitting: false,
+          dishSearch: '',
+          allDishes: [],
+          addItemsSelection: {},
+          // 转台弹窗
+          showTransferDialog: false,
+          transferToTableId: null,
+          transferLoading: false
         }
       },
       // 修改点(2026-09-18)：订单/优惠券/会员变化时向服务端请求权威结算预览，
@@ -710,12 +886,43 @@
         diffAmount() {
           const diff = (Number(this.todayStats.totalAmount) || 0) - this.settledAmount
           return diff > 0 ? diff : 0
+        },
+        // ====== 桌台相关 computed ======
+        filteredTables() {
+          var self = this
+          if (!self.tableFilter) return self.tables
+          return self.tables.filter(function(t) { return t.status === self.tableFilter })
+        },
+        occupiedCount() {
+          return this.tables.filter(function(t) { return t.status === 'OCCUPIED' }).length
+        },
+        freeTables() {
+          return this.tables.filter(function(t) { return t.status === 'FREE' })
+        },
+        tableTotalAmount() {
+          if (!this.selectedTable || !this.selectedTable.orders) return 0
+          return this.selectedTable.orders.reduce(function(sum, o) { return sum + (Number(o.amount) || 0) }, 0)
+        },
+        filteredDishes() {
+          var q = (this.dishSearch || '').toLowerCase()
+          if (!q) return this.allDishes
+          return this.allDishes.filter(function(d) { return (d.name || '').toLowerCase().indexOf(q) >= 0 })
+        },
+        addItemsTotal() {
+          var self = this
+          var total = 0
+          Object.keys(this.addItemsSelection).forEach(function(id) {
+            var sel = self.addItemsSelection[id]
+            total += (Number(sel.price) || 0) * sel.qty
+          })
+          return total
         }
       },
       created() {
         this.updateTime()
         this.timeTimer = setInterval(this.updateTime, 1000)
         this.fetchData()
+        this.loadTables()
       },
       mounted() {
         // C.1：全局快捷键 Enter=收款（未聚焦输入框时）
@@ -1005,6 +1212,176 @@
             ReggieUI.error('日结失败，请稍后重试')
           } finally {
             this.settleLoading = false
+          }
+        },
+        // ====== 桌台相关方法 ======
+        async loadTables() {
+          try {
+            var res = await getTableList()
+            if (res.code === 1) {
+              this.tables = res.data || []
+              // 为占用桌台加载金额
+              this.loadTableAmounts()
+            }
+          } catch (e) {
+            console.warn('[cashier] 加载桌台列表失败:', e)
+          }
+        },
+        async loadTableAmounts() {
+          var self = this
+          var occupied = this.tables.filter(function(t) { return t.status === 'OCCUPIED' })
+          // 并行加载每个占用桌台的明细以获取金额
+          for (var i = 0; i < occupied.length; i++) {
+            try {
+              var res = await getTableDetail(occupied[i].id)
+              if (res.code === 1 && res.data && res.data.orders) {
+                var total = res.data.orders.reduce(function(s, o) { return s + (Number(o.amount) || 0) }, 0)
+                self.$set(self.tableAmountMap, occupied[i].id, total)
+              }
+            } catch (e) { /* 忽略单桌加载失败 */ }
+          }
+        },
+        async selectTable(table) {
+          this.detailLoading = true
+          this.selectedTable = null
+          try {
+            var res = await getTableDetail(table.id)
+            if (res.code === 1 && res.data) {
+              this.selectedTable = res.data
+              // 自动选中该桌第一个订单（供支付面板使用）
+              if (this.selectedTable.orders && this.selectedTable.orders.length > 0) {
+                var firstOrder = this.selectedTable.orders[0]
+                // 构造兼容 selectOrder 的对象
+                this.selectOrder({
+                  id: firstOrder.orderId,
+                  number: firstOrder.orderNumber,
+                  amount: this.tableTotalAmount,
+                  tableId: table.id,
+                  orderTime: firstOrder.orderTime
+                })
+              }
+            } else {
+              ReggieUI.error(res.msg || '加载桌台详情失败')
+            }
+          } catch (e) {
+            ReggieUI.error('加载桌台详情失败')
+          } finally {
+            this.detailLoading = false
+          }
+        },
+        clearTableSelection() {
+          this.selectedTable = null
+          this.selectedOrder = null
+          this.loadTables()
+        },
+        handleCheckout() {
+          // 将桌台总金额作为应付金额，选中桌台所有订单中第一个进行结账
+          if (!this.selectedTable || !this.selectedTable.orders || this.selectedTable.orders.length === 0) return
+          var firstOrder = this.selectedTable.orders[0]
+          this.selectOrder({
+            id: firstOrder.orderId,
+            number: firstOrder.orderNumber,
+            amount: this.tableTotalAmount,
+            tableId: this.selectedTable.tableId,
+            orderTime: firstOrder.orderTime
+          })
+          // 支付面板会自动显示，用户确认支付即可
+        },
+        // ====== 加菜相关 ======
+        async openAddItemsDialog() {
+          this.addItemsVisible = true
+          this.addItemsSelection = {}
+          this.dishSearch = ''
+          if (this.allDishes.length === 0) {
+            this.addItemsLoading = true
+            try {
+              // 使用 /dish/list 端点加载在售菜品（返回 id/name/price/image 等）
+              var res = await $axios({ url: '/dish/list', method: 'get' })
+              if (res.code === 1 && res.data) {
+                this.allDishes = res.data
+              }
+            } catch (e) {
+              console.warn('[cashier] 加载菜品列表失败:', e)
+            } finally {
+              this.addItemsLoading = false
+            }
+          }
+        },
+        toggleDishSelect(dish) {
+          if (this.addItemsSelection[dish.id]) {
+            this.$delete(this.addItemsSelection, dish.id)
+          } else {
+            this.$set(this.addItemsSelection, dish.id, { dishId: dish.id, name: dish.name, price: dish.price, qty: 1 })
+          }
+        },
+        adjustDishQty(dishId, delta) {
+          var item = this.addItemsSelection[dishId]
+          if (!item) return
+          var newQty = item.qty + delta
+          if (newQty <= 0) {
+            this.$delete(this.addItemsSelection, dishId)
+          } else {
+            item.qty = newQty
+          }
+        },
+        async submitAddItems() {
+          if (!this.selectedTable || !this.selectedTable.orders || this.selectedTable.orders.length === 0) {
+            ReggieUI.warning('当前桌台无订单，请先开台')
+            return
+          }
+          if (this.addItemsSubmitting) return
+          var items = []
+          var self = this
+          Object.keys(this.addItemsSelection).forEach(function(id) {
+            var sel = self.addItemsSelection[id]
+            items.push({ dishId: sel.dishId, number: sel.qty })
+          })
+          if (items.length === 0) {
+            ReggieUI.warning('请至少选择一个菜品')
+            return
+          }
+          this.addItemsSubmitting = true
+          try {
+            // 为桌台第一个订单加菜
+            var orderId = this.selectedTable.orders[0].orderId
+            var res = await addItemsToTable({ orderId: orderId, items: items })
+            if (res.code === 1) {
+              ReggieUI.success('加菜成功')
+              this.addItemsVisible = false
+              this.addItemsSelection = {}
+              // 刷新桌台详情
+              this.selectTable({ id: this.selectedTable.tableId })
+            } else {
+              ReggieUI.error(res.msg || '加菜失败')
+            }
+          } catch (e) {
+            ReggieUI.error('加菜失败')
+          } finally {
+            this.addItemsSubmitting = false
+          }
+        },
+        // ====== 转台 ======
+        async handleTransfer() {
+          if (!this.selectedTable || !this.transferToTableId) return
+          if (this.transferLoading) return
+          this.transferLoading = true
+          try {
+            var res = await transferTable({
+              fromTableId: this.selectedTable.tableId,
+              toTableId: this.transferToTableId
+            })
+            if (res.code === 1) {
+              ReggieUI.success('转台成功')
+              this.showTransferDialog = false
+              this.transferToTableId = null
+              this.clearTableSelection()
+            } else {
+              ReggieUI.error(res.msg || '转台失败')
+            }
+          } catch (e) {
+            ReggieUI.error('转台失败')
+          } finally {
+            this.transferLoading = false
           }
         },
         // C.1：快捷键 Enter=收款（避开输入框/按钮聚焦）

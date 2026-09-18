@@ -82,6 +82,11 @@ public class Orders implements Serializable {
     @Size(max = 200, message = "备注不能超过200个字符")
     private String remark;
 
+    @Schema(description = "内部备注（仅后台可见，店员运营信息）", example = "骑手已联系客户")
+    @Size(max = 500, message = "内部备注不能超过500个字符")
+    @TableField("internal_remark")
+    private String internalRemark;
+
     @Schema(description = "预计送达时间", example = "30分钟内")
     @Size(max = 20, message = "送达时间格式不正确")
     private String expectDeliveryTime;
@@ -114,8 +119,7 @@ public class Orders implements Serializable {
     @Schema(description = "桌台ID（堂食/排队/预订使用）", example = "1")
     private Long tableId;
 
-    @Schema(description = "桌台名称（非数据库字段，冗余展示）", example = "A01")
-    @TableField(exist = false)
+    @Schema(description = "桌台名称（冗余展示，转台/并台/拆台时同步更新）", example = "A01")
     private String tableName;
 
     @Schema(description = "用餐人数（非数据库字段）", example = "4")

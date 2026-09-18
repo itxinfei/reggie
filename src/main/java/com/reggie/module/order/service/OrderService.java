@@ -164,5 +164,16 @@ public interface OrderService extends IService<Orders> {
      * @return totalOrders/pendingOrders/completedOrders/amount
      */
     Map<String, Object> getPlatformOrderStatistics(String platformType, Integer status);
+
+    // ==================== 堂食加菜 ====================
+
+    /**
+     * 为已有堂食订单追加菜品（加菜）
+     * <p>服务端查价格防篡改 + 重算订单总额 + 扣库存</p>
+     *
+     * @param orderId 订单ID
+     * @param items   加菜明细列表（每项含 dishId/setmealId + number + flavor）
+     */
+    void addItemsToCurrentOrder(Long orderId, List<com.reggie.module.dining.dto.AddItemsToOrderDTO.OrderItem> items);
 }
 

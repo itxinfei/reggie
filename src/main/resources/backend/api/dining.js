@@ -1,52 +1,27 @@
-// 修改点：筛选下拉选项（动态加载区域名称）
-const areaOptions = () => $axios({ url: '/api/dining/area/options', method: 'get' })
+// 堂食桌台管理 API
+// 桌台列表（不分页）
+const getTableList = () => $axios({ url: '/api/dining/table/list', method: 'get' })
 
-const areaPage = (params) => $axios({ url: '/api/dining/area/page', method: 'get', params })
-const areaList = () => $axios({ url: '/api/dining/area/list', method: 'get' })
-const addArea = (params) => $axios({ url: '/api/dining/area', method: 'post', data: params })
-const updateArea = (params) => $axios({ url: '/api/dining/area', method: 'put', data: params })
-const deleteArea = (id) => $axios({ url: `/api/dining/area/${id}`, method: 'delete' })
-const getArea = (id) => $axios({ url: `/api/dining/area/${id}`, method: 'get' })
+// 桌台统计（按状态分类计数）
+const getTableStats = () => $axios({ url: '/api/dining/table/stats', method: 'get' })
 
-const tablePage = (params) => $axios({ url: '/api/dining/table/page', method: 'get', params })
-// 修改点：桌台区域聚合统计（SQL 分组，替代前端 pageSize:999 拉全量分组）
-const tableAreaStats = () => $axios({ url: '/api/dining/table/area-stats', method: 'get' })
-// 域⑩-A：桌台统计（按状态分类计数，替代 pageSize:1 多状态并发查询 hack）
-const tableStats = () => $axios({ url: '/api/dining/table/stats', method: 'get' })
-const addTable = (params) => $axios({ url: '/api/dining/table', method: 'post', data: params })
-const updateTable = (params) => $axios({ url: '/api/dining/table', method: 'put', data: params })
-const deleteTable = (id) => $axios({ url: `/api/dining/table/${id}`, method: 'delete' })
-const getTable = (id) => $axios({ url: `/api/dining/table/${id}`, method: 'get' })
-const updateTableStatus = (params) => $axios({ url: '/api/dining/table/status', method: 'put', data: params })
-const tableQrcode = (id) => $axios({ url: `/api/dining/table/qrcode/${id}`, method: 'get' })
-const tableInfo = (id) => $axios({ url: `/api/dining/table/${id}`, method: 'get' })
-// 修改点：开台（绑定订单到桌台）
-const openTable = (data) => $axios({ url: '/api/dining/table/open', method: 'post', data })
-// 修改点：一键开台（建占位单并绑定）
-const openTableWithOrder = (params) => $axios({ url: '/api/dining/table/openWithOrder', method: 'post', params })
-// 修改点：转台（订单从原桌台迁移到新桌台）
-const transferTable = (data) => $axios({ url: '/api/dining/table/transfer', method: 'post', data })
+// 桌台明细（含订单+菜品列表，收银台用）
+const getTableDetail = (tableId) => $axios({ url: '/api/dining/table/detail/' + tableId, method: 'get' })
 
-const queuePage = (params) => $axios({ url: '/api/dining/queue/page', method: 'get', params })
-const queueTake = (params) => $axios({ url: '/api/dining/queue/take', method: 'post', data: params })
-const queueCall = (params) => $axios({ url: '/api/dining/queue/call', method: 'put', data: params })
-const queueCancel = (id) => $axios({ url: `/api/dining/queue/cancel/${id}`, method: 'put' })
-// 域⑩-B：排队统计 + 安排入座 + 退回/恢复
-const queueStats = () => $axios({ url: '/api/dining/queue/stats', method: 'get' })
-const queueSeat = (data) => $axios({ url: '/api/dining/queue/seat', method: 'put', data })
-const recallQueue = (id) => $axios({ url: `/api/dining/queue/recall/${id}`, method: 'put' })
-const reactivateQueue = (id) => $axios({ url: `/api/dining/queue/reactivate/${id}`, method: 'put' })
+// 加菜（为已有订单追加菜品）
+const addItemsToTable = (data) => $axios({ url: '/api/dining/table/addItems', method: 'post', data: data })
 
-const reservationPage = (params) => $axios({ url: '/api/dining/reservation/page', method: 'get', params })
-const reservationStats = () => $axios({ url: '/api/dining/reservation/stats', method: 'get' })
-const addReservation = (params) => $axios({ url: '/api/dining/reservation', method: 'post', data: params })
-const confirmReservation = (id) => $axios({ url: `/api/dining/reservation/confirm/${id}`, method: 'put' })
-const cancelReservation = (id) => $axios({ url: `/api/dining/reservation/cancel/${id}`, method: 'put' })
-const arriveReservation = (id) => $axios({ url: `/api/dining/reservation/arrive/${id}`, method: 'put' })
-const updateReservation = (params) => $axios({ url: '/api/dining/reservation', method: 'put', data: params })
-const deleteReservation = (id) => $axios({ url: `/api/dining/reservation/${id}`, method: 'delete' })
-const getReservation = (id) => $axios({ url: `/api/dining/reservation/${id}`, method: 'get' })
-// 桌台列表（不分页，预订选桌台用）
-const tableListAll = () => $axios({ url: '/api/dining/table/list', method: 'get' })
+// 转台
+const transferTable = (data) => $axios({ url: '/api/dining/table/transfer', method: 'post', data: data })
 
+// 并台
+const mergeTables = (data) => $axios({ url: '/api/dining/table/merge', method: 'post', data: data })
 
+// 拆台
+const splitTable = (params) => $axios({ url: '/api/dining/table/split', method: 'post', params: params })
+
+// 一键开台
+const openWithOrder = (params) => $axios({ url: '/api/dining/table/openWithOrder', method: 'post', params: params })
+
+// 结账（复用订单接口）
+const checkoutOrder = (id, payMethod) => $axios({ url: '/order/checkout', method: 'post', data: { id: id, payMethod: payMethod } })

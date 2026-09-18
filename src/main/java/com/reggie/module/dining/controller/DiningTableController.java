@@ -63,6 +63,9 @@ public class DiningTableController {
     @Autowired
     private com.reggie.module.dining.service.TableAreaService tableAreaService;
 
+    @Autowired
+    private com.reggie.module.order.service.OrderService orderService;
+
     /**
      * 分页查询桌台列表
      * @param page 页码
@@ -438,6 +441,52 @@ public class DiningTableController {
         }
         diningTableService.splitBill(dto);
         return R.success("AA 分账成功");
+    }
+
+    /**
+     * 桌台明细查询（收银台用）：返回桌台信息 + 关联订单 + 菜品明细
+     *
+     * @param tableId 桌台ID
+     * @return 桌台明细 VO
+     */
+    @GetMapping("/detail/{tableId}")
+    @Operation(summary = "桌台明细", description = "收银台专用，返回桌台关联订单及其菜品明细")
+    public R<com.reggie.module.dining.vo.TableDetailVO> getTableDetail(@PathVariable Long tableId) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        try {
+            com.reggie.module.dining.vo.TableDetailVO detail = diningTableService.getTableDetail(tableId);
+            return R.success(detail);
+        } catch (CustomException e) {
+            return R.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 加菜：为当前桌台的订单追加菜品
+     * <p>服务端查价格防篡改 + 重算订单总额 + 扣库存</p>
+     *
+     * @param dto 加菜请求（orderId + items 列表）
+     * @return 操作结果
+     */
+    @PostMapping("/addItems")
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "加菜", description = "为堂食订单追加菜品，服务端查价格防篡改，自动重算金额并扣库存")
+    public R<String> addItemsToOrder(@Valid @RequestBody com.reggie.module.dining.dto.AddItemsToOrderDTO dto) {
+        log.info("加菜请求: orderId={}, itemsCount={}", dto.getOrderId(),
+                dto.getItems() != null ? dto.getItems().size() : 0);
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        try {
+            orderService.addItemsToCurrentOrder(dto.getOrderId(), dto.getItems());
+            return R.success("加菜成功");
+        } catch (CustomException e) {
+            return R.error(e.getMessage());
+        }
     }
 }
 

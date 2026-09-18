@@ -1595,6 +1595,113 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         stats.put("amount", amt != null ? new BigDecimal(amt.toString()) : BigDecimal.ZERO);
         return stats;
     }
+
+    // ==================== 堂食加菜 ====================
+
+    /**
+     * 为已有堂食订单追加菜品（加菜）
+     * <p>
+     * 流程：校验订单状态 → 服务端查价格 → 新建 OrderDetail 扣库存 → 重算总额
+     * </p>
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void addItemsToCurrentOrder(Long orderId,
+                                       List<com.reggie.module.dining.dto.AddItemsToOrderDTO.OrderItem> items) {
+        // 1. 校验订单存在、状态、租户归属
+        Orders order = getById(orderId);
+        if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null || !tenantId.equals(order.getTenantId())) {
+            throw new CustomException("无权操作该订单");
+        }
+        if (order.getStatus() == null || order.getStatus() != com.reggie.enums.OrderStatus.PENDING_PAYMENT.getValue()) {
+            throw new CustomException("订单状态不允许加菜，当前状态: " + order.getStatus());
+        }
+
+        // 2. 批量查菜品/套餐价格（防客户端篡改）
+        java.util.Map<Long, Dish> dishMap = new java.util.HashMap<>();
+        java.util.Map<Long, Setmeal> setmealMap = new java.util.HashMap<>();
+        java.util.Set<Long> dishIds = new java.util.HashSet<>();
+        java.util.Set<Long> setmealIds = new java.util.HashSet<>();
+        for (com.reggie.module.dining.dto.AddItemsToOrderDTO.OrderItem item : items) {
+            if (item.getDishId() != null) { dishIds.add(item.getDishId()); }
+            if (item.getSetmealId() != null) { setmealIds.add(item.getSetmealId()); }
+        }
+        if (!dishIds.isEmpty()) {
+            List<Dish> dishes = dishService.listByIds(dishIds);
+            for (Dish d : dishes) { dishMap.put(d.getId(), d); }
+        }
+        if (!setmealIds.isEmpty()) {
+            List<Setmeal> setmeals = setmealService.listByIds(setmealIds);
+            for (Setmeal s : setmeals) { setmealMap.put(s.getId(), s); }
+        }
+
+        // 3. 构建 OrderDetail + 扣库存
+        List<OrderDetail> newDetails = new java.util.ArrayList<>();
+        for (com.reggie.module.dining.dto.AddItemsToOrderDTO.OrderItem item : items) {
+            if (item.getDishId() == null && item.getSetmealId() == null) {
+                throw new CustomException("菜品ID和套餐ID不能同时为空");
+            }
+            int qty = item.getNumber() != null && item.getNumber() > 0 ? item.getNumber() : 1;
+
+            OrderDetail detail = new OrderDetail();
+            detail.setOrderId(orderId);
+            detail.setNumber(qty);
+            detail.setDishFlavor(item.getFlavor());
+            detail.setRemark(item.getRemark());
+            detail.setTenantId(tenantId);
+
+            if (item.getDishId() != null) {
+                Dish dish = dishMap.get(item.getDishId());
+                if (dish == null) { throw new CustomException("菜品不存在: " + item.getDishId()); }
+                detail.setDishId(dish.getId());
+                detail.setName(dish.getName());
+                detail.setImage(dish.getImage());
+                // 服务端价格，防篡改
+                detail.setAmount(dish.getPrice());
+                // 扣库存
+                dishService.deductStock(dish.getId(), BigDecimal.valueOf(qty));
+            } else {
+                Setmeal setmeal = setmealMap.get(item.getSetmealId());
+                if (setmeal == null) { throw new CustomException("套餐不存在: " + item.getSetmealId()); }
+                detail.setSetmealId(setmeal.getId());
+                detail.setName(setmeal.getName());
+                detail.setImage(setmeal.getImage());
+                detail.setAmount(setmeal.getPrice());
+                // 套餐扣减每个子菜品库存
+                LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
+                sdWrapper.eq(SetmealDish::getSetmealId, setmeal.getId());
+                List<SetmealDish> sdList = setmealDishService.list(sdWrapper);
+                for (SetmealDish sd : sdList) {
+                    int copies = sd.getCopies() != null ? sd.getCopies() : 1;
+                    dishService.deductStock(sd.getDishId(),
+                            BigDecimal.valueOf((long) copies * qty));
+                }
+            }
+            newDetails.add(detail);
+        }
+        orderDetailService.saveBatch(newDetails);
+
+        // 4. 重算订单总额：SELECT SUM(amount * number) FROM order_detail WHERE order_id = ?
+        BigDecimal newTotal = BigDecimal.ZERO;
+        LambdaQueryWrapper<OrderDetail> sumQw = new LambdaQueryWrapper<>();
+        sumQw.eq(OrderDetail::getOrderId, orderId)
+             .select(OrderDetail::getAmount, OrderDetail::getNumber);
+        List<OrderDetail> allDetails = orderDetailService.list(sumQw);
+        for (OrderDetail d : allDetails) {
+            BigDecimal lineTotal = d.getAmount().multiply(BigDecimal.valueOf(d.getNumber()));
+            newTotal = newTotal.add(lineTotal);
+        }
+        Orders update = new Orders();
+        update.setId(orderId);
+        update.setAmount(newTotal);
+        updateById(update);
+
+        log.info("[加菜] orderId={}, 新增{}个菜品, 新总额={}", orderId, newDetails.size(), newTotal);
+    }
 }
 
 
