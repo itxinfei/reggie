@@ -147,8 +147,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         detail.setMaterialId(materialId);
         detail.setQty(qty);
         detail.setUnitPrice(unitPrice);
-        detail.setAmount(unitPrice != null ? unitPrice.multiply(qty).setScale(2, RoundingMode.HALF_UP) : BigDecimal
-                .ZERO);
+        detail.setAmount(unitPrice != null ? unitPrice.multiply(qty).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
         detail.setReceivedQty(BigDecimal.ZERO);
         detailService.save(detail);
         // 修改点：添加明细后实时重算采购单总金额，保证草稿期列表金额与明细合计一致（此前仅收货时重算）
@@ -412,6 +411,19 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         if (PurchaseOrderStatus.RECEIVED.getValue().equals(po.getStatus()) || PurchaseOrderStatus.CANCELLED.getValue()
                 .equals(po.getStatus())) {
             throw new CustomException("采购单状态不允许取消");
+        }
+        // 修改点：PARTIAL状态取消需冲销已部分收货入库的库存，防止库存虚高
+        if (PurchaseOrderStatus.PARTIAL.getValue().equals(po.getStatus())) {
+            List<PurchaseOrderDetail> details = detailService.list(
+                new LambdaQueryWrapper<PurchaseOrderDetail>().eq(PurchaseOrderDetail::getPurchaseOrderId, orderId));
+            for (PurchaseOrderDetail detail : details) {
+                // 仅回滚实际已入库的数量（未收部分本就未增加库存，无需处理）
+                BigDecimal received = detail.getReceivedQty() != null ? detail.getReceivedQty() : BigDecimal.ZERO;
+                if (received.compareTo(BigDecimal.ZERO) > 0) {
+                    stockRecordService.stockOut(detail.getMaterialId(), received,
+                        orderId, "采购取消回滚", po.getOperator());
+                }
+            }
         }
         po.setStatus(PurchaseOrderStatus.CANCELLED.getValue());
         updateById(po);
