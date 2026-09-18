@@ -105,7 +105,8 @@ public class SetmealController {
     public R<Page<SetmealDto>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
             "10") @Min(1) @Max(100) int pageSize, @RequestParam(required = false) String name, @RequestParam(required =
             false) String status,
-                                    @RequestParam(required = false) String code){
+                                    @RequestParam(required = false) String code,
+                                    @RequestParam(required = false) Long categoryId){
         //分页构造器对象
         Page<Setmeal> pageInfo = PageUtils.of(page,pageSize);
         Page<SetmealDto> dtoPage = PageUtils.of(page, pageSize);
@@ -115,6 +116,7 @@ public class SetmealController {
         queryWrapper.like(name != null,Setmeal::getName,name);
         queryWrapper.eq(status != null && !status.isEmpty(), Setmeal::getStatus, status);
         queryWrapper.like(code != null && !code.isEmpty(), Setmeal::getCode, code);
+        queryWrapper.eq(categoryId != null, Setmeal::getCategoryId, categoryId);
         //添加排序条件，根据更新时间降序排列
         queryWrapper.orderByDesc(Setmeal::getUpdateTime);
 

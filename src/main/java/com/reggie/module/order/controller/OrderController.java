@@ -273,9 +273,10 @@ public class OrderController {
                     "10") @Min(1) @Max(100) int pageSize,
             @Parameter(description = "平台类型（MEITUAN/ELEME/DOUYIN/SELF/OTHER，可选）") @RequestParam(required =
                     false) String platformType,
-            @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
+            @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "平台订单号（可选，模糊查询）") @RequestParam(required = false) String platformOrderId) {
         // 租户ID已由 LoginCheckFilter 设置到 BaseContext
-        Page<Orders> pageInfo = orderService.platformOrderPage(page, PageUtils.cap(pageSize), platformType, status);
+        Page<Orders> pageInfo = orderService.platformOrderPage(page, PageUtils.cap(pageSize), platformType, status, platformOrderId);
         if (pageInfo.getRecords() != null) {
             for (Orders order : pageInfo.getRecords()) {
                 order.setPhone(order.getPhone() != null ? LogMaskUtils.maskPhone(order.getPhone()) : null);

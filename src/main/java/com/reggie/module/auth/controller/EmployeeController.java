@@ -720,7 +720,7 @@ public class EmployeeController {
     @RequireEmployee
     @Operation(summary = "查询员工信息", description = "根据ID查询员工详情，返回脱敏后的信息")
     @Parameter(name = "id", description = "员工ID", required = true)
-    public R<Employee> getById(@PathVariable Long id){
+    public R<Employee> getById(@PathVariable Long id, @RequestParam(defaultValue = "false") Boolean raw){
         log.debug("根据ID查询员工信息");
         Employee employee = employeeService.getById(id);
         if(employee != null){
@@ -729,11 +729,13 @@ public class EmployeeController {
             if (currentTenantId != null && !currentTenantId.equals(employee.getTenantId())) {
                 return R.error("没有查询到对应员工信息");
             }
-            // 脱敏：移除密码、手机号、身份证等敏感字段
+            // 脱敏：移除密码（永远脱敏）、手机号、身份证等敏感字段
             employee.setPassword(null);
             employee.setPasswordType(null);
-            employee.setPhone(employee.getPhone() != null ? maskPhone(employee.getPhone()) : null);
-            employee.setIdNumber(null);
+            if (!Boolean.TRUE.equals(raw)) {
+                employee.setPhone(employee.getPhone() != null ? maskPhone(employee.getPhone()) : null);
+                employee.setIdNumber(null);
+            }
             return R.success(employee);
         }
         return R.error("没有查询到对应员工信息");

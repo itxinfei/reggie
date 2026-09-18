@@ -60,12 +60,16 @@ public class SupplierController {
     public R<Page<Supplier>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
             "10") @Min(1) @Max(100) int pageSize,
                                    @RequestParam(required = false) String name,
-                                   @RequestParam(required = false) Integer status) {
+                                   @RequestParam(required = false) Integer status,
+                                   @RequestParam(required = false) String beginTime,
+                                   @RequestParam(required = false) String endTime) {
         Page<Supplier> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Supplier> qw = new LambdaQueryWrapper<>();
         qw.like(name != null && !name.isEmpty(), Supplier::getName, name);
         // 修改点：添加按状态筛选支持，修复前端 status 参数被后端静默丢弃的 Bug
         qw.eq(status != null, Supplier::getStatus, status);
+        qw.ge(beginTime != null && !beginTime.isEmpty(), Supplier::getCreatedTime, beginTime);
+        qw.le(endTime != null && !endTime.isEmpty(), Supplier::getCreatedTime, endTime);
         qw.orderByDesc(Supplier::getUpdateTime);
         supplierService.page(pageInfo, qw);
         // 修改点：8.3.3 批量回填采购汇总（累计采购金额/采购单笔数）

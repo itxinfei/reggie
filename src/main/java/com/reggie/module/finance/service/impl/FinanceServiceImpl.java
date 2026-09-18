@@ -779,6 +779,15 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
         result.put("totalAmount", totalAmount);
         result.put("paidAmount", paidAmount);
         result.put("statusCount", statusCountMap);
+        // 修改点：追加前端预期字段别名（P2-14）
+        Integer total = 0;
+        for (Integer count : statusCountMap.values()) {
+            total += count;
+        }
+        result.put("totalApplications", total);
+        result.put("pendingCount", statusCountMap.getOrDefault(WithdrawalApplication.STATUS_PENDING, 0));
+        result.put("paidCount", statusCountMap.getOrDefault(WithdrawalApplication.STATUS_PAID, 0));
+        result.put("totalWithdrawal", result.getOrDefault("totalAmount", BigDecimal.ZERO));
 
         return result;
     }

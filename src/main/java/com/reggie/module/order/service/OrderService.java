@@ -155,7 +155,7 @@ public interface OrderService extends IService<Orders> {
      * @param status       订单状态（可选）
      * @return 分页订单列表
      */
-    Page<Orders> platformOrderPage(int page, int pageSize, String platformType, Integer status);
+    Page<Orders> platformOrderPage(int page, int pageSize, String platformType, Integer status, String platformOrderId);
 
     /**
      * 平台订单全量统计（供平台订单页统计卡片使用，翻页不重算）

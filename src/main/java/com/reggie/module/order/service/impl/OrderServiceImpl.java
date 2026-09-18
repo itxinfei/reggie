@@ -1535,7 +1535,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      * @return 返回结果
      */
     @Override
-    public Page<Orders> platformOrderPage(int page, int pageSize, String platformType, Integer status) {
+    public Page<Orders> platformOrderPage(int page, int pageSize, String platformType, Integer status, String platformOrderId) {
         Page<Orders> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Orders::getIsDeleted, 0);
@@ -1544,6 +1544,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
         if (status != null) {
             wrapper.eq(Orders::getStatus, status);
+        }
+        if (StringUtils.isNotBlank(platformOrderId)) {
+            wrapper.like(Orders::getPlatformOrderId, platformOrderId);
         }
         wrapper.orderByDesc(Orders::getOrderTime);
         return this.page(pageParam, wrapper);
