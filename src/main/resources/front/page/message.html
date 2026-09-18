@@ -156,11 +156,11 @@
                     history.go(-1);
                 },
                 // 修改点：下拉刷新
+                // 修改点：下拉刷新（refreshing 由 loadMessages.finally 复位，与网络实际完成同步）
                 onRefresh: function() {
                     this.page = 1;
                     this.hasMore = true;
                     this.loadMessages();
-                    setTimeout(function() { this.refreshing = false; }.bind(this), 1000);
                 },
 
                 loadMessages: function() {
@@ -183,6 +183,8 @@
                         vant.Toast.fail('加载消息失败');
                     }).finally(function() {
                         self.loading = false;
+                        // 修改点：下拉刷新与实际加载同步
+                        self.refreshing = false;
                     });
                 },
 

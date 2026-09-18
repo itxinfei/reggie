@@ -110,11 +110,10 @@
         this.loadData()
       },
       methods: {
-        // 修改点：下拉刷新
+        // 修改点：下拉刷新（refreshing 由 loadData.finally 复位）
         onRefresh: function(){
           this.page = 1
           this.loadData()
-          setTimeout(function(){ this.refreshing = false }.bind(this), 1000)
         },
         loadData: function() {
           var self = this
@@ -130,6 +129,8 @@
             if (err.message !== 'NOTLOGIN') vant.Toast.fail('加载发票记录失败')
           }).finally(function() {
             self.loading = false
+            // 修改点：下拉刷新与实际加载同步
+            self.refreshing = false
           })
         },
         onPageChange: function(p) {

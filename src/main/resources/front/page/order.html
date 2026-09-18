@@ -236,15 +236,16 @@
                 initData(){
                     this.getList()
                 },
-                // 修改点：下拉刷新处理
-                onRefresh(){
+                // 修改点：下拉刷新处理（await getList 后复位，避免固定延时与实际加载不同步）
+                async onRefresh(){
                     this.paging.page = 1;
                     this.orderList = [];
                     this.finished = false;
-                    this.getList();
-                    setTimeout(() => {
-                        this.refreshing = false;
-                    }, 1000);
+                    try {
+                        await this.getList()
+                    } finally {
+                        this.refreshing = false
+                    }
                 },
                 // 修改点：切换Tab时重置分页并重新加载
                 switchTab(status){

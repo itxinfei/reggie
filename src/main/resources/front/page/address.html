@@ -139,10 +139,9 @@
                     this.initData()
                 },
                 methods:{
-                    // 修改点：下拉刷新
-                    onRefresh(){
-                        this.initData()
-                        setTimeout(() => { this.refreshing = false }, 1000)
+                    // 修改点：下拉刷新（refreshing 由 initData.finally 复位）
+                    async onRefresh(){
+                        try { await this.initData() } finally { this.refreshing = false }
                     },
                     // 修改点：拼接完整省市区地址
                     fullAddress(item){

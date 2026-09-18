@@ -232,11 +232,10 @@
                         dish.content = (content + ' ' + tag).trim()
                     }
                 },
-                // 修改点：下拉刷新
+                // 修改点：下拉刷新（refreshing 由 loadEvaluations.finally 复位）
                 onRefresh(){
                     this.page = 1
                     this.loadData()
-                    setTimeout(() => { this.refreshing = false }, 1000)
                 },
                 // 修改点(2026-09-17 UX)：分页由 PC 风格 van-pagination 改为移动端 van-list 上拉加载，
                 // 加载逻辑抽出为 loadEvaluations(isRefresh)：isRefresh=true 重置列表，false 追加下一页
@@ -268,6 +267,8 @@
                         vant.Toast.fail('加载失败，请稍后重试')
                     } finally {
                         this.loading = false
+                        // 修改点：下拉刷新与实际加载同步
+                        this.refreshing = false
                     }
                 },
                 // van-list 上拉加载回调（追加下一页）
