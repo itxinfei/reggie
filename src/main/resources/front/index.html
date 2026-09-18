@@ -156,9 +156,10 @@
               </div>
             </div>
           </div>
-          <!-- 美团标志性：红色优惠券栏 -->
-          <div class="coupon-bar" @click="showCouponDetail">
-            <div class="coupon-item" v-for="(c, ci) in (restaurantInfo.coupons || defaultCoupons)" :key="ci">
+          <!-- 修改点(2026-09-18 UX)：仅渲染后端真实返回的优惠券。原 defaultCoupons 为写死的
+               「满25减5/新客立减3元/满50减10」，但后端从不返回 coupons，属虚假营销且点进死胡同弹窗，已移除 -->
+          <div class="coupon-bar" v-if="restaurantInfo.coupons && restaurantInfo.coupons.length" @click="showCouponDetail">
+            <div class="coupon-item" v-for="(c, ci) in restaurantInfo.coupons" :key="ci">
               <span class="coupon-tag">{{ c.tag }}</span>
               <span class="coupon-text">{{ c.text }}</span>
             </div>
@@ -242,7 +243,8 @@
                 <div class="di-info" @click="dishDetails(item)">
                   <div class="di-name">{{ item.name }}</div>
                   <div class="di-desc" v-if="item.description">{{ item.description }}</div>
-                  <div class="di-sales">月售{{ item.saleNum || 0 }}<span v-if="item.saleNum > 50"> · 好评率98%</span></div>
+                  <!-- 修改点(2026-09-18 UX)：移除写死的「好评率98%」，后端无此数据，属虚假展示 -->
+                  <div class="di-sales">月售{{ item.saleNum || 0 }}</div>
                   <div class="di-price-row">
                     <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
                   </div>
@@ -659,12 +661,6 @@
               addressInfo: null,
               // 修改点：商家信息（从后端动态获取）
               restaurantInfo: {},
-              // 修改点：默认优惠券（后端未返回时使用）
-              defaultCoupons: [
-                { tag: '减', text: '满25减5' },
-                { tag: '折', text: '新客立减3元' },
-                { tag: '减', text: '满50减10' }
-              ],
               dialogFlavor:{
                 name:'',
                 flavors:[],
@@ -1117,12 +1113,12 @@
             },
             // 修改点：点击优惠券栏展开优惠券详情
             showCouponDetail(){
-              // 修改点：使用动态商家信息，无后端数据时兜底
-              const coupons = (this.restaurantInfo.coupons || this.defaultCoupons)
-                .map(c => c.text).join(' · ')
+              // 修改点(2026-09-18)：只展示后端真实券；无真实券时券栏本就不渲染，此处双保险
+              const coupons = this.restaurantInfo.coupons
+              if(!Array.isArray(coupons) || coupons.length === 0) return
               vant.Dialog.alert({
                 title: '优惠券',
-                message: coupons,
+                message: coupons.map(c => c.text).join(' · '),
                 confirmButtonText: '我知道了'
               })
             },
@@ -1170,7 +1166,8 @@
               }
               // 修改点：加载商家信息（无需登录）
               tasks.push(fetchRestaurantInfo().catch(() => null))
-              Promise.all(tasks).then(res=>{
+              // 修改点(2026-09-18)：return Promise，供下拉刷新真实等待加载完成
+              return Promise.all(tasks).then(res=>{
                 //获取分类数据
                 if(res[0].code === 1){
                   this.categoryList = res[0].data
@@ -1178,7 +1175,8 @@
                     this.categoryId = res[0].data[0].id
                     this.activeType = 0
                     // 修改点(2026-09-16)：改为一次性加载所有分类，支持右侧滚动联动左侧高亮
-                    this.loadAllDishes()
+                    // 修改点(2026-09-18)：return 菜品加载 Promise，使下拉刷新等待菜单就绪
+                    return this.loadAllDishes()
                   }
                 }else{
                   this.loadFailed = true
@@ -1206,11 +1204,14 @@
               })
             },
             // 修改点：下拉刷新处理
-            onRefresh(){
-              this.initData()
-              setTimeout(() => {
+            // 修改点(2026-09-18)：await initData 完成后再收起刷新动画，原实现固定 1s 复位，
+            // 弱网下数据未回来刷新图标就消失，强网下又白等
+            async onRefresh(){
+              try {
+                await this.initData()
+              } finally {
                 this.refreshing = false
-              }, 1000)
+              }
             },
             //分类点击
             // 修改点(2026-09-16)：分组长列表模式下，点击分类改为滚动右栏到对应分类标题（不再重新加载）
@@ -1584,6 +1585,17 @@
             
             //清空购物车
             async clearCart(){
+              // 修改点(2026-09-18 UX)：清空不可逆，先二次确认防误触（Vant confirm 取消为 reject）
+              try {
+                await vant.Dialog.confirm({
+                  title: '清空购物车',
+                  message: '确定要清空已选商品吗？',
+                  confirmButtonText: '清空',
+                  cancelButtonText: '再想想'
+                })
+              } catch(e) {
+                return
+              }
               // 修改点：包裹try-catch，防止NOTLOGIN导致的未捕获Promise rejection
               try {
                 const res = await clearCartApi()
