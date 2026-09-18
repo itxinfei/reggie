@@ -507,7 +507,15 @@
                     if (res.code === 1) {
                         vant.Toast.success && vant.Toast.success('保存成功')
                         setTimeout(function () {
-                            window.location.replace('/front/page/address.html')
+                            // 修改点：从结算页跳转来时（addressFromCheckout=1），
+                            // 保存成功后直接跳回结算页，不再卡在地址列表。
+                            // 后端已自动将首个地址设为默认，getDefault() 能正确返回。
+                            if (sessionStorage.getItem('addressFromCheckout') === '1') {
+                                sessionStorage.removeItem('addressFromCheckout')
+                                window.location.replace('/front/page/add-order.html')
+                            } else {
+                                window.location.replace('/front/page/address.html')
+                            }
                         }, 500)
                     } else {
                         this.saving = false

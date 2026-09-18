@@ -490,6 +490,9 @@
                                 this.finishTime = getFinishTime()
                                 return
                             }
+                            // 修改点：跳转地址编辑前设置 addressFromCheckout 标志，
+                            // 保存地址后自动跳回结算页（此前未设置此标志，用户卡死在地址列表）
+                            sessionStorage.setItem('addressFromCheckout', '1')
                             window.requestAnimationFrame(()=>{
                                 window.location.href = '/front/page/address-edit.html'
                             })

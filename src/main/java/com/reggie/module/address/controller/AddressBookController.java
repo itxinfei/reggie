@@ -78,6 +78,17 @@ public class AddressBookController {
             addressBook.setLongitude(lngLat[0]);
             addressBook.setLatitude(lngLat[1]);
         }
+        // 修改点：首个地址自动设为默认——新用户首次添加地址时 isDefault 未设置（前端表单无此字段），
+        // 导致 getDefault() 永远返回空，结算页反复跳转地址编辑页无法完成下单。
+        Long userId = BaseContext.getCurrentId();
+        Long tenantId = BaseContext.getCurrentTenantId();
+        boolean hasExisting = addressBookService.lambdaQuery()
+                .eq(AddressBook::getUserId, userId)
+                .eq(tenantId != null, AddressBook::getTenantId, tenantId)
+                .exists();
+        if (!hasExisting) {
+            addressBook.setIsDefault(1);
+        }
         addressBookService.save(addressBook);
         return R.success(addressBook);
     }
