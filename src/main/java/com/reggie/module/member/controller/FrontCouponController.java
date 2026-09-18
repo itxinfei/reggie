@@ -7,6 +7,7 @@ import com.reggie.common.RateLimit;
 import com.reggie.enums.CouponStatus;
 import com.reggie.module.member.model.CouponTemplate;
 import com.reggie.module.member.model.CouponUser;
+import com.reggie.module.member.model.CouponUserVO;
 import com.reggie.module.member.model.Member;
 import com.reggie.module.member.model.CouponAvailableDTO;
 import com.reggie.module.member.service.CouponTemplateService;
@@ -22,7 +23,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -79,18 +83,63 @@ public class FrontCouponController {
      * @return 返回结果
      */
     @GetMapping("/my")
-    @Operation(summary = "我的优惠券", description = "查询当前登录用户已领取的全部优惠券")
-    public R<List<CouponUser>> myCoupons() {
+    @Operation(summary = "我的优惠券", description = "查询当前登录用户已领取的全部优惠券（关联模板返回名称/面额/类型）")
+    public R<List<CouponUserVO>> myCoupons() {
         Member member = currentMember();
         if (member == null) {
             return R.error("尚未开通会员，请先注册会员");
         }
+        Long tenantId = BaseContext.getCurrentTenantId();
         LambdaQueryWrapper<CouponUser> qw = new LambdaQueryWrapper<>();
         qw.eq(CouponUser::getMemberId, member.getId());
-        qw.eq(CouponUser::getTenantId, BaseContext.getCurrentTenantId());
+        qw.eq(CouponUser::getTenantId, tenantId);
         qw.orderByDesc(CouponUser::getCreatedTime);
         List<CouponUser> list = couponUserService.list(qw);
-        return R.success(list);
+        if (list.isEmpty()) {
+            return R.success(new ArrayList<CouponUserVO>());
+        }
+        // 修改点(2026-09-18)：批量关联模板补全展示字段（避免 N+1）。
+        // 原实现直接返回裸 CouponUser，前端读不到模板的金额/名称/类型，所有券显示 ￥0、通用、优惠券。
+        List<Long> templateIds = new ArrayList<>();
+        for (CouponUser cu : list) {
+            Long tplId = cu.getTemplateId();
+            if (tplId != null && !templateIds.contains(tplId)) {
+                templateIds.add(tplId);
+            }
+        }
+        Map<Long, CouponTemplate> tplMap = new HashMap<>();
+        if (!templateIds.isEmpty()) {
+            LambdaQueryWrapper<CouponTemplate> tqw = new LambdaQueryWrapper<>();
+            tqw.eq(CouponTemplate::getTenantId, tenantId);
+            tqw.in(CouponTemplate::getId, templateIds);
+            List<CouponTemplate> templates = couponTemplateService.list(tqw);
+            for (CouponTemplate t : templates) {
+                tplMap.put(t.getId(), t);
+            }
+        }
+        List<CouponUserVO> result = new ArrayList<>();
+        for (CouponUser cu : list) {
+            CouponUserVO vo = new CouponUserVO();
+            vo.setId(cu.getId());
+            vo.setTemplateId(cu.getTemplateId());
+            vo.setCode(cu.getCode());
+            // 状态沿用库内小写枚举：unused / used / expired
+            vo.setStatus(cu.getStatus());
+            vo.setUsedTime(cu.getUsedTime());
+            vo.setExpireTime(cu.getExpireTime());
+            vo.setCreatedTime(cu.getCreatedTime());
+            CouponTemplate t = tplMap.get(cu.getTemplateId());
+            // 模板可能已被删除，此时仅展示券记录本身，名称留给前端兜底
+            if (t != null) {
+                vo.setName(t.getName());
+                vo.setType(t.getType());
+                vo.setConditionAmount(t.getConditionAmount());
+                vo.setDiscountAmount(t.getDiscountAmount());
+                vo.setDiscountRate(t.getDiscountRate());
+            }
+            result.add(vo);
+        }
+        return R.success(result);
     }
 
     /**

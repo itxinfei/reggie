@@ -179,15 +179,18 @@
           我的优惠券 <span class="count">({{ myCoupons.length }}张)</span>
         </div>
         <div v-if="myCoupons.length===0" class="empty-state"><i class="ri-coupon-line"></i><p class="empty-text">暂无优惠券</p></div>
-        <div :class="['mc-coupon', c.status==='USED'||c.status==='EXPIRED' ? 'used' : '']" v-for="c in myCoupons" :key="'my-'+c.id">
+        <!-- 修改点(2026-09-18)：后端 /my 改为返回关联模板的 CouponUserVO；状态库值为小写
+             unused/used/expired（原比大写恒不生效）；金额按券类型区分满减/折扣 -->
+        <div :class="['mc-coupon', c.status==='used'||c.status==='expired' ? 'used' : '']" v-for="c in myCoupons" :key="'my-'+c.id">
           <div class="mc-coupon-left">
-            <div class="c-amount">￥{{ Number(c.amount||0).toFixed(2) }}</div>
-            <div class="c-type">{{ c.type||'通用' }}</div>
+            <div class="c-amount">{{ couponValue(c) }}</div>
+            <div class="c-type">{{ couponTypeText(c) }}</div>
           </div>
           <div class="mc-coupon-right">
             <div class="c-name">{{ c.name || '优惠券' }}</div>
-            <div class="c-expire" v-if="c.expireTime">有效期至 {{ c.expireTime }}</div>
-            <div class="c-cond" v-else-if="c.status==='USED'">已使用</div>
+            <div class="c-expire" v-if="c.expireTime">有效期至 {{ fmtCouponDate(c.expireTime) }}</div>
+            <div class="c-cond" v-else-if="c.status==='used'">已使用</div>
+            <div class="c-cond" v-else-if="c.status==='expired'">已过期</div>
           </div>
         </div>
       </div>
@@ -369,6 +372,24 @@
         fmtMoney: function(v) {
           if (v == null) return '0.00'
           return Number(v).toFixed(2)
+        },
+        // 修改点(2026-09-18)：我的优惠券面额——折扣券显示折数（0.85→8.5折），其余显示满减金额
+        couponValue: function(c) {
+          if (c.type === 'DISCOUNT' && c.discountRate) {
+            var zhe = Math.round(Number(c.discountRate) * 100) / 10
+            return zhe + '折'
+          }
+          return '￥' + Number(c.discountAmount || 0).toFixed(2)
+        },
+        // 修改点(2026-09-18)：券类型码转中文（模板 type 为 FULL_REDUCTION/DISCOUNT/NEW_MEMBER）
+        couponTypeText: function(c) {
+          var m = { FULL_REDUCTION: '满减券', DISCOUNT: '折扣券', NEW_MEMBER: '新客券' }
+          return m[c.type] || '通用券'
+        },
+        // 修改点(2026-09-18)：有效期仅展示到日，兼容后端 LocalDateTime 的 ISO(带T) 序列化
+        fmtCouponDate: function(t) {
+          if (!t) return ''
+          return String(t).replace('T', ' ').substring(0, 10)
         }
       }
     })
