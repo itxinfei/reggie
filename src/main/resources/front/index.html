@@ -259,9 +259,12 @@
           </div>
           <!-- 修改点(2026-09-17)：菜单空态统一为全站标准 .empty-state——
                原用自定义 .empty-tip 且插图取 noImg.png（菜品缺图占位图）、alt 写成"图片加载失败"，语义错误 -->
+          <!-- 修改点：区分「加载失败」与「暂无菜品」，失败时显示重试按钮 -->
           <div class="empty-state" v-if="!loadingAll && (!dishList || dishList.length === 0)">
-            <img src="./images/no_order.png" alt="暂无菜品"/>
-            <p class="empty-text">暂无菜品</p>
+            <img v-if="loadFailed" src="./images/no_wifi.png" alt="加载失败"/>
+            <img v-else src="./images/no_order.png" alt="暂无菜品"/>
+            <p class="empty-text">{{ loadFailed ? '菜单加载失败' : '暂无菜品' }}</p>
+            <div v-if="loadFailed" class="empty-action" @click="retryLoadDishes">重新加载</div>
           </div>
         </div>
       </div>
@@ -702,6 +705,10 @@
               previewIndex: 0,
               // 修改点(2026-09-16)：全量加载所有分类菜品时的 loading 态
               loadingAll: false,
+              // 修改点：加购防重复提交（快速连点多次触发 addCartApi 导致数量异常）
+              addingCart: false,
+              // 修改点：菜单加载失败状态（显示重试按钮而非空态误导）
+              loadFailed: false,
               // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
               activeTab: 0,
             }
@@ -1174,6 +1181,7 @@
                     this.loadAllDishes()
                   }
                 }else{
+                  this.loadFailed = true
                   vant.Toast.fail(res[0].msg || '加载分类失败');
                 }
                 //获取购物车数据（仅登录后，索引1）
@@ -1191,6 +1199,7 @@
                 }
               }).catch(() => {
                 // 修改点：捕获Promise异常，避免控制台报错，未登录时会自动跳转登录页
+                this.loadFailed = true
               }).finally(() => {
                 // 修改点：无论成功失败，关闭骨架屏
                 this.pageLoading = false
@@ -1295,6 +1304,7 @@
             async loadAllDishes(){
               if(!this.categoryList || this.categoryList.length === 0) return
               this.loadingAll = true
+              this.loadFailed = false
               try {
                 const cartData = this.cartData || []
                 const flat = []
@@ -1340,10 +1350,19 @@
                   this.$nextTick(() => { this.initCatVisibilityObserver() })
                 }
               } catch(e){
+                console.error('[index] 加载菜单失败:', e)
+                this.loadFailed = true
                 vant.Toast.fail('加载菜单失败')
               } finally {
                 this.loadingAll = false
               }
+            },
+            // 修改点：重试加载菜单（重置失败状态，重新加载分类+菜品）
+            async retryLoadDishes(){
+              this.loadFailed = false
+              this.dishList = []
+              this.categoryList = []
+              await this.initData()
             },
             //获取菜品数据
             async getDishList(){
@@ -1413,8 +1432,12 @@
             //菜单中往购物车中添加商品
             // 修改点：修复菜品/套餐误判 — item.flavors !== undefined 可靠区分（菜品有flavors字段，套餐无）
             async addCart(item){
+              // 修改点：防重复提交（快速连点时忽略后续请求，避免数量异常累加）
+              if(this.addingCart) return
+              this.addingCart = true
               // 修改点：未登录时跳转登录页
               if(!this.userPhone){
+                this.addingCart = false
                 vant.Toast.fail('请先登录');
                 window.requestAnimationFrame(()=>{
                   window.location.href = '/front/page/login.html'
@@ -1450,6 +1473,7 @@
                   vant.Toast.fail(res.msg || '添加失败')
                 }
               } catch(e) { /* 由请求拦截器统一处理（如NOTLOGIN跳转） */ }
+              finally { this.addingCart = false }
             },
 
             //菜单中减少选中的商品
