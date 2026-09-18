@@ -72,9 +72,10 @@
   margin-bottom: 24rem;
 }
 
+/* 修改点(2026-09-18)：触控高度 36→44rem；探活进行中禁用 */
 #no_wifi .divContent .btnRefresh {
-  width: 124rem;
-  height: 36rem;
+  width: 160rem;
+  height: 44rem;
   background: var(--color-primary);
   border-radius: var(--radius-xl);
   font-size: 15rem;
@@ -82,12 +83,38 @@
   font-weight: 500;
   text-align: center;
   color: var(--color-text-primary);
-  line-height: 36rem;
+  line-height: 44rem;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 #no_wifi .divContent .btnRefresh:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+#no_wifi .divContent .btnRefresh.btnDisabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* 修改点(2026-09-18)：新增次级「回到首页」出口，网络长时间不恢复时不被困在本页 */
+#no_wifi .divContent .btnHome {
+  margin-top: 12rem;
+  width: 160rem;
+  height: 44rem;
+  line-height: 42rem;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-xl);
+  font-size: 15rem;
+  font-family: var(--font-family-title);
+  color: var(--color-primary-dark);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+#no_wifi .divContent .btnHome:active {
   transform: scale(0.95);
   opacity: 0.8;
 }

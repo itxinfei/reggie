@@ -26,8 +26,10 @@
             <div class="divContent">
                 <i class="ri-wifi-off-line wifi-icon" aria-hidden="true"></i>
                 <div class="divDesc">网络连接异常</div>
-                <div class="divSub">请检查网络连接后点击重试</div>
-                <div class="btnRefresh" @click="toPagePrev">点击刷新</div>
+                <!-- 修改点(2026-09-18)：副文案随探活状态切换；原 reload 静态页即使网络恢复也仍停在本页 -->
+                <div class="divSub">{{ checking ? '正在检测网络…' : (netError ? '网络仍不可用，请检查网络后重试' : '点击重新检测，网络恢复后自动返回') }}</div>
+                <div class="btnRefresh" :class="{btnDisabled:checking}" @click="toPagePrev">{{ checking ? '检测中…' : '重新检测' }}</div>
+                <div class="btnHome" @click="goHome">回到首页</div>
             </div>
         </div>
             <!-- 开发环境版本，包含了有帮助的命令行警告 -->
@@ -40,16 +42,47 @@
                 el:"#no_wifi",
                 data(){
                     return {
+                        // 修改点(2026-09-18)：探活状态。原 location.reload() 只重载本静态页，
+                        // 不发起任何业务请求，网络恢复后用户仍被困在断网页。
+                        checking: false,
+                        netError: false
                     }
                 },
                 computed:{},
                 methods:{
                     goBack(){
-                        history.go(-1)
+                        this.backOrHome()
                     },
-                    // 修改点：修复"点击刷新"语义 — 改为真正刷新页面而非返回上一页
+                    // 有历史返回来源页，无历史（深链接直接进入）兜底回首页
+                    backOrHome(){
+                        if(history.length > 1){ history.go(-1) } else { this.goHome() }
+                    },
+                    goHome(){
+                        location.href = '/front/index.html'
+                    },
+                    // 用原生 XHR 探活免登录的字典端点（绕开 request 拦截器，避免失败时再次跳本页/弹通知）。
+                    // 只要拿到任意 HTTP 状态码（200/401 等）即说明网络与后端已恢复；断网时 status=0 或 onerror/超时。
                     toPagePrev(){
-                        location.reload()
+                        if(this.checking) return
+                        var self = this
+                        this.checking = true
+                        this.netError = false
+                        var finished = false
+                        var xhr = new XMLHttpRequest()
+                        function finish(ok){
+                            if(finished) return
+                            finished = true
+                            self.checking = false
+                            if(ok){ self.backOrHome() } else { self.netError = true }
+                        }
+                        xhr.open('GET', '/api/meta/enums?t=' + Date.now(), true)
+                        xhr.timeout = 5000
+                        xhr.onreadystatechange = function(){
+                            if(xhr.readyState === 4){ finish(xhr.status !== 0) }
+                        }
+                        xhr.ontimeout = function(){ finish(false) }
+                        xhr.onerror = function(){ finish(false) }
+                        xhr.send()
                     }
                 }
             })
