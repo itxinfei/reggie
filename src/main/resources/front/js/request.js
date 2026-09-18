@@ -116,9 +116,17 @@
       else if (message.includes("Request failed with status code")) {
         message = "系统接口" + message.substring(message.length - 3) + "异常";
       }
-      // 修改点：网络异常时自动跳转断网页（排除已在断网页/登录页的情况，避免死循环）
+      // 修改点(2026-09-18)：仅 GET 请求网络异常才跳断网页。
+      // 原实现不分方法一律 location.href=no-wifi，会卸载当前页，导致用户在下单/支付/加购/
+      // 提交评价/保存地址等变更操作中途断网时，已填表单与进行中交易全部丢失且无法原地重试。
+      // 变更类请求（POST/PUT/DELETE/PATCH）失败只提示并 reject，由调用方 try/catch 引导重试；
+      // GET 不承载表单输入，首屏数据加载失败进断网页是合理兜底。
       var currentPage = window.location.pathname;
-      if ((message === "Network Error" || message === "后端接口连接异常" || message.includes("timeout"))
+      var reqMethod = (error && error.config && error.config.method || '').toLowerCase();
+      var isMutating = reqMethod === 'post' || reqMethod === 'put'
+          || reqMethod === 'delete' || reqMethod === 'patch';
+      if (!isMutating
+          && (message === "Network Error" || message === "后端接口连接异常" || message.includes("timeout"))
           && !currentPage.includes('no-wifi')
           && !currentPage.includes('login')) {
         window.location.href = '/front/page/no-wifi.html'

@@ -98,7 +98,8 @@
         <div v-if="titles.length === 0" class="empty-state"><i class="ri-file-list-line"></i><p class="empty-text">暂无发票抬头，请先在下方新增</p></div>
 
         <div class="new-title-title">新增抬头</div>
-        <van-field v-model="form.type" label="抬头类型" readonly is-link @click="typePickerShow = true" :placeholder="form.type === 1 ? '个人' : '企业'"></van-field>
+        <!-- 修改点(2026-09-18)：v-model 直绑数字 type 会在框内显示 1/2，改为只读 :value 展示中文 -->
+        <van-field :value="form.type === 1 ? '个人' : '企业'" label="抬头类型" readonly is-link @click="typePickerShow = true"></van-field>
         <van-field v-model="form.title" label="抬头名称" placeholder="个人填姓名，企业填公司名称" maxlength="50"></van-field>
         <van-field v-model="form.taxNumber" label="税号" placeholder="企业填写纳税人识别号（个人可留空）" maxlength="30"></van-field>
         <van-button type="primary" plain block size="small" @click="saveTitle" :loading="saving">保存抬头</van-button>
@@ -118,7 +119,8 @@
     <van-popup v-model="editPopupShow" position="bottom" round :close-on-click-overlay="false">
       <div class="edit-popup">
         <div class="edit-popup-title">编辑抬头</div>
-        <van-field v-model="editForm.type" label="抬头类型" readonly is-link @click="editTypePickerShow = true" :placeholder="editForm.type === 1 ? '个人' : '企业'"></van-field>
+        <!-- 修改点(2026-09-18)：编辑弹窗抬头类型同样以中文展示，避免显示原始数字 -->
+        <van-field :value="editForm.type === 1 ? '个人' : '企业'" label="抬头类型" readonly is-link @click="editTypePickerShow = true"></van-field>
         <van-field v-model="editForm.title" label="抬头名称" placeholder="个人填姓名，企业填公司名称" maxlength="50"></van-field>
         <van-field v-model="editForm.taxNumber" label="税号" placeholder="企业填写纳税人识别号（个人可留空）" maxlength="30"></van-field>
         <van-button type="primary" block @click="saveEditTitle" :loading="editing">保存修改</van-button>
