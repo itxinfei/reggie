@@ -250,13 +250,8 @@
   <div class="dashboard-container" id="urgency-app">
     <main class="container urgency-container" id="main-content" role="main" aria-label="紧急催菜看板">
 
-      <!-- 页头：标题 + 副标题 -->
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">紧急催菜</h1>
-          <p class="ds-page-header__subtitle">实时监控出餐超时订单，及时催菜提醒后厨</p>
-        </div>
-      </header>
+      
+      
 
       <!-- 1. 统计卡片区 -->
       <stat-cards :cards="statsCards" :loading="statsLoading"></stat-cards>
@@ -273,7 +268,7 @@
           <el-radio-group v-model="filterStatus" size="small" @change="onFilterChange" aria-label="按订单状态筛选">
             <el-radio-button label="ALL">全部</el-radio-button>
             <el-radio-button label="COOKING">制作中</el-radio-button>
-            <el-radio-button label="WAITING_CALL">待上菜</el-radio-button>
+            <el-radio-button label="SERVING">上菜中</el-radio-button>
             <el-radio-button label="DONE">已完成</el-radio-button>
           </el-radio-group>
           <span class="filter-row__tip">共 {{ filteredOrders.length }} 单</span>
@@ -658,15 +653,14 @@
         // ============ 倒计时 ============
         startCountdown: function () {
           const self = this
+          var threshold = (this.thresholds && this.thresholds.waitMinutes) || 15
           if (this.timerId) clearInterval(this.timerId)
           this.timerId = setInterval(function () {
             self.orders.forEach(function (o) {
               if (o.status === 'DONE') return
-              if (o.remainingMin > 0) {
-                o.remainingMin -= 1
-                o.countdown = o.remainingMin + ' 分钟'
-              }
-              o.isOverdue = o.remainingMin < 10
+              o.waitMinutes = (o.waitMinutes || 0) + 1
+              o.countdown = o.waitMinutes + ' 分钟'
+              o.isOverdue = o.waitMinutes >= threshold
             })
           }, 60000)
         },

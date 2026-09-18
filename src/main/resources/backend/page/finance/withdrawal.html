@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -116,14 +116,59 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <main class="container" id="main-content" role="main" aria-labelledby="page-title">
-    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-    <header class="ds-page-header">
-      <div class="ds-page-header__titles">
-        <h1 class="ds-page-header__title" id="page-title">提现管理</h1>
-        <p class="ds-page-header__subtitle">审核商家提现申请</p>
-      </div>
-      <div class="ds-page-header__actions"></div>
-    </header>
+    <!-- 统计卡片：总申请数/待审核/已打款/总提现金额 -->
+    <stat-cards :cards="statsCards"></stat-cards>
+
+    <!-- 搜索栏：按状态筛选 + 申请提现按钮 -->
+    <table-bar
+      :search-items="searchItems"
+      :actions="actionItems"
+      @search="onSearch"
+      @reset="onReset"
+      @action="onAction"
+    ></table-bar>
+
+    <!-- 数据表格：申请编号/申请人/提现金额/方式/收款账户/状态/申请时间/操作 -->
+    <crud-table
+      :data="pagedData"
+      :columns="columns"
+      :loading="loading"
+      :page="page"
+      :page-size="pageSize"
+      :total="filteredData.length"
+      :show-actions="true"
+      :actions-width="200"
+      :actions-fixed="true"
+      @page-change="onPageChange"
+      @size-change="onSizeChange"
+      aria-label="提现申请列表"
+    >
+      <!-- 提现金额列 -->
+      <template #col-amount="{ row }">
+        <strong>¥{{ formatMoney(row.amount) }}</strong>
+      </template>
+      <!-- 提现方式列 -->
+      <template #col-withdrawMethod="{ row }">
+        {{ getWithdrawMethodText(row.withdrawMethod) }}
+      </template>
+      <!-- 状态列 -->
+      <template #col-status="{ row }">
+        <el-tag :type="getStatusTag(row.status)" size="small">
+          {{ getStatusText(row.status) }}
+        </el-tag>
+      </template>
+      <!-- 操作按钮 -->
+      <template #actions="{ row }">
+        <el-button type="text" size="small" @click="handleView(row)">查看</el-button>
+        <el-button v-if="row.status === 0" type="text" size="small" @click="handleReview(row)">审核</el-button>
+        <el-button v-if="row.status === 1" type="text" size="small" class="btn-success" @click="handlePayment(row)">打款</el-button>
+        <el-button v-if="row.status === 0" type="text" size="small" class="btn-warning" @click="handleCancel(row)">取消</el-button>
+      </template>
+    </crud-table>
+
+    <!-- 详情弹窗：只读展示申请编号/申请人/金额/方式/账户/状态/时间/审核备注 -->
+    <crud-dialog :show-cancel="true" title="申请详情" :visible.sync="detailDialogVisible" size="md" :show-submit="false" cancel-text="关 闭">
+      <div v-if="detailRow" class="withdraw-detail">
     <!-- 统计卡片：总申请数/待审核/已打款/总提现金额 -->
     <stat-cards :cards="statsCards"></stat-cards>
 
@@ -424,7 +469,7 @@
               this.allData = res.data || []
             }
           } catch (err) {
-            ReggieUI.error('Failed to fetch data')
+            ReggieUI.error('加载数据失败')
           } finally {
             this.loading = false
           }
@@ -434,13 +479,13 @@
             const res = await getWithdrawalStatistics()
             if (res.code === 1) {
               this.statistics = res.data || {}
-              this.statsCards[0].value = this.statistics.totalApplications || 0
-              this.statsCards[1].value = this.statistics.pendingCount || 0
-              this.statsCards[2].value = this.statistics.paidCount || 0
-              this.statsCards[3].value = '¥' + this.formatMoney(this.statistics.totalWithdrawal)
+              this.statsCards[0].value = this.statistics.totalApplications || this.statistics.total || 0
+              this.statsCards[1].value = this.statistics.pendingCount || (this.statistics.statusCount && this.statistics.statusCount[0]) || 0
+              this.statsCards[2].value = this.statistics.paidCount || (this.statistics.statusCount && this.statistics.statusCount[2]) || 0
+              this.statsCards[3].value = '¥' + this.formatMoney(this.statistics.totalWithdrawal || this.statistics.totalAmount || 0)
             }
           } catch (err) {
-            ReggieUI.error('Failed to fetch statistics:')
+            ReggieUI.error('加载统计数据失败')
           }
         },
         resetSearch() {
@@ -476,15 +521,15 @@
           self.submitLoading = true
           createWithdrawal(self.addForm).then(function(res) {
             if (res.code === 1) {
-              ReggieUI.success('Application submitted')
+              ReggieUI.success('提交成功')
               self.addDialogVisible = false
               self.fetchData()
               self.fetchStatistics()
             } else {
-              ReggieUI.error(res.msg || 'Submission failed')
+              ReggieUI.error(res.msg || '提交失败')
             }
           }).catch(function(err) {
-            ReggieUI.error('Submission failed')
+            ReggieUI.error('提交失败，请稍后重试')
           }).finally(function() {
             self.submitLoading = false
           })
@@ -581,7 +626,7 @@
               ReggieUI.error(res.msg || 'Cancellation failed')
             }
           } catch (err) {
-            if (err && err.__cancelled) { return }
+            if (err === 'cancel') return
             console.warn('[withdrawal] 取消提现失败:', err)
             ReggieUI.error('取消失败')
           }
@@ -591,6 +636,7 @@
   </script>
 </body>
 </html>
+
 
 
 

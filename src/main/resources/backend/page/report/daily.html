@@ -33,7 +33,7 @@
     .daily-container .container {
       flex: 1;
       background: transparent;
-      padding: 24px 32px 32px;
+      padding: var(--space-3) var(--space-4);
       min-width: 0;
       max-width: 1400px;
       margin: 0 auto;
@@ -45,17 +45,17 @@
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 10px;
       background: var(--bg-surface);
-      padding: 16px 24px;
+      padding: var(--space-3) var(--space-4);
       border-radius: var(--radius-lg);
-      margin-bottom: 20px;
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--el-border-light);
-      transition: all 0.3s;
+      margin-bottom: var(--space-4);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+      border: 1px solid var(--el-border-lighter);
+      transition: all 0.25s ease;
     }
     .tableBar:hover {
-      box-shadow: var(--shadow-lg);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.08);
     }
     .tableBar .toolbar-label {
       font-size: var(--font-size-base);
@@ -75,19 +75,19 @@
     .export-records-panel {
       background: var(--bg-surface);
       border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--el-border-light);
-      margin-bottom: 20px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+      border: 1px solid var(--el-border-lighter);
+      margin-bottom: var(--space-4);
       overflow: hidden;
-      transition: all 0.3s;
+      transition: all 0.25s ease;
     }
     .export-records-panel:hover {
-      box-shadow: var(--shadow-xl);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.08);
     }
     .export-records-panel .panel-header {
       display: flex;
       align-items: center;
-      padding: 18px 24px;
+      padding: 14px var(--space-4);
       cursor: pointer;
       transition: background 0.2s;
       user-select: none;
@@ -96,13 +96,15 @@
       background: var(--el-bg-ghost);
     }
     .export-records-panel .panel-title {
-      font-size: var(--font-size-md);
+      font-size: var(--font-size-base);
       font-weight: 600;
       color: var(--el-text-primary);
       flex: 1;
       display: flex;
       align-items: center;
       gap: 8px;
+      padding-left: 10px;
+      border-left: 3px solid var(--color-brand-500);
     }
     .export-records-panel .record-count-badge {
       background: var(--el-color-primary);
@@ -121,7 +123,7 @@
       transform: rotate(180deg);
     }
     .export-records-panel .panel-body {
-      padding: 0 24px 20px;
+      padding: 0 var(--space-4) var(--space-4);
       transition: all 0.3s;
     }
 
@@ -138,13 +140,13 @@
       font-size: var(--font-size-xs);
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      padding: 12px 16px;
+      padding: 10px 14px;
       /* 修改点(2026-09-01)：表头/内容统一居中 */
       text-align: center;
       border-bottom: 2px solid var(--el-bg-page);
     }
     .record-table tbody td {
-      padding: 14px 16px;
+      padding: 10px 14px;
       text-align: center;
       border-bottom: 1px solid var(--el-bg-light);
       color: var(--el-text-regular);
@@ -216,13 +218,13 @@
 
     /* ========== 响应式 ========== */
     @media (max-width: 1200px) {
-      .container { padding: 20px 28px 28px !important; }
-      .tableBar { padding: 14px 20px; }
+      .container { padding: var(--space-3) var(--space-4) !important; }
+      .tableBar { padding: var(--space-3) var(--space-4); }
       /* 中等屏幕下双图改为单列 */
       .daily-two-col { grid-template-columns: 1fr !important; }
     }
     @media (max-width: 768px) {
-      .container { padding: 12px 16px 16px !important; }
+      .container { padding: var(--space-2) var(--space-3) !important; }
       .tableBar { flex-direction: column; align-items: stretch; }
       .tableBar .toolbar-spacer { display: none; }
     }
@@ -234,14 +236,8 @@
 
   <div class="dashboard-container daily-container" id="report-daily-app">
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
-      <!-- 页头：标题 + 副标题 + 页级操作 -->
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">营业日报</h1>
-          <p class="ds-page-header__subtitle">查看每日营业数据和导出报表</p>
-        </div>
-        <div class="ds-page-header__actions"></div>
-      </header>
+      
+      
 
       <!-- 修改点：P2-1 骨架屏——日报加载态（图表/报表区域脉冲骨架，替代纯转圈） -->
       <div v-if="loading" class="daily-skeleton">
@@ -274,7 +270,7 @@
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             value-format="yyyy-MM-dd"
-            :shortcuts="dateShortcuts"
+            :picker-options="{ shortcuts: dateShortcuts }"
             @change="onDateChange"
             size="small"
           ></el-date-picker>
@@ -282,22 +278,22 @@
       </table-bar>
 
       <!-- ========== 趋势图 + 分类销售 双图 ========== -->
-      <div class="daily-two-col" style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
-        <chart-panel style="margin-bottom:0;" padding="24px" margin-bottom="0">
+      <div class="daily-two-col" style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-4);">
+        <chart-panel style="margin-bottom:0;">
           <template #title>
             <i class="ri-bar-chart-line" style="color:var(--el-color-primary);"></i>
             营收趋势
             <span style="font-size:var(--font-size-xs);color:var(--text-muted);font-weight:400;margin-left:4px;">（近7日）</span>
           </template>
-          <div style="flex:1;min-height:360px;" id="trendChart"></div>
+          <div style="flex:1;min-height:300px;" id="trendChart"></div>
         </chart-panel>
-        <chart-panel style="margin-bottom:0;" padding="24px" margin-bottom="0">
+        <chart-panel style="margin-bottom:0;">
           <template #title>
             <i class="ri-pie-chart-line" style="color:var(--color-warning);"></i>
             菜品分类销售占比
             <span style="font-size:var(--font-size-xs);color:var(--text-muted);font-weight:400;margin-left:4px;">（基于已选日期）</span>
           </template>
-          <div style="flex:1;min-height:360px;" id="categoryChart"></div>
+          <div style="flex:1;min-height:300px;" id="categoryChart"></div>
         </chart-panel>
       </div>
 
@@ -574,7 +570,8 @@
             }
 
             // 趋势数据
-            const trendRes = await dashboardTrend()
+            const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1
+            const trendRes = await dashboardTrend({ days: days })
             if (String(trendRes.code) === '1') {
               this.renderChart(trendRes.data || [])
             } else {
@@ -702,7 +699,7 @@
           }
           const colors = [RgPalette.seriesBlue,RgPalette.seriesGreen,RgPalette.seriesGold,RgPalette.seriesPink,RgPalette.seriesSky,RgPalette.seriesOrange,RgPalette.seriesViolet,RgPalette.seriesMagenta]
           this.categoryChart.setOption({
-            tooltip: { trigger: 'item', formatter: '{b}: {c} 元({d}%)' },
+            tooltip: { trigger: 'item', formatter: '{b}: {c} 份({d}%)' },
             legend: { bottom: 4, textStyle: { fontSize: 12 } },
             series: [{
               type: 'pie',

@@ -68,14 +68,8 @@
 <div id="app">
     <div class="dashboard-container">
         <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-            <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-            <header class="ds-page-header">
-                <div class="ds-page-header__titles">
-                    <h1 class="ds-page-header__title" id="page-title">门店管理</h1>
-                    <p class="ds-page-header__subtitle">管理门店信息与营业状态</p>
-                </div>
-                <div class="ds-page-header__actions"></div>
-            </header>
+            
+            
             <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
             <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -660,8 +654,7 @@
                     ReggieUI.error((res && res.msg) || '状态更新失败');
                 }
             }).catch(function(err) {
-                // 修改点：统一重载数据恢复 el-switch 状态（原非 __cancelled 分支未 loadData，前端状态与后端不一致）
-                if (!err || !err.__cancelled) {
+                if (err !== 'cancel') {
                   console.warn('[门店管理] 状态更新失败:', err);
                   ReggieUI.error('状态更新失败，请重试');
                 }
@@ -685,7 +678,7 @@
                     ReggieUI.error((res && res.msg) || label + '失败');
                 }
             }).catch(function(err) {
-                if (err && err.__cancelled) return;
+                if (err === 'cancel') return;
                 console.warn('[门店管理] ' + label + '失败:', err);
                 ReggieUI.error(label + '失败，请重试');
             });

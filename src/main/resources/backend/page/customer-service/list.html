@@ -54,13 +54,6 @@
   <div class="cs-container" id="cs-app">
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
 
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">客服管理</h1>
-          <p class="ds-page-header__subtitle">会话管理 · 投诉处理 · 客服统计</p>
-        </div>
-      </header>
-
       <el-tabs v-model="activeTab" class="cs-tabs" @tab-click="onTabClick">
         <el-tab-pane label="会话管理" name="session"></el-tab-pane>
         <el-tab-pane label="投诉处理" name="complaint"></el-tab-pane>
@@ -645,7 +638,7 @@
           return map[status] || '未知'
         },
         statusTagComplaint(status) {
-          var map = { 0: 'warning', 1: '', 2: 'success', 3: 'info' }
+          var map = { 0: 'warning', 1: 'info', 2: 'success', 3: 'info' }
           return map[status] || 'info'
         },
         typeTextComplaint(type) {
@@ -653,7 +646,7 @@
           return map[type] || '未知'
         },
         complaintTypeTagType(type) {
-          var map = { 1: 'danger', 2: 'warning', 3: 'info', 4: 'warning', 5: '' }
+          var map = { 1: 'danger', 2: 'warning', 3: 'info', 4: 'warning', 5: 'info' }
           return map[type] || 'info'
         },
         async onViewComplaint(row) {

@@ -31,13 +31,6 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div id="app" class="dashboard-container">
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
-    <!-- 页头：标题 + 副标题 -->
-    <header class="ds-page-header">
-      <div class="ds-page-header__titles">
-        <h1 class="ds-page-header__title" id="page-title">菜品成本管理</h1>
-        <p class="ds-page-header__subtitle">核算单菜品成本与毛利</p>
-      </div>
-    </header>
     <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
     <table-bar
       :search-items="searchItems"
@@ -412,7 +405,7 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            if (err && err.__cancelled) { return }
+            if (err === 'cancel') return
             console.warn('[dish-cost] 删除失败:', err)
             ReggieUI.error('删除失败')
           }

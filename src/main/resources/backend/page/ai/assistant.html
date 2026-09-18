@@ -681,7 +681,9 @@
                     msg.feedback = type;
                     aiBackendApi.recordFeedback({
                         messageId: msg.dbMessageId,
-                        feedbackType: type
+                        // 修改点(2026-09-18)：后端校验只接受 positive/negative（UI 本地状态仍用 good/bad），
+                        // 原直发 'good' 被 @Pattern 拒绝，反馈从未成功入库
+                        feedbackType: type === 'good' ? 'positive' : 'negative'
                     }).catch(function(err) {
                         ReggieUI.error('反馈提交失败');
                     });

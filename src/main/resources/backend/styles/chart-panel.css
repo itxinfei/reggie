@@ -17,30 +17,47 @@
 .chart-panel {
   background: var(--color-white);
   border-radius: var(--radius-lg);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--el-border-lighter);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 
 .chart-panel:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
 }
 
-/* 标题栏 */
+/* 标题栏：左侧品牌色竖线 + 精简分隔 */
 .chart-panel__title {
-  font-size: 16px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--el-text-primary);
-  margin-bottom: 20px;
-  padding-bottom: 14px;
-  border-bottom: 2px solid var(--el-bg-page);
+  margin-bottom: var(--space-3);
+  padding-left: 10px;
+  border-left: 3px solid var(--color-brand-500);
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.chart-panel__title .ri-bar-chart-box-line,
+.chart-panel__title .ri-pie-chart-line,
+.chart-panel__title .ri-bar-chart-line,
+.chart-panel__title .ri-database-line,
+.chart-panel__title .ri-file-list-line,
+.chart-panel__title .ri-star-fill {
+  font-size: 16px;
+  flex-shrink: 0;
 }
 
 .chart-panel__icon {
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
 }
 
@@ -49,26 +66,36 @@
   width: 100%;
 }
 
+/* 图表容器（统一高度） */
+.chart-panel .chart-box,
+.chart-panel .chart-container,
+.chart-panel [id$="Chart"] {
+  width: 100%;
+  min-height: 300px;
+  flex: 1;
+}
+
 
 /* ========== kpi-card — KPI 指标卡片 ========== */
 
 .kpi-card {
   background: var(--color-white);
   border-radius: var(--radius-lg);
-  padding: 22px 24px;
+  padding: 18px 20px;
   position: relative;
   overflow: hidden;
-  transition: all 0.2s;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--el-border-lighter);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 130px;
+  min-height: 120px;
 }
 
 .kpi-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
 }
 
 /* 顶部主题色条（纯色，符合"禁止渐变"规范） */
@@ -86,16 +113,16 @@
 /* 图标 */
 .kpi-card__icon {
   position: absolute;
-  right: 18px;
-  top: 20px;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-lg);
+  right: 16px;
+  top: 16px;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
   background: var(--icon-bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 22px;
 }
 
 /* 内容区 */
@@ -112,7 +139,7 @@
 }
 
 .kpi-card__value {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   line-height: 1.2;
   margin-bottom: 4px;
@@ -149,23 +176,24 @@
 }
 
 .page-shell__header {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--el-text-primary);
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid var(--el-bg-page);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  padding-left: 10px;
+  border-left: 3px solid var(--color-brand-500);
 }
 
 .page-shell__toolbar {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-4);
 }
 
 .page-shell__cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .page-shell__cards--col-3 {

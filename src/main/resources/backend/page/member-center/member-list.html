@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -46,14 +46,66 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="member-app">
     <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">会员管理</h1>
-          <p class="ds-page-header__subtitle">管理会员信息、等级与余额</p>
-        </div>
-        <div class="ds-page-header__actions"></div>
-      </header>
+      <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+
+      <!-- ===== 搜索栏 ===== -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      ></table-bar>
+
+      <!-- ===== 数据表格 ===== -->
+      <crud-table
+        ref="crudTable"
+        empty-hint="试试调整筛选条件"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :show-actions="true"
+        :actions-width="340"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-levelName="{ row }">
+          <span :class="getLevelClass(row.levelName)">{{ row.levelName || '普通会员' }}</span>
+        </template>
+        <template #col-balance="{ row }">
+          <span style="color:var(--color-brand-700);font-weight:600;">￥{{ row.balance }}</span>
+        </template>
+        <template #col-totalConsumption="{ row }">
+          <span style="font-weight:500;">￥{{ row.totalConsumption }}</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">{{ row.status === 1 ? '正常' : '已禁用' }}</el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="selectMember(row)">详情</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="showRecharge(row)">充值</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="showEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="toggleStatus(row)">{{ row.status === 1 ? '禁用' : '启用' }}</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- ===== 会员详情弹窗（2026-09-01：原 8.4.1 双栏右卡迁移为弹窗式详情） ===== -->
+    <crud-dialog :show-submit="false" :show-cancel="true"
+      title="会员详情"
+      :visible.sync="detailVisible"
+      size="md"
+      cancel-text="关 闭"
+      :show-close="true"
+    >
+      <div v-if="selectedMember" class="member-detail">
+        <div class="member-detail__head">
       <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -513,13 +565,13 @@
           }).catch(function() { self.detailCouponLoading = false })
         },
         couponStatusText: function(s) {
-          if (s === 'USED' || s === '1' || s === 1) return '已使用'
-          if (s === 'EXPIRED' || s === '2' || s === 2) return '已过期'
+          if (s === 'used') return '已使用'
+          if (s === 'expired') return '已过期'
           return '未使用'
         },
         couponTagType: function(s) {
-          if (s === 'USED' || s === '1' || s === 1) return 'info'
-          if (s === 'EXPIRED' || s === '2' || s === 2) return 'warning'
+          if (s === 'used') return 'info'
+          if (s === 'expired') return 'warning'
           return 'success'
         },
         /* ── 充值操作 ── */
@@ -544,6 +596,7 @@
   </script>
 </body>
 </html>
+
 
 
 

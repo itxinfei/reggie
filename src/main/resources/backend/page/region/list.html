@@ -14,14 +14,6 @@
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="region-app">
     <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">行政区划管理</h1>
-          <p class="ds-page-header__subtitle">管理配送区域与范围</p>
-        </div>
-        <div class="ds-page-header__actions"></div>
-      </header>
       <!-- 修改点：统计卡片支持点击筛选（点击省份/城市/区县卡片按层级过滤数据，与层级下拉框互斥） -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
       <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->

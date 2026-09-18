@@ -17,14 +17,6 @@
 <div class="dashboard-container" id="provider-app">
     <main class="container" id="main-content" role="main" aria-label="页面主要内容">
 
-        <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-        <header class="ds-page-header">
-          <div class="ds-page-header__titles">
-            <h1 class="ds-page-header__title" id="page-title">AI 服务商配置</h1>
-            <p class="ds-page-header__subtitle">管理 AI 服务商与连接测试</p>
-          </div>
-          <div class="ds-page-header__actions"></div>
-        </header>
 
         <!-- 当前激活供应商 -->
         <div class="active-provider-card" v-if="activeProvider">
@@ -117,6 +109,8 @@
                :show-close="true" :close-on-click-modal="false" :submit-loading="submitting" @submit="submitForm">
         <!-- 修改点：补全 ref/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
         <el-form ref="providerForm" :model="form" :rules="providerRules" label-width="100px" size="small" class="dialog-form">
+            <!-- 修改点(2026-09-18)：分组分隔线，降低长表单视觉压力 -->
+            <el-divider content-position="left">基础信息</el-divider>
             <el-form-item label="供应商名称" prop="providerName">
                 <el-input v-model="form.providerName" placeholder="如：DeepSeek、通义千问" />
             </el-form-item>
@@ -125,8 +119,18 @@
                     placeholder="deepseek / qwen / zhipu / ernie..." />
                 <div class="field-tip">唯一标识，建议使用英文小写，如 deepseek、qwen</div>
             </el-form-item>
+            <el-divider content-position="left">接口配置</el-divider>
+            <!-- 修改点(2026-09-18)：重新设计 —— 地址自动补全预览，杜绝"填裸域名打到网页入口"的配置错误 -->
             <el-form-item label="API 地址" prop="baseUrl">
-                <el-input v-model="form.baseUrl" placeholder="https://api.deepseek.com/v1" />
+                <el-input v-model="form.baseUrl"
+                    placeholder="https://api.iamhc.cn 或 https://api.deepseek.com/v1" clearable />
+                <div class="field-tip">
+                    填网关域名即可，系统自动补全 /v1/chat/completions；带 /v1 或完整路径的写法同样支持
+                </div>
+                <div v-if="form.baseUrl" class="endpoint-preview">
+                    <i class="ri-link" aria-hidden="true"></i>
+                    实际请求：<code>{{ resolvedEndpoint }}</code>
+                </div>
             </el-form-item>
             <el-form-item label="模型名称" prop="modelName">
                 <!-- 修改点：模型名称支持手动输入 + 一键拉取API模型列表（参考ChatBox/NextChat体验） -->
@@ -163,25 +167,28 @@
                 </div>
             </el-form-item>
             <el-form-item label="API 密钥" prop="apiKey">
-                <el-input v-model="form.apiKey" type="password"
-                    :placeholder="form._hasExistingKey ? '密钥已设置，如需更换请输入新密钥' : 'sk-...'"
-                    show-word-limit show-password />
+                <!-- 修改点(2026-09-18)：明文直接显示（用户要求不脱敏），密钥入库前仍加密存储 -->
+                <el-input v-model="form.apiKey" type="text"
+                    :placeholder="form._hasExistingKey ? '' : 'sk-...'" clearable />
                 <div class="key-hint" v-if="form._hasExistingKey">
-                    <i class="ri-checkbox-circle-line key-ok" aria-hidden="true"></i> 密钥已存在（安全存储，不可查看）。留空则不修改密钥，输入新值则替换。
+                    <i class="ri-checkbox-circle-line key-ok" aria-hidden="true"></i> 已加载当前密钥，可直接查看或替换
                 </div>
                 <div class="key-hint" v-else>
-                    <i class="ri-alert-line key-warn" aria-hidden="true"></i> 密钥将加密存储，使用密码框输入，安全不可见
+                    <i class="ri-alert-line key-warn" aria-hidden="true"></i> 密钥将加密存储到数据库
                 </div>
             </el-form-item>
             <el-form-item label="API 格式">
-                <el-select v-model="form.apiFormat" style="width:100%;">
+                <!-- 修改点(2026-09-18)：popper 不挂 body，避免 append-to-body 弹窗内下拉层级异常导致选不了 -->
+                <el-select v-model="form.apiFormat" style="width:100%;" :popper-append-to-body="false">
                     <el-option label="OpenAI 兼容格式（推荐）" value="openai_compatible" />
                     <el-option label="Anthropic Claude" value="anthropic" />
                     <el-option label="百度文心一言" value="baidu" />
                     <el-option label="360智脑" value="360" />
                     <el-option label="自定义" value="custom" />
                 </el-select>
+                <div class="field-tip">国内主流网关/GPT/DeepSeek/千问/GLM 均选「OpenAI 兼容格式」；360、自定义也按 OpenAI 兼容处理</div>
             </el-form-item>
+            <el-divider content-position="left">生成参数</el-divider>
             <el-row :gutter="16">
                 <el-col :span="12">
                     <el-form-item label="超时（秒）">
@@ -201,6 +208,17 @@
             <el-form-item label="备注说明">
                 <el-input v-model="form.remark" type="textarea" :rows="2"
                     placeholder="模型特点、适用场景等说明" />
+            </el-form-item>
+            <!-- 修改点(2026-09-18)：新增 —— 弹窗内连通测试（编辑模式，使用数据库已保存配置） -->
+            <el-form-item v-if="form.id" label="连通测试">
+                <el-button size="mini" type="warning" plain :loading="dialogTesting" @click="testFromDialog">
+                    {{ dialogTesting ? '测试中...' : '测试已保存的配置' }}
+                </el-button>
+                <div v-if="dialogTestResult" :class="['key-hint', dialogTestOk ? 'dialog-test-ok' : 'dialog-test-ng']">
+                    <i :class="dialogTestOk ? 'ri-checkbox-circle-line key-ok' : 'ri-close-circle-line key-ng'" aria-hidden="true"></i>
+                    {{ dialogTestResult }}
+                </div>
+                <div v-else class="field-tip">测试走数据库已保存的配置；刚修改的字段请先点「保存」再测试</div>
             </el-form-item>
         </el-form>
     </crud-dialog>
@@ -245,6 +263,10 @@
             fetchingModels: false,
             modelList: [],
             modelFetchError: '',
+            // 修改点(2026-09-18)：弹窗内连通测试状态
+            dialogTesting: false,
+            dialogTestResult: '',
+            dialogTestOk: false,
             form: {
                 id: null,
                 providerCode: '',
@@ -267,11 +289,51 @@
             }
         },
 
+        // 修改点(2026-09-18)：端点实时预览，规则与后端 AiUrlUtils.resolveEndpoint 保持一致
+        computed: {
+            resolvedEndpoint: function() {
+                var base = (this.form.baseUrl || '').trim().replace(/\/+$/, '');
+                if (!base) return '';
+                var ep = '/chat/completions';
+                if (base.length > ep.length && base.lastIndexOf(ep) === base.length - ep.length) {
+                    return base;
+                }
+                var schemeIdx = base.indexOf('://');
+                var pathIdx = schemeIdx >= 0 ? base.indexOf('/', schemeIdx + 3) : base.indexOf('/');
+                if (pathIdx < 0) {
+                    return base + '/v1' + ep;
+                }
+                return base + ep;
+            }
+        },
+
         created: function() {
             this.loadData();
         },
 
         methods: {
+            /* ── 弹窗内连通测试（编辑模式） ── */
+            // 修改点(2026-09-18)：新增，测试走数据库已保存配置（与卡片上的「测试」按钮同一接口）
+            testFromDialog: function() {
+                const self = this;
+                self.dialogTesting = true;
+                self.dialogTestResult = '';
+                window.aiBackendApi.providerTest(self.form.id).then(function(res) {
+                    if (res.code === 1 && res.data) {
+                        self.dialogTestOk = res.data.success === 'true';
+                        self.dialogTestResult = res.data.result || (self.dialogTestOk ? 'SUCCESS' : 'FAIL');
+                    } else {
+                        self.dialogTestOk = false;
+                        self.dialogTestResult = res.msg || '测试请求失败';
+                    }
+                }).catch(function(err) {
+                    self.dialogTestOk = false;
+                    self.dialogTestResult = '测试请求失败：' + (err.message || err);
+                }).finally(function() {
+                    self.dialogTesting = false;
+                });
+            },
+
             /* ── 数据加载 ── */
             loadData: function() {
                 const self = this;
@@ -388,13 +450,23 @@
                 this.modelList = [];
                 this.modelFetchError = '';
                 this.fetchingModels = false;
+                // 修改点(2026-09-18)：重置连通测试状态
+                this.dialogTesting = false;
+                this.dialogTestResult = '';
+                this.dialogTestOk = false;
                 this.dialogTitle = '添加模型';
                 this.dialogVisible = true;
             },
 
             openEditDialog: function(provider) {
                 this.form = JSON.parse(JSON.stringify(provider));
+                // 修改点(2026-09-18)：列表返回的 apiKey 也是脱敏值，立即清空防止误提交覆盖真实密钥
+                this.form.apiKey = '';
                 const self = this;
+                // 修改点(2026-09-18)：重置连通测试状态
+                this.dialogTesting = false;
+                this.dialogTestResult = '';
+                this.dialogTestOk = false;
                 // 修改点：掩码可能出现在开头（indexOf===0），>= 0 才能正确识别已有 key
                 this.form._hasExistingKey = !!(provider.apiKey && provider.apiKey.indexOf('****') >= 0);
                 // 修改点：重置模型列表状态
@@ -404,8 +476,10 @@
                 this.dialogTitle = '编辑模型 - ' + (provider.providerName || provider.providerCode);
                 this.dialogVisible = true;
 
-                window.aiBackendApi.providerGet(provider.id).then(function(res) {
+                window.aiBackendApi.providerGet(provider.id, true).then(function(res) {
                     if (res.code === 1 && res.data) {
+                        // 修改点(2026-09-18)：编辑时直接拉取明文密钥回填显示（不脱敏），
+                        // 保存时原样重新加密入库，效果等同「不修改」；后端仍保留 **** 掩码防护
                         self.form.apiKey = res.data.apiKey || '';
                         self.form._hasExistingKey = !!(res.data.apiKey);
                     }

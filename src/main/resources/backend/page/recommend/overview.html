@@ -8,26 +8,26 @@
 
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
     <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+    <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260915c" />
     <script src="../../plugins/echarts/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: var(--bg-page); font-family: var(--font-family-base); }
 
         /* 图表行 */
-        .charts-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
-        .chart-panel { background: var(--bg-surface); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-xs); }
-        .panel-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 16px;
-            padding-bottom: 12px; border-bottom: 1px solid var(--el-border-light); display: flex; align-items: center; gap: 8px; }
+        .charts-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); margin-bottom: var(--space-4); }
+        .panel-title { font-size: var(--font-size-base); font-weight: 600; color: var(--el-text-primary); margin-bottom: var(--space-3);
+            padding-left: 10px; border-left: 3px solid var(--color-brand-500); display: flex; align-items: center; gap: 8px; }
         .panel-title .el-icon { color: var(--el-color-primary); }
-        .chart-box { width: 100%; height: 300px; }
+        .chart-box { width: 100%; min-height: 300px; flex: 1; }
 
         /* 热门排行 */
-        .hot-section { background: var(--bg-surface); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-xs); }
-        .dish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-        .dish-card { border: 1px solid var(--el-border-light); border-radius: var(--radius-md); overflow: hidden; cursor: pointer; transition: all 0.2s; }
-        .dish-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-        .dish-img { width: 100%; height: 120px; object-fit: cover; background: var(--el-bg-subtle); }
-        .dish-body { padding: 10px 12px; }
+        .hot-section { background: var(--color-white); border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04); border: 1px solid var(--el-border-lighter); }
+        .dish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-3); }
+        .dish-card { border: 1px solid var(--el-border-lighter); border-radius: var(--radius-md); overflow: hidden; cursor: pointer; transition: all 0.2s; }
+        .dish-card:hover { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.08); transform: translateY(-2px); }
+        .dish-img { width: 100%; height: 100px; object-fit: cover; background: var(--el-bg-subtle); }
+        .dish-body { padding: 8px 10px; }
         .dish-name { font-size:var(--font-size-base); font-weight: 500; color: var(--el-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .dish-price { font-size:var(--font-size-md); font-weight: 600; color: var(--color-brand-700); margin-top: 4px; }
         .dish-desc { font-size:var(--font-size-xs); color: var(--color-info); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -42,14 +42,14 @@
         .loading-wrap p { color: var(--color-info); margin-top: 12px; }
 
         /* 推荐算法标签 */
-        .algo-tags { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .algo-tags { display: flex; gap: 6px; margin-bottom: var(--space-3); flex-wrap: wrap; }
         .algo-tag { padding: 4px 12px; border-radius: var(--radius-lg); font-size:var(--font-size-xs); border: 1px solid var(--el-border-lighter2);
             cursor: pointer; transition: all 0.2s; color: var(--el-text-regular); }
         .algo-tag.active { background: var(--el-color-primary); color: var(--bg-surface); border-color: var(--el-color-primary); }
         .algo-tag:hover:not(.active) { border-color: var(--el-color-primary); color: var(--el-color-primary); }
 
         @media (max-width: 1200px) {
-            .charts-row { grid-template-columns: 1fr; }
+            .charts-row { grid-template-columns: 1fr; gap: var(--space-4); }
         }
     </style>
 </head>
@@ -58,16 +58,7 @@
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="app">
   <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-    <!-- 页头：标题 + 副标题 + 操作（与全站 ds-page-header 规范一致） -->
-    <header class="ds-page-header">
-      <div class="ds-page-header__titles">
-        <h1 class="ds-page-header__title" id="page-title">热门菜排行</h1>
-        <p class="ds-page-header__subtitle">基于销量聚合的菜品热门排行，浏览行为趋势实时分析</p>
-      </div>
-      <div class="ds-page-header__actions">
-        <el-button type="primary" size="small" icon="ri-refresh-line" @click="refreshAll" :loading="loadingAll">刷新数据</el-button>
-      </div>
-    </header>
+    <el-button type="primary" size="small" icon="ri-refresh-line" @click="refreshAll" :loading="loadingAll">刷新数据</el-button>
 
     <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
     <stat-cards :cards="statsCards"></stat-cards>
@@ -325,14 +316,17 @@
         renderAlgoChart(data) {
             if (!this.algoChart) return;
             const algos = data.algos || ['协同过滤', '内容推荐', '热门排行', '混合推荐'];
-            const ctRates = data.ctRates || [0, 0, 0, 0];
-            const cvRates = data.cvRates || [0, 0, 0, 0];
+            const ctRates = (data.ctRates || [0, 0, 0, 0]).map(Number);
+            const cvRates = (data.cvRates || [0, 0, 0, 0]).map(Number);
+            const allValues = [...ctRates, ...cvRates];
+            const maxVal = Math.max(...allValues, 10);
+            const yAxisMax = Math.ceil(maxVal * 1.2);
             this.algoChart.setOption({
                 tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
                 legend: { data: ['点击率%', '转化率%'], bottom: 0 },
                 grid: { left: 50, right: 20, top: 10, bottom: 40 },
                 xAxis: { type: 'category', data: algos, axisLabel: { fontSize: 12 } },
-                yAxis: { type: 'value', name: '%', max: 100 },
+                yAxis: { type: 'value', name: '%', max: yAxisMax },
                 series: [
                     { name: '点击率%', type: 'bar', data: ctRates, barWidth: 20,
                         itemStyle: { color: RgPalette.seriesBlue, borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] },

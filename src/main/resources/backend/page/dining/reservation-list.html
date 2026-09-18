@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -13,16 +13,7 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="reservation-app">
     <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-      <!-- 页头 -->
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">桌台预订</h1>
-          <p class="ds-page-header__subtitle">管理桌台预订记录，支持电话预订、确认、到店等全流程</p>
-        </div>
-        <div class="ds-page-header__actions">
-          <el-button type="primary" icon="ri-add-line" size="small" @click="addHandle">新增预订</el-button>
-        </div>
-      </header>
+      <el-button type="primary" icon="ri-add-line" size="small" @click="addHandle">新增预订</el-button>
 
       <!-- 统计卡片 -->
       <stat-cards
@@ -166,7 +157,7 @@
   <script src="../../js/accessibility-utils.js?v=20260916"></script>
   <script src="../../js/performance-utils.js?v=20260916"></script>
   <script src="../../js/components.js?v=20260916"></script>
-  <script src="../../api/dining.js?v=20260916"></script>
+  <script src="../../api/dining.js?v=20260918b"></script>
   <script>
     new Vue({
       el: '#reservation-app',

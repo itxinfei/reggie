@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -86,14 +86,51 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <main class="container" id="main-content" role="main" aria-labelledby="page-title">
-    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-    <header class="ds-page-header">
-      <div class="ds-page-header__titles">
-        <h1 class="ds-page-header__title" id="page-title">日结管理</h1>
-        <p class="ds-page-header__subtitle">查看每日营业日结与对账</p>
-      </div>
-      <div class="ds-page-header__actions"></div>
-    </header>
+    <!-- 统计卡片 - 使用统一的 <stat-cards> 组件 -->
+    <stat-cards :cards="statsCards"></stat-cards>
+
+    <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
+    <table-bar
+      :search-items="searchItems"
+      :actions="searchActions"
+      :loading="loading"
+      @search="handleSearch"
+      @reset="handleReset"
+      @action="handleAction">
+    </table-bar>
+
+    <!-- 表格 -->
+    <div class="table-card">
+      <crud-table aria-label="数据表格"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :total="tableData.length"
+        :show-actions="true"
+        :actions-width="180"
+        border stripe size="small">
+        <template #col-refundAmount="{ row }">
+          <span style="color: var(--el-color-danger);">¥{{ formatMoney(row.refundAmount) }}</span>
+        </template>
+        <template #col-netIncome="{ row }">
+          <strong>¥{{ formatMoney(row.netIncome) }}</strong>
+        </template>
+        <template #col-grossProfit="{ row }">
+          <span :style="{ color: row.grossProfit >= 0 ? 'var(--el-color-success)' : 'var(--el-color-danger)' }">
+            ¥{{ formatMoney(row.grossProfit) }}
+          </span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag size="small" :type="row.status === 1 ? 'success' : 'warning'">
+            {{ row.status === 1 ? '已结算' : '未结算' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="handleViewDetail(row)">查看</el-button>
+          <el-button type="text" size="small" class="btn-warning" @click="handleCancelSettlement(row)" v-if="row.status === 1">取消</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
     <!-- 统计卡片 - 使用统一的 <stat-cards> 组件 -->
     <stat-cards :cards="statsCards"></stat-cards>
 
@@ -343,7 +380,7 @@
               ReggieUI.error(res.msg || '日结失败')
             }
           } catch (err) {
-            if (err && err.__cancelled) { return }
+            if (err === 'cancel') return
             console.warn('[daily-settlement] 日结失败:', err)
             ReggieUI.error('日结失败')
           } finally {
@@ -371,7 +408,7 @@
               ReggieUI.error(res.msg || '取消失败')
             }
           } catch (err) {
-            if (err && err.__cancelled) { return }
+            if (err === 'cancel') return
             console.warn('[daily-settlement] 取消失败:', err)
             ReggieUI.error('取消失败')
           }
@@ -393,7 +430,7 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            if (err && err.__cancelled) { return }
+            if (err === 'cancel') return
             console.warn('[daily-settlement] 删除失败:', err)
             ReggieUI.error('删除失败')
           }
@@ -404,7 +441,10 @@
           this.fetchData()
         },
         handleReset() {
-          this.dateRange = []
+          var end = new Date()
+          var start = new Date()
+          start.setTime(start.getTime() - 30 * 24 * 3600 * 1000)
+          this.dateRange = [this.formatDate(start), this.formatDate(end)]
           this.fetchData()
         },
         handleAction(action) {
@@ -415,3 +455,4 @@
   </script>
 </body>
 </html>
+

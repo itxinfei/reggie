@@ -373,7 +373,7 @@ a.breadcrumb__item:hover,
 .ds-hide-sm { display: initial !important; }
 
 @media (max-width: 768px) {
-  .dashboard-container { padding: var(--space-3); }
+  .dashboard-container { padding: var(--space-2); }
   .dashboard-container .container { padding: var(--space-4); border-radius: var(--radius-md); }
   .ds-page-header { flex-direction: column; align-items: stretch; }
   .ds-page-header__actions { width: 100%; }
@@ -393,7 +393,7 @@ a.breadcrumb__item:hover,
 @media (max-width: 1280px) {
   .ds-show-lg { display: initial !important; }
   .ds-hide-lg { display: none !important; }
-  .dashboard-container { padding: var(--space-4); }
+  .dashboard-container { padding: var(--space-3); }
   .dashboard-container .container { padding: var(--space-5); }
 }
 

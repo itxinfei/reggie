@@ -1,11 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>外卖平台对接 - 瑞吉外卖管理端</title>
-  <!-- 修改点：补入 main.css 统一样式入口（原缺失导致 ds-page-header/dashboard-container/crud-table
-       等全局样式与响应式断点全部失效，页面布局与其余后台页不一致） -->
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
 </head>
@@ -15,16 +13,7 @@
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="platform-app">
   <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-    <!-- 页头：标题 + 主操作 -->
-    <header class="ds-page-header">
-      <div class="ds-page-header__titles">
-        <h1 class="ds-page-header__title">外卖平台对接</h1>
-        <p class="ds-page-header__subtitle">统一管理外卖平台接入，灵活配置对接平台与同步范围</p>
-      </div>
-      <div class="ds-page-header__actions">
-        <el-button type="primary" size="small" @click="openAdd">添加平台</el-button>
-      </div>
-    </header>
+    <el-button type="primary" size="small" @click="openAdd">添加平台</el-button>
 
     <!-- 修改点：统计卡片支持点击筛选（点击总数/已启用/已停用按状态过滤数据） -->
     <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
@@ -394,3 +383,4 @@
 </style>
 </body>
 </html>
+

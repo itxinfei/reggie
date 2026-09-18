@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -55,12 +55,6 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="warn-app">
     <main class="container warn-container" id="main-content" role="main" aria-label="库存预警看板">
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">库存预警</h1>
-          <p class="ds-page-header__subtitle">低库存食材预警、补货建议与一键补货</p>
-        </div>
-      </header>
 
       <!-- 统计卡片（固定 4 个） -->
       <stat-cards :cards="statsCards" :loading="statsLoading"></stat-cards>
@@ -187,11 +181,11 @@
           >
             <template #col-dailyUsage="{ row }">{{ (row.dailyUsage || 0).toFixed(2) }} {{ row.unit }}</template>
             <template #col-urgency="{ row }">
-              <el-tag :type="row.urgency === 'HIGH' ? 'danger' : row.urgency === 'MEDIUM' ? 'warning' : 'info'" size="small">
-                {{ row.urgency === 'HIGH' ? '紧急' : row.urgency === 'MEDIUM' ? '适中' : '平稳' }}
+              <el-tag :type="String(row.urgency) === '3' ? 'danger' : String(row.urgency) === '2' ? 'warning' : 'info'" size="small">
+                {{ String(row.urgency) === '3' ? '高危' : String(row.urgency) === '2' ? '预警' : '平稳' }}
               </el-tag>
             </template>
-            <template #col-estimatedCost="{ row }">¥{{ row.estimatedCost | toDecimal }}</template>
+            <template #col-estimatedCost="{ row }">¥{{ (row.estimatedCost || row.cost || 0) | toDecimal }}</template>
             <template #actions="{ row }">
               <el-button type="text" size="small" @click="openSmartRestock([row])">补货</el-button>
             </template>

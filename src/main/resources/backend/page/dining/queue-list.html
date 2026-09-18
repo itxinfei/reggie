@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -80,12 +80,6 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="queue-app">
     <main class="container queue-container" id="main-content" role="main" aria-label="排队叫号看板">
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">排队叫号</h1>
-          <p class="ds-page-header__subtitle">堂食排队取号、叫号、入座全流程管理</p>
-        </div>
-      </header>
 
       <!-- 修改点：统计卡片支持点击筛选（点击按排队状态过滤数据，与状态下拉框联动） -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
@@ -254,7 +248,7 @@
   <script src="../../js/accessibility-utils.js?v=20260915c"></script>
   <script src="../../js/performance-utils.js?v=20260915c"></script>
   <script src="../../js/components.js?v=20260915c"></script>
-  <script src="../../api/dining.js?v=20260915c"></script>
+  <script src="../../api/dining.js?v=20260918b"></script>
   <script>
     new Vue({
       el: '#queue-app',

@@ -56,14 +56,8 @@
   <div class="payment-page" id="report-payment-app" v-loading="loading">
     <main class="container" id="main-content" role="main" aria-label="页面主要内容">
 
-      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">支付分析</h1>
-          <p class="ds-page-header__subtitle">分析各支付渠道的交易数据</p>
-        </div>
-        <div class="ds-page-header__actions"></div>
-      </header>
+      
+      
 
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 KPI 卡片 -->
       <stat-cards :cards="statsCards"></stat-cards>
@@ -142,13 +136,13 @@
   <script src="../../js/components.js?v=20260915c"></script>
   <script src="../../js/chart-panel.js?v=20260915c"></script>
   <script>
-    const CHANNEL_LABEL = { wechat: '微信支付', alipay: '支付宝', balance: '线下/其他', unionpay: '云闪付' };
+    const CHANNEL_LABEL = { wechat: '微信支付', alipay: '支付宝', balance: '线下/其他', other: '其他渠道' };
     // 支付渠道配色：wechat/alipay 为平台品牌色（保留 hex），balance/unionpay 引用全局设计令牌
     const CHANNEL_COLOR = {
       wechat: '#07c160',       // 微信支付品牌绿（平台色，保留）
       alipay: '#1677ff',       // 支付宝品牌蓝（平台色，保留）
       balance: RgPalette.brand, // 余额支付 → 品牌金 #ffc200
-      unionpay: RgPalette.warning // 云闪付 → 警告橙 #e6a23c
+      other: RgPalette.warning // 其他渠道 → 警告橙 #e6a23c
     };
 
     (function() {

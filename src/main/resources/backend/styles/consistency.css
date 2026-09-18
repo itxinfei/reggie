@@ -28,13 +28,15 @@ body:not(.login-page) {
 
 /* ========== 3. 主容器表面统一 ========== */
 /* 重新断言设计系统容器规范（design-system.css 定义，被 page.css 覆盖后在此恢复） */
+.dashboard-container {
+  padding: var(--space-2);
+}
 .dashboard-container .container {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  /* 管理后台以数据密度优先，收紧内边距（12px 纵向 / 16px 横向） */
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
 }
 
 /* 兼容非 dashboard-container 的页面容器（overview-container 等） */
@@ -46,8 +48,7 @@ body:not(.login-page) {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  /* 管理后台以数据密度优先，收紧内边距（12px 纵向 / 16px 横向） */
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
 }
 
 /* ========== 3b. 裸 .container 兜底（body 直下，无 dashboard-container 包裹） ========== */
@@ -61,10 +62,9 @@ body > .container {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  /* 管理后台以数据密度优先，收紧内边距（12px 纵向 / 16px 横向） */
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   max-width: 1400px;
-  margin: 12px auto;   /* 页面留白：与 .dashboard-container 的 20px padding 对齐 */
+  margin: 8px auto;
   min-width: 0;
 }
 

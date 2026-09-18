@@ -15,16 +15,9 @@
 
   <div class="dashboard-container" id="attendance-app">
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">考勤管理</h1>
-          <p class="ds-page-header__subtitle">查看员工出勤状况与考勤异常</p>
-        </div>
-        <div class="ds-page-header__actions">
-          <el-button type="primary" size="small" icon="ri-checkbox-circle-line" @click="handleClockIn" :loading="clockBtnLoading">签到打卡</el-button>
-          <el-button type="success" size="small" icon="ri-close-circle-line" @click="handleClockOut" :loading="clockBtnLoading">签退打卡</el-button>
-        </div>
-      </header>
+
+      <el-button type="primary" size="small" icon="ri-checkbox-circle-line" @click="handleClockIn" :loading="clockBtnLoading">签到打卡</el-button>
+      <el-button type="success" size="small" icon="ri-close-circle-line" @click="handleClockOut" :loading="clockBtnLoading">签退打卡</el-button>
 
       <!-- 统计卡片 -->
       <stat-cards :cards="statsCards"></stat-cards>
@@ -169,15 +162,15 @@
           self.clockBtnLoading = true
           attendanceClockIn().then(function (res) {
             self.clockBtnLoading = false
-            if (res.code === 1) {
-              self.$message.success('签到成功：' + (res.data.status || ''))
+            if (String(res.code) === '1') {
+              ReggieUI.success('签到成功')
               self.fetchAll()
             } else {
-              self.$message.error(res.msg || '签到失败')
+              ReggieUI.error(res.msg || '签到失败')
             }
           }).catch(function (e) {
             self.clockBtnLoading = false
-            self.$message.error('签到失败，请稍后重试')
+            ReggieUI.error('签到失败，请稍后重试')
           })
         },
         handleClockOut: function () {
@@ -185,15 +178,15 @@
           self.clockBtnLoading = true
           attendanceClockOut({}).then(function (res) {
             self.clockBtnLoading = false
-            if (res.code === 1) {
-              self.$message.success('签退成功：' + (res.data.status || ''))
+            if (String(res.code) === '1') {
+              ReggieUI.success('签退成功')
               self.fetchAll()
             } else {
-              self.$message.error(res.msg || '签退失败')
+              ReggieUI.error(res.msg || '签退失败')
             }
           }).catch(function (e) {
             self.clockBtnLoading = false
-            self.$message.error('签退失败，请稍后重试')
+            ReggieUI.error('签退失败，请稍后重试')
           })
         },
         // ===== 日期初始化 =====
@@ -238,7 +231,7 @@
             self.loading = false
           }).catch(function (e) {
             self.loading = false
-            self.$message.warning('数据加载失败，已使用演示数据')
+            ReggieUI.warning('数据加载失败，已使用演示数据')
           })
         },
         fetchWeekSummary: function () {
@@ -373,22 +366,6 @@
               else if (s === 0) dayStatuses[d.day] = 'absent'
               else dayStatuses[d.day] = ''
             })
-          } else {
-            // mock 数据：随机分配状态
-            const statuses = ['normal', 'late', 'absent', 'rest', '']
-            for (let d = 1; d <= totalDays; d++) {
-              const weekday = new Date(year, month - 1, d).getDay()
-              if (weekday === 0) {
-                dayStatuses[d] = 'rest'
-              } else if (weekday === 6) {
-                dayStatuses[d] = ''
-              } else {
-                const r = Math.abs(((d * 7 + month * 3) % 10))
-                if (r === 2) dayStatuses[d] = 'late'
-                else if (r === 5) dayStatuses[d] = 'absent'
-                else dayStatuses[d] = 'normal'
-              }
-            }
           }
 
           // 修改点：totalCells 在下方循环中自增，const 会抛 "Assignment to constant variable."

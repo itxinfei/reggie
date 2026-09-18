@@ -40,7 +40,7 @@
     .overview-container .container {
       flex: 1;
       background: transparent;
-      padding: 16px 24px 24px;
+      padding: var(--space-3) var(--space-4);
       min-width: 0;
       max-width: 1400px;
       margin: 0 auto;
@@ -74,24 +74,24 @@
     .charts-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
+      gap: var(--space-4);
+      margin-bottom: var(--space-4);
     }
 
     .chart-panel {
-      padding: 20px;
+      padding: var(--space-4);
       display: flex;
       flex-direction: column;
       min-width: 0;
     }
 
     .chart-panel .chart-title {
-      font-size:var(--font-size-base);
+      font-size: var(--font-size-base);
       font-weight: 600;
       color: var(--el-text-primary);
-      margin-bottom: 14px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid var(--el-bg-page);
+      margin-bottom: var(--space-3);
+      padding-left: 10px;
+      border-left: 3px solid var(--color-brand-500);
       flex-shrink: 0;
       display: flex;
       align-items: center;
@@ -100,7 +100,7 @@
 
     .chart-box {
       width: 100%;
-      min-height: 260px;
+      min-height: 300px;
       flex: 1;
     }
 
@@ -108,21 +108,21 @@
     .bottom-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      gap: var(--space-4);
     }
 
     .bottom-panel {
-      padding: 20px;
+      padding: var(--space-4);
       min-width: 0;
     }
 
     .bottom-panel .panel-title {
-      font-size:var(--font-size-base);
+      font-size: var(--font-size-base);
       font-weight: 600;
       color: var(--el-text-primary);
-      margin-bottom: 14px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid var(--el-bg-page);
+      margin-bottom: var(--space-3);
+      padding-left: 10px;
+      border-left: 3px solid var(--color-brand-500);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -296,35 +296,35 @@
     /* ========== 响应式设计 ========== */
     @media (max-width: 1200px) {
       .container {
-        padding: 16px 20px 20px !important;
+        padding: var(--space-3) var(--space-4) !important;
       }
       .ops-summary-grid {
         grid-template-columns: 1fr 1fr;
       }
       .charts-row {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: var(--space-4);
       }
       .bottom-row {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: var(--space-4);
       }
     }
 
     /* ========== 首屏待办台（8.7.1） ========== */
     .todo-panel {
       background: var(--bg-surface);
-      border: 1px solid var(--el-border-color);
+      border: 1px solid var(--el-border-lighter);
       border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      padding: 16px 20px;
-      margin-bottom: 16px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
     }
     .todo-panel__head {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 12px;
+      margin-bottom: var(--space-3);
     }
     .todo-panel__title {
       font-size: var(--font-size-base);
@@ -333,6 +333,8 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      padding-left: 10px;
+      border-left: 3px solid var(--color-brand-500);
     }
     .todo-panel__count {
       font-size: var(--font-size-xs);
@@ -341,14 +343,14 @@
     .todo-panel__grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px;
+      gap: var(--space-3);
     }
     .todo-item {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 12px 14px;
-      border: 1px solid var(--el-border-color);
+      padding: 10px 12px;
+      border: 1px solid var(--el-border-lighter);
       border-radius: var(--radius-md);
       background: var(--bg-surface);
       cursor: pointer;
@@ -359,7 +361,7 @@
     }
     .todo-item:hover {
       border-color: var(--color-brand-500);
-      box-shadow: var(--shadow-sm);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
       transform: translateY(-1px);
     }
     .todo-item__icon {
@@ -416,15 +418,6 @@
   <!-- 修改点：P2-1 骨架屏——移除根 v-loading 全屏转圈遮罩，加载态改由页面级骨架屏呈现 -->
   <div class="overview-container" id="dashboard-app" v-cloak>
     <main class="container" id="main-content" role="main" aria-labelledby="page-title">
-
-      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">数据概览</h1>
-          <p class="ds-page-header__subtitle">今日经营核心指标一览</p>
-        </div>
-        <div class="ds-page-header__actions"></div>
-      </header>
 
       <!-- 修改点：P2-1 骨架屏——工作台首屏加载态（待办台 + KPI 卡片区域脉冲骨架，替代纯转圈） -->
       <div v-if="loading" class="overview-skeleton">

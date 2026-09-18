@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -17,10 +17,7 @@
                background: var(--bg-page); color: var(--text-primary); }
 
         .app-container { max-width: 1400px; margin: 0 auto; padding: var(--space-5); }
-        .ds-page-header__title { color: var(--text-primary); }
-        .ds-page-header__subtitle { color: var(--text-secondary); }
-
-        /* Tab */
+/* Tab */
         .tabs { display: flex; gap: 0; background: var(--bg-surface); border-radius: var(--radius-md); overflow: hidden;
                 border: 1px solid var(--border-default); border-bottom: none; }
         .tab-btn { padding: 12px 24px; cursor: pointer; border: none; background: var(--bg-surface); font-size:var(--font-size-base);
@@ -121,13 +118,14 @@
     <div id="app">
         <main class="app-container ds-page" id="main-content" role="main" aria-labelledby="page-title">
             <!-- 页头：标题 + 副标题 + 页级操作 -->
-            <header class="ds-page-header">
-                <div class="ds-page-header__titles">
-                    <h1 class="ds-page-header__title" id="page-title">消息通知管理</h1>
-                    <p class="ds-page-header__subtitle">管理系统通知和消息推送</p>
-                </div>
-                <div class="ds-page-header__actions"></div>
             </header>
+
+            <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stats-cards -->
+            <stat-cards :cards="statsCards"></stat-cards>
+
+            <!-- Mock模式提示 -->
+            <div class="mock-banner" v-if="isMockMode">
+                <i class="ri-error-warning-line"></i> 当前为开发Mock模式，短信/推送仅打印日志，不会真实发送。生产环境请配置阿里云短信参数。
 
             <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stats-cards -->
             <stat-cards :cards="statsCards"></stat-cards>
@@ -784,9 +782,9 @@
 
                     // 修改点：新增简单短信发送，无需依赖阿里云模板
                     const sendData = {
-                        phoneNumbers: phones,
-                        content: self.smsForm.content.trim(),
-                        type: 'SMS'
+                        channel: 1,
+                        targets: phones,
+                        content: self.smsForm.content.trim()
                     };
 
                     notificationApi.sendSimpleMessage(sendData).then(function(res) {
@@ -830,10 +828,10 @@
 
                     // 修改点：修正推送数据格式，title和content提到顶层（后端sendSimpleMessage直接读取）
                     const data = {
-                        userIds: userIds,
+                        channel: 2,
+                        targets: userIds.map(String),
                         title: self.pushForm.title.trim(),
-                        content: self.pushForm.content.trim(),
-                        type: 'PUSH'
+                        content: self.pushForm.content.trim()
                     };
 
                     notificationApi.sendSimpleMessage(data).then(function(res) {
@@ -860,6 +858,8 @@
                     const params = {};
                     if (self.recordForm.status !== '') params.status = self.recordForm.status;
                     if (self.recordForm.channel) params.channel = self.recordForm.channel;
+                    params.page = self.recordPage;
+                    params.pageSize = self.recordSize;
 
                     notificationApi.getRecordPage(params).then(function(res) {
                         if (res && res.code === 1 && res.data) {
@@ -904,6 +904,8 @@
                     self.templatePage = page;
                     const params = {};
                     if (self.templateFilter.bizType) params.bizType = self.templateFilter.bizType;
+                    params.page = self.templatePage;
+                    params.pageSize = self.templateSize;
 
                     notificationApi.getTemplatePage(params).then(function(res) {
                         if (res && res.code === 1 && res.data) {
@@ -1032,14 +1034,5 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
 
 

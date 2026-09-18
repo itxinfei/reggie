@@ -1,5 +1,5 @@
 .dashboard-container {
-  padding: 20px;
+  padding: 10px;
   /* 修改点：确保溢出内容不被裁剪，配合 tableBar 内部按钮自动换行 */
   overflow: visible;
 }

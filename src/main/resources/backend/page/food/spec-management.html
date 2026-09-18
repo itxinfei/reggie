@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c">
   <style>
     /* ===== 规格管理页专有样式（前缀 spec- 避免污染全局） ===== */
-    .spec-main { margin-top: 20px; }
 
     /* 左右面板共用卡片样式 */
     .spec-panel {
@@ -230,7 +229,6 @@
       .spec-search { width: 150px; }
     }
     @media (max-width: 768px) {
-      .spec-main { margin-top: var(--space-4); }
       .spec-panel { min-height: auto; }
       .spec-panel__head { flex-direction: column; align-items: flex-start; }
       .spec-panel__filters { width: 100%; margin-left: 0; }
@@ -242,18 +240,9 @@
 </head>
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
-  <main class="container" id="main-content" role="main" aria-labelledby="page-title">
-    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-    <header class="ds-page-header">
-      <div class="ds-page-header__titles">
-        <h1 class="ds-page-header__title" id="page-title">规格管理</h1>
-        <p class="ds-page-header__subtitle">统一维护菜品规格组与规格选项，支持加价、必选、单选/多选等配置</p>
-      </div>
-      <div class="ds-page-header__actions">
-        <el-button icon="ri-refresh-line" @click="refreshAll">刷新</el-button>
-        <el-button type="primary" icon="ri-add-line" @click="openGroupDialog()">新增规格组</el-button>
-      </div>
-    </header>
+  <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <el-button icon="ri-refresh-line" @click="refreshAll">刷新</el-button>
+    <el-button type="primary" icon="ri-add-line" @click="openGroupDialog()">新增规格组</el-button>
 
     <!-- 统计概览 -->
     <stat-cards :cards="statsCards" aria-label="规格数据概览"></stat-cards>

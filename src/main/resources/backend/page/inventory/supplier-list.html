@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -17,14 +17,123 @@
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="supplier-app">
   <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-    <header class="ds-page-header">
-      <div class="ds-page-header__titles">
-        <h1 class="ds-page-header__title" id="page-title">供应商管理</h1>
-        <p class="ds-page-header__subtitle">管理食材供应商信息</p>
-      </div>
-      <div class="ds-page-header__actions"></div>
-    </header>
+    <!-- ============================================================
+     组件1：stat-cards — 统计卡片
+     关联数据：statsCards（计算属性，从 stats 对象实时映射）
+     事件：@card-click → 按供应商状态筛选表格
+    ============================================================ -->
+    <stat-cards
+      :cards="statsCards"
+      :active-key.sync="activeStatus"
+      @card-click="onStatCardClick"
+    ></stat-cards>
+
+    <!-- ============================================================
+     组件2：table-bar — 搜索 + 操作按钮栏
+     搜索项：供应商名称、联系人（两个 input）
+     操作按钮：+ 新增供应商
+     事件：@search（触发分页查询） / @reset（清空并重新加载） / @action（按钮回调）
+    ============================================================ -->
+    <table-bar
+      ref="tableBar"
+      :search-items="searchConfig"
+      :actions="actionConfig"
+      @search="onSearch"
+      @reset="onReset"
+      @action="onAction"
+    ></table-bar>
+
+    <!-- ============================================================
+     组件3：crud-table — 完整 CRUD 数据表格
+     列定义：columns（名称、联系人、电话、地址、状态、操作）
+     分页：page/pageSize/total 双向绑定
+     操作列：修改/删除按钮（通过 #actions 插槽自定义）
+    ============================================================ -->
+    <crud-table
+      ref="crudTable"
+      :data="tableData"
+      :columns="columns"
+      :loading="loading"
+      :page="page"
+      :page-size="pageSize"
+      :total="counts"
+      :show-actions="true" :viewable="true"
+      :actions-width="210"
+      @page-change="onPageChange"
+      @size-change="onSizeChange"
+    >
+      <!-- 累计采购额列 -->
+      <template #col-totalPurchaseAmount="{ row }">
+        <span v-if="row.totalPurchaseAmount != null">
+          ￥{{ formatMoney(row.totalPurchaseAmount) }}
+          <span style="color:var(--text-muted);font-size:var(--font-size-xs);margin-left:2px;" v-if="row.purchaseCount">/ {{ row.purchaseCount }} 单</span>
+        </span>
+        <span v-else style="color:var(--text-muted);">-</span>
+      </template>
+      <!-- 状态列自定义渲染 -->
+      <template #col-status="{ row }">
+        <el-tag :type="String(row.status) === '1' ? 'success' : 'info'" size="small">
+          {{ String(row.status) === '1' ? '启用' : '禁用' }}
+        </el-tag>
+      </template>
+      <!-- 行操作按钮 -->
+      <template #actions="{ row }">
+        <el-button type="text" size="small" class="btn-view" @click="openPurchases(row)">采购记录</el-button>
+        <el-button type="text" size="small" class="btn-view" @click="openEdit(row)">修改</el-button>
+        <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row.id)">删除</el-button>
+      </template>
+    </crud-table>
+
+  </main>
+
+  <!-- ============================================================
+   组件4：crud-dialog — 新增/编辑弹窗
+   表单内容通过默认插槽传入，底部按钮由组件统一管理
+   ============================================================ -->
+  <crud-dialog :show-submit="true" :show-cancel="true"
+    :title="dialogTitle"
+    :visible.sync="dialogVisible"
+    :submit-loading="submitting"
+    size="lg"
+    @submit="submitForm"
+    @close="resetForm"
+  >
+    <el-form ref="supplierForm" :model="formData" label-width="80px">
+      <el-form-item label="供应商名称：" prop="name" :rules="[{required: true, message: '请输入供应商名称', trigger: 'blur'}]">
+        <el-input v-model="formData.name" placeholder="请输入供应商名称" maxlength="50" />
+      </el-form-item>
+      <el-form-item label="联系人：">
+        <el-input v-model="formData.contact" placeholder="请输入联系人" maxlength="20" />
+      </el-form-item>
+      <el-form-item label="联系电话：">
+        <el-input v-model="formData.phone" placeholder="请输入联系电话" maxlength="20" />
+      </el-form-item>
+      <el-form-item label="地址：">
+        <el-input v-model="formData.address" placeholder="请输入地址" maxlength="100" />
+      </el-form-item>
+      <el-form-item label="状态：">
+        <el-radio-group v-model="formData.status">
+          <el-radio label="1">启用</el-radio>
+          <el-radio label="0">禁用</el-radio>
+        </el-radio-group>
+      </el-form-item>
+    </el-form>
+  </crud-dialog>
+
+  <!-- ============================================================
+   组件5：crud-dialog — 采购记录弹窗（8.3.3 供应商历史采购，复用 purchaseOrder page 接口；只读，仅有关闭按钮）
+   ============================================================ -->
+  <crud-dialog
+    title="采购记录"
+    :visible.sync="purchaseDialog.visible"
+    size="lg"
+    :show-submit="false"
+    :show-cancel="true"
+    cancel-text="关 闭"
+  >
+    <div v-if="purchaseList.length === 0" class="ds-table-empty">
+      <i class="ri-file-text-line"></i>
+      <p>该供应商暂无采购记录</p>
 
     <!-- ============================================================
      组件1：stat-cards — 统计卡片
@@ -144,7 +253,7 @@
       <i class="ri-file-text-line"></i>
       <p>该供应商暂无采购记录</p>
     </div>
-    <el-table v-else :data="purchaseList" stripe border size="small" :loading="purchaseLoading">
+    <el-table v-else :data="purchaseList" stripe border size="small" v-loading="purchaseLoading">
       <el-table-column prop="orderNo" label="采购单号" min-width="160" align="center"></el-table-column>
       <el-table-column prop="totalAmount" label="金额" width="110" align="center">
         <template slot-scope="s">￥{{ formatMoney(s.row.totalAmount) }}</template>
@@ -504,6 +613,7 @@
   </script>
 </body>
 </html>
+
 
 
 

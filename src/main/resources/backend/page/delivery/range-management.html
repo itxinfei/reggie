@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -17,7 +17,7 @@
       background: var(--el-bg-subtle);
     }
     .container {
-      padding: 24px 32px;
+      padding: var(--space-3) var(--space-4);
       max-width: 1400px;
       margin: 0 auto;
     }
@@ -25,12 +25,17 @@
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 10px;
       background: var(--bg-surface);
-      padding: 16px 24px;
+      padding: var(--space-3) var(--space-4);
       border-radius: var(--radius-lg);
-      margin-bottom: 20px;
-      box-shadow: var(--shadow-sm);
+      margin-bottom: var(--space-4);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+      border: 1px solid var(--el-border-lighter);
+      transition: all 0.25s ease;
+    }
+    .tableBar:hover {
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.08);
     }
     .tableBar .toolbar-spacer {
       flex: 1;
@@ -38,8 +43,9 @@
     .table-card {
       background: var(--bg-surface);
       border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
+      padding: var(--space-4);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+      border: 1px solid var(--el-border-lighter);
     }
     .range-type-tag {
       padding: 4px 8px;
@@ -95,14 +101,42 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <main class="container" id="main-content" role="main" aria-labelledby="page-title">
-    <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-    <header class="ds-page-header">
-      <div class="ds-page-header__titles">
-        <h1 class="ds-page-header__title" id="page-title">配送范围管理</h1>
-        <p class="ds-page-header__subtitle">管理配送区域与计费规则</p>
-      </div>
-      <div class="ds-page-header__actions"></div>
-    </header>
+    <!-- 统计卡片 -->
+    <stat-cards :cards="statsCards"></stat-cards>
+
+    <!-- 搜索 + 操作栏 -->
+    <table-bar
+      :search-items="searchItems"
+      :actions="actionItems"
+      @search="onSearch"
+      @reset="onReset"
+      @action="onAction"
+    ></table-bar>
+
+    <!-- 数据表格 -->
+    <crud-table
+      :data="pagedData"
+      :columns="columns"
+      :loading="loading"
+      :page="page"
+      :page-size="pageSize"
+      :total="filteredTotal"
+      :show-actions="true" :viewable="true"
+      :actions-width="250"
+      :actions-fixed="true"
+      @page-change="onPageChange"
+      @size-change="onSizeChange"
+      aria-label="配送范围规则列表"
+    >
+      <!-- 范围类型列 -->
+      <template #col-rangeType="{ row }">
+        <el-tag :type="row.rangeType === 1 ? 'warning' : 'success'" size="small">
+          {{ row.rangeType === 1 ? '圆形' : '多边形' }}
+        </el-tag>
+      </template>
+      <!-- 范围参数列 -->
+      <template #col-rangeParams="{ row }">
+        <div v-if="row.rangeType === 1">
     <!-- 统计卡片 -->
     <stat-cards :cards="statsCards"></stat-cards>
 
@@ -619,8 +653,7 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            // 修改点：ReggieUI.confirm 取消时 reject {__cancelled}，静默返回；真实请求失败才提示
-            if (err && err.__cancelled) { return }
+            if (err === 'cancel') return
             console.warn('[range-management] 删除失败:', err)
             ReggieUI.error('删除失败')
           }
@@ -703,7 +736,7 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            if (err && err.__cancelled) { return }
+            if (err === 'cancel') return
             console.warn('[range-management] 删除阶梯规则失败:', err)
             ReggieUI.error('删除失败')
           }
@@ -736,6 +769,7 @@
   </script>
 </body>
 </html>
+
 
 
 

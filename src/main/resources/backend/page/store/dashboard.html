@@ -21,52 +21,52 @@
         }
         .store-dashboard { min-height: 100%; display: flex; flex-direction: column; }
         .store-dashboard .container {
-            flex: 1; background: transparent; padding: 24px 32px 32px;
+            flex: 1; background: transparent; padding: var(--space-3) var(--space-4);
             min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%;
         }
 
         /* ========== 图表 + 排行 双栏 ========== */
         .content-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-4);
         }
         /* 趋势图全宽单列 */
-        .full-width-row { margin-bottom: 24px; }
+        .full-width-row { margin-bottom: var(--space-4); }
 
         /* ========== 图表面板 ========== */
         .chart-panel {
-            padding: 24px;
+            padding: var(--space-4);
             display: flex; flex-direction: column; min-width: 0;
         }
         .chart-panel .panel-title {
-            font-size:var(--font-size-lg); font-weight: 600; color: var(--el-text-primary);
-            margin-bottom: 8px; padding-bottom: 16px;
-            border-bottom: 2px solid var(--el-bg-page); flex-shrink: 0;
+            font-size: var(--font-size-base); font-weight: 600; color: var(--el-text-primary);
+            margin-bottom: var(--space-3); padding-left: 10px;
+            border-left: 3px solid var(--color-brand-500); flex-shrink: 0;
             display: flex; align-items: center; gap: 8px;
         }
-        .panel-sub { font-size:var(--font-size-xs); color: var(--color-info); margin: -8px 0 12px; }
-        .chart-box { width: 100%; min-height: 400px; flex: 1; }
+        .panel-sub { font-size: var(--font-size-xs); color: var(--color-info); margin: -4px 0 var(--space-3); }
+        .chart-box { width: 100%; min-height: 300px; flex: 1; }
 
         /* ========== 门店排行 ========== */
         .ranking-panel {
-            padding: 24px; min-width: 0;
+            padding: var(--space-4); min-width: 0;
         }
         .ranking-panel .panel-title {
-            font-size:var(--font-size-lg); font-weight: 600; color: var(--el-text-primary);
-            margin-bottom: 20px; padding-bottom: 16px;
-            border-bottom: 2px solid var(--el-bg-page);
+            font-size: var(--font-size-base); font-weight: 600; color: var(--el-text-primary);
+            margin-bottom: var(--space-3); padding-left: 10px;
+            border-left: 3px solid var(--color-brand-500);
             display: flex; align-items: center; gap: 8px;
         }
         .rank-list { list-style: none; padding: 0; margin: 0; }
         .rank-item {
-            display: flex; align-items: center; padding: 16px 0;
+            display: flex; align-items: center; padding: 12px 0;
             border-bottom: 1px solid var(--el-bg-light); transition: all 0.2s; gap: 14px;
         }
         .rank-item:hover { background: var(--el-bg-ghost); margin: 0 -12px; padding-left: 12px; padding-right: 12px; border-radius: var(--radius-md); }
         .rank-item:last-child { border-bottom: none; padding-bottom: 0; }
         .rank-num {
-            width: 36px; height: 36px; border-radius: var(--radius-md);
+            width: 32px; height: 32px; border-radius: var(--radius-md);
             display: flex; align-items: center; justify-content: center;
-            font-size:var(--font-size-base); font-weight: 700; flex-shrink: 0;
+            font-size: var(--font-size-sm); font-weight: 700; flex-shrink: 0;
         }
         .rank-num.r1 { background: var(--color-brand-500); color: var(--text-on-brand); }
         .rank-num.r2 { background: var(--color-info); color: var(--color-white); }
@@ -83,16 +83,16 @@
             font-size: var(--font-size-xs); color: var(--text-muted); background: var(--el-bg-subtle);
             padding: 2px 8px; border-radius: var(--radius-sm); font-weight: 500;
         }
-        .rank-bar-wrap { width: 120px; height: 8px; background: var(--el-bg-page); border-radius: var(--radius-sm); overflow: hidden; flex-shrink: 0; }
+        .rank-bar-wrap { width: 100px; height: 6px; background: var(--el-bg-page); border-radius: var(--radius-sm); overflow: hidden; flex-shrink: 0; }
         .rank-bar-fill { height: 100%; border-radius: var(--radius-sm); transition: width 0.8s cubic-bezier(0.4,0,0.2,1); background: var(--color-brand-500); }
-        .rank-stats { text-align: right; flex-shrink: 0; min-width: 80px; }
-        .rank-orders { font-size:var(--font-size-lg); font-weight: 700; color: var(--el-text-primary); }
+        .rank-stats { text-align: right; flex-shrink: 0; min-width: 70px; }
+        .rank-orders { font-size: var(--font-size-base); font-weight: 700; color: var(--el-text-primary); }
         .rank-amount { font-size:var(--font-size-sm); color: var(--color-danger); font-weight: 600; }
         .rank-avg { font-size:var(--font-size-xs); color: var(--color-info); }
-        .rank-list { list-style: none; padding: 0; margin: 0; max-height: 372px; overflow-y: auto; }
+        .rank-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
 
         /* ========== 排行维度切换 Tab ========== */
-        .rank-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+        .rank-tabs { display: flex; gap: 4px; margin-bottom: var(--space-3); }
         .rank-tab {
             padding: 4px 14px; font-size: var(--font-size-xs); font-weight: 500;
             border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;
@@ -118,12 +118,12 @@
 
         /* ========== 响应式 ========== */
         @media (max-width: 1200px) {
-            .container { padding: 16px 20px 20px !important; }
-            .content-grid { grid-template-columns: 1fr; gap: 20px; }
+            .container { padding: var(--space-3) var(--space-4) !important; }
+            .content-grid { grid-template-columns: 1fr; gap: var(--space-4); }
         }
         @media (max-width: 768px) {
-            .container { padding: 12px 16px 16px !important; }
-            .chart-box { min-height: 300px; }
+            .container { padding: var(--space-2) var(--space-3) !important; }
+            .chart-box { min-height: 260px; }
         }
     </style>
 </head>
@@ -133,16 +133,8 @@
 <!-- 修改点：P2-1 骨架屏——移除根 v-loading 全屏转圈遮罩，加载态改由页面级骨架屏呈现 -->
 <div class="store-dashboard" id="store-dash-app">
     <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">{{ pageTitle }}</h1>
-          <p class="ds-page-header__subtitle">{{ pageSubtitle }}</p>
-        </div>
-        <div class="ds-page-header__actions">
-          <el-button v-if="isStoreMode" size="small" icon="ri-arrow-left-s-line" @click="backToHeadquarters">返回总部控制台</el-button>
-        </div>
-      </header>
+      
+      
 
         <!-- 修改点：P2-1 骨架屏——门店工作台首屏加载态（内容区脉冲骨架，替代纯转圈） -->
         <div v-if="loading" class="store-dashboard-skeleton">
@@ -396,14 +388,26 @@
                     if (hit) self.currentStoreName = hit.storeName || '';
                 }
                 self.lastUpdated = new Date();
-                self.$nextTick(function() { self.renderBarChart(); });
+                self.$nextTick(function() {
+                    self.renderBarChart();
+                    self.renderTrendChart();
+                    self.renderCategoryChart();
+                });
             }).catch(function(err) {
                 ReggieUI.error('加载失败：' + (err.message || '网络异常'));
             }).finally(function() { self.loading = false; });
-            // 并行加载排行详情（集团模式也需要排行三维切换）
-            getRankingDetail(7).then(function(res) {
-                if (res && res.code === 1) { self.rankDetail = res.data || []; }
-            }).catch(function() { /* 静默 */ });
+            // 并行加载排行详情、趋势数据、品类数据（集团模式也需要排行三维切换）
+            Promise.all([
+                getRankingDetail(7).then(function(res) {
+                    if (res && res.code === 1) { self.rankDetail = res.data || []; }
+                }),
+                getMultiStoreTrend(7).then(function(res) {
+                    if (res && res.code === 1) { self.trendData = res.data; }
+                }),
+                getCategoryComparison().then(function(res) {
+                    if (res && res.code === 1) { self.categoryData = res.data; }
+                })
+            ]).catch(function() { /* 静默 */ });
         },
         loadDashboard() {
             var self = this;

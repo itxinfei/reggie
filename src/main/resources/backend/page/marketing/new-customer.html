@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -16,13 +16,105 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="app">
     <main class="container ds-page" id="main-content" role="main">
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">新客优惠</h1>
-          <p class="ds-page-header__subtitle">管理新客专享优惠活动</p>
-        </div>
-        <div class="ds-page-header__actions"></div>
       </header>
+
+      <!-- 统计卡片：全部/已启用/已禁用，点击可筛选 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <!-- 搜索栏：按优惠名称搜索 + 新增新客优惠按钮 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      ></table-bar>
+
+      <!-- 数据表格：ID/优惠名称/优惠类型/优惠值/最大优惠/起送金额/有效天数/状态 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :selection="false"
+        :show-actions="true" :viewable="true"
+        :actions-width="180"
+        :actions-fixed="true"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        aria-label="新客优惠列表"
+      >
+        <template #col-discountType="{ row }">
+          <el-tag :type="row.discountType === 2 ? 'success' : 'info'" size="small">
+            {{ row.discountType === 1 ? '固定金额' : '按比例' }}
+          </el-tag>
+        </template>
+        <template #col-discountValue="{ row }">
+          <span v-if="row.discountType === 1">¥{{ formatMoney(row.discountValue) }}</span>
+          <span v-else>{{ Number(row.discountValue).toFixed(1) }}%</span>
+        </template>
+        <template #col-maxDiscountAmount="{ row }">
+          <span>{{ row.maxDiscountAmount ? '¥' + formatMoney(row.maxDiscountAmount) : '不限' }}</span>
+        </template>
+        <template #col-minOrderAmount="{ row }">
+          <span>{{ row.minOrderAmount ? '满¥' + formatMoney(row.minOrderAmount) : '不限' }}</span>
+        </template>
+        <template #col-validDays="{ row }">
+          <span>{{ row.validDays || '不限' }}</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+            {{ row.status === 1 ? '启用' : '禁用' }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="handleEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" @click="handleToggleStatus(row)">
+            {{ row.status === 1 ? '禁用' : '启用' }}
+          </el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 新增/编辑弹窗：优惠名称/类型/优惠值/最大优惠/起送金额/有效天数/备注/状态 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :size="'md'"
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      :close-on-click-modal="false"
+      :submit-loading="submitLoading"
+      @submit="handleSubmit"
+    >
+      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px" size="small">
+        <el-form-item label="优惠名称" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入优惠名称"></el-input>
+        </el-form-item>
+        <el-form-item label="优惠类型" prop="discountType">
+          <el-radio-group v-model="formData.discountType">
+            <el-radio :label="1">固定金额</el-radio>
+            <el-radio :label="2">按比例</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item :label="formData.discountType === 1 ? '优惠金额(元)' : '优惠比例(%)'" prop="discountValue">
+          <el-input-number
+            v-model="formData.discountValue"
+            :precision="2"
+            :min="formData.discountType === 1 ? 0.01 : 1"
+            :max="formData.discountType === 2 ? 99 : 99999"
+            style="width: 100%;">
+          </el-input-number>
+        </el-form-item>
+        <el-form-item v-if="formData.discountType === 2" label="最大优惠金额">
+          <el-input-number v-model="formData.maxDiscountAmount" :precision="2" :min="0" style="width: 100%;"></el-input-number>
 
       <!-- 统计卡片：全部/已启用/已禁用，点击可筛选 -->
       <stat-cards
@@ -178,6 +270,8 @@
             { prop: 'status', label: '状态', slot: true, width: 80, align: 'center' }
           ],
           stats: { total: 0, active: 0, inactive: 0 },
+          allData: [],
+          filteredData: [],
           lastSearch: {},
           dialogVisible: false,
           dialogTitle: '新增新客优惠',
@@ -213,7 +307,6 @@
       },
       created: function() {
         this.init()
-        this.loadStats()
       },
       methods: {
         // ========== 辅助方法 ==========
@@ -225,22 +318,28 @@
         async init() {
           this.loading = true
           const self = this
-          const params = { page: self.page || 1, pageSize: self.pageSize || 10 }
+          const params = {}
           if (self.lastSearch.name) {
             params.name = self.lastSearch.name
           }
-          if (self.activeFilter && self.activeFilter !== '') {
-            params.status = self.activeFilter
-          }
           try {
             const res = await getNewCustomerDiscounts(params)
-            // 修改点：修复字段层级。分页接口返回 {code, data:{records, total}}，
-            // res.data 是分页对象（含 records/total），非数组；原 tableData=res.data 导致表格拿到对象渲染失败。
             if (String(res.code) === '1' && res.data) {
               var d = res.data;
-              // 兼容分页响应 {records, total} 与数组响应 [...]
-              self.tableData = Array.isArray(d) ? d : (d.records || []);
-              self.counts = Array.isArray(d) ? d.length : (d.total != null ? d.total : self.tableData.length);
+              // 后端返回裸数组，前端负责过滤和分页
+              var all = Array.isArray(d) ? d : (d.records || []);
+              self.allData = all;
+              // 前端状态过滤
+              var filtered = all;
+              if (self.activeFilter && self.activeFilter !== '') {
+                var statusVal = parseInt(self.activeFilter);
+                filtered = all.filter(function(item) { return item.status === statusVal; });
+              }
+              self.filteredData = filtered;
+              self.counts = filtered.length;
+              // 前端分页
+              self.tableData = filtered.slice((self.page - 1) * self.pageSize, self.page * self.pageSize);
+              self.loadStats();
             }
           } catch (err) {
             ReggieUI.error('获取新客优惠列表失败')
@@ -248,28 +347,14 @@
           self.loading = false
         },
         async loadStats() {
-          try {
-            const results = await Promise.all([
-              getNewCustomerDiscounts({ page: 1, pageSize: 1, status: '1' }),
-              getNewCustomerDiscounts({ page: 1, pageSize: 1, status: '0' })
-            ])
-            // 修改点：修复字段层级错误。request.js 返回 {code, msg, data:{records, total}}，
-            // total 在 data 内层，原 results[0].total / results[0].data.length 均层级错误，
-            // 且 total=0 时短路到 data.length 会抛 TypeError（data 是对象非数组）。
-            var extractCount = function(res) {
-              if (!res || String(res.code) !== '1' || !res.data) return 0;
-              var d = res.data;
-              return (d.total != null ? d.total : ((d.records || []).length)) || 0;
-            };
-            const activeCount = extractCount(results[0]);
-            const inactiveCount = extractCount(results[1]);
-            this.stats = {
-              total: activeCount + inactiveCount,
-              active: activeCount,
-              inactive: inactiveCount
-            }
-          } catch (err) {
-            console.warn('加载新客优惠统计失败:', err)
+          // 前端统计：从 allData 计算，无需额外 API 请求
+          var all = this.allData || [];
+          var activeCount = all.filter(function(item) { return item.status === 1; }).length;
+          var inactiveCount = all.filter(function(item) { return item.status === 0; }).length;
+          this.stats = {
+            total: all.length,
+            active: activeCount,
+            inactive: inactiveCount
           }
         },
         // ========== 筛选/分页事件 ==========
@@ -365,7 +450,7 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            if (err && err.__cancelled) { return }
+            if (err === 'cancel') return
             console.warn('[new-customer] 删除失败:', err)
             ReggieUI.error('删除失败')
           }

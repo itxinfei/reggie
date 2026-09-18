@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -91,13 +91,6 @@
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="coupon-app">
     <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-      <!-- 页头：标题 + 副标题（与全站 ds-page-header 规范一致） -->
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">优惠券管理</h1>
-          <p class="ds-page-header__subtitle">券模板、定向发放、到期预警一站式管理</p>
-        </div>
-      </header>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -1059,7 +1052,7 @@
               this.init(false)
               if (this.issueTemplateId) { this.loadIssued(1) }
             } else {
-              ReggieUI.error(res.message || '发放失败')
+              ReggieUI.error(res.msg || '发放失败')
             }
           } catch (e) {
             console.error(e)
@@ -1122,13 +1115,13 @@
         },
         // 券状态
         couponStatusText: function(s) {
-          if (s === 'USED' || s === '1' || s === 1) return '已使用'
-          if (s === 'EXPIRED' || s === '2' || s === 2) return '已过期'
+          if (s === 'used') return '已使用'
+          if (s === 'expired') return '已过期'
           return '未使用'
         },
         couponStatusType: function(s) {
-          if (s === 'USED' || s === '1' || s === 1) return 'info'
-          if (s === 'EXPIRED' || s === '2' || s === 2) return 'warning'
+          if (s === 'used') return 'info'
+          if (s === 'expired') return 'warning'
           return 'success'
         },
         // ============ Tab3 即将到期 ============
@@ -1278,3 +1271,4 @@
   </script>
 </body>
 </html>
+

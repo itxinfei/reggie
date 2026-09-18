@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -16,13 +16,97 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="app">
     <main class="container ds-page" id="main-content" role="main">
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">秒杀活动</h1>
-          <p class="ds-page-header__subtitle">管理限时秒杀活动</p>
-        </div>
-        <div class="ds-page-header__actions"></div>
       </header>
+
+      <!-- 统计卡片：全部/进行中/已暂停/已结束，点击可筛选 -->
+      <stat-cards
+        :cards="statsCards"
+        :active-key.sync="activeFilter"
+        @card-click="onCardClick"
+      ></stat-cards>
+
+      <!-- 搜索栏：按活动名称搜索 + 新增秒杀活动按钮 -->
+      <table-bar
+        ref="tableBar"
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction"
+      ></table-bar>
+
+      <!-- 数据表格：ID/活动名称/秒杀菜品/原价/秒杀价/已售总量/每人限购/活动时间/状态 -->
+      <crud-table
+        ref="crudTable"
+        :data="tableData"
+        :columns="columns"
+        :loading="loading"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :selection="false"
+        :show-actions="true" :viewable="true"
+        :actions-width="180"
+        :actions-fixed="true"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+        aria-label="秒杀活动列表"
+      >
+        <template #col-dish="{ row }">
+          <span>{{ row.dishName || '-' }}</span>
+        </template>
+        <template #col-originalPrice="{ row }">
+          <span style="text-decoration: line-through; color: var(--text-muted)">¥{{ formatMoney(row.originalPrice) }}</span>
+        </template>
+        <template #col-flashPrice="{ row }">
+          <span style="color: var(--color-danger); font-weight: 600">¥{{ formatMoney(row.flashPrice) }}</span>
+        </template>
+        <template #col-stock="{ row }">
+          <span>{{ row.soldQuantity || 0 }}/{{ row.totalQuantity || 0 }}</span>
+        </template>
+        <template #col-maxPerUser="{ row }">
+          <span>{{ row.maxPerUser || '不限' }}</span>
+        </template>
+        <template #col-time="{ row }">
+          <span>{{ formatDate(row.startTime) }} ~ {{ formatDate(row.endTime) }}</span>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="statusTagType(row.status)" size="small">
+            {{ statusText(row.status) }}
+          </el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="handleEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" @click="handleToggleStatus(row)" :disabled="row.status === 0 || row.status === 3">
+            {{ row.status === 1 ? '暂停' : '启用' }}
+          </el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 新增/编辑弹窗：活动名称/秒杀菜品/原价/秒杀价/总量/限购/活动时段/描述/状态 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      :size="'lg'"
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      :close-on-click-modal="false"
+      :submit-loading="submitLoading"
+      @submit="handleSubmit"
+    >
+      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px" size="small">
+        <el-form-item label="活动名称" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入活动名称"></el-input>
+        </el-form-item>
+        <el-form-item label="秒杀菜品" prop="dishId">
+          <el-select v-model="formData.dishId" placeholder="请选择菜品" filterable @change="onDishChange" style="width: 100%;">
+            <el-option v-for="d in dishOptions" :key="d.value" :label="d.label" :value="d.value"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="原价(元)">
+              <el-input-number v-model="formData.originalPrice" :precision="2" :min="0" disabled style="width: 100%;"></el-input-number>
 
       <!-- 统计卡片：全部/进行中/已暂停/已结束，点击可筛选 -->
       <stat-cards
@@ -449,7 +533,7 @@
               ReggieUI.error(res.msg || '删除失败')
             }
           } catch (err) {
-            if (err && err.__cancelled) { return }
+            if (err === 'cancel') return
             console.warn('[flash-sale] 删除失败:', err)
             ReggieUI.error('删除失败')
           }

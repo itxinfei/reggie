@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -7,6 +7,7 @@
   <title>成本核算 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
@@ -22,13 +23,16 @@
     }
     /* ── 图表卡片内标题 ── */
     .chart-title {
-      font-size: var(--font-size-lg);
+      font-size: var(--font-size-base);
       font-weight: 600;
       color: var(--text-primary);
-      margin-bottom: var(--space-4);
+      margin-bottom: var(--space-3);
+      padding-left: 10px;
+      border-left: 3px solid var(--color-brand-500);
     }
     .chart-container {
-      height: 300px;
+      min-height: 300px;
+      flex: 1;
     }
     /* ── 预警条目（自定义语义色，使用设计令牌） ── */
     .alert-item {
@@ -72,12 +76,6 @@
   <div id="app" class="dashboard-container">
     <main class="container ds-page" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头：标题 + 副标题 -->
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">成本核算</h1>
-          <p class="ds-page-header__subtitle">核算菜品成本与毛利</p>
-        </div>
-      </header>
 
       <!-- 统计卡片（统一 <stat-cards> 组件） -->
       <stat-cards :cards="statsCards"></stat-cards>
@@ -95,27 +93,27 @@
       <!-- 图表区（el-row/el-col 24 栅格，小屏自动折叠为单列） -->
       <el-row :gutter="12" style="margin-bottom: var(--space-4);">
         <el-col :xs="24" :sm="12">
-          <el-card shadow="never" body-style="padding: var(--space-4);">
+          <div class="chart-panel">
             <div class="chart-title">成本趋势分析</div>
             <div id="trendChart" class="chart-container"></div>
-          </el-card>
+          </div>
         </el-col>
         <el-col :xs="24" :sm="12">
-          <el-card shadow="never" body-style="padding: var(--space-4);">
+          <div class="chart-panel">
             <div class="chart-title">成本结构分析</div>
             <div id="structureChart" class="chart-container"></div>
-          </el-card>
+          </div>
         </el-col>
       </el-row>
 
       <!-- 成本排名（整行卡片） -->
-      <el-card shadow="never" body-style="padding: var(--space-4);" style="margin-bottom: var(--space-5);">
+      <div class="chart-panel" style="margin-bottom: var(--space-4);">
         <div class="chart-title">菜品成本排名</div>
         <div id="rankingChart" class="chart-container"></div>
-      </el-card>
+      </div>
 
       <!-- 成本预警（整行卡片） -->
-      <el-card shadow="never" body-style="padding: var(--space-4);">
+      <div class="chart-panel">
         <div class="chart-title">成本预警</div>
         <div v-if="alerts.length === 0" style="text-align: center; padding: var(--space-5); color: var(--text-secondary);">
           暂无预警信息
@@ -126,7 +124,7 @@
             <span>{{ alert.message }}</span>
           </div>
         </div>
-      </el-card>
+      </div>
     </main>
   </div>
 

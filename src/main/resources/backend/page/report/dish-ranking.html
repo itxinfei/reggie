@@ -60,14 +60,8 @@
 
   <div class="dish-ranking-page" id="report-dish-app" v-loading="loading">
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
-      <!-- 页头：标题 + 副标题 + 页级操作 -->
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">菜品排行</h1>
-          <p class="ds-page-header__subtitle">查看菜品销量排行和热门菜品</p>
-        </div>
-        <div class="ds-page-header__actions"></div>
-      </header>
+      
+      
 
 
       <stat-cards :cards="statsCards"></stat-cards>
@@ -171,7 +165,7 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: '菜品', icon: 'ri-restaurant-2-line', label: '菜品总数', value: self.stats.totalDishes || 0, color: 'primary' },
+            { key: '菜品', icon: 'ri-restaurant-2-line', label: '上榜菜品', value: self.stats.totalDishes || 0, color: 'primary' },
             { key: '上榜', icon: 'ri-trophy-line', label: '上榜菜品', value: self.stats.topDishes || 0, color: 'success' },
             { key: '总销量', icon: 'ri-bar-chart-2-line', label: '总销量（份）', value: self.stats.totalSales || 0, color: 'warning' },
             { key: '平均', icon: 'ri-line-chart-line', label: '平均销量', value: self.stats.avgSales || 0, color: 'info' }

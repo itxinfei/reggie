@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -18,13 +18,99 @@
   <div class="dashboard-container" id="printer-task-app">
     <main class="container" id="main-content" role="main" aria-label="页面主要内容">
       <!-- 页头 -->
-      <header class="ds-page-header">
-        <div class="ds-page-header__titles">
-          <h1 class="ds-page-header__title" id="page-title">打印任务</h1>
-          <p class="ds-page-header__subtitle">门店 PC 打印代理的执行流水，订单小票/厨房单入队后由代理领取打印</p>
-        </div>
-        <div class="ds-page-header__actions"></div>
       </header>
+      <!-- 数据统计卡片 -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+      <!-- 筛选 + 操作 -->
+      <table-bar
+        :search-items="tableSearchItems"
+        :actions="tableActions"
+        @search="search"
+        @reset="reset"
+        @action="onTableAction">
+        <template slot="search-extra">
+          <el-input v-model="query.orderId" placeholder="订单ID" class="el-select--narrow-xs" clearable size="small"
+            @keyup.enter.native="search"></el-input>
+          <el-select v-model="query.taskType" placeholder="类型" class="el-select--narrow-xs" clearable size="small"
+            @change="search">
+            <el-option label="小票" value="BILL"></el-option>
+            <el-option label="厨房" value="KITCHEN"></el-option>
+            <el-option label="配送" value="DELIVERY"></el-option>
+            <el-option label="测试" value="TEST"></el-option>
+          </el-select>
+          <el-select v-model="query.status" placeholder="状态" class="el-select--narrow-xs" clearable size="small"
+            @change="search">
+            <el-option label="待打印" value="PENDING"></el-option>
+            <el-option label="打印中" value="PULLED"></el-option>
+            <el-option label="成功" value="SUCCESS"></el-option>
+            <el-option label="失败" value="FAILED"></el-option>
+            <el-option label="已取消" value="CANCELLED"></el-option>
+          </el-select>
+          <el-date-picker
+            v-model="query.timeRange"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            value-format="yyyy-MM-dd HH:mm:ss"
+            class="el-select--wide-sm"
+            size="small"
+            clearable
+            @change="search">
+          </el-date-picker>
+        </template>
+      </table-bar>
+      <!-- 任务列表 -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :page-sizes="[10, 20, 30]"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="90"
+        @page-change="onPageChange"
+        @size-change="onSizeChange"
+      >
+        <template #col-taskType="{ row }">
+          <el-tag size="mini" :type="getTypeTag(row.taskType).type">{{ getTypeTag(row.taskType).label }}</el-tag>
+        </template>
+        <template #col-status="{ row }">
+          <el-tag :type="getStatusTag(row.status).type">{{ getStatusTag(row.status).label }}</el-tag>
+        </template>
+        <template #col-errorMsg="{ row }">
+          <span v-if="row.errorMsg" :title="row.errorMsg" class="cell-ellipsis">{{ row.errorMsg }}</span>
+          <span v-else>-</span>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="showDetail(row)">查看</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- 任务详情弹窗（只读，仅有关闭按钮） -->
+    <crud-dialog :title="dialog.title" :visible.sync="dialog.visible" size="lg" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
+      <div class="task-detail">
+        <el-row :gutter="16" class="task-detail__row">
+          <el-col :span="8"><span class="task-detail__label">任务ID：</span>{{ dialog.row.id }}</el-col>
+          <el-col :span="8"><span class="task-detail__label">订单ID：</span>{{ dialog.row.orderId || '-' }}</el-col>
+          <el-col :span="8"><span class="task-detail__label">类型：</span>{{ getTypeTag(dialog.row.taskType).label }}</el-col>
+        </el-row>
+        <el-row :gutter="16" class="task-detail__row">
+          <el-col :span="8"><span class="task-detail__label">状态：</span>{{ getStatusTag(dialog.row.status).label }}</el-col>
+          <el-col :span="8"><span class="task-detail__label">终端：</span>{{ dialog.row.terminalName || dialog.row.terminalCode }}</el-col>
+          <el-col :span="8"><span class="task-detail__label">门店：</span>{{ dialog.row.storeCode || '-' }}</el-col>
+        </el-row>
+        <el-row :gutter="16" class="task-detail__row">
+          <el-col :span="8"><span class="task-detail__label">创建时间：</span>{{ dialog.row.createdTime || '-' }}</el-col>
+          <el-col :span="8"><span class="task-detail__label">领取时间：</span>{{ dialog.row.pulledTime || '-' }}</el-col>
+          <el-col :span="8"><span class="task-detail__label">完成时间：</span>{{ dialog.row.doneTime || '-' }}</el-col>
+        </el-row>
+        <el-row :gutter="16" class="task-detail__row" v-if="dialog.row.errorMsg">
+          <el-col :span="24"><span class="task-detail__label">失败原因：</span>{{ dialog.row.errorMsg }}</el-col>
+        </el-row>
       <!-- 数据统计卡片 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
       <!-- 筛选 + 操作 -->
