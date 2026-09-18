@@ -67,8 +67,8 @@
                                @input="form.code = form.code.replace(/\D/g, '')">
                         <span class="codeBtn"
                               @click='getCode'
-                              :class="{codeDisabled: countdown > 0}">
-                            {{ countdown > 0 ? countdown + 's后重发' : '获取验证码' }}
+                              :class="{codeDisabled: countdown > 0 || sending}">
+                            {{ countdown > 0 ? countdown + 's后重发' : (sending ? '发送中…' : '获取验证码') }}
                         </span>
                     </div>
                 </div>
@@ -236,6 +236,8 @@
                     msgFlag:false,
                     loading:false,
                     countdown:0,
+                    // 修改点(2026-09-18)：验证码请求在飞期间防连点（countdown 仅在成功后启动，存在空窗）
+                    sending:false,
                     countdownTimer:null,
                     // 修改点：新增协议勾选状态
                     agreed: false,
@@ -319,7 +321,9 @@
                     // 避免手机号非法时用户已输入的验证码被无谓清空
                     this.form.code = ''
                     this.msgFlag = false
-                    if (this.countdown > 0) return;
+                    // 修改点(2026-09-18)：请求在飞期间直接拦截连点，避免弱网下重复触发短信（后端虽有频控，前端也应即时禁用）
+                    if (this.countdown > 0 || this.sending) return;
+                    this.sending = true
                     try {
                         const res = await sendMsgApi({phone: this.form.phone})
                         if(res.code === 1){
@@ -333,6 +337,8 @@
                         }
                     } catch(e) {
                         vant.Notify({ type:'warning', message:'网络异常，请稍后再试'});
+                    } finally {
+                        this.sending = false
                     }
                 },
                 // 修改点：完善登录逻辑 — 错误提示、存储用户完整信息、加载态
@@ -364,7 +370,17 @@
                                 sessionStorage.setItem("userName", res.data.name || '')
                             }
                             window.requestAnimationFrame(()=>{
-                                window.location.href = '/front/index.html'
+                                // 修改点(2026-09-18)：支持登录后回跳来源页（?redirect=），
+                                // 从受保护页被 401 踢来登录后不再固定回首页、丢失原操作意图
+                                var target = ''
+                                var m = location.search.match(/[?&]redirect=([^&]+)/)
+                                if (m) { try { target = decodeURIComponent(m[1]) } catch(e) { target = '' } }
+                                // 仅允许站内绝对路径（单斜杠开头、非协议相对 //、不含反斜杠），防开放重定向
+                                if (target.charAt(0) === '/' && target.charAt(1) !== '/' && target.indexOf('\\') === -1) {
+                                    window.location.href = target
+                                } else {
+                                    window.location.href = '/front/index.html'
+                                }
                             })
                         }else{
                             vant.Notify({ type:'warning', message:res.msg || '登录失败'});

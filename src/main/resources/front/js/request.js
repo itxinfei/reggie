@@ -22,6 +22,12 @@
       return Promise.reject(error)
   })
 
+  // 修改点(2026-09-18)：未登录跳登录页时携带当前地址，登录成功后回跳来源页（仅站内相对路径，登录页再做安全校验）
+  function buildLoginUrl() {
+    var back = window.location.pathname + window.location.search;
+    return '/front/page/login.html?redirect=' + encodeURIComponent(back);
+  }
+
   /**
    * 获取CSRF Token
    */
@@ -80,7 +86,7 @@
       if (res && res.data && res.data.code === 0 && res.data.msg === 'NOTLOGIN') {
         // 修改点：本项目不使用iframe，直接用window.location
         clearCsrfToken();
-        window.location.href = '/front/page/login.html'
+        window.location.href = buildLoginUrl()
         return Promise.reject(new Error('NOTLOGIN'))
       } else if (res && res.data) {
         return res.data
@@ -100,7 +106,7 @@
           clearCsrfToken();
           var curPage = window.location.pathname;
           if (!curPage.includes('login')) {
-            window.location.href = '/front/page/login.html';
+            window.location.href = buildLoginUrl();
           }
           return Promise.reject(error);
         }
