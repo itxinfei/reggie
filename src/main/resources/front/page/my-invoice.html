@@ -136,6 +136,8 @@
         onPageChange: function(p) {
           this.page = p
           this.loadData()
+          // 修改点(2026-09-18)：换页后回到列表顶部，否则视口停留在底部分页器，看不到新页首条
+          window.scrollTo(0, 0)
         },
         // 状态文案
         statusText: function(s) {
