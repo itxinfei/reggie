@@ -15,6 +15,7 @@ CREATE TABLE orders (
   amount decimal(10,2) NOT NULL COMMENT '实收金',
   delivery_fee decimal(10,2) NULL DEFAULT NULL COMMENT '配费（卖单配费，堂食为 null',
   remark varchar(100) NULL DEFAULT NULL COMMENT '备注',
+  internal_remark varchar(500) NULL DEFAULT NULL COMMENT '内部备注（仅后台可见）',
   expect_delivery_time varchar(20) NULL DEFAULT NULL COMMENT '预送达时间',
   user_name varchar(50) NULL DEFAULT NULL COMMENT '用户',
   phone varchar(255) NULL DEFAULT NULL COMMENT '手机',
