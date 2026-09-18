@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+        <title>收银台 - 瑞吉外卖</title>
+        <link rel="icon" href="./../images/favico.ico">
+        <script src="./../js/base.js?v=20260917"></script>
+        <link rel="stylesheet" href="../styles/vant.min.css" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260918" />
+        <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+        <script src="../js/icon-fallback.js?v=20260917"></script>
+        <style>
+            /* 收银台页样式（自包含，沿用 index.css 金色品牌令牌与卡片风格） */
+            .cashier-wrap { min-height: 100vh; background: #f5f6fa; padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+            .cashier-head {
+                height: 46px; display: flex; align-items: center; justify-content: center;
+                position: relative; background: #fff; border-bottom: 1px solid #e5e7eb;
+                position: sticky; top: 0; z-index: 10;
+            }
+            .cashier-head .back, .cashier-head .home {
+                position: absolute; top: 0; height: 46px; min-width: 44px;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 22px; color: #1f2937; text-decoration: none;
+            }
+            .cashier-head .back { left: 4px; }
+            .cashier-head .home { right: 4px; font-size: 20px; }
+            .cashier-head .title { font-size: 17px; font-weight: 600; color: #1f2937; }
+            .amount-card {
+                background: #fff; margin: 12px; border-radius: 12px;
+                padding: 28px 20px 24px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            }
+            .amount-card .label { font-size: 13px; color: #9ca3af; margin-bottom: 8px; }
+            .amount-card .amount { font-size: 40px; font-weight: 700; color: #1f2937; line-height: 1.1; }
+            .amount-card .amount .sym { font-size: 20px; font-weight: 600; margin-right: 2px; }
+            .amount-card .order-no { margin-top: 12px; font-size: 12px; color: #9ca3af; word-break: break-all; }
+            .pay-card { background: #fff; margin: 12px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+            .pay-item { display: flex; align-items: center; padding: 16px; min-height: 56px; box-sizing: border-box; }
+            .pay-item + .pay-item { border-top: 1px solid #f0f1f5; }
+            .pay-item .pay-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #fff; margin-right: 12px; }
+            .pay-icon.wechat { background: #07c160; }
+            .pay-icon.alipay { background: #1677ff; }
+            .pay-item .pay-name { flex: 1; font-size: 15px; color: #1f2937; }
+            .pay-item .pay-check { font-size: 20px; color: #ffc200; }
+            .mock-tip {
+                margin: 4px 12px 0; padding: 10px 12px; border-radius: 8px;
+                background: #fff8e1; color: #8a6d3b; font-size: 12px; line-height: 1.6;
+                display: flex; align-items: flex-start;
+            }
+            .mock-tip i { margin-right: 6px; font-size: 15px; line-height: 1.5; }
+            .pay-bar {
+                position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+                padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+                background: #fff; border-top: 1px solid #e5e7eb;
+                display: flex; align-items: center; gap: 12px;
+            }
+            .pay-bar .bar-amount { flex-shrink: 0; font-size: 13px; color: #4b5563; }
+            .pay-bar .bar-amount b { font-size: 20px; color: #f5222d; font-weight: 700; }
+            .pay-bar .confirm-btn {
+                flex: 1; height: 46px; border: none; border-radius: 23px;
+                background: #ffc200; color: #4a3500; font-size: 16px; font-weight: 600;
+            }
+            .pay-bar .confirm-btn:active { opacity: 0.85; }
+            .pay-bar .confirm-btn[disabled] { background: #e5e7eb; color: #9ca3af; }
+            .cashier-state { padding: 80px 24px; text-align: center; color: #9ca3af; }
+            .cashier-state i { font-size: 48px; display: block; margin-bottom: 12px; }
+        </style>
+    </head>
+    <body>
+        <div id="cashier">
+            <div class="cashier-wrap" v-if="loaded">
+                <div class="cashier-head">
+                    <a class="back" href="javascript:;" @click="goBack" aria-label="返回"><i class="ri-arrow-left-s-line"></i></a>
+                    <span class="title">收银台</span>
+                    <a class="home" href="/front/index.html" aria-label="返回首页"><i class="ri-home-4-line"></i></a>
+                </div>
+
+                <div class="amount-card">
+                    <div class="label">应付金额</div>
+                    <div class="amount"><span class="sym">￥</span>{{ amountText }}</div>
+                    <div class="order-no" v-if="orderNo">订单号：{{ orderNo }}</div>
+                </div>
+
+                <div class="pay-card">
+                    <div class="pay-item">
+                        <div class="pay-icon" :class="isWechat ? 'wechat' : 'alipay'">
+                            <i :class="isWechat ? 'ri-wechat-line' : 'ri-alipay-line'"></i>
+                        </div>
+                        <span class="pay-name">{{ channelName }}</span>
+                        <i class="ri-checkbox-circle-fill pay-check"></i>
+                    </div>
+                </div>
+
+                <!-- 沙箱提示：当前支付渠道为模拟实现，点击确认仅在演示环境完成支付，不会真实扣款 -->
+                <div class="mock-tip">
+                    <i class="ri-information-line"></i>
+                    <span>演示环境：当前为模拟支付，点击「确认支付」即模拟完成付款，不会产生真实交易。</span>
+                </div>
+            </div>
+
+            <!-- 参数缺失/订单加载失败态 -->
+            <div class="cashier-state" v-if="loadError">
+                <i class="ri-file-warning-line"></i>
+                <p>{{ loadError }}</p>
+            </div>
+
+            <div class="pay-bar" v-if="loaded">
+                <div class="bar-amount">应付 <b>￥{{ amountText }}</b></div>
+                <button class="confirm-btn" :disabled="paying" @click="confirmPay">
+                    {{ paying ? '支付处理中...' : '确认支付' }}
+                </button>
+            </div>
+        </div>
+
+        <script src="../../backend/plugins/vue/vue.js"></script>
+        <script src="../../backend/plugins/axios/axios.min.js"></script>
+        <script src="./../js/request.js?v=20260917"></script>
+        <script src="./../js/common.js?v=20260917"></script>
+        <script src="../js/vant.min.js"></script>
+        <script src="./../api/payment.js?v=20260918"></script>
+        <script src="./../api/order.js?v=20260917"></script>
+        <script>
+        new Vue({
+            el: '#cashier',
+            data: function () {
+                return {
+                    orderId: '',
+                    channel: 'WECHAT',
+                    // 商户支付单号（/pay 返回，回调 out_trade_no 必需）
+                    tradeNo: '',
+                    orderNo: '',
+                    amount: 0,
+                    loaded: false,
+                    loadError: '',
+                    paying: false
+                }
+            },
+            computed: {
+                isWechat: function () { return this.channel !== 'ALIPAY'; },
+                channelName: function () { return this.isWechat ? '微信支付' : '支付宝'; },
+                amountText: function () { return Number(this.amount || 0).toFixed(2); }
+            },
+            created: function () {
+                var q = this.parseQuery();
+                this.orderId = q.orderId || '';
+                this.channel = (q.channel === 'ALIPAY') ? 'ALIPAY' : 'WECHAT';
+                this.tradeNo = q.tradeNo || '';
+                if (!this.orderId || !this.tradeNo) {
+                    this.loadError = '支付参数缺失，请返回重新下单';
+                    return;
+                }
+                this.loadOrder();
+            },
+            methods: {
+                parseQuery: function () {
+                    var map = {};
+                    (window.location.search.replace(/^\?/, '').split('&') || []).forEach(function (pair) {
+                        if (!pair) return;
+                        var kv = pair.split('=');
+                        map[decodeURIComponent(kv[0] || '')] = decodeURIComponent(kv[1] || '');
+                    });
+                    return map;
+                },
+                // 拉订单真实金额与单号展示（不信任 URL 透传金额，支付金额以后端订单为准）
+                loadOrder: function () {
+                    var self = this;
+                    getOrderDetailApi(this.orderId).then(function (res) {
+                        if (res && res.code === 1 && res.data) {
+                            var d = res.data;
+                            self.amount = Number(d.amount || d.actualAmount || 0);
+                            self.orderNo = d.number || d.orderNo || '';
+                            self.loaded = true;
+                        } else {
+                            self.loadError = (res && res.msg) || '订单信息加载失败';
+                        }
+                    }).catch(function () {
+                        self.loadError = '网络异常，订单信息加载失败';
+                    });
+                },
+                // 沙箱模拟支付：构造渠道回调参数，请求 /notify/{channel}（mock-mode 下跳过验签直接受理）
+                confirmPay: function () {
+                    if (this.paying) return;
+                    this.paying = true;
+                    var amount = Number(this.amount || 0);
+                    var params = {
+                        out_trade_no: this.tradeNo,
+                        sign: 'mock'
+                    };
+                    if (this.isWechat) {
+                        // 微信回调：total_fee 单位分，result_code=SUCCESS 表示业务成功
+                        params.total_fee = String(Math.round(amount * 100));
+                        params.result_code = 'SUCCESS';
+                        params.return_code = 'SUCCESS';
+                        params.transaction_id = 'MOCK_WX_' + Date.now();
+                    } else {
+                        // 支付宝回调：total_amount 单位元，trade_status=TRADE_SUCCESS
+                        params.total_amount = amount.toFixed(2);
+                        params.trade_status = 'TRADE_SUCCESS';
+                        params.trade_no = 'MOCK_ALI_' + Date.now();
+                    }
+                    var self = this;
+                    paymentNotifyMockApi(this.channel, params).then(function (res) {
+                        if (res && res.code === 1) {
+                            // 回调已受理并推进订单状态 → 跳支付结果页（由其回查确认）
+                            window.location.replace('/front/page/pay-success.html?reorderId=' + self.orderId);
+                        } else {
+                            self.paying = false;
+                            vant.Toast.fail((res && res.msg) || '支付失败，请重试');
+                        }
+                    }).catch(function () {
+                        self.paying = false;
+                        vant.Toast.fail('网络异常，支付失败，请重试');
+                    });
+                },
+                goBack: function () {
+                    // 返回优先回订单/结算来源；无历史时回首页，避免死胡同
+                    if (window.history.length > 1) {
+                        window.history.back();
+                    } else {
+                        window.location.replace('/front/index.html');
+                    }
+                }
+            }
+        });
+        </script>
+    </body>
+</html>

@@ -162,6 +162,8 @@ public class PaymentController {
         request.setAmount(payAmount);
         request.setSubject("瑞吉外卖-订单" + dto.getOrderId());
         PayResponse response = paymentChannel.createOrder(request);
+        // 回填商户支付单号：沙箱(mock-mode)收银台需用它作为 out_trade_no 发起模拟支付回调
+        response.setTradeNo(paymentOrder.getTradeNo());
 
         return R.success(response);
     }

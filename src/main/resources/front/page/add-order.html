@@ -632,11 +632,7 @@
                                         orderId: this.reorderId,
                                         channel: this.payMethod === 2 ? 'WECHAT' : 'ALIPAY'
                                     })
-                                    if(payRes.code === 1 && payRes.data){
-                                        window.location.replace('/front/page/pay-success.html?reorderId=' + this.reorderId)
-                                    }else{
-                                        vant.Toast.fail((payRes.data && payRes.data.errorMsg) || payRes.msg || '支付发起失败');
-                                    }
+                                    this.redirectAfterPayCreate(payRes, this.reorderId)
                                 }else{
                                     // 货到付款的待付款订单不应走到这里，兜底跳转
                                     window.location.replace('/front/page/pay-success.html?reorderId=' + this.reorderId)
@@ -688,12 +684,7 @@
                                     orderId: orderId,
                                     channel: this.payMethod === 2 ? 'WECHAT' : 'ALIPAY'
                                 })
-                                if(payRes.code === 1 && payRes.data){
-                                    // 携带订单号跳转，供支付结果页回查
-                                    window.location.replace('/front/page/pay-success.html?reorderId=' + orderId)
-                                }else{
-                                    vant.Toast.fail((payRes.data && payRes.data.errorMsg) || payRes.msg || '支付发起失败');
-                                }
+                                this.redirectAfterPayCreate(payRes, orderId)
                             }else{
                                 window.requestAnimationFrame(()=>{
                                     window.location.replace('/front/page/pay-success.html')
@@ -705,6 +696,24 @@
                             vant.Toast.fail('提交订单失败，请稍后重试');
                         } finally {
                             this.loading = false
+                        }
+                    },
+                    // /pay 创建成功后分流：0元订单后端已自动完成支付（无 tradeNo）→ 直接进结果页；
+                    // 正常待支付订单（返回商户单号 tradeNo）→ 进沙箱收银台完成模拟付款。
+                    // loading 由调用方 finally 复位，此处只负责跳转/提示。
+                    redirectAfterPayCreate(payRes, orderId){
+                        if(payRes && payRes.code === 1 && payRes.data){
+                            var d = payRes.data
+                            if(d.tradeNo){
+                                var channel = this.payMethod === 2 ? 'WECHAT' : 'ALIPAY'
+                                window.location.replace('/front/page/pay-cashier.html?orderId=' + orderId
+                                    + '&channel=' + channel + '&tradeNo=' + encodeURIComponent(d.tradeNo))
+                            }else{
+                                window.location.replace('/front/page/pay-success.html?reorderId=' + orderId)
+                            }
+                        }else{
+                            vant.Toast.fail((payRes && payRes.data && payRes.data.errorMsg)
+                                || (payRes && payRes.msg) || '支付发起失败')
                         }
                     },
                 }

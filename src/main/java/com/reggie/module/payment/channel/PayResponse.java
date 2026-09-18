@@ -14,6 +14,8 @@ import lombok.Data;
 public class PayResponse {
     /** 是否成功 */
     private boolean success;
+    /** 商户支付单号（PaymentOrder.tradeNo，回调 out_trade_no 用，供沙箱收银台发起模拟支付） */
+    private String tradeNo;
     /** 渠道交易号 */
     private String channelTradeNo;
     /** 支付URL */
