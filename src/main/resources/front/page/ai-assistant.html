@@ -660,11 +660,23 @@
                     try {
                         var currentConv = this.getCurrentConversation();
                         if (currentConv) {
-                            currentConv.messages = this.messages.slice(0, 100);
+                            // 修改点(2026-09-18)：持久化前净化——过滤请求进行中 content 仍为空的
+                            // streaming 占位气泡，并强制 streaming=false。否则在请求进行中切换/新建会话
+                            // 等时机保存后，重进页面会永久残留"思考中"气泡。
+                            var cleanMessages = this.messages
+                                .filter(function(m) {
+                                    return !(m.role === 'assistant' && m.streaming === true && !m.content);
+                                })
+                                .map(function(m) {
+                                    var copy = Object.assign({}, m);
+                                    if (copy.streaming === true) copy.streaming = false;
+                                    return copy;
+                                });
+                            currentConv.messages = cleanMessages.slice(0, 100);
                             currentConv.updatedAt = Date.now();
                             currentConv.timeText = formatTime(Date.now());
-                            if (this.messages.length > 0) {
-                                var firstUserMsg = this.messages.find(function(m) { return m.role === 'user'; });
+                            if (currentConv.messages.length > 0) {
+                                var firstUserMsg = currentConv.messages.find(function(m) { return m.role === 'user'; });
                                 if (firstUserMsg) {
                                     currentConv.title = firstUserMsg.content.substring(0, 30);
                                 }
@@ -682,6 +694,16 @@
                                 var self = this;
                                 this.conversations = data.slice(0, 50).map(function(c) {
                                     c.timeText = formatTime(c.updatedAt || c.createdAt || Date.now());
+                                    // 修改点(2026-09-18)：兜底历史脏数据——剔除永久残留的"思考中"占位气泡，
+                                    // 其余消息的 streaming 一律复位，避免旧版本已存入 localStorage 的卡死气泡。
+                                    if (Array.isArray(c.messages)) {
+                                        c.messages = c.messages.filter(function(m) {
+                                            return !(m.role === 'assistant' && m.streaming === true && !m.content);
+                                        }).map(function(m) {
+                                            if (m.streaming === true) m.streaming = false;
+                                            return m;
+                                        });
+                                    }
                                     return c;
                                 });
                             }
@@ -939,7 +961,17 @@
                     $axios({ url: '/shopping-cart/add', method: 'post', data: payload })
                         .then(function(res) {
                             if (res && res.code === 1) {
-                                vant.Notify({ type: 'success', message: '已添加「' + dish.name + '」到购物车' });
+                                // 修改点(2026-09-18)：成功提示可点击直达结算页，补齐 AI 加购后的转化出口
+                                // （原仅一条自消失通知，用户需自行返回首页找购物车）
+                                var cartNotify = vant.Notify({
+                                    type: 'success',
+                                    message: '已添加「' + dish.name + '」到购物车，点击去结算',
+                                    duration: 2500,
+                                    onClick: function() {
+                                        cartNotify.close();
+                                        window.location.href = '/front/page/add-order.html';
+                                    }
+                                });
                             } else {
                                 vant.Notify({ type: 'warning', message: (res && res.msg) || '添加失败' });
                             }
