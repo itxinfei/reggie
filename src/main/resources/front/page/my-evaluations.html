@@ -140,14 +140,15 @@
                             <div class="submit-order-id">订单 #{{ submitData.orderId }}</div>
                             <div class="submit-order-tip">请为您购买的菜品评分</div>
                         </div>
-                        <div class="submit-eval-item" v-for="(dish, idx) in submitData.dishes" :key="idx">
+                        <!-- 修改点(2026-09-18)：已成功提交的菜标记 is-submitted，部分失败重试时跳过，避免重复提交 -->
+                        <div class="submit-eval-item" :class="{'is-submitted': dish._submitted}" v-for="(dish, idx) in submitData.dishes" :key="idx">
                             <div class="submit-dish-row">
-                                <span class="submit-dish-name">{{ dish.dishName }}</span>
+                                <span class="submit-dish-name">{{ dish.dishName }}<span class="submitted-flag" v-if="dish._submitted">已评价 ✓</span></span>
                                 <!-- 修改点：el-rate 替换为自定义星级评分组件 -->
                                 <span class="star-rating">
                                     <span v-for="s in 5" :key="s"
                                           :class="['star-item', { active: s <= dish.starRating }]"
-                                          @click="dish.starRating = s">★</span>
+                                          @click="!dish._submitted && (dish.starRating = s)">★</span>
                                 </span>
                             </div>
                             <!-- 快捷评价标签（对齐美团） -->
@@ -158,6 +159,7 @@
                             </div>
                             <!-- 修改点：el-input textarea 替换为原生textarea -->
                             <textarea v-model="dish.content" rows="2" class="eval-textarea"
+                                      :disabled="dish._submitted"
                                       placeholder="分享您的用餐体验（选填）" maxlength="200"></textarea>
                             <span class="eval-word-count" v-if="dish.content">{{ dish.content.length }}/200</span>
                         </div>
@@ -240,6 +242,8 @@
             methods: {
                 // 快捷标签切换（追加/移除到评价内容）
                 toggleQuickTag(dish, tag){
+                    // 修改点(2026-09-18)：已成功提交的菜锁定，不允许再改标签
+                    if(dish._submitted) return
                     var content = dish.content || ''
                     if(content.includes(tag)){
                         dish.content = content.replace(tag, '').replace(/  +/g, ' ').trim()
@@ -318,8 +322,17 @@
                         return deleteMyEvaluation({ id: item.id });
                     }).then(function(res) {
                         if (res && res.code === 1) {
-                            vant.Toast.success('已删除，请到订单页重新评价');
                             self.loadData();
+                            // 修改点(2026-09-18)：原仅 toast 一句"请到订单页重新评价"却不导航，成为死胡同；
+                            // 删除成功后主动询问并可一键跳转到订单页
+                            vant.Dialog.confirm({
+                                title: '原评价已删除',
+                                message: '是否立即前往订单页重新评价？',
+                                confirmButtonText: '去评价',
+                                cancelButtonText: '留在本页'
+                            }).then(function() {
+                                window.location.href = '/front/page/order.html';
+                            }).catch(function() { /* 用户选择留在本页 */ });
                         } else {
                             vant.Toast.fail((res && res.msg) || '删除失败');
                         }
@@ -490,17 +503,22 @@
                         vant.Toast.fail('订单信息缺失，请重新进入评价页')
                         return
                     }
-                    // 校验每个菜品的评分
+                    // 校验每个待提交菜品的评分（已成功提交的无需再评）
                     for (let i = 0; i < dishes.length; i++) {
-                        if (!dishes[i].starRating || dishes[i].starRating < 1) {
+                        if (!dishes[i]._submitted && (!dishes[i].starRating || dishes[i].starRating < 1)) {
                             vant.Toast.fail('请为「' + (dishes[i].dishName || '菜品') + '」评分')
                             return
                         }
                     }
                     this.submitLoading = true
+                    // 修改点(2026-09-18)：原实现逐菜提交，任一失败即整体中断，已成功的菜与未提交的菜
+                    // 混在一起，用户重试会把已成功的菜重复提交。现成功一道即响应式标记 _submitted 并跳过，
+                    // 失败项保留在弹窗内可单独重试；全部成功才关闭，部分失败给出剩余数量提示。
+                    var failNames = []
                     try {
                         for (let i = 0; i < dishes.length; i++) {
                             const dish = dishes[i]
+                            if (dish._submitted) continue
                             const payload = {
                                 orderId: orderId,
                                 dishId: dish.dishId,
@@ -508,21 +526,29 @@
                                 content: (dish.content || '').trim()
                             }
                             if (dish.dishName) payload.dishName = dish.dishName
-                            const res = await submitEvaluation(payload)
-                            if (res.code !== 1) {
-                                vant.Toast.fail((res.msg) || ('「' + dish.dishName + '」提交失败'))
-                                return
+                            try {
+                                const res = await submitEvaluation(payload)
+                                if (res && res.code === 1) {
+                                    this.$set(dish, '_submitted', true)
+                                } else {
+                                    failNames.push(dish.dishName || '菜品')
+                                }
+                            } catch (singleErr) {
+                                console.error('[my-evaluations] 单条评价提交失败:', singleErr)
+                                failNames.push(dish.dishName || '菜品')
                             }
                         }
-                        vant.Toast.success('评价提交成功，感谢您的反馈')
-                        this.submitVisible = false
-                        this.submitData = { orderId: null, dishes: [] }
-                        this.loadData()
-                        this.checkPendingEvaluation()
-                    } catch (err) {
-                        // 修改点(2026-09-17 UX)：技术错误细节进 console，用户只见友好文案
-                        console.error('[my-evaluations] 提交评价失败:', err)
-                        vant.Toast.fail('提交失败，请稍后重试')
+                        var remain = dishes.filter(d => !d._submitted).length
+                        if (remain === 0) {
+                            vant.Toast.success('评价提交成功，感谢您的反馈')
+                            this.submitVisible = false
+                            this.submitData = { orderId: null, dishes: [] }
+                            this.loadData()
+                            this.checkPendingEvaluation()
+                        } else {
+                            var shown = failNames.slice(0, 3).join('、') + (failNames.length > 3 ? ' 等' : '')
+                            vant.Toast.fail('「' + shown + '」提交失败，其余已保存，请重试剩余项')
+                        }
                     } finally {
                         this.submitLoading = false
                     }

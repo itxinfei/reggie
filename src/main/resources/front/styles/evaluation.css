@@ -166,6 +166,22 @@
   border-radius: var(--radius-md);
 }
 
+/* 修改点(2026-09-18)：逐菜评价中已成功提交的菜品置灰锁定，部分失败重试时跳过，避免重复提交 */
+.submit-eval-item.is-submitted {
+  opacity: 0.55;
+}
+.submit-eval-item.is-submitted .star-item,
+.submit-eval-item.is-submitted .quick-tag,
+.submit-eval-item.is-submitted .eval-textarea {
+  pointer-events: none;
+}
+.submitted-flag {
+  margin-left: 8rem;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary-dark);
+  font-weight: 600;
+}
+
 .empty-state .pagination-wrap { margin: 16rem 0; }
 
 /* 自定义星级评分组件 */
