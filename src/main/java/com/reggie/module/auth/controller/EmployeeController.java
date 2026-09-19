@@ -23,11 +23,23 @@ import com.reggie.module.auth.service.EmployeeService;
 import com.reggie.module.sys.model.Role;
 import com.reggie.module.sys.service.RoleService;
 import io.swagger.v3.oas.annotations.Operation;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import io.swagger.v3.oas.annotations.Operation;
+import org.springframework.web.multipart.MultipartFile;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -50,6 +62,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * 员工管理
@@ -576,6 +589,247 @@ public class EmployeeController {
         result.put("disabledEmployees", employeeService.count(disabledQw));
         result.put("newThisMonth", employeeService.count(newQw));
         return R.success(result);
+    }
+
+    /**
+     * 下载员工导入模板（xlsx）
+     * <p>列：账号、员工姓名、手机号、性别、身份证号；第二行附带一条示例数据。</p>
+     */
+    @GetMapping("/import/template")
+    @RequireEmployee
+    @RequiresAdmin
+    @Operation(summary = "下载员工导入模板", description = "返回员工批量导入用的 xlsx 模板，仅管理员可下载")
+    public ResponseEntity<byte[]> importTemplate() throws java.io.IOException {
+        // POI 在接口层创建，try-with-resources 保证工作簿资源释放
+        try (XSSFWorkbook wb = new XSSFWorkbook();
+             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+            Sheet sheet = wb.createSheet("员工导入");
+            String[] headers = {"账号*", "员工姓名*", "手机号*", "性别", "身份证号*"};
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.length; i++) {
+                headerRow.createCell(i).setCellValue(headers[i]);
+                sheet.setColumnWidth(i, 20 * 256);
+            }
+            // 示例行（导入时自动跳过：账号为示例值）
+            Row sampleRow = sheet.createRow(1);
+            sampleRow.createCell(0).setCellValue("zhangsan");
+            sampleRow.createCell(1).setCellValue("张三");
+            sampleRow.createCell(2).setCellValue("13800138000");
+            sampleRow.createCell(3).setCellValue("男");
+            sampleRow.createCell(4).setCellValue("110101199001011234");
+
+            wb.write(out);
+            byte[] bytes = out.toByteArray();
+            HttpHeaders h = new HttpHeaders();
+            h.setContentType(MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            // RFC 5987 编码中文文件名，兼容各浏览器
+            h.setContentDisposition(ContentDisposition.attachment()
+                    .filename("员工导入模板.xlsx", java.nio.charset.StandardCharsets.UTF_8).build());
+            return new ResponseEntity<>(bytes, h, HttpStatus.OK);
+        }
+    }
+
+    /** 导入文件最大 1MB（对齐 Spring 默认 multipart 单文件上限，千行文本 xlsx 远小于此）、单次最多 1000 条 */
+    private static final long IMPORT_MAX_FILE_SIZE = 1L * 1024 * 1024;
+    private static final int IMPORT_MAX_ROWS = 1000;
+    /** 身份证 15/18 位校验（与前端 validID 规则一致） */
+    private static final Pattern ID_CARD_PATTERN =
+            Pattern.compile("(^\\d{15}$)|(^\\d{18}$)|(^\\d{17}(\\d|X|x)$)");
+
+    /**
+     * 批量导入员工（xlsx）
+     * <p>仅管理员可用。逐行校验（账号 4-20 位/姓名/手机号/性别/身份证 + 文件内与库内账号去重），
+     * 全部合法后批量入库；任一行为整表校验失败信息，已成功行不受失败行影响。
+     * 初始密码随机生成并 BCrypt 加密，仅在本次响应中明文返回一次，由管理员分发给员工。</p>
+     *
+     * @param file xlsx 文件
+     * @return successCount/failCount/failures(行号+原因)/accounts(账号+初始密码)
+     */
+    @PostMapping("/import")
+    @RequireEmployee
+    @RequiresAdmin
+    @RateLimit(maxRequestsPerSecond = 2)
+    @Operation(summary = "批量导入员工", description = "上传 xlsx 批量创建员工，仅管理员可操作")
+    public R<Map<String, Object>> importEmployees(HttpServletRequest request,
+            @RequestParam("file") MultipartFile file) {
+        if (!isAdmin(request)) {
+            return R.error("权限不足，仅管理员可导入员工");
+        }
+        if (file == null || file.isEmpty()) {
+            return R.error("请选择要导入的文件");
+        }
+        String originalName = file.getOriginalFilename();
+        if (originalName == null || !originalName.toLowerCase().endsWith(".xlsx")) {
+            return R.error("仅支持 .xlsx 格式文件，请先下载导入模板填写");
+        }
+        if (file.getSize() > IMPORT_MAX_FILE_SIZE) {
+            return R.error("文件不能超过 1MB，单次最多导入 " + IMPORT_MAX_ROWS + " 条");
+        }
+
+        DataFormatter formatter = new DataFormatter();
+        List<Map<String, Object>> failures = new ArrayList<>();
+        List<Employee> toSave = new ArrayList<>();
+        Set<String> fileUsernames = new HashSet<>();
+        Long tenantId = BaseContext.getCurrentTenantId();
+
+        try (XSSFWorkbook wb = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = wb.getSheetAt(0);
+            if (sheet == null) {
+                return R.error("文件中没有可导入的工作表");
+            }
+            int lastRow = sheet.getLastRowNum();
+            if (lastRow < 1) {
+                return R.error("文件没有数据行，请按模板填写后再导入");
+            }
+            if (lastRow - 1 > IMPORT_MAX_ROWS) {
+                return R.error("单次最多导入 " + IMPORT_MAX_ROWS + " 条，请拆分后再导入");
+            }
+
+            // 第一轮：逐行字段校验（行号按 Excel 实际行号，含表头第 1 行）
+            for (int rowIdx = 1; rowIdx <= lastRow; rowIdx++) {
+                Row row = sheet.getRow(rowIdx);
+                String username = cellText(row, 0, formatter).trim();
+                String name = cellText(row, 1, formatter).trim();
+                String phone = cellText(row, 2, formatter).trim();
+                String sex = cellText(row, 3, formatter).trim();
+                String idNumber = cellText(row, 4, formatter).trim();
+
+                // 整行为空直接跳过；模板示例行按示例账号跳过
+                if (username.isEmpty() && name.isEmpty() && phone.isEmpty() && idNumber.isEmpty()) {
+                    continue;
+                }
+                int excelRowNum = rowIdx + 1;
+                if ("zhangsan".equals(username)) {
+                    continue;
+                }
+
+                String reason = validateImportRow(username, name, phone, sex, idNumber, fileUsernames);
+                if (reason != null) {
+                    addImportFailure(failures, excelRowNum, username, reason);
+                    continue;
+                }
+                fileUsernames.add(username);
+
+                Employee emp = new Employee();
+                emp.setUsername(username);
+                emp.setName(name);
+                emp.setPhone(phone);
+                // 性别与前端新增弹窗一致存中文（男/女），留空默认男
+                emp.setSex(sex.isEmpty() ? "男" : sex);
+                emp.setIdNumber(idNumber);
+                emp.setStatus(UserStatus.ENABLED.getValue());
+                emp.setTenantId(tenantId);
+                toSave.add(emp);
+            }
+
+            // 第二轮：库内账号去重（同租户，employee 表在租户忽略列表需手动过滤）
+            if (!toSave.isEmpty()) {
+                List<String> usernames = new ArrayList<>();
+                for (Employee e : toSave) {
+                    usernames.add(e.getUsername());
+                }
+                LambdaQueryWrapper<Employee> dupQw = new LambdaQueryWrapper<>();
+                dupQw.in(Employee::getUsername, usernames);
+                if (tenantId != null) {
+                    dupQw.eq(Employee::getTenantId, tenantId);
+                }
+                Set<String> existed = new HashSet<>();
+                for (Employee e : employeeService.list(dupQw)) {
+                    existed.add(e.getUsername());
+                }
+                if (!existed.isEmpty()) {
+                    List<Employee> deduped = new ArrayList<>();
+                    for (Employee e : toSave) {
+                        if (existed.contains(e.getUsername())) {
+                            addImportFailure(failures, null, e.getUsername(), "账号已存在");
+                        } else {
+                            deduped.add(e);
+                        }
+                    }
+                    toSave.clear();
+                    toSave.addAll(deduped);
+                }
+            }
+
+            // 第三轮：生成随机初始密码并批量入库，明文密码仅在本次响应返回一次
+            List<Map<String, Object>> accounts = new ArrayList<>();
+            for (Employee emp : toSave) {
+                String initialPassword = SecurityConstants.generateRandomPassword();
+                emp.setPassword(PasswordUtils.encodePassword(initialPassword));
+                emp.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
+                Map<String, Object> account = new HashMap<>();
+                account.put("username", emp.getUsername());
+                account.put("name", emp.getName());
+                account.put("password", initialPassword);
+                accounts.add(account);
+            }
+            if (!toSave.isEmpty()) {
+                employeeService.saveBatch(toSave);
+                log.info("批量导入员工成功 {} 条，失败 {} 条，操作人={}",
+                        toSave.size(), failures.size(), request.getSession().getAttribute("employee"));
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("successCount", toSave.size());
+            result.put("failCount", failures.size());
+            result.put("failures", failures);
+            result.put("accounts", accounts);
+            return R.success(result);
+        } catch (Exception e) {
+            // 非 xlsx/文件损坏时 XSSFWorkbook 构造抛 POIXMLException 或 IOException，统一兜底
+            log.error("解析员工导入文件失败", e);
+            return R.error("文件解析失败，请确认使用的是最新模板的 .xlsx 文件");
+        }
+    }
+
+    /** 读取单元格文本（数字单元格也按文本取值，避免手机号被科学计数法处理） */
+    private String cellText(Row row, int cellIdx, DataFormatter formatter) {
+        if (row == null) {
+            return "";
+        }
+        Cell cell = row.getCell(cellIdx);
+        return cell == null ? "" : formatter.formatCellValue(cell);
+    }
+
+    /** 导入行字段校验，返回 null 表示通过，否则返回失败原因 */
+    private String validateImportRow(String username, String name, String phone, String sex,
+            String idNumber, Set<String> fileUsernames) {
+        if (username.isEmpty()) {
+            return "账号不能为空";
+        }
+        if (username.length() < 4 || username.length() > 20) {
+            return "账号长度应为 4-20 位";
+        }
+        if (fileUsernames.contains(username)) {
+            return "账号在文件内重复";
+        }
+        if (name.isEmpty()) {
+            return "员工姓名不能为空";
+        }
+        if (name.length() > 12) {
+            return "姓名长度不能超过 12 位";
+        }
+        if (phone.isEmpty() || !phone.matches(SecurityConstants.PHONE_PATTERN)) {
+            return "手机号格式不正确";
+        }
+        if (!sex.isEmpty() && !"男".equals(sex) && !"女".equals(sex)) {
+            return "性别只能填写 男 或 女";
+        }
+        if (idNumber.isEmpty() || !ID_CARD_PATTERN.matcher(idNumber).matches()) {
+            return "身份证号码不正确";
+        }
+        return null;
+    }
+
+    /** 追加一条导入失败记录（行号未知时仅记录账号） */
+    private void addImportFailure(List<Map<String, Object>> failures, Integer rowNum,
+            String username, String reason) {
+        Map<String, Object> item = new HashMap<>();
+        item.put("row", rowNum);
+        item.put("username", username);
+        item.put("reason", reason);
+        failures.add(item);
     }
 
     /**

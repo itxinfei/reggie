@@ -67,21 +67,18 @@
             size="small"
             class="btn-view"
             @click="addMemberHandle(row.id)"
-            v-if="isAdmin"
           >编辑</el-button>
           <el-button
             type="text"
             size="small"
-            class="btn-delete"
+            class="btn-warning"
             @click="statusHandle(row)"
-            v-if="isAdmin"
           >{{ row.status == '1' ? '禁用' : '启用' }}</el-button>
           <el-button
             type="text"
             size="small"
             class="btn-delete"
             @click="deleteHandle(row)"
-            v-if="isAdmin"
           >删除</el-button>
         </template>
       </crud-table>
@@ -126,6 +123,54 @@
         <el-button v-if="memberDialog.actionType == 'add'" type="primary" size="medium" class="continue" :loading="submitting" @click="submitMemberForm('continue')">保存并继续添加</el-button>
       </template>
     </crud-dialog>
+
+    <!-- 批量导入员工：下载模板 → 选文件自动上传 → 展示初始密码与失败明细 -->
+    <crud-dialog title="批量导入员工" :visible.sync="importDialog.visible" size="md"
+      show-close :show-submit="false" :show-cancel="true" cancel-text="关 闭"
+      @close="onImportDialogClose">
+      <ol style="margin: 0 0 var(--space-3); padding-left: var(--space-5); color: var(--text-secondary); font-size: var(--font-size-base); line-height: 1.8;">
+        <li>先 <a href="/employee/import/template" style="color: var(--color-brand-700);">下载导入模板</a>，按表头填写（带 * 为必填）；</li>
+        <li>账号 4-20 位且不能与已有员工重复，手机号、身份证需真实有效，性别填 男/女；</li>
+        <li>单次最多 1000 条、文件不超过 1MB，仅支持 .xlsx；初始密码随机生成，导入成功后请在下方查看并分发给员工。</li>
+      </ol>
+      <el-upload
+        action="/employee/import"
+        name="file"
+        accept=".xlsx"
+        :show-file-list="false"
+        :before-upload="beforeImportUpload"
+        :on-success="onImportSuccess"
+        :on-error="onImportError"
+      >
+        <el-button type="primary" icon="ri-upload-line" :loading="importLoading">选择文件并导入</el-button>
+      </el-upload>
+
+      <div v-if="importResult" style="margin-top: var(--space-3);">
+        <el-alert
+          :title="importResult.failCount > 0 ? ('成功 ' + importResult.successCount + ' 条，失败 ' + importResult.failCount + ' 条') : ('成功导入 ' + importResult.successCount + ' 名员工')"
+          :type="importResult.failCount > 0 ? 'warning' : 'success'"
+          :closable="false"
+          show-icon
+          style="margin-bottom: var(--space-2);"
+        ></el-alert>
+        <el-table v-if="importResult.accounts && importResult.accounts.length" :data="importResult.accounts" size="small" border stripe style="width: 100%;" max-height="200">
+          <el-table-column prop="username" label="账号" width="140" align="center" :header-align="'center'"></el-table-column>
+          <el-table-column prop="name" label="姓名" width="120" align="center" :header-align="'center'"></el-table-column>
+          <el-table-column prop="password" label="初始密码" align="center" :header-align="'center'">
+            <template slot-scope="scope">
+              <span style="font-family: monospace; letter-spacing: 1px;">{{ scope.row.password }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-table v-if="importResult.failures && importResult.failures.length" :data="importResult.failures" size="small" border stripe style="width: 100%; margin-top: var(--space-2);" max-height="200">
+          <el-table-column label="Excel 行号" width="100" align="center" :header-align="'center'">
+            <template slot-scope="scope">{{ scope.row.row || '—' }}</template>
+          </el-table-column>
+          <el-table-column prop="username" label="账号" width="140" align="center" :header-align="'center'"></el-table-column>
+          <el-table-column prop="reason" label="失败原因" align="center" :header-align="'center'"></el-table-column>
+        </el-table>
+      </div>
+    </crud-dialog>
   </div>
     <!-- 开发环境版本，包含了有帮助的命令行警告 -->
     <script src="../../plugins/vue/vue.js"></script>
@@ -161,6 +206,7 @@
              tableSearchItems: [],
           tableActions: [
             { key: 'add', text: '+ 添加员工', type: 'primary' },
+            { key: 'import', text: '导入', type: 'warning', icon: 'ri-upload-line' },
             { key: 'export', text: '导出', type: 'success', icon: 'ri-download-line' }
           ],
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
@@ -172,7 +218,6 @@
           ],
              id : '',
              status : '',
-             isAdmin : false,
              // 数据统计
              stats: {
                totalEmployees: 0,
@@ -189,6 +234,10 @@
                actionType: 'add',
                loading: false
              },
+             // 批量导入弹窗
+             importDialog: { visible: false },
+             importLoading: false,
+             importResult: null,
              memberForm: {
                username: '',
                name: '',
@@ -229,50 +278,15 @@
         created() {
           this.loadFilterOptions()
           this.fetchData(true)
-          this.initAdminFlag()
         },
         mounted() {
         },
         methods: {
-          /**
-           * 初始化"是否超管"标识，决定 编辑/禁用/删除 按钮是否显示。
-           *
-           * 修改点1：登录时 localStorage 存的是 role 字段（1=超管，见 EmployeeRole.ADMIN）；
-           *         旧代码读取的是 isAdmin 键，而该键从未被任何代码写入、恒为 false，
-           *         导致三个操作按钮对所有人都隐藏、只剩"查看"。
-           * 修改点2：升级前已登录的老会话，其 userInfo 不含 role 字段，
-           *         此时回源查询员工详情补齐并写回 localStorage，
-           *         避免用户必须重新登录才能恢复操作按钮。
-           */
-          initAdminFlag() {
-            const self = this
-            let parsed = null
-            try {
-              const userInfo = localStorage.getItem('userInfo')
-              if (userInfo) parsed = JSON.parse(userInfo)
-            } catch (e) {
-              console.warn('解析用户信息失败:', e)
-              return
-            }
-            if (parsed && parsed.role !== undefined && parsed.role !== null) {
-              self.isAdmin = Number(parsed.role) === 1
-              return
-            }
-            if (!parsed || !parsed.id) return
-            queryEmployeeById(parsed.id).then(function (res) {
-              const role = res && res.data ? res.data.role : undefined
-              if (role === undefined || role === null) return
-              self.isAdmin = Number(role) === 1
-              try {
-                parsed.role = role
-                localStorage.setItem('userInfo', JSON.stringify(parsed))
-              } catch (e) {
-                console.warn('回写用户信息失败:', e)
-              }
-            }).catch(function () {
-              // 回源失败时保持非管理员，不影响列表等其余功能
-            })
-          },
+          // 操作列按钮（编辑/启用禁用/删除）不再按前端角色遮蔽：
+          // 能进入员工管理页即可看到完整操作，是否允许执行由后端
+          // @RequiresAdmin + isAdmin 双重校验统一把关（无权限时返回"权限不足"）。
+          // 原 localStorage.role===1 判定在 RBAC 改造后 role 字段语义已变（全员为 2），
+          // 会把真实管理员的操作按钮误隐藏。
           /* ── 筛选选项加载 ── */
           async loadFilterOptions() {
             this.optionsLoading = true
@@ -363,6 +377,7 @@
           // 修改点：<table-bar> 组件 action 按钮事件处理
           onTableAction(payload) {
             if (payload.key === 'add') { this.addMemberHandle('add') }
+            else if (payload.key === 'import') { this.importDialog.visible = true }
             else if (payload.key === 'export') { this.exportEmployees('excel') }
           },
           // 重置搜索条件，恢复表格初始状态
@@ -540,6 +555,53 @@
             } catch (err) {
               ReggieUI.error('导出失败：' + (err.message || err))
             }
+          },
+
+          /* ── 批量导入 ── */
+          // el-upload 选完文件自动上传前的校验
+          beforeImportUpload(file) {
+            this.importResult = null
+            if (!/\.xlsx$/i.test(file.name)) {
+              ReggieUI.error('仅支持 .xlsx 格式，请先下载导入模板填写')
+              return false
+            }
+            if (file.size > 1 * 1024 * 1024) {
+              ReggieUI.error('文件不能超过 1MB')
+              return false
+            }
+            this.importLoading = true
+            return true
+          },
+          onImportSuccess(res) {
+            this.importLoading = false
+            // el-upload 不走全局 axios 拦截器，需自行判定业务响应
+            if (!res || String(res.code) !== '1' || !res.data) {
+              if (res && res.msg === 'NOTLOGIN') {
+                if (window.self !== window.top) {
+                  try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*') } catch (e) { /* 跨域兜底 */ }
+                } else {
+                  window.location.href = '/backend/page/login/login.html'
+                }
+                return
+              }
+              ReggieUI.error((res && res.msg) || '导入失败')
+              return
+            }
+            this.importResult = res.data
+            if (res.data.successCount > 0) {
+              ReggieUI.success('成功导入 ' + res.data.successCount + ' 名员工')
+              this.fetchData(true)
+            } else {
+              ReggieUI.error('导入未成功，请查看下方失败明细')
+            }
+          },
+          onImportError() {
+            this.importLoading = false
+            ReggieUI.error('导入失败：网络异常或登录已过期，请重试')
+          },
+          onImportDialogClose() {
+            this.importResult = null
+            this.importLoading = false
           },
 
           // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
