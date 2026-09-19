@@ -117,8 +117,8 @@
 
     <div id="app">
         <main class="app-container ds-page" id="main-content" role="main" aria-labelledby="page-title">
-            <!-- 页头：标题 + 副标题 + 页级操作 -->
-            </header>
+            <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+            <h1 class="sr-only" id="page-title">消息通知管理</h1>
 
             <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stats-cards -->
             <stat-cards :cards="statsCards"></stat-cards>

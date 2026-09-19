@@ -31,6 +31,8 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div id="app" class="dashboard-container">
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+    <h1 class="sr-only" id="page-title">菜品成本管理</h1>
     <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
     <table-bar
       :search-items="searchItems"

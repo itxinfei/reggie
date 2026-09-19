@@ -53,6 +53,8 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="cs-container" id="cs-app">
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+      <h1 class="sr-only" id="page-title">客服管理</h1>
 
       <el-tabs v-model="activeTab" class="cs-tabs" @tab-click="onTabClick">
         <el-tab-pane label="会话管理" name="session"></el-tab-pane>

@@ -18,6 +18,8 @@
 
   <div class="dashboard-container" id="category-app">
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+      <h1 class="sr-only" id="page-title">分类管理</h1>
 
       <!-- ========== 数据统计卡片（统一组件） ========== -->
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->

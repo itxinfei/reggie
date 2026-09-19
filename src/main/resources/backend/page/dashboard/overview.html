@@ -418,6 +418,8 @@
   <!-- 修改点：P2-1 骨架屏——移除根 v-loading 全屏转圈遮罩，加载态改由页面级骨架屏呈现 -->
   <div class="overview-container" id="dashboard-app" v-cloak>
     <main class="container" id="main-content" role="main" aria-labelledby="page-title">
+      <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+      <h1 class="sr-only" id="page-title">数据概览</h1>
 
       <!-- 修改点：P2-1 骨架屏——工作台首屏加载态（待办台 + KPI 卡片区域脉冲骨架，替代纯转圈） -->
       <div v-if="loading" class="overview-skeleton">

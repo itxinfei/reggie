@@ -11,9 +11,8 @@
 
   【语义与无障碍（a11y）】
     - <a class="skip-link"> 跳转到主内容（WCAG 2.4.1）
-    - <main role="main" aria-labelledby> 主内容地标
-    - <nav> 面包屑
-    - <h1> 页面唯一主标题（ds-page-header__title）
+    - <main role="main" aria-labelledby="page-title"> 主内容地标
+    - <h1 class="sr-only" id="page-title"> 页面唯一主标题（页头已移除，视觉隐藏仅供屏幕阅读器）
     - 弹窗/表格由组件层保证 role/aria（crud-dialog/table-bar/crud-table）
 
   【组件契约（禁止手写重复实现）】
@@ -43,7 +42,8 @@
   <div class="dashboard-container" id="template-app">
     <!-- 主内容地标 + 设计系统 page 结构 -->
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
-
+      <!-- 页面唯一主标题：视觉隐藏（.sr-only），仅供屏幕阅读器播报，配合 main 的 aria-labelledby -->
+      <h1 class="sr-only" id="page-title">页面标题</h1>
 
       
       
