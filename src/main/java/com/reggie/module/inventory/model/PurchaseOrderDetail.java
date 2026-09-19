@@ -39,6 +39,10 @@ public class PurchaseOrderDetail implements Serializable {
     @TableField(exist = false)
     private String materialName;
 
+    /** 物料单位（关联查询填充，数据库无此列） */
+    @TableField(exist = false)
+    private String unit;
+
     /** 数量 */
     private BigDecimal qty;
 

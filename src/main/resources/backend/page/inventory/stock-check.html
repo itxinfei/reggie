@@ -184,7 +184,7 @@
                   <span class="diff-status-tag" :class="getDiffStatusClass(scope.row)">{{ getDiffStatusLabel(scope.row) }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="remark" label="备注" min-width="120" />
+              <el-table-column prop="remark" label="备注" min-width="120"></el-table-column>
             </el-table>
           </template>
           <div v-else-if="row.status === 'DONE'" class="empty-expand">

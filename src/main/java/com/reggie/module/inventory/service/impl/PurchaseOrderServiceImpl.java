@@ -354,15 +354,27 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
     }
 
     /**
-     * 批量填充采购明细的物料名称
+     * 批量填充采购明细的物料名称与单位（同一次物料查询，避免两轮 SQL）
      */
     private void fillMaterialName(List<PurchaseOrderDetail> details) {
-        BatchFillHelper.fillNames(
-                details,
-                PurchaseOrderDetail::getMaterialId,
-                ids -> materialService.list(new LambdaQueryWrapper<Material>().in(Material::getId, ids))
-                        .stream().collect(Collectors.toMap(Material::getId, Material::getName, (v1, v2) -> v1)),
-                PurchaseOrderDetail::setMaterialName);
+        List<Long> materialIds = details.stream()
+                .map(PurchaseOrderDetail::getMaterialId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (materialIds.isEmpty()) {
+            return;
+        }
+        Map<Long, Material> materialMap = materialService.list(
+                new LambdaQueryWrapper<Material>().in(Material::getId, materialIds))
+                .stream().collect(Collectors.toMap(Material::getId, m -> m, (v1, v2) -> v1));
+        details.forEach(d -> {
+            Material material = materialMap.get(d.getMaterialId());
+            if (material != null) {
+                d.setMaterialName(material.getName());
+                d.setUnit(material.getUnit());
+            }
+        });
     }
 
     /**

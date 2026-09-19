@@ -30,8 +30,8 @@
     .rg-w-160 { width: 160px !important; }
     .rg-w-100 { width: 100px !important; }
 
-    /* ========== 采购单详情弹窗：单据信息头 + 明细表 + 合计条 ========== */
-    /* 单据信息：两列描述栅格（label 浅灰底 + 值），左右对称、上下与明细表平衡 */
+    /* ========== 采购单详情弹窗：单据信息头 + 明细表 + 合计条 + 收货批次 + 弹窗内收货 ========== */
+    /* 单据信息：两列描述栅格（label 浅灰底 + 值），六个字段左右对称、与明细表上下平衡 */
     .detail-head {
       display: flex; flex-wrap: wrap;
       margin-bottom: 14px;
@@ -45,8 +45,7 @@
       font-size: var(--font-size-base);
     }
     .detail-head__item:nth-child(even) { border-left: 1px solid var(--border-default); }
-    .detail-head__item--full,
-    .detail-head__item--full:nth-child(even) { width: 100%; border-left: 0; border-bottom: 0; }
+    .detail-head__item:last-child { border-bottom: 0; }
     .detail-head__label {
       flex: 0 0 84px;
       padding: 9px 12px;
@@ -59,15 +58,33 @@
       color: var(--text-primary);
       word-break: break-word;
     }
+    /* 备注值最多两行，超出省略（title 悬浮看全文） */
+    .detail-head__value--clamp {
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden; word-break: break-word;
+    }
+    /* 单号复制 */
+    .dh-copy { margin-left: 4px; padding: 2px; color: var(--text-muted); }
+    .dh-copy:hover { color: var(--color-brand-700); }
     /* 明细小节标题 */
     .detail-sub {
       margin-bottom: 8px;
       font-size: var(--font-size-base); font-weight: 500; color: var(--text-primary);
     }
     .detail-sub__count { margin-left: 2px; font-weight: 400; font-size: var(--font-size-sm, 12px); color: var(--text-muted); }
-    .detail-dialog__table .cell { font-variant-numeric: tabular-nums; }
+    /* body 表强制 fixed：common-el.css 只给 .el-table__header 设了 table-layout:fixed，body 表为 auto，
+       短内容列（单位）会被按内容压缩触发省略号；本弹窗两表列宽已按容器总宽精确声明，fixed 后严格按声明渲染 */
+    .detail-dialog__table .el-table__body { table-layout: fixed; }
+    /* 密集网格收窄单元格外距：unified-components 给 td/th 加了 20px 横向 padding，与 .cell 自带 10px 内距
+       叠加后窄列文本被省略号截断；弹窗表格改由 .cell 内距留白（与 common-el 复刻的 Element 默认节奏一致） */
+    .detail-dialog__table.el-table th,
+    .detail-dialog__table.el-table td { padding-left: 0; padding-right: 0; }
+    /* nowrap：窄列（单位/数量/单价/小计）表头与数字禁止折行；收货情况列的副文本是 block，仍独占一行 */
+    .detail-dialog__table .cell { font-variant-numeric: tabular-nums; white-space: nowrap; }
     .pd-amount { font-weight: 600; color: var(--text-primary); }
-    /* 表底合计条：左合计金额，右整单收货进度 */
+    /* 收货情况：主状态 + 部分收货时的「待收 N」副行 */
+    .pd-rec__sub { display: block; font-size: var(--font-size-sm, 12px); font-variant-numeric: tabular-nums; }
+    /* 表底合计条：左合计金额，右整单收货进度 + 待收 */
     .pd-summary {
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
       margin-top: 10px; padding-top: 10px;
@@ -76,6 +93,7 @@
     }
     .pd-summary b { font-variant-numeric: tabular-nums; }
     .pd-total { margin-left: 6px; color: var(--color-brand-700); font-size: var(--font-size-base); font-weight: 600; }
+    .pd-wait { margin-left: 8px; color: var(--color-warning); font-weight: 500; }
     /* 收货：已收齐(绿)/部分(橙)/未收(灰)，纯文字不加徽章 */
     .pd-rec.is-done { color: var(--color-success); }
     .pd-rec.is-partial { color: var(--color-warning); }
@@ -83,6 +101,66 @@
     .pd-recv.is-done { color: var(--color-success); font-weight: 500; }
     .pd-recv.is-partial { color: var(--color-warning); font-weight: 500; }
     .pd-recv.is-none { color: var(--text-muted); }
+    .pd-remain { color: var(--color-warning); font-variant-numeric: tabular-nums; }
+
+    /* 收货批次记录：时间线（数据来自 stock_record 的 IN 流水，按时间+收货人聚合） */
+    .rb-wrap { margin-top: 14px; }
+    .rb-title { margin-bottom: 8px; font-size: var(--font-size-base); font-weight: 500; color: var(--text-primary); }
+    .rb-title span { font-weight: 400; font-size: var(--font-size-sm, 12px); color: var(--text-muted); }
+    .rb { position: relative; padding: 0 0 12px 18px; }
+    .rb:last-child { padding-bottom: 0; }
+    .rb::before { content: ''; position: absolute; left: 4px; top: 18px; bottom: -2px; width: 1px; background: var(--border-default); }
+    .rb:last-child::before { display: none; }
+    .rb__dot {
+      position: absolute; left: 0; top: 5px;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--color-brand-500);
+      border: 2px solid var(--bg-surface);
+      box-shadow: 0 0 0 1px var(--border-default);
+    }
+    .rb__head { display: flex; align-items: baseline; gap: 10px; font-size: var(--font-size-sm, 12px); }
+    .rb__head b { color: var(--text-primary); font-weight: 500; font-variant-numeric: tabular-nums; }
+    .rb__head span { color: var(--text-secondary); }
+    .rb__head em { margin-left: auto; font-style: normal; color: var(--text-muted); }
+    .rb__items { margin-top: 2px; color: var(--text-secondary); font-size: var(--font-size-sm, 12px); line-height: 1.7; }
+    .rb__chip {
+      display: inline-block; margin: 2px 8px 2px 0; padding: 1px 8px;
+      background: var(--bg-page); border-radius: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 弹窗内收货录入态 */
+    .rx-tip {
+      margin: -4px 0 10px; padding: 8px 12px;
+      background: var(--bg-page); border-radius: var(--radius-md);
+      font-size: var(--font-size-sm, 12px); color: var(--text-secondary);
+    }
+    .rx-tip b { color: var(--color-brand-700); }
+    /* footer 自定义：左侧业务动作，右侧关闭/确认 */
+    .detail-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; gap: 12px;
+    }
+    .rx-sum { font-size: var(--font-size-sm, 12px); color: var(--text-secondary); }
+    .rx-sum b { color: var(--color-brand-700); font-size: var(--font-size-base); font-variant-numeric: tabular-nums; margin: 0 2px; }
+    /* 主按钮保金色：common-el.css 的 .el-button 基础块（白底灰字）与 design-system.css 的
+       .el-button--primary（金底深字）特异性相同且加载更晚，金色被覆盖；此处加 .detail-footer 提一级特异性收回 */
+    .detail-footer .el-button--primary {
+      background-color: var(--color-brand-500);
+      border-color: var(--color-brand-500);
+      color: var(--text-on-brand);
+    }
+    .detail-footer .el-button--primary:hover,
+    .detail-footer .el-button--primary:focus {
+      background-color: var(--color-brand-400);
+      border-color: var(--color-brand-400);
+      color: var(--text-on-brand);
+    }
+    .detail-footer .el-button--primary:active {
+      background-color: var(--color-brand-600);
+      border-color: var(--color-brand-600);
+      color: var(--text-on-brand);
+    }
 </style>
 </head>
 <body>
@@ -147,7 +225,7 @@
           <!-- 查看：打开该单采购明细弹窗（所有状态均可查看） -->
           <el-button type="text" size="small" class="btn-view" @click="viewDetail(row)">查看</el-button>
           <el-button type="text" size="small" class="btn-view" @click="approveHandle(row)" v-if="row.status === 'DRAFT'">审核</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="receiveHandle(row)" v-if="row.status === 'ORDERED' || row.status === 'PARTIAL'">收货</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="viewDetail(row, 'receive')" v-if="row.status === 'ORDERED' || row.status === 'PARTIAL'">收货</el-button>
           <!-- 修改点：补充编辑（草稿/已下单/部分收货可改）与删除（仅草稿/已取消可删，与后端约束一致） -->
           <el-button type="text" size="small" class="btn-view" @click="editHandle(row)" v-if="row.status === 'DRAFT' || row.status === 'ORDERED' || row.status === 'PARTIAL'">编辑</el-button>
           <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row)" v-if="row.status === 'DRAFT' || row.status === 'CANCELLED'">删除</el-button>
@@ -221,20 +299,24 @@
       </el-form>
     </crud-dialog>
 
-    <!-- 采购单详情弹窗（只读，仅有关闭按钮）：操作列「查看」打开，上为单据信息、下为采购明细 -->
+    <!-- 采购单详情弹窗（详情即工作台）：单据信息 + 明细/收货录入双态 + 收货批次记录，弹窗内可直接审核/收货 -->
     <crud-dialog
       :visible.sync="detailDialogVisible"
-      :title="'采购单详情 · ' + (detailRow.orderNo || '')"
+      title="采购单详情"
       size="xl"
       :show-submit="false"
-      :show-cancel="true"
-      cancel-text="关 闭"
+      :show-cancel="false"
+      :close-on-click-modal="false"
+      @close="onDetailClose"
     >
       <!-- 单据信息：两列描述栅格，与下方明细表上下平衡 -->
       <div class="detail-head">
         <div class="detail-head__item">
-          <span class="detail-head__label">供应商</span>
-          <span class="detail-head__value">{{ detailRow.supplierName || '—' }}</span>
+          <span class="detail-head__label">采购单号</span>
+          <span class="detail-head__value">
+            {{ detailRow.orderNo || '—' }}
+            <el-button v-if="detailRow.orderNo" type="text" class="dh-copy" title="复制单号" @click="copyOrderNo"><i class="ri-file-copy-line"></i></el-button>
+          </span>
         </div>
         <div class="detail-head__item">
           <span class="detail-head__label">状态</span>
@@ -244,6 +326,10 @@
           </span>
         </div>
         <div class="detail-head__item">
+          <span class="detail-head__label">供应商</span>
+          <span class="detail-head__value">{{ detailRow.supplierName || '—' }}</span>
+        </div>
+        <div class="detail-head__item">
           <span class="detail-head__label">操作员</span>
           <span class="detail-head__value">{{ detailRow.operator || '—' }}</span>
         </div>
@@ -251,74 +337,118 @@
           <span class="detail-head__label">创建时间</span>
           <span class="detail-head__value">{{ detailRow.createdTime || '—' }}</span>
         </div>
-        <div class="detail-head__item detail-head__item--full">
+        <div class="detail-head__item">
           <span class="detail-head__label">备注</span>
-          <span class="detail-head__value">{{ detailRow.remark || '—' }}</span>
+          <span class="detail-head__value detail-head__value--clamp" :title="detailRow.remark || ''">{{ detailRow.remark || '—' }}</span>
         </div>
       </div>
-      <!-- 明细小节标题 -->
-      <div class="detail-sub">采购明细<span class="detail-sub__count" v-if="detailRow.details">（{{ detailRow.details.length }} 项）</span></div>
-      <el-table
-        :data="detailRow.details || []"
-        v-loading="detailRow.detailLoading"
-        border
-        size="small"
-        class="detail-dialog__table"
-        empty-text="暂无明细数据"
-        style="width:100%;">
-        <el-table-column prop="materialName" label="食材名称" min-width="260" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
-        <el-table-column label="数量" width="110" align="center" :header-align="'center'">
-          <template slot-scope="scope">{{ fmtNum(scope.row.qty) }}</template>
-        </el-table-column>
-        <el-table-column label="单价(元)" width="130" align="center" :header-align="'center'">
-          <template slot-scope="scope">￥{{ fmtMoney(scope.row.unitPrice) }}</template>
-        </el-table-column>
-        <el-table-column label="已收货" width="130" align="center" :header-align="'center'">
-          <template slot-scope="scope">
-            <span :class="['pd-rec', receiveState(scope.row).cls]">{{ receiveState(scope.row).text }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="小计(元)" width="130" align="center" :header-align="'center'">
-          <template slot-scope="scope"><span class="pd-amount">￥{{ fmtMoney(scope.row.amount) }}</span></template>
-        </el-table-column>
-      </el-table>
-      <!-- 表底合计条：左合计金额，右整单收货进度 -->
-      <div v-if="detailRow.detailSummary" class="pd-summary">
-        <span>合计金额<b class="pd-total">￥{{ fmtMoney(detailRow.detailSummary.totalAmount) }}</b></span>
-        <span>已收货 <b :class="['pd-recv', detailRow.detailSummary.recvCls]">{{ fmtNum(detailRow.detailSummary.totalReceived) }}/{{ fmtNum(detailRow.detailSummary.totalQty) }}（{{ detailRow.detailSummary.percent }}%）</b></span>
-      </div>
-    </crud-dialog>
 
-    <!-- 修改点：部分收货弹窗——按明细指定收货数量 -->
-    <crud-dialog
-      :visible.sync="partialDialogVisible"
-      title="收货确认"
-      size="lg"
-      :show-submit="true"
-      submit-text="确认收货"
-      :submit-loading="partialLoading"
-      @submit="submitPartialReceive"
-    >
-      <el-alert type="info" :closable="false" style="margin-bottom:16px;">
-        <div slot="title">修改「本次收货」数量，支持部分收货。未收货的明细可在下次继续收货。</div>
-      </el-alert>
-      <el-table :data="partialItems" border size="small" style="width:100%;">
-        <el-table-column prop="materialName" label="食材名称" min-width="150" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
-        <el-table-column label="采购数量" width="90" align="center" :header-align="'center'">
-          <template slot-scope="scope">{{ fmtNum(scope.row.qty) }}</template>
-        </el-table-column>
-        <el-table-column label="已收货" width="90" align="center" :header-align="'center'">
-          <template slot-scope="scope">{{ fmtNum(scope.row.receivedQty) }}</template>
-        </el-table-column>
-        <el-table-column label="剩余" width="90" align="center" :header-align="'center'">
-          <template slot-scope="scope">{{ fmtNum(scope.row.remainQty) }}</template>
-        </el-table-column>
-        <el-table-column label="本次收货" min-width="150" align="center" :header-align="'center'">
-          <template slot-scope="scope">
-            <el-input-number v-model="scope.row.receiveQty" :min="0" :max="scope.row.remainQty" size="small" controls-position="right" style="width:120px;" />
+      <!-- ===== 详情态：明细 + 合计 + 收货批次 ===== -->
+      <template v-if="!receiveMode">
+        <div class="detail-sub">采购明细<span class="detail-sub__count" v-if="detailRow.details">（{{ detailRow.details.length }} 项）</span></div>
+        <el-table
+          :data="detailRow.details || []"
+          v-loading="detailRow.detailLoading"
+          border
+          size="small"
+          class="detail-dialog__table"
+          empty-text="暂无明细数据"
+          style="width:100%;">
+          <!-- 注意：本页为 in-DOM 模板，el-table-column 即使无插槽内容也必须显式闭合，
+               自闭合 <.../> 会被浏览器解析成嵌套列（表头分组+数据列空白） -->
+          <el-table-column prop="materialName" label="食材名称" min-width="200" align="center" :header-align="'center'" :show-overflow-tooltip="true"></el-table-column>
+          <el-table-column prop="unit" label="单位" width="70" align="center" :header-align="'center'">
+            <template slot-scope="scope">{{ scope.row.unit || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="数量" width="100" align="center" :header-align="'center'">
+            <template slot-scope="scope">{{ fmtNum(scope.row.qty) }}</template>
+          </el-table-column>
+          <el-table-column label="单价(元)" width="120" align="center" :header-align="'center'">
+            <template slot-scope="scope">￥{{ fmtMoney(scope.row.unitPrice) }}</template>
+          </el-table-column>
+          <el-table-column label="收货情况" width="140" align="center" :header-align="'center'">
+            <template slot-scope="scope">
+              <span :class="['pd-rec', receiveState(scope.row).cls]">
+                <template v-if="receiveState(scope.row).cls === 'is-done'">已收齐</template>
+                <template v-else-if="receiveState(scope.row).cls === 'is-partial'">
+                  {{ fmtNum(scope.row.receivedQty) }}/{{ fmtNum(scope.row.qty) }}
+                  <span class="pd-rec__sub">待收 {{ fmtNum(remainQty(scope.row)) }}</span>
+                </template>
+                <template v-else>待收 {{ fmtNum(scope.row.qty) }}</template>
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="小计(元)" width="130" align="center" :header-align="'center'">
+            <template slot-scope="scope"><span class="pd-amount">￥{{ fmtMoney(scope.row.amount) }}</span></template>
+          </el-table-column>
+        </el-table>
+        <!-- 表底合计条：左合计金额，右整单收货进度 + 待收 -->
+        <div v-if="detailRow.detailSummary" class="pd-summary">
+          <span>合计金额<b class="pd-total">￥{{ fmtMoney(detailRow.detailSummary.totalAmount) }}</b></span>
+          <span>
+            已收货 <b :class="['pd-recv', detailRow.detailSummary.recvCls]">{{ fmtNum(detailRow.detailSummary.totalReceived) }}/{{ fmtNum(detailRow.detailSummary.totalQty) }}（{{ detailRow.detailSummary.percent }}%）</b>
+            <span v-if="detailRow.detailSummary.totalRemain > 0" class="pd-wait">待收 {{ fmtNum(detailRow.detailSummary.totalRemain) }}</span>
+          </span>
+        </div>
+
+        <!-- 收货批次记录：stock_record 的 IN 流水按时间+收货人聚合 -->
+        <div v-if="receiveBatches.length" class="rb-wrap">
+          <div class="rb-title">收货记录<span>（{{ receiveBatches.length }} 次）</span></div>
+          <div v-for="(batch, bi) in receiveBatches" :key="bi" class="rb">
+            <span class="rb__dot"></span>
+            <div class="rb__head">
+              <b>{{ batch.time }}</b><span>{{ batch.operator || '—' }}</span><em>收货 {{ batch.items.length }} 项</em>
+            </div>
+            <div class="rb__items">
+              <span v-for="(it, ii) in batch.items" :key="ii" class="rb__chip">{{ it.materialName }} {{ fmtNum(it.qty) }}{{ it.unit }}</span>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- ===== 收货录入态：只列待收明细，默认填满剩余，改完直接确认 ===== -->
+      <template v-else>
+        <div class="rx-tip">登记本次实际收货数量，确认后库存自动增加；剩余为 <b>0</b> 的食材已收齐，不再列出。</div>
+        <el-table :data="rxRows" border size="small" class="detail-dialog__table" style="width:100%;">
+          <el-table-column prop="materialName" label="食材名称" min-width="200" align="center" :header-align="'center'" :show-overflow-tooltip="true"></el-table-column>
+          <el-table-column prop="unit" label="单位" width="70" align="center" :header-align="'center'">
+            <template slot-scope="scope">{{ scope.row.unit || '—' }}</template>
+          </el-table-column>
+          <el-table-column label="采购数量" width="100" align="center" :header-align="'center'">
+            <template slot-scope="scope">{{ fmtNum(scope.row.qty) }}</template>
+          </el-table-column>
+          <el-table-column label="已收货" width="100" align="center" :header-align="'center'">
+            <template slot-scope="scope">{{ fmtNum(scope.row.receivedQty) }}</template>
+          </el-table-column>
+          <el-table-column label="剩余" width="100" align="center" :header-align="'center'">
+            <template slot-scope="scope"><span class="pd-remain">{{ fmtNum(scope.row.remainQty) }}</span></template>
+          </el-table-column>
+          <el-table-column label="本次收货" width="168" align="center" :header-align="'center'">
+            <template slot-scope="scope">
+              <el-input-number v-model="rxForm[scope.row.id]" :min="0" :max="scope.row.remainQty" :step="1" size="small" controls-position="right" style="width:138px;" />
+            </template>
+          </el-table-column>
+        </el-table>
+      </template>
+
+      <!-- footer 自定义：左业务动作（按状态）/录入汇总，右关闭或确认 -->
+      <span slot="footer" class="detail-footer">
+        <span>
+          <template v-if="!receiveMode">
+            <el-button v-if="detailRow.status === 'DRAFT'" size="medium" @click="approveHandle(detailRow)">审核下单</el-button>
+            <template v-else-if="detailRow.status === 'ORDERED' || detailRow.status === 'PARTIAL'">
+              <el-button type="primary" size="medium" @click="startReceive">登记收货</el-button>
+              <el-button type="text" size="medium" @click="receiveAll">一键收齐</el-button>
+            </template>
           </template>
-        </el-table-column>
-      </el-table>
+          <span v-else class="rx-sum">本次收货 <b>{{ rxCount }}</b> 项 · 合计金额 ￥{{ fmtMoney(rxAmount) }}</span>
+        </span>
+        <span>
+          <el-button v-if="receiveMode" size="medium" @click="cancelReceive">取 消</el-button>
+          <el-button v-if="receiveMode" type="primary" size="medium" :loading="receiveSubmitting" @click="submitReceive">确认收货</el-button>
+          <el-button v-else size="medium" @click="detailDialogVisible = false">关 闭</el-button>
+        </span>
+      </span>
     </crud-dialog>
   </div>
 
@@ -381,11 +511,13 @@
             supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
             operator: [{ required: true, whitespace: true, message: '请输入操作员', trigger: 'blur' }]
           },
-          // 修改点：部分收货弹窗
-          partialDialogVisible: false,
-          partialOrderId: null,
-          partialItems: [],
-          partialLoading: false
+          // 详情弹窗收货工作台：receiveMode 录入态开关；rxRows 待收明细副本；rxForm 明细ID→本次数量；
+          // receiveRecords 该单 stock_record 的 IN 流水；receiveSubmitting 防重复提交
+          receiveMode: false,
+          rxRows: [],
+          rxForm: {},
+          receiveRecords: [],
+          receiveSubmitting: false
         }
       },
       created() { this.init() },
@@ -400,6 +532,51 @@
             { key: 'ORDERED', icon: 'ri-truck-line', label: '待收货', value: s.pendingReceive || 0, color: 'info', clickable: true, active: self.cardFilter === 'ORDERED' },
             { key: 'monthAmount', icon: 'ri-money-cny-circle-line', label: '本月采购金额', value: '¥' + self.formatMoney(s.monthAmount), color: 'success', prefix: '' }
           ]
+        },
+        // 收货批次：该单 stock_record 的 IN 流水按「时间（秒）+收货人」聚合为一次收货动作
+        receiveBatches: function() {
+          const self = this;
+          // 流水本身无单位列，从采购明细构 materialId → {name, unit} 映射
+          const detailMap = {};
+          ((this.detailRow && this.detailRow.details) || []).forEach(function(d) {
+            if (d.materialId != null) detailMap[d.materialId] = { name: d.materialName, unit: d.unit };
+          });
+          const groups = [];
+          const indexMap = {};
+          this.receiveRecords.forEach(function(r) {
+            const time = self.formatRecordTime(r.createdTime);
+            // 整单收货流水 operator 存制单人姓名；部分收货存的是操作人用户ID，纯数字时回退采购单操作员
+            let operator = r.operator;
+            if (!operator || /^\d+$/.test(String(operator))) operator = self.detailRow.operator || '';
+            const key = time + '|' + (operator || '');
+            let batch = indexMap[key];
+            if (!batch) {
+              batch = { time: time, operator: operator || '—', items: [] };
+              indexMap[key] = batch;
+              groups.push(batch);
+            }
+            const dm = detailMap[r.materialId] || {};
+            batch.items.push({
+              materialName: r.materialName || dm.name || '未知食材',
+              qty: Number(r.qty) || 0,
+              unit: dm.unit || ''
+            });
+          });
+          return groups;
+        },
+        // 录入态：本次填写了数量（>0）的项数
+        rxCount: function() {
+          const form = this.rxForm;
+          return this.rxRows.reduce(function(n, r) {
+            return n + ((Number(form[r.id]) || 0) > 0 ? 1 : 0);
+          }, 0);
+        },
+        // 录入态：本次收货合计金额 = Σ 本次数量 × 明细单价（数量混合单位不相加）
+        rxAmount: function() {
+          const form = this.rxForm;
+          return this.rxRows.reduce(function(sum, r) {
+            return sum + (Number(form[r.id]) || 0) * (Number(r.unitPrice) || 0);
+          }, 0);
         }
       },
       // 修改点：resize 回调存引用，否则 beforeDestroy 无法解绑（原匿名函数导致监听器泄漏）
@@ -538,38 +715,189 @@
         },
         loadSupplierOptions() { supplierList().then(res => { if (res.code === 1) this.supplierOptions = res.data }) },
         loadMaterialOptions() { materialList().then(res => { if (res.code === 1) this.materialOptions = res.data }) },
-        // 点击采购单号：打开明细弹窗并懒加载明细（已加载过走缓存，列表刷新后自然失效）
-        viewDetail(row) {
+        // 打开详情弹窗（详情即工作台）：mode='receive' 时明细加载完直接进入收货录入态（列表「收货」按钮入口）
+        viewDetail(row, mode) {
           this.detailRow = row
+          this.receiveMode = false
+          this.rxRows = []
+          this.rxForm = {}
+          this.receiveRecords = []
           this.detailDialogVisible = true
-          this.loadDetails(row)
+          this.loadDetails(row, mode)
         },
-        loadDetails(row) {
-          // 已加载或正在加载时不重复请求（弹窗再次打开复用缓存）；表格按 loading/有数据/空 三态呈现
-          if (!row.id || row.details || row.detailLoading) return
-          this.$set(row, 'detailLoading', true)
+        // 弹窗关闭（右上角 X / ESC / 关闭按钮）：复位录入态，下次打开默认详情态
+        onDetailClose() {
+          this.receiveMode = false
+        },
+        loadDetails(row, mode) {
+          const self = this
+          // 已加载过走缓存（弹窗再次打开复用）；force=true 用于收货后强制重拉
+          if (row.details && !row.detailLoading) {
+            if (mode === 'receive') self.startReceive()
+            return
+          }
+          if (!row.id) return
+          self.$set(row, 'detailLoading', true)
           purchaseDetailList(row.id).then(res => {
             if (res.code === 1) {
-              const details = res.data || []
-              this.$set(row, 'details', details)
-              // 汇总整单：合计数量/金额 + 收货进度，供明细底部合计行使用
-              let totalQty = 0, totalAmount = 0, totalReceived = 0
-              details.forEach(function(d) {
-                totalQty += Number(d.qty) || 0
-                totalAmount += Number(d.amount) || 0
-                totalReceived += Number(d.receivedQty) || 0
-              })
-              const percent = totalQty > 0 ? Math.min(100, Math.round(totalReceived / totalQty * 100)) : 0
-              this.$set(row, 'detailSummary', {
-                totalQty: totalQty,
-                totalAmount: totalAmount,
-                totalReceived: totalReceived,
-                percent: percent,
-                recvCls: percent >= 100 ? 'is-done' : (totalReceived > 0 ? 'is-partial' : 'is-none')
-              })
+              self.$set(row, 'details', res.data || [])
+              self.recalcSummary(row)
+              self.loadReceiveRecords(row)
+              if (mode === 'receive') self.startReceive()
             }
           }).catch(err => { ReggieUI.error('请求失败：' + err) })
-            .finally(() => { this.$set(row, 'detailLoading', false) })
+            .finally(() => { self.$set(row, 'detailLoading', false) })
+        },
+        // 收货后强制刷新弹窗内明细/汇总/批次，并按剩余数量本地同步整单状态（不关闭弹窗）
+        async reloadDetail(row) {
+          const self = this
+          self.$set(row, 'detailLoading', true)
+          try {
+            const res = await purchaseDetailList(row.id)
+            if (res.code === 1) {
+              self.$set(row, 'details', res.data || [])
+              const totalRemain = self.recalcSummary(row)
+              self.loadReceiveRecords(row)
+              self.$set(row, 'status', totalRemain <= 0 ? 'RECEIVED' : 'PARTIAL')
+            }
+          } catch (e) { /* 背景列表 handleQuery 仍会刷新，不阻断成功提示 */ }
+          finally { self.$set(row, 'detailLoading', false) }
+        },
+        // 汇总整单：合计数量/金额 + 已收 + 待收 + 收货进度，供明细底部合计条使用，返回待收总量
+        recalcSummary(row) {
+          let totalQty = 0, totalAmount = 0, totalReceived = 0
+          ;(row.details || []).forEach(function(d) {
+            totalQty += Number(d.qty) || 0
+            totalAmount += Number(d.amount) || 0
+            totalReceived += Number(d.receivedQty) || 0
+          })
+          const totalRemain = Math.max(0, totalQty - totalReceived)
+          const percent = totalQty > 0 ? Math.min(100, Math.round(totalReceived / totalQty * 100)) : 0
+          this.$set(row, 'detailSummary', {
+            totalQty: totalQty,
+            totalAmount: totalAmount,
+            totalReceived: totalReceived,
+            totalRemain: totalRemain,
+            percent: percent,
+            recvCls: percent >= 100 ? 'is-done' : (totalReceived > 0 ? 'is-partial' : 'is-none')
+          })
+          return totalRemain
+        },
+        // 单行待收数量
+        remainQty(d) {
+          return Math.max(0, (Number(d.qty) || 0) - (Number(d.receivedQty) || 0))
+        },
+        // 查询该单收货流水：只取 type=IN（取消 PARTIAL 单会产生 OUT 冲销流水，必须排除）
+        loadReceiveRecords(row) {
+          const self = this
+          stockRecordPage({ page: 1, pageSize: 100, type: 'IN', bizId: row.id }).then(res => {
+            self.receiveRecords = (res.code === 1 && res.data && res.data.records) ? res.data.records : []
+          }).catch(() => { self.receiveRecords = [] })
+        },
+        // 流水时间兼容两种序列化："yyyy-MM-dd HH:mm:ss" 与 ISO "yyyy-MM-ddTHH:mm:ss"
+        formatRecordTime(t) {
+          if (!t) return '—'
+          return String(t).replace('T', ' ').slice(0, 19)
+        },
+        // 进入收货录入态：只列待收明细，默认填满剩余数量（副本对象，不污染明细原对象）
+        startReceive() {
+          const self = this
+          const row = self.detailRow
+          if (!row || !row.details) return
+          const rows = row.details
+            .filter(d => self.remainQty(d) > 0)
+            .map(d => Object.assign({}, d, { remainQty: self.remainQty(d) }))
+          if (!rows.length) {
+            ReggieUI.warning('该采购单的食材已全部收齐')
+            return
+          }
+          const form = {}
+          rows.forEach(function(r) { form[r.id] = r.remainQty })
+          self.rxRows = rows
+          self.rxForm = form
+          self.receiveMode = true
+        },
+        cancelReceive() {
+          this.receiveMode = false
+        },
+        // 确认部分收货：收集本次数量 > 0 的明细提交，成功后弹窗内原地刷新，不回列表
+        async submitReceive() {
+          const self = this
+          const row = self.detailRow
+          const qtys = {}
+          let hasQty = false
+          self.rxRows.forEach(function(r) {
+            const q = Number(self.rxForm[r.id]) || 0
+            if (q > 0) { qtys[r.id] = q; hasQty = true }
+          })
+          if (!hasQty) { ReggieUI.warning('请至少填写一项收货数量'); return }
+          const overflow = self.rxRows.some(r => (Number(self.rxForm[r.id]) || 0) > r.remainQty)
+          if (overflow) { ReggieUI.warning('本次收货数量不能超过剩余数量'); return }
+          self.receiveSubmitting = true
+          try {
+            const res = await receivePartialPurchase(row.id, qtys)
+            if (String(res.code) === '1') {
+              ReggieUI.success('收货成功！库存已更新')
+              self.receiveMode = false
+              await self.reloadDetail(row)
+              self.handleQuery()
+            } else {
+              ReggieUI.error(res.msg || '收货失败')
+            }
+          } catch (e) {
+            ReggieUI.error('请求失败：' + (e.message || e))
+          } finally {
+            self.receiveSubmitting = false
+          }
+        },
+        // 一键收齐：剩余明细整单收满入库
+        receiveAll() {
+          const self = this
+          const row = self.detailRow
+          ReggieUI.confirm('确认将该采购单剩余食材全部收货入库？', '一键收齐', {
+            confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
+          }).then(async () => {
+            try {
+              const res = await receivePurchase(row.id)
+              if (String(res.code) === '1') {
+                ReggieUI.success('已全部收货入库！')
+                self.receiveMode = false
+                await self.reloadDetail(row)
+                self.handleQuery()
+              } else {
+                ReggieUI.error(res.msg || '收货失败')
+              }
+            } catch (e) {
+              ReggieUI.error('请求失败：' + (e.message || e))
+            }
+          }).catch(() => {})
+        },
+        // 复制采购单号：优先 Clipboard API，非安全上下文降级 textarea + execCommand
+        copyOrderNo() {
+          const self = this
+          const text = self.detailRow.orderNo || ''
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() {
+              ReggieUI.success('采购单号已复制')
+            }).catch(function() { self.fallbackCopy(text) })
+          } else {
+            self.fallbackCopy(text)
+          }
+        },
+        fallbackCopy(text) {
+          const ta = document.createElement('textarea')
+          ta.value = text
+          ta.style.position = 'fixed'
+          ta.style.opacity = '0'
+          document.body.appendChild(ta)
+          ta.select()
+          try {
+            document.execCommand('copy')
+            ReggieUI.success('采购单号已复制')
+          } catch (e) {
+            ReggieUI.warning('复制失败，请手动复制')
+          }
+          document.body.removeChild(ta)
         },
         // 明细金额：千分位 + 两位小数
         fmtMoney(v) {
@@ -582,7 +910,7 @@
             ? n.toLocaleString('zh-CN')
             : n.toLocaleString('zh-CN', { maximumFractionDigits: 2 })
         },
-        // 单行已收货文字：已收齐(绿)/已收/采购(橙)/未收货(灰)
+        // 单行收货状态分类：已收齐(绿)/部分收货(橙)/未收货(灰)，模板按 cls 分支渲染
         receiveState(d) {
           const qty = Number(d.qty) || 0
           const received = Number(d.receivedQty) || 0
@@ -612,72 +940,15 @@
             confirmButtonText: '确定', cancelButtonText: '取消', type: 'info'
           }).then(() => {
             approvePurchase(row.id).then(res => {
-              if (res.code === 1) { ReggieUI.success('审核通过！'); this.handleQuery() }
+              if (res.code === 1) {
+                ReggieUI.success('审核通过！')
+                // 详情弹窗内审核时同步行状态，footer 动作按钮即时切换为「登记收货/一键收齐」
+                this.$set(row, 'status', 'ORDERED')
+                this.handleQuery()
+              }
               else ReggieUI.error(res.msg || '操作失败')
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
           }).catch((err) => { console.warn('[purchase-list] 审核操作取消或失败:', err) })
-        },
-        // 修改点：收货——展示部分收货弹窗，支持按明细指定数量收货
-        async receiveHandle(row) {
-          const self = this;
-          self.partialOrderId = row.id;
-          self.partialItems = [];
-          self.partialDialogVisible = true;
-          try {
-            // 修改点：明细走 /detail 端点（/{id} 仅返回采购单主表、不带 details，旧写法弹窗永远空表）
-            const res = await purchaseDetailList(row.id);
-            if (res.code === 1) {
-              const details = res.data || [];
-              self.partialItems = details.map(function(d) {
-                var qty = Number(d.qty) || 0;
-                var received = Number(d.receivedQty) || 0;
-                var remain = Math.max(0, qty - received);
-                return {
-                  id: d.id,
-                  materialName: d.materialName,
-                  qty: qty,
-                  receivedQty: received,
-                  remainQty: remain,
-                  receiveQty: remain // 默认收满剩余数量
-                };
-              }).filter(function(it) { return it.remainQty > 0; }); // 已收齐的明细不再出现在收货列表
-              if (!self.partialItems.length) {
-                ReggieUI.warning('该采购单没有待收货的明细');
-                self.partialDialogVisible = false;
-              }
-            }
-          } catch (e) {
-            ReggieUI.error('加载采购明细失败');
-            self.partialDialogVisible = false;
-          }
-        },
-        // 修改点：提交部分收货
-        async submitPartialReceive() {
-          const self = this;
-          var hasQty = self.partialItems.some(function(it) { return it.receiveQty > 0; });
-          if (!hasQty) {
-            ReggieUI.warning('请至少填写一项收货数量');
-            return;
-          }
-          self.partialLoading = true;
-          try {
-            var qtys = {};
-            self.partialItems.forEach(function(it) {
-              if (it.receiveQty > 0) { qtys[it.id] = it.receiveQty; }
-            });
-            var res = await receivePartialPurchase(self.partialOrderId, qtys);
-            if (String(res.code) === '1') {
-              ReggieUI.success('收货成功！库存已更新');
-              self.partialDialogVisible = false;
-              self.handleQuery();
-            } else {
-              ReggieUI.error(res.msg || '收货失败');
-            }
-          } catch (e) {
-            ReggieUI.error('请求失败：' + (e.message || e));
-          } finally {
-            self.partialLoading = false;
-          }
         },
         cancelHandle(row) {
           ReggieUI.confirm('确认取消该采购单?', '提示', {

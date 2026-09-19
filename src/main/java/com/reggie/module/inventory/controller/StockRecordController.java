@@ -49,22 +49,25 @@ public class StockRecordController {
      * @param pageSize 每页数量
      * @param materialId 食材ID（可选）
      * @param type 记录类型（可选）：IN-入库，OUT-出库，CHECK-盘点
+     * @param bizId 业务单ID（可选，如采购单ID，配合 type=IN 查询采购收货记录）
      * @param startDate 开始日期（可选）
      * @param endDate 结束日期（可选）
      * @return 分页结果
      */
     @GetMapping("/page")
-    @Operation(summary = "分页查询", description = "分页查询出入库记录，支持按食材ID、类型和日期范围筛选")
+    @Operation(summary = "分页查询", description = "分页查询出入库记录，支持按食材ID、类型、业务单ID和日期范围筛选")
     @Parameter(name = "page", description = "页码", required = true, example = "1")
     @Parameter(name = "pageSize", description = "每页数量", required = true, example = "10")
     @Parameter(name = "materialId", description = "食材ID（可选）")
     @Parameter(name = "type", description = "类型（可选）：IN-入库，OUT-出库，CHECK-盘点")
+    @Parameter(name = "bizId", description = "业务单ID（可选，如采购单ID）")
     @Parameter(name = "startDate", description = "开始日期（可选）")
     @Parameter(name = "endDate", description = "结束日期（可选）")
     public R<Page<StockRecord>> page(@RequestParam(defaultValue = "1") @Min(1) int page, @RequestParam(defaultValue =
             "10") @Min(1) @Max(100) int pageSize,
                                       @RequestParam(required = false) Long materialId,
                                       @RequestParam(required = false) String type,
+                                      @RequestParam(required = false) Long bizId,
                                       @Parameter(description = "开始日期（可选），格式yyyy-MM-dd")
                                       @RequestParam(required = false) String startDate,
                                       @Parameter(description = "结束日期（可选），格式yyyy-MM-dd")
@@ -76,6 +79,8 @@ public class StockRecordController {
         qw.eq(materialId != null, StockRecord::getMaterialId, materialId);
         // 修改点：添加类型筛选支持，修复前端 type 参数被后端静默丢弃的 Bug
         qw.eq(type != null && !type.isEmpty(), StockRecord::getType, type);
+        // 业务单过滤：采购单详情用 type=IN + bizId=采购单ID 查询该单的收货记录
+        qw.eq(bizId != null, StockRecord::getBizId, bizId);
         // 修改点：添加日期范围筛选支持，修复前端 dateRange 参数被后端静默丢弃的 Bug
         if (startDate != null && !startDate.isEmpty()) {
             LocalDateTime start = LocalDate.parse(startDate).atStartOfDay();
