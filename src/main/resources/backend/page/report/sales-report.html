@@ -43,6 +43,12 @@
       color: var(--el-text-primary);
       margin-bottom: 16px;
     }
+    .chart-title__sub {
+      font-size: var(--font-size-xs);
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
     .chart-container {
       height: 300px;
     }
@@ -97,12 +103,12 @@
     <div class="chart-row">
       <!-- 营业额趋势图 -->
       <div class="chart-card">
-        <div class="chart-title">营业额趋势</div>
+        <div class="chart-title">营业额趋势<span class="chart-title__sub">（{{ periodLabel }}）</span></div>
         <div id="revenueChart" class="chart-container"></div>
       </div>
       <!-- 订单数趋势图 -->
       <div class="chart-card">
-        <div class="chart-title">订单数趋势</div>
+        <div class="chart-title">订单数趋势<span class="chart-title__sub">（{{ periodLabel }}）</span></div>
         <div id="orderChart" class="chart-container"></div>
       </div>
     </div>
@@ -178,6 +184,12 @@
         })
       },
       computed: {
+        // 图表标题中的统计周期，随周报/月报/年报切换实时变化
+        periodLabel: function() {
+          if (this.reportType === 'weekly') return this.year + '年 第' + this.week + '周'
+          if (this.reportType === 'monthly') return this.year + '年' + this.month + '月'
+          return this.year + '年'
+        },
         statsCards: function() {
           const self = this;
           return [
@@ -293,35 +305,47 @@
           const labels = this.detailData.map(d => d.label)
           const revenues = this.detailData.map(d => d.revenue)
           const orders = this.detailData.map(d => d.orderCount)
-          
+          const emptyTitle = { text: '暂无数据', left: 'center', top: 'center',
+            textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+
           // Revenue chart
-          this.revenueChart.setOption({
-            tooltip: { trigger: 'axis' },
-            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-            xAxis: { type: 'category', data: labels },
-            yAxis: { type: 'value', axisLabel: { formatter: '¥{value}' } },
-            series: [{
-              name: '营业额',
-              type: 'bar',
-              data: revenues,
-              itemStyle: { color: RgPalette.linkBlue }
-            }]
-          })
-          
+          // 第二参 true（notMerge）：切换周/月/年后轴与系列口径不同，防止旧配置残留
+          if (!labels.length) {
+            this.revenueChart.setOption({ title: emptyTitle }, true)
+          } else {
+            this.revenueChart.setOption({
+              tooltip: { trigger: 'axis' },
+              grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+              xAxis: { type: 'category', data: labels },
+              yAxis: { type: 'value', name: '营业额(元)', axisLabel: { formatter: '¥{value}' } },
+              series: [{
+                name: '营业额',
+                type: 'bar',
+                data: revenues,
+                itemStyle: { color: RgPalette.linkBlue }
+              }]
+            }, true)
+          }
+
           // Order chart
-          this.orderChart.setOption({
-            tooltip: { trigger: 'axis' },
-            grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-            xAxis: { type: 'category', data: labels },
-            yAxis: { type: 'value' },
-            series: [{
-              name: '订单数',
-              type: 'line',
-              data: orders,
-              itemStyle: { color: RgPalette.success },
-              areaStyle: { opacity: 0.3 }
-            }]
-          })
+          if (!labels.length) {
+            this.orderChart.setOption({ title: emptyTitle }, true)
+          } else {
+            this.orderChart.setOption({
+              tooltip: { trigger: 'axis' },
+              grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+              xAxis: { type: 'category', data: labels },
+              yAxis: { type: 'value', name: '订单数(单)', minInterval: 1,
+                axisLabel: { formatter: '{value} 单' } },
+              series: [{
+                name: '订单数',
+                type: 'line',
+                data: orders,
+                itemStyle: { color: RgPalette.success },
+                areaStyle: { opacity: 0.3 }
+              }]
+            }, true)
+          }
         }
       }
     })

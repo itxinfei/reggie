@@ -104,7 +104,7 @@
   <script>
     (function() {
       // 修改点：颜色统一走 window.RgPalette（单一来源），不再硬编码 hex
-      const COLORS = [RgPalette.brand, RgPalette.success, RgPalette.warning, RgPalette.danger, RgPalette.linkBlue, RgPalette.seriesViolet, RgPalette.emerald, RgPalette.orange500];
+      const COLORS = [RgPalette.brand600, RgPalette.success, RgPalette.warning, RgPalette.danger, RgPalette.linkBlue, RgPalette.seriesViolet, RgPalette.emerald, RgPalette.orange500];
       new Vue({
         el: '#report-timeslot-app',
         data: function() {
@@ -145,11 +145,7 @@
           }
         },
         created: function() {
-          const now = new Date();
-          const first = new Date(now.getFullYear(), now.getMonth(), 1);
-          const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-          var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-          this.dateRange = [fmt(first), fmt(last)];
+          this.dateRange = this.defaultRange();
         },
         mounted: function() {
           const self = this;
@@ -166,6 +162,14 @@
           });
         },
         methods: {
+          // 默认查询区间：本月 1 日 ~ 月末（created 初始化与重置共用）
+          defaultRange: function() {
+            const now = new Date();
+            const first = new Date(now.getFullYear(), now.getMonth(), 1);
+            const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+            return [fmt(first), fmt(last)];
+          },
           // 修改点：独立初始化逻辑，增加安全判断与延迟 resize 防止变形
           initCharts: function() {
             const self = this;
@@ -234,6 +238,15 @@
             const slots = ['早市(6-10)', '午市(10-14)', '下午茶(14-17)', '晚市(17-21)', '夜市(21-6)'];
             var heatData = (data.data || []).map(function(d) { return [d.slotIdx || 0, d.dayIdx || 0, d.value || 0]; });
             const maxVal = data.maxVal || 100;
+            // 空数据（无格子或全部为 0）时给居中占位，避免图区永久空白
+            var isEmpty = !heatData.length || heatData.every(function(d) { return !d[2]; });
+            if (isEmpty) {
+              this.heatmapChart.setOption({
+                title: { text: '暂无时段销售数据', left: 'center', top: 'center',
+                  textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+              }, true);
+              return;
+            }
             this.heatmapChart.setOption({
               tooltip: { formatter: function(p) { return days[p.value[1]] + ' ' + slots[p.value[0]] + ': ' + p.value[2] + ' 单'; },
                 backgroundColor: RgPalette.white, borderColor: RgPalette.borderLighter2, borderWidth: 1,
@@ -248,7 +261,7 @@
                 inRange: { color: [RgPalette.blueSoft,RgPalette.blueSoft2,RgPalette.linkBlue,RgPalette.blueDark,RgPalette.blueDarkest] },
                 text: ['高', '低'], textStyle: { fontSize: 11, color: RgPalette.textRegular } },
               series: [{ type: 'heatmap', data: heatData,
-                label: { show: true, fontSize: 12, color: function(p) { return p.value > maxVal * 0.6 ? RgPalette.white : RgPalette.textPrimary; } },
+                label: { show: true, fontSize: 12, color: function(p) { return p.value[2] > maxVal * 0.6 ? RgPalette.white : RgPalette.textPrimary; } },
                 emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' } } }]
             }, true);
           },
@@ -373,7 +386,12 @@
             if (params && params.dateRange) this.dateRange = params.dateRange;
             this.loadData();
           },
-          handleReset: function() { this.dateRange = []; this.loadData(); },
+          handleReset: function() {
+            // 重置为默认本月区间再查询；清空后立即 loadData 必然触发“请选择日期范围”警告
+            this.dateRange = this.defaultRange();
+            this.tableData = [];
+            this.loadData();
+          },
           handleAction: function(action) { if (action.key === 'export') this.handleExport(); }
         }
       })

@@ -256,7 +256,7 @@
           <template #title>
             <i class="ri-bar-chart-line" style="color:var(--el-color-primary);"></i>
             营收趋势
-            <span style="font-size:var(--font-size-xs);color:var(--text-muted);font-weight:400;margin-left:4px;">（近7日）</span>
+            <span style="font-size:var(--font-size-xs);color:var(--text-muted);font-weight:400;margin-left:4px;">（{{ trendRangeLabel }}）</span>
           </template>
           <div style="flex:1;min-height:300px;" id="trendChart"></div>
         </chart-panel>
@@ -358,7 +358,7 @@
   <script src="../../js/performance-utils.js?v=20260915c"></script>
   <script src="../../api/export.js?v=20260915c"></script>
   <script src="../../api/report.js?v=20260915c"></script>
-  <script src="../../api/dashboard.js?v=20260915c"></script>
+  <script src="../../api/report-enhanced.js?v=20260919a"></script>
   <script src="../../js/components.js?v=20260915c"></script>
   <script src="../../js/chart-panel.js?v=20260915c"></script>
   <script>
@@ -445,6 +445,12 @@
         }
       },
       computed: {
+        // 趋势图标题中的日期范围，随筛选实时变化（单日只显示一个日期）
+        trendRangeLabel() {
+          const q = this.queryDate
+          if (!q || q.length < 2 || !q[0] || !q[1]) return ''
+          return q[0] === q[1] ? q[0] : (q[0] + ' ~ ' + q[1])
+        },
         completionRate() {
           const total = this.dailyData.totalOrders || 0
           const completed = this.dailyData.completedOrders || 0
@@ -542,11 +548,24 @@
               })
             }
 
-            // 趋势数据
-            const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1
-            const trendRes = await dashboardTrend({ days: days })
+            // 趋势数据：严格按所选起止日期按天统计。旧实现调用 dashboardTrend 锚定“今天”往回数 N 天，
+            // 当用户选择历史区间（如上月）时图形与筛选条件不一致；enhanced 接口直接按 startDate/endDate 返回
+            // { labels:['yyyy-MM-dd'...], revenues:[], orders:[] }，这里映射成 renderChart 需要的数组
+            const trendRes = await getSalesTrend({ period: 'day', startDate: startDate, endDate: endDate })
             if (String(trendRes.code) === '1') {
-              this.renderChart(trendRes.data || [])
+              const trendMap = trendRes.data || {}
+              const labels = trendMap.labels || []
+              const revenues = trendMap.revenues || []
+              const orderCounts = trendMap.orders || []
+              // x 轴标签裁剪为 MM-dd，与旧 dashboardTrend 的 date 格式保持一致
+              const trendList = labels.map(function(label, i) {
+                return {
+                  date: String(label).substring(5),
+                  orderCount: Number(orderCounts[i]) || 0,
+                  revenue: Number(revenues[i]) || 0
+                }
+              })
+              this.renderChart(trendList)
             } else {
               this.renderChart([])
             }
@@ -567,13 +586,34 @@
             })
           } finally {
             this.loading = false
+            // v-if 骨架屏在 loading 期间会销毁图表容器，loading 结束 v-else 才重建 DOM。
+            // 此时 echarts 旧实例仍指向已游离的旧节点，必须 nextTick 后重新绑定并用最新数据补绘，否则图表空白
+            this.$nextTick(() => {
+              if (this.lastTrendData !== undefined) this.renderChart(this.lastTrendData)
+              if (this.lastCatData !== undefined) this.renderCategoryChart(this.lastCatData)
+            })
           }
+        },
+        // 取/重建图表实例：若缓存实例已失效（容器被 v-if 重建）则 dispose 旧实例并在新 DOM 上重新 init
+        bindChart(refKey, id) {
+          const el = document.getElementById(id)
+          if (!el) return null
+          let inst = this[refKey]
+          const valid = inst && !inst.isDisposed() && inst.getDom && inst.getDom() === el
+          if (!valid) {
+            if (inst) { try { inst.dispose() } catch (e) {} }
+            inst = echarts.init(el)
+            this[refKey] = inst
+          }
+          return inst
         },
 
         renderChart(trendData) {
-          if (!this.chart) return
+          this.lastTrendData = trendData
+          const chart = this.bindChart('chart', 'trendChart')
+          if (!chart) return
           if (!trendData || trendData.length === 0) {
-            this.chart.setOption({
+            chart.setOption({
               title: { text: '暂无趋势数据', left: 'center', top: 'center',
                 textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
             }, true)
@@ -585,7 +625,7 @@
           const hasData = dates.length > 0
           // 根据数据量自适应柱宽，防止图表拥挤变形
           const barW = dates.length <= 5 ? 32 : dates.length <= 10 ? 26 : 20;
-          this.chart.setOption({
+          chart.setOption({
             tooltip: {
               trigger: 'axis',
               axisPointer: { type: 'cross', crossStyle: { color: RgPalette.graySoft } },
@@ -656,22 +696,23 @@
             ]
           }, true)
           // 渲染后延迟 resize 确保在 flex 布局中尺寸正确
-          const self = this;
-          setTimeout(function() { if (self.chart && !self.chart.isDisposed()) self.chart.resize(); }, 200);
+          setTimeout(function() { if (!chart.isDisposed()) chart.resize(); }, 200);
         },
 
         // 渲染分类销售饼图
         renderCategoryChart(data) {
-          if (!this.categoryChart) return
+          this.lastCatData = data
+          const chart = this.bindChart('categoryChart', 'categoryChart')
+          if (!chart) return
           if (!data || data.length === 0) {
-            this.categoryChart.setOption({
+            chart.setOption({
               title: { text: '暂无分类数据', left: 'center', top: 'center',
                 textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
             }, true)
             return
           }
           const colors = [RgPalette.seriesBlue,RgPalette.seriesGreen,RgPalette.seriesGold,RgPalette.seriesPink,RgPalette.seriesSky,RgPalette.seriesOrange,RgPalette.seriesViolet,RgPalette.seriesMagenta]
-          this.categoryChart.setOption({
+          chart.setOption({
             tooltip: { trigger: 'item', formatter: '{b}: {c} 份({d}%)' },
             legend: { bottom: 4, textStyle: { fontSize: 12 } },
             series: [{

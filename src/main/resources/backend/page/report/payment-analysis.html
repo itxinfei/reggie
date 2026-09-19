@@ -132,12 +132,12 @@
   <script src="../../js/chart-panel.js?v=20260915c"></script>
   <script>
     const CHANNEL_LABEL = { wechat: '微信支付', alipay: '支付宝', balance: '线下/其他', other: '其他渠道' };
-    // 支付渠道配色：wechat/alipay 为平台品牌色（保留 hex），balance/unionpay 引用全局设计令牌
+    // 支付渠道配色：统一走 RgPalette（微信绿/支付宝蓝已收录为调色板字段），canvas 中禁止写 hex
     const CHANNEL_COLOR = {
-      wechat: '#07c160',       // 微信支付品牌绿（平台色，保留）
-      alipay: '#1677ff',       // 支付宝品牌蓝（平台色，保留）
-      balance: RgPalette.brand, // 余额支付 → 品牌金 #ffc200
-      other: RgPalette.warning // 其他渠道 → 警告橙 #e6a23c
+      wechat: RgPalette.wechatGreen, // 微信支付品牌绿
+      alipay: RgPalette.alipayBlue,  // 支付宝品牌蓝
+      balance: RgPalette.brand,      // 余额支付 → 品牌金
+      other: RgPalette.warning       // 其他渠道 → 警告橙
     };
 
     (function() {
@@ -191,11 +191,7 @@
           }
         },
         created: function() {
-          const now = new Date();
-          const first = new Date(now.getFullYear(), now.getMonth(), 1);
-          const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-          var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-          this.dateRange = [fmt(first), fmt(last)];
+          this.dateRange = this.defaultRange();
         },
         mounted: function() {
           const self = this;
@@ -232,6 +228,14 @@
           });
         },
         methods: {
+          // 默认查询区间：本月 1 日 ~ 月末（created 初始化与重置共用）
+          defaultRange: function() {
+            const now = new Date();
+            const first = new Date(now.getFullYear(), now.getMonth(), 1);
+            const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+            return [fmt(first), fmt(last)];
+          },
           loadData: function() {
             const self = this;
             if (!self.dateRange || self.dateRange.length < 2) {
@@ -336,19 +340,20 @@
               series: [
                 { name: '微信支付', type: 'line', data: data.wechat || [], smooth: true, symbol: 'circle', symbolSize: 6,
                   lineStyle: { color: RgPalette.wechatGreen, width: 3 }, itemStyle: { color: RgPalette.wechatGreen, borderColor: RgPalette.white, borderWidth: 2 },
-                  areaStyle: { color: makeAreaGrad(RgPalette.wechatGreen) } },
+                  // 面积半透明（opacity 0.15），三条线重叠时互不遮盖
+                  areaStyle: { color: makeAreaGrad(RgPalette.wechatGreen), opacity: 0.15 } },
                 { name: '支付宝', type: 'line', data: data.alipay || [], smooth: true, symbol: 'circle', symbolSize: 6,
                   lineStyle: { color: RgPalette.alipayBlue, width: 3 }, itemStyle: { color: RgPalette.alipayBlue, borderColor: RgPalette.white, borderWidth: 2 },
-                  areaStyle: { color: makeAreaGrad(RgPalette.alipayBlue) } },
+                  areaStyle: { color: makeAreaGrad(RgPalette.alipayBlue), opacity: 0.15 } },
                 { name: '线下/其他', type: 'line', data: data.balance || [], smooth: true, symbol: 'circle', symbolSize: 6,
                   lineStyle: { color: RgPalette.warning, width: 3 }, itemStyle: { color: RgPalette.warning, borderColor: RgPalette.white, borderWidth: 2 },
-                  areaStyle: { color: makeAreaGrad(RgPalette.warning) } }
+                  areaStyle: { color: makeAreaGrad(RgPalette.warning), opacity: 0.15 } }
               ]
             }, true);
           },
           reset: function() {
             this.dateRange = []; this.tableData = [];
-            [this.pieChart, this.barChart, this.trendChart].forEach(function(ch) {
+            [this.pieChart, this.barChart, this.trendChart, this.refundChart].forEach(function(ch) {
               if (ch && !ch.isDisposed()) ch.clear();
             });
           },
@@ -394,8 +399,9 @@
               if (this.barChart) this.barChart.setOption({ title: { text: '暂无支付数据', left: 'center', top: 'center',
                 textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }, true); return;
             }
-            var names = this.tableData.map(function(r) { return r.channel; });
-            var counts = this.tableData.map(function(r) { return r.transactionCount; });
+            var rows = this.tableData;
+            var names = rows.map(function(r) { return r.channel; });
+            var counts = rows.map(function(r) { return r.transactionCount; });
             var amounts = this.tableData.map(function(r) { return r.amount != null ? Number(r.amount).toFixed(2) : 0; });
             var hasAmount = this.tableData.some(function(r) { return r.amount != null; });
             const barW = names.length <= 2 ? 48 : names.length <= 3 ? 36 : 24;
@@ -430,7 +436,8 @@
               series: [
                 { name: '交易笔数', type: 'bar', data: counts, barWidth: barW,
                   itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0],
-                    color: function(p) { const key = Object.keys(CHANNEL_COLOR)[p.dataIndex]; return CHANNEL_COLOR[key] || RgPalette.textSecondary; } },
+                    // 按数据行真实渠道 key 取色（旧实现按 Object.keys 下标，渠道缺失/乱序时会错配）
+                    color: function(p) { const row = rows[p.dataIndex] || {}; return CHANNEL_COLOR[row.key] || RgPalette.textSecondary; } },
                   label: { show: true, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c} 笔' } },
                 hasAmount ? { name: '交易金额', type: 'line', yAxisIndex: 1, data: amounts,
                   smooth: true, symbol: 'emptyCircle', symbolSize: 8,
@@ -465,7 +472,12 @@
             if (params && params.dateRange) this.dateRange = params.dateRange;
             this.loadData();
           },
-          handleReset: function() { this.dateRange = []; this.loadData(); },
+          handleReset: function() {
+            // 重置为默认本月区间再查询；清空后立即 loadData 必然触发“请选择日期范围”警告
+            this.dateRange = this.defaultRange();
+            this.tableData = [];
+            this.loadData();
+          },
           handleAction: function(action) { if (action.key === 'export') this.handleExport(); }
         }
       })

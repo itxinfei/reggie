@@ -155,7 +155,7 @@
         <div class="full-width-row">
             <div class="chart-panel">
                 <div class="panel-title"><i class="ri-line-chart-line" aria-hidden="true"></i> 多店营收趋势（近 7 天）</div>
-                <div class="panel-sub">各门店每日完成订单营收对比 · 多折线图</div>
+                <div class="panel-sub">{{ isStoreMode ? '全门店对比 · ' : '' }}各门店每日完成订单营收对比 · 多折线图</div>
                 <div class="chart-box" id="trendChart"></div>
             </div>
         </div>
@@ -165,7 +165,7 @@
             <!-- 品类销售对比（堆叠柱状图） -->
             <div class="chart-panel">
                 <div class="panel-title"><i class="ri-pie-chart-2-line" aria-hidden="true"></i> 品类销售对比（近 7 天）</div>
-                <div class="panel-sub">各门店各品类的销售金额占比 · 堆叠柱状图</div>
+                <div class="panel-sub">{{ isStoreMode ? '全门店对比 · ' : '' }}各门店各品类的销售金额占比 · 堆叠柱状图</div>
                 <div class="chart-box" id="categoryChart"></div>
             </div>
 
@@ -455,6 +455,8 @@
             if (!dom) return;
             if (!this.barChart) this.barChart = echarts.init(dom);
             var hasData = stores.length > 0;
+            // 门店过多时常显标签会互相压叠，超过 12 家只在 tooltip 中查看数值
+            var showLabel = hasData && stores.length <= 12;
             var names = hasData ? stores.map(function(s) { return s.storeName; }) : ['暂无数据'];
             var orders = hasData ? stores.map(function(s) { return s.todayOrders || 0; }) : [0];
             var amounts = hasData ? stores.map(function(s) { return s.todayAmount || 0; }) : [0];
@@ -517,15 +519,16 @@
                                 return colors[p.dataIndex % colors.length];
                             }
                         },
-                        label: { show: hasData, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c}' }
+                        label: { show: showLabel, position: 'top', fontSize: 12, fontWeight: 600, formatter: '{c}' }
                     },
                     {
                         name: '营收', type: 'line', yAxisIndex: 1, data: amounts,
                         smooth: true, symbol: 'emptyCircle', symbolSize: 8,
-                        lineStyle: { color: RgPalette.brand, width: 3 },
-                        itemStyle: { color: RgPalette.brand, borderColor: RgPalette.white, borderWidth: 2 },
+                        // 折线用 brandDark：第一名柱子是 brand 金，同色折线压在柱上无法区分
+                        lineStyle: { color: RgPalette.brandDark, width: 3 },
+                        itemStyle: { color: RgPalette.brandDark, borderColor: RgPalette.white, borderWidth: 2 },
                         label: {
-                            show: hasData, position: 'top', fontSize: 12, fontWeight: 700, color: RgPalette.brandDark,
+                            show: showLabel, position: 'top', fontSize: 12, fontWeight: 700, color: RgPalette.brandDark,
                             formatter: function(p) { return '¥' + Number(p.value).toFixed(0); }
                         }
                     }
@@ -548,10 +551,17 @@
         // ==================== 集团汇总看板：多店营收趋势折线图 ====================
         renderTrendChart() {
             var data = this.trendData;
-            if (!data || !data.dates || !data.stores || data.stores.length === 0) return;
             var dom = document.getElementById('trendChart');
             if (!dom) return;
             if (!this.trendChart) this.trendChart = echarts.init(dom);
+            if (!data || !data.dates || !data.stores || data.stores.length === 0) {
+                // 空数据/接口失败：显式占位，避免面板永久留白
+                this.trendChart.setOption({
+                    title: { text: '暂无趋势数据', left: 'center', top: 'center',
+                        textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+                }, true);
+                return;
+            }
 
             var self = this;
             var colors = [RgPalette.brand, RgPalette.seriesBlue, RgPalette.seriesGreen, RgPalette.seriesOrange,
@@ -609,10 +619,17 @@
         // ==================== 集团汇总看板：品类销售对比堆叠柱状图 ====================
         renderCategoryChart() {
             var data = this.categoryData;
-            if (!data || data.length === 0) return;
             var dom = document.getElementById('categoryChart');
             if (!dom) return;
             if (!this.categoryChart) this.categoryChart = echarts.init(dom);
+            // 空数据/接口失败：显式占位，避免面板永久留白
+            if (!data || data.length === 0) {
+                this.categoryChart.setOption({
+                    title: { text: '暂无品类数据', left: 'center', top: 'center',
+                        textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+                }, true);
+                return;
+            }
 
             // 提取所有品类名称（并集）
             var categorySet = {};
@@ -622,7 +639,13 @@
                 });
             });
             var allCategories = Object.keys(categorySet);
-            if (allCategories.length === 0) return;
+            if (allCategories.length === 0) {
+                this.categoryChart.setOption({
+                    title: { text: '暂无品类数据', left: 'center', top: 'center',
+                        textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+                }, true);
+                return;
+            }
 
             var colors = [RgPalette.brand, RgPalette.seriesBlue, RgPalette.seriesGreen, RgPalette.seriesOrange,
                           RgPalette.seriesCyan, RgPalette.seriesPurple, RgPalette.seriesMagenta, RgPalette.seriesPink];

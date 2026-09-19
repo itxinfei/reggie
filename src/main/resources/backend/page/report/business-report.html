@@ -435,9 +435,10 @@
             ],
             series: [
               { name: '营业额', type: 'bar', data: revs, barWidth: '45%',
-                itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0], color: RgPalette.brand } },
+                // 全页统一语义色：金额=seriesGreen、单数=seriesBlue（与时段图一致）
+                itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0], color: RgPalette.seriesGreen } },
               { name: '订单数', type: 'line', data: ords, yAxisIndex: 1, smooth: true, symbol: 'none',
-                lineStyle: { color: RgPalette.emerald, width: 2 } }
+                lineStyle: { color: RgPalette.seriesBlue, width: 2 } }
             ]
           }, true)
         },
@@ -479,8 +480,11 @@
           }
           var rows = this.slotRows
           if (!rows.length) {
-            this.slotChart.clear()
-            this.slotPieChart.clear()
+            // 空数据给居中占位，避免图区永久空白
+            var emptyOpt = { title: { text: '当前日期范围内暂无时段数据', left: 'center', top: 'center',
+              textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }
+            if (this.slotChart) this.slotChart.setOption(emptyOpt, true)
+            if (this.slotPieChart) this.slotPieChart.setOption(emptyOpt, true)
             return
           }
           var labels = rows.map(function(r) { return r.name })
@@ -497,9 +501,9 @@
             ],
             series: [
               { name: '订单数', type: 'bar', data: counts, barWidth: '50%',
-                itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0], color: RgPalette.brand } },
+                itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0], color: RgPalette.seriesBlue } },
               { name: '营业额', type: 'line', data: amounts, yAxisIndex: 1, smooth: true, symbol: 'none',
-                lineStyle: { color: RgPalette.amber500, width: 2 } }
+                lineStyle: { color: RgPalette.seriesGreen, width: 2 } }
             ]
           }, true)
           this.slotPieChart.setOption({
@@ -551,7 +555,9 @@
           }
           var rows = this.rankingRows
           if (!rows.length) {
-            this.rankChart.clear()
+            if (this.rankChart) this.rankChart.setOption({ title: { text: '当前日期范围内暂无热销菜品',
+              left: 'center', top: 'center',
+              textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }, true)
             return
           }
           var top = rows.slice(0, 10)

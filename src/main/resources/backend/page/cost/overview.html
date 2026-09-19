@@ -106,7 +106,7 @@
 
       <!-- 成本排名（整行卡片） -->
       <div class="chart-panel" style="margin-bottom: var(--space-4);">
-        <div class="chart-title">菜品成本排名</div>
+        <div class="chart-title">菜品成本排名<span style="font-size:var(--font-size-xs);color:var(--text-muted);font-weight:400;margin-left:6px;">（不限时间，按累计成本 Top10）</span></div>
         <div id="rankingChart" class="chart-container"></div>
       </div>
 
@@ -298,20 +298,27 @@
               this.summary = summaryRes.data
             }
 
-            if (trendRes && trendRes.code === 1) {
+            // 成功用新数据渲染；失败/异常置空并渲染空态，避免图区保留旧图或永久留白
+            if (trendRes && trendRes.code === 1 && trendRes.data) {
               this.trendData = trendRes.data
-              this.updateTrendChart()
+            } else {
+              this.trendData = { dates: [], materialCosts: [], laborCosts: [], otherCosts: [], totalCosts: [] }
             }
+            this.updateTrendChart()
 
             if (structureRes && structureRes.code === 1) {
               this.structureData = structureRes.data.structure || []
-              this.updateStructureChart()
+            } else {
+              this.structureData = []
             }
+            this.updateStructureChart()
 
             if (rankingRes && rankingRes.code === 1) {
-              this.rankingData = rankingRes.data
-              this.updateRankingChart()
+              this.rankingData = rankingRes.data || []
+            } else {
+              this.rankingData = []
             }
+            this.updateRankingChart()
 
             if (alertRes && alertRes.code === 1) {
               this.alerts = alertRes.data || []
@@ -331,9 +338,24 @@
         },
         /* ── 图表渲染 ── */
         updateTrendChart() {
+          if (!this.trendData || !this.trendData.dates || this.trendData.dates.length === 0) {
+            this.trendChart.setOption({
+              title: { text: '暂无成本趋势数据', left: 'center', top: 'center',
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+            }, true)
+            return
+          }
           const option = {
             tooltip: {
-              trigger: 'axis'
+              trigger: 'axis',
+              // Y 轴带 ¥ 前缀，tooltip 金额也需带单位，避免裸数字与坐标轴口径不一致
+              formatter: function(params) {
+                var html = '<b>' + params[0].axisValue + '</b>'
+                params.forEach(function(p) {
+                  html += '<br/>' + p.marker + ' ' + p.seriesName + '：<b>¥' + Number(p.value).toFixed(2) + '</b>'
+                })
+                return html
+              }
             },
             legend: {
               data: ['食材成本', '人工成本', '其他成本', '总成本']
@@ -389,13 +411,22 @@
               }
             ]
           }
-          this.trendChart.setOption(option)
+          this.trendChart.setOption(option, true)
         },
         updateStructureChart() {
+          if (!this.structureData || this.structureData.length === 0) {
+            this.structureChart.setOption({
+              title: { text: '暂无成本数据', left: 'center', top: 'center',
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+            }, true)
+            return
+          }
           const option = {
             tooltip: {
               trigger: 'item',
-              formatter: '{a} <br/>{b}: {c} ({d}%)'
+              formatter: function(p) {
+                return p.seriesName + '<br/>' + p.marker + p.name + '：<b>¥' + Number(p.value).toFixed(2) + '</b>（' + p.percent + '%）'
+              }
             },
             legend: {
               orient: 'vertical',
@@ -436,14 +467,25 @@
               }
             ]
           }
-          this.structureChart.setOption(option)
+          this.structureChart.setOption(option, true)
         },
         updateRankingChart() {
+          if (!this.rankingData || this.rankingData.length === 0) {
+            this.rankingChart.setOption({
+              title: { text: '暂无成本排名数据', left: 'center', top: 'center',
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+            }, true)
+            return
+          }
           const option = {
             tooltip: {
               trigger: 'axis',
               axisPointer: {
                 type: 'shadow'
+              },
+              formatter: function(params) {
+                var p = params[0]
+                return '<b>' + p.name + '</b><br/>' + p.marker + ' 总成本：<b>¥' + Number(p.value).toFixed(2) + '</b>'
               }
             },
             grid: {
@@ -477,7 +519,7 @@
               }
             ]
           }
-          this.rankingChart.setOption(option)
+          this.rankingChart.setOption(option, true)
         },
         /* ── 筛选与导出 ── */
         resetQuery() {

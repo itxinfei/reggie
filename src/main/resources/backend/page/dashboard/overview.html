@@ -103,6 +103,14 @@
       min-height: 300px;
       flex: 1;
     }
+    /* ECharts 脚本加载失败时的图表区占位 */
+    .chart-box--failed {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: var(--font-size-base);
+    }
 
     /* ========== 底部面板 ========== */
     .bottom-row {
@@ -499,11 +507,13 @@
               <el-radio-button :label="30">30天</el-radio-button>
             </el-radio-group>
           </div>
-          <div class="chart-box" id="trendChart" role="img" :aria-label="'近' + trendDays + '日订单与营收趋势图表'"></div>
+          <div class="chart-box" id="trendChart" v-show="!echartsLoadFailed" role="img" :aria-label="'近' + trendDays + '日订单与营收趋势图表'"></div>
+          <div v-if="echartsLoadFailed" class="chart-box chart-box--failed">图表加载失败，请刷新重试</div>
         </div>
         <div class="chart-panel">
           <div class="chart-title"><i class="ri-pie-chart-line" aria-hidden="true"></i> 今日订单状态分布</div>
-          <div class="chart-box" id="statusChart" role="img" aria-label="今日订单状态分布环形图"></div>
+          <div class="chart-box" id="statusChart" v-show="!echartsLoadFailed" role="img" aria-label="今日订单状态分布环形图"></div>
+          <div v-if="echartsLoadFailed" class="chart-box chart-box--failed">图表加载失败，请刷新重试</div>
         </div>
       </div>
 
@@ -649,6 +659,8 @@
           trend: [],
           // 修改点：趋势图天数切换（7/14/30天）
           trendDays: 7,
+          // ECharts 脚本懒加载失败标志：失败时图表区显示占位文案而非静默留白
+          echartsLoadFailed: false,
           orderStatus: {},
           hotDishes: [],
           inventoryAlert: null,
@@ -787,12 +799,14 @@
               // 图表渲染不阻塞 KPI 展示：ECharts 加载失败仅跳过图表，不影响其余数据
               try {
                 await this.ensureEcharts();
+                this.echartsLoadFailed = false;
                 this.$nextTick(() => {
                   this.renderTrendChart();
                   this.renderStatusChart();
                 });
               } catch (e) {
                 console.warn('ECharts 加载失败，已跳过图表渲染', e);
+                this.echartsLoadFailed = true;
               }
             } else {
               ReggieUI.error(res.msg || '数据加载失败');
@@ -807,13 +821,21 @@
         // 修改点：切换趋势图天数，重新加载趋势数据
         async switchTrendDays(days) {
           try {
+            // 初次懒加载若失败过，切换时再尝试加载一次，避免静默无响应
+            if (!this.echartsReady()) {
+              await this.ensureEcharts();
+            }
+            this.echartsLoadFailed = false;
             var res = await dashboardTrend({ days: days });
             if (String(res.code) === '1') {
               this.trend = res.data || [];
-              this.renderTrendChart();
+              this.$nextTick(() => this.renderTrendChart());
+            } else {
+              ReggieUI.error(res.msg || '趋势数据加载失败');
             }
           } catch (e) {
             console.warn('切换趋势图天数失败:', e);
+            if (!this.echartsReady()) this.echartsLoadFailed = true;
           }
         },
 
@@ -906,6 +928,8 @@
           const revenues = this.trend.map(t => Number(t.revenue) || 0);
 
           const emptyData = dates.length === 0;
+          // 数据点较多（切到 30 天）时常显柱顶/折点标签会互相压叠，超过 14 个点仅靠 tooltip 查看数值
+          const showPointLabel = !emptyData && dates.length <= 14;
           const xData = emptyData ? ['暂无数据'] : dates;
           const barData = emptyData ? [0] : orders;
           const lineData = emptyData ? [0] : revenues;
@@ -931,7 +955,7 @@
               }
             },
             legend: {
-              data: ['订单数', '营业额'],
+              data: ['订单量', '营业额'],
               bottom: 8,
               itemWidth: 14,
               itemHeight: 14,
@@ -972,7 +996,7 @@
             ],
             series: [
               {
-                name: '订单数',
+                name: '订单量',
                 type: 'bar',
                 data: barData,
                 barWidth: 28,
@@ -982,7 +1006,7 @@
                   color: RgPalette.brand
                 },
                 label: {
-                  show: !emptyData,
+                  show: showPointLabel,
                   position: 'top',
                   color: RgPalette.brand800,
                   fontSize: 12,
@@ -1013,7 +1037,7 @@
                   color: RgPalette.successArea
                 },
                 label: {
-                  show: !emptyData,
+                  show: showPointLabel,
                   position: 'top',
                   color: RgPalette.successDeep,
                   fontSize: 14,

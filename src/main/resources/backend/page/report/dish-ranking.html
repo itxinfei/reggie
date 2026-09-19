@@ -148,7 +148,7 @@
             { prop: 'rank', label: '排名', width: 80, align: 'center', slot: true },
             { prop: 'name', label: '菜品名称', width: 140 },
             { prop: 'count', label: '销量（份）', width: 120, type: 'number' },
-            { prop: 'ratio', label: '占比', width: 140, align: 'center', slot: true }
+            { prop: 'ratio', label: '相对榜首', width: 140, align: 'center', slot: true }
           ],
           stats: { totalDishes: 0, topDishes: 0, totalSales: 0, avgSales: 0 },
           chart: null, trendChart: null, resizeHandler: null
@@ -160,11 +160,14 @@
         },
         statsCards: function() {
           const self = this;
+          // 统计仅基于当前 Top N 榜单（接口按 limit 截断），文案明确口径避免误解为全店总计
+          const topN = self.limit;
+          const topSales = self.tableData.length ? (self.tableData[0].count || 0) : 0;
           return [
-            { key: '菜品', icon: 'ri-restaurant-2-line', label: '上榜菜品', value: self.stats.totalDishes || 0, color: 'primary' },
-            { key: '上榜', icon: 'ri-trophy-line', label: '上榜菜品', value: self.stats.topDishes || 0, color: 'success' },
-            { key: '总销量', icon: 'ri-bar-chart-2-line', label: '总销量（份）', value: self.stats.totalSales || 0, color: 'warning' },
-            { key: '平均', icon: 'ri-line-chart-line', label: '平均销量', value: self.stats.avgSales || 0, color: 'info' }
+            { key: '菜品', icon: 'ri-restaurant-2-line', label: '在榜菜品数（Top' + topN + '）', value: self.stats.totalDishes || 0, color: 'primary' },
+            { key: '榜首', icon: 'ri-trophy-line', label: '榜首销量（份）', value: topSales, color: 'success' },
+            { key: '总销量', icon: 'ri-bar-chart-2-line', label: '在榜总销量（份）', value: self.stats.totalSales || 0, color: 'warning' },
+            { key: '平均', icon: 'ri-line-chart-line', label: '在榜平均销量（份）', value: self.stats.avgSales || 0, color: 'info' }
           ]
         }
       },
@@ -226,46 +229,51 @@
           // 修改点：传递分类筛选参数
           if (self.categoryId) { params.categoryId = self.categoryId; }
 
-          Promise.all([reportDishRanking(params), self.loadDishRankingStats()])
-            .then(function(results) {
-              const rankRes = results[0], statsRes = results[1];
-              if (String(rankRes.code) === '1') {
-                self.tableData = rankRes.data || [];
+          // 榜单与统计共用同一次请求结果（旧实现用相同参数请求两次）
+          reportDishRanking(params)
+            .then(function(res) {
+              if (String(res.code) === '1') {
+                const rows = res.data || [];
+                self.tableData = rows;
+                self.stats = self.computeStats(rows);
                 self.renderChart();
                 self.loadTopTrend();
-              } else { ReggieUI.error(rankRes.msg || '加载失败'); }
-              if (statsRes && String(statsRes.code) === '1') {
-                self.stats = statsRes.data || self.stats;
-              }
+              } else { ReggieUI.error(res.msg || '加载失败'); }
             }).catch(function(err) { ReggieUI.error('请求失败：' + err); })
             .finally(function() { self.loading = false; });
         },
-        loadDishRankingStats: function() {
-          const self = this;
-          const statsParams = { limit: self.limit, startDate: self.dateRange ? self.dateRange[0] : '', endDate: self.dateRange ? self.dateRange[1] : '' };
-          if (self.categoryId) { statsParams.categoryId = self.categoryId; }
-          return reportDishRanking(statsParams).then(function(res) {
-            if (String(res.code) === '1') {
-              const data = res.data || [];
-              var totalSales = data.reduce(function(s, i) { return s + (i.count || 0); }, 0);
-              const avgSales = data.length > 0 ? Math.round(totalSales / data.length) : 0;
-              return { code: 1, data: { totalDishes: data.length, topDishes: data.length, totalSales: totalSales, avgSales: avgSales } };
-            }
-            return { code: 0 };
-          }).catch(function() { return { code: 0 }; });
+        // 统计口径：当前 Top N 榜单内汇总（接口本身按 limit 截断，非全店数据）
+        computeStats: function(rows) {
+          const data = rows || [];
+          var totalSales = data.reduce(function(s, i) { return s + (i.count || 0); }, 0);
+          const avgSales = data.length > 0 ? Math.round(totalSales / data.length) : 0;
+          return { totalDishes: data.length, topDishes: data.length, totalSales: totalSales, avgSales: avgSales };
         },
         loadTopTrend: function() {
           const self = this;
-          if (!self.tableData || self.tableData.length === 0 || !self.trendChart) return;
+          if (!self.trendChart) return;
+          if (!self.tableData || self.tableData.length === 0) { self.showTrendEmpty(); return; }
           var top3Names = self.tableData.slice(0, 3).map(function(d) { return d.name; });
-          if (top3Names.length === 0) return;
+          if (top3Names.length === 0) { self.showTrendEmpty(); return; }
           reportDishTrend({
             names: top3Names.join(','),
             startDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[0] : '',
             endDate: self.dateRange && self.dateRange.length >= 2 ? self.dateRange[1] : ''
           }).then(function(res) {
             if (res.code === 1 && res.data) self.renderTrendChart(res.data);
-          }).catch(function(err) { console.warn('[菜品排行] 加载趋势数据失败:', err) });
+            else self.showTrendEmpty();
+          }).catch(function(err) {
+            // 趋势为附属图，失败不弹错误条，图区给占位避免永久留白
+            console.warn('[菜品排行] 加载趋势数据失败:', err);
+            self.showTrendEmpty();
+          });
+        },
+        showTrendEmpty: function() {
+          if (!this.trendChart) return;
+          this.trendChart.setOption({
+            title: { text: '暂无趋势数据', left: 'center', top: 'center',
+              textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+          }, true);
         },
         renderTrendChart: function(data) {
           if (!this.trendChart) return;
@@ -381,7 +389,7 @@
             ReggieUI.warning('暂无数据可导出'); return;
           }
           const esc = function(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"' }
-          const header = ['排名', '菜品名称', '销量（份）', '占比']
+          const header = ['排名', '菜品名称', '销量（份）', '相对榜首(%)']
           const lines = self.tableData.map(function(r, i) {
             return [i + 1, r.name, r.count, self.calcPercent(r.count) + '%'].map(esc).join(',')
           })

@@ -13,7 +13,14 @@
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
     /* ========== 采购管理专用样式 ========== */
-    .purchase-chart { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px 24px; box-shadow: var(--shadow-sm); margin-bottom: 20px; height: 340px; }
+    /* 采购趋势卡片：标题头 + 图表主体（紧凑档内边距，与全站卡片一致） */
+    .purchase-chart { background: var(--bg-surface); border-radius: var(--radius-md); padding: var(--space-3) var(--space-3) var(--space-2); box-shadow: var(--shadow-sm); margin-bottom: var(--space-3); }
+    .purchase-chart__head { display: flex; align-items: baseline; gap: var(--space-2); margin-bottom: 4px; }
+    .purchase-chart__title { display: flex; align-items: center; gap: 6px; font-size: var(--font-size-base); font-weight: 600; color: var(--text-primary); }
+    .purchase-chart__title i { color: var(--color-brand-500); font-size: var(--font-size-base); }
+    .purchase-chart__sub { font-size: var(--font-size-sm, 12px); color: var(--text-muted); }
+    .purchase-chart__body { height: 280px; }
+    .purchase-chart__empty { height: 280px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: var(--font-size-sm, 12px); }
     .detail-row { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
   
     /* 采购管理表单宽度工具类（弹窗内表单用：page.css 的 --narrow* 仅限 .container .tableBar 搜索区，不可复用于弹窗）
@@ -62,9 +69,6 @@
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
       <stat-cards :cards="statsCards" :active-key.sync="cardFilter" @card-click="onCardClick"></stat-cards>
 
-      <!-- 采购趋势图 -->
-      <div class="purchase-chart" id="purchaseTrendChart"></div>
-
       <!-- 修改点：使用 <table-bar> 统一组件替代手写 HTML -->
       <table-bar
         :search-items="tableSearchItems"
@@ -85,6 +89,16 @@
           </el-select>
         </template>
       </table-bar>
+
+      <!-- 采购趋势：近30天每日新建采购单的金额（柱）与单数（线），全局统计不随上方筛选变化 -->
+      <div class="purchase-chart">
+        <div class="purchase-chart__head">
+          <span class="purchase-chart__title"><i class="ri-line-chart-line"></i>近30天采购趋势</span>
+          <span class="purchase-chart__sub">按天统计新建采购单金额与单数（含全部状态，不受上方筛选影响）</span>
+        </div>
+        <div class="purchase-chart__body" id="purchaseTrendChart" v-show="!trendEmpty"></div>
+        <div class="purchase-chart__empty" v-if="trendEmpty">近30天暂无采购数据</div>
+      </div>
 
       <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination（与库存流水页一致，修复表格样式不一致） -->
       <crud-table
@@ -277,6 +291,7 @@
           input: { supplierId: '', status: '' },
           supplierOptions: [], materialOptions: [],
           trendChart: null,
+          trendEmpty: false,
           formData: {
             title: '新增采购单', dialogVisible: false,
             supplierId: '', operator: '', remark: '',
@@ -348,7 +363,8 @@
             if (statsRes && String(statsRes.code) === '1') {
               this.stats = {
                 totalOrders: statsRes.data.monthPOCount || 0,
-                pendingApprove: (statsRes.data.monthPOCount || 0),
+                // 待审核数只能取 DRAFT 状态计数（下方单独查询），不可先用本月单数占位，否则草稿查询失败时显示错误数字
+                pendingApprove: 0,
                 pendingReceive: statsRes.data.pendingReceiveCount || 0,
                 monthAmount: statsRes.data.monthPOAmount || 0
               }
@@ -382,37 +398,68 @@
         async renderTrendChart() {
           const dom = document.getElementById('purchaseTrendChart')
           if (!dom) return
-          // 修改点：echarts 依赖外部 CDN，加载失败时给出占位提示而非 340px 空白块（避免误判为布局问题）
+          // echarts 为本地 plugins 引入；异常缺失时在空态位给出提示，不渲染空白块
           if (typeof echarts === 'undefined') {
-            dom.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:var(--font-size-sm);">图表组件加载失败，请检查网络后刷新</div>'
+            this.trendEmpty = true
             return
           }
-          if (!this.trendChart) this.trendChart = echarts.init(dom)
+          let dates = [], amounts = [], counts = []
           try {
             const res = await inventoryPurchaseTrend()
-            let dates = [], amounts = [], counts = []
-            if (res && String(res.code) === '1' && res.data) {
+            if (res && String(res.code) === '1' && Array.isArray(res.data)) {
               res.data.forEach(d => {
-                dates.push(d.date); amounts.push(Number(d.amount) || 0); counts.push(d.count || 0)
+                dates.push(d.date)
+                amounts.push(Number(d.amount) || 0)
+                counts.push(Number(d.count) || 0)
               })
             }
-            if (dates.length === 0) { dates = ['暂无']; amounts = [0]; counts = [0] }
-            this.trendChart.setOption({
-              color: ['var(--color-brand-500)', 'var(--color-success)'],
-              tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-              legend: { data: ['采购金额', '采购单数'], bottom: 0 },
-              grid: { left: 60, right: 60, top: 30, bottom: 40 },
-              xAxis: { type: 'category', data: dates, axisLabel: { rotate: 45, fontSize: 11 } },
-              yAxis: [
-                { type: 'value', name: '金额(元)', axisLabel: { formatter: '¥{value}' }, splitLine: { lineStyle: { type: 'dashed' } } },
-                { type: 'value', name: '单数' }
-              ],
-              series: [
-                { name: '采购金额', type: 'bar', data: amounts, barWidth: 14, itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0], color: 'var(--color-brand-500)' } },
-                { name: '采购单数', type: 'line', yAxisIndex: 1, data: counts, smooth: true, lineStyle: { width: 2, color: 'var(--color-success)' }, symbol: 'circle', symbolSize: 6 }
-              ]
-            })
           } catch (e) { console.warn('趋势图加载失败:', e) }
+          // 本月无任何采购单：显示空态，不渲染 0 值假日柱子
+          const hasData = amounts.some(v => v > 0) || counts.some(v => v > 0)
+          this.trendEmpty = !hasData
+          if (!hasData) return
+          await this.$nextTick()
+          if (!this.trendChart) this.trendChart = echarts.init(dom)
+          const P = window.RgPalette
+          const moneyFmt = window.RgFormat ? window.RgFormat.formatMoney : function(v) { return Number(v).toFixed(2) }
+          this.trendChart.setOption({
+            color: [P.brand, P.success],
+            tooltip: {
+              trigger: 'axis', axisPointer: { type: 'shadow' },
+              formatter: function(params) {
+                let html = params[0].axisValue + '<br/>'
+                params.forEach(p => {
+                  const val = p.seriesName === '采购金额' ? ('¥' + moneyFmt(p.value)) : (p.value + ' 单')
+                  html += p.marker + p.seriesName + '：' + val + '<br/>'
+                })
+                return html
+              }
+            },
+            legend: { data: ['采购金额', '采购单数'], bottom: 0, itemWidth: 14, itemHeight: 8, textStyle: { color: P.textSecondary } },
+            grid: { left: 56, right: 48, top: 24, bottom: 38, containLabel: true },
+            xAxis: {
+              type: 'category', data: dates,
+              axisLabel: { rotate: dates.length > 20 ? 45 : 0, fontSize: 11, color: P.textSecondary },
+              axisLine: { lineStyle: { color: P.borderLighter } }, axisTick: { show: false }
+            },
+            yAxis: [
+              {
+                type: 'value', name: '金额(元)', nameTextStyle: { color: P.textSecondary, align: 'left' },
+                axisLabel: { color: P.textSecondary, formatter: function(v) { return Math.abs(v) >= 10000 ? (v / 10000) + '万' : v } },
+                splitLine: { lineStyle: { type: 'dashed', color: P.borderLighter } }
+              },
+              {
+                type: 'value', name: '单数', minInterval: 1, nameTextStyle: { color: P.textSecondary, align: 'right' },
+                axisLabel: { color: P.textSecondary }, splitLine: { show: false }
+              }
+            ],
+            series: [
+              { name: '采购金额', type: 'bar', data: amounts, barMaxWidth: 22, itemStyle: { borderRadius: [P.radiusMd, P.radiusMd, 0, 0], color: P.brand } },
+              { name: '采购单数', type: 'line', yAxisIndex: 1, data: counts, smooth: true, symbol: 'circle', symbolSize: 6, lineStyle: { width: 2, color: P.success }, itemStyle: { color: P.success } }
+            ]
+          })
+          // 容器在 v-show 由隐藏切显示后需校正一次尺寸
+          this.trendChart.resize()
         },
         filterByStatus(status) {
           this.cardFilter = this.cardFilter === status ? '' : status

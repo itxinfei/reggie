@@ -41,12 +41,6 @@
         .loading-wrap { text-align: center; padding: 60px 0; }
         .loading-wrap p { color: var(--color-info); margin-top: 12px; }
 
-        /* 推荐算法标签 */
-        .algo-tags { display: flex; gap: 6px; margin-bottom: var(--space-3); flex-wrap: wrap; }
-        .algo-tag { padding: 4px 12px; border-radius: var(--radius-lg); font-size:var(--font-size-xs); border: 1px solid var(--el-border-lighter2);
-            cursor: pointer; transition: all 0.2s; color: var(--el-text-regular); }
-        .algo-tag.active { background: var(--el-color-primary); color: var(--bg-surface); border-color: var(--el-color-primary); }
-        .algo-tag:hover:not(.active) { border-color: var(--el-color-primary); color: var(--el-color-primary); }
 
         @media (max-width: 1200px) {
             .charts-row { grid-template-columns: 1fr; gap: var(--space-4); }
@@ -107,12 +101,7 @@
             <i class="ri-star-fill" style="color:var(--color-warning);"></i> 今日热门菜品排行
             <el-button type="primary" size="small" @click="refreshHotRank" :loading="loadingHot">刷新排行</el-button>
         </div>
-        <!-- 修改点：后端 /recommend/hot 仅按销量聚合排序，不支持 cf/content 算法维度；
-             原「协同过滤/内容推荐」标签与「热门排行」请求同一接口、数据完全相同，属误导性功能，已移除 -->
-        <div class="algo-tags">
-            <span class="algo-tag" :class="{active: algoType === 'all'}" role="button" tabindex="0" @click="loadHotByAlgo('all')" @keydown.enter="loadHotByAlgo('all')" :aria-pressed="algoType === 'all'">全部算法</span>
-            <span class="algo-tag" :class="{active: algoType === 'hot'}" role="button" tabindex="0" @click="loadHotByAlgo('hot')" @keydown.enter="loadHotByAlgo('hot')" :aria-pressed="algoType === 'hot'">热门排行</span>
-        </div>
+        <!-- 后端 /recommend/hot 仅按销量聚合排序，不支持算法维度，故不再提供算法切换标签 -->
         <div v-if="!loadingHot" class="dish-grid">
             <div class="dish-card" v-for="(dish, idx) in hotDishes" :key="dish.id" style="position:relative;">
                 <span v-if="idx < 3" :class="['rank-badge', 'r' + (idx + 1)]">TOP{{ idx + 1 }}</span>
@@ -153,7 +142,6 @@
     data: {
         loadingAll: false,
         loadingHot: false,
-        algoType: 'all',
         hotDishes: [],
         stats: {
             hybridRate: null, clickRate: null, conversionRate: null,
@@ -398,13 +386,9 @@
             }, true);
         },
 
-        // 热门排行
-        loadHotRank() { return this.loadHotByAlgo('all'); },
-        loadHotByAlgo(type) {
-            this.algoType = type;
+        // 热门排行：后端 /recommend/hot 不支持算法维度，仅按销量聚合排序
+        loadHotRank() {
             this.loadingHot = true;
-            // 修改点：后端 /recommend/hot 不支持 algo 参数，仅按销量聚合排序，
-            // 标签切换仅重查同一接口刷新数据（与「刷新排行」行为一致）
             return recommendBackendApi.getHotRecommend(12).then(res => {
                 if (res.code === 1) {
                     this.hotDishes = res.data || [];

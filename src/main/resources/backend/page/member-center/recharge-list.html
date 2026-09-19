@@ -232,6 +232,9 @@
               if (statsRes && String(statsRes.code) === '1') {
                 this.stats = statsRes.data
                 this.$nextTick(function() { this.renderCharts() })
+              } else {
+                // 统计加载失败：stats 保持初始空结构，渲染空态占位避免图区空白
+                this.$nextTick(function() { this.renderCharts() })
               }
             }
           } catch(e) { ReggieUI.error('请求失败：' + e) }
@@ -251,22 +254,37 @@
           }
           window.addEventListener('resize', this._resizeHandler)
         },
+        // 图表空数据占位（无月份/无支付分布或值全为 0 时，图区不再留空白）
+        chartEmptyOption: function(text) {
+          return {
+            title: { text: text, left: 'center', top: 'center',
+              textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+          }
+        },
         renderCharts: function() {
           const self = this
           // 趋势
           if (self.trendChart && self.stats.trend) {
             const months = [], amounts = []
             self.stats.trend.forEach(function(d) { months.push(d.month); amounts.push(Number(d.amount) || 0) })
-            self.trendChart.setOption({
-              tooltip: { trigger: 'axis', formatter: function(p) { return p[0].name + '<br/>充值：¥' + p[0].value.toLocaleString() } },
-              grid: { left: 55, right: 25, top: 15, bottom: 20 },
-              xAxis: { type: 'category', data: months, axisLabel: { rotate: 30, fontSize: 10 } },
-              yAxis: { type: 'value', axisLabel: { formatter: function(v) { return '¥' + (v/10000).toFixed(0) + 'w' } } },
-              series: [{
-                type: 'bar', data: amounts, barWidth: '50%',
-                itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0], color: RgPalette.amber500 }
-              }]
-            })
+            // 无月份或金额全为 0：显示空态占位
+            if (!months.length || !amounts.some(function(v) { return v > 0 })) {
+              self.trendChart.setOption(self.chartEmptyOption('暂无充值数据'), true)
+            } else {
+              self.trendChart.setOption({
+                tooltip: { trigger: 'axis', formatter: function(p) { return p[0].name + '<br/>充值：¥' + Number(p[0].value).toLocaleString() } },
+                grid: { left: 55, right: 25, top: 15, bottom: 20 },
+                xAxis: { type: 'category', data: months, axisLabel: { rotate: 30, fontSize: 10 } },
+                yAxis: { type: 'value', axisLabel: { formatter: function(v) {
+                  // 按量级自适应：原写法不足 1 万时整轴都显示 ¥0w，严重误导
+                  return Math.abs(v) >= 10000 ? ('¥' + (v / 10000).toFixed(1) + 'w') : ('¥' + v)
+                } } },
+                series: [{
+                  type: 'bar', data: amounts, barWidth: '50%',
+                  itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0], color: RgPalette.amber500 }
+                }]
+              }, true)
+            }
           }
           // 支付方式
           if (self.paymentChart && self.stats.paymentDistribution) {
@@ -274,16 +292,22 @@
               const name = d.name === 'WECHAT' ? '微信支付' : d.name === 'ALIPAY' ? '支付宝' : d.name === 'CASH' ? '现金' : d.name
               return { name: name, value: Number(d.value) || 0 }
             })
-            const colors = [RgPalette.emerald,RgPalette.alipayBlue,RgPalette.amber500,RgPalette.violet500]
-            self.paymentChart.setOption({
-              tooltip: { trigger: 'item', formatter: '{b}: ¥{c} ({d}%)' },
-              series: [{
-                type: 'pie', radius: ['50%', '75%'], center: ['50%', '50%'],
-                avoidLabelOverlap: false, itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 3 },
-                label: { show: true, formatter: '{b}\n{d}%' },
-                data: pieData, color: colors
-              }]
-            })
+            // 无分布或金额全为 0：显示空态占位
+            if (!pieData.length || !pieData.some(function(d) { return d.value > 0 })) {
+              self.paymentChart.setOption(self.chartEmptyOption('暂无充值数据'), true)
+            } else {
+              // 补齐到 6 色，支付方式多于 4 种时多余扇区不至于回落 ECharts 默认色
+              const colors = [RgPalette.emerald, RgPalette.alipayBlue, RgPalette.amber500, RgPalette.violet500, RgPalette.blue500, RgPalette.red500]
+              self.paymentChart.setOption({
+                tooltip: { trigger: 'item', formatter: '{b}: ¥{c} ({d}%)' },
+                series: [{
+                  type: 'pie', radius: ['50%', '75%'], center: ['50%', '50%'],
+                  avoidLabelOverlap: false, itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 3 },
+                  label: { show: true, formatter: '{b}\n{d}%' },
+                  data: pieData, color: colors
+                }]
+              }, true)
+            }
           }
         },
         fmtMoney: function(v) {

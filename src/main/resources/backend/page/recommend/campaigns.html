@@ -91,7 +91,7 @@
             <div class="chart-panel">
                 <div class="chart-header">
                     <span class="chart-title">活动参与统计</span>
-                    <span class="chart-subtitle">近7日活动概览</span>
+                    <span class="chart-subtitle">活动累计概览（全部活动汇总）</span>
                 </div>
                 <div class="chart-box" id="overviewBarChart"></div>
             </div>
@@ -384,16 +384,6 @@
             ],
             // 修改点：summary 包含4种状态 + 推送总数，全部来自后端真实统计
             summary: { total: 0, active: 0, draft: 0, ended: 0, paused: 0, totalParticipants: 0, totalPushed: 0 },
-            // 修改点(2026-07-10)：新增 recentDates 用于图表的 X 轴
-            recentDates: (function() {
-                const arr = [];
-                for (let i = 6; i >= 0; i--) {
-                    const d = new Date();
-                    d.setDate(d.getDate() - i);
-                    arr.push((d.getMonth() + 1) + '/' + d.getDate());
-                }
-                return arr;
-            })(),
             dialogVisible: false, dialogTitle: '新建营销活动', dialogMode: 'create', editId: null, dateRange: [],
             rulePreset: '', ruleError: '',
             // 修改点：活动时间选择器快捷选项，与通用组件保持一致
@@ -529,9 +519,20 @@
         },
         renderOverviewCharts: function() {
             const self = this;
-            // 状态分布饼图 — 修改点：展示全部4种状态
+            // 状态分布饼图 — 修改点：展示全部4种状态；全 0（初始/加载失败）时显示空态而非只剩 legend 的白图
             if (this.statusPieChart) {
-                this.statusPieChart.setOption({
+                const pieData = [
+                    { value: self.summary.active || 0, name: '进行中', itemStyle: { color: RgPalette.success } },
+                    { value: self.summary.draft || 0, name: '草稿', itemStyle: { color: RgPalette.info } },
+                    { value: self.summary.ended || 0, name: '已结束', itemStyle: { color: RgPalette.warning } },
+                    { value: self.summary.paused || 0, name: '已暂停', itemStyle: { color: RgPalette.danger } }
+                ];
+                const pieEmpty = pieData.every(function(d) { return !d.value; });
+                this.statusPieChart.setOption(pieEmpty ? {
+                    title: { text: '暂无活动数据', left: 'center', top: 'center',
+                        textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } }
+                } : {
+                    title: { show: false },
                     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
                     legend: { orient: 'vertical', right: 10, top: 'center', textStyle: { fontSize: 12 } },
                     series: [{
@@ -540,37 +541,36 @@
                         itemStyle: { borderRadius: RgPalette.radiusSm, borderColor: RgPalette.white, borderWidth: 2 },
                         label: { show: false },
                         emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
-                        data: [
-                            { value: self.summary.active || 0, name: '进行中', itemStyle: { color: RgPalette.success } },
-                            { value: self.summary.draft || 0, name: '草稿', itemStyle: { color: RgPalette.info } },
-                            { value: self.summary.ended || 0, name: '已结束', itemStyle: { color: RgPalette.warning } },
-                            { value: self.summary.paused || 0, name: '已暂停', itemStyle: { color: RgPalette.danger } }
-                        ]
+                        data: pieData
                     }]
                 }, true);
             }
-            // 推送与参与柱状图 — 修改点：保留推送/参与对比，但使用真实汇总数据
+            // 推送与参与柱状图 — 单系列两根柱（推送统计/参与统计各一根）。
+            // 旧实现两个系列各带 1 个值，柱体全部堆到第一个类目下，第二个类目恒空
             if (this.overviewBarChart) {
                 this.overviewBarChart.setOption({
-                    tooltip: { trigger: 'axis' },
-                    legend: { data: ['推送消息数', '参与总人数'], bottom: 0, textStyle: { fontSize: 12 } },
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: function(params) {
+                            const p = params[0];
+                            const d = (p && p.data) || {};
+                            return p.name + '<br/>' + p.marker + ' ' + (d.name || '') + '：<b>' + p.value + '</b>';
+                        }
+                    },
                     grid: { left: 55, right: 30, top: 20, bottom: 40 },
                     xAxis: { type: 'category', data: ['推送统计', '参与统计'], axisLabel: { fontSize: 13 } },
                     yAxis: { type: 'value', minInterval: 1 },
                     series: [
                         {
-                            name: '推送消息数', type: 'bar',
-                            data: [self.summary.totalPushed || 0],
+                            type: 'bar',
+                            data: [
+                                { value: self.summary.totalPushed || 0, name: '推送消息数', itemStyle: { color: RgPalette.brand } },
+                                { value: self.summary.totalParticipants || 0, name: '参与总人数', itemStyle: { color: RgPalette.seriesBlue } }
+                            ],
                             barWidth: 50,
-                            itemStyle: { color: RgPalette.seriesBlue, borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] },
-                            label: { show: true, position: 'top', fontSize: 14, fontWeight: 'bold', color: RgPalette.seriesBlue }
-                        },
-                        {
-                            name: '参与总人数', type: 'bar',
-                            data: [self.summary.totalParticipants || 0],
-                            barWidth: 50,
-                            itemStyle: { color: RgPalette.seriesGreen, borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] },
-                            label: { show: true, position: 'top', fontSize: 14, fontWeight: 'bold', color: RgPalette.success }
+                            itemStyle: { borderRadius: [RgPalette.radiusMd, RgPalette.radiusMd, 0, 0] },
+                            label: { show: true, position: 'top', fontSize: 14, fontWeight: 'bold',
+                                color: RgPalette.textRegular, formatter: '{c}' }
                         }
                     ]
                 }, true);
@@ -619,7 +619,11 @@
                     self.summary.totalPushed = s.total_pushed || 0;
                     self.renderOverviewCharts();
                 }
-            }).catch(function(err) { console.warn('[campaigns] 加载统计数据失败:', err) });
+            }).catch(function(err) {
+                // 加载失败也要重绘：饼图进入「暂无活动数据」空态，避免图区永久留白
+                console.warn('[campaigns] 加载统计数据失败:', err);
+                self.renderOverviewCharts();
+            });
         },
 
         /* ====== 表单与规则 ====== */
@@ -875,14 +879,19 @@
                     }
                     self.statsCampaign = row;
                     self.statsDialogVisible = true;
+                    // crud-dialog 不转发 el-dialog 的 @open，且 destroy-on-close 每次打开容器都是新 DOM，
+                    // 必须在这里显式触发图表初始化，否则弹窗内图表恒为空白
+                    self.onStatsDialogOpen();
                 }).catch(function() {
                     row.pushCount = 0;
                     self.statsCampaign = row;
                     self.statsDialogVisible = true;
+                    self.onStatsDialogOpen();
                 });
             } else {
                 this.statsCampaign = row;
                 this.statsDialogVisible = true;
+                this.onStatsDialogOpen();
             }
         },
         onStatsDialogOpen: function() {
@@ -902,22 +911,30 @@
             // 修改点(2026-07-10)：使用真实数据，不再模拟
             const pushCount = c.pushCount || 0;
             const participants = c.currentParticipants || 0;
+            // 单系列两根柱：旧实现两个系列各 1 个值，柱体都堆在「推送统计」类目下
             this.statsChart.setOption({
-                tooltip: { trigger: 'axis' },
-                legend: { data: ['推送数', '参与数'], bottom: 0, textStyle: { fontSize: 12 } },
-                grid: { left: 50, right: 20, top: 10, bottom: 40 },
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: function(params) {
+                        const p = params[0];
+                        const d = (p && p.data) || {};
+                        return p.name + '<br/>' + p.marker + ' ' + (d.name || '') + '：<b>' + p.value + '</b>';
+                    }
+                },
+                grid: { left: 50, right: 20, top: 30, bottom: 30 },
                 xAxis: { type: 'category', data: ['推送统计', '参与统计'] },
                 yAxis: { type: 'value', minInterval: 1 },
                 series: [
                     {
-                        name: '推送数', type: 'bar',
-                        data: [pushCount],
-                        itemStyle: { color: RgPalette.seriesBlue, borderRadius: [RgPalette.radiusSm, RgPalette.radiusSm, 0, 0] }
-                    },
-                    {
-                        name: '参与数', type: 'bar',
-                        data: [participants],
-                        itemStyle: { color: RgPalette.seriesGreen, borderRadius: [RgPalette.radiusSm, RgPalette.radiusSm, 0, 0] }
+                        type: 'bar',
+                        data: [
+                            { value: pushCount, name: '推送数', itemStyle: { color: RgPalette.brand } },
+                            { value: participants, name: '参与数', itemStyle: { color: RgPalette.seriesBlue } }
+                        ],
+                        barWidth: 50,
+                        itemStyle: { borderRadius: [RgPalette.radiusSm, RgPalette.radiusSm, 0, 0] },
+                        label: { show: true, position: 'top', fontSize: 13, fontWeight: 'bold',
+                            color: RgPalette.textRegular, formatter: '{c}' }
                     }
                 ]
             }, true);

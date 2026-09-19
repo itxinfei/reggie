@@ -247,40 +247,73 @@
         },
         renderCharts: function() {
           const self = this
+          // 积分空态文案：趋势与构成共用同一套 title 配置，notMerge=true 先清旧系列再绘制
+          const emptyTitle = {
+            text: '暂无积分数据', left: 'center', top: 'center',
+            textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' }
+          }
           // 趋势图
-          if (self.trendChart && self.stats.trend) {
-            const dates = [], acquired = [], consumed = []
-            self.stats.trend.forEach(function(d) { dates.push(d.date); acquired.push(d.acquired); consumed.push(d.consumed) })
-            self.trendChart.setOption({
-              tooltip: { trigger: 'axis' },
-              legend: { data: ['获取', '消耗'], bottom: 0, textStyle: { fontSize: 12 } },
-              grid: { left: 50, right: 20, top: 20, bottom: 35 },
-              xAxis: { type: 'category', data: dates, axisLabel: { rotate: 45, fontSize: 10, formatter: function(v) { return v.slice(5) } } },
-              yAxis: { type: 'value' },
-              series: [
-                { name: '获取', type: 'line', data: acquired, smooth: true, symbol: 'none',
-                  lineStyle: { color: RgPalette.emerald, width: 2 }, areaStyle: { color: RgPalette.emeraldArea } },
-                { name: '消耗', type: 'line', data: consumed, smooth: true, symbol: 'none',
-                  lineStyle: { color: RgPalette.orange500, width: 2 }, areaStyle: { color: RgPalette.orange500Area } }
-              ]
-            })
+          const trend = self.stats.trend || []
+          const trendEmpty = !trend.length || !trend.some(function(d) {
+            return (Number(d.acquired) || 0) > 0 || (Number(d.consumed) || 0) > 0
+          })
+          if (self.trendChart) {
+            if (trendEmpty) {
+              self.trendChart.setOption({ title: emptyTitle }, true)
+            } else {
+              const dates = [], acquired = [], consumed = []
+              trend.forEach(function(d) { dates.push(d.date); acquired.push(Number(d.acquired) || 0); consumed.push(Number(d.consumed) || 0) })
+              self.trendChart.setOption({
+                tooltip: {
+                  trigger: 'axis',
+                  // 两系列均为积分数值，统一补「分」单位并千分位
+                  formatter: function(params) {
+                    let html = '<b>' + String(params[0].axisValue).slice(5) + '</b><br/>'
+                    params.forEach(function(p) {
+                      html += p.marker + ' ' + p.seriesName + '：<b>' + (Number(p.value) || 0).toLocaleString() + ' 分</b><br/>'
+                    })
+                    return html
+                  }
+                },
+                legend: { data: ['获取', '消耗'], bottom: 0, textStyle: { fontSize: 12 } },
+                grid: { left: 60, right: 20, top: 20, bottom: 35 },
+                xAxis: { type: 'category', data: dates, axisLabel: { rotate: 45, fontSize: 10, formatter: function(v) { return v.slice(5) } } },
+                yAxis: {
+                  type: 'value', name: '积分(分)',
+                  nameTextStyle: { color: RgPalette.textSecondary, fontSize: 12 },
+                  axisLabel: { color: RgPalette.textSecondary, fontSize: 12 }
+                },
+                series: [
+                  { name: '获取', type: 'line', data: acquired, smooth: true, symbol: 'none',
+                    lineStyle: { color: RgPalette.emerald, width: 2 }, areaStyle: { color: RgPalette.emeraldArea } },
+                  { name: '消耗', type: 'line', data: consumed, smooth: true, symbol: 'none',
+                    lineStyle: { color: RgPalette.orange500, width: 2 }, areaStyle: { color: RgPalette.orange500Area } }
+                ]
+              }, true)
+            }
           }
           // 饼图
           if (self.pieChart) {
-            self.pieChart.setOption({
-              tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-              legend: { bottom: 0, textStyle: { fontSize: 12 } },
-              series: [{
-                type: 'pie', radius: ['48%', '72%'], center: ['50%', '48%'], avoidLabelOverlap: false,
-                label: { show: false }, emphasis: { label: { show: true, fontWeight: 'bold' } },
-                itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 3 },
-                data: [
-                  { value: self.stats.totalAcquired || 0, name: '累计获取', itemStyle: { color: RgPalette.emerald } },
-                  { value: self.stats.totalConsumed || 0, name: '累计消耗', itemStyle: { color: RgPalette.orange500 } },
-                  { value: Math.max(0, (self.stats.totalPoints||0) - (self.stats.totalAcquired||0) + (self.stats.totalConsumed||0)), name: '初始积分', itemStyle: { color: RgPalette.blue500 } }
-                ]
-              }]
-            })
+            const initialPoints = Math.max(0, (self.stats.totalPoints || 0) - (self.stats.totalAcquired || 0) + (self.stats.totalConsumed || 0))
+            const pieEmpty = !(self.stats.totalAcquired || 0) && !(self.stats.totalConsumed || 0) && !initialPoints
+            if (pieEmpty) {
+              self.pieChart.setOption({ title: emptyTitle }, true)
+            } else {
+              self.pieChart.setOption({
+                tooltip: { trigger: 'item', formatter: function(p) { return p.name + ': ' + (Number(p.value) || 0).toLocaleString() + ' 分 (' + p.percent + '%)' } },
+                legend: { bottom: 0, textStyle: { fontSize: 12 } },
+                series: [{
+                  type: 'pie', radius: ['48%', '72%'], center: ['50%', '48%'], avoidLabelOverlap: false,
+                  label: { show: false }, emphasis: { label: { show: true, fontWeight: 'bold' } },
+                  itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 3 },
+                  data: [
+                    { value: self.stats.totalAcquired || 0, name: '累计获取', itemStyle: { color: RgPalette.emerald } },
+                    { value: self.stats.totalConsumed || 0, name: '累计消耗', itemStyle: { color: RgPalette.orange500 } },
+                    { value: initialPoints, name: '初始积分', itemStyle: { color: RgPalette.blue500 } }
+                  ]
+                }]
+              }, true)
+            }
           }
         },
         /* ── 筛选与分页 ── */
