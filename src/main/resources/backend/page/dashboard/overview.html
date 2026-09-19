@@ -433,7 +433,18 @@
         </div>
       </div>
 
-      <!-- ========== 首屏待办台（8.7.1：店长第一眼看到该做什么） ========== -->
+      <!-- ========== KPI 指标卡片（统一布局：统计卡置顶；点击下钻） ========== -->
+      <div style="position:relative;">
+        <stat-cards :cards="kpiCards" :loading="loading" @card-click="onKpiClick"></stat-cards>
+        <!-- 修改点：营收目标设置入口 -->
+        <el-tooltip content="设置营收目标" placement="top">
+          <el-button size="mini" circle style="position:absolute;top:8px;right:8px;" @click="openTargetDialog">
+            <i class="ri-settings-3-line"></i>
+          </el-button>
+        </el-tooltip>
+      </div>
+
+      <!-- ========== 今日待办台（8.7.1：待处理事项直达入口） ========== -->
       <section v-if="!loading" class="todo-panel" aria-label="今日待办">
         <div class="todo-panel__head">
           <h2 class="todo-panel__title"><i class="ri-todo-line" aria-hidden="true"></i> 今日待办</h2>
@@ -458,17 +469,6 @@
           <span>今日暂无待办，辛苦啦</span>
         </div>
       </section>
-
-      <!-- ========== KPI 指标卡片（点击下钻） ========== -->
-      <div style="position:relative;">
-        <stat-cards :cards="kpiCards" :loading="loading" @card-click="onKpiClick"></stat-cards>
-        <!-- 修改点：营收目标设置入口 -->
-        <el-tooltip content="设置营收目标" placement="top">
-          <el-button size="mini" circle style="position:absolute;top:8px;right:8px;" @click="openTargetDialog">
-            <i class="ri-settings-3-line"></i>
-          </el-button>
-        </el-tooltip>
-      </div>
 
       <!-- ========== 库存预警提示 ========== -->
       <!-- 修改点：集成库存预警，显示低库存食材名称 -->

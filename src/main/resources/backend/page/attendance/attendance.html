@@ -18,11 +18,14 @@
       <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
       <h1 class="sr-only" id="page-title">考勤管理</h1>
 
-      <el-button type="primary" size="small" icon="ri-checkbox-circle-line" @click="handleClockIn" :loading="clockBtnLoading">签到打卡</el-button>
-      <el-button type="success" size="small" icon="ri-close-circle-line" @click="handleClockOut" :loading="clockBtnLoading">签退打卡</el-button>
-
-      <!-- 统计卡片 -->
+      <!-- 统一布局：统计卡片置顶，操作行第二，主体在下 -->
       <stat-cards :cards="statsCards"></stat-cards>
+
+      <!-- 操作行：签到 / 签退 -->
+      <div class="ds-actions-row">
+        <el-button type="primary" size="small" icon="ri-checkbox-circle-line" @click="handleClockIn" :loading="clockBtnLoading">签到打卡</el-button>
+        <el-button type="success" size="small" icon="ri-close-circle-line" @click="handleClockOut" :loading="clockBtnLoading">签退打卡</el-button>
+      </div>
 
       <!-- 今日考勤 + 本周异常 -->
       <el-row :gutter="24" class="content-row">

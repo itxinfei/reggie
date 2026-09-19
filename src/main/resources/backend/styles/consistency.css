@@ -159,6 +159,21 @@ body .eval-app-wrap .filter-bar:hover {
   box-shadow: var(--shadow-sm);
 }
 
+/* ========== 6c. 通用页级操作行（卡→栏→表统一布局第二区段） ==========
+   统计卡置顶后，原位于卡片上方的页级按钮行（签到/刷新/平台同步等）统一
+   包此类：横排、紧凑 gap 8px、可换行，与下方主体留 12px。
+   重置 Element 相邻按钮自带的 10px 左外边距，避免与 gap 叠加成 18px。 */
+.ds-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.ds-actions-row .el-button + .el-button {
+  margin-left: 0;
+}
+
 /* ==========================================================================
    7. 响应式兜底（新增）
    背景：Element UI 的 :span="N" 是固定百分比，不带断点时在手机上依然按

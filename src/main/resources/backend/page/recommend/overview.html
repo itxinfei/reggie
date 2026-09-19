@@ -58,10 +58,13 @@
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="app">
   <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-    <el-button type="primary" size="small" icon="ri-refresh-line" @click="refreshAll" :loading="loadingAll">刷新数据</el-button>
-
-    <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
+    <!-- 统一布局：统计卡片置顶，操作行第二 -->
     <stat-cards :cards="statsCards"></stat-cards>
+
+    <!-- 操作行 -->
+    <div class="ds-actions-row">
+      <el-button type="primary" size="small" icon="ri-refresh-line" @click="refreshAll" :loading="loadingAll">刷新数据</el-button>
+    </div>
 
     <!-- 图表行 -->
     <div class="charts-row">

@@ -15,20 +15,22 @@
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="dish-mapping-app">
   <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-    <!-- 页级操作：营业状态同步 -->
-        <span class="ds-action-label">营业状态同步：</span>
-        <el-select v-model="businessPlatform" placeholder="选择平台" size="small" style="width:130px;margin-right:8px;">
-          <el-option label="美团" value="MEITUAN"></el-option>
-          <el-option label="饿了么" value="ELEME"></el-option>
-          <el-option label="抖音" value="DOUYIN"></el-option>
-          <el-option label="自营" value="SELF"></el-option>
-          <el-option label="其他" value="OTHER"></el-option>
-        </el-select>
-        <el-button size="small" type="success" :loading="bizLoading" @click="syncBusiness(true)">设为营业</el-button>
-        <el-button size="small" @click="syncBusiness(false)">设为休息</el-button>
-
-    <!-- 修改点：统计卡片支持点击筛选（点击总数/已上架/已下架按状态过滤数据） -->
+    <!-- 统一布局：统计卡片置顶（支持点击筛选：总数/已上架/已下架按状态过滤） -->
     <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+
+    <!-- 页级操作行：营业状态同步 -->
+    <div class="ds-actions-row">
+      <span class="ds-action-label">营业状态同步：</span>
+      <el-select v-model="businessPlatform" placeholder="选择平台" size="small" style="width:130px;">
+        <el-option label="美团" value="MEITUAN"></el-option>
+        <el-option label="饿了么" value="ELEME"></el-option>
+        <el-option label="抖音" value="DOUYIN"></el-option>
+        <el-option label="自营" value="SELF"></el-option>
+        <el-option label="其他" value="OTHER"></el-option>
+      </el-select>
+      <el-button size="small" type="success" :loading="bizLoading" @click="syncBusiness(true)">设为营业</el-button>
+      <el-button size="small" @click="syncBusiness(false)">设为休息</el-button>
+    </div>
 
     <!-- 筛选区 -->
     <el-card shadow="never" class="ds-card ds-card--filter">

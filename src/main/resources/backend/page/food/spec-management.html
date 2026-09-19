@@ -225,6 +225,9 @@
       align-items: center;
     }
 
+    /* 工具栏（统计卡置顶后的第二区块）：按钮横排，与下方主体保持紧凑间距 */
+    .spec-toolbar { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); flex-wrap: wrap; }
+
     @media (max-width: 1200px) {
       .spec-search { width: 150px; }
     }
@@ -243,11 +246,14 @@
   <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
     <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
     <h1 class="sr-only" id="page-title">规格管理</h1>
-    <el-button icon="ri-refresh-line" @click="refreshAll">刷新</el-button>
-    <el-button type="primary" icon="ri-add-line" @click="openGroupDialog()">新增规格组</el-button>
-
-    <!-- 统计概览 -->
+    <!-- 统一布局：统计卡片置顶，工具栏第二，主体（规格组/选项工作台）第三 -->
     <stat-cards :cards="statsCards" aria-label="规格数据概览"></stat-cards>
+
+    <!-- 工具栏 -->
+    <div class="spec-toolbar">
+      <el-button icon="ri-refresh-line" @click="refreshAll">刷新</el-button>
+      <el-button type="primary" icon="ri-add-line" @click="openGroupDialog()">新增规格组</el-button>
+    </div>
 
     <!-- 主内容：左侧规格组导航 + 右侧选项工作台 -->
     <div class="spec-main">
