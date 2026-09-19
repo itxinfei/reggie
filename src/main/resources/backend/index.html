@@ -271,6 +271,7 @@
             goBackFlag: false,
             loading: true,
             timer: null,
+            loadingSince: 0,  // 本次切页遮罩显示时刻（用于最短 200ms 防闪）
             navHistory: [],  // 导航历史栈，用于返回按钮
           }
         },
@@ -316,7 +317,7 @@
             return
           }
           this.userInfo = JSON.parse(userInfo)
-          this.closeLoading()
+          this.showLoading()
         },
         mounted() {
           // 修改点：将菜单数据与处理方法暴露到全局，供 iframe 内页面通过 window.parent 调用
@@ -407,12 +408,11 @@
           goBack() {
             if (this.navHistory.length > 0) {
               const prev = this.navHistory.pop()
-              this.loading = true
+              this.showLoading()
               this.menuActived = prev.id
               this.iframeUrl = prev.url
               this.headTitle = prev.name
               this.goBackFlag = this.navHistory.length > 0
-              this.closeLoading()
             }
           },
           menuHandle(item, goBackFlag) {
@@ -424,18 +424,43 @@
                 url: this.iframeUrl
               })
             }
-            this.loading = true
+            this.showLoading()
             this.menuActived = item.id
             this.iframeUrl = item.url
             this.headTitle = item.name
             this.goBackFlag = this.navHistory.length > 0
-            this.closeLoading()
           },
-          closeLoading(){
-            this.timer = null
-            this.timer = setTimeout(()=>{
+          /* 显示切页加载遮罩：收起时机交给 iframe load 事件（onIframeLoad），
+             3s 兜底定时器防止 load 异常不触发时遮罩永久卡死。
+             替代原固定 setTimeout(1000)——快页不再白等 1 秒，慢页未加载完
+             也不会提前露出空白 iframe。 */
+          showLoading() {
+            this.loading = true
+            this.loadingSince = Date.now()
+            this.clearLoadingTimer()
+            this.timer = setTimeout(() => {
               this.loading = false
-            },1000)
+              this.timer = null
+            }, 3000)
+          },
+          /* iframe 文档加载完成：同步高度并收起遮罩。
+             遮罩最短展示 200ms，避免页面瞬间加载时遮罩一闪而过的闪烁感。 */
+          onIframeLoad() {
+            this.resizeIframe()
+            if (!this.loading) return
+            const elapsed = Date.now() - this.loadingSince
+            const remain = Math.max(0, 200 - elapsed)
+            this.clearLoadingTimer()
+            this.timer = setTimeout(() => {
+              this.loading = false
+              this.timer = null
+            }, remain)
+          },
+          clearLoadingTimer() {
+            if (this.timer) {
+              clearTimeout(this.timer)
+              this.timer = null
+            }
           },
           toggleSidebar() {
             // 移动端（≤767px）切换抽屉式展开/关闭
@@ -453,10 +478,17 @@
           initIframeAutoHeight() {
             const iframe = document.getElementById('cIframe')
             if (!iframe) return
-            // iframe 内容加载完成后调整高度
+            // iframe 内容加载完成后调整高度并收起切页遮罩
             iframe.addEventListener('load', () => {
-              this.resizeIframe()
+              this.onIframeLoad()
             })
+            // 首屏文档若在监听器绑定前已 load 完成（强缓存命中），补一次判定，
+            // 否则遮罩只能等 3s 兜底才消失
+            try {
+              if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
+                this.onIframeLoad()
+              }
+            } catch (e) { /* 跨域文档不可读时忽略，等待 load 事件 */ }
             // 监听窗口大小变化，重新计算
             window.addEventListener('resize', () => {
               this.resizeIframe()
@@ -473,8 +505,7 @@
           }
         },
         beforeDestroy() {
-          this.timer = null
-          clearTimeout(this.timer)
+          this.clearLoadingTimer()
         }
       })
     </script>
