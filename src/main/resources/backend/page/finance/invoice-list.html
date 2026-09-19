@@ -71,59 +71,6 @@
             <el-button v-if="row.status == 1" type="text" size="small" class="btn-edit" @click="openIssueDialog(row)">开具</el-button>
             <el-button v-if="row.status == 2 && row.invoiceUrl" type="text" size="small" class="btn-view" @click="openInvoiceUrl(row.invoiceUrl)">查看票面</el-button>
             <el-button v-if="row.status == 2" type="text" size="small" class="btn-delete" @click="voidHandle(row)">作废</el-button>
-
-      <!-- 数据统计卡片：点击切换状态筛选 -->
-      <stat-cards
-        :cards="statsCards"
-        :active-key.sync="activeFilter"
-        @card-click="onCardClick"
-      ></stat-cards>
-
-      <!-- 筛选 + 操作栏 -->
-      <table-bar
-        ref="tableBar"
-        :search-items="searchConfig"
-        :actions="actionConfig"
-        @search="onSearch"
-        @reset="onReset"
-        @action="onAction"
-      ></table-bar>
-
-      <!-- 数据表格 -->
-      <crud-table
-        ref="crudTable"
-        :data="tableData"
-        :columns="columns"
-        :loading="loading"
-        :page="page"
-        :page-size="pageSize"
-        :total="counts"
-        :show-actions="true"
-        :actions-width="180"
-        @page-change="onPageChange"
-        @size-change="onSizeChange"
-      >
-        <template #col-type="{ row }">
-          <el-tag size="small" :type="row.type == 2 ? 'warning' : 'info'" effect="plain">
-            {{ row.type == 2 ? '企业' : '个人' }}
-          </el-tag>
-        </template>
-        <template #col-status="{ row }">
-          <el-tag size="small" :type="statusTagType(row.status)">
-            {{ statusText(row.status) }}
-          </el-tag>
-        </template>
-        <template #col-applyTime="{ row }">
-          {{ fmtTime(row.applyTime) }}
-        </template>
-        <template #col-issueTime="{ row }">
-          {{ fmtTime(row.issueTime) }}
-        </template>
-        <template #actions="{ row }">
-          <div class="inv-actions">
-            <el-button v-if="row.status == 1" type="text" size="small" class="btn-edit" @click="openIssueDialog(row)">开具</el-button>
-            <el-button v-if="row.status == 2 && row.invoiceUrl" type="text" size="small" class="btn-view" @click="openInvoiceUrl(row.invoiceUrl)">查看票面</el-button>
-            <el-button v-if="row.status == 2" type="text" size="small" class="btn-delete" @click="voidHandle(row)">作废</el-button>
           </div>
         </template>
       </crud-table>

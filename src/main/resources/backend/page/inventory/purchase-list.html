@@ -33,10 +33,6 @@
       <stat-cards :cards="statsCards" :active-key.sync="cardFilter" @card-click="onCardClick"></stat-cards>
 
       <!-- 采购趋势图 -->
-      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
-      <stat-cards :cards="statsCards" :active-key.sync="cardFilter" @card-click="onCardClick"></stat-cards>
-
-      <!-- 采购趋势图 -->
       <div class="purchase-chart" id="purchaseTrendChart"></div>
 
       <!-- 修改点：使用 <table-bar> 统一组件替代手写 HTML -->

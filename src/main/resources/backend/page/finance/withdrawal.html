@@ -171,59 +171,6 @@
     <!-- 详情弹窗：只读展示申请编号/申请人/金额/方式/账户/状态/时间/审核备注 -->
     <crud-dialog :show-cancel="true" title="申请详情" :visible.sync="detailDialogVisible" size="md" :show-submit="false" cancel-text="关 闭">
       <div v-if="detailRow" class="withdraw-detail">
-    <!-- 统计卡片：总申请数/待审核/已打款/总提现金额 -->
-    <stat-cards :cards="statsCards"></stat-cards>
-
-    <!-- 搜索栏：按状态筛选 + 申请提现按钮 -->
-    <table-bar
-      :search-items="searchItems"
-      :actions="actionItems"
-      @search="onSearch"
-      @reset="onReset"
-      @action="onAction"
-    ></table-bar>
-
-    <!-- 数据表格：申请编号/申请人/提现金额/方式/收款账户/状态/申请时间/操作 -->
-    <crud-table
-      :data="pagedData"
-      :columns="columns"
-      :loading="loading"
-      :page="page"
-      :page-size="pageSize"
-      :total="filteredData.length"
-      :show-actions="true"
-      :actions-width="200"
-      :actions-fixed="true"
-      @page-change="onPageChange"
-      @size-change="onSizeChange"
-      aria-label="提现申请列表"
-    >
-      <!-- 提现金额列 -->
-      <template #col-amount="{ row }">
-        <strong>¥{{ formatMoney(row.amount) }}</strong>
-      </template>
-      <!-- 提现方式列 -->
-      <template #col-withdrawMethod="{ row }">
-        {{ getWithdrawMethodText(row.withdrawMethod) }}
-      </template>
-      <!-- 状态列 -->
-      <template #col-status="{ row }">
-        <el-tag :type="getStatusTag(row.status)" size="small">
-          {{ getStatusText(row.status) }}
-        </el-tag>
-      </template>
-      <!-- 操作按钮 -->
-      <template #actions="{ row }">
-        <el-button type="text" size="small" @click="handleView(row)">查看</el-button>
-        <el-button v-if="row.status === 0" type="text" size="small" @click="handleReview(row)">审核</el-button>
-        <el-button v-if="row.status === 1" type="text" size="small" class="btn-success" @click="handlePayment(row)">打款</el-button>
-        <el-button v-if="row.status === 0" type="text" size="small" class="btn-warning" @click="handleCancel(row)">取消</el-button>
-      </template>
-    </crud-table>
-
-    <!-- 详情弹窗：只读展示申请编号/申请人/金额/方式/账户/状态/时间/审核备注 -->
-    <crud-dialog :show-cancel="true" title="申请详情" :visible.sync="detailDialogVisible" size="md" :show-submit="false" cancel-text="关 闭">
-      <div v-if="detailRow" class="withdraw-detail">
         <div class="dt-item"><span class="dt-label">申请编号</span><span class="dt-value">{{ detailRow.applicationNo }}</span></div>
         <div class="dt-item"><span class="dt-label">申请人</span><span class="dt-value">{{ detailRow.applicantName }}</span></div>
         <div class="dt-item"><span class="dt-label">提现金额</span><span class="dt-value ds-money--danger">¥{{ formatMoney(detailRow.amount) }}</span></div>

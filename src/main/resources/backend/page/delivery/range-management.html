@@ -139,42 +139,6 @@
       <!-- 范围参数列 -->
       <template #col-rangeParams="{ row }">
         <div v-if="row.rangeType === 1">
-    <!-- 统计卡片 -->
-    <stat-cards :cards="statsCards"></stat-cards>
-
-    <!-- 搜索 + 操作栏 -->
-    <table-bar
-      :search-items="searchItems"
-      :actions="actionItems"
-      @search="onSearch"
-      @reset="onReset"
-      @action="onAction"
-    ></table-bar>
-
-    <!-- 数据表格 -->
-    <crud-table
-      :data="pagedData"
-      :columns="columns"
-      :loading="loading"
-      :page="page"
-      :page-size="pageSize"
-      :total="filteredTotal"
-      :show-actions="true" :viewable="true"
-      :actions-width="250"
-      :actions-fixed="true"
-      @page-change="onPageChange"
-      @size-change="onSizeChange"
-      aria-label="配送范围规则列表"
-    >
-      <!-- 范围类型列 -->
-      <template #col-rangeType="{ row }">
-        <el-tag :type="row.rangeType === 1 ? 'warning' : 'success'" size="small">
-          {{ row.rangeType === 1 ? '圆形' : '多边形' }}
-        </el-tag>
-      </template>
-      <!-- 范围参数列 -->
-      <template #col-rangeParams="{ row }">
-        <div v-if="row.rangeType === 1">
           <div>半径：{{ row.radius }}米</div>
           <div style="font-size: var(--font-size-xs); color: var(--text-muted);">中心：{{ row.centerLatitude }}, {{ row.centerLongitude }}</div>
         </div>

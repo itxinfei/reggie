@@ -74,66 +74,6 @@
         </template>
       </crud-table>
     </main>
-      <!-- 数据统计卡片 -->
-      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
-      <!-- 筛选 + 操作 -->
-      <table-bar
-        :search-items="tableSearchItems"
-        :actions="tableActions"
-        @search="search"
-        @reset="reset"
-        @action="onTableAction">
-        <template slot="search-extra">
-          <el-input v-model="query.name" placeholder="终端名称" class="el-select--narrow-xs" clearable size="small"
-            @keyup.enter.native="search"></el-input>
-          <el-input v-model="query.code" placeholder="终端编码" class="el-select--narrow-xs" clearable size="small"
-            @keyup.enter.native="search"></el-input>
-          <el-input v-model="query.storeCode" placeholder="门店编码" class="el-select--narrow-xs" clearable size="small"
-            @keyup.enter.native="search"></el-input>
-          <el-select v-model="query.status" placeholder="状态" class="el-select--narrow-xxs" clearable size="small"
-            @change="search">
-            <el-option label="启用" :value="1"></el-option>
-            <el-option label="停用" :value="0"></el-option>
-          </el-select>
-        </template>
-      </table-bar>
-      <!-- 终端列表 -->
-      <crud-table
-        :data="tableData"
-        :columns="columns"
-        :page="page"
-        :page-size="pageSize"
-        :page-sizes="[10, 20, 30]"
-        :total="counts"
-        :loading="loading"
-        :show-actions="true"
-        :actions-width="200"
-        @page-change="onPageChange"
-        @size-change="onSizeChange"
-      >
-        <template #col-printTypes="{ row }">
-          <el-tag v-for="(t, i) in getPrintTypeTags(row.printTypes)" :key="i"
-            size="mini" :type="t.type" style="margin-right:4px;">{{ t.label }}</el-tag>
-        </template>
-        <template #col-online="{ row }">
-          <el-tag :type="isOnline(row) ? 'success' : 'info'">
-            {{ isOnline(row) ? '在线' : '离线' }}
-          </el-tag>
-        </template>
-        <template #col-status="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'info'">
-            {{ row.status === 1 ? '启用' : '停用' }}
-          </el-tag>
-        </template>
-        <template #actions="{ row }">
-          <el-button type="text" size="small" class="btn-view" @click="handleTest(row)">测试打印</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="handleStatus(row)">
-            {{ row.status === 1 ? '停用' : '启用' }}
-          </el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
-        </template>
-      </crud-table>
-    </main>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>

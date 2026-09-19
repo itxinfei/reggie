@@ -106,66 +106,6 @@
     >
       <div v-if="selectedMember" class="member-detail">
         <div class="member-detail__head">
-      <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
-      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
-
-      <!-- ===== 搜索栏 ===== -->
-      <table-bar
-        ref="tableBar"
-        :search-items="searchConfig"
-        :actions="actionConfig"
-        @search="onSearch"
-        @reset="onReset"
-        @action="onAction"
-      ></table-bar>
-
-      <!-- ===== 数据表格 ===== -->
-      <crud-table
-        ref="crudTable"
-        empty-hint="试试调整筛选条件"
-        :data="tableData"
-        :columns="columns"
-        :loading="loading"
-        :page="page"
-        :page-size="pageSize"
-        :total="counts"
-        :show-actions="true"
-        :actions-width="340"
-        @page-change="onPageChange"
-        @size-change="onSizeChange"
-      >
-        <template #col-levelName="{ row }">
-          <span :class="getLevelClass(row.levelName)">{{ row.levelName || '普通会员' }}</span>
-        </template>
-        <template #col-balance="{ row }">
-          <span style="color:var(--color-brand-700);font-weight:600;">￥{{ row.balance }}</span>
-        </template>
-        <template #col-totalConsumption="{ row }">
-          <span style="font-weight:500;">￥{{ row.totalConsumption }}</span>
-        </template>
-        <template #col-status="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">{{ row.status === 1 ? '正常' : '已禁用' }}</el-tag>
-        </template>
-        <template #actions="{ row }">
-          <el-button type="text" size="small" class="btn-view" @click="selectMember(row)">详情</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="showRecharge(row)">充值</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="showEdit(row)">编辑</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="toggleStatus(row)">{{ row.status === 1 ? '禁用' : '启用' }}</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
-        </template>
-      </crud-table>
-    </main>
-
-    <!-- ===== 会员详情弹窗（2026-09-01：原 8.4.1 双栏右卡迁移为弹窗式详情） ===== -->
-    <crud-dialog :show-submit="false" :show-cancel="true"
-      title="会员详情"
-      :visible.sync="detailVisible"
-      size="md"
-      cancel-text="关 闭"
-      :show-close="true"
-    >
-      <div v-if="selectedMember" class="member-detail">
-        <div class="member-detail__head">
           <div class="member-detail__avatar" aria-hidden="true">{{ (selectedMember.name || '?').charAt(0) }}</div>
           <div class="member-detail__head-info">
             <div class="member-detail__name">{{ selectedMember.name }}</div>

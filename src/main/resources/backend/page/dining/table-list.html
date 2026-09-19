@@ -114,26 +114,6 @@
       >
         <!-- 视图切换按钮（table-bar 默认插槽） -->
         <div class="table-grid-toggle" style="margin-left:auto;">
-
-      <!-- 数据统计卡片 -->
-      <stat-cards
-        :cards="statsCards"
-        :active-key.sync="activeFilter"
-        @card-click="onCardClick"
-      ></stat-cards>
-
-      <!-- 搜索 + 操作栏（含视图切换、新增按钮） -->
-      <table-bar
-        ref="tableBar"
-        :search-items="searchConfig"
-        :actions="actionConfig"
-        :show-search-btns="true"
-        @search="onSearch"
-        @reset="onReset"
-        @action="onAction"
-      >
-        <!-- 视图切换按钮（table-bar 默认插槽） -->
-        <div class="table-grid-toggle" style="margin-left:auto;">
           <div class="toggle-btn" role="button" tabindex="0" :aria-pressed="viewMode === 'table'" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'" @keydown.enter="viewMode = 'table'">列表</div>
           <div class="toggle-btn" role="button" tabindex="0" :aria-pressed="viewMode === 'card'" :class="{ active: viewMode === 'card' }" @click="viewMode = 'card'" @keydown.enter="viewMode = 'card'">卡片</div>
           <div class="toggle-btn" role="button" tabindex="0" :aria-pressed="viewMode === 'map'" :class="{ active: viewMode === 'map' }" @click="viewMode = 'map'" @keydown.enter="viewMode = 'map'">桌型图</div>

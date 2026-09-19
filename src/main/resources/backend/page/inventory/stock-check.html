@@ -92,47 +92,6 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="stock-check-app">
     <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-      <!-- 统计卡片 -->
-      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
-
-      <!-- 搜索栏 -->
-      <table-bar
-        :search-items="tableSearchItems"
-        :actions="tableActions"
-        @search="handleQuery"
-        @reset="reset"
-        @action="onTableAction">
-        <template slot="search-extra">
-          <el-date-picker v-model="input.dateRange" type="daterange" range-separator="至"
-            start-placeholder="开始日期" end-placeholder="结束日期" value-format="yyyy-MM-dd"
-            class="el-date-editor--md" @change="handleQuery" size="small"></el-date-picker>
-        </template>
-      </table-bar>
-
-      <!-- 数据表格 -->
-      <crud-table
-        :data="tableData"
-        :columns="columns"
-        :loading="loading"
-        :page="page"
-        :page-size="pageSize"
-        :page-sizes="[10,20,30,40]"
-        :total="counts"
-        :expand="true"
-        row-key="id"
-        :show-actions="true" :viewable="true"
-        :actions-width="200"
-        @page-change="onPageChange"
-        @size-change="onSizeChange"
-        @expand-change="loadDetails">
-        <!-- 展开行：仅已完成状态显示明细 -->
-        <template #expand="{ row }">
-          <template v-if="row.status === 'DONE' && row.details && row.details.length">
-            <div class="expand-summary">
-              <div class="expand-summary__item">
-                <i class="ri-user-line"></i>
-                <span class="expand-summary__label">操作员</span>
-                <span class="expand-summary__value">{{ row.operator || '-' }}</span>
 
       <!-- 统计卡片 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>

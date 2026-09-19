@@ -40,11 +40,6 @@
 
       <!-- ===== 等级进阶 ===== -->
       <div class="progression-section" v-if="tableData.length > 0">
-      <!-- 修改点：使用 <stat-cards> 统一组件 -->
-      <stat-cards :cards="statsCards"></stat-cards>
-
-      <!-- ===== 等级进阶 ===== -->
-      <div class="progression-section" v-if="tableData.length > 0">
         <div class="progression-title"><i class="ri-bar-chart-2-line" aria-hidden="true"></i> 等级晋升阶梯</div>
         <div class="progression-bar">
           <div class="prog-item" v-for="(item, idx) in sortedLevels" :key="item.id">
