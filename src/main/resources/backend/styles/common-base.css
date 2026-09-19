@@ -24,16 +24,18 @@ html {
 }
 
 a,
-a:focus,
 a:hover {
   color: inherit;
-  outline: none;
   text-decoration: none;
 }
-/* blueBug/delBut/non 旧操作按钮类已无页面引用，统一走 .btn-view/.btn-delete（components.css） */
-div:focus {
+/* 键盘聚焦时保留 design-system.css 全局 :focus-visible 品牌焦点环（WCAG 2.4.7），
+   仅去掉鼠标点击聚焦的默认 outline；原 a:focus/div:focus 无差别 outline:none
+   会以更高特异性压掉焦点环，使键盘用户无法辨认位置 */
+a:focus:not(:focus-visible),
+div:focus:not(:focus-visible) {
   outline: none;
 }
+/* blueBug/delBut/non 旧操作按钮类已无页面引用，统一走 .btn-view/.btn-delete（components.css） */
 
 .clearfix:after {
   content: "";

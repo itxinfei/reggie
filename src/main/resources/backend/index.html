@@ -22,52 +22,8 @@
         width: 100%;
         height: 100%;
       }
-      /* 修改点：顶栏面包屑直接内嵌，避免外部 CSS 缓存/未加载导致样式不生效 */
-      .topbar .breadcrumb {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        margin: 0;
-        padding: 0;
-        border: none;
-        font-size: 14px;
-        line-height: 1;
-      }
-      .topbar .crumb-item,
-      .topbar .crumb-current {
-        display: inline-flex;
-        align-items: center;
-        margin: 0;
-        padding: 4px 10px;
-        border-radius: 4px;
-        font-size: 14px;
-        line-height: 1;
-        transition: all 0.2s ease;
-      }
-      .topbar .crumb-item {
-        color: var(--color-gray-500);
-        cursor: default;
-      }
-      .topbar .crumb-item.clickable {
-        cursor: pointer;
-      }
-      .topbar .crumb-item.clickable:hover {
-        color: var(--color-warning-dark); /* #b45309 最接近 --color-warning-dark (#b88219)，语义均为深橙色文字 */
-        background: var(--amber-100);
-        box-shadow: 0 1px 3px rgba(0,0,0,.08);
-      }
-      .topbar .crumb-current {
-        color: var(--text-primary);
-        font-weight: 600;
-        background: var(--color-gray-100);
-      }
-      .topbar .crumb-sep {
-        color: var(--color-gray-300);
-        font-size: 12px;
-        line-height: 1;
-        user-select: none;
-        margin: 0 2px;
-      }
+      /* 面包屑样式已归位 styles/index.css 唯一权威定义（2026-09-19），
+         CSS 为 head 渲染阻塞资源、Vue 挂载晚于 CSS 加载，无需内联防缓存 */
     </style>
   </head>
 

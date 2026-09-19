@@ -154,6 +154,21 @@
   --sidebar-item-gap: 4px;
   --sidebar-item-radius: 8px;
   --topbar-height: 56px;
+
+  /* 深色侧边栏交互态（白色/品牌金在深底上的透明叠加，集中管理便于整体换肤，
+     禁止在 index.css 中再硬编码 rgba） */
+  --sidebar-border: rgba(255, 255, 255, 0.06);              /* logo 分割线 */
+  --sidebar-item-hover-bg: rgba(255, 255, 255, 0.08);       /* 一级菜单 hover */
+  --sidebar-subitem-bg: rgba(0, 0, 0, 0.15);                /* 二级菜单内嵌底 */
+  --sidebar-subitem-hover-bg: rgba(255, 255, 255, 0.06);    /* 二级/三级菜单 hover */
+  --sidebar-active-bg: rgba(255, 194, 0, 0.1);              /* 一级菜单激活 */
+  --sidebar-subitem-active-bg: rgba(255, 194, 0, 0.08);     /* 二级菜单激活 */
+  --sidebar-collapsed-active-bg: rgba(255, 194, 0, 0.12);   /* 折叠态激活 */
+  --sidebar-scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  --sidebar-arrow-color: rgba(255, 255, 255, 0.4);
+  --sidebar-text-tertiary: rgba(255, 255, 255, 0.55);       /* 三级分组标题 */
+  --sidebar-text-quiet: rgba(255, 255, 255, 0.35);          /* logo 副标题/折叠按钮默认 */
+  --sidebar-text-strong: rgba(255, 255, 255, 0.7);          /* 折叠按钮 hover */
 }
 
 /* 大屏微调（与 index.css 原行为一致） */

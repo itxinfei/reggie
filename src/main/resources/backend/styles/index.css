@@ -88,7 +88,7 @@ html, body {
   cursor: pointer;
   user-select: none;
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--sidebar-border);
   transition: padding var(--transition-smooth);
 }
 
@@ -121,7 +121,7 @@ html, body {
 .sidebar-logo .logo-sub {
   font-size: 10px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--sidebar-text-quiet);
   letter-spacing: 1.5px;
   text-transform: uppercase;
 }
@@ -143,7 +143,7 @@ html, body {
   width: 4px;
 }
 .sidebar-menu-wrap::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--sidebar-scrollbar-thumb);
   border-radius: 2px;
 }
 .sidebar-menu-wrap::-webkit-scrollbar-track {
@@ -202,7 +202,7 @@ html, body {
 /* Hover 态 */
 .sidebar-container .el-menu-item:hover {
   color: var(--text-inverse) !important;
-  background-color: rgba(255, 255, 255, 0.08) !important;
+  background-color: var(--sidebar-item-hover-bg) !important;
 }
 .sidebar-container .el-menu-item:hover::before {
   content: '';
@@ -220,7 +220,7 @@ html, body {
 /* 激活态 */
 .sidebar-container .el-menu-item.is-active {
   color: var(--accent-color) !important;
-  background-color: rgba(255, 194, 0, 0.1) !important;
+  background-color: var(--sidebar-active-bg) !important;
   font-weight: 500 !important;
 }
 .sidebar-container .el-menu-item.is-active::before {
@@ -253,7 +253,7 @@ html, body {
 }
 .sidebar-container .el-submenu__title:hover {
   color: var(--text-inverse) !important;
-  background-color: rgba(255, 255, 255, 0.06) !important;
+  background-color: var(--sidebar-subitem-hover-bg) !important;
 }
 .sidebar-container .el-submenu__title i {
   font-size: 19px;
@@ -265,7 +265,7 @@ html, body {
 
 /* 子菜单展开箭头 */
 .sidebar-container .el-submenu__icon-arrow {
-  color: rgba(255, 255, 255, 0.4) !important;
+  color: var(--sidebar-arrow-color) !important;
   transition: transform var(--transition-fast);
   right: 12px;
   font-size: 12px;
@@ -278,14 +278,14 @@ html, body {
 .sidebar-container .el-menu--inline .el-menu-item {
   padding-left: 46px !important;
   font-size: 13px !important;
-  background: rgba(0, 0, 0, 0.15) !important;
+  background: var(--sidebar-subitem-bg) !important;
   margin: 1px 0;
 }
 .sidebar-container .el-menu--inline .el-menu-item:hover {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--sidebar-subitem-hover-bg) !important;
 }
 .sidebar-container .el-menu--inline .el-menu-item.is-active {
-  background-color: rgba(255, 194, 0, 0.08) !important;
+  background-color: var(--sidebar-subitem-active-bg) !important;
 }
 
 /* ---------- 三级菜单（订单中心分组折叠，2026-09-10）----------
@@ -300,14 +300,14 @@ html, body {
   border-radius: 6px !important;
   font-size: 12.5px !important;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.55) !important;
+  color: var(--sidebar-text-tertiary) !important;
   background: transparent !important;
   margin: 1px 0;
   transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 .sidebar-container .el-menu--inline .el-submenu__title:hover {
   color: var(--text-inverse) !important;
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: var(--sidebar-subitem-hover-bg) !important;
 }
 /* 分组层展开箭头（对齐 Element 默认箭头位置） */
 .sidebar-container .el-menu--inline .el-submenu__icon-arrow {
@@ -335,13 +335,13 @@ html, body {
   margin-top: 8px;
   border-radius: var(--sidebar-item-radius);
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--sidebar-text-quiet);
   transition: color var(--transition-fast), background-color var(--transition-fast);
   flex-shrink: 0;
 }
 .sidebar-toggle-btn:hover {
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--sidebar-text-strong);
+  background: var(--sidebar-subitem-hover-bg);
 }
 .sidebar-toggle-btn svg {
   transition: transform var(--transition-smooth);
@@ -398,7 +398,7 @@ html, body {
 /* 折叠态 active 用品牌色浅背景代替发光描边 */
 .sidebar-container.collapsed .el-menu-item.is-active {
   border-radius: 12px !important;
-  background-color: rgba(255, 194, 0, 0.12) !important;
+  background-color: var(--sidebar-collapsed-active-bg) !important;
 }
 
 /* 折叠态主内容区拉宽 */
@@ -450,30 +450,39 @@ html, body {
   flex-shrink: 0;
 }
 
-/* ---------- 顶栏面包屑覆写（design-system.css 的页面级样式在此不适用） ---------- */
+/* ---------- 顶栏面包屑（唯一权威定义；原 index.html <head> 内联副本已迁入，
+   design-system.css 的页面级 .ds-breadcrumb 在此不适用） ---------- */
 .topbar .breadcrumb {
-  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
   padding: 0;
-  border-bottom: none;
-  font-size: 14px;
+  border: none;
+  font-size: var(--font-size-base);
+  line-height: 1;
 }
 
 .topbar .crumb-item,
 .topbar .crumb-current {
+  display: inline-flex;
+  align-items: center;
   margin: 0;
-  padding: 4px 8px;
-  border-radius: 4px;
-  color: var(--text-secondary);
-  transition: color 0.2s, background 0.2s;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--color-gray-500);
+  transition: color var(--transition-base),
+              background-color var(--transition-base),
+              box-shadow var(--transition-base);
   cursor: default;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   line-height: 1;
 }
 
 .topbar .crumb-current {
   color: var(--text-primary);
   font-weight: 600;
-  background: var(--bg-subtle);
+  background: var(--color-gray-100);
 }
 
 .topbar .crumb-item.clickable {
@@ -481,13 +490,14 @@ html, body {
 }
 
 .topbar .crumb-item.clickable:hover {
-  color: #c99200;
-  background: #fffbeb;
+  color: var(--color-brand-700);
+  background: var(--color-brand-50);
+  box-shadow: var(--shadow-sm);
 }
 
 .topbar .crumb-sep {
   color: var(--color-gray-300);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   line-height: 1;
   user-select: none;
   margin: 0 2px;
@@ -571,7 +581,8 @@ html, body {
   font-size: 13px;
   font-weight: 700;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(255, 194, 0, 0.3);
+  /* 金色发光违反「禁发光」规范，收敛为中性轻投影 */
+  box-shadow: var(--shadow-sm);
 }
 
 .user-name {
