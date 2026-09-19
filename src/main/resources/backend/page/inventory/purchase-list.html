@@ -22,6 +22,36 @@
     .rg-w-220 { width: 220px !important; }
     .rg-w-160 { width: 160px !important; }
     .rg-w-100 { width: 100px !important; }
+
+    /* ========== 展开行：采购明细卡片（#purchase-app 作用域，不影响盘点/评价页展开行） ========== */
+    /* 收紧 Element 默认 20px 50px 的展开区内边距，浅灰底把展开区与主表行分层 */
+    #purchase-app .el-table__expanded-cell[class*="cell"] { padding: 8px 12px; }
+    #purchase-app .el-table__expanded-cell { background-color: var(--bg-page); }
+    .purchase-detail {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .purchase-detail__head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-page);
+      border-bottom: 1px solid var(--border-default);
+    }
+    .purchase-detail__title {
+      display: flex; align-items: center; gap: 6px;
+      font-size: var(--font-size-base); font-weight: 500; color: var(--text-primary);
+    }
+    .purchase-detail__title i { color: var(--text-muted); font-size: var(--font-size-base); }
+    .purchase-detail__count { font-size: var(--font-size-sm, 12px); color: var(--text-muted); }
+    /* 明细表：小尺寸、去掉外框与底部伪元素线（卡片已提供边框），避免表中表的双线堆叠 */
+    .purchase-detail__table { width: 100%; border: 0 !important; }
+    .purchase-detail__table::before { display: none !important; }
+    .purchase-detail__empty {
+      text-align: center; padding: 16px;
+      color: var(--text-muted); font-size: var(--font-size-sm, 12px);
+    }
 </style>
 </head>
 <body>
@@ -73,22 +103,29 @@
         @size-change="onSizeChange"
         @expand-change="loadDetails">
         <template #expand="{ row }">
-          <el-table aria-label="数据表格" :data="row.details" stripe class="tableBox" v-if="row.details && row.details.length">
-            <el-table-column prop="materialName" label="食材名称" min-width="140" align="center" :header-align="'center'" />
-            <el-table-column prop="materialId" label="食材ID" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
-            <el-table-column prop="qty" label="数量" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
-            <el-table-column label="单价" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
-              <template slot-scope="scope">￥{{ scope.row.unitPrice }}</template>
-            </el-table-column>
-            <el-table-column label="已收货" width="120" align="center" :header-align="'center'" :show-overflow-tooltip="true">
-              <template slot-scope="scope">{{ scope.row.receivedQty || 0 }}</template>
-            </el-table-column>
-            <el-table-column label="小计" width="110" align="center">
-              <template slot-scope="scope">￥{{ scope.row.amount }}</template>
-            </el-table-column>
-            <el-table-column prop="remark" label="备注" min-width="120" align="center" :header-align="'center'" />
-          </el-table>
-          <div v-else style="text-align:center;padding:16px;color:var(--text-muted);">暂无明细数据</div>
+          <div class="purchase-detail">
+            <div class="purchase-detail__head">
+              <span class="purchase-detail__title"><i class="ri-file-list-3-line"></i>采购明细</span>
+              <span class="purchase-detail__count" v-if="row.details && row.details.length">共 {{ row.details.length }} 项</span>
+            </div>
+            <div v-if="row.detailLoading" class="purchase-detail__empty"><i class="el-icon-loading"></i> 明细加载中...</div>
+            <el-table v-else-if="row.details && row.details.length" aria-label="采购明细" :data="row.details" stripe size="small" class="purchase-detail__table">
+              <el-table-column prop="materialName" label="食材名称" min-width="140" align="center" :header-align="'center'" />
+              <el-table-column prop="materialId" label="食材ID" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
+              <el-table-column prop="qty" label="数量" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true" />
+              <el-table-column label="单价" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
+                <template slot-scope="scope">￥{{ scope.row.unitPrice }}</template>
+              </el-table-column>
+              <el-table-column label="已收货" width="120" align="center" :header-align="'center'" :show-overflow-tooltip="true">
+                <template slot-scope="scope">{{ scope.row.receivedQty || 0 }}</template>
+              </el-table-column>
+              <el-table-column label="小计" width="110" align="center">
+                <template slot-scope="scope">￥{{ scope.row.amount }}</template>
+              </el-table-column>
+              <el-table-column prop="remark" label="备注" min-width="120" align="center" :header-align="'center'" />
+            </el-table>
+            <div v-else class="purchase-detail__empty">暂无明细数据</div>
+          </div>
         </template>
         <template #col-totalAmount="{ row }">￥{{ (row.totalAmount || 0).toString() }}</template>
         <template #col-status="{ row }">
@@ -384,10 +421,13 @@
         loadSupplierOptions() { supplierList().then(res => { if (res.code === 1) this.supplierOptions = res.data }) },
         loadMaterialOptions() { materialList().then(res => { if (res.code === 1) this.materialOptions = res.data }) },
         loadDetails(row) {
-          if (!row.id || row.details) return
+          // 已加载或正在加载时不重复请求；展开区按 loading/有数据/空 三态渲染
+          if (!row.id || row.details || row.detailLoading) return
+          this.$set(row, 'detailLoading', true)
           purchaseDetailList(row.id).then(res => {
             if (res.code === 1) this.$set(row, 'details', res.data || [])
           }).catch(err => { ReggieUI.error('请求失败：' + err) })
+            .finally(() => { this.$set(row, 'detailLoading', false) })
         },
         handleQuery() { this.page = 1; this.init() },
         reset() { this.input.supplierId = ''; this.input.status = ''; this.cardFilter = ''; this.page = 1; this.init() },
