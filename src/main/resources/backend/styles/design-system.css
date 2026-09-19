@@ -6,7 +6,7 @@
  * 内容：
  *   1. 无障碍基础设施（聚焦环 / sr-only / skip-link / 减弱动效）
  *   2. 页面表面统一（.dashboard-container .container → token 化卡片）
- *   3. 布局原语（BEM：ds-page-header / ds-stack / ds-cluster / ds-gap-*）
+ *   3. 布局原语（BEM：ds-stack / ds-cluster / ds-gap-*）
  *   4. 卡片与区块标题
  *   5. 面包屑导航
  *   6. 文字按钮（.ds-link / .ds-link--danger）
@@ -82,41 +82,6 @@
 }
 
 /* ========== 3. 布局原语（BEM / ds- 前缀） ========== */
-
-/* 页头：标题 + 操作区，自动换行并在窄屏堆叠 */
-.ds-page-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  /* 管理后台以数据密度优先，页头与内容间距从 20px 收紧至 12px */
-  margin-bottom: var(--space-3);
-}
-.ds-page-header__titles {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-.ds-page-header__title {
-  margin: 0;
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-tight);
-  color: var(--text-primary);
-}
-.ds-page-header__subtitle {
-  margin: 0;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-}
-.ds-page-header__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
 
 /* 纵向堆叠（gap 默认 16px） */
 .ds-stack {
@@ -375,11 +340,8 @@ a.breadcrumb__item:hover,
 @media (max-width: 768px) {
   .dashboard-container { padding: var(--space-2); }
   .dashboard-container .container { padding: var(--space-4); border-radius: var(--radius-md); }
-  .ds-page-header { flex-direction: column; align-items: stretch; }
-  .ds-page-header__actions { width: 100%; }
   .ds-show-sm { display: initial !important; }
   .ds-hide-sm { display: none !important; }
-  .ds-page-header__title { font-size: var(--font-size-xl); }
 }
 
 /* ========== 9. 中屏 / 大屏响应式断点工具类（补齐 ≤768 之外） ========== */
@@ -397,11 +359,10 @@ a.breadcrumb__item:hover,
   .dashboard-container .container { padding: var(--space-5); }
 }
 
-/* 中屏（1024px 以下，平板/小桌面）：统计卡两列、页头堆叠 */
+/* 中屏（1024px 以下，平板/小桌面）：统计卡两列 */
 @media (max-width: 1024px) {
   .ds-show-md { display: initial !important; }
   .ds-hide-md { display: none !important; }
-  .ds-page-header__title { font-size: var(--font-size-2xl); }
   .ds-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
 }
 
