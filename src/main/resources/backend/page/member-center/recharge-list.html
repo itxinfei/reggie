@@ -18,10 +18,7 @@
     .chart-panel .panel-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 12px;
       padding-bottom: 10px; border-bottom: 1px solid var(--el-bg-lighter); }
     .chart-box { width: 100%; height: 300px; }
-    /* ── 筛选栏 ── */
-    .filter-bar { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 14px 20px; margin-bottom: 16px;
-      box-shadow: var(--shadow-xs); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .filter-bar .el-select { width: 150px; }
+    /* 筛选区已迁移到统一 table-bar 组件，旧 .filter-bar 手写样式移除 */
     /* ── 充值会员信息卡片 ── */
     .recharge-member { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%;
       padding: 10px 14px; background: var(--bg-subtle); border: 1px solid var(--border-default);
@@ -40,12 +37,19 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="recharge-app">
     <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-      <el-button type="primary" size="small" icon="ri-add-line" @click="openRecharge">手动充值</el-button>
-
-      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
+      <!-- 统计卡片（第一区块） -->
       <stat-cards :cards="statsCards"></stat-cards>
 
-      <!-- ===== 图表区 ===== -->
+      <!-- 工具栏（第二区块）：手机号 + 支付方式筛选 + 查询/重置 + 手动充值，统一 table-bar -->
+      <table-bar
+        :search-items="searchItems"
+        :actions="tableActions"
+        @search="onBarSearch"
+        @reset="onBarReset"
+        @action="onBarAction">
+      </table-bar>
+
+      <!-- ===== 图表区（主体） ===== -->
       <div class="chart-panels">
         <div class="chart-panel">
           <div class="panel-title"><i class="ri-line-chart-line" aria-hidden="true"></i> 近12月充值趋势</div>
@@ -57,22 +61,7 @@
         </div>
       </div>
 
-      <!-- ===== 筛选区 ===== -->
-      <div class="filter-bar">
-        <el-input v-model="input.phone" placeholder="请输入会员手机号" clearable
-          @keyup.enter.native="handleQuery" style="width:200px;">
-          <i slot="prefix" class="el-input__icon ri-search-line"></i>
-        </el-input>
-        <el-select v-model="input.paymentMethod" placeholder="支付方式" clearable @change="handleQuery">
-          <el-option label="微信支付" value="WECHAT"></el-option>
-          <el-option label="支付宝" value="ALIPAY"></el-option>
-          <el-option label="现金" value="CASH"></el-option>
-        </el-select>
-        <el-button type="primary" size="small" @click="handleQuery">查询</el-button>
-        <el-button size="small" @click="reset">重置</el-button>
-      </div>
-
-      <!-- ===== 数据表格 ===== -->
+      <!-- ===== 数据表格（主体） ===== -->
       <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination（图表区保持不变） -->
       <crud-table
         empty-hint="暂无相关记录"
@@ -162,6 +151,19 @@
         return {
           loading: false,
           input: { phone: '', paymentMethod: '' },
+          // table-bar 统一工具栏：手机号搜索 + 支付方式下拉（清空=全部）+ 手动充值操作
+          searchItems: [
+            { type: 'input', field: 'phone', placeholder: '请输入会员手机号', width: 200 },
+            { type: 'select', field: 'paymentMethod', placeholder: '支付方式（全部）', width: 160,
+              options: [
+                { label: '微信支付', value: 'WECHAT' },
+                { label: '支付宝', value: 'ALIPAY' },
+                { label: '现金', value: 'CASH' }
+              ] }
+          ],
+          tableActions: [
+            { key: 'recharge', text: '手动充值', type: 'primary', icon: 'ri-add-line' }
+          ],
           counts: 0, page: 1, pageSize: 10,
           tableData: [],
           stats: { totalAmount: 0, totalCount: 0, todayAmount: 0, todayCount: 0,
@@ -291,6 +293,14 @@
           return n.toFixed(2)
         },
         /* ── 筛选与分页 ── */
+        // table-bar 回调桥接：组件内部筛选值同步到既有 input，再复用原查询逻辑
+        onBarSearch: function(params) {
+          this.input.phone = params.phone || ''
+          this.input.paymentMethod = params.paymentMethod || ''
+          this.handleQuery()
+        },
+        onBarReset: function() { this.reset() },
+        onBarAction: function(payload) { if (payload.key === 'recharge') this.openRecharge() },
         handleQuery: function() { this.page = 1; this.fetchData(false) },
         reset: function() { this.input = { phone: '', paymentMethod: '' }; this.page = 1; this.fetchData(false) },
         /* ── 手动充值弹窗（8.4.3） ── */

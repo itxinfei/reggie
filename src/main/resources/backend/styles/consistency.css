@@ -27,8 +27,10 @@ body:not(.login-page) {
 
 /* ========== 3. 主容器表面统一 ========== */
 /* 重新断言设计系统容器规范（design-system.css 定义，被 page.css 覆盖后在此恢复） */
+/* 用户拍板(2026-09-19)：取消卡片外 8px 灰边，白卡片贴紧 iframe 边缘，更紧凑；
+   卡片内边距仍保持 8/12（见下 .dashboard-container .container）。 */
 .dashboard-container {
-  padding: var(--space-2);
+  padding: 0;
 }
 .dashboard-container .container {
   background: var(--bg-surface);
@@ -36,6 +38,7 @@ body:not(.login-page) {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   padding: var(--space-2) var(--space-3);
+  margin: 0; /* 归零 unified-components 遗留的 24px 底边距，配合外衬 padding:0 四面贴边 */
   min-width: 0; /* 防 iframe 内定宽内容横向撑破（与裸 .container 兜底一致） */
 }
 
@@ -65,7 +68,8 @@ body > .container {
   box-shadow: var(--shadow-sm);
   padding: var(--space-2) var(--space-3);
   max-width: 1400px;
-  margin: 8px auto;
+  /* 用户拍板(2026-09-19)：取消卡片外 8px 灰边，垂直外边距归 0；左右 auto 保留超宽屏居中 */
+  margin: 0 auto;
   min-width: 0;
 }
 

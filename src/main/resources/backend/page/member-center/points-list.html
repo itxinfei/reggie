@@ -19,14 +19,7 @@
       padding-bottom: 10px; border-bottom: 1px solid var(--el-bg-lighter); display: flex; align-items: center; gap: 8px; }
     .chart-box { width: 100%; height: 320px; }
 
-    /* ---- 筛选区 ---- */
-    .filter-bar { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 16px;
-      box-shadow: var(--shadow-xs); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .filter-bar .el-select, .filter-bar .el-input { width: 180px; }
-    .type-tag { cursor: pointer; padding: 5px 14px; border-radius: var(--radius-lg); font-size:var(--font-size-sm);
-      border: 1px solid var(--el-border-lighter2); color: var(--el-text-regular); transition: all 0.2s; user-select: none; }
-    .type-tag.active { color: var(--el-color-primary); border-color: var(--el-color-primary); background: var(--el-color-primary-lighter); }
-    .type-tag:hover { color: var(--el-color-primary); border-color: var(--el-color-primary-light); }
+    /* 筛选区已迁移到统一 table-bar 组件，旧 .filter-bar/.type-tag 手写样式移除 */
 
     .adjust-member { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%;
       padding: 10px 14px; background: var(--bg-subtle); border: 1px solid var(--border-default);
@@ -35,7 +28,6 @@
     .adjust-member .ri-user-star-line { color: var(--color-brand-500); font-size: var(--font-size-xl) }
 
     @media (max-width: 900px) {
-      .stat-card { min-width: 140px; flex: 1 1 calc(50% - 8px); }
       .chart-panel { min-width: 100%; }
     }
   </style>
@@ -47,12 +39,19 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="points-app">
     <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-      <el-button type="primary" size="small" icon="ri-add-line" @click="openAdjust">积分调整</el-button>
-
-      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stat-card -->
+      <!-- 统计卡片（第一区块） -->
       <stat-cards :cards="statsCards"></stat-cards>
 
-      <!-- ===== 图表区 ===== -->
+      <!-- 工具栏（第二区块）：手机号 + 类型筛选 + 查询/重置 + 积分调整，统一 table-bar -->
+      <table-bar
+        :search-items="searchItems"
+        :actions="tableActions"
+        @search="onBarSearch"
+        @reset="onBarReset"
+        @action="onBarAction">
+      </table-bar>
+
+      <!-- ===== 图表区（主体） ===== -->
       <div class="chart-panels">
         <div class="chart-panel">
           <div class="panel-title"><i class="ri-line-chart-line" aria-hidden="true"></i> 近30天积分趋势</div>
@@ -64,21 +63,7 @@
         </div>
       </div>
 
-      <!-- ===== 筛选区 ===== -->
-      <div class="filter-bar">
-        <el-input v-model="input.phone" placeholder="请输入会员手机号" clearable
-          @keyup.enter.native="handleQuery" style="width:200px;">
-          <i slot="prefix" class="el-input__icon ri-search-line"></i>
-        </el-input>
-        <span style="color:var(--color-info);font-size:var(--font-size-sm);">类型：</span>
-        <span :class="['type-tag', input.type === '' ? 'active' : '']" role="button" tabindex="0" @click="setType('')" @keydown.enter="setType('')" :aria-pressed="input.type === ''">全部</span>
-        <span :class="['type-tag', input.type === 'IN' ? 'active' : '']" role="button" tabindex="0" @click="setType('IN')" @keydown.enter="setType('IN')" :aria-pressed="input.type === 'IN'" aria-label="获取类型"><i class="ri-arrow-down-circle-line tag-in" aria-hidden="true"></i> 获取</span>
-        <span :class="['type-tag', input.type === 'OUT' ? 'active' : '']" role="button" tabindex="0" @click="setType('OUT')" @keydown.enter="setType('OUT')" :aria-pressed="input.type === 'OUT'" aria-label="消费类型"><i class="ri-arrow-up-circle-line tag-out" aria-hidden="true"></i> 消费</span>
-        <el-button type="primary" size="small" @click="handleQuery">查询</el-button>
-        <el-button size="small" @click="reset">重置</el-button>
-      </div>
-
-      <!-- ===== 数据表格 ===== -->
+      <!-- ===== 数据表格（主体） ===== -->
       <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination（图表区保持不变） -->
       <crud-table
         empty-hint="暂无相关记录"
@@ -167,6 +152,15 @@
         return {
           loading: false,
           input: { phone: '', type: '' },
+          // table-bar 统一工具栏：手机号搜索 + 类型下拉（清空=全部）+ 积分调整操作
+          searchItems: [
+            { type: 'input', field: 'phone', placeholder: '请输入会员手机号', width: 200 },
+            { type: 'select', field: 'type', placeholder: '类型（全部）', width: 140,
+              options: [ { label: '获取', value: 'IN' }, { label: '消费', value: 'OUT' } ] }
+          ],
+          tableActions: [
+            { key: 'adjust', text: '积分调整', type: 'primary', icon: 'ri-add-line' }
+          ],
           counts: 0, page: 1, pageSize: 10,
           tableData: [],
           stats: { totalPoints: 0, todayAcquired: 0, todayConsumed: 0,
@@ -291,7 +285,14 @@
         },
         /* ── 筛选与分页 ── */
         fmtNum: function(n) { return (n || 0).toLocaleString() },
-        setType: function(t) { this.input.type = t; this.page = 1; this.fetchData(false) },
+        // table-bar 回调桥接：组件内部筛选值同步到既有 input，再复用原查询逻辑
+        onBarSearch: function(params) {
+          this.input.phone = params.phone || ''
+          this.input.type = params.type || ''
+          this.handleQuery()
+        },
+        onBarReset: function() { this.reset() },
+        onBarAction: function(payload) { if (payload.key === 'adjust') this.openAdjust() },
         handleQuery: function() { this.page = 1; this.fetchData(false) },
         reset: function() { this.input = { phone: '', type: '' }; this.page = 1; this.fetchData(false) },
         /* ── 积分调整弹窗（8.4.3） ── */
