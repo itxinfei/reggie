@@ -13,7 +13,10 @@
   <style>
     body { overflow-x: visible; }
     /* ========== C.5 菜品管理（行内编辑） ========== */
-    .cell-img { width: auto; height: 40px; border: none; cursor: pointer; border-radius: var(--radius-sm); }
+    .cell-img { width: 36px; height: 36px; object-fit: cover; border: none; cursor: pointer; border-radius: var(--radius-sm); flex-shrink: 0; }
+    /* 菜品名称列：缩略图 + 名称同一格（原图片独占一列信息量低，合并后更紧凑实用） */
+    .dish-name-cell { display: inline-flex; align-items: center; gap: var(--space-2); max-width: 100%; }
+    .dish-name-cell .dish-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .inline-value {
       cursor: text;
       padding: 2px 6px;
@@ -68,16 +71,19 @@
             @selection-change="onSelection"
             aria-label="菜品列表"
           >
-            <!-- 图片列 -->
-            <template #col-image="{ row }">
-              <el-image class="cell-img"
-                :src="getImage(row.image)"
-                :preview-src-list="[getImage(row.image)]"
-                alt="菜品图片">
-                <div slot="error" class="image-slot">
-                  <img src="./../../images/noImg.png" class="cell-img" alt="暂无图片">
-                </div>
-              </el-image>
+            <!-- 菜品名称列（缩略图 + 名称） -->
+            <template #col-name="{ row }">
+              <span class="dish-name-cell">
+                <el-image class="cell-img"
+                  :src="getImage(row.image)"
+                  :preview-src-list="[getImage(row.image)]"
+                  alt="菜品图片">
+                  <div slot="error" class="image-slot">
+                    <img src="./../../images/noImg.png" class="cell-img" alt="暂无图片">
+                  </div>
+                </el-image>
+                <span class="dish-name-text" :title="row.name">{{ row.name }}</span>
+              </span>
             </template>
             <!-- 售价列（C.5 行内编辑：聚焦即改、回车/blur 提交） -->
             <template #col-price="{ row }">
@@ -368,8 +374,7 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'image', label: '图片', slot: true, width: 80, align: 'center' },
-            { prop: 'name', label: '菜品名称', minWidth: 100 },
+            { prop: 'name', label: '菜品名称', slot: true, minWidth: 150 },
             { prop: 'categoryName', label: '分类', width: 60, align: 'center' },
             { prop: 'price', label: '售价', slot: true, width: 110, type: 'money' },
             { prop: 'status', label: '状态', slot: true, width: 50, align: 'center' },

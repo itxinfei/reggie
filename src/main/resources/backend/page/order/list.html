@@ -10,22 +10,6 @@
 
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
-
-  <style lang="less" scoped>
-    /* 修改点：键盘快捷键提示（header 操作区） */
-    .ds-kbd-hint {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: var(--font-size-xs);
-      line-height: 1.5;
-      color: var(--el-text-secondary);
-      background: var(--el-bg-subtle);
-      border: 1px solid var(--el-border-color);
-      border-radius: 4px;
-      padding: 4px 10px;
-    }
-  </style>
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -35,9 +19,6 @@
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
       <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
       <h1 class="sr-only" id="page-title">订单明细</h1>
-          <span class="ds-kbd-hint" title="Enter 接单 / F 完成（作用于当前高亮行）">
-            <i class="ri-key-line"></i>&nbsp;Enter 接单 · F 完成
-          </span>
 
       <!-- 数据统计卡片 -->
       <stat-cards
@@ -70,7 +51,6 @@
         :actions-width="200"
         @page-change="onPageChange"
         @size-change="onSizeChange"
-        @row-click="onRowClick"
       >
         <template #col-status="{ row }">
           <el-tag :type="getOrderTagType(row)" size="small">{{ getOrderType(row) }}</el-tag>
@@ -271,8 +251,6 @@
           // 统计数据（修改点：改走 /order/statistics，含分状态计数）
           stats: { todayRevenue: 0, pendingOrders: 0, deliveringOrders: 0, totalOrders: 0 },
           activeFilter: '',
-          // 当前高亮行（键盘快捷键 Enter 接单 / F 完成 的操作目标）
-          currentOrder: null,
           // 搜索配置
           searchConfig: [
             { type: 'input', field: 'number', placeholder: '请输入订单号', width: '200px' },
@@ -354,13 +332,6 @@
         this.init()
         this.loadEnums()
       },
-      mounted: function() {
-        // 修改点：收银/店长高频快捷键 —— Enter 接单、F 完成（操作当前高亮行）
-        window.addEventListener('keydown', this.handleKeydown)
-      },
-      beforeDestroy: function() {
-        window.removeEventListener('keydown', this.handleKeydown)
-      },
       methods: {
         // 修改点：拉取后端枚举字典（订单状态唯一真源），失败时静默使用本地兜底常量
         loadEnums: function() {
@@ -428,24 +399,6 @@
           else this.lastSearch = {}
           this.page = 1
           this.init()
-        },
-        // 修改点：行点击记录当前高亮行，作为键盘快捷键的操作目标
-        onRowClick: function(row) {
-          this.currentOrder = row
-        },
-        // 修改点：Enter 接单（待接单→配送中）、F 完成（配送中→已完成），仅作用于当前高亮行
-        handleKeydown: function(e) {
-          const tag = (e.target && e.target.tagName) || ''
-          if (tag === 'INPUT' || tag === 'TEXTAREA' || this.dialogVisible || this.refundVisible) return
-          const row = this.currentOrder
-          if (!row) return
-          if (e.key === 'Enter' && Number(row.status) === 2) {
-            e.preventDefault()
-            this.cancelOrDeliveryOrComplete(3, row.id)
-          } else if ((e.key === 'F' || e.key === 'f') && Number(row.status) === 3) {
-            e.preventDefault()
-            this.cancelOrDeliveryOrComplete(4, row.id)
-          }
         },
         // table-bar 回调
         onSearch: function(searchParams) {
