@@ -22,43 +22,13 @@
       max-width: 1400px;
       margin: 0 auto;
     }
-    .tableBar {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      background: var(--bg-surface);
-      padding: 16px 24px;
-      border-radius: var(--radius-lg);
-      margin-bottom: 20px;
-      box-shadow: var(--shadow-sm);
-    }
-    .tableBar .toolbar-label {
-      font-size:var(--font-size-base);
-      color: var(--el-text-regular);
-      font-weight: 500;
-    }
-    .tableBar .toolbar-spacer {
-      flex: 1;
-    }
+    /* 工具栏统一走 table-bar 组件 + page.css 的 .container .tableBar 纯 flex 栏规则，
+       不再私有卡片化覆盖；toolbar-label/spacer 旧类 DOM 已无引用，一并移除。 */
     .table-card {
       background: var(--bg-surface);
       border-radius: var(--radius-lg);
       padding: 20px;
       box-shadow: var(--shadow-sm);
-    }
-    .status-tag {
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      font-size:var(--font-size-xs);
-    }
-    .status-tag.settled {
-      background: var(--el-color-success-lighter);
-      color: var(--el-color-success);
-    }
-    .status-tag.unsettled {
-      background: var(--el-color-warning-lighter);
-      color: var(--el-color-warning);
     }
     /* 详情字段网格（替代本构建未注册的 el-descriptions） */
     .settle-detail {
@@ -88,10 +58,10 @@
  <main class="container" id="main-content" role="main" aria-labelledby="page-title">
     <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
     <h1 class="sr-only" id="page-title">日结管理</h1>
-    <!-- 统计卡片 - 使用统一的 <stat-cards> 组件 -->
+    <!-- 统计卡片 - 使用统一的 stat-cards 组件 -->
     <stat-cards :cards="statsCards"></stat-cards>
 
-    <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
+    <!-- 修改点：搜索栏使用 table-bar 统一组件 -->
     <table-bar
       :search-items="searchItems"
       :actions="searchActions"
@@ -191,7 +161,7 @@
           loading: false,
           submitting: false, // 日结防重复提交守卫
           dateRange: [],
-          // 修改点：<table-bar> 统一组件配置
+          // 修改点：table-bar 统一组件配置
           searchItems: [{ type: 'daterange', field: 'dateRange', placeholder: '日期范围', width: '300px' }],
           searchActions: [{ key: 'settle', text: '今日日结', type: 'warning', icon: 'ri-calendar-line' }],
           tableData: [],
@@ -216,7 +186,7 @@
         }
       },
       computed: {
-        // 统计卡片配置 - 使用统一的 <stat-cards> 组件
+        // 统计卡片配置 - 使用统一的 stat-cards 组件
         statsCards() {
           return [
             {
@@ -392,7 +362,7 @@
             ReggieUI.error('删除失败')
           }
         },
-        // 修改点：<table-bar> 组件回调桥接
+        // 修改点：table-bar 组件回调桥接
         handleSearch(params) {
           if (params && params.dateRange) this.dateRange = params.dateRange
           this.fetchData()

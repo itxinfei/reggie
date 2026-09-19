@@ -23,89 +23,9 @@
       max-width: 1400px;
       margin: 0 auto;
     }
-    /* ===== 搜索栏样式 ===== */
-    .tableBar {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      background: var(--bg-surface);
-      padding: 16px 24px;
-      border-radius: var(--radius-lg);
-      margin-bottom: 20px;
-      box-shadow: var(--shadow-sm);
-    }
-    .tableBar .toolbar-label {
-      font-size:var(--font-size-base);
-      color: var(--el-text-regular);
-      font-weight: 500;
-    }
-    .tableBar .toolbar-spacer {
-      flex: 1;
-    }
-    /* ===== 统计卡片样式 ===== */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-      margin-bottom: 20px;
-    }
-    .stats-card {
-      background: var(--bg-surface);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-      text-align: center;
-    }
-    .stats-value {
-      font-size: var(--font-size-3xl);
-      font-weight: 700;
-      color: var(--el-color-primary);
-      margin-bottom: 8px;
-    }
-    .stats-value.warning {
-      color: var(--el-color-warning);
-    }
-    .stats-value.success {
-      color: var(--el-color-success);
-    }
-    .stats-label {
-      font-size:var(--font-size-base);
-      color: var(--el-text-secondary);
-    }
-    /* ===== 数据表格样式 ===== */
-    .table-card {
-      background: var(--bg-surface);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
-    }
-    /* ===== 状态标签样式（待审核/审核通过/已打款/已拒绝/已取消） ===== */
-    .status-tag {
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      font-size:var(--font-size-xs);
-    }
-    .status-tag.pending {
-      background: var(--el-color-warning-lighter);
-      color: var(--el-color-warning);
-    }
-    .status-tag.approved {
-      background: var(--el-color-primary-lighter);
-      color: var(--el-color-primary);
-    }
-    .status-tag.paid {
-      background: var(--el-color-success-lighter);
-      color: var(--el-color-success);
-    }
-    .status-tag.rejected {
-      background: var(--el-color-danger-lighter);
-      color: var(--el-color-danger);
-    }
-    .status-tag.cancelled {
-      background: var(--el-color-info-lighter);
-      color: var(--el-color-info);
-    }
+    /* 工具栏统一走 table-bar 组件 + page.css 的 .container .tableBar 纯 flex 栏规则；
+       统计区已用 stat-cards 组件、状态列已用 el-tag，旧 stats-row/stats-card/
+       table-card/status-tag 手写样式 DOM 均无引用，一并移除。 */
     /* ===== 详情弹窗样式 ===== */
     .withdraw-detail .dt-item { display: flex; padding: 10px 0; border-bottom: 1px solid var(--el-bg-lighter); }
     .withdraw-detail .dt-label { width: 100px; color: var(--gray-666); font-size: var(--font-size-sm); flex-shrink: 0; }

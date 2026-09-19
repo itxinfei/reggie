@@ -20,14 +20,8 @@
     .dish-ranking-page .container { flex: 1; background: transparent; padding: 24px 32px 32px;
       min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
 
-    /* 工具栏 */
-    .tableBar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
-      background: var(--bg-surface); padding: 16px 24px; border-radius: var(--radius-lg); margin-bottom: 20px;
-      box-shadow: var(--shadow-sm); border: 1px solid var(--el-border-light);
-      transition: box-shadow 0.3s; }
-    .tableBar:hover { box-shadow: var(--shadow-lg); }
-    .tableBar .toolbar-label { font-size:var(--font-size-base); color: var(--el-text-regular); font-weight: 500; flex-shrink: 0; }
-    .tableBar .toolbar-spacer { flex: 1; min-width: 0; }
+    /* 工具栏统一走 table-bar 组件 + page.css 的 .container .tableBar 纯 flex 栏规则，
+       不再私有卡片化覆盖；toolbar-label/spacer 旧类已无引用。 */
 
     /* 修改点：search-extra 包装器，防止日期选择器+数字输入与搜索按钮重叠 */
     .search-extra-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

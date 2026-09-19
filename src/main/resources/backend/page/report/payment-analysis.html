@@ -19,13 +19,8 @@
     .payment-page { min-height: 100%; display: flex; flex-direction: column; }
     .payment-page .container { flex: 1; background: transparent; padding: 24px 32px 32px;
       min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
-    .payment-page .tableBar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
-      background: var(--bg-surface); padding: 16px 24px; border-radius: var(--radius-lg); margin-bottom: 20px;
-      box-shadow: var(--shadow-sm); border: 1px solid var(--el-border-light);
-      transition: box-shadow 0.3s; }
-    .payment-page .tableBar:hover { box-shadow: var(--shadow-lg); }
-    .payment-page .tableBar .fl-label { font-size:var(--font-size-base); color: var(--el-text-regular); font-weight: 500; flex-shrink: 0; }
-    .payment-page .tableBar .fl-spacer { flex: 1; min-width: 0; }
+    /* 工具栏统一走 table-bar 组件 + page.css 的 .container .tableBar 纯 flex 栏规则，
+       不再私有卡片化覆盖；fl-label/fl-spacer 旧类已无引用。 */
     .payment-page .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     /* ====== 退款分析 ====== */
     .payment-page .refund-overview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
@@ -59,11 +54,11 @@
       
       
 
-      <!-- 修改点：使用 <stat-cards> 统一组件替代手写 KPI 卡片 -->
+      <!-- 修改点：使用 stat-cards 统一组件替代手写 KPI 卡片 -->
       <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- ========== 工具栏 ========== -->
-      <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
+      <!-- 修改点：搜索栏使用 table-bar 统一组件 -->
       <table-bar
         :search-items="searchItems"
         :actions="searchActions"
@@ -151,7 +146,7 @@
         data: function() {
           return {
             loading: false, dateRange: [], tableData: [],
-            // 修改点：<table-bar> 统一组件配置
+            // 修改点：table-bar 统一组件配置
             searchItems: [{ type: 'daterange', field: 'dateRange', placeholder: '日期范围' }],
             searchActions: [{ key: 'export', text: '导出 CSV', type: 'success', icon: 'ri-download-line' }],
             // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
@@ -174,7 +169,7 @@
             var top = this.tableData.reduce(function(m, r) { return (r.transactionCount || 0) > (m.transactionCount || 0) ? r : m; }, this.tableData[0]);
             return CHANNEL_LABEL[top.key] || top.channel || '--';
           },
-          // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
+          // 修改点：statsCards 统一卡片配置（供 stat-cards 组件使用）
           statsCards: function() {
             const self = this;
             return [
@@ -465,7 +460,7 @@
             URL.revokeObjectURL(link.href);
             ReggieUI.success('导出成功');
           },
-          // 修改点：<table-bar> 组件回调桥接
+          // 修改点：table-bar 组件回调桥接
           handleSearch: function(params) {
             if (params && params.dateRange) this.dateRange = params.dateRange;
             this.loadData();

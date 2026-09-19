@@ -21,80 +21,10 @@
       max-width: 1400px;
       margin: 0 auto;
     }
-    .tableBar {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      background: var(--bg-surface);
-      padding: var(--space-3) var(--space-4);
-      border-radius: var(--radius-lg);
-      margin-bottom: var(--space-4);
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
-      border: 1px solid var(--el-border-lighter);
-      transition: all 0.25s ease;
-    }
-    .tableBar:hover {
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.08);
-    }
-    .tableBar .toolbar-spacer {
-      flex: 1;
-    }
-    .table-card {
-      background: var(--bg-surface);
-      border-radius: var(--radius-lg);
-      padding: var(--space-4);
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
-      border: 1px solid var(--el-border-lighter);
-    }
-    .range-type-tag {
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      font-size:var(--font-size-xs);
-    }
-    .range-type-tag.circle {
-      background: var(--el-color-primary-lighter);
-      color: var(--el-color-primary);
-    }
-    .range-type-tag.polygon {
-      background: var(--el-color-success-lighter);
-      color: var(--el-color-success);
-    }
-    .fee-type-tag {
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      font-size:var(--font-size-xs);
-    }
-    .fee-type-tag.fixed {
-      background: var(--el-color-warning-lighter);
-      color: var(--el-color-warning);
-    }
-    .fee-type-tag.step {
-      background: var(--el-color-info-lighter);
-      color: var(--el-color-info);
-    }
-    .fee-type-tag.dynamic {
-      background: var(--el-color-danger-lighter);
-      color: var(--el-color-danger);
-    }
-    .status-tag {
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      font-size:var(--font-size-xs);
-    }
-    .status-tag.active {
-      background: var(--el-color-success-lighter);
-      color: var(--el-color-success);
-    }
-    .status-tag.disabled {
-      background: var(--el-color-danger-lighter);
-      color: var(--el-color-danger);
-    }
-    .fee-info {
-      font-size:var(--font-size-xs);
-      color: var(--el-text-secondary);
-      margin-top: 4px;
-    }
+    /* 工具栏统一走 table-bar 组件，外观由 page.css 的 .container .tableBar 兜底
+       （纯 flex 栏，无卡片表面/hover），本页不再私有覆盖；
+       旧 range-type-tag/fee-type-tag/status-tag/fee-info 手写标签已全部改用
+       el-tag/插槽内联，对应死样式一并移除。 */
   </style>
 </head>
 <body>
@@ -174,11 +104,11 @@
           {{ row.status === 1 ? '启用' : '禁用' }}
         </el-tag>
       </template>
-      <!-- 操作按钮 -->
+      <!-- 操作按钮：对齐全站统一语义色（编辑=btn-view 金、启停=btn-warning 橙、删除=btn-delete 红） -->
       <template #actions="{ row }">
-        <el-button type="text" size="small" @click="handleEdit(row)">编辑</el-button>
-        <el-button type="text" size="small" @click="handleFeeStep(row)">阶梯规则</el-button>
-        <el-button type="text" size="small" @click="handleToggleStatus(row)">
+        <el-button type="text" size="small" class="btn-view" @click="handleEdit(row)">编辑</el-button>
+        <el-button type="text" size="small" class="btn-view" @click="handleFeeStep(row)">阶梯规则</el-button>
+        <el-button type="text" size="small" class="btn-warning" @click="handleToggleStatus(row)">
           {{ row.status === 1 ? '禁用' : '启用' }}
         </el-button>
         <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
@@ -309,8 +239,8 @@
         <el-table-column prop="incrementFee" label="递增费用(元)" width="120" align="center" :header-align="'center'"></el-table-column>
         <el-table-column label="操作" width="150" align="center" :header-align="'center'" fixed="right">
           <template slot-scope="scope">
-            <el-button type="text" size="small" @click="handleEditFeeStep(scope.row)">编辑</el-button>
-            <el-button type="text" size="small" style="color: var(--el-color-danger);" @click="handleDeleteFeeStep(scope.row)">删除</el-button>
+            <el-button type="text" size="small" class="btn-view" @click="handleEditFeeStep(scope.row)">编辑</el-button>
+            <el-button type="text" size="small" class="btn-delete" @click="handleDeleteFeeStep(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
