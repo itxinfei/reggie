@@ -1,14 +1,8 @@
-.dashboard-container {
-  padding: 10px;
-  /* 修改点：确保溢出内容不被裁剪，配合 tableBar 内部按钮自动换行 */
-  overflow: visible;
-}
-.dashboard-container .container {
-  background: var(--color-white);
-  position: relative;
-  padding: 30px 28px;
-  border-radius: 4px;
-}
+/* 页面容器表面（背景/边框/圆角/阴影/定位/溢出）统一在 design-system.css 第 2 节定义，
+   紧凑内边距（8/12）与外层 8px 留白由 consistency.css 最终断言。
+   本文件原先的 .dashboard-container 重复规则（padding:30px 28px、border-radius:4px 等）
+   已删除——它们是死声明且会把卡片圆角从规范的 12px 压成 4px。 */
+
 /* ========== tableBar — 搜索筛选 + 操作按钮栏（统一设计规范） ========== */
 
 /* 主容器：flex row，控件紧靠，操作区推到右侧 */

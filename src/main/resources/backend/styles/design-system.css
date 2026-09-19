@@ -91,12 +91,19 @@ html {
 ::-webkit-scrollbar-thumb:hover { background: var(--color-gray-400); }
 
 /* ========== 2. 页面表面统一（token 化卡片容器） ========== */
+/* 外层包裹：允许内部 tableBar 按钮换行、下拉/弹出内容不被裁剪。
+   外层 8px 留白由最终层 consistency.css 断言（此处只声明溢出行为）。 */
+.dashboard-container {
+  overflow: visible;
+}
 .dashboard-container .container {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: var(--space-6) var(--space-6);
+  padding: var(--space-6) var(--space-6); /* 标准默认；紧凑 8/12 由 consistency.css 覆盖 */
+  position: relative;  /* 容器内绝对定位元素（角标/浮动按钮）的定位上下文 */
+  min-width: 0;       /* 防 iframe 内定宽内容横向撑破 */
 }
 
 /* ========== 3. 布局原语（BEM / ds- 前缀） ========== */
