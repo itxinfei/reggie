@@ -47,8 +47,11 @@
         :page="page"
         :page-size="pageSize"
         :total="counts"
+        :selection="true"
+        row-key="id"
         :show-actions="true"
         :actions-width="200"
+        @selection-change="onSelectionChange"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -276,6 +279,8 @@
           ],
           // 缓存搜索参数
           lastSearch: {},
+          // 勾选行 ID（跨翻页保留）；为空时导出按当前筛选
+          selectedIds: [],
           // 修改点：枚举字典（订单状态等），由后端 /api/meta/enums 下发；
           // 下方 ORDER_STATUS_FALLBACK 为兜底常量，接口失败时仍能正确显示
           enums: {},
@@ -397,18 +402,29 @@
           if (payload.activeKey === 'pending') this.lastSearch = { status: 2 }
           else if (payload.activeKey === 'delivering') this.lastSearch = { status: 3 }
           else this.lastSearch = {}
+          this.clearSelection()
           this.page = 1
           this.init()
+        },
+        // 勾选行变化（跨翻页保留）；勾了导出选中行，没勾按当前筛选导出
+        onSelectionChange: function(payload) {
+          this.selectedIds = (payload && payload.ids) ? payload.ids : []
+        },
+        clearSelection: function() {
+          this.selectedIds = []
+          if (this.$refs.crudTable && this.$refs.crudTable.clearSelection) this.$refs.crudTable.clearSelection()
         },
         // table-bar 回调
         onSearch: function(searchParams) {
           this.activeFilter = ''
           this.lastSearch = searchParams
+          this.clearSelection()
           this.page = 1; this.init()
         },
         onReset: function() {
           this.activeFilter = ''
           this.lastSearch = {}
+          this.clearSelection()
           this.page = 1; this.init()
         },
         onAction: function(payload) {
@@ -546,15 +562,27 @@
           self.refundLoading = false
         },
         exportOrders: async function(format) {
+          // 勾选了行：只导出选中行（跨翻页保留）；未勾选：按当前筛选条件导出
+          const hasSelection = this.selectedIds.length > 0
+          if (!hasSelection && this.counts === 0) {
+            ReggieUI.warning('当前筛选没有可导出的订单')
+            return
+          }
           const params = {}
-          if (this.lastSearch.beginTime) params.startDate = this.lastSearch.beginTime
-          if (this.lastSearch.endTime) params.endDate = this.lastSearch.endTime
-          if (this.lastSearch.number) params.number = this.lastSearch.number
+          if (hasSelection) {
+            params.ids = this.selectedIds.join(',')
+          } else {
+            // 列表日期控件输出 yyyy-MM-dd HH:mm:ss，导出接口按 yyyy-MM-dd 接收，截取日期部分
+            if (this.lastSearch.beginTime) params.startDate = String(this.lastSearch.beginTime).slice(0, 10)
+            if (this.lastSearch.endTime) params.endDate = String(this.lastSearch.endTime).slice(0, 10)
+            if (this.lastSearch.number) params.number = this.lastSearch.number
+            if (this.lastSearch.status !== undefined && this.lastSearch.status !== null && this.lastSearch.status !== '') params.status = this.lastSearch.status
+          }
           try {
             const ext = format === 'excel' ? 'xlsx' : 'pdf'
             const apiCall = format === 'excel' ? exportApi.exportOrdersExcel(params) : exportApi.exportOrdersPdf(params)
             await exportApi.downloadFile(apiCall, '订单数据.' + ext)
-            ReggieUI.success('导出成功，文件已开始下载')
+            ReggieUI.success(hasSelection ? ('已导出选中的 ' + this.selectedIds.length + ' 条订单') : ('已按当前筛选导出 ' + (this.counts || 0) + ' 条订单'))
           } catch (err) { ReggieUI.error('导出失败：' + (err.message || err)) }
         }
       }

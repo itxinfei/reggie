@@ -635,8 +635,8 @@ Vue.component('crud-table', {
           '</slot>' +
         '</template>' +
       '</el-table-column>' +
-      // 多选列
-      '<el-table-column v-if="selection" type="selection" align="center" :width="selectionWidth"></el-table-column>' +
+      // 多选列（页面显式传 row-key 时开启跨翻页保留勾选；未传则维持默认单页行为）
+      '<el-table-column v-if="selection" type="selection" align="center" :width="selectionWidth" :reserve-selection="!!rowKey"></el-table-column>' +
       // 行号列
       '<el-table-column v-if="showIndex" type="index" :label="indexLabel" :width="indexWidth" align="center"></el-table-column>' +
       // 数据列

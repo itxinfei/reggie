@@ -21,7 +21,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -39,6 +38,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -98,16 +98,16 @@ public class ExportController {
      * @return Excel文件流
      */
     @GetMapping("/orders/excel")
-    @Operation(summary = "导出订单Excel", description = "导出订单数据为Excel文件，支持按日期范围和订单状态筛选")
+    @Operation(summary = "导出订单Excel", description = "导出订单数据为Excel文件，支持勾选行导出或按日期/订单号/状态筛选导出")
     public ResponseEntity<?> exportOrdersExcel(
-                        @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern =
-                                "yyyy-MM-dd") LocalDate startDate,
-            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern =
-                    "yyyy-MM-dd") LocalDate endDate,
-            @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
+                        @Parameter(description = "开始日期 yyyy-MM-dd（可选）") @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期 yyyy-MM-dd（可选）") @RequestParam(required = false) String endDate,
+            @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "订单号模糊匹配（可选）") @RequestParam(required = false) String number,
+            @Parameter(description = "勾选导出的订单ID，逗号分隔（可选，非空时仅导出选中行）") @RequestParam(required = false) String ids) {
 
         try {
-            List<Orders> orders = queryOrders(startDate, endDate, status);
+            List<Orders> orders = queryOrders(parseDate(startDate), parseDate(endDate), status, number, ids);
 
             LinkedHashMap<String, String> columns = new LinkedHashMap<>();
             columns.put("number", "订单号");
@@ -122,6 +122,8 @@ public class ExportController {
             List<Map<String, Object>> dataList = buildOrderDataList(orders, true);
             byte[] bytes = ExportUtil.generateExcelBytes(columns, dataList);
             return buildFileResponse(bytes, "订单数据", "xlsx");
+        } catch (com.reggie.common.CustomException ce) {
+            return buildErrorResponse(ce.getMessage());
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出订单Excel失败: startDate={}, endDate={}", startDate, endDate, e);
@@ -138,16 +140,18 @@ public class ExportController {
      * @return PDF文件流
      */
     @GetMapping("/orders/pdf")
-    @Operation(summary = "导出订单PDF", description = "导出订单数据为PDF报表，支持按日期范围和订单状态筛选")
+    @Operation(summary = "导出订单PDF", description = "导出订单数据为PDF报表，支持勾选行导出或按日期/订单号/状态筛选导出")
     public ResponseEntity<?> exportOrdersPdf(
-                        @Parameter(description = "开始日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern =
-                                "yyyy-MM-dd") LocalDate startDate,
-            @Parameter(description = "结束日期（可选）") @RequestParam(required = false) @DateTimeFormat(pattern =
-                    "yyyy-MM-dd") LocalDate endDate,
-            @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status) {
+                        @Parameter(description = "开始日期 yyyy-MM-dd（可选）") @RequestParam(required = false) String startDate,
+            @Parameter(description = "结束日期 yyyy-MM-dd（可选）") @RequestParam(required = false) String endDate,
+            @Parameter(description = "订单状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "订单号模糊匹配（可选）") @RequestParam(required = false) String number,
+            @Parameter(description = "勾选导出的订单ID，逗号分隔（可选，非空时仅导出选中行）") @RequestParam(required = false) String ids) {
 
         try {
-            List<Orders> orders = queryOrders(startDate, endDate, status);
+            LocalDate start = parseDate(startDate);
+            LocalDate end = parseDate(endDate);
+            List<Orders> orders = queryOrders(start, end, status, number, ids);
 
             LinkedHashMap<String, String> columns = new LinkedHashMap<>();
             columns.put("number", "订单号");
@@ -166,11 +170,13 @@ public class ExportController {
             Map<String, String> summary = new LinkedHashMap<>();
             summary.put("订单总数", String.valueOf(orders.size()));
             summary.put("总金额", "¥" + String.format("%.2f", totalAmount));
-            summary.put("日期范围", (startDate != null ? startDate.toString() : "不限")
-                    + " ~ " + (endDate != null ? endDate.toString() : "不限"));
+            summary.put("日期范围", (start != null ? start.toString() : "不限")
+                    + " ~ " + (end != null ? end.toString() : "不限"));
 
             byte[] bytes = ExportUtil.generatePdfBytes("瑞吉外卖 - 订单数据报表", columns, dataList, summary);
             return buildFileResponse(bytes, "订单报表", "pdf");
+        } catch (com.reggie.common.CustomException ce) {
+            return buildErrorResponse(ce.getMessage());
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出订单PDF失败: startDate={}, endDate={}", startDate, endDate, e);
@@ -188,9 +194,13 @@ public class ExportController {
      * @return Excel文件流
      */
     @GetMapping("/dishes/excel")
-    @Operation(summary = "导出菜品Excel", description = "导出菜品数据为Excel文件，支持按分类筛选")
+    @Operation(summary = "导出菜品Excel", description = "导出菜品数据为Excel文件，支持勾选行导出或按分类/名称/商品码/状态筛选")
     public ResponseEntity<?> exportDishesExcel(
-                        @Parameter(description = "分类ID（可选）") @RequestParam(required = false) Long categoryId) {
+                        @Parameter(description = "分类ID（可选）") @RequestParam(required = false) Long categoryId,
+            @Parameter(description = "菜品名称模糊匹配（可选）") @RequestParam(required = false) String name,
+            @Parameter(description = "商品码模糊匹配（可选）") @RequestParam(required = false) String code,
+            @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "勾选导出的菜品ID，逗号分隔（可选，非空时仅导出选中行）") @RequestParam(required = false) String ids) {
 
         try {
             LinkedHashMap<String, String> columns = new LinkedHashMap<>();
@@ -201,9 +211,11 @@ public class ExportController {
             columns.put("description", "描述");
             columns.put("createTime", "创建时间");
 
-            List<Map<String, Object>> dataList = buildDishDataList(categoryId);
+            List<Map<String, Object>> dataList = buildDishDataList(categoryId, name, code, status, ids);
             byte[] bytes = ExportUtil.generateExcelBytes(columns, dataList);
             return buildFileResponse(bytes, "菜品数据", "xlsx");
+        } catch (com.reggie.common.CustomException ce) {
+            return buildErrorResponse(ce.getMessage());
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出菜品Excel失败: categoryId={}", categoryId, e);
@@ -218,9 +230,13 @@ public class ExportController {
      * @return PDF文件流
      */
     @GetMapping("/dishes/pdf")
-    @Operation(summary = "导出菜品PDF", description = "导出菜品数据为PDF报表，支持按分类筛选")
+    @Operation(summary = "导出菜品PDF", description = "导出菜品数据为PDF报表，支持勾选行导出或按分类/名称/商品码/状态筛选")
     public ResponseEntity<?> exportDishesPdf(
-                        @Parameter(description = "分类ID（可选）") @RequestParam(required = false) Long categoryId) {
+                        @Parameter(description = "分类ID（可选）") @RequestParam(required = false) Long categoryId,
+            @Parameter(description = "菜品名称模糊匹配（可选）") @RequestParam(required = false) String name,
+            @Parameter(description = "商品码模糊匹配（可选）") @RequestParam(required = false) String code,
+            @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "勾选导出的菜品ID，逗号分隔（可选，非空时仅导出选中行）") @RequestParam(required = false) String ids) {
 
         try {
             LinkedHashMap<String, String> columns = new LinkedHashMap<>();
@@ -230,7 +246,7 @@ public class ExportController {
             columns.put("status", "状态");
             columns.put("createTime", "创建时间");
 
-            List<Map<String, Object>> dataList = buildDishDataList(categoryId);
+            List<Map<String, Object>> dataList = buildDishDataList(categoryId, name, code, status, ids);
 
             Map<String, String> summary = new LinkedHashMap<>();
             summary.put("菜品总数", String.valueOf(dataList.size()));
@@ -238,6 +254,8 @@ public class ExportController {
             byte[] bytes = ExportUtil.generatePdfBytes(
                     "瑞吉外卖 - 菜品数据报表", columns, dataList, summary);
             return buildFileResponse(bytes, "菜品报表", "pdf");
+        } catch (com.reggie.common.CustomException ce) {
+            return buildErrorResponse(ce.getMessage());
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出菜品PDF失败: categoryId={}", categoryId, e);
@@ -253,8 +271,11 @@ public class ExportController {
      * @return Excel文件流
      */
     @GetMapping("/employees/excel")
-    @Operation(summary = "导出员工Excel", description = "导出员工数据为Excel文件")
-    public ResponseEntity<?> exportEmployeesExcel() {
+    @Operation(summary = "导出员工Excel", description = "导出员工数据为Excel文件，支持勾选行导出或按姓名/状态筛选")
+    public ResponseEntity<?> exportEmployeesExcel(
+                        @Parameter(description = "员工姓名模糊匹配（可选）") @RequestParam(required = false) String name,
+            @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "勾选导出的员工ID，逗号分隔（可选，非空时仅导出选中行）") @RequestParam(required = false) String ids) {
 
         try {
             LinkedHashMap<String, String> columns = new LinkedHashMap<>();
@@ -265,9 +286,11 @@ public class ExportController {
             columns.put("status", "状态");
             columns.put("createTime", "入职时间");
 
-            List<Map<String, Object>> dataList = buildEmployeeDataList(queryEmployees());
+            List<Map<String, Object>> dataList = buildEmployeeDataList(queryEmployees(name, status, ids));
             byte[] bytes = ExportUtil.generateExcelBytes(columns, dataList);
             return buildFileResponse(bytes, "员工数据", "xlsx");
+        } catch (com.reggie.common.CustomException ce) {
+            return buildErrorResponse(ce.getMessage());
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出员工Excel失败", e);
@@ -281,8 +304,11 @@ public class ExportController {
      * @return PDF文件流
      */
     @GetMapping("/employees/pdf")
-    @Operation(summary = "导出员工PDF", description = "导出员工数据为PDF报表")
-    public ResponseEntity<?> exportEmployeesPdf() {
+    @Operation(summary = "导出员工PDF", description = "导出员工数据为PDF报表，支持勾选行导出或按姓名/状态筛选")
+    public ResponseEntity<?> exportEmployeesPdf(
+                        @Parameter(description = "员工姓名模糊匹配（可选）") @RequestParam(required = false) String name,
+            @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "勾选导出的员工ID，逗号分隔（可选，非空时仅导出选中行）") @RequestParam(required = false) String ids) {
 
         try {
             LinkedHashMap<String, String> columns = new LinkedHashMap<>();
@@ -292,7 +318,7 @@ public class ExportController {
             columns.put("sex", "性别");
             columns.put("status", "状态");
 
-            List<Employee> employees = queryEmployees();
+            List<Employee> employees = queryEmployees(name, status, ids);
             List<Map<String, Object>> dataList = buildEmployeeDataList(employees);
 
             Map<String, String> summary = new LinkedHashMap<>();
@@ -301,6 +327,8 @@ public class ExportController {
             byte[] bytes = ExportUtil.generatePdfBytes(
                     "瑞吉外卖 - 员工数据报表", columns, dataList, summary);
             return buildFileResponse(bytes, "员工报表", "pdf");
+        } catch (com.reggie.common.CustomException ce) {
+            return buildErrorResponse(ce.getMessage());
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出员工PDF失败", e);
@@ -316,8 +344,12 @@ public class ExportController {
      * @return Excel文件流
      */
     @GetMapping("/users/excel")
-    @Operation(summary = "导出用户Excel", description = "导出C端用户数据为Excel文件")
-    public ResponseEntity<?> exportUsersExcel() {
+    @Operation(summary = "导出用户Excel", description = "导出C端用户数据为Excel文件，支持勾选行导出或按姓名/手机号/状态筛选")
+    public ResponseEntity<?> exportUsersExcel(
+                        @Parameter(description = "用户姓名模糊匹配（可选）") @RequestParam(required = false) String name,
+            @Parameter(description = "手机号模糊匹配（可选）") @RequestParam(required = false) String phone,
+            @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "勾选导出的用户ID，逗号分隔（可选，非空时仅导出选中行）") @RequestParam(required = false) String ids) {
         try {
             LinkedHashMap<String, String> columns = new LinkedHashMap<>();
             columns.put("name", "姓名");
@@ -327,9 +359,11 @@ public class ExportController {
             columns.put("status", "状态");
             columns.put("createTime", "注册时间");
 
-            List<Map<String, Object>> dataList = buildUserDataList(queryUsers());
+            List<Map<String, Object>> dataList = buildUserDataList(queryUsers(name, phone, status, ids));
             byte[] bytes = ExportUtil.generateExcelBytes(columns, dataList);
             return buildFileResponse(bytes, "用户数据", "xlsx");
+        } catch (com.reggie.common.CustomException ce) {
+            return buildErrorResponse(ce.getMessage());
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出用户Excel失败", e);
@@ -343,8 +377,12 @@ public class ExportController {
      * @return PDF文件流
      */
     @GetMapping("/users/pdf")
-    @Operation(summary = "导出用户PDF", description = "导出C端用户数据为PDF报表")
-    public ResponseEntity<?> exportUsersPdf() {
+    @Operation(summary = "导出用户PDF", description = "导出C端用户数据为PDF报表，支持勾选行导出或按姓名/手机号/状态筛选")
+    public ResponseEntity<?> exportUsersPdf(
+                        @Parameter(description = "用户姓名模糊匹配（可选）") @RequestParam(required = false) String name,
+            @Parameter(description = "手机号模糊匹配（可选）") @RequestParam(required = false) String phone,
+            @Parameter(description = "状态（可选）") @RequestParam(required = false) Integer status,
+            @Parameter(description = "勾选导出的用户ID，逗号分隔（可选，非空时仅导出选中行）") @RequestParam(required = false) String ids) {
         try {
             LinkedHashMap<String, String> columns = new LinkedHashMap<>();
             columns.put("name", "姓名");
@@ -353,7 +391,7 @@ public class ExportController {
             columns.put("status", "状态");
             columns.put("createTime", "注册时间");
 
-            List<Map<String, Object>> dataList = buildUserDataList(queryUsers());
+            List<Map<String, Object>> dataList = buildUserDataList(queryUsers(name, phone, status, ids));
 
             Map<String, String> summary = new LinkedHashMap<>();
             summary.put("用户总数", String.valueOf(dataList.size()));
@@ -361,6 +399,8 @@ public class ExportController {
             byte[] bytes = ExportUtil.generatePdfBytes(
                     "瑞吉外卖 - 用户数据报表", columns, dataList, summary);
             return buildFileResponse(bytes, "用户报表", "pdf");
+        } catch (com.reggie.common.CustomException ce) {
+            return buildErrorResponse(ce.getMessage());
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("导出用户PDF失败", e);
@@ -370,10 +410,15 @@ public class ExportController {
 
     // ==================== 私有数据查询方法 ====================
 
+    /** 勾选导出单次 ID 数量上限（GET URL 长度与内存边界） */
+    private static final int MAX_EXPORT_IDS = 1000;
+
     /**
      * 查询订单列表
+     * ids 非空时仅按勾选 ID 导出（仍强制租户过滤）；否则按日期/订单号/状态筛选
      */
-    private List<Orders> queryOrders(LocalDate startDate, LocalDate endDate, Integer status) {
+    private List<Orders> queryOrders(LocalDate startDate, LocalDate endDate, Integer status,
+                                     String number, String idsParam) {
         LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
         // #11 fail-closed：强制租户过滤，无租户上下文拒绝导出
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -381,25 +426,34 @@ public class ExportController {
             throw new com.reggie.common.CustomException("无导出权限，租户上下文缺失");
         }
         wrapper.eq(Orders::getTenantId, tenantId);
-        if (startDate != null) {
-            wrapper.ge(Orders::getOrderTime, LocalDateTime.of(startDate, LocalTime.MIN));
-        }
-        if (endDate != null) {
-            wrapper.le(Orders::getOrderTime, LocalDateTime.of(endDate, LocalTime.MAX));
-        }
-        if (status != null) {
-            wrapper.eq(Orders::getStatus, status);
+        List<Long> ids = parseIds(idsParam);
+        if (!ids.isEmpty()) {
+            wrapper.in(Orders::getId, ids);
+        } else {
+            if (startDate != null) {
+                wrapper.ge(Orders::getOrderTime, LocalDateTime.of(startDate, LocalTime.MIN));
+            }
+            if (endDate != null) {
+                wrapper.le(Orders::getOrderTime, LocalDateTime.of(endDate, LocalTime.MAX));
+            }
+            if (status != null) {
+                wrapper.eq(Orders::getStatus, status);
+            }
+            if (hasText(number)) {
+                wrapper.like(Orders::getNumber, number.trim());
+            }
+            // #12 限制最大导出行数，防止全量加载 OOM
+            wrapper.last("LIMIT 100000");
         }
         wrapper.orderByDesc(Orders::getOrderTime);
-        // #12 限制最大导出行数，防止全量加载 OOM
-        wrapper.last("LIMIT 100000");
         return orderService.list(wrapper);
     }
 
     /**
      * 查询菜品列表
+     * ids 非空时仅按勾选 ID 导出；否则按分类/名称/商品码/状态筛选
      */
-    private List<Dish> queryDishes(Long categoryId) {
+    private List<Dish> queryDishes(Long categoryId, String name, String code, Integer status, String idsParam) {
         LambdaQueryWrapper<Dish> wrapper = new LambdaQueryWrapper<>();
         // #11 fail-closed：强制租户过滤
         Long tenantId = BaseContext.getCurrentTenantId();
@@ -407,25 +461,51 @@ public class ExportController {
             throw new com.reggie.common.CustomException("无导出权限，租户上下文缺失");
         }
         wrapper.eq(Dish::getTenantId, tenantId);
-        wrapper.eq(Dish::getIsDeleted, 0);
-        if (categoryId != null) {
-            wrapper.eq(Dish::getCategoryId, categoryId);
+        List<Long> ids = parseIds(idsParam);
+        if (!ids.isEmpty()) {
+            wrapper.in(Dish::getId, ids);
+        } else {
+            wrapper.eq(Dish::getIsDeleted, 0);
+            if (categoryId != null) {
+                wrapper.eq(Dish::getCategoryId, categoryId);
+            }
+            if (hasText(name)) {
+                wrapper.like(Dish::getName, name.trim());
+            }
+            if (hasText(code)) {
+                wrapper.like(Dish::getCode, code.trim());
+            }
+            if (status != null) {
+                wrapper.eq(Dish::getStatus, status);
+            }
+            // #12 限制最大导出行数，防止全量加载 OOM
+            wrapper.last("LIMIT 100000");
         }
         wrapper.orderByDesc(Dish::getCreateTime);
-        // #12 限制最大导出行数，防止全量加载 OOM
-        wrapper.last("LIMIT 100000");
         return dishService.list(wrapper);
     }
 
     /**
      * 查询员工列表
+     * ids 非空时仅按勾选 ID 导出；否则按姓名/状态筛选
      */
-    private List<Employee> queryEmployees() {
+    private List<Employee> queryEmployees(String name, Integer status, String idsParam) {
         LambdaQueryWrapper<Employee> wrapper = new LambdaQueryWrapper<>();
         addTenantFilter(wrapper);
+        List<Long> ids = parseIds(idsParam);
+        if (!ids.isEmpty()) {
+            wrapper.in(Employee::getId, ids);
+        } else {
+            if (hasText(name)) {
+                wrapper.like(Employee::getName, name.trim());
+            }
+            if (status != null) {
+                wrapper.eq(Employee::getStatus, status);
+            }
+            // #12 限制最大导出行数，防止全量加载 OOM
+            wrapper.last("LIMIT 100000");
+        }
         wrapper.orderByDesc(Employee::getCreateTime);
-        // #12 限制最大导出行数，防止全量加载 OOM
-        wrapper.last("LIMIT 100000");
         return employeeService.list(wrapper);
     }
 
@@ -433,18 +513,82 @@ public class ExportController {
      * 查询C端用户列表
      * employee表在MybatisPlusConfig忽略列表中，必须手动隔离；用户表同样按租户隔离
      * #11 fail-closed：无租户上下文直接抛异常拒绝导出
+     * ids 非空时仅按勾选 ID 导出；否则按姓名/手机号/状态筛选
      */
-    private List<User> queryUsers() {
+    private List<User> queryUsers(String name, String phone, Integer status, String idsParam) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new com.reggie.common.CustomException("无导出权限，租户上下文缺失");
         }
         wrapper.eq(User::getTenantId, tenantId);
+        List<Long> ids = parseIds(idsParam);
+        if (!ids.isEmpty()) {
+            wrapper.in(User::getId, ids);
+        } else {
+            if (hasText(name)) {
+                wrapper.like(User::getName, name.trim());
+            }
+            if (hasText(phone)) {
+                wrapper.like(User::getPhone, phone.trim());
+            }
+            if (status != null) {
+                wrapper.eq(User::getStatus, status);
+            }
+            // #12 限制最大行数，防止全量加载 OOM
+            wrapper.last("LIMIT 100000");
+        }
         wrapper.orderByDesc(User::getCreateTime);
-        // #12 限制最大行数，防止全量加载 OOM
-        wrapper.last("LIMIT 100000");
         return userService.list(wrapper);
+    }
+
+    /**
+     * 解析勾选导出的 ID 串（逗号分隔），空白忽略；非法值或超量抛业务异常
+     */
+    private List<Long> parseIds(String idsParam) {
+        List<Long> ids = new ArrayList<>();
+        if (!hasText(idsParam)) {
+            return ids;
+        }
+        String[] parts = idsParam.trim().split(",");
+        for (String part : parts) {
+            String s = part.trim();
+            if (s.isEmpty()) {
+                continue;
+            }
+            try {
+                ids.add(Long.valueOf(s));
+            } catch (NumberFormatException e) {
+                throw new com.reggie.common.CustomException("导出参数有误：非法的记录ID");
+            }
+        }
+        if (ids.size() > MAX_EXPORT_IDS) {
+            throw new com.reggie.common.CustomException("单次最多勾选导出" + MAX_EXPORT_IDS + "条，请缩小范围");
+        }
+        return ids;
+    }
+
+    /**
+     * 宽松解析导出日期参数：兼容 yyyy-MM-dd 与前端误传的 yyyy-MM-dd HH:mm:ss（取前10位）
+     */
+    private LocalDate parseDate(String value) {
+        if (!hasText(value)) {
+            return null;
+        }
+        String s = value.trim();
+        if (s.length() > 10) {
+            s = s.substring(0, 10);
+        }
+        try {
+            return LocalDate.parse(s);
+        } catch (DateTimeParseException e) {
+            throw new com.reggie.common.CustomException("日期格式有误，请使用 yyyy-MM-dd");
+        }
+    }
+
+    /** 字符串非空白判断（JDK8 兼容，避免引入额外依赖） */
+    private boolean hasText(String s) {
+        return s != null && !s.trim().isEmpty();
     }
 
     // ==================== 数据构建方法 ====================
@@ -495,8 +639,9 @@ public class ExportController {
      * 构建菜品数据列表
      * 修改点：Excel/PDF共用，消除重复代码
      */
-    private List<Map<String, Object>> buildDishDataList(Long categoryId) {
-        List<Dish> dishes = queryDishes(categoryId);
+    private List<Map<String, Object>> buildDishDataList(Long categoryId, String name, String code,
+                                                        Integer status, String idsParam) {
+        List<Dish> dishes = queryDishes(categoryId, name, code, status, idsParam);
 
         Map<Long, String> categoryMap = new HashMap<>();
         LambdaQueryWrapper<Category> categoryWrapper = new LambdaQueryWrapper<>();

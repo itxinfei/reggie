@@ -63,6 +63,7 @@
             :page-size="pageSize"
             :total="counts"
             :selection="true"
+            row-key="id"
             :show-actions="true" :viewable="true"
             :actions-width="260"
             :actions-fixed="true"
@@ -491,18 +492,26 @@
           var self = this
           self.activeFilter = payload.activeKey
           self.lastSearch = {}
+          self.clearSelection()
           self.page = 1; self.init()
         },
         // table-bar 回调
         onSearch: function(searchParams) {
           this.activeFilter = ''
           this.lastSearch = searchParams
+          this.clearSelection()
           this.page = 1; this.init()
         },
         onReset: function() {
           this.activeFilter = ''
           this.lastSearch = {}
+          this.clearSelection()
           this.page = 1; this.init()
+        },
+        // 结果集变化时清空勾选（checkList 同时用于批量操作）
+        clearSelection: function() {
+          this.checkList = []
+          if (this.$refs.crudTable && this.$refs.crudTable.clearSelection) this.$refs.crudTable.clearSelection()
         },
         onAction: function(payload) {
           var self = this
@@ -779,12 +788,26 @@
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
         },
-        exportDishes: function(format) {
+        exportDishes: async function(format) {
+          // 勾选了行：只导出选中行；未勾选：按当前筛选（名称/编码/售罄状态）导出
+          var hasSelection = this.checkList.length > 0
+          if (!hasSelection && this.counts === 0) {
+            ReggieUI.warning('当前筛选没有可导出的菜品')
+            return
+          }
+          var params = {}
+          if (hasSelection) {
+            params.ids = this.checkList.join(',')
+          } else {
+            if (this.lastSearch.name) params.name = this.lastSearch.name
+            if (this.lastSearch.code) params.code = this.lastSearch.code
+            if (this.activeFilter !== '' && this.activeFilter !== undefined && this.activeFilter !== null) params.status = this.activeFilter
+          }
           try {
             var ext = format === 'excel' ? 'xlsx' : 'pdf'
-            var apiCall = format === 'excel' ? exportApi.exportDishesExcel({}) : exportApi.exportDishesPdf({})
-            exportApi.downloadFile(apiCall, '菜品数据.' + ext)
-            ReggieUI.success('导出成功，文件已开始下载')
+            var apiCall = format === 'excel' ? exportApi.exportDishesExcel(params) : exportApi.exportDishesPdf(params)
+            await exportApi.downloadFile(apiCall, '菜品数据.' + ext)
+            ReggieUI.success(hasSelection ? ('已导出选中的 ' + this.checkList.length + ' 个菜品') : ('已按当前筛选导出 ' + (this.counts || 0) + ' 个菜品'))
           } catch (err) { ReggieUI.error('导出失败：' + (err.message || err)) }
         },
         // ========== 配方编辑 ==========

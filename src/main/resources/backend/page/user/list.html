@@ -45,6 +45,7 @@
       </table-bar>
       <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination，columns 配置化，内置分页 -->
       <crud-table
+        ref="crudTable"
         empty-hint="试试调整筛选条件"
         :data="tableData"
         :columns="columns"
@@ -52,8 +53,11 @@
         :page-size="pageSize"
         :total="counts"
         :loading="loading"
+        :selection="true"
+        row-key="id"
         :show-actions="true"
         :actions-width="240"
+        @selection-change="onSelectionChange"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -181,6 +185,8 @@
           },
           // 修改点：当前激活的筛选器值，对应 <stat-cards> 组件
           activeFilter: '',
+          // 勾选行 ID（跨翻页保留）；为空时导出按当前筛选
+          selectedIds: [],
           // 修改点：<table-bar> 统一组件配置
           tableSearchItems: [
             { type: 'select', field: 'status', placeholder: '用户状态', options: [
@@ -260,8 +266,17 @@
           }
           this.input.name = ''
           this.input.phone = ''
+          this.clearSelection()
           this.page = 1
           this.fetchData()
+        },
+        // 勾选行变化；勾了导出选中行，没勾按当前筛选导出
+        onSelectionChange: function(payload) {
+          this.selectedIds = (payload && payload.ids) ? payload.ids : []
+        },
+        clearSelection: function() {
+          this.selectedIds = []
+          if (this.$refs.crudTable && this.$refs.crudTable.clearSelection) this.$refs.crudTable.clearSelection()
         },
         // 修改点：通用优化方案 — 加载筛选下拉框选项，区分"空数据"与"加载失败"
         async loadFilterOptions() {
@@ -360,6 +375,7 @@
             name: this.input.name || undefined,
             phone: this.input.phone || undefined
           })
+          this.clearSelection()
           this.fetchData()
         },
         // 重置搜索条件，恢复表格初始状态
@@ -369,6 +385,7 @@
           this.input.status = null
           this.activeFilter = ''
           this.page = 1
+          this.clearSelection()
           this.fetchData()
         },
         // filterByStatus 已迁移至 onCardClick
@@ -448,13 +465,34 @@
           if (payload.key === 'exportExcel') this.exportUsers('excel')
           else if (payload.key === 'exportPdf') this.exportUsers('pdf')
         },
-        // 导出C端用户数据（Excel/PDF）
+        // 导出C端用户数据（Excel/PDF）：勾选了行只导选中行；未勾选按当前筛选导出
         exportUsers: async function(format) {
+          const hasSelection = this.selectedIds.length > 0
+          if (!hasSelection && this.counts === 0) {
+            ReggieUI.warning('当前筛选没有可导出的用户')
+            return
+          }
+          const params = {}
+          if (hasSelection) {
+            params.ids = this.selectedIds.join(',')
+          } else {
+            // 与 getUserPage 的取值保持一致：优先 lastSearch，回退手写搜索框 input
+            const s = this.lastSearch || {}
+            const name = s.name || this.input.name || ''
+            const phone = s.phone || this.input.phone || ''
+            if (name) params.name = name
+            if (phone) params.phone = phone
+            if (s.status != null) {
+              if (s.status !== '') params.status = Number(s.status)
+            } else if (this.input.status != null) {
+              params.status = this.input.status
+            }
+          }
           try {
             const ext = format === 'excel' ? 'xlsx' : 'pdf'
-            const apiCall = format === 'excel' ? exportApi.exportUsersExcel({}) : exportApi.exportUsersPdf({})
+            const apiCall = format === 'excel' ? exportApi.exportUsersExcel(params) : exportApi.exportUsersPdf(params)
             await exportApi.downloadFile(apiCall, '用户数据.' + ext)
-            ReggieUI.success('导出成功，文件已开始下载')
+            ReggieUI.success(hasSelection ? ('已导出选中的 ' + this.selectedIds.length + ' 个用户') : ('已按当前筛选导出 ' + (this.counts || 0) + ' 个用户'))
           } catch (err) {
             ReggieUI.error('导出失败：' + (err.message || err))
           }

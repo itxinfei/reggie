@@ -39,14 +39,18 @@
       </table-bar>
       <!-- 修改点：使用 <crud-table> 统一组件替代手写 el-table + el-pagination -->
       <crud-table
+        ref="crudTable"
         :data="tableData"
         :columns="columns"
         :page="page"
         :page-size="pageSize"
         :total="counts"
         :loading="loading"
+        :selection="true"
+        row-key="id"
         :show-actions="true"
         :actions-width="240"
+        @selection-change="onSelectionChange"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -227,6 +231,8 @@
              },
              // 修改点：当前激活的筛选器值，空字符串=全部
              activeFilter: '',
+             // 勾选行 ID（跨翻页保留）；为空时导出按当前筛选
+             selectedIds: [],
              // 员工弹窗相关
              memberDialog: {
                title: '添加员工',
@@ -371,8 +377,17 @@
           handleQuery() {
             // 修改点：搜索时清空卡片筛选状态
             this.activeFilter = ''
+            this.clearSelection()
             this.page = 1;
             this.fetchData(false);
+          },
+          // 勾选行变化；勾了导出选中行，没勾按当前筛选导出
+          onSelectionChange(payload) {
+            this.selectedIds = (payload && payload.ids) ? payload.ids : []
+          },
+          clearSelection() {
+            this.selectedIds = []
+            if (this.$refs.crudTable && this.$refs.crudTable.clearSelection) this.$refs.crudTable.clearSelection()
           },
           // 修改点：<table-bar> 组件 action 按钮事件处理
           onTableAction(payload) {
@@ -384,6 +399,7 @@
           reset() {
             this.input = ''
             this.activeFilter = ''
+            this.clearSelection()
             this.page = 1
             this.fetchData(false)
           },
@@ -391,6 +407,7 @@
           onCardClick(payload) {
             this.activeFilter = payload.activeKey
             this.input = ''
+            this.clearSelection()
             this.page = 1
             this.fetchData(false)
           },
@@ -543,15 +560,27 @@
               }
             }).catch((e) => { console.warn('[member/list.html] 用户取消删除操作:', e) })
           },
-          // 导出员工数据
-          exportEmployees(format) {
+          // 导出员工数据：勾选了行只导选中行；未勾选按当前筛选（姓名/状态）导出
+          async exportEmployees(format) {
+            const hasSelection = this.selectedIds.length > 0
+            if (!hasSelection && this.counts === 0) {
+              ReggieUI.warning('当前筛选没有可导出的员工')
+              return
+            }
+            const params = {}
+            if (hasSelection) {
+              params.ids = this.selectedIds.join(',')
+            } else {
+              if (this.input) params.name = this.input
+              if (this.activeFilter) params.status = this.activeFilter
+            }
             try {
               const ext = format === 'excel' ? 'xlsx' : 'pdf'
               const apiCall = format === 'excel'
-                ? exportApi.exportEmployeesExcel({})
-                : exportApi.exportEmployeesPdf({})
-              exportApi.downloadFile(apiCall, '员工数据.' + ext)
-              ReggieUI.success('导出成功，文件已开始下载')
+                ? exportApi.exportEmployeesExcel(params)
+                : exportApi.exportEmployeesPdf(params)
+              await exportApi.downloadFile(apiCall, '员工数据.' + ext)
+              ReggieUI.success(hasSelection ? ('已导出选中的 ' + this.selectedIds.length + ' 名员工') : ('已按当前筛选导出 ' + (this.counts || 0) + ' 名员工'))
             } catch (err) {
               ReggieUI.error('导出失败：' + (err.message || err))
             }
