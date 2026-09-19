@@ -131,6 +131,34 @@ body > .container {
   margin-top: var(--space-5);
 }
 
+/* ========== 6b. 手写筛选栏内部节奏统一（新增，0 HTML 改动） ==========
+   背景：5 个页面的手写 .filter-bar（优惠券到期预警 / 积分记录 / 充值记录 /
+   库存预警 / 评价审核）内部 gap 在 10/12/16px 间漂移，统一收敛到紧凑档 8px，
+   并保证控件在窄屏可换行。
+   边界：仅统一内部布局（display/wrap/gap），不触碰卡片表面（背景/圆角/
+   阴影/内外边距维持各页现状）；评价审核页 .container 为透明容器，筛选卡
+   自带白卡表面，保持不变。
+   特异性：页面私有 <style> 晚于 main.css 加载，故用 body + .container 前缀
+   把特异性提升到 (0,2,1) 以稳定覆盖页面的单类/双类定义。
+   豁免：排队叫号页的 .filter-bar 是 .bar-row 单行工具栏内的透明填充子组
+   （位于 .queue-container 下、无 .container 祖先），刻意维持 12px 单行
+   设计，自然不在命中范围。
+   align-items 不做全局统一：label 在控件上方的 col 模式（优惠券/库存预警）
+   适用 flex-end；文字标签与控件同行的平铺模式（积分/充值/评价）适用
+   center——强统一为 flex-end 会使同行标签文字下坠，故各页按自身结构保持。 */
+body .container .filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* 评价审核页筛选卡是静态容器（不可点击），其私有 hover 抬升到 shadow-lg
+   属于无意义反馈，与阶段 A「静态卡片不抬升」的全站语义对齐：hover 时维持
+   静止阴影（表面、过渡均不变）。 */
+body .eval-app-wrap .filter-bar:hover {
+  box-shadow: var(--shadow-sm);
+}
+
 /* ==========================================================================
    7. 响应式兜底（新增）
    背景：Element UI 的 :span="N" 是固定百分比，不带断点时在手机上依然按
