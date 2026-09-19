@@ -231,14 +231,24 @@
                 { id: '10-7', name: '库存盘点', url: 'page/inventory/stock-check.html', icon: 'ri-survey-line' },
               ]},
 
-              /* ──6. 会员中心（6 项，精简会员+营销）── */
+              /* ──6. 会员中心（5 项）── */
               { id: '6', name: '会员中心', icon: 'ri-group-line', children: [
                 { id: '6-1', name: '会员列表', url: 'page/member-center/member-list.html', icon: 'ri-user-star-line' },
                 { id: '6-2', name: '会员等级', url: 'page/member-center/level-list.html', icon: 'ri-vip-crown-line' },
                 { id: '6-3', name: '积分管理', url: 'page/member-center/points-list.html', icon: 'ri-coin-line' },
                 { id: '6-4', name: '优惠券', url: 'page/member-center/coupon-list.html', icon: 'ri-coupon-line' },
                 { id: '6-5', name: '充值记录', url: 'page/member-center/recharge-list.html', icon: 'ri-bank-card-line' },
-                { id: '6-6', name: '营销活动', url: 'page/marketing/index.html', icon: 'ri-flag-line' },
+              ]},
+
+              /* ──11. 营销管理（6 项，原营销活动卡片导航页只会 window.open 跳走，
+                      改为各类活动直链自带弹窗 CRUD 的管理页）── */
+              { id: '11', name: '营销管理', icon: 'ri-megaphone-line', children: [
+                { id: '11-1', name: '折扣活动', url: 'page/marketing/discount.html', icon: 'ri-percent-line' },
+                { id: '11-2', name: '满减活动', url: 'page/marketing/full-reduction.html', icon: 'ri-gift-line' },
+                { id: '11-3', name: '秒杀活动', url: 'page/marketing/flash-sale.html', icon: 'ri-flashlight-line' },
+                { id: '11-4', name: '买赠活动', url: 'page/marketing/buy-get-free.html', icon: 'ri-gift-2-line' },
+                { id: '11-5', name: '新客优惠', url: 'page/marketing/new-customer.html', icon: 'ri-user-star-line' },
+                { id: '11-6', name: '智能营销', url: 'page/recommend/campaigns.html', icon: 'ri-lightbulb-flash-line' },
               ]},
 
               /* ──7. 数据报表（8 项，合并报表+导出+支付分析）── */
