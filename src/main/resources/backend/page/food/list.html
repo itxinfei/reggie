@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -33,49 +33,6 @@
 
   <div class="dashboard-container" id="food-app">
     <main class="container ds-page" id="main-content" role="main" aria-label="页面主要内容">
-      <!-- 数据统计卡片 -->
-      <stat-cards
-            :cards="statsCards"
-            :active-key.sync="activeFilter"
-            @card-click="onCardClick"
-          ></stat-cards>
-
-          <!-- 搜索 + 操作栏（批量按钮 + 新增 + 导出通过 actions 传入） -->
-          <table-bar
-            ref="tableBar"
-            :search-items="searchConfig"
-            :actions="actionConfig"
-            @search="onSearch"
-            @reset="onReset"
-            @action="onAction"
-          ></table-bar>
-
-          <!-- 数据表格（多选 + 自定义图片/状态/库存列 + 操作列） -->
-          <crud-table
-            ref="crudTable"
-            :data="tableData"
-            :columns="columns"
-            :loading="loading"
-            :page="page"
-            :page-size="pageSize"
-            :total="counts"
-            :selection="true"
-            :show-actions="true" :viewable="true"
-            :actions-width="260"
-            :actions-fixed="true"
-            @page-change="onPageChange"
-            @size-change="onSizeChange"
-            @selection-change="onSelection"
-            aria-label="菜品列表"
-          >
-            <!-- 图片列 -->
-            <template #col-image="{ row }">
-              <el-image class="cell-img"
-                :src="getImage(row.image)"
-                :preview-src-list="[getImage(row.image)]"
-                alt="菜品图片">
-                <div slot="error" class="image-slot">
-                  <img src="./../../images/noImg.png" class="cell-img" alt="暂无图片">
       <!-- 数据统计卡片 -->
       <stat-cards
             :cards="statsCards"
