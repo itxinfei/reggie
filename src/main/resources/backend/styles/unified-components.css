@@ -484,8 +484,10 @@
 }
 
 .stats-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl);
+  /* 抬升档全站统一：-2px + shadow-md（原 -4px + shadow-xl 过于夸张），
+     与组件 .stat-card、.ds-card--hover 一致。 */
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .stats-card-icon {
@@ -539,7 +541,8 @@
 }
 
 .chart-card:hover {
-  box-shadow: var(--shadow-lg);
+  /* 大块图表卡不做位移，悬浮仅提升到柔和 shadow-md，避免大卡漂浮、与统计卡抢层级 */
+  box-shadow: var(--shadow-md);
 }
 
 .chart-title {

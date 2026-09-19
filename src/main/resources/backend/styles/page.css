@@ -94,8 +94,8 @@
   font-size: 13px;
   padding: 7px 15px;
   height: 32px;
-  border-radius: 4px;
-  transition: all 0.25s ease;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-all);
   white-space: nowrap;
 }
 
@@ -127,18 +127,21 @@
 }
 
 /* --- 新增按钮：绿色（创建/添加） --- */
+/* 修改点：彩色按钮统一使用中性柔和阴影令牌（静止 sm / 悬浮 md），
+   移除原先绿/红/橙色发光阴影（违反"禁止发光、多重阴影"规范）。
+   按钮本身已是高饱和实色，辨识度足够，无需彩色光晕。 */
 .container .tableBar .btn-add,
 .container .tableBar .btn-action.el-button--success {
   background: var(--color-success) !important;
   border: none !important;
   color: var(--color-white) !important;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 .container .tableBar .btn-add:hover,
 .container .tableBar .btn-action.el-button--success:hover {
   background: var(--color-success-dark) !important;
-  box-shadow: 0 4px 14px rgba(103, 194, 58, 0.45);
+  box-shadow: var(--shadow-md);
 }
 
 /* --- 删除按钮：红色（危险操作） --- */
@@ -148,12 +151,12 @@
   border: none !important;
   color: var(--color-white) !important;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(245, 108, 108, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 .container .tableBar .btn-delete:hover,
 .container .tableBar .btn-action.el-button--danger:hover {
   background: var(--color-danger-dark) !important;
-  box-shadow: 0 4px 14px rgba(245, 108, 108, 0.45);
+  box-shadow: var(--shadow-md);
 }
 
 /* --- 导出按钮：橙色（数据导出） --- */
@@ -163,12 +166,12 @@
   border: none !important;
   color: var(--color-white) !important;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(230, 162, 60, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 .container .tableBar .btn-export:hover,
 .container .tableBar .btn-action.el-button--warning:hover {
   background: var(--color-warning-dark) !important;
-  box-shadow: 0 4px 14px rgba(230, 162, 60, 0.45);
+  box-shadow: var(--shadow-md);
 }
 
 /* --- 刷新按钮：信息灰边框（数据刷新） --- */
@@ -189,11 +192,11 @@
   border: none !important;
   color: var(--color-white) !important;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(230, 162, 60, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 .container .tableBar .btn-warning-status:hover {
   background: var(--color-warning-dark) !important;
-  box-shadow: 0 4px 14px rgba(230, 162, 60, 0.45);
+  box-shadow: var(--shadow-md);
 }
 
 /* --- 操作按钮组（右侧，自动推到最右边） --- */
@@ -206,12 +209,12 @@
   margin-left: auto;
 }
 
-/* 操作按钮微悬浮效果 */
+/* 操作按钮微悬浮效果（中性柔和阴影，静止 sm / 悬浮 md） */
 .container .tableBar .btn-action {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 .container .tableBar .btn-action:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 .container .tableBox {
   width: 100%;
@@ -220,11 +223,6 @@
 .container .tableBox .el-image img {
   width: 40px;
   border-radius: 5px;
-}
-
-.container .pageList {
-  text-align: center;
-  margin-top: 20px;
 }
 
 /* 修改点：tableLab 操作区推到右侧，与 action-group 行为一致 */
@@ -442,17 +440,12 @@
   width: 100%;
 }
 
-/* 统一表格视觉样式（.tableBox 与 .el-table 是同一元素，须用复合选择器；
-   样式与 components.css 的 crud 表格规范对齐，保证手写 el-table 与 crud-table 视觉一致） */
+/* 统一表格视觉样式（.tableBox 与 .el-table 是同一元素，须用复合选择器）。
+   表头底色/字重/字号已由 consistency.css 的 .el-table th.el-table__cell 单一定义
+   （手写表与 crud 表通用；crud 表在 .crud-table-wrapper 内由 components.css 更高
+   特异性接管并额外带品牌底线），此处不再用 !important 重复声明。 */
 .tableBox.el-table {
   font-size: var(--font-size-base);
-}
-
-.tableBox.el-table th {
-  background-color: var(--bg-subtle) !important;
-  color: var(--text-secondary) !important;
-  font-weight: var(--font-weight-semibold) !important;
-  font-size: var(--font-size-sm) !important;
 }
 
 /* 统一表格内容垂直居中 + 密度（padding 13px 0 与 components.css crud 规范一致） */

@@ -129,11 +129,8 @@
   color: var(--text-secondary);
 }
 
-/* 分页区域 */
-.crud-table-wrapper .pageList {
-  text-align: center;
-  margin-top: 20px;
-}
+/* 分页区域：.pageList 已由 consistency.css 单一定义（text-align 居中 + margin-top 20px），
+   .crud-table-wrapper 内外通用，故此处不再重复声明。 */
 
 /* ========== 操作列按钮统一间距 ========== */
 /* 操作列内按钮间距（新版统一样式见下方 .el-button--text 块） */

@@ -34,18 +34,21 @@
 
 /* ========== 卡片基础（经典变体） ========== */
 .stat-card {
-  background: var(--color-white);
+  background: var(--bg-surface);
   border-radius: var(--radius-lg);
   padding: 20px 24px;
   position: relative;
   overflow: hidden;
-  transition: all 0.2s;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  border: 1px solid var(--el-bg-page);
+  transition: var(--transition-all);
+  box-shadow: var(--shadow-sm);
+  /* 修改点：原误用背景令牌 --el-bg-page(#f0f2f5) 当边框（偏蓝灰），统一为中性边框令牌 */
+  border: 1px solid var(--border-subtle);
 }
 
 .stat-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  /* 抬升档全站统一：-2px + shadow-md（与 .ds-card--hover、私有 .stats-card 同一档位） */
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 /* 顶部主题色条（纯色，符合"禁止渐变"规范） */
@@ -145,7 +148,10 @@
 }
 
 .stat-card.clickable.active {
-  border-color: var(--color-brand-500);
+  /* 激活筛选态：淡金底 + 柔和金边，比单根 #ffc200 实色边框更柔和且更易辨识；
+     键盘焦点环由 design-system.css 的全局 :focus-visible 提供（卡片 tabindex=0）。 */
+  background: var(--color-brand-50);
+  border-color: var(--color-brand-300);
 }
 
 /* ========== 桌台变体（flex 布局） ========== */

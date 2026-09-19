@@ -72,6 +72,24 @@
   }
 }
 
+/* ========== 1.5 全局滚动条（细、中性，替代系统默认粗滚动条） ==========
+ * 本文件主框架（外壳）与 iframe 子页都会加载，故只需在此定义一处。
+ * 仅接管"未单独定制"的原生滚动区（页面主体 / 弹窗 / 表格 / 下拉等）；
+ * Element 的 .el-scrollbar、.el-input、侧边栏 .sidebar-menu-wrap、会话列表
+ * 等已有更高特异性（带类名）的滚动条规则，不受这组裸选择器影响。
+ * Firefox 走 scrollbar-width/scrollbar-color，WebKit 走 ::-webkit-scrollbar。 */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-300) transparent;
+}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--color-gray-300);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--color-gray-400); }
+
 /* ========== 2. 页面表面统一（token 化卡片容器） ========== */
 .dashboard-container .container {
   background: var(--bg-surface);
@@ -504,12 +522,11 @@ a.breadcrumb__item:hover,
   border-radius: var(--radius-lg);
   border: var(--border-width-thin) var(--border-style-solid) var(--border-color-light);
   box-shadow: var(--shadow-sm);
-  transition: var(--transition-all);
+  /* 静态内容卡片：仅过渡阴影/边框色，不做 all 全属性动画；
+     默认无 hover 抬升（避免纯展示卡片随鼠标浮动），需要可点反馈的卡片
+     请显式加 .ds-card--hover（统一 -2px + shadow-md 档位）。 */
+  transition: box-shadow var(--transition-base), border-color var(--transition-base);
   overflow: hidden;
-}
-
-.el-card:hover {
-  box-shadow: var(--shadow-md);
 }
 
 .el-card__header {

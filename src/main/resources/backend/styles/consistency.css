@@ -105,9 +105,10 @@ body > .container {
 }
 .stats-row .stats-card:hover,
 .stats-cards .stats-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--color-brand-300);
+  /* 抬升档全站统一：translateY(-2px) + shadow-md（与统一组件 .stat-card、
+     .ds-card--hover 一致）；移除原先 -3px + shadow-lg + 金边的夸张反馈。 */
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 /* ========== 5. 表格表头统一（表头底色/字重/字号对齐设计规范） ========== */
@@ -118,11 +119,13 @@ body > .container {
   font-size: var(--font-size-sm);
 }
 
-/* ========== 6. 分页区域统一 ========== */
+/* ========== 6. 分页区域统一（全站表格分页唯一权威定义） ==========
+   page.css 的 .container .pageList 与 components.css 的
+   .crud-table-wrapper .pageList 重复副本已删除，统一落到这里。
+   el-pagination 内部为 inline-block，靠父级 text-align 居中；不使用 flex，
+   以免改变分页器自身的内部布局。margin 维持 20px（--space-5）现状。 */
 .pageList {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  text-align: center;
   margin-top: var(--space-5);
 }
 
