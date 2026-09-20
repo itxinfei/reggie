@@ -330,7 +330,8 @@
               } },
               grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
               xAxis: { type: 'category', data: labels },
-              yAxis: { type: 'value', name: '营业额(元)', axisLabel: { formatter: '¥{value}' } },
+              yAxis: { type: 'value', name: '营业额(元)', axisLabel: {
+                formatter: function(v) { return '¥' + Number(v).toLocaleString('zh-CN'); } } },
               series: [{
                 name: '营业额',
                 type: 'bar',

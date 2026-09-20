@@ -957,6 +957,9 @@
 .text-info { color: var(--color-info) !important; }
 .text-info:hover { background: var(--color-info-light) !important; }
 
+/* 低库存数字警示（纯文本，无 hover 底；替代内联 :style） */
+.stock-low { color: var(--color-danger); font-weight: var(--font-weight-bold); }
+
 /* ========== 统一按钮系统（非 Element UI 页面用） ========== */
 
 /* --- 基础按钮重置 --- */

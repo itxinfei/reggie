@@ -280,7 +280,8 @@
               },
               grid: { left: 120, right: 60, top: 20, bottom: 30 },
               xAxis: {
-                type: 'value', axisLabel: { color: RgPalette.info, fontSize: 12, formatter: '¥{value}' },
+                type: 'value', axisLabel: { color: RgPalette.info, fontSize: 12,
+                  formatter: function(v) { return '¥' + Number(v).toLocaleString('zh-CN'); } },
                 splitLine: { lineStyle: { color: RgPalette.borderLighter2, type: 'dashed' } },
                 axisLine: { show: false }, axisTick: { show: false }
               },
@@ -431,7 +432,8 @@
                   axisLabel: { color: RgPalette.textSecondary, fontSize: 12 } },
                 hasAmount ? { type: 'value', name: '金额',
                   nameTextStyle: { color: RgPalette.textSecondary, fontSize: 12 },
-                  axisLabel: { formatter: '¥{value}', color: RgPalette.textSecondary, fontSize: 12 },
+                  axisLabel: { color: RgPalette.textSecondary, fontSize: 12,
+                    formatter: function(v) { return '¥' + Number(v).toLocaleString('zh-CN'); } },
                   splitLine: { show: false } } : {}
               ].filter(function(y) { return Object.keys(y).length; }),
               series: [

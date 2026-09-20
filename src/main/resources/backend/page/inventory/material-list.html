@@ -56,7 +56,7 @@
         @size-change="onSizeChange"
       >
         <template #col-stockQty="{ row }">
-          <span :style="row.stockQty <= row.minStock ? 'color: var(--color-danger); font-weight: bold' : ''">{{ row.stockQty }}</span>
+          <span :class="{ 'stock-low': row.stockQty <= row.minStock }">{{ row.stockQty }}</span>
         </template>
         <template #col-status="{ row }">
           <el-tag :type="row.status == '1' ? 'success' : 'info'" size="small">
@@ -152,7 +152,7 @@
         <el-table-column prop="unit" label="单位" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true"></el-table-column>
         <el-table-column label="库存数量" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true">
           <template slot-scope="scope">
-            <span :style="{ color: 'var(--color-danger)', fontWeight: 'var(--font-weight-bold)' }">{{ scope.row.stockQty }}</span>
+            <span class="stock-low">{{ scope.row.stockQty }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="minStock" label="最低库存" width="140" align="center" :header-align="'center'" :show-overflow-tooltip="true"></el-table-column>
