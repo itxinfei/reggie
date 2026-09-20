@@ -18,58 +18,42 @@
     <!-- 统一布局：统计卡片置顶（支持点击筛选：总数/已上架/已下架按状态过滤） -->
     <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
-    <!-- 页级操作行：营业状态同步 -->
-    <div class="ds-actions-row">
-      <span class="ds-action-label">营业状态同步：</span>
-      <el-select v-model="businessPlatform" placeholder="选择平台" size="small" style="width:130px;">
-        <el-option label="美团" value="MEITUAN"></el-option>
-        <el-option label="饿了么" value="ELEME"></el-option>
-        <el-option label="抖音" value="DOUYIN"></el-option>
-        <el-option label="自营" value="SELF"></el-option>
-        <el-option label="其他" value="OTHER"></el-option>
-      </el-select>
-      <el-button size="small" type="success" :loading="bizLoading" @click="syncBusiness(true)">设为营业</el-button>
-      <el-button size="small" @click="syncBusiness(false)">设为休息</el-button>
-    </div>
+    <!-- 搜索 + 工具栏 -->
+    <table-bar
+      :search-items="searchItems"
+      @search="onMappingSearch"
+      @reset="onMappingReset"
+    >
+      <!-- 默认插槽：页级操作「营业状态同步」，与筛选无关，独立成组 -->
+      <div class="biz-sync">
+        <span class="biz-sync__label">营业状态同步：</span>
+        <el-select v-model="businessPlatform" placeholder="选择平台" size="small" style="width:130px;">
+          <el-option label="美团" value="MEITUAN"></el-option>
+          <el-option label="饿了么" value="ELEME"></el-option>
+          <el-option label="抖音" value="DOUYIN"></el-option>
+          <el-option label="自营" value="SELF"></el-option>
+          <el-option label="其他" value="OTHER"></el-option>
+        </el-select>
+        <el-button size="small" type="success" :loading="bizLoading" @click="syncBusiness(true)">设为营业</el-button>
+        <el-button size="small" :loading="bizLoading" @click="syncBusiness(false)">设为休息</el-button>
+      </div>
+    </table-bar>
 
-    <!-- 筛选区 -->
-    <el-card shadow="never" class="ds-card ds-card--filter">
-      <el-form :inline="true" :model="filters" @submit.native.prevent class="ds-filter-form">
-        <el-form-item label="平台">
-          <el-select v-model="filters.platformType" placeholder="全部平台" clearable size="small" style="width:140px;">
-            <el-option label="美团" value="MEITUAN"></el-option>
-            <el-option label="饿了么" value="ELEME"></el-option>
-            <el-option label="抖音" value="DOUYIN"></el-option>
-            <el-option label="自营" value="SELF"></el-option>
-            <el-option label="其他" value="OTHER"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="菜品ID">
-          <el-input v-model="filters.dishId" placeholder="本系统菜品ID" size="small" clearable style="width:160px;"></el-input>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" size="small" @click="search">查询</el-button>
-          <el-button size="small" @click="resetFilters">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
-
-    <!-- 映射表格 -->
-    <el-card shadow="never" class="ds-card">
-      <crud-table
-        v-if="loading || tableData.length > 0"
-        :data="tableData"
-        :columns="columns"
-        :page="page"
-        :page-size="pageSize"
-        :total="counts"
-        :loading="loading"
-        :show-actions="true"
-        :actions-width="200"
-        :actions-fixed="true"
-        @page-change="handlePageChange"
-        @size-change="handleSizeChange"
-      >
+    <!-- 映射表格（空态走 crud-table 内置 empty-hint） -->
+    <crud-table
+      :data="tableData"
+      :columns="columns"
+      :page="page"
+      :page-size="pageSize"
+      :total="counts"
+      :loading="loading"
+      :show-actions="true"
+      :actions-width="120"
+      :actions-fixed="true"
+      empty-hint="暂无菜品平台映射，请先在菜品编辑中建立平台映射"
+      @page-change="handlePageChange"
+      @size-change="handleSizeChange"
+    >
         <template #col-platformType="{ row }">
           <el-tag size="mini">{{ platformTypeText(row.platformType) }}</el-tag>
         </template>
@@ -79,18 +63,13 @@
           </el-tag>
         </template>
         <template #col-price="{ row }">
-          <span class="ds-money">{{ row.price != null ? '￥' + row.price.toFixed(2) : '-' }}</span>
+          <span class="ds-money">{{ formatPrice(row.price) }}</span>
         </template>
         <template #actions="{ row }">
-          <el-button v-if="row.status !== 1" size="mini" type="text" class="btn-view" @click="syncDish(row, 'on_shelf')">上架</el-button>
-          <el-button v-if="row.status === 1" size="mini" type="text" class="btn-warning" @click="syncDish(row, 'off_shelf')">下架</el-button>
+          <el-button v-if="row.status !== 1" type="text" size="small" class="btn-view" @click="syncDish(row, 'on_shelf')">上架</el-button>
+          <el-button v-if="row.status === 1" type="text" size="small" class="btn-warning" @click="syncDish(row, 'off_shelf')">下架</el-button>
         </template>
       </crud-table>
-
-      <div v-if="!loading && tableData.length === 0" class="ds-empty">
-        暂无菜品平台映射，请先在菜品编辑中建立平台映射
-      </div>
-    </el-card>
   </main>
 </div>
 
@@ -115,6 +94,18 @@
         // 修改点：菜品平台映射统计（总数/已上架/已下架/覆盖平台数），由 /admin/platform/mapping/stats 加载
         stats: {},
         filters: { platformType: '', dishId: '' },
+        // table-bar 筛选项：平台下拉（改选即查）+ 菜品ID（回车/点放大镜查询）
+        searchItems: [
+          { type: 'select', field: 'platformType', placeholder: '全部平台', width: 140,
+            options: [
+              { label: '美团', value: 'MEITUAN' },
+              { label: '饿了么', value: 'ELEME' },
+              { label: '抖音', value: 'DOUYIN' },
+              { label: '自营', value: 'SELF' },
+              { label: '其他', value: 'OTHER' }
+            ] },
+          { type: 'input', field: 'dishId', label: '菜品ID', placeholder: '本系统菜品ID', width: 160 }
+        ],
         columns: [
           { prop: 'platformType', label: '平台', width: 100, align: 'center', slot: true },
           { prop: 'dishId', label: '菜品ID', width: 100, align: 'center' },
@@ -198,14 +189,18 @@
         this.page = 1
         this.fetchData(false)
       },
-      search() {
+      // table-bar 查询：组件内部 searchValues 不双向绑定，桥接回 filters
+      onMappingSearch(params) {
+        this.filters.platformType = params.platformType || ''
+        this.filters.dishId = params.dishId || ''
         this.page = 1
         this.fetchData(false)
       },
-      resetFilters() {
+      // table-bar 重置：清空筛选回总览，并重算统计
+      onMappingReset() {
         this.filters = { platformType: '', dishId: '' }
         this.page = 1
-        this.fetchData()
+        this.fetchData(true)
       },
       handlePageChange(p) {
         // 修改点：crud-table emit 的是 {page, pageSize} 对象，需提取 page 数字
@@ -220,6 +215,10 @@
       platformTypeText(type) {
         const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音', SELF: '自营', OTHER: '其他' }
         return map[type] || type
+      },
+      // 平台价：null 显 '-'；其余半角 ¥ + 千分位两位小数（formatMoney 内部做 Number 转换，字符串价格也不会崩）
+      formatPrice(price) {
+        return price != null ? '¥' + window.RgFormat.formatMoney(price) : '-'
       },
       /* ── 菜品与营业状态同步 ── */
       syncDish(row, action) {
@@ -263,15 +262,17 @@
   })
 </script>
 <style>
-  .ds-filter-form { padding: 4px 0; }
-  .ds-action-label { font-size: var(--font-size-base); color: var(--el-text-secondary); }
-  .ds-money { font-variant-numeric: tabular-nums; color: var(--el-text-primary); }
-  .ds-empty {
-    text-align: center;
-    padding: 40px 0;
-    color: var(--el-text-secondary);
-    font-size: var(--font-size-base);
+  /* 营业状态同步组：table-bar 默认插槽内，与左侧搜索区竖线分隔 */
+  .biz-sync {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border-default);
   }
+  .biz-sync__label { font-size: var(--font-size-base); color: var(--el-text-secondary); }
+  .ds-money { font-variant-numeric: tabular-nums; color: var(--el-text-primary); }
 </style>
 </body>
 </html>
