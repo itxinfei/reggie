@@ -11,7 +11,7 @@
     <!-- 修改点：补充加载完整 remixicon.css（此前仅加载 fallback，ri-moon-line/ri-menu-line/ri-close-line 等 header 图标不渲染） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css">
     <script src="../js/icon-fallback.js?v=20260917"></script>
-    <link rel="stylesheet" href="../styles/ai-assistant.css?v=20260921">
+    <link rel="stylesheet" href="../styles/ai-assistant.css?v=20260922">
 
 </head>
 <body>
@@ -146,6 +146,14 @@
                                 <span class="user-text" v-if="msg.content">{{ msg.content }}</span>
                             </div>
                         </div>
+                        <!-- P4 经营数据工具调用状态条（模型查实时报表时展示「正在查询→完成」） -->
+                        <div class="ai-tool-bar" v-if="msg.tools && msg.tools.length">
+                            <div class="ai-tool-item" v-for="tool in msg.tools" :key="tool.name" :class="'is-' + tool.status">
+                                <i class="ai-tool-icon" :class="toolStatusIcon(tool.status)" aria-hidden="true"></i>
+                                <span class="ai-tool-label">{{ tool.label || tool.name }}</span>
+                                <span class="ai-tool-summary" v-if="tool.summary">{{ tool.summary }}</span>
+                            </div>
+                        </div>
                         <!-- 已停止标记 -->
                         <div class="stopped-badge" v-if="msg.stopped && !msg.streaming">
                             <i class="ri-stop-circle-line" aria-hidden="true"></i> 已停止，内容为部分回复
@@ -264,7 +272,7 @@
     <script src="../js/vant.min.js"></script>
     <script src="../js/request.js?v=20260917"></script>
     <!-- 公共聊天内核：POST+SSE 客户端 / 安全 Markdown / 消息工厂（与管理后台同一份） -->
-    <script src="../../backend/js/ai/ai-chat-core.js?v=20260921"></script>
+    <script src="../../backend/js/ai/ai-chat-core.js?v=20260922"></script>
     <script src="../api/ai.js?v=20260921"></script>
     <script>
     (function() {
@@ -1103,6 +1111,11 @@
                             if (requestId !== self.currentRequestId) return;
                             aiMsg.dishes = dishes;
                         },
+                        onTool: function(tool) {
+                            // P4 经营数据工具调用状态：{name,label,status:running|done|error,summary}
+                            if (requestId !== self.currentRequestId || !tool || !tool.name) return;
+                            self.applyToolEvent(aiMsg, tool);
+                        },
                         onDone: function(data) {
                             if (requestId !== self.currentRequestId) return;
                             if (data.messageId) aiMsg.dbMessageId = data.messageId;
@@ -1152,6 +1165,31 @@
                             }
                         }
                     });
+                },
+
+                /** P4 工具事件按 name 合并到状态条（running→done/error 保留同一条） */
+                applyToolEvent: function(aiMsg, tool) {
+                    if (!aiMsg.tools) this.$set(aiMsg, 'tools', []);
+                    var hit = null;
+                    for (var i = 0; i < aiMsg.tools.length; i++) {
+                        if (aiMsg.tools[i].name === tool.name) { hit = aiMsg.tools[i]; break; }
+                    }
+                    if (!hit) {
+                        hit = { name: tool.name, label: tool.label || tool.name, status: tool.status, summary: tool.summary || '' };
+                        aiMsg.tools.push(hit);
+                    } else {
+                        this.$set(hit, 'status', tool.status);
+                        if (tool.label) this.$set(hit, 'label', tool.label);
+                        if (tool.summary) this.$set(hit, 'summary', tool.summary);
+                    }
+                    this.scheduleScroll();
+                },
+
+                /** 工具状态 → RemixIcon 类名 */
+                toolStatusIcon: function(status) {
+                    if (status === 'done') return 'ri-checkbox-circle-line';
+                    if (status === 'error') return 'ri-error-warning-line';
+                    return 'ri-loader-4-line ai-tool-spin';
                 },
 
                 /** 流式不可用时的非流式降级（点餐走 order-assistant，其余走通用 chat；附件随降级通道透传） */

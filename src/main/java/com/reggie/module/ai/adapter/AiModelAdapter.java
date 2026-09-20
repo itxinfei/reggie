@@ -3,6 +3,8 @@ package com.reggie.module.ai.adapter;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
+import com.reggie.module.ai.model.ModelTurn;
+import com.reggie.module.ai.tool.ToolDefinition;
 
 import java.util.List;
 
@@ -67,6 +69,34 @@ public interface AiModelAdapter {
             callback.onToken(response.getContent(), true);
         }
         return response != null ? response.getContent() : null;
+    }
+
+    /**
+     * 是否支持 function calling（工具调用）。
+     * <p>除供应商配置 capabilities.tools 勾选外，还需适配器在协议层真正支持；
+     * Baidu 压平协议不支持，默认 false。</p>
+     */
+    default boolean supportsToolCalling() {
+        return false;
+    }
+
+    /**
+     * 单轮工具感知对话：模型可能返回自然语言（经 textSink 流式推送），
+     * 也可能返回 {@link ModelTurn#getToolCalls()} 请求调用工具，由编排层执行后续轮。
+     *
+     * @param messages    对话消息（可含 assistant.toolCalls 与 role=tool 结果消息）
+     * @param maxTokens   最大 token 数
+     * @param temperature 温度参数
+     * @param config      供应商配置
+     * @param tools       可用工具定义；空列表表示本轮不提供工具（强制模型总结作答）
+     * @param abort       中止回调（用户点停止时断开上游）
+     * @param textSink    文本增量回调（只推 token，不使用 isLast 语义）
+     * @return 本轮结果；上游错误返回 {@link ModelTurn#error(String)}
+     */
+    default ModelTurn chatTurn(List<AIMessage> messages, int maxTokens, double temperature,
+                               AiProviderConfig config, List<ToolDefinition> tools,
+                               AbortableStreamCallback abort, StreamCallback textSink) throws Exception {
+        throw new UnsupportedOperationException(getFormatId() + " 适配器不支持工具调用");
     }
 
     /**

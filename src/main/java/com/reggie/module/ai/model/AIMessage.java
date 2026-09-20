@@ -38,4 +38,20 @@ public class AIMessage {
      * 适配器按各家协议分流（OpenAI image_url / Anthropic image.source / Baidu 压平）。
      */
     private List<String> imageDataUrls;
+
+    /**
+     * 模型发起的工具调用（仅 role=assistant；P4 经营数据工具）。
+     * 下一轮需以 role="tool" 的结果消息逐条回应，否则各家协议都会报错。
+     */
+    private List<ToolCall> toolCalls;
+
+    /**
+     * 工具调用 ID（仅 role=tool），关联对应 assistant 工具调用的 id。
+     */
+    private String toolCallId;
+
+    /**
+     * 工具名（仅 role=tool），OpenAI 协议要求工具结果消息携带 name 字段。
+     */
+    private String name;
 }

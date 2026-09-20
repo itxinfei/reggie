@@ -24,8 +24,14 @@ import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AIMessageRecord;
 import com.reggie.module.ai.model.AIRecommendedDish;
 import com.reggie.module.ai.model.AiProviderConfig;
+import com.reggie.module.ai.model.ModelTurn;
 import com.reggie.module.ai.provider.AiProviderManager;
 import com.reggie.module.ai.adapter.AbortableStreamCallback;
+import com.reggie.module.ai.adapter.AiModelAdapter;
+import com.reggie.module.ai.tool.AiToolOrchestrator;
+import com.reggie.module.ai.tool.BusinessSnapshotService;
+import com.reggie.module.ai.tool.ToolEvent;
+import com.reggie.module.ai.tool.ToolEventSink;
 import com.reggie.module.ai.service.AIChatService;
 import com.reggie.module.ai.service.AiAttachmentService;
 import com.reggie.module.ai.service.AiPromptTemplateService;
@@ -40,6 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -125,6 +132,14 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     /** 图片附件服务（P2：归属校验、元数据落库、模型 base64 装配） */
     @Resource
     private AiAttachmentService aiAttachmentService;
+
+    /** P4：function calling 多轮工具编排（经营分析场景查真实报表） */
+    @Resource
+    private AiToolOrchestrator aiToolOrchestrator;
+
+    /** P4：不支持工具调用的供应商走经营快照注入降级 */
+    @Resource
+    private BusinessSnapshotService businessSnapshotService;
 
     // ==================== 流式对话 ====================
 
@@ -649,6 +664,29 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             }
         }
 
+        // 4.5) P4 经营分析场景的数据供给（二选一）：
+        //      支持 function calling → 注入工具使用准则（真实数字必须现查）；
+        //      不支持（Baidu 压平协议/未勾选能力）→ 注入近 7 天经营快照兜底，二者都避免模型编造数字
+        if ("business_analysis".equals(request.getScene())) {
+            if (aiProviderManager.supportsToolCalling()) {
+                messages.add(AIMessage.builder()
+                        .role("system")
+                        .content(buildToolGuidePrompt())
+                        .build());
+            } else {
+                try {
+                    String snapshotPrompt = businessSnapshotService
+                            .buildSnapshotSystemPrompt(BaseContext.getCurrentTenantId());
+                    if (snapshotPrompt != null && !snapshotPrompt.isEmpty()) {
+                        messages.add(AIMessage.builder().role("system").content(snapshotPrompt).build());
+                    }
+                } catch (Exception e) {
+                    // 宽异常兜底：快照失败退化为无快照对话，不阻断聊天
+                    log.warn("注入经营快照失败，降级为无快照对话: {}", e.getMessage());
+                }
+            }
+        }
+
         // 5) 当前用户消息
         // 修改点(2026-09-20)：saveUserMessage 已把本轮消息写入上下文缓存（DB 重建路径同样包含），
         // 若末条已是相同的用户消息则不再追加，修复每轮问题被重复发送两次给模型的缺陷；
@@ -671,6 +709,20 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         //    适配器按协议分流；失败静默降级为纯文本，不阻断对话
         attachImageDataUrls(messages, request);
         return messages;
+    }
+
+    /**
+     * P4 工具链路 system 指引：明确数字必须来自工具、给出今天日期供相对时间换算。
+     */
+    private String buildToolGuidePrompt() {
+        return "你可以通过工具查询本店的真实经营数据：经营日报、菜品销量排行、时段客流分析、"
+                + "支付方式分析、分类销量占比、复购率、近期销售趋势。使用规则：\n"
+                + "1. 凡涉及具体经营数字（营业额、销量、订单数、占比、排名、复购率等），"
+                + "必须先调用对应工具获取真实数据，严禁凭常识或上下文猜测编造；\n"
+                + "2. 今天是 " + LocalDate.now() + "（按此日期把“昨天/本周/近几天”换算成 yyyy-MM-dd 入参）；\n"
+                + "3. 工具返回的是本店铺真实数据，金额单位均为元人民币；\n"
+                + "4. 取数后用中文简洁回答，可使用表格或要点，并说明统计口径与时间范围；"
+                + "工具未覆盖的问题再结合餐饮经营常识给建议。";
     }
 
     /**
@@ -1319,7 +1371,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
      * <p>实现 Runnable 直接提交到 aiExecutor；作为 AbortableStreamCallback 传入适配器，
      * 用户停止时 abort() 置位并断开上游 HttpURLConnection，已生成片段以 stopped 状态保留。</p>
      */
-    private final class ChatStreamSession implements AbortableStreamCallback, Runnable {
+    private final class ChatStreamSession implements AbortableStreamCallback, Runnable, ToolEventSink {
 
         private final SseEmitter emitter;
         private final AIChatRequest request;
@@ -1419,16 +1471,39 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         }
 
         /**
+         * P4：工具调用状态事件实时转发前端（running → done/error），历史消息不回放。
+         */
+        @Override
+        public void onToolEvent(ToolEvent event) {
+            if (aborted.get() || event == null) {
+                return;
+            }
+            try {
+                Map<String, Object> data = new HashMap<>();
+                data.put("name", event.getName());
+                data.put("label", event.getLabel());
+                data.put("status", event.getStatus());
+                if (event.getSummary() != null) {
+                    data.put("summary", event.getSummary());
+                }
+                emitter.send(SseEmitter.event().name("tool").data(data));
+            } catch (Exception e) {
+                // 连接可能已断开；工具事件为增强展示，推送失败不影响主链路
+                log.debug("tool事件推送失败（连接可能已断开）: conversationId={}", conversationId);
+            }
+        }
+
+        /**
          * 异步执行流式对话。
          */
         private void execute() {
             try {
-                // 1) 能力事件：按供应商配置 capabilities 下发（P2 vision；P4 tools 暂恒 false）
+                // 1) 能力事件：按供应商配置 capabilities 下发（P2 vision；P4 tools 配置+协议双条件）
                 Map<String, Boolean> providerCaps = aiProviderManager.getCapabilities();
                 Map<String, Object> caps = new HashMap<>();
                 caps.put("chat", Boolean.TRUE);
                 caps.put("vision", Boolean.TRUE.equals(providerCaps.get("vision")));
-                caps.put("tools", Boolean.FALSE);
+                caps.put("tools", aiProviderManager.supportsToolCalling());
                 try {
                     emitter.send(SseEmitter.event().name("capabilities").data(caps));
                 } catch (Exception e) {
@@ -1457,12 +1532,53 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 double temperature = (providerConfig != null && providerConfig.getTemperature() != null)
                         ? providerConfig.getTemperature() : aiConfig.getTemperature();
 
-                // 3) 调用流式接口（适配器真流式或 manager 分块降级）
-                aiProviderManager.streamChat(messages, maxTokens, temperature, this);
+                // 3) 经营分析场景且供应商支持 function calling：走工具多轮编排（真实查报表）；
+                //    其余场景（含不支持 tools 的供应商，已在 buildMessages 注入经营快照）保持原流式链路
+                boolean useTools = "business_analysis".equals(scene)
+                        && aiProviderManager.supportsToolCalling();
+                ModelTurn toolTurn = null;
+                if (useTools) {
+                    // 工具轮文本出口：只转发增量，绝不发 isLast——最终收尾由 execute 统一做，
+                    // 否则会提前触发 finalizeStream（session 自身 onToken 的 isLast 语义不能复用）
+                    AiModelAdapter.StreamCallback toolTextSink = new AiModelAdapter.StreamCallback() {
+                        @Override
+                        public void onToken(String token, boolean isLast) {
+                            if (aborted.get() || token == null || token.isEmpty()) {
+                                return;
+                            }
+                            fullContent.append(token);
+                            long now = System.currentTimeMillis();
+                            if (firstTokenTime == 0) {
+                                firstTokenTime = now - streamStart;
+                                log.debug("首字延迟(工具轮): {}ms, conversationId={}",
+                                        firstTokenTime, conversationId);
+                            }
+                            Map<String, Object> chunkData = new HashMap<>();
+                            chunkData.put("text", token);
+                            try {
+                                emitter.send(SseEmitter.event().name("message").data(chunkData));
+                            } catch (Exception sendEx) {
+                                // 客户端已断开：中止上游，避免继续消耗 token
+                                log.debug("SSE推送失败，中止上游: conversationId={}", conversationId);
+                                abort();
+                            }
+                        }
+                    };
+                    toolTurn = aiToolOrchestrator.run(messages, maxTokens, temperature, tenantId,
+                            this, toolTextSink, this);
+                } else {
+                    // 适配器真流式或 manager 分块降级
+                    aiProviderManager.streamChat(messages, maxTokens, temperature, this);
+                }
 
-                // 4) 收尾：中止时保留 stopped 片段；适配器未回调 isLast 时保证连接不挂起
+                // 4) 收尾：中止时保留 stopped 片段；工具轮整体报错且无文本则下发错误；
+                //    适配器未回调 isLast 时保证连接不挂起
                 if (aborted.get()) {
                     finalizeStream(true);
+                } else if (toolTurn != null && toolTurn.isError() && fullContent.length() == 0) {
+                    String errMsg = toolTurn.getErrorMessage();
+                    completeWithError(emitter,
+                            errMsg != null ? errMsg : "AI服务暂时不可用，请稍后重试", conversationId);
                 } else if (!finalized.get()) {
                     if (fullContent.length() > 0) {
                         finalizeStream(false);

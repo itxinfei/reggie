@@ -425,6 +425,32 @@
     content: ''; position: absolute; inset: -8px; border-radius: var(--radius-round);
 }
 
+/* ========== P4 经营数据工具调用状态条 ========== */
+.ai-tool-bar {
+    display: flex; flex-direction: column; gap: 6px; margin-top: 8px;
+}
+.ai-tool-item {
+    display: flex; align-items: center; gap: 6px;
+    border: 1px solid var(--ai-border-light); border-radius: var(--radius-md);
+    padding: 5px 10px; background: var(--bg-card);
+    font-size: 11px; color: var(--color-text-secondary);
+    transition: background 0.2s, border-color 0.2s;
+}
+.ai-tool-item .ai-tool-icon { font-size: 13px; line-height: 1; flex-shrink: 0; }
+.ai-tool-item .ai-tool-label { font-weight: 500; white-space: nowrap; }
+.ai-tool-item .ai-tool-summary {
+    color: var(--color-text-hint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ai-tool-item.is-running {
+    background: var(--color-primary-tint); border-color: var(--color-primary); color: var(--color-primary-dark);
+}
+.ai-tool-item.is-running .ai-tool-icon { color: var(--color-primary-dark); }
+.ai-tool-item.is-done .ai-tool-icon { color: var(--color-success); }
+.ai-tool-item.is-error { border-color: var(--color-danger); color: var(--color-danger); }
+.ai-tool-item.is-error .ai-tool-icon { color: var(--color-danger); }
+.ai-tool-spin { animation: ai-tool-spin 1s linear infinite; }
+@keyframes ai-tool-spin { to { transform: rotate(360deg); } }
+
 /* ========== 反馈按钮 ========== */
 .feedback-bar {
     display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-sm); padding-left: 4px;

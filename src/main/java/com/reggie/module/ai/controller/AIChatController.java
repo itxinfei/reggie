@@ -724,12 +724,13 @@ public class AIChatController {
             resolvedScene = CUSTOMER_SCENE.equals(scene) ? scene : CUSTOMER_SCENE;
         }
 
-        // P2：vision 按供应商配置 capabilities 下发；tools 链路 P4 才完成，暂恒 false
+        // P2/P4：vision、tools 均按供应商配置下发；tools 还需适配器协议层真正支持
+        // （工具调用链路当前仅在经营分析场景启用，能力位仅表示供应商是否具备）
         Map<String, Boolean> providerCaps = aiProviderManager.getCapabilities();
         Map<String, Object> capabilities = new HashMap<>();
         capabilities.put("chat", true);
         capabilities.put("vision", Boolean.TRUE.equals(providerCaps.get("vision")));
-        capabilities.put("tools", false);
+        capabilities.put("tools", aiProviderManager.supportsToolCalling());
 
         // P3：欢迎语/快捷问题优先取模板库（后台「提示词模板」可运营），读取异常降级静态兜底
         String welcome = null;

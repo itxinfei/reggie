@@ -380,6 +380,9 @@
                 try { dishes = JSON.parse(data.raw); } catch (e2) { dishes = []; }
             }
             handlers.onDishes(dishes || []);
+        } else if (eventName === 'tool' && handlers.onTool) {
+            // P4 经营数据工具调用状态：{name,label,status:running|done|error,summary}
+            handlers.onTool(data);
         } else if (eventName === 'done' && handlers.onDone) {
             handlers.onDone(data);
         } else if (eventName === 'error') {
@@ -417,7 +420,7 @@
 
     /**
      * 发起流式请求
-     * @param {Object} cfg url/body + 回调（onCapabilities/onToken/onDishes/onDone/onError/onAbort）
+     * @param {Object} cfg url/body + 回调（onCapabilities/onToken/onDishes/onTool/onDone/onError/onAbort）
      */
     ChatClient.prototype.stream = function (cfg) {
         var self = this;
@@ -599,6 +602,8 @@
                 dbMessageId: null,
                 feedback: null,
                 dishes: null,
+                // P4 经营数据工具调用状态条（仅流式过程中展示，历史不回放）
+                tools: [],
                 timestamp: Date.now()
             };
         },
@@ -625,6 +630,8 @@
                 attachments: attachments,
                 feedback: record.feedback || null,
                 dishes: null,
+                // 工具调用是当次生成的过程状态，历史不回放
+                tools: null,
                 timestamp: record.createTime ? new Date(record.createTime).getTime() : Date.now()
             };
         },

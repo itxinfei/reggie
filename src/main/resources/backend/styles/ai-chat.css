@@ -470,6 +470,32 @@
 .dish-card .dish-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 .dish-card .dish-price { color: var(--color-danger); font-weight: 600; font-size: 14px; white-space: nowrap; }
 
+/* P4 经营数据工具调用状态条（模型查实时报表时展示「正在查询→完成」） */
+.ai-tool-bar {
+  display: flex; flex-direction: column; gap: 6px; margin-top: 8px;
+}
+.ai-tool-item {
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border-default); border-radius: var(--radius-sm);
+  padding: 5px 10px; background: var(--bg-surface);
+  font-size: 12px; color: var(--text-secondary);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.ai-tool-item .ai-tool-icon { font-size: 14px; line-height: 1; flex-shrink: 0; }
+.ai-tool-item .ai-tool-label { font-weight: 500; white-space: nowrap; }
+.ai-tool-item .ai-tool-summary {
+  color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ai-tool-item.is-running {
+  background: var(--color-brand-50); border-color: var(--color-brand-200); color: var(--color-brand-700);
+}
+.ai-tool-item.is-running .ai-tool-icon { color: var(--color-brand-700); }
+.ai-tool-item.is-done .ai-tool-icon { color: var(--color-success); }
+.ai-tool-item.is-error { border-color: var(--color-danger); color: var(--color-danger); }
+.ai-tool-item.is-error .ai-tool-icon { color: var(--color-danger); }
+.ai-tool-spin { animation: ai-tool-spin 1s linear infinite; }
+@keyframes ai-tool-spin { to { transform: rotate(360deg); } }
+
 /* 停止生成按钮 */
 .stop-btn {
   padding: 8px 20px; background: var(--color-danger);

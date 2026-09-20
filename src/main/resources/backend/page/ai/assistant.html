@@ -6,7 +6,7 @@
     <title>AI 经营分析助手 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../styles/tokens.css?v=20260920a" />
     <link rel="stylesheet" href="../../styles/main.css?v=20260920a" />
-    <link rel="stylesheet" href="../../styles/ai-chat.css?v=20260921" />
+    <link rel="stylesheet" href="../../styles/ai-chat.css?v=20260922" />
 </head>
 <body>
     <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -171,6 +171,18 @@
                                     </div>
                                 </div>
 
+                                <!-- P4 经营数据工具调用状态条（模型查实时报表时展示「正在查询→完成」） -->
+                                <div class="ai-tool-bar" v-if="msg.tools && msg.tools.length">
+                                    <div class="ai-tool-item"
+                                         v-for="tool in msg.tools"
+                                         :key="tool.name"
+                                         :class="'is-' + tool.status">
+                                        <i class="ai-tool-icon" :class="toolStatusIcon(tool.status)" aria-hidden="true"></i>
+                                        <span class="ai-tool-label">{{ tool.label || tool.name }}</span>
+                                        <span class="ai-tool-summary" v-if="tool.summary">{{ tool.summary }}</span>
+                                    </div>
+                                </div>
+
                                 <!-- 推荐菜品卡片（点餐场景兜底） -->
                                 <div class="dish-cards" v-if="msg.dishes && msg.dishes.length">
                                     <div class="dish-card" v-for="dish in msg.dishes" :key="d.id || d.name">
@@ -305,7 +317,7 @@
     <script src="../../js/components.js?v=20260915c"></script>
     <script src="../../js/accessibility-utils.js?v=20260915c"></script>
     <script src="../../js/performance-utils.js?v=20260915c"></script>
-    <script src="../../js/ai/ai-chat-core.js?v=20260921"></script>
+    <script src="../../js/ai/ai-chat-core.js?v=20260922"></script>
     <script src="../../api/ai.js?v=20260921"></script>
     <script>
     (function() {
@@ -762,6 +774,11 @@
                             if (requestId !== self.currentRequestId) return;
                             aiMsg.dishes = dishes;
                         },
+                        // P4 经营数据工具调用状态：按 name upsert 到状态条
+                        onTool: function(tool) {
+                            if (requestId !== self.currentRequestId || !tool || !tool.name) return;
+                            self.applyToolEvent(aiMsg, tool);
+                        },
                         onDone: function(data) {
                             if (requestId !== self.currentRequestId) return;
                             if (data.messageId) aiMsg.dbMessageId = data.messageId;
@@ -804,6 +821,34 @@
                             if (aiMsg.streaming) self.finishAi(aiMsg, { stopped: !aiMsg.content });
                         }
                     });
+                },
+
+                /** P4：工具事件按 name upsert 进消息状态条（running → done/error） */
+                applyToolEvent: function(aiMsg, tool) {
+                    if (!aiMsg.tools) {
+                        this.$set(aiMsg, 'tools', []);
+                    }
+                    var idx = -1;
+                    for (var i = 0; i < aiMsg.tools.length; i++) {
+                        if (aiMsg.tools[i].name === tool.name) { idx = i; break; }
+                    }
+                    var next = {
+                        name: tool.name,
+                        label: tool.label || (idx >= 0 ? aiMsg.tools[idx].label : tool.name),
+                        status: tool.status || 'running',
+                        summary: tool.summary || (idx >= 0 ? aiMsg.tools[idx].summary : '')
+                    };
+                    if (idx >= 0) {
+                        this.$set(aiMsg.tools, idx, next);
+                    } else {
+                        aiMsg.tools.push(next);
+                    }
+                    this.scheduleScroll();
+                },
+                toolStatusIcon: function(status) {
+                    if (status === 'done') return 'ri-checkbox-circle-line';
+                    if (status === 'error') return 'ri-error-warning-line';
+                    return 'ri-loader-4-line ai-tool-spin';
                 },
 
                 /** 流式不可用时的非流式降级（显式建会话，保证后续多轮不丢上下文） */

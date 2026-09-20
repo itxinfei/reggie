@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
+import com.reggie.module.ai.model.ModelTurn;
+import com.reggie.module.ai.model.ToolCall;
+import com.reggie.module.ai.tool.ToolDefinition;
 import com.reggie.module.ai.util.AiSecretMaskUtils;
 import com.reggie.module.ai.util.AiUrlUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +21,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * <p>
@@ -132,6 +136,35 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
     private Map<String, Object> buildMessagePayload(AIMessage msg) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("role", msg.getRole());
+
+        // P4：工具结果消息（OpenAI role=tool，需关联 tool_call_id）
+        if ("tool".equals(msg.getRole())) {
+            m.put("tool_call_id", msg.getToolCallId() == null ? "" : msg.getToolCallId());
+            if (msg.getName() != null) {
+                m.put("name", msg.getName());
+            }
+            m.put("content", msg.getContent());
+            return m;
+        }
+
+        // P4：携带工具调用请求的 assistant 消息（多轮工具协议要求原样回填）
+        if ("assistant".equals(msg.getRole()) && msg.getToolCalls() != null && !msg.getToolCalls().isEmpty()) {
+            m.put("content", msg.getContent());
+            List<Map<String, Object>> toolCalls = new ArrayList<>();
+            for (com.reggie.module.ai.model.ToolCall tc : msg.getToolCalls()) {
+                Map<String, Object> call = new LinkedHashMap<>();
+                call.put("id", tc.getId() == null ? "" : tc.getId());
+                call.put("type", "function");
+                Map<String, String> function = new LinkedHashMap<>();
+                function.put("name", tc.getName() == null ? "" : tc.getName());
+                function.put("arguments", tc.getArguments() == null ? "{}" : tc.getArguments());
+                call.put("function", function);
+                toolCalls.add(call);
+            }
+            m.put("tool_calls", toolCalls);
+            return m;
+        }
+
         List<String> images = msg.getImageDataUrls();
         boolean multimodal = "user".equals(msg.getRole()) && images != null && !images.isEmpty();
         if (!multimodal) {
@@ -533,5 +566,342 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.debug("SSE行解析跳过: {}", truncate(data, 100));
         }
+    }
+
+    // ==================== P4：工具调用（function calling） ====================
+
+    /**
+     * OpenAI 兼容协议原生支持 function calling。
+     */
+    @Override
+    public boolean supportsToolCalling() {
+        return true;
+    }
+
+    /**
+     * 工具感知单轮对话：请求体带 tools/tool_choice，仍走 stream:true；
+     * 文本增量经 textSink 实时推送，delta.tool_calls 按 index 分片累积后以 {@link ModelTurn} 结构化返回。
+     * <p>网关未按 SSE 返回整包 JSON 时同样兼容（message.tool_calls 一次完整）。</p>
+     */
+    @Override
+    public ModelTurn chatTurn(List<AIMessage> messages, int maxTokens, double temperature,
+                              AiProviderConfig config, List<ToolDefinition> tools,
+                              AbortableStreamCallback abort, StreamCallback textSink) throws Exception {
+        HttpURLConnection conn = null;
+        StringBuilder fullContent = new StringBuilder();
+        TreeMap<Integer, ToolCallAccumulator> toolCallMap = new TreeMap<Integer, ToolCallAccumulator>();
+        String[] finishReasonHolder = new String[] {null};
+        try {
+            String apiUrl = AiUrlUtils.resolveEndpoint(config.getBaseUrl(), "/chat/completions");
+
+            Map<String, String> headers = new LinkedHashMap<String, String>();
+            headers.put("Authorization", "Bearer " + config.getApiKey());
+            conn = createConnection(apiUrl, config, headers);
+
+            // 中止链路：与 chatStream 同口径，断开上游连接打断阻塞 readLine
+            final HttpURLConnection streamConn = conn;
+            if (abort != null) {
+                abort.registerAbortAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            streamConn.disconnect();
+                        } catch (Exception e) {
+                            log.debug("中止工具轮上游连接失败（可忽略）: {}", e.getMessage());
+                        }
+                    }
+                });
+            }
+
+            Map<String, Object> requestBody = new LinkedHashMap<String, Object>();
+            requestBody.put("model", config.getModelName());
+            List<Map<String, Object>> msgList = new ArrayList<Map<String, Object>>();
+            for (AIMessage msg : messages) {
+                msgList.add(buildMessagePayload(msg));
+            }
+            requestBody.put("messages", msgList);
+            requestBody.put("max_tokens", resolveMaxTokens(maxTokens, config));
+            requestBody.put("temperature", resolveTemperature(temperature, config));
+            // 空工具列表表示「强制收工具」轮，请求体不带 tools，模型只能自然语言作答
+            if (tools != null && !tools.isEmpty()) {
+                requestBody.put("tools", buildToolsPayload(tools));
+                requestBody.put("tool_choice", "auto");
+            }
+            requestBody.put("stream", true);
+
+            String jsonBody = getObjectMapper().writeValueAsString(requestBody);
+            log.info("AI工具轮请求[{} / {}]: model={}, messages={}, tools={}",
+                    config.getProviderCode(), FORMAT_ID, config.getModelName(), msgList.size(),
+                    tools == null ? 0 : tools.size());
+
+            sendRequestBody(conn, jsonBody);
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode != 200) {
+                String errorBody = readErrorBody(conn);
+                log.error("AI工具轮请求失败: code={}, error={}", responseCode, truncate(errorBody, 200));
+                return ModelTurn.error(buildUserFriendlyError(config.getProviderName(), errorBody));
+            }
+
+            String contentType = conn.getContentType();
+            if (contentType != null && contentType.toLowerCase().contains("application/json")) {
+                parseTurnJson(readResponseBody(conn), fullContent, textSink, toolCallMap, finishReasonHolder);
+            } else {
+                readTurnSse(conn, fullContent, textSink, abort, toolCallMap, finishReasonHolder);
+            }
+
+            if (abort != null && abort.isAborted()) {
+                log.info("AI工具轮被用户中止: provider={}, partialLength={}",
+                        config.getProviderCode(), fullContent.length());
+                return ModelTurn.builder().finishReason(ModelTurn.FINISH_STOP).build();
+            }
+
+            List<ToolCall> calls = buildToolCalls(toolCallMap);
+            String finishReason = finishReasonHolder[0];
+            if (finishReason == null || finishReason.isEmpty()) {
+                finishReason = calls.isEmpty() ? ModelTurn.FINISH_STOP : ModelTurn.FINISH_TOOL_CALLS;
+            }
+            return ModelTurn.builder()
+                    .content(fullContent.toString())
+                    .toolCalls(calls.isEmpty() ? null : calls)
+                    .finishReason(finishReason)
+                    .build();
+        } catch (Exception e) {
+            // 用户中止触发的 SocketException：安静返回空 turn，交由服务层按 stopped 收尾
+            if (abort != null && abort.isAborted()) {
+                log.info("AI工具轮读取被中止: provider={}, partialLength={}",
+                        config.getProviderCode(), fullContent.length());
+                return ModelTurn.builder().finishReason(ModelTurn.FINISH_STOP).build();
+            }
+            throw e;
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    /**
+     * 构造 OpenAI tools 请求体：[{type:"function", function:{name,description,parameters}}]。
+     */
+    private List<Map<String, Object>> buildToolsPayload(List<ToolDefinition> tools) {
+        List<Map<String, Object>> payload = new ArrayList<Map<String, Object>>();
+        for (ToolDefinition tool : tools) {
+            Map<String, Object> item = new LinkedHashMap<String, Object>();
+            item.put("type", "function");
+            Map<String, Object> function = new LinkedHashMap<String, Object>();
+            function.put("name", tool.getName());
+            function.put("description", tool.getDescription());
+            Map<String, Object> schema = tool.getParameters();
+            if (schema == null) {
+                schema = new LinkedHashMap<String, Object>();
+                schema.put("type", "object");
+                schema.put("properties", new LinkedHashMap<String, Object>());
+            }
+            function.put("parameters", schema);
+            item.put("function", function);
+            payload.add(item);
+        }
+        return payload;
+    }
+
+    /**
+     * 工具轮 SSE 读取（与 {@link #readSseStream} 同协议，额外携带分片累积器与 finish_reason 槽）。
+     */
+    private void readTurnSse(HttpURLConnection conn, StringBuilder fullContent, StreamCallback textSink,
+                             AbortableStreamCallback abort, TreeMap<Integer, ToolCallAccumulator> toolCallMap,
+                             String[] finishReasonHolder) throws IOException {
+        InputStream is = conn.getInputStream();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+        try {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (abort != null && abort.isAborted()) {
+                    break;
+                }
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith(":")) {
+                    continue;
+                }
+                if (!line.startsWith("data:")) {
+                    continue;
+                }
+                String data = line.substring(5).trim();
+                if (data.isEmpty() || "[DONE]".equals(data)) {
+                    continue;
+                }
+                handleTurnDelta(data, fullContent, textSink, toolCallMap, finishReasonHolder);
+            }
+        } finally {
+            reader.close();
+        }
+    }
+
+    /**
+     * 解析单条工具轮 SSE data：content 增量推给 textSink；tool_calls 增量按 index 累积；
+     * finish_reason 落槽。网关透传 Anthropic 事件时仅消费文本块（其工具协议不同，
+     * 无法可靠映射到 OpenAI 分片，模型最终不能调工具时会自然语言作答，不阻断主链路）。
+     */
+    private void handleTurnDelta(String data, StringBuilder fullContent, StreamCallback textSink,
+                                 TreeMap<Integer, ToolCallAccumulator> toolCallMap,
+                                 String[] finishReasonHolder) {
+        try {
+            JsonNode root = getObjectMapper().readTree(data);
+            JsonNode choices = root.get("choices");
+            if (choices != null && choices.isArray() && choices.size() > 0) {
+                JsonNode choice = choices.get(0);
+                JsonNode fr = choice.get("finish_reason");
+                if (fr != null && !fr.isNull()) {
+                    finishReasonHolder[0] = fr.asText();
+                }
+                JsonNode delta = choice.get("delta");
+                if (delta == null) {
+                    return;
+                }
+                String token = delta.path("content").asText("");
+                if (!token.isEmpty()) {
+                    fullContent.append(token);
+                    if (textSink != null) {
+                        textSink.onToken(token, false);
+                    }
+                }
+                accumulateToolCallDeltas(delta.get("tool_calls"), toolCallMap);
+                return;
+            }
+            if ("content_block_delta".equals(root.path("type").asText(""))) {
+                JsonNode delta = root.get("delta");
+                if (delta != null) {
+                    String token = delta.path("text").asText("");
+                    if (!token.isEmpty()) {
+                        fullContent.append(token);
+                        if (textSink != null) {
+                            textSink.onToken(token, false);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // 宽异常兜底：单行解析失败不拖垮整轮流式
+            log.debug("工具轮SSE行解析跳过: {}", truncate(data, 100));
+        }
+    }
+
+    /**
+     * 按 index 聚合流式 tool_calls 分片（id/function.name 通常在首片，arguments 跨多片）。
+     */
+    private void accumulateToolCallDeltas(JsonNode toolCallsNode, TreeMap<Integer, ToolCallAccumulator> toolCallMap) {
+        if (toolCallsNode == null || !toolCallsNode.isArray()) {
+            return;
+        }
+        for (JsonNode tcNode : toolCallsNode) {
+            int index = tcNode.path("index").asInt(0);
+            ToolCallAccumulator acc = toolCallMap.get(index);
+            if (acc == null) {
+                acc = new ToolCallAccumulator();
+                toolCallMap.put(index, acc);
+            }
+            if (tcNode.hasNonNull("id")) {
+                acc.id = tcNode.get("id").asText();
+            }
+            JsonNode function = tcNode.get("function");
+            if (function != null) {
+                if (function.hasNonNull("name")) {
+                    acc.name = function.get("name").asText();
+                }
+                String argsPiece = function.path("arguments").asText("");
+                if (!argsPiece.isEmpty()) {
+                    acc.arguments.append(argsPiece);
+                }
+            }
+        }
+    }
+
+    /**
+     * 整包 JSON（非 SSE）工具轮响应解析：message.content 一次性回吐，message.tool_calls 已完整。
+     */
+    private void parseTurnJson(String body, StringBuilder fullContent, StreamCallback textSink,
+                               TreeMap<Integer, ToolCallAccumulator> toolCallMap, String[] finishReasonHolder) {
+        try {
+            JsonNode root = getObjectMapper().readTree(body);
+            JsonNode choices = root.get("choices");
+            if (choices == null || !choices.isArray() || choices.size() == 0) {
+                log.warn("AI工具轮整包响应无 choices: bodyPreview={}", truncate(body, 100));
+                return;
+            }
+            JsonNode choice = choices.get(0);
+            JsonNode fr = choice.get("finish_reason");
+            if (fr != null && !fr.isNull()) {
+                finishReasonHolder[0] = fr.asText();
+            }
+            JsonNode message = choice.get("message");
+            if (message == null) {
+                return;
+            }
+            String content = message.path("content").asText("");
+            if (content.isEmpty()) {
+                // 推理模型兜底
+                content = message.path("reasoning_content").asText("");
+            }
+            if (!content.isEmpty()) {
+                fullContent.append(content);
+                if (textSink != null) {
+                    textSink.onToken(content, false);
+                }
+            }
+            JsonNode toolCallsNode = message.get("tool_calls");
+            if (toolCallsNode != null && toolCallsNode.isArray()) {
+                for (int i = 0; i < toolCallsNode.size(); i++) {
+                    JsonNode tcNode = toolCallsNode.get(i);
+                    int index = tcNode.has("index") && !tcNode.path("index").isNull()
+                            ? tcNode.path("index").asInt() : i;
+                    ToolCallAccumulator acc = new ToolCallAccumulator();
+                    acc.id = tcNode.path("id").asText("");
+                    JsonNode function = tcNode.get("function");
+                    if (function != null) {
+                        acc.name = function.path("name").asText("");
+                        acc.arguments.append(function.path("arguments").asText(""));
+                    }
+                    toolCallMap.put(index, acc);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("AI工具轮整包解析失败: {}", truncate(e.getMessage(), 100));
+        }
+    }
+
+    /**
+     * 分片累积器转结构化 ToolCall 列表；id 缺失补 call_N，arguments 缺失补 {}，
+     * name 缺失的残片直接丢弃（回填会造成上游协议错误）。
+     */
+    private List<ToolCall> buildToolCalls(TreeMap<Integer, ToolCallAccumulator> toolCallMap) {
+        List<ToolCall> calls = new ArrayList<ToolCall>();
+        for (Map.Entry<Integer, ToolCallAccumulator> entry : toolCallMap.entrySet()) {
+            ToolCallAccumulator acc = entry.getValue();
+            if (acc.name == null || acc.name.isEmpty()) {
+                log.warn("丢弃缺少 name 的工具调用分片: index={}, argsPreview={}",
+                        entry.getKey(), truncate(acc.arguments.toString(), 80));
+                continue;
+            }
+            String id = acc.id;
+            if (id == null || id.isEmpty()) {
+                id = "call_" + entry.getKey();
+            }
+            String args = acc.arguments.toString();
+            calls.add(ToolCall.builder()
+                    .id(id)
+                    .name(acc.name)
+                    .arguments(args.isEmpty() ? "{}" : args)
+                    .build());
+        }
+        return calls;
+    }
+
+    /**
+     * 流式 tool_calls 分片累加器：id/name 多在首片到达，arguments 按 index 跨片拼接。
+     */
+    private static final class ToolCallAccumulator {
+        private String id;
+        private String name;
+        private final StringBuilder arguments = new StringBuilder();
     }
 }

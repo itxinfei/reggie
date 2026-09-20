@@ -15,6 +15,8 @@ import com.reggie.module.ai.mapper.AiProviderConfigMapper;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
+import com.reggie.module.ai.model.ModelTurn;
+import com.reggie.module.ai.tool.ToolDefinition;
 import com.reggie.module.ai.util.AiKeyEncryptor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -296,6 +298,42 @@ public class AiProviderManager {
     }
 
     /**
+     * P4 工具感知单轮对话：由 {@code AiToolOrchestrator} 驱动多轮循环。
+     * <p>配置/格式/能力校验与 {@link #streamChat} 同口径，错误以 {@link ModelTurn#error} 返回；
+     * 文本增量经 textSink 推送，工具调用由适配器在 ModelTurn 中结构化返回。</p>
+     */
+    public ModelTurn chatTurn(List<AIMessage> messages, int maxTokens, double temperature,
+                              List<ToolDefinition> tools, AbortableStreamCallback abort,
+                              StreamCallback textSink) {
+        AiProviderConfig config = getActiveConfig();
+        if (messages == null || messages.isEmpty()) {
+            return ModelTurn.error("消息列表为空，无法发起对话");
+        }
+        if (config == null) {
+            return ModelTurn.error("AI功能未配置：没有激活的AI供应商。请前往后台管理 → AI供应商配置 中设置API密钥并激活供应商。");
+        }
+        String apiFormat = config.getApiFormat();
+        if (apiFormat == null || apiFormat.isEmpty()) {
+            apiFormat = OpenAICompatibleAdapter.FORMAT_ID;
+        }
+        apiFormat = apiFormat.toLowerCase();
+
+        AiModelAdapter adapter = adapterRegistry.get(apiFormat);
+        if (adapter == null) {
+            return ModelTurn.error("不支持的API格式：" + apiFormat);
+        }
+        if (!adapter.supportsToolCalling()) {
+            return ModelTurn.error("当前模型不支持工具调用");
+        }
+
+        String providerCode = config.getProviderCode();
+        return circuitBreakerService.execute(providerCode,
+                () -> adapter.chatTurn(messages, maxTokens, temperature, config, tools, abort, textSink),
+                (code, reason) -> ModelTurn.error("【AI服务暂时不可用】" + reason + "（" + config.getProviderName() + "），请稍后重试。")
+        );
+    }
+
+    /**
      * 执行实际流式逻辑（被熔断保护包裹）
      */
     private String doStream(List<AIMessage> messages, int maxTokens, double temperature,
@@ -438,6 +476,32 @@ public class AiProviderManager {
     /** 当前激活供应商是否支持视觉多模态 */
     public boolean supportsVision() {
         return Boolean.TRUE.equals(getCapabilities().get(CAP_VISION));
+    }
+
+    /**
+     * 当前激活供应商是否可走工具调用链路：配置 capabilities.tools 勾选，
+     * 且对应适配器在协议层真正实现了 function calling（Baidu 压平协议不支持）。
+     */
+    public boolean supportsToolCalling() {
+        if (!Boolean.TRUE.equals(getCapabilities().get(CAP_TOOLS))) {
+            return false;
+        }
+        AiProviderConfig config;
+        try {
+            config = getActiveConfig();
+        } catch (Exception e) {
+            log.warn("读取供应商配置失败，工具能力按不支持处理: {}", e.getMessage());
+            return false;
+        }
+        if (config == null) {
+            return false;
+        }
+        String apiFormat = config.getApiFormat();
+        if (apiFormat == null || apiFormat.isEmpty()) {
+            apiFormat = OpenAICompatibleAdapter.FORMAT_ID;
+        }
+        AiModelAdapter adapter = adapterRegistry.get(apiFormat.toLowerCase());
+        return adapter != null && adapter.supportsToolCalling();
     }
 
     /**
