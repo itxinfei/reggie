@@ -363,7 +363,7 @@
                         <option value="">所有渠道</option>
                         <option :value="1">短信</option>
                         <option :value="2">APP推送</option>
-                        <option :value="3">短信+推送</option>
+                        <option :value="3">短信+APP推送</option>
                     </select>
                     <button class="app-btn app-btn-default app-btn-sm" @click="loadRecords(1)">刷新</button>
                 </div>
@@ -988,10 +988,10 @@
                     return map[type] || '未知类型';
                 },
 
-                // 修改点：渠道映射对齐发送记录筛选选项 {1:短信, 2:APP推送, 3:短信+推送}，
+                // 修改点：渠道映射对齐发送记录筛选选项 {1:短信, 2:APP推送, 3:短信+APP推送}，
                 // 此前误用「站内信/邮件」导致渠道显示错位
                 channelName: function(ch) {
-                    const map = { 1: '短信', 2: 'APP推送', 3: '短信+推送' };
+                    const map = { 1: '短信', 2: 'APP推送', 3: '短信+APP推送' };
                     return map[ch] || '未知';
                 },
 
