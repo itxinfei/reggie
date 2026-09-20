@@ -34,6 +34,9 @@ public class AIConversation implements Serializable {
     @Schema(description = "用户ID", example = "1")
     private Long userId;
 
+    @Schema(description = "归属身份类型：EMPLOYEE=后台员工，CUSTOMER=C端用户", example = "CUSTOMER")
+    private String actorType;
+
     @Schema(description = "会话标题（首条消息摘要）", example = "帮我推荐菜品")
     private String title;
 

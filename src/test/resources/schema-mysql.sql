@@ -63,6 +63,7 @@ CREATE TABLE `ai_conversation` (
   `id` bigint NOT NULL COMMENT '主键',
   `conversation_id` varchar(64) NOT NULL COMMENT '会话ID（UUID）',
   `user_id` bigint DEFAULT NULL COMMENT '用户ID',
+  `actor_type` varchar(16) NOT NULL DEFAULT 'UNKNOWN' COMMENT '归属身份类型：EMPLOYEE/CUSTOMER',
   `title` varchar(200) DEFAULT NULL COMMENT '会话标题',
   `scene` varchar(50) DEFAULT NULL COMMENT '场景',
   `message_count` int DEFAULT '0' COMMENT '消息数量',
@@ -75,7 +76,8 @@ CREATE TABLE `ai_conversation` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_conversation_id` (`conversation_id`),
   KEY `idx_user_id` (`user_id`),
-  KEY `idx_tenant_id` (`tenant_id`)
+  KEY `idx_tenant_id` (`tenant_id`),
+  KEY `idx_tenant_actor` (`tenant_id`,`actor_type`,`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI对话会话';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -92,7 +94,10 @@ CREATE TABLE `ai_message` (
   `user_id` bigint DEFAULT NULL COMMENT '用户ID',
   `role` varchar(20) NOT NULL COMMENT '角色：user/assistant',
   `content` text COMMENT '消息内容',
+  `attachments` varchar(1000) DEFAULT NULL COMMENT '附件列表JSON',
   `message_type` varchar(20) DEFAULT 'text' COMMENT '消息类型',
+  `status` varchar(20) NOT NULL DEFAULT 'completed' COMMENT '消息状态：completed/stopped/failed',
+  `client_msg_id` varchar(64) DEFAULT NULL COMMENT '前端消息幂等键',
   `feedback` varchar(10) DEFAULT NULL COMMENT '反馈类型',
   `dish_ids` varchar(500) DEFAULT NULL COMMENT '推荐菜品ID（JSON）',
   `tokens_used` int DEFAULT '0' COMMENT 'Token使用量',
@@ -103,6 +108,7 @@ CREATE TABLE `ai_message` (
   `create_time` datetime NOT NULL COMMENT '创建时间',
   `tenant_id` bigint DEFAULT NULL COMMENT '租户ID',
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_conversation_client_msg` (`conversation_id`,`client_msg_id`),
   KEY `idx_conversation_id` (`conversation_id`),
   KEY `idx_user_id` (`user_id`),
   KEY `idx_create_time` (`create_time`)

@@ -223,6 +223,21 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             headers.put("Authorization", "Bearer " + config.getApiKey());
             conn = createConnection(apiUrl, config, headers);
 
+            // 中止链路：用户点「停止生成」时断开上游连接，打断阻塞中的 readLine
+            final HttpURLConnection streamConn = conn;
+            if (callback instanceof AbortableStreamCallback) {
+                ((AbortableStreamCallback) callback).registerAbortAction(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            streamConn.disconnect();
+                        } catch (Exception e) {
+                            log.debug("中止上游连接失败（可忽略）: {}", e.getMessage());
+                        }
+                    }
+                });
+            }
+
             Map<String, Object> requestBody = new LinkedHashMap<>();
             requestBody.put("model", config.getModelName());
 
@@ -275,6 +290,13 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                     config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(apiUrl), config.getModelName());
             return null;
         } catch (Exception e) {
+            // 用户主动停止：disconnect 打断 readLine 会抛 SocketException，安静返回，
+            // 不推送错误 token（服务层负责把已生成片段以 stopped 状态落库）
+            if (callback instanceof AbortableStreamCallback && ((AbortableStreamCallback) callback).isAborted()) {
+                log.info("AI流式被用户中止: provider={}, partialLength={}",
+                        config.getProviderCode(), fullContent.length());
+                return null;
+            }
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             // 修改点(2026-09-15)：外网不可达属运行环境问题，降为 WARN 且不打全量堆栈，避免刷屏
             if (AiNetworkFailureUtils.isNetworkFailure(e)) {
@@ -336,6 +358,10 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
         try {
             String line;
             while ((line = reader.readLine()) != null) {
+                // 中止链路：停止生成时尽快退出读取循环
+                if (callback instanceof AbortableStreamCallback && ((AbortableStreamCallback) callback).isAborted()) {
+                    break;
+                }
                 line = line.trim();
                 if (line.isEmpty() || line.startsWith(":")) {
                     continue;

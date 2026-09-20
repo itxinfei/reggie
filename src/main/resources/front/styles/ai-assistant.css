@@ -593,5 +593,98 @@
     .input-area { padding: 10px var(--spacing-md); gap: var(--spacing-sm); }
     .input-area input,
     .input-textarea { padding: var(--spacing-sm) 14px; font-size: 13px; border-radius: 20px; }
-    .voice-btn, .send-btn { width: 36px; height: 36px; font-size: var(--font-size-lg); }
+    .voice-btn, .send-btn, .stop-btn { width: 36px; height: 36px; font-size: var(--font-size-lg); }
 }
+
+/* ========== P1 聊天基线（POST 流式 + Markdown + 停止/重生成） ========== */
+
+/* 输入框容器：textarea + 字数计数 */
+.input-wrap { flex: 1; min-width: 0; position: relative; display: flex; }
+.input-wrap .input-textarea { padding-bottom: 20px; }
+.char-count {
+    position: absolute; right: 12px; bottom: 5px;
+    font-size: 10px; color: var(--color-text-hint); pointer-events: none;
+    line-height: 1;
+}
+.char-count.over { color: var(--color-danger); }
+
+/* 停止生成按钮：与发送按钮同尺寸，红色 */
+.stop-btn {
+    width: 40px; height: 40px; border-radius: var(--radius-round);
+    background: var(--color-danger); color: var(--color-text-white);
+    border: none; font-size: 16px; cursor: pointer;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; user-select: none;
+}
+.stop-btn:active { transform: scale(0.92); opacity: 0.85; }
+
+/* 用户多行输入：保留换行 */
+.chat-bubble .user-text { white-space: pre-line; word-break: break-word; }
+
+/* 已停止标记 */
+.stopped-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    margin-top: 4px; padding-left: 2px;
+    font-size: 11px; color: var(--color-text-hint);
+}
+
+/* 欢迎语首段 */
+.welcome-line { margin: 0 0 8px 0; font-weight: 500; }
+
+/* Markdown 渲染（内核先实体转义后白名单替换，XSS 安全） */
+.md-body { font-size: var(--font-size-md); line-height: 1.7; word-break: break-word; }
+.md-body > :first-child { margin-top: 0; }
+.md-body > :last-child { margin-bottom: 0; }
+.md-body p { margin: 8px 0; }
+.md-body h1, .md-body h2, .md-body h3, .md-body h4 {
+    margin: 14px 0 8px; line-height: 1.4; font-weight: 600;
+    color: var(--color-text-primary);
+}
+.md-body h1 { font-size: 18px; }
+.md-body h2 { font-size: 17px; }
+.md-body h3 { font-size: 15px; }
+.md-body h4 { font-size: 14px; }
+.md-body ul, .md-body ol { margin: 8px 0; padding-left: 22px; }
+.md-body ul { list-style: disc; }
+.md-body ol { list-style: decimal; }
+.md-body li { margin: 4px 0; }
+.md-body li > ul, .md-body li > ol { margin: 4px 0; }
+.md-body a { color: var(--color-primary-dark); text-decoration: underline; word-break: break-all; }
+.md-body strong { font-weight: 600; color: var(--color-text-primary); }
+.md-body em { font-style: italic; }
+.md-body hr { border: none; border-top: 1px solid var(--ai-border-light); margin: 12px 0; }
+.md-body blockquote {
+    margin: 8px 0; padding: 6px 12px;
+    border-left: 3px solid var(--color-primary);
+    background: var(--bg-hover); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    color: var(--color-text-secondary);
+}
+.md-code-inline {
+    font-family: Menlo, Consolas, monospace; font-size: 0.88em;
+    background: var(--bg-hover); color: var(--color-danger);
+    padding: 1px 5px; border-radius: 4px;
+}
+.md-code-block {
+    font-family: Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.6;
+    background: #1f2937; color: #e5e7eb;
+    padding: 10px 12px; border-radius: var(--radius-md);
+    overflow-x: auto; margin: 8px 0; white-space: pre;
+    -webkit-overflow-scrolling: touch;
+}
+.md-table-wrap { overflow-x: auto; margin: 8px 0; -webkit-overflow-scrolling: touch; }
+.md-table {
+    border-collapse: collapse; font-size: 13px; min-width: 200px;
+}
+.md-table th, .md-table td {
+    border: 1px solid var(--ai-border-medium);
+    padding: 6px 10px; text-align: left;
+}
+.md-table th { background: var(--bg-hover); font-weight: 600; }
+
+/* 暗色模式下的代码块/表格微调 */
+.ai-container.dark-mode .md-code-inline { background: rgba(255,255,255,0.12); color: #fca5a5; }
+.ai-container.dark-mode .md-code-block { background: #111827; color: #e5e7eb; }
+.ai-container.dark-mode .md-table th { background: rgba(255,255,255,0.06); }
+.ai-container.dark-mode blockquote,
+.ai-container.dark-mode .md-body blockquote { background: rgba(255,255,255,0.06); }
+

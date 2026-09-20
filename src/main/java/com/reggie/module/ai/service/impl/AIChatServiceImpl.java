@@ -14,6 +14,7 @@ import com.reggie.module.dish.mapper.DishMapper;
 import com.reggie.module.ai.config.AIConfigProperties;
 import com.reggie.module.ai.mapper.AIConversationMapper;
 import com.reggie.module.ai.mapper.AIMessageRecordMapper;
+import com.reggie.module.ai.model.AiChatConstants;
 import com.reggie.module.ai.model.AIChatRequest;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIConversation;
@@ -22,7 +23,7 @@ import com.reggie.module.ai.model.AIMessageRecord;
 import com.reggie.module.ai.model.AIRecommendedDish;
 import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.provider.AiProviderManager;
-import com.reggie.module.ai.adapter.AiModelAdapter.StreamCallback;
+import com.reggie.module.ai.adapter.AbortableStreamCallback;
 import com.reggie.module.ai.service.AIChatService;
 import com.reggie.module.ai.service.ConversationContextService;
 import com.reggie.module.ai.service.AICacheService;
@@ -47,6 +48,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -127,145 +130,35 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
     /**
      * 处理 chat stream。
+     * <p>P1 改造：SSE 会话状态由 {@link ChatStreamSession} 持有，
+     * 客户端断开（fetch abort）/超时经 emitter 回调触发 abort，断开上游连接并保留已生成片段。</p>
      * @param request 参数 request
      * @return 返回结果
      */
     @Override
     public SseEmitter chatStream(AIChatRequest request) {
-        final Long userId = request.getUserId();
         final String conversationId = request.getConversationId();
-        final String scene = request.getScene();
-        final String userMessage = request.getMessage();
         long sseTimeout = resolveSseTimeout();
         SseEmitter emitter = new SseEmitter(sseTimeout);
-        emitter.onTimeout(() -> log.warn("SSE连接超时: conversationId={}", conversationId));
-        emitter.onError((e) -> log.warn("SSE连接错误: conversationId={}", conversationId, e));
-        emitter.onCompletion(() -> log.debug("SSE连接完成: conversationId={}", conversationId));
 
         final AiProviderConfig providerConfig = aiProviderManager.getActiveConfig();
         final Long tenantId = BaseContext.getCurrentTenantId();
+        final ChatStreamSession session = new ChatStreamSession(emitter, request, providerConfig, tenantId);
 
-        CompletableFuture.runAsync(() -> doStreamChat(request, emitter, providerConfig, tenantId, userId,
-                conversationId, scene, userMessage), aiExecutor);
+        emitter.onTimeout(() -> {
+            log.warn("SSE连接超时，中止上游: conversationId={}", conversationId);
+            session.abort();
+        });
+        emitter.onError((e) -> {
+            // 客户端 AbortController/关闭页面会走这里：中止上游，避免继续消耗 token
+            log.debug("SSE连接错误（客户端可能已断开），中止上游: conversationId={}", conversationId);
+            session.abort();
+        });
+        emitter.onCompletion(() -> log.debug("SSE连接完成: conversationId={}", conversationId));
+
+        CompletableFuture.runAsync(session, aiExecutor);
 
         return emitter;
-    }
-
-    /**
-     * 异步执行流式对话（等价抽取，降低方法长度）。
-     */
-    private void doStreamChat(AIChatRequest request, SseEmitter emitter, AiProviderConfig providerConfig,
-            Long tenantId, Long userId, String conversationId, String scene, String userMessage) {
-        try {
-            // 修改点(2026-09-18)：用户消息持久化移入异步线程，
-            // 原先在请求线程同步执行会拖慢 SSE 连接建立
-            saveUserMessage(request);
-            List<AIMessage> messages = buildMessages(request);
-            int maxTokens = (providerConfig != null && providerConfig.getMaxTokens() != null)
-                    ? providerConfig.getMaxTokens() : aiConfig.getMaxTokens();
-            double temperature = (providerConfig != null && providerConfig.getTemperature() != null)
-                    ? providerConfig.getTemperature() : aiConfig.getTemperature();
-
-            final long[] firstTokenTime = new long[1];
-            long streamStart = System.currentTimeMillis();
-
-            // 使用真流式输出（适配器直接支持 SSE 或降级分块）
-            StringBuilder fullContent = new StringBuilder();
-            final Long[] savedAiMsgId = new Long[1];
-            @SuppressWarnings("unchecked")
-            final List<AIRecommendedDish>[] parsedDishes = new List[]{null};
-
-            StreamCallback callback = new StreamCallback() {
-                /**
-                 * 处理 on token。
-                 * @param token 参数 token
-                 * @param isLast 参数 isLast
-                 */
-                @Override
-                public void onToken(String token, boolean isLast) {
-                    try {
-                        if (isLast) {
-                            // 修改点(2026-09-18)：错误提示（Key 无效/请求失败/熔断等）以 isLast token
-                            // 形式返回且 fullContent 为空，原实现经 handleStreamComplete 静默 return，
-                            // 导致 SSE 挂起至超时（AsyncRequestTimeoutException）、用户端永远转圈；
-                            // 现推送 error 事件并完成连接（前端 assistant.html 已监听 error 事件）
-                            if (fullContent.length() == 0) {
-                                completeWithError(emitter, token, conversationId);
-                            } else {
-                                // 最后一块：持久化并发送完成信号
-                                handleStreamComplete(emitter, fullContent, scene, tenantId, parsedDishes,
-                                        savedAiMsgId, conversationId, userId, userMessage);
-                            }
-                        } else {
-                            // 中间 token：累积内容并推送
-                            fullContent.append(token);
-                            long now = System.currentTimeMillis();
-                            if (firstTokenTime[0] == 0) {
-                                firstTokenTime[0] = now - streamStart;
-                                log.debug("首字延迟: {}ms, conversationId={}", firstTokenTime[0], conversationId);
-                            }
-                            Map<String, Object> chunkData = new HashMap<>();
-                            chunkData.put("text", token);
-                            emitter.send(SseEmitter.event().name("message").data(chunkData));
-                        }
-                    } catch (Exception e) {
-                        // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                        log.warn("SSE token推送失败: conversationId={}", conversationId, e);
-                    }
-                }
-            };
-
-            // 调用流式接口
-            aiProviderManager.streamChat(messages, maxTokens, temperature, callback);
-
-            // 超时兜底：如果流式完成时间过长，记录延迟
-            if (firstTokenTime[0] > 0) {
-                long totalTime = System.currentTimeMillis() - streamStart;
-                if (firstTokenTime[0] > 3000) {
-                    log.warn("首字延迟过高: {}ms, totalTime={}ms, provider={}",
-                            firstTokenTime[0], totalTime,
-                            providerConfig != null ? providerConfig.getProviderCode() : "default");
-                }
-            }
-        } catch (Exception e) {
-            handleStreamError(emitter, conversationId, e);
-        }
-    }
-
-    /**
-     * 处理流式最后一块：持久化并发送完成信号（等价抽取）。
-     */
-    private void handleStreamComplete(SseEmitter emitter, StringBuilder fullContent, String scene, Long tenantId,
-            List<AIRecommendedDish>[] parsedDishes, Long[] savedAiMsgId, String conversationId, Long userId,
-            String userMessage) throws java.io.IOException {
-        String content = fullContent.toString();
-        if (content.isEmpty()) {
-            return;
-        }
-
-        // 解析推荐菜品（点餐场景）
-        List<AIRecommendedDish> dishes = null;
-        if ("order_assistant".equals(scene)) {
-            dishes = parseRecommendedDishes(content, tenantId);
-            parsedDishes[0] = dishes;
-            content = cleanJsonFromContent(content);
-        }
-
-        savedAiMsgId[0] = saveAiMessage(conversationId, userId, content, null, dishes);
-
-        Map<String, Object> doneData = new HashMap<>();
-        doneData.put("status", "complete");
-        if (savedAiMsgId[0] != null) {
-            doneData.put("messageId", savedAiMsgId[0]);
-        }
-        emitter.send(SseEmitter.event().name("done").data(doneData));
-
-        if ("order_assistant".equals(scene) && dishes != null && !dishes.isEmpty()) {
-            sendDishesEvent(emitter, dishes);
-        }
-
-        updateConversationTitle(conversationId, userMessage);
-        emitter.complete();
     }
 
     /**
@@ -552,6 +445,111 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         conversationManagementService.recordFeedback(messageId, feedbackType, userId);
     }
 
+    // ==================== P1：身份双校验版本委托 ====================
+
+    /**
+     * 处理 create conversation with actor。
+     * @param userId 用户ID
+     * @param actorType 身份类型 EMPLOYEE/CUSTOMER
+     * @param title 标题
+     * @param scene 场景
+     * @return 新会话
+     */
+    @Override
+    public AIConversation createConversation(Long userId, String actorType, String title, String scene) {
+        return conversationManagementService.createConversation(userId, actorType, title, scene);
+    }
+
+    /**
+     * 处理 get user conversations with actor。
+     * @param userId 用户ID
+     * @param actorType 身份类型
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @return 会话列表
+     */
+    @Override
+    public List<AIConversation> getUserConversations(Long userId, String actorType, int page, int pageSize) {
+        return conversationManagementService.getUserConversations(userId, actorType, page, pageSize);
+    }
+
+    /**
+     * 处理 get conversation messages with actor。
+     * @param conversationId 会话ID
+     * @param userId 用户ID
+     * @param actorType 身份类型
+     * @return 消息列表
+     */
+    @Override
+    public List<AIMessageRecord> getConversationMessages(String conversationId, Long userId, String actorType) {
+        return conversationManagementService.getConversationMessages(conversationId, userId, actorType);
+    }
+
+    /**
+     * 处理 delete conversation with actor。
+     * @param conversationId 会话ID
+     * @param userId 用户ID
+     * @param actorType 身份类型
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteConversation(String conversationId, Long userId, String actorType) {
+        conversationManagementService.deleteConversation(conversationId, userId, actorType);
+    }
+
+    /**
+     * 处理 rename conversation。
+     * @param conversationId 会话ID
+     * @param userId 用户ID
+     * @param actorType 身份类型
+     * @param title 新标题
+     * @return 是否成功
+     */
+    @Override
+    public boolean renameConversation(String conversationId, Long userId, String actorType, String title) {
+        return conversationManagementService.renameConversation(conversationId, userId, actorType, title);
+    }
+
+    /**
+     * 处理 delete message。
+     * @param conversationId 会话ID
+     * @param messageId 消息ID
+     * @param userId 用户ID
+     * @param actorType 身份类型
+     * @return 是否成功
+     */
+    @Override
+    public boolean deleteMessage(String conversationId, Long messageId, Long userId, String actorType) {
+        return conversationManagementService.deleteMessage(conversationId, messageId, userId, actorType);
+    }
+
+    /**
+     * 处理 validate ownership with actor。
+     * @param conversationId 会话ID
+     * @param userId 用户ID
+     * @param actorType 身份类型
+     * @return 归属用户ID，不匹配返回 null
+     */
+    @Override
+    public Long validateConversationOwnership(String conversationId, Long userId, String actorType) {
+        return conversationManagementService.validateConversationOwnership(conversationId, userId, actorType);
+    }
+
+    /**
+     * 处理 search conversations with actor。
+     * @param userId 用户ID
+     * @param actorType 身份类型
+     * @param keyword 关键词
+     * @param page 页码
+     * @param pageSize 每页条数
+     * @return 会话列表
+     */
+    @Override
+    public List<AIConversation> searchConversations(Long userId, String actorType, String keyword, int page,
+                                                    int pageSize) {
+        return conversationManagementService.searchConversations(userId, actorType, keyword, page, pageSize);
+    }
+
     // ==================== 内部方法 ====================
 
     /**
@@ -568,8 +566,9 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         }
 
         // 2) 对话上下文记忆（滑动窗口 + 摘要）
+        List<AIMessage> ctxMessages = Collections.emptyList();
         if (request.getConversationId() != null && !request.getConversationId().isEmpty()) {
-            List<AIMessage> ctxMessages = conversationContextService.getContext(request.getConversationId());
+            ctxMessages = conversationContextService.getContext(request.getConversationId());
             if (ctxMessages.isEmpty()) {
                 // 缓存未命中，从 DB 加载并重建上下文
                 try {
@@ -622,7 +621,15 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         }
 
         // 5) 当前用户消息
-        messages.add(AIMessage.builder().role("user").content(request.getMessage()).build());
+        // 修改点(2026-09-20)：saveUserMessage 已把本轮消息写入上下文缓存（DB 重建路径同样包含），
+        // 若末条已是相同的用户消息则不再追加，修复每轮问题被重复发送两次给模型的缺陷；
+        // 重新生成场景（末轮 user 来自 DB 重建）也由此天然去重。
+        AIMessage lastCtx = ctxMessages.isEmpty() ? null : ctxMessages.get(ctxMessages.size() - 1);
+        boolean ctxHasCurrent = lastCtx != null && "user".equals(lastCtx.getRole())
+                && request.getMessage() != null && request.getMessage().equals(lastCtx.getContent());
+        if (!ctxHasCurrent) {
+            messages.add(AIMessage.builder().role("user").content(request.getMessage()).build());
+        }
         return messages;
     }
 
@@ -883,18 +890,31 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             return null;
         }
         try {
-            // 去重检查
-            LambdaQueryWrapper<AIMessageRecord> dedupWrapper = new LambdaQueryWrapper<>();
-            dedupWrapper.eq(AIMessageRecord::getConversationId, request.getConversationId())
-                    .eq(AIMessageRecord::getRole, "user")
-                    .eq(AIMessageRecord::getContent, request.getMessage())
-                    .eq(AIMessageRecord::getIsDeleted, 0)
-                    .gt(AIMessageRecord::getCreateTime, LocalDateTime.now().minusSeconds(5))
-                    .orderByDesc(AIMessageRecord::getCreateTime);
-            AIMessageRecord existingMsg = messageRecordMapper.selectOne(dedupWrapper);
+            String clientMsgId = request.getClientMsgId();
+            AIMessageRecord existingMsg = null;
+            if (clientMsgId != null && !clientMsgId.isEmpty()) {
+                // 修改点(2026-09-20)：POST 流式按 (conversationId, clientMsgId) 幂等去重。
+                // 旧的「时间窗 + content 全等」会吞掉同文案带图消息与重新生成后的正常消息；
+                // MySQL 唯一索引对 NULL 不去重，不带 clientMsgId 的旧 GET 端点走下方时间窗兜底。
+                LambdaQueryWrapper<AIMessageRecord> idempotentWrapper = new LambdaQueryWrapper<>();
+                idempotentWrapper.eq(AIMessageRecord::getConversationId, request.getConversationId())
+                        .eq(AIMessageRecord::getClientMsgId, clientMsgId)
+                        .eq(AIMessageRecord::getIsDeleted, 0);
+                existingMsg = messageRecordMapper.selectOne(idempotentWrapper);
+            } else {
+                // 兼容旧 GET EventSource 端点（无幂等键）：5 秒时间窗 + 内容全等去重
+                LambdaQueryWrapper<AIMessageRecord> dedupWrapper = new LambdaQueryWrapper<>();
+                dedupWrapper.eq(AIMessageRecord::getConversationId, request.getConversationId())
+                        .eq(AIMessageRecord::getRole, "user")
+                        .eq(AIMessageRecord::getContent, request.getMessage())
+                        .eq(AIMessageRecord::getIsDeleted, 0)
+                        .gt(AIMessageRecord::getCreateTime, LocalDateTime.now().minusSeconds(5))
+                        .orderByDesc(AIMessageRecord::getCreateTime);
+                existingMsg = messageRecordMapper.selectOne(dedupWrapper);
+            }
             if (existingMsg != null) {
                 log.debug("检测到重复用户消息，跳过保存: conversationId={}, contentLength={}",
-                        request.getConversationId(), request.getMessage().length());
+                        request.getConversationId(), request.getMessage() != null ? request.getMessage().length() : 0);
                 return existingMsg.getId();
             }
 
@@ -904,6 +924,8 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             record.setRole("user");
             record.setContent(request.getMessage());
             record.setMessageType("text");
+            record.setStatus(AiChatConstants.MSG_STATUS_COMPLETED);
+            record.setClientMsgId(clientMsgId);
             record.setIsDeleted(0);
             record.setCreateTime(LocalDateTime.now());
             messageRecordMapper.insert(record);
@@ -933,6 +955,17 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
      */
     private Long saveAiMessage(String conversationId, Long userId, String content,
                                 Integer tokensUsed, List<AIRecommendedDish> dishes) {
+        return saveAiMessage(conversationId, userId, content, tokensUsed, dishes,
+                AiChatConstants.MSG_STATUS_COMPLETED);
+    }
+
+    /**
+     * 保存AI回复消息（可指定状态：completed/stopped/failed）。
+     *
+     * @param status 消息状态，见 {@link AiChatConstants}
+     */
+    private Long saveAiMessage(String conversationId, Long userId, String content,
+                                Integer tokensUsed, List<AIRecommendedDish> dishes, String status) {
         if (conversationId == null || conversationId.isEmpty() || content == null) {
             return null;
         }
@@ -957,6 +990,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             record.setRole("assistant");
             record.setContent(content);
             record.setMessageType("text");
+            record.setStatus(status != null ? status : AiChatConstants.MSG_STATUS_COMPLETED);
             record.setTokensUsed(tokensUsed != null ? tokensUsed : 0);
             record.setIsDeleted(0);
             record.setCreateTime(LocalDateTime.now());
@@ -1072,6 +1106,279 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     @Override
     public Long validateConversationOwnership(String conversationId) {
         return conversationManagementService.validateConversationOwnership(conversationId);
+    }
+
+    /**
+     * 单次 SSE 流式会话的状态载体：中止标志、上游中止动作、内容累积与一次性落库守卫。
+     * <p>实现 Runnable 直接提交到 aiExecutor；作为 AbortableStreamCallback 传入适配器，
+     * 用户停止时 abort() 置位并断开上游 HttpURLConnection，已生成片段以 stopped 状态保留。</p>
+     */
+    private final class ChatStreamSession implements AbortableStreamCallback, Runnable {
+
+        private final SseEmitter emitter;
+        private final AIChatRequest request;
+        private final AiProviderConfig providerConfig;
+        private final Long tenantId;
+        private final String conversationId;
+        private final String scene;
+        private final Long userId;
+
+        private final StringBuilder fullContent = new StringBuilder();
+        private final AtomicBoolean aborted = new AtomicBoolean(false);
+        private final AtomicBoolean finalized = new AtomicBoolean(false);
+        private final AtomicReference<Runnable> abortActionRef = new AtomicReference<>();
+
+        private List<AIRecommendedDish> parsedDishes;
+        private Long savedAiMsgId;
+        private long firstTokenTime;
+        private final long streamStart = System.currentTimeMillis();
+
+        ChatStreamSession(SseEmitter emitter, AIChatRequest request, AiProviderConfig providerConfig,
+                          Long tenantId) {
+            this.emitter = emitter;
+            this.request = request;
+            this.providerConfig = providerConfig;
+            this.tenantId = tenantId;
+            this.conversationId = request.getConversationId();
+            this.scene = request.getScene();
+            this.userId = request.getUserId();
+        }
+
+        @Override
+        public boolean isAborted() {
+            return aborted.get();
+        }
+
+        @Override
+        public void registerAbortAction(Runnable action) {
+            abortActionRef.set(action);
+        }
+
+        /**
+         * 中止生成：置位并断开上游连接（可由 emitter 超时/断链回调触发）。
+         */
+        void abort() {
+            if (aborted.compareAndSet(false, true)) {
+                Runnable action = abortActionRef.get();
+                if (action != null) {
+                    try {
+                        action.run();
+                    } catch (Exception e) {
+                        log.debug("中止上游连接失败（可忽略）: {}", e.getMessage());
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void onToken(String token, boolean isLast) {
+            // 停止后忽略残余回调（落库由 execute 兜底统一处理）
+            if (aborted.get()) {
+                return;
+            }
+            try {
+                if (isLast) {
+                    if (fullContent.length() == 0) {
+                        // 错误提示（Key 无效/熔断等）以 isLast token 形式返回且无内容
+                        completeWithError(emitter, token, conversationId);
+                    } else {
+                        finalizeStream(false);
+                    }
+                } else {
+                    fullContent.append(token);
+                    long now = System.currentTimeMillis();
+                    if (firstTokenTime == 0) {
+                        firstTokenTime = now - streamStart;
+                        log.debug("首字延迟: {}ms, conversationId={}", firstTokenTime, conversationId);
+                    }
+                    Map<String, Object> chunkData = new HashMap<>();
+                    chunkData.put("text", token);
+                    try {
+                        emitter.send(SseEmitter.event().name("message").data(chunkData));
+                    } catch (Exception sendEx) {
+                        // 客户端已断开：中止上游，避免继续消耗 token
+                        log.debug("SSE推送失败，中止上游: conversationId={}", conversationId);
+                        abort();
+                    }
+                }
+            } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+                log.warn("SSE token处理失败: conversationId={}", conversationId, e);
+            }
+        }
+
+        @Override
+        public void run() {
+            execute();
+        }
+
+        /**
+         * 异步执行流式对话。
+         */
+        private void execute() {
+            try {
+                // 1) 能力事件（P1：vision/tools 待后续分期开放）
+                Map<String, Object> caps = new HashMap<>();
+                caps.put("chat", Boolean.TRUE);
+                caps.put("vision", Boolean.FALSE);
+                caps.put("tools", Boolean.FALSE);
+                try {
+                    emitter.send(SseEmitter.event().name("capabilities").data(caps));
+                } catch (Exception e) {
+                    // 连接建立即断开，无需继续
+                    abort();
+                    return;
+                }
+
+                // 2) 重新生成：重放最后一条用户消息；普通发送：持久化用户消息
+                boolean regenerate = Boolean.TRUE.equals(request.getRegenerate());
+                if (regenerate) {
+                    String lastUserMessage = prepareRegenerate();
+                    if (lastUserMessage == null) {
+                        completeWithError(emitter, "没有可重新生成的提问", conversationId);
+                        return;
+                    }
+                    request.setMessage(lastUserMessage);
+                } else {
+                    // 修改点(2026-09-18)：用户消息持久化在异步线程执行，避免拖慢 SSE 建立
+                    saveUserMessage(request);
+                }
+
+                List<AIMessage> messages = buildMessages(request);
+                int maxTokens = (providerConfig != null && providerConfig.getMaxTokens() != null)
+                        ? providerConfig.getMaxTokens() : aiConfig.getMaxTokens();
+                double temperature = (providerConfig != null && providerConfig.getTemperature() != null)
+                        ? providerConfig.getTemperature() : aiConfig.getTemperature();
+
+                // 3) 调用流式接口（适配器真流式或 manager 分块降级）
+                aiProviderManager.streamChat(messages, maxTokens, temperature, this);
+
+                // 4) 收尾：中止时保留 stopped 片段；适配器未回调 isLast 时保证连接不挂起
+                if (aborted.get()) {
+                    finalizeStream(true);
+                } else if (!finalized.get()) {
+                    if (fullContent.length() > 0) {
+                        finalizeStream(false);
+                    } else {
+                        completeWithError(emitter, "AI服务返回了空响应", conversationId);
+                    }
+                }
+
+                // 5) 首字延迟观测
+                if (firstTokenTime > 3000) {
+                    log.warn("首字延迟过高: {}ms, totalTime={}ms, provider={}",
+                            firstTokenTime, System.currentTimeMillis() - streamStart,
+                            providerConfig != null ? providerConfig.getProviderCode() : "default");
+                }
+            } catch (Exception e) {
+                if (aborted.get()) {
+                    finalizeStream(true);
+                } else {
+                    handleStreamError(emitter, conversationId, e);
+                }
+            }
+        }
+
+        /**
+         * 结束并落库：stopped=true 时片段以 stopped 状态保留，且不再触发菜品推荐。
+         */
+        private void finalizeStream(boolean stopped) {
+            if (!finalized.compareAndSet(false, true)) {
+                return;
+            }
+            try {
+                String content = fullContent.toString();
+                if (content.isEmpty()) {
+                    if (stopped) {
+                        emitter.complete();
+                    } else {
+                        completeWithError(emitter, "AI服务返回了空响应", conversationId);
+                    }
+                    return;
+                }
+
+                List<AIRecommendedDish> dishes = null;
+                if ("order_assistant".equals(scene) && !stopped) {
+                    dishes = parseRecommendedDishes(content, tenantId);
+                    parsedDishes = dishes;
+                    content = cleanJsonFromContent(content);
+                }
+
+                String status = stopped
+                        ? AiChatConstants.MSG_STATUS_STOPPED : AiChatConstants.MSG_STATUS_COMPLETED;
+                savedAiMsgId = saveAiMessage(conversationId, userId, content, null, dishes, status);
+
+                Map<String, Object> doneData = new HashMap<>();
+                doneData.put("status", stopped ? "stopped" : "complete");
+                doneData.put("stopped", stopped);
+                doneData.put("conversationId", conversationId);
+                if (savedAiMsgId != null) {
+                    doneData.put("messageId", savedAiMsgId);
+                }
+                try {
+                    emitter.send(SseEmitter.event().name("done").data(doneData));
+                } catch (Exception sendEx) {
+                    // 客户端主动断开时 done 推不出去，落库已成功，忽略
+                    log.debug("done事件推送失败（连接可能已断开）: conversationId={}", conversationId);
+                }
+
+                if (!stopped && "order_assistant".equals(scene) && dishes != null && !dishes.isEmpty()) {
+                    sendDishesEvent(emitter, dishes);
+                }
+
+                updateConversationTitle(conversationId, request.getMessage());
+                emitter.complete();
+            } catch (Exception e) {
+                log.warn("流式收尾失败: conversationId={}", conversationId, e);
+                try {
+                    emitter.complete();
+                } catch (Exception ignore) {
+                    // 宽异常兜底：连接状态已终结
+                }
+            }
+        }
+
+        /**
+         * 重新生成前置处理：定位最后一条用户消息，逻辑删除其后的 assistant 消息，
+         * 并清除内存上下文（buildMessages 缓存 miss 后从 DB 重建）。
+         *
+         * @return 最后一条用户消息内容；无用户消息或归属校验失败返回 null
+         */
+        private String prepareRegenerate() {
+            if (userId == null || request.getActorType() == null) {
+                return null;
+            }
+            if (conversationManagementService.validateConversationOwnership(
+                    conversationId, userId, request.getActorType()) == null) {
+                log.warn("重新生成被拒绝（会话归属不匹配）: conversationId={}, userId={}", conversationId, userId);
+                return null;
+            }
+            List<AIMessageRecord> history = conversationManagementService.getConversationMessages(
+                    conversationId, userId, request.getActorType());
+            String lastUserContent = null;
+            int lastUserIdx = -1;
+            for (int i = 0; i < history.size(); i++) {
+                if ("user".equals(history.get(i).getRole())) {
+                    lastUserIdx = i;
+                    lastUserContent = history.get(i).getContent();
+                }
+            }
+            if (lastUserContent == null) {
+                return null;
+            }
+            for (int i = lastUserIdx + 1; i < history.size(); i++) {
+                AIMessageRecord record = history.get(i);
+                if ("assistant".equals(record.getRole())) {
+                    LambdaUpdateWrapper<AIMessageRecord> uw = new LambdaUpdateWrapper<>();
+                    uw.eq(AIMessageRecord::getId, record.getId())
+                            .eq(AIMessageRecord::getIsDeleted, 0)
+                            .set(AIMessageRecord::getIsDeleted, 1);
+                    messageRecordMapper.update(null, uw);
+                }
+            }
+            conversationContextService.clearContext(conversationId);
+            return lastUserContent;
+        }
     }
 }
 

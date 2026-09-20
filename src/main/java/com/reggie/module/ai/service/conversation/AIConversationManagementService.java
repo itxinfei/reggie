@@ -65,4 +65,50 @@ public interface AIConversationManagementService {
      * @return 对话所属用户ID（未找到或已删除返回 null）
      */
     Long validateConversationOwnership(String conversationId);
+
+    /**
+     * 获取指定身份类型的对话列表（员工 EMPLOYEE 与 C 端用户 CUSTOMER ID 空间隔离）
+     */
+    List<AIConversation> getUserConversations(Long userId, String actorType, int page, int pageSize);
+
+    /**
+     * 按身份双校验获取对话消息历史（userId + actorType 均匹配才返回）
+     */
+    List<AIMessageRecord> getConversationMessages(String conversationId, Long userId, String actorType);
+
+    /**
+     * 创建带身份类型的新对话
+     */
+    AIConversation createConversation(Long userId, String actorType, String title, String scene);
+
+    /**
+     * 按身份双校验删除对话（软删除）
+     */
+    void deleteConversation(String conversationId, Long userId, String actorType);
+
+    /**
+     * 重命名对话（身份双校验，标题限长由调用方校验）
+     *
+     * @return true 表示命中并更新成功
+     */
+    boolean renameConversation(String conversationId, Long userId, String actorType, String title);
+
+    /**
+     * 删除单条消息（身份双校验 + 上下文缓存失效，消息必须属于该对话）
+     *
+     * @return true 表示删除成功
+     */
+    boolean deleteMessage(String conversationId, Long messageId, Long userId, String actorType);
+
+    /**
+     * 身份双校验对话所有权
+     *
+     * @return 对话所属用户ID（不存在/已删除/身份不匹配均返回 null）
+     */
+    Long validateConversationOwnership(String conversationId, Long userId, String actorType);
+
+    /**
+     * 按身份类型搜索对话（标题/场景关键词）
+     */
+    List<AIConversation> searchConversations(Long userId, String actorType, String keyword, int page, int pageSize);
 }

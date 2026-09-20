@@ -34,6 +34,21 @@ var aiApi = {
     },
 
     /**
+     * 流式对话端点（POST+SSE，由 AiChatCore.ChatClient 直接 fetch 消费）
+     */
+    streamUrl: '/api/ai/chat/stream',
+
+    /**
+     * 场景前端配置（欢迎语、快捷问题、能力开关；不含 system prompt）
+     * @param {string} scene - 场景标识（C 端仅 order_assistant 生效）
+     */
+    getSceneConfig: function(scene) {
+        return $axios.get('/api/ai/scene-config', {
+            params: scene ? { scene: scene } : {}
+        });
+    },
+
+    /**
      * AI健康检查
      */
     health: function() {
@@ -75,6 +90,15 @@ var aiApi = {
      */
     deleteConversation: function(conversationId) {
         return $axios.delete('/api/ai/conversations/' + conversationId);
+    },
+
+    /**
+     * 删除对话内单条消息（后端同步失效上下文缓存）
+     * @param {string} conversationId - 对话ID（服务端会话）
+     * @param {number|string} messageId - 消息ID
+     */
+    deleteMessage: function(conversationId, messageId) {
+        return $axios.delete('/api/ai/conversations/' + conversationId + '/messages/' + messageId);
     },
 
     // ==================== 反馈记录 ====================

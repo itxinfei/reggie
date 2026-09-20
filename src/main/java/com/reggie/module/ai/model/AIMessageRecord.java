@@ -35,8 +35,17 @@ public class AIMessageRecord {
     @TableField("content")
     private String content;
 
+    /** 附件列表JSON（P2 视觉多模态：[{attachmentId,type,mime,url,width,height}]） */
+    private String attachments;
+
     /** 消息类型：text/action/feedback */
     private String messageType;
+
+    /** 消息状态：completed/stopped/failed */
+    private String status;
+
+    /** 前端消息幂等键（同一会话内重复提交只落一条用户消息） */
+    private String clientMsgId;
 
     /** 反馈类型：good / bad / null */
     private String feedback;

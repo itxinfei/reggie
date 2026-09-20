@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -33,4 +34,16 @@ public class AIChatRequest {
 
     /** 用户ID（用于个性化推荐和画像注入） */
     private Long userId;
+
+    /** 归属身份类型：EMPLOYEE/CUSTOMER（由控制器从登录会话解析，防止员工与用户ID撞号） */
+    private String actorType;
+
+    /** 前端消息幂等键（同一会话重复提交只落一条用户消息；重生成时为空） */
+    private String clientMsgId;
+
+    /** 是否重新生成上一条回答（为 true 时 message 可为空，服务端重放最后一条用户消息） */
+    private Boolean regenerate;
+
+    /** 附件ID列表（P2 视觉多模态启用，P1 仅透传字段） */
+    private List<String> attachments;
 }

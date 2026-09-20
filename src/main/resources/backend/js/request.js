@@ -11,9 +11,9 @@
   // 修改点：移除手动GET参数拼接代码，axios原生支持params序列化，无需手动处理
   // 修改点：自动携带CSRF Token（从Cookie或SessionStorage获取）
   service.interceptors.request.use(config => {
-    // 为POST/PUT/DELETE请求添加CSRF Token
+    // 为POST/PUT/DELETE/PATCH请求添加CSRF Token（后端 CsrfFilter 同样校验 PATCH）
     var method = (config.method || 'get').toLowerCase();
-    if (method === 'post' || method === 'put' || method === 'delete') {
+    if (method === 'post' || method === 'put' || method === 'delete' || method === 'patch') {
       var csrfToken = getCsrfToken();
       if (csrfToken) {
         config.headers['X-CSRF-Token'] = csrfToken;

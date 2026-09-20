@@ -11,9 +11,7 @@
     <!-- 修改点：补充加载完整 remixicon.css（此前仅加载 fallback，ri-moon-line/ri-menu-line/ri-close-line 等 header 图标不渲染） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css">
     <script src="../js/icon-fallback.js?v=20260917"></script>
-    <link rel="stylesheet" href="../styles/ai-assistant.css?v=20260917">
-    <!-- 修改点(2026-09-17)：移除 ai-assistant-dark.css 引用——该文件为空壳（仅注释，媒体查询体为空），
-         暗色样式实际由 ai-assistant.css 的 .dark-mode 类承担，引用属死重 -->
+    <link rel="stylesheet" href="../styles/ai-assistant.css?v=20260920a">
 
 </head>
 <body>
@@ -35,7 +33,7 @@
         </div>
 
         <!-- 对话管理侧边栏 -->
-        <div class="sidebar-overlay" :class="{active: sidebarOpen}" @click="toggleSidebar"></div>
+        <div class="sidebar-overlay" :class="{active: sidebarOpen}" @click="toggleSidebar(false)"></div>
         <!-- 修改点(2026-09-17)：可访问性——历史抽屉为非模态补充区域，用 complementary 语义并标注名称 -->
         <div class="conversation-sidebar" :class="{active: sidebarOpen}"
              role="complementary" aria-label="对话历史">
@@ -54,7 +52,7 @@
                      @click="switchConversation(conv.id)">
                     <div class="conv-title">{{ conv.title || '新对话' }}</div>
                     <div class="conv-time">{{ conv.timeText || '' }}</div>
-                    <span class="conv-delete" @click.stop="deleteConversation(conv.id)" title="删除"><i class="ri-delete-bin-6-line" aria-hidden="true"></i></span>
+                    <span class="conv-delete" @click.stop="deleteConversation(conv)" title="删除"><i class="ri-delete-bin-6-line" aria-hidden="true"></i></span>
                 </div>
             </div>
             <div class="sidebar-footer" v-if="conversations.length > 0">
@@ -72,7 +70,7 @@
         </div>
 
         <!-- 快捷提示 -->
-        <div class="quick-tips" v-if="messages.length <= 1">
+        <div class="quick-tips" v-if="messages.length === 0">
             <span v-for="tag in userProfileTags" :key="tag"
                   class="quick-tip profile-tag"
                   @click="sendQuickTip(tag)">
@@ -86,22 +84,6 @@
 
         <!-- 聊天区域 -->
         <div class="chat-area" ref="chatArea">
-            <!-- 骨架屏（消息少时显示） -->
-            <template v-if="messages.length === 0 && loading">
-                <div class="skeleton-row">
-                    <div class="skeleton-avatar"></div>
-                    <div class="skeleton-bubble skeleton-b1"></div>
-                </div>
-                <div class="skeleton-row">
-                    <div class="skeleton-avatar"></div>
-                    <div class="skeleton-bubble skeleton-b2"></div>
-                </div>
-                <div class="skeleton-row skeleton-reverse">
-                    <div class="skeleton-avatar"></div>
-                    <div class="skeleton-bubble skeleton-b3"></div>
-                </div>
-            </template>
-
             <!-- 欢迎消息 -->
             <div class="chat-msg assistant" v-if="messages.length === 0">
                 <div class="chat-avatar"><i class="ri-robot-line" aria-hidden="true"></i></div>
@@ -123,7 +105,7 @@
                         · "会员日专属优惠文案"
                     </template>
                     <template v-else>
-                        你好！我是小吉，你的智能点餐助手 <i class="ri-emotion-line" aria-hidden="true"></i><br><br>
+                        <p class="welcome-line">{{ orderWelcome }}</p>
                         告诉我你想吃什么，我来帮你推荐最合适的菜品！<br><br>
                         <i class="ri-lightbulb-line tip-icon" aria-hidden="true"></i> <b>试试这样说：</b><br>
                         · "我想吃辣的，2个人"<br>
@@ -135,7 +117,7 @@
 
             <!-- 对话消息 -->
             <template v-for="(msg, idx) in messages">
-                <div :class="'chat-msg ' + msg.role" :key="msg.id || idx"
+                <div :class="'chat-msg ' + msg.role" :key="msg.key || (msg.role + '-' + idx)"
                      @contextmenu.prevent="showMsgMenu($event, msg)"
                      @touchstart="onMsgTouchStart($event, msg)"
                      @touchend="onMsgTouchEnd"
@@ -146,34 +128,34 @@
                         <i v-else class="ri-user-line"></i>
                     </div>
                     <div class="msg-body">
-                        <div class="chat-bubble" :class="{'streaming-cursor': msg.streaming}">
-                            <!-- 安全渲染 -->
-                            <template v-if="msg.role === 'assistant'">
-                                <span v-for="(part, pIdx) in msg.renderedParts" :key="pIdx">
-                                    <span v-if="part.type === 'text'" class="msg-line">{{ part.text }}</span>
-                                    <span v-else-if="part.type === 'bold'" class="msg-bold">{{ part.text }}</span>
-                                    <span v-else-if="part.type === 'list'" class="msg-list">
-                                        <ul>
-                                            <li v-for="(item, i) in part.items" :key="i">{{ item }}</li>
-                                        </ul>
-                                    </span>
-                                    <span v-else-if="part.type === 'highlight'" class="msg-highlight">{{ part.text }}</span>
-                                </span>
-                            </template>
-                            <template v-else>
-                                {{ msg.content }}
-                            </template>
+                        <div class="chat-bubble" :class="{'streaming-cursor': msg.streaming && !!msg.content}">
+                            <!-- 等待首字：三点动画 -->
+                            <div v-if="msg.role === 'assistant' && msg.streaming && !msg.content" class="typing-indicator">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <!-- AI 回复：安全 Markdown 渲染（内核先转义后白名单替换） -->
+                            <div v-else-if="msg.role === 'assistant'" class="md-body" v-html="renderMarkdown(msg.content)"></div>
+                            <!-- 用户消息：纯文本保留换行 -->
+                            <span v-else class="user-text">{{ msg.content }}</span>
                         </div>
-                        <!-- 复制按钮 -->
-                        <div class="msg-actions" v-if="!msg.streaming">
-                            <button class="copy-btn" @click="copyMessage(msg)" :title="msg.copied ? '已复制' : '复制'">
+                        <!-- 已停止标记 -->
+                        <div class="stopped-badge" v-if="msg.stopped && !msg.streaming">
+                            <i class="ri-stop-circle-line" aria-hidden="true"></i> 已停止，内容为部分回复
+                        </div>
+                        <!-- 消息操作：重新生成 / 复制 -->
+                        <div class="msg-actions" v-if="!msg.streaming && msg.content && !msg.error">
+                            <button class="copy-btn" v-if="canRegenerate(msg)"
+                                    @click="regenerateMessage(msg)" title="重新生成" aria-label="重新生成">
+                                <i class="ri-refresh-line" aria-hidden="true"></i>
+                            </button>
+                            <button class="copy-btn" @click="copyMessage(msg)" :title="msg.copied ? '已复制' : '复制'" aria-label="复制">
                                 <span v-if="msg.copied"><i class="ri-check-line" aria-hidden="true"></i></span>
                                 <span v-else><i class="ri-copy-line" aria-hidden="true"></i></span>
                             </button>
                         </div>
                         <!-- 推荐菜品卡片 -->
                         <div class="dish-recommendations" v-if="msg.dishes && msg.dishes.length > 0">
-                            <div class="dish-card" v-for="dish in msg.dishes" :key="dish.dishId" @click="addToCart(dish)">
+                            <div class="dish-card" v-for="dish in msg.dishes" :key="dish.dishId || dish.name" @click="addToCart(dish)">
                                 <img :src="dish.image || '/front/images/noImg.png'" loading="lazy" :alt="dish.name" @error="imgError">
                                 <div class="dish-info">
                                     <div class="dish-name">{{ dish.name }}</div>
@@ -183,8 +165,8 @@
                                 <button class="add-btn" @click.stop="addToCart(dish)">+</button>
                             </div>
                         </div>
-                        <!-- 反馈按钮 -->
-                        <div class="feedback-bar" v-if="msg.role === 'assistant' && msg.showFeedback && !msg.streaming">
+                        <!-- 反馈按钮（仅服务端已落库的回复可反馈） -->
+                        <div class="feedback-bar" v-if="msg.role === 'assistant' && msg.dbMessageId && !msg.streaming">
                             <button :class="['feedback-btn', msg.feedback === 'good' ? 'active-good' : '']"
                                     @click="sendFeedback(msg, 'good')"><i class="ri-thumb-up-line" aria-hidden="true"></i> 有用</button>
                             <button :class="['feedback-btn', msg.feedback === 'bad' ? 'active-bad' : '']"
@@ -197,35 +179,31 @@
                     </div>
                 </div>
             </template>
-
-            <!-- 加载中 -->
-            <div class="chat-msg assistant" v-if="loading && !hasStreamingMessage">
-                <div class="chat-avatar"><i class="ri-robot-line" aria-hidden="true"></i></div>
-                <div class="chat-bubble">
-                    <div class="typing-indicator">
-                        <span></span><span></span><span></span>
-                    </div>
-                </div>
-            </div>
         </div>
 
-        <!-- 输入区 -->
+        <!-- 输入区：Enter 发送（仅物理键盘）/ Shift+Enter 换行，移动端回车正常换行不发送 -->
         <div class="input-area">
-            <button class="voice-btn" :class="{'recording': isRecording}" @click="toggleVoice" title="语音输入">
+            <button class="voice-btn" :class="{'recording': isRecording}" @click="toggleVoice" title="语音输入" aria-label="语音输入">
                 <i class="ri-mic-line" aria-hidden="true"></i>
             </button>
-            <textarea
-                ref="inputArea"
-                v-model="inputText"
-                :placeholder="inputPlaceholder"
-                @keydown.enter.exact.prevent="sendMessage"
-                @input="autoResizeInput"
-                :disabled="loading"
-                rows="1"
-                class="input-textarea"
-            ></textarea>
-            <button class="send-btn" @click="sendMessage" :disabled="!inputText.trim() || loading">
+            <div class="input-wrap">
+                <textarea
+                    ref="inputArea"
+                    v-model="inputText"
+                    :placeholder="inputPlaceholder"
+                    @keydown="onInputKeydown"
+                    @input="autoResizeInput"
+                    rows="1"
+                    maxlength="4000"
+                    class="input-textarea"
+                ></textarea>
+                <span class="char-count" :class="{ over: inputText.length >= 4000 }">{{ inputText.length }}/4000</span>
+            </div>
+            <button v-if="!loading" class="send-btn" @click="sendMessage" :disabled="!inputText.trim() || inputText.length > 4000" aria-label="发送">
                 <i class="ri-send-plane-fill" aria-hidden="true"></i>
+            </button>
+            <button v-else class="stop-btn" @click="stopGenerate" aria-label="停止生成">
+                <i class="ri-stop-fill" aria-hidden="true"></i>
             </button>
         </div>
 
@@ -246,56 +224,14 @@
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="../js/vant.min.js"></script>
     <script src="../js/request.js?v=20260917"></script>
-    <script src="../api/ai.js?v=20260917"></script>
+    <!-- 公共聊天内核：POST+SSE 客户端 / 安全 Markdown / 消息工厂（与管理后台同一份） -->
+    <script src="../../backend/js/ai/ai-chat-core.js?v=20260920a"></script>
+    <script src="../api/ai.js?v=20260920a"></script>
     <script>
     (function() {
         'use strict';
 
         // ==================== 工具函数 ====================
-        function safeFormatContent(content) {
-            if (!content) return [];
-            if (typeof content !== 'string') return [{ type: 'text', text: String(content) }];
-            var parts = [];
-            var lines = content.split('\n');
-            for (var li = 0; li < lines.length; li++) {
-                var line = lines[li];
-                if (li > 0) parts.push({ type: 'text', text: '\n' });
-                var trimmed = line.trim();
-                // 修改点：列表行先于 bold/text 解析判断，直接收集连续列表项为单个 list part，
-                // 避免该行再被当作纯文本 push 一次导致同一行内容渲染两遍（bullet 重复）
-                if (trimmed.startsWith('- ') || trimmed.startsWith('· ')) {
-                    var listItems = [];
-                    for (var ni = li; ni < lines.length; ni++) {
-                        var t = lines[ni].trim();
-                        if (t.startsWith('- ') || t.startsWith('· ')) listItems.push(t.replace(/^[-·]\s*/, ''));
-                        else break;
-                    }
-                    parts.push({ type: 'list', items: listItems });
-                    li += listItems.length - 1;
-                    continue;
-                }
-                var boldRegex = /\*\*(.*?)\*\*/g;
-                var lastIndex = 0;
-                var match;
-                while ((match = boldRegex.exec(line)) !== null) {
-                    if (match.index > lastIndex) parts.push({ type: 'text', text: line.substring(lastIndex, match.index) });
-                    parts.push({ type: 'bold', text: match[1] });
-                    lastIndex = match.index + match[0].length;
-                }
-                if (lastIndex < line.length) parts.push({ type: 'text', text: line.substring(lastIndex) });
-            }
-            if (parts.length === 0) return [{ type: 'text', text: content }];
-            var merged = [];
-            for (var i = 0; i < parts.length; i++) {
-                if (i > 0 && parts[i].type === 'text' && merged[merged.length - 1].type === 'text') {
-                    merged[merged.length - 1].text += parts[i].text;
-                } else {
-                    merged.push(parts[i]);
-                }
-            }
-            return merged;
-        }
-
         function formatTime(timestamp) {
             var now = new Date();
             var date = new Date(timestamp);
@@ -307,25 +243,11 @@
             return (date.getMonth() + 1) + '月' + date.getDate() + '日';
         }
 
-        function copyText(text) {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                return navigator.clipboard.writeText(text).catch(function() {
-                    fallbackCopy(text);
-                });
-            }
-            fallbackCopy(text);
-            return Promise.resolve();
-        }
-
-        function fallbackCopy(text) {
-            var ta = document.createElement('textarea');
-            ta.value = text;
-            ta.style.position = 'fixed';
-            ta.style.left = '-9999px';
-            document.body.appendChild(ta);
-            ta.select();
-            try { document.execCommand('copy'); } catch(e) {}
-            document.body.removeChild(ta);
+        /** 未登录跳转（fetch 链路无法走 axios 拦截器，与 front/js/request.js 行为对齐） */
+        function redirectToLogin() {
+            try { sessionStorage.removeItem('csrfToken'); } catch (e) { /* noop */ }
+            var back = window.location.pathname + window.location.search;
+            window.location.href = '/front/page/login.html?redirect=' + encodeURIComponent(back);
         }
 
         // ==================== Vue App ====================
@@ -356,29 +278,42 @@
                 userInfo: null,
                 userAvatar: '',
                 cartData: [],
+                addressData: null,
                 userProfileTags: [],
                 inputPlaceholder: '告诉小吉你想吃什么...',
-                // 新增：网络状态
+                // 网络状态
                 isOnline: navigator.onLine !== false,
-                // 新增：暗色模式
+                // 暗色模式
                 darkModeEnabled: false,
-                // 新增：消息操作菜单
+                // 消息操作菜单
                 menuVisible: false,
                 menuX: 0,
                 menuY: 0,
                 menuTarget: null,
-                // 修改点：移动端长按计时器状态（见 onMsgTouchStart）
+                // 流式客户端（POST+SSE，支持停止生成）
+                streamClient: null,
+                // 场景配置（来自 /api/ai/scene-config，失败用本地兜底）
+                sceneConfig: { welcome: '', quickQuestions: [] },
+                // 触屏设备标记：移动端软键盘回车不拦截发送，避免误触
+                touchDevice: ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0,
+                // 移动端长按计时器状态（见 onMsgTouchStart）
                 msgPressTimer: null,
                 msgPressT0: 0,
-                _msgPressEndHandler: null
+                _msgPressEndHandler: null,
+                _scrollQueued: false
             },
             computed: {
                 currentQuickTips: function() {
+                    if (this.currentScene === 'order_assistant'
+                        && this.sceneConfig.quickQuestions
+                        && this.sceneConfig.quickQuestions.length) {
+                        return this.sceneConfig.quickQuestions;
+                    }
                     return this.quickTipsMap[this.currentScene] || [];
                 },
-                hasStreamingMessage: function() {
-                    var self = this;
-                    return self.messages.some(function(m) { return m.role === 'assistant' && m.streaming === true; });
+                orderWelcome: function() {
+                    return this.sceneConfig.welcome
+                        || '你好！我是小吉，你的智能点餐助手';
                 }
             },
             created: function() {
@@ -386,6 +321,7 @@
                 this.loadConversations();
                 this.loadUserProfileTags();
                 this.loadCartContext();
+                this.loadAddressContext();
                 this.loadDarkModePreference();
                 if (this.conversations.length === 0) {
                     this.newConversation(true);
@@ -394,6 +330,7 @@
                 }
                 if (this.userInfo) {
                     this.syncConversationsFromBackend();
+                    this.loadSceneConfig();
                 }
                 // 监听网络变化
                 var self = this;
@@ -422,8 +359,24 @@
                 // 修改点：清理长按计时器与取消监听
                 if (this.msgPressTimer) clearTimeout(this.msgPressTimer);
                 if (this._msgPressEndHandler) document.removeEventListener('touchstart', this._msgPressEndHandler);
+                if (this.streamClient) { try { this.streamClient.stop(); } catch (e) { /* noop */ } }
             },
             methods: {
+                // ==================== 场景配置 ====================
+                loadSceneConfig: function() {
+                    var self = this;
+                    if (typeof aiApi === 'undefined' || !aiApi.getSceneConfig) return;
+                    // C 端仅点餐场景下发配置；员工场景对顾客强制 order_assistant，拉了也无意义
+                    aiApi.getSceneConfig('order_assistant').then(function(res) {
+                        var data = (res && res.code === 1) ? res.data : null;
+                        if (!data) return;
+                        if (data.welcome) self.$set(self.sceneConfig, 'welcome', data.welcome);
+                        if (data.quickQuestions && data.quickQuestions.length) {
+                            self.$set(self.sceneConfig, 'quickQuestions', data.quickQuestions);
+                        }
+                    }).catch(function(e) { console.warn('[ai-assistant] 场景配置加载失败:', e); });
+                },
+
                 // ==================== 网络检测 ====================
                 checkNetwork: function() {
                     if (!this.isOnline) {
@@ -499,7 +452,6 @@
                 // ==================== 消息操作菜单 ====================
                 // 修改点：移动端长按无法触发原生 contextmenu，
                 // 改用 touchstart 启动 600ms 计时器，touchend/touchmove 取消。
-                // 仅在触摸事件回调（含自定义属性）中执行 preventDefault，避免拦截页面滚动。
                 onMsgTouchStart: function(e, msg) {
                     var self = this;
                     if (e.touches && e.touches.length > 1) return; // 多指触摸（缩放手势）不处理
@@ -554,34 +506,62 @@
                     }
                     this.menuVisible = false;
                 },
+                // 修改点(2026-09-20)：单条删除同步到后端（新 DELETE 端点 + 失效上下文缓存），
+                // 本地临时会话（未与服务端关联）仅删本地
                 deleteMenuTarget: function() {
-                    if (this.menuTarget) {
-                        var idx = this.messages.indexOf(this.menuTarget);
-                        if (idx >= 0) {
-                            this.messages.splice(idx, 1);
-                            this.saveConversations();
-                        }
+                    if (!this.menuTarget) { this.menuVisible = false; return; }
+                    var self = this;
+                    var msg = this.menuTarget;
+                    var conv = this.getCurrentConversation();
+                    var removeLocal = function() {
+                        var idx = self.messages.indexOf(msg);
+                        if (idx >= 0) self.messages.splice(idx, 1);
+                        self.saveConversations();
+                        self.menuVisible = false;
+                    };
+                    if (msg.dbMessageId && conv && conv.serverBacked) {
+                        aiApi.deleteMessage(conv.id, msg.dbMessageId).then(function(res) {
+                            if (res && res.code === 1) {
+                                removeLocal();
+                            } else {
+                                vant.Notify({ type: 'danger', message: (res && res.msg) || '删除失败' });
+                            }
+                        }).catch(function(e) {
+                            console.warn('[ai-assistant] 删除消息失败:', e);
+                        });
+                    } else {
+                        removeLocal();
                     }
-                    this.menuVisible = false;
                 },
 
                 // ==================== 消息复制 ====================
                 copyMessage: function(msg) {
-                    var text = '';
-                    if (msg.role === 'assistant') {
-                        text = msg.content || '';
-                    } else {
-                        text = msg.content || '';
-                    }
+                    var text = msg.content || '';
                     if (!text) return;
-                    copyText(text).then(function() {
+                    window.AiChatCore.copyText(text).then(function() {
                         msg.copied = true;
                         vant.Notify({ type: 'success', message: '已复制到剪贴板', duration: 1500 });
-                        setTimeout(function() { if (msg) msg.copied = false; }, 2000);
+                        setTimeout(function() { msg.copied = false; }, 2000);
+                    }).catch(function() {
+                        vant.Notify({ type: 'warning', message: '复制失败，请长按文本手动复制', duration: 2000 });
                     });
                 },
 
-                // ==================== 输入框自适应高度 ====================
+                // ==================== Markdown 渲染 ====================
+                renderMarkdown: function(content) {
+                    return window.AiChatCore.Markdown.render(content || '');
+                },
+
+                // ==================== 输入框 ====================
+                // 修复 @keydown.enter.exact.prevent 在移动端软键盘上误发送：
+                // 触屏设备回车一律走换行；物理键盘 Enter 发送、Shift+Enter 换行；中文组词期间不拦截
+                onInputKeydown: function(e) {
+                    if (this.touchDevice) return;
+                    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                },
                 autoResizeInput: function() {
                     var el = this.$refs.inputArea;
                     if (!el) return;
@@ -589,14 +569,19 @@
                     var newHeight = Math.min(el.scrollHeight, 120);
                     el.style.height = newHeight + 'px';
                 },
+                resetInputHeight: function() {
+                    var el = this.$refs.inputArea;
+                    if (el) el.style.height = 'auto';
+                },
 
                 // ==================== 对话管理 ====================
                 newConversation: function(silent) {
                     var conv = {
-                        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                        id: window.AiChatCore.genId('local'),
                         title: '',
                         messages: [],
                         scene: this.currentScene,
+                        serverBacked: false,
                         createdAt: Date.now(),
                         updatedAt: Date.now(),
                         timeText: '刚刚'
@@ -610,32 +595,65 @@
                     }
                 },
                 switchConversation: function(id) {
-                    if (this.loading) return;
+                    if (this.loading) {
+                        vant.Toast('AI 正在回复，请先停止当前生成');
+                        return;
+                    }
                     var conv = this.conversations.find(function(c) { return c.id === id; });
                     if (!conv) return;
                     this.currentConversationId = id;
+                    this.currentScene = conv.scene || 'order_assistant';
+                    this.inputPlaceholder = this.getScenePlaceholder(this.currentScene);
                     this.messages = conv.messages || [];
                     this.toggleSidebar(false);
-                    this.$nextTick(function() { this.scrollToBottom(); }.bind(this));
+                    // 服务端会话：本地无消息时拉取历史（含真实 messageId，可反馈）
+                    if (conv.serverBacked && (!conv.messages || conv.messages.length === 0)) {
+                        this.loadHistoryMessages(conv);
+                    } else {
+                        this.scrollToBottom();
+                    }
                 },
-                deleteConversation: function(id) {
+                loadHistoryMessages: function(conv) {
                     var self = this;
+                    aiApi.getConversation(conv.id).then(function(res) {
+                        if (self.currentConversationId !== conv.id) return;
+                        var records = (res && res.code === 1) ? res.data : res;
+                        if (!Array.isArray(records)) { self.messages = []; return; }
+                        var mapped = records.map(function(record) {
+                            var msg = window.AiChatCore.MessageFactory.fromRecord(record);
+                            // 后端反馈值 positive/negative → 本地按钮态 good/bad
+                            if (msg.feedback === 'positive') msg.feedback = 'good';
+                            else if (msg.feedback === 'negative') msg.feedback = 'bad';
+                            return msg;
+                        });
+                        conv.messages = mapped;
+                        self.messages = mapped;
+                        self.scrollToBottom();
+                    }).catch(function(e) {
+                        console.warn('[ai-assistant] 加载历史消息失败:', e);
+                        self.messages = [];
+                    });
+                },
+                deleteConversation: function(convOrId) {
+                    var self = this;
+                    var conv = (typeof convOrId === 'object') ? convOrId :
+                        this.conversations.find(function(c) { return c.id === convOrId; });
+                    if (!conv) return;
                     vant.Dialog.confirm({
                         title: '删除对话',
                         message: '确定要删除这个对话吗？此操作不可恢复。'
                     }).then(function() {
-                        // 修改点：同步删除后端记录，成功后更新本地；失败保留本地并提示。
-                        // 此前仅移除 localStorage，下次 syncConversationsFromBackend 会把已删对话"复活"
-                        var backendPromise = (typeof aiApi !== 'undefined' && aiApi.deleteConversation)
-                            ? aiApi.deleteConversation(id)
+                        // 仅已落库会话调后端删除；本地临时会话直接清本地
+                        var backendPromise = (conv.serverBacked && typeof aiApi !== 'undefined' && aiApi.deleteConversation)
+                            ? aiApi.deleteConversation(conv.id)
                             : Promise.resolve({ code: 1 });
                         return backendPromise.then(function(res) {
                             if (res && res.code === 1) return true;
                             throw new Error((res && res.msg) || '删除失败');
                         });
                     }).then(function() {
-                        self.conversations = self.conversations.filter(function(c) { return c.id !== id; });
-                        if (self.currentConversationId === id) {
+                        self.conversations = self.conversations.filter(function(c) { return c.id !== conv.id; });
+                        if (self.currentConversationId === conv.id) {
                             if (self.conversations.length > 0) {
                                 self.switchConversation(self.conversations[0].id);
                             } else {
@@ -646,7 +664,6 @@
                         vant.Toast.success('对话已删除');
                     }).catch(function(e) {
                         if (e && e.message) console.warn('[ai-assistant.html] 删除对话失败:', e.message);
-                        else console.warn('[ai-assistant.html] 用户取消删除对话:', e);
                     });
                 },
                 toggleSidebar: function(force) {
@@ -660,9 +677,8 @@
                     try {
                         var currentConv = this.getCurrentConversation();
                         if (currentConv) {
-                            // 修改点(2026-09-18)：持久化前净化——过滤请求进行中 content 仍为空的
-                            // streaming 占位气泡，并强制 streaming=false。否则在请求进行中切换/新建会话
-                            // 等时机保存后，重进页面会永久残留"思考中"气泡。
+                            // 持久化前净化：过滤请求进行中 content 仍为空的 streaming 占位气泡，
+                            // 重进页面不会永久残留"思考中"气泡
                             var cleanMessages = this.messages
                                 .filter(function(m) {
                                     return !(m.role === 'assistant' && m.streaming === true && !m.content);
@@ -691,11 +707,9 @@
                         if (raw) {
                             var data = JSON.parse(raw);
                             if (Array.isArray(data)) {
-                                var self = this;
                                 this.conversations = data.slice(0, 50).map(function(c) {
                                     c.timeText = formatTime(c.updatedAt || c.createdAt || Date.now());
-                                    // 修改点(2026-09-18)：兜底历史脏数据——剔除永久残留的"思考中"占位气泡，
-                                    // 其余消息的 streaming 一律复位，避免旧版本已存入 localStorage 的卡死气泡。
+                                    // 兜底旧版本脏数据：剔除永久残留的"思考中"占位气泡
                                     if (Array.isArray(c.messages)) {
                                         c.messages = c.messages.filter(function(m) {
                                             return !(m.role === 'assistant' && m.streaming === true && !m.content);
@@ -713,12 +727,20 @@
                 getCurrentConversation: function() {
                     return this.conversations.find(function(c) { return c.id === this.currentConversationId; }.bind(this));
                 },
+                /** 首轮回复后把本地临时会话绑定到服务端真实 conversationId */
+                bindServerConversation: function(conv, serverCid) {
+                    if (!conv || !serverCid) return;
+                    if (conv.serverBacked) { conv.id = serverCid; this.currentConversationId = serverCid; return; }
+                    conv.serverBacked = true;
+                    conv.id = serverCid;
+                    this.currentConversationId = serverCid;
+                    this.saveConversations();
+                },
                 syncConversationsFromBackend: function() {
                     var self = this;
                     if (typeof aiApi === 'undefined' || !aiApi.getConversations) return;
                     aiApi.getConversations(1, 50).then(function(res) {
-                        var data = res.data || res;
-                        var backendList = (data && data.code === 1) ? data.data : data;
+                        var backendList = (res && res.code === 1) ? res.data : res;
                         if (!Array.isArray(backendList) || backendList.length === 0) return;
                         backendList.forEach(function(backendConv) {
                             var localIdx = -1;
@@ -730,6 +752,7 @@
                                 title: backendConv.title || '对话',
                                 scene: backendConv.scene || 'order_assistant',
                                 messages: [],
+                                serverBacked: true,
                                 createdAt: backendConv.createTime ? new Date(backendConv.createTime).getTime() : Date.now(),
                                 updatedAt: backendConv.updateTime ? new Date(backendConv.updateTime).getTime() : Date.now(),
                                 timeText: formatTime(backendConv.updateTime || backendConv.createTime || Date.now()),
@@ -744,7 +767,7 @@
                         });
                         self.conversations.sort(function(a, b) { return (b.updatedAt || 0) - (a.updatedAt || 0); });
                         self.saveConversations();
-                    }).catch(function(e) { console.warn('[ai-assistant.html] 同步后端对话列表失败:', e) });
+                    }).catch(function(e) { console.warn('[ai-assistant.html] 同步后端对话列表失败:', e); });
                 },
                 clearAllConversations: function() {
                     var self = this;
@@ -752,11 +775,10 @@
                         title: '清空对话',
                         message: '确定要清空全部对话记录吗？此操作不可恢复。'
                     }).then(function() {
-                        // 修改点：逐一同步删除后端对话，成功后清空本地；失败保留本地并提示。
-                        // 此前仅清 localStorage，下次同步会把已删对话全部"复活"
-                        var ids = self.conversations.map(function(c) { return c.id; }).filter(function(id) { return !!id; });
-                        var backendPromise = (typeof aiApi !== 'undefined' && aiApi.deleteConversation && ids.length > 0)
-                            ? Promise.all(ids.map(function(id) { return aiApi.deleteConversation(id); }))
+                        // 仅删除已落库会话；本地临时会话随 localStorage 一起清掉
+                        var serverConvs = self.conversations.filter(function(c) { return !!c.serverBacked; });
+                        var backendPromise = (typeof aiApi !== 'undefined' && aiApi.deleteConversation && serverConvs.length > 0)
+                            ? Promise.all(serverConvs.map(function(c) { return aiApi.deleteConversation(c.id); }))
                             : Promise.resolve([]);
                         return backendPromise;
                     }).then(function() {
@@ -774,6 +796,7 @@
                     this.saveConversations();
                     this.newConversation(true);
                     this.inputPlaceholder = this.getScenePlaceholder(scene);
+                    if (scene === 'order_assistant' && this.userInfo) this.loadSceneConfig();
                 },
                 getScenePlaceholder: function(scene) {
                     var map = {
@@ -806,13 +829,12 @@
                         if (!self.userInfo) return;
                         if (typeof aiApi !== 'undefined' && aiApi.getProfileSummary) {
                             aiApi.getProfileSummary().then(function(res) {
-                                var data = res.data || res;
-                                var result = (data && data.code === 1) ? data.data : data;
+                                var result = (res && res.code === 1) ? res.data : res;
                                 if (result && result.tags && result.tags.length > 0) {
                                     self.userProfileTags = result.tags.slice(0, 5);
                                     try { localStorage.setItem('ai_profile_tags', JSON.stringify(self.userProfileTags)); } catch(e) {}
                                 }
-                            }).catch(function(e) { console.warn('[ai-assistant.html] 加载用户画像标签失败:', e) });
+                            }).catch(function(e) { console.warn('[ai-assistant.html] 加载用户画像标签失败:', e); });
                         }
                     } catch (e) {}
                 },
@@ -830,16 +852,39 @@
                             .catch(function(e) { console.warn('[ai-assistant.html] 刷新购物车上下文失败:', e); });
                     } catch (e) { console.warn('[ai-assistant.html] 加载购物车上下文异常:', e); }
                 },
+                // 默认地址仅在登录态下预取（未登录调用会被拦截器重定向到登录页）
+                loadAddressContext: function() {
+                    var self = this;
+                    try {
+                        if (!sessionStorage.getItem('userId')) return;
+                        $axios({ url: '/address-book/default', method: 'get' })
+                            .then(function(res) {
+                                if (res && res.code === 1 && res.data) self.addressData = res.data;
+                            })
+                            .catch(function() { /* 无默认地址属正常情况，静默 */ });
+                    } catch (e) { /* noop */ }
+                },
+                // 真实随请求提交的 context（购物车 + 地址摘要 + 脱敏用户信息）
                 buildContext: function() {
                     var context = {};
                     if (this.userInfo) {
                         context.user = { name: this.userInfo.name || '', phone: this.maskPhone(this.userInfo.phone || '') };
                     }
                     if (this.cartData && this.cartData.length > 0) {
+                        var totalNumber = this.cartData.reduce(function(sum, item) { return sum + (item.number || 0); }, 0);
                         context.cart = {
-                            itemCount: this.cartData.length,
-                            totalAmount: this.cartData.reduce(function(sum, item) { return sum + (item.number || 0); }, 0),
-                            items: this.cartData.slice(0, 5).map(function(item) { return { name: item.name, quantity: item.number }; })
+                            itemKinds: this.cartData.length,
+                            totalNumber: totalNumber,
+                            items: this.cartData.slice(0, 5).map(function(item) {
+                                return { name: item.name, quantity: item.number };
+                            })
+                        };
+                    }
+                    if (this.addressData) {
+                        var addr = this.addressData;
+                        context.address = {
+                            consignee: addr.consignee || '',
+                            detail: ((addr.provinceCode ? '' : '') + (addr.district || '') + (addr.detail || '')).trim()
                         };
                     }
                     return context;
@@ -849,92 +894,209 @@
                     return phone.substring(0, 3) + '****' + phone.substring(7);
                 },
 
-                // ==================== 消息发送 ====================
+                // ==================== 消息发送（POST + SSE） ====================
                 sendMessage: function() {
                     var text = this.inputText.trim();
-                    if (!text || this.loading) return;
+                    if (!text || this.loading || this.inputText.length > 4000) return;
                     // 网络检测
                     if (!this.checkNetwork()) return;
 
+                    // 后台静默刷新购物车（本轮使用已加载数据，下一轮生效）
                     this.loadCartContext();
-                    this.currentRequestId++;
-                    var requestId = this.currentRequestId;
 
-                    var userMsg = {
-                        id: Date.now(), role: 'user', content: text,
-                        timestamp: Date.now(), copied: false
-                    };
-                    var assistantMsg = {
-                        id: Date.now() + 1, role: 'assistant',
-                        content: '', renderedParts: [], streaming: true,
-                        showFeedback: false, feedback: null, error: false,
-                        retryData: null, timestamp: Date.now(), copied: false,
-                        dishes: []
-                    };
-
+                    var userMsg = window.AiChatCore.MessageFactory.createUserMessage(text);
+                    var aiMsg = window.AiChatCore.MessageFactory.createAssistantMessage();
                     this.messages.push(userMsg);
-                    this.messages.push(assistantMsg);
+                    this.messages.push(aiMsg);
                     this.inputText = '';
-                    // 重置输入框高度
-                    var el = this.$refs.inputArea;
-                    if (el) el.style.height = 'auto';
+                    this.resetInputHeight();
                     this.loading = true;
                     this.scrollToBottom();
 
+                    this.runStream(userMsg, aiMsg, { regenerate: false, fallbackUsed: false });
+                },
+
+                /**
+                 * 发起 POST 流式请求（AiChatCore.ChatClient 内部 fetch + ReadableStream）
+                 */
+                runStream: function(userMsg, aiMsg, opts) {
                     var self = this;
-                    var apiCall;
-                    if (this.currentScene === 'order_assistant') {
-                        apiCall = aiApi.orderAssistant(text, this.getUserId(), this.currentConversationId);
+                    this.currentRequestId++;
+                    var requestId = this.currentRequestId;
+                    var conv = this.getCurrentConversation();
+                    var serverCid = (conv && conv.serverBacked) ? conv.id : null;
+
+                    var body = { scene: this.currentScene };
+                    if (serverCid) body.conversationId = serverCid;
+                    if (opts.regenerate) {
+                        body.regenerate = true;
                     } else {
-                        apiCall = aiApi.chat(text, this.currentScene, this.currentConversationId);
+                        body.message = userMsg.content;
+                        body.clientMsgId = userMsg.clientMsgId;
+                        var ctx = this.buildContext();
+                        if (Object.keys(ctx).length > 0) body.context = ctx;
                     }
 
-                    apiCall.then(function(res) {
-                        if (requestId !== self.currentRequestId) return;
-                        var data = res.data || res;
-                        var responseData = (data && data.code === 1) ? data.data : data;
-                        assistantMsg.content = (responseData && responseData.content)
-                            ? responseData.content
-                            : '抱歉，我没理解您的意思，换个说法试试？';
-                        assistantMsg.streaming = false;
-                        assistantMsg.showFeedback = true;
-                        assistantMsg.renderedParts = safeFormatContent(assistantMsg.content);
-                        assistantMsg.dishes = (self.currentScene === 'order_assistant' && responseData && responseData.dishes)
-                            ? responseData.dishes : [];
-                        var meta = (responseData && responseData.data) || {};
-                        if (meta.conversationId && !self.currentConversationId) {
-                            self.currentConversationId = meta.conversationId;
+                    var client = new window.AiChatCore.ChatClient();
+                    this.streamClient = client;
+                    client.stream({
+                        url: aiApi.streamUrl,
+                        body: body,
+                        onToken: function(token) {
+                            if (requestId !== self.currentRequestId) return;
+                            aiMsg.content += token;
+                            self.scheduleScroll();
+                        },
+                        onDishes: function(dishes) {
+                            if (requestId !== self.currentRequestId) return;
+                            aiMsg.dishes = dishes;
+                        },
+                        onDone: function(data) {
+                            if (requestId !== self.currentRequestId) return;
+                            if (data.messageId) aiMsg.dbMessageId = data.messageId;
+                            if (data.conversationId) self.bindServerConversation(conv, data.conversationId);
+                            self.finishTurn(aiMsg, { stopped: data.stopped === true });
+                        },
+                        onAbort: function() {
+                            if (requestId !== self.currentRequestId) return;
+                            // 用户主动停止：保留已生成片段（服务端同步以 stopped 落库）
+                            self.finishTurn(aiMsg, { stopped: true });
+                        },
+                        onError: function(message, info) {
+                            if (requestId !== self.currentRequestId) return;
+                            info = info || {};
+                            if (info.notLogin) {
+                                aiMsg.streaming = false;
+                                self.loading = false;
+                                self.streamClient = null;
+                                redirectToLogin();
+                                return;
+                            }
+                            // 网络失败且尚无内容：自动降级一次非流式接口
+                            if (!opts.regenerate && !opts.fallbackUsed && info.network && !aiMsg.content) {
+                                opts.fallbackUsed = true;
+                                self.fallbackNonStream(userMsg, aiMsg, serverCid);
+                                return;
+                            }
+                            aiMsg.streaming = false;
+                            aiMsg.error = true;
+                            aiMsg.retryData = opts.regenerate
+                                ? { regenerate: true }
+                                : { message: userMsg ? userMsg.content : '' };
+                            if (!aiMsg.content) aiMsg.content = message || '抱歉，请求失败，请重试。';
+                            self.loading = false;
+                            self.streamClient = null;
+                            self.scrollToBottom();
+                            self.saveConversations();
+                        },
+                        onComplete: function() {
+                            // 服务端未发 done 即断流的兜底：有内容正常收尾，无内容标错显示重试
+                            if (requestId !== self.currentRequestId) return;
+                            if (aiMsg.streaming) {
+                                self.finishTurn(aiMsg, { stopped: !aiMsg.content });
+                            }
                         }
-                        self.scrollToBottom();
-                        self.saveConversations();
-                    }).catch(function(err) {
-                        if (requestId !== self.currentRequestId) return;
-                        assistantMsg.content = '抱歉，请求失败，请重试。';
-                        assistantMsg.streaming = false;
-                        assistantMsg.error = true;
-                        assistantMsg.retryData = { message: text, requestId: requestId };
-                        assistantMsg.renderedParts = [{ type: 'text', text: assistantMsg.content }];
-                        self.scrollToBottom();
-                    }).finally(function() {
-                        if (requestId === self.currentRequestId) self.loading = false;
                     });
                 },
-                retryMessage: function(msg) {
-                    if (msg.retryData) {
-                        var idx = this.messages.indexOf(msg);
-                        if (idx > 0) this.messages.splice(idx - 1, 2);
-                        this.inputText = msg.retryData.message;
-                        this.sendMessage();
+
+                /** 流式不可用时的非流式降级（点餐走 order-assistant，其余走通用 chat） */
+                fallbackNonStream: function(userMsg, aiMsg, serverCid) {
+                    var self = this;
+                    var text = userMsg.content;
+                    var promise = (this.currentScene === 'order_assistant')
+                        ? aiApi.orderAssistant(text, null, serverCid)
+                        : aiApi.chat(text, this.currentScene, serverCid);
+                    promise.then(function(res) {
+                        var payload = (res && res.code === 1) ? res.data : null;
+                        if (!payload) { throw new Error((res && res.msg) || '服务异常'); }
+                        aiMsg.content = payload.content || '抱歉，我没理解您的意思，换个说法试试？';
+                        aiMsg.dishes = (self.currentScene === 'order_assistant' && payload.dishes) ? payload.dishes : [];
+                        var meta = payload.data || {};
+                        var conv = self.getCurrentConversation();
+                        if (meta.conversationId) self.bindServerConversation(conv, meta.conversationId);
+                        self.finishTurn(aiMsg, { stopped: false });
+                    }).catch(function(e) {
+                        console.warn('[ai-assistant] 非流式降级失败:', e);
+                        aiMsg.content = '抱歉，请求失败，请重试。';
+                        aiMsg.streaming = false;
+                        aiMsg.error = true;
+                        aiMsg.retryData = { message: text };
+                        self.loading = false;
+                        self.streamClient = null;
+                        self.scrollToBottom();
+                        self.saveConversations();
+                    });
+                },
+
+                /** 用户点击停止 */
+                stopGenerate: function() {
+                    if (this.streamClient) {
+                        try { this.streamClient.stop(); } catch (e) { /* noop */ }
                     }
                 },
+
+                /** 统一收尾 AI 占位消息 */
+                finishTurn: function(aiMsg, opts) {
+                    opts = opts || {};
+                    aiMsg.streaming = false;
+                    aiMsg.stopped = !!opts.stopped;
+                    this.loading = false;
+                    this.streamClient = null;
+                    var conv = this.getCurrentConversation();
+                    if (conv) {
+                        conv.updatedAt = Date.now();
+                        conv.timeText = formatTime(Date.now());
+                    }
+                    this.scrollToBottom();
+                    this.saveConversations();
+                },
+
+                // ==================== 重试 / 重生成 / 复制 ====================
+                /** 错误气泡重试：原文重发或重新生成 */
+                retryMessage: function(msg) {
+                    if (!msg.retryData) return;
+                    var idx = this.messages.indexOf(msg);
+                    if (msg.retryData.regenerate) {
+                        if (idx >= 0) this.messages.splice(idx, 1);
+                        var aiMsg = window.AiChatCore.MessageFactory.createAssistantMessage();
+                        this.messages.push(aiMsg);
+                        this.loading = true;
+                        this.scrollToBottom();
+                        this.runStream(null, aiMsg, { regenerate: true, fallbackUsed: false });
+                        return;
+                    }
+                    var text = msg.retryData.message;
+                    // 删除失败 AI 消息与其用户消息，用原文重新发送（新 clientMsgId 走幂等）
+                    if (idx > 0) this.messages.splice(idx - 1, 2);
+                    this.inputText = text;
+                    this.sendMessage();
+                },
+                canRegenerate: function(msg) {
+                    if (this.loading) return false;
+                    var conv = this.getCurrentConversation();
+                    if (!conv || !conv.serverBacked) return false;
+                    return this.messages[this.messages.length - 1] === msg
+                        && msg.role === 'assistant' && !!msg.content;
+                },
+                /** 重新生成最后一条回复（服务端重放最后一条用户消息） */
+                regenerateMessage: function(msg) {
+                    if (this.loading || !this.canRegenerate(msg)) return;
+                    var idx = this.messages.indexOf(msg);
+                    this.messages.splice(idx, 1);
+                    var aiMsg = window.AiChatCore.MessageFactory.createAssistantMessage();
+                    this.messages.push(aiMsg);
+                    this.loading = true;
+                    this.scrollToBottom();
+                    this.runStream(null, aiMsg, { regenerate: true, fallbackUsed: false });
+                },
                 sendQuickTip: function(tip) {
+                    if (this.loading) return;
                     this.inputText = tip;
                     this.sendMessage();
                 },
 
                 // ==================== 推荐菜品 ====================
                 addToCart: function(dish) {
-                    var self = this;
                     var dishId = dish.dishId || dish.id || 0;
                     if (!dishId) {
                         vant.Notify({ type: 'warning', message: '菜品信息不完整' });
@@ -961,8 +1123,7 @@
                     $axios({ url: '/shopping-cart/add', method: 'post', data: payload })
                         .then(function(res) {
                             if (res && res.code === 1) {
-                                // 修改点(2026-09-18)：成功提示可点击直达结算页，补齐 AI 加购后的转化出口
-                                // （原仅一条自消失通知，用户需自行返回首页找购物车）
+                                // 成功提示可点击直达结算页，补齐 AI 加购后的转化出口
                                 var cartNotify = vant.Notify({
                                     type: 'success',
                                     message: '已添加「' + dish.name + '」到购物车，点击去结算',
@@ -984,18 +1145,19 @@
 
                 // ==================== 反馈 ====================
                 sendFeedback: function(msg, type) {
+                    if (!msg.dbMessageId) return;
                     msg.feedback = type;
-                    var self = this;
                     try {
                         if (typeof aiApi !== 'undefined' && aiApi.recordFeedback) {
                             aiApi.recordFeedback({
-                                messageId: msg.id,
-                                // 修改点(2026-09-18)：后端校验只接受 positive/negative，原直发 'good' 被 400 拒绝
+                                // 使用 done 事件回填的真实 messageId（原前端临时 id 后端无法关联）
+                                messageId: msg.dbMessageId,
+                                // 后端校验只接受 positive/negative（UI 本地状态用 good/bad）
                                 feedbackType: type === 'good' ? 'positive' : 'negative',
-                                scene: self.currentScene
-                            }).catch(function(e) { console.warn('[ai-assistant] recordFeedback 失败:', e) });
+                                scene: this.currentScene
+                            }).catch(function(e) { console.warn('[ai-assistant] recordFeedback 失败:', e); });
                         }
-                    } catch (e) { console.warn('[ai-assistant] recordFeedback 异常:', e) }
+                    } catch (e) { console.warn('[ai-assistant] recordFeedback 异常:', e); }
                     this.saveConversations();
                 },
 
@@ -1029,8 +1191,7 @@
                         try { this.recognition.stop(); } catch (e) { console.warn('语音停止异常:', e); }
                         this.isRecording = false;
                     } else {
-                        // 修改点：start() 为异步且可能抛 InvalidStateError（连点/上一次未结束），
-                        // try-catch 失败时复位录音态并提示，避免按钮卡在 recording 无响应
+                        // start() 为异步且可能抛 InvalidStateError（连点/上一次未结束），try-catch 防卡态
                         try {
                             this.recognition.start();
                             this.isRecording = true;
@@ -1044,10 +1205,15 @@
                 },
 
                 // ==================== 工具方法 ====================
-                getUserId: function() {
-                    if (this.userInfo && this.userInfo.id) return this.userInfo.id;
-                    var userId = sessionStorage.getItem('userId');
-                    return userId ? parseInt(userId) : null;
+                scheduleScroll: function() {
+                    var self = this;
+                    if (this._scrollQueued) return;
+                    this._scrollQueued = true;
+                    var raf = window.requestAnimationFrame || function(cb) { return setTimeout(cb, 60); };
+                    raf(function() {
+                        self._scrollQueued = false;
+                        self.scrollToBottom();
+                    });
                 },
                 scrollToBottom: function() {
                     var self = this;

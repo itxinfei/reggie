@@ -29,6 +29,28 @@
         },
 
         /**
+         * 流式对话端点（POST+SSE，由 AiChatCore.ChatClient 直接 fetch 消费）
+         */
+        streamUrl: '/api/ai/chat/stream',
+
+        /**
+         * 场景前端配置（欢迎语、快捷问题、能力开关；不含 system prompt）
+         * @param {string} scene - 场景标识（可选）
+         */
+        getSceneConfig: function(scene) {
+            return $axios.get('/api/ai/scene-config', {
+                params: scene ? { scene: scene } : {}
+            });
+        },
+
+        /**
+         * AI 服务状态（兼作 CSRF Token 预热请求）
+         */
+        getStatus: function() {
+            return $axios.get('/api/ai/status');
+        },
+
+        /**
          * 生成菜品描述
          */
         generateDishDesc: function(dishName, categoryName, ingredients) {
@@ -95,6 +117,24 @@
          */
         deleteConversation: function(conversationId) {
             return $axios.delete('/api/ai/conversations/' + conversationId);
+        },
+
+        /**
+         * 重命名对话（PATCH 局部更新）
+         * @param {string} conversationId - 会话ID
+         * @param {string} title - 新标题
+         */
+        renameConversation: function(conversationId, title) {
+            return $axios.patch('/api/ai/conversations/' + conversationId, { title: title });
+        },
+
+        /**
+         * 删除对话内单条消息（后端同步失效上下文缓存）
+         * @param {string} conversationId - 会话ID
+         * @param {number|string} messageId - 消息ID
+         */
+        deleteMessage: function(conversationId, messageId) {
+            return $axios.delete('/api/ai/conversations/' + conversationId + '/messages/' + messageId);
         },
 
         // ==================== 反馈 ====================

@@ -116,4 +116,30 @@ public interface AIChatService extends IService<AIConversation> {
      * @return 对话所属用户ID（未找到或已删除返回 null）
      */
     Long validateConversationOwnership(String conversationId);
+
+    // ==================== P1：身份双校验版本（EMPLOYEE/CUSTOMER） ====================
+
+    /** 创建带身份类型的新对话 */
+    AIConversation createConversation(Long userId, String actorType, String title, String scene);
+
+    /** 按身份类型获取对话列表 */
+    List<AIConversation> getUserConversations(Long userId, String actorType, int page, int pageSize);
+
+    /** 身份双校验获取消息历史 */
+    List<AIMessageRecord> getConversationMessages(String conversationId, Long userId, String actorType);
+
+    /** 身份双校验删除对话 */
+    void deleteConversation(String conversationId, Long userId, String actorType);
+
+    /** 身份双校验重命名对话 */
+    boolean renameConversation(String conversationId, Long userId, String actorType, String title);
+
+    /** 身份双校验删除单条消息（同时失效上下文缓存） */
+    boolean deleteMessage(String conversationId, Long messageId, Long userId, String actorType);
+
+    /** 身份双校验所有权：返回归属用户ID，不匹配返回 null */
+    Long validateConversationOwnership(String conversationId, Long userId, String actorType);
+
+    /** 按身份类型搜索对话 */
+    List<AIConversation> searchConversations(Long userId, String actorType, String keyword, int page, int pageSize);
 }

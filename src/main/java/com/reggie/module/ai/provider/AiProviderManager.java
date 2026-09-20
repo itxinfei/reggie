@@ -3,6 +3,7 @@ package com.reggie.module.ai.provider;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.module.ai.adapter.AiModelAdapter.StreamCallback;
+import com.reggie.module.ai.adapter.AbortableStreamCallback;
 import com.reggie.module.ai.adapter.AiModelAdapter;
 import com.reggie.module.ai.adapter.AnthropicAdapter;
 import com.reggie.module.ai.adapter.BaiduAdapter;
@@ -290,6 +291,10 @@ public class AiProviderManager {
         if (adapter.supportsStreaming()) {
             try {
                 String content = adapter.chatStream(messages, maxTokens, temperature, config, callback);
+                // 用户中止：安静返回，不降级、不补发错误事件（片段落库由服务层负责）
+                if (callback instanceof AbortableStreamCallback && ((AbortableStreamCallback) callback).isAborted()) {
+                    return null;
+                }
                 if (content != null && !content.isEmpty()) {
                     return content;
                 }
@@ -297,6 +302,11 @@ public class AiProviderManager {
                 // 不直接报「模型返回了空响应」，降级为非流式重试
                 log.warn("AI流式返回空内容，降级为非流式重试: provider={}", config.getProviderCode());
             } catch (Exception e) {
+                // 用户主动中止导致的 IO 异常不降级
+                if (callback instanceof AbortableStreamCallback && ((AbortableStreamCallback) callback).isAborted()) {
+                    log.info("流式被用户中止，跳过分块降级: provider={}", config.getProviderCode());
+                    return null;
+                }
                 // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.warn("真流式失败，降级为分块流式: provider={}", config.getProviderCode(), e);
             }
@@ -308,6 +318,10 @@ public class AiProviderManager {
             String content = response.getContent();
             String[] chunks = splitIntoChunks(content, 20);
             for (int i = 0; i < chunks.length; i++) {
+                // 中止链路：分块降级期间用户停止则立即退出（不发 isLast，由服务层落 stopped）
+                if (callback instanceof AbortableStreamCallback && ((AbortableStreamCallback) callback).isAborted()) {
+                    return null;
+                }
                 callback.onToken(chunks[i], i == chunks.length - 1);
                 try { Thread.sleep(30); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
             }
