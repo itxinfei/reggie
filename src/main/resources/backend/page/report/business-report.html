@@ -9,6 +9,7 @@
 
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260915c" />
   <style>
     /* 8.5.1 经营报表四合一：总览 / 销售明细 / 时段分布 / 菜品排行 —— 全部引用 tokens.css 设计令牌 */
     .br-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
@@ -25,11 +26,8 @@
     .quick-btn.active { background: var(--color-brand-500); border-color: var(--color-brand-500); color: var(--text-on-brand); font-weight: 500 }
     .br-datebar__range { margin-left: var(--space-1) }
 
-    /* 图表面板 */
-    .chart-panel { background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); padding: var(--space-4); margin-bottom: var(--space-4) }
-    .chart-panel__title { font-size: var(--font-size-lg); font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-3);
-      display: flex; align-items: center; gap: 8px }
-    .chart-box { width: 100%; height: 260px }
+    /* 图表面板统一走 <chart-panel> 组件（js/chart-panel.js + styles/chart-panel.css），
+       本页不再私有 .chart-panel/.chart-panel__title/.chart-box 样式 */
     .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4) }
     @media (max-width: 1200px) { .charts-row { grid-template-columns: 1fr } }
 
@@ -76,14 +74,17 @@
         <!-- ===== Tab1 总览：KPI 卡 + 销售趋势图 ===== -->
         <el-tab-pane label="总览" name="overview">
           <stat-cards :cards="overviewCards" :loading="overviewLoading"></stat-cards>
-          <div class="chart-panel">
-            <div class="chart-panel__title"><i class="ri-line-chart-line" aria-hidden="true"></i> 销售趋势（{{ dateLabel }}）</div>
+          <chart-panel>
+            <template #title>
+              <i class="ri-line-chart-line" aria-hidden="true"></i>
+              <span>销售趋势（{{ dateLabel }}）</span>
+            </template>
             <div v-if="trendData.labels && trendData.labels.length" class="chart-box" id="trendChart"></div>
             <div v-else class="empty-state">
               <div class="empty-state__icon"><i class="ri-bar-chart-box-line" aria-hidden="true"></i></div>
               <div>当前日期范围内暂无销售数据</div>
             </div>
-          </div>
+          </chart-panel>
         </el-tab-pane>
 
         <!-- ===== Tab2 销售明细 ===== -->
@@ -104,14 +105,12 @@
         <!-- ===== Tab3 时段分布 ===== -->
         <el-tab-pane label="时段分布" name="timeslot">
           <div class="charts-row">
-            <div class="chart-panel">
-              <div class="chart-panel__title"><i class="ri-bar-chart-2-line" aria-hidden="true"></i> 各时段订单与营业额</div>
+            <chart-panel title="各时段订单与营业额" icon="ri-bar-chart-2-line">
               <div class="chart-box" id="slotChart"></div>
-            </div>
-            <div class="chart-panel">
-              <div class="chart-panel__title"><i class="ri-pie-chart-2-line" aria-hidden="true"></i> 订单占比</div>
+            </chart-panel>
+            <chart-panel title="订单占比" icon="ri-pie-chart-2-line">
               <div class="chart-box" id="slotPieChart"></div>
-            </div>
+            </chart-panel>
           </div>
           <crud-table
             :data="slotRows"
@@ -131,10 +130,13 @@
 
         <!-- ===== Tab4 菜品排行 ===== -->
         <el-tab-pane label="菜品排行" name="ranking">
-          <div class="chart-panel">
-            <div class="chart-panel__title"><i class="ri-trophy-line" aria-hidden="true"></i> 热销菜品 TOP {{ Math.min(10, rankingRows.length) }}</div>
+          <chart-panel>
+            <template #title>
+              <i class="ri-trophy-line" aria-hidden="true"></i>
+              <span>热销菜品 TOP {{ Math.min(10, rankingRows.length) }}</span>
+            </template>
             <div class="chart-box" id="rankChart"></div>
-          </div>
+          </chart-panel>
           <crud-table
             v-if="rankingLoading || rankingRows.length > 0"
             :data="rankingRows"
@@ -168,6 +170,7 @@
   <script src="../../api/report.js?v=20260915c"></script>
   <script src="../../api/report-enhanced.js?v=20260915c"></script>
   <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../js/chart-panel.js?v=20260915c"></script>
   <script>
     // 8.5.1 经营报表四合一：总览/销售明细/时段分布/菜品排行，日期快捷联动全表
     new Vue({
@@ -372,12 +375,21 @@
             } else {
               ReggieUI.error(res.msg || '加载失败')
             }
-            // 合并同比/环比
-            var momData = (results[1] && String(results[1].code) === '1') ? results[1].data || {} : {}
-            var yoyData = (results[2] && String(results[2].code) === '1') ? results[2].data || {} : {}
+            // 合并同比/环比：附属数据失败不阻断主图，合并为一条轻提示
+            var momOk = results[1] && String(results[1].code) === '1'
+            var yoyOk = results[2] && String(results[2].code) === '1'
+            var momData = momOk ? (results[1].data || {}) : {}
+            var yoyData = yoyOk ? (results[2].data || {}) : {}
             self.comparisonData = { mom: momData, yoy: yoyData }
+            if (!momOk || !yoyOk) {
+              var auxFail = []
+              if (!momOk) auxFail.push('环比')
+              if (!yoyOk) auxFail.push('同比')
+              ReggieUI.warning(auxFail.join('、') + '对比数据暂不可用')
+            }
           } catch (e) {
             console.warn('加载销售趋势失败:', e)
+            ReggieUI.error('销售趋势数据加载失败，请稍后重试')
           } finally {
             self.overviewLoading = false
             self.detailLoading = false
