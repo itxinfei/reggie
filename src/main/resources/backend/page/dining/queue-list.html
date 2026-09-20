@@ -170,8 +170,9 @@
         <div class="empty-state__icon"><i class="ri-file-list-3-line" aria-hidden="true"></i></div>
         <div>暂无排队记录</div>
         <div class="empty-state__desc">点击上方"取号"为顾客创建排队记录</div>
+      </div>
       </main>
-    </div>
+    <!-- 挂载点 #queue-app 的闭合在两个弹窗之后（见文件尾），确保弹窗在 Vue 编译范围内 -->
 
     <!-- 取号弹窗 -->
     <crud-dialog :show-submit="true" :show-cancel="true"

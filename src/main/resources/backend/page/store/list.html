@@ -178,8 +178,9 @@
                     <el-button type="primary" size="small" style="margin-top:12px;" @click="openCreateDialog">创建第一家门店</el-button>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
+    <!-- #app（L68）的闭合在全部弹窗之后，见文件尾，确保弹窗在 Vue 编译范围内 -->
 
     <!-- ===== 新建/编辑门店对话框 ===== -->
     <crud-dialog :show-submit="true" :show-cancel="true"
@@ -390,10 +391,10 @@
             <el-button size="small" type="primary" @click="doSync('dishes')" :loading="syncing.dishes" icon="ri-price-tag-line">同步菜品</el-button>
             <el-button size="small" type="success" @click="doSync('categories')" :loading="syncing.categories" icon="ri-menu-line">同步分类</el-button>
             <el-button size="small" type="warning" @click="doSync('setmeals')" :loading="syncing.setmeals" icon="ri-grid-line">同步套餐</el-button>
-        </main>
+        </div>
         <el-alert
             v-if="syncResult"
-            :title='同步完成：成功 ' + syncResult.synced + ' 条，失败 ' + syncResult.failed + ' 条'
+            :title="'同步完成：成功 ' + syncResult.synced + ' 条，失败 ' + syncResult.failed + ' 条'"
             :type="syncResult.failed > 0 ? 'warning' : 'success'"
             :closable="false"
             style="margin-top:14px;">

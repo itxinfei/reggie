@@ -12,7 +12,14 @@
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <style>
-    /* 页面样式已通过 main.css 统一管理 */
+    /* 详情字段两列栅格：本构建未注册 el-descriptions（2.13+ 组件），手写栅格替代 */
+    .usr-detail { display: flex; flex-wrap: wrap; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; }
+    .usr-detail__item { display: flex; width: 50%; min-width: 0; border-bottom: 1px solid var(--border-default); }
+    .usr-detail__item:nth-child(odd) { border-right: 1px solid var(--border-default); }
+    .usr-detail__item.usr-detail__item--full { width: 100%; border-right: 0; }
+    .usr-detail__label { flex: 0 0 84px; padding: 8px 12px; background: var(--bg-page); color: var(--text-secondary); font-size: var(--font-size-sm); }
+    .usr-detail__value { flex: 1; min-width: 0; padding: 8px 12px; color: var(--text-primary); font-size: var(--font-size-sm); word-break: break-word; }
+    .usr-detail__avatar { width: 80px; height: 80px; border-radius: 50%; }
   </style>
 </head>
 <body>
@@ -68,16 +75,6 @@
           <span v-if="row.idNumber">{{ maskIdNumber(row.idNumber) }}</span>
           <span v-else>-</span>
         </template>
-        <template #col-avatar="{ row }">
-          <el-image
-            v-if="row.avatar"
-            style="width: 50px; height: 50px; border-radius: 50%;"
-            :src="row.avatar"
-            fit="cover"
-            alt="用户头像"
-          ></el-image>
-          <span v-else>-</span>
-        </template>
         <template #col-status="{ row }">
           <el-tag :type="row.status == 1 ? 'success' : 'danger'" size="small">
             {{ row.status == 1 ? '正常' : '禁用' }}
@@ -125,22 +122,43 @@
       size="md"
       @close="detailDialog.visible = false"
     >
-      <el-descriptions :column="2" border size="medium">
-        <el-descriptions-item label="姓名">{{ detailDialog.data.name || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="手机号">{{ detailDialog.data.phone || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="性别">{{ detailDialog.data.sex === '1' ? '男' : detailDialog.data.sex === '0' ? '女' : '未知' }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="detailDialog.data.status == 1 ? 'success' : 'danger'" size="small">
-            {{ detailDialog.data.status == 1 ? '正常' : '禁用' }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="身份证号" :span="2">{{ detailDialog.data.idNumber || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="头像" :span="2">
-          <el-image v-if="detailDialog.data.avatar" :src="detailDialog.data.avatar" fit="cover" style="width: 80px; height: 80px; border-radius: 50%;"></el-image>
-          <span v-else>-</span>
-        </el-descriptions-item>
-        <el-descriptions-item label="注册时间" :span="2">{{ detailDialog.data.createTime || '-' }}</el-descriptions-item>
-      </el-descriptions>
+      <div class="usr-detail">
+        <div class="usr-detail__item">
+          <span class="usr-detail__label">姓名</span>
+          <span class="usr-detail__value">{{ detailDialog.data.name || '-' }}</span>
+        </div>
+        <div class="usr-detail__item">
+          <span class="usr-detail__label">手机号</span>
+          <span class="usr-detail__value">{{ detailDialog.data.phone || '-' }}</span>
+        </div>
+        <div class="usr-detail__item">
+          <span class="usr-detail__label">性别</span>
+          <span class="usr-detail__value">{{ detailDialog.data.sex === '1' ? '男' : detailDialog.data.sex === '0' ? '女' : '未知' }}</span>
+        </div>
+        <div class="usr-detail__item">
+          <span class="usr-detail__label">状态</span>
+          <span class="usr-detail__value">
+            <el-tag :type="detailDialog.data.status == 1 ? 'success' : 'danger'" size="small">
+              {{ detailDialog.data.status == 1 ? '正常' : '禁用' }}
+            </el-tag>
+          </span>
+        </div>
+        <div class="usr-detail__item usr-detail__item--full">
+          <span class="usr-detail__label">身份证号</span>
+          <span class="usr-detail__value">{{ detailDialog.data.idNumber ? maskIdNumber(detailDialog.data.idNumber) : '-' }}</span>
+        </div>
+        <div class="usr-detail__item usr-detail__item--full">
+          <span class="usr-detail__label">头像</span>
+          <span class="usr-detail__value">
+            <el-image v-if="detailDialog.data.avatar" :src="detailDialog.data.avatar" fit="cover" class="usr-detail__avatar"></el-image>
+            <span v-else>-</span>
+          </span>
+        </div>
+        <div class="usr-detail__item usr-detail__item--full">
+          <span class="usr-detail__label">注册时间</span>
+          <span class="usr-detail__value">{{ detailDialog.data.createTime || '-' }}</span>
+        </div>
+      </div>
     </crud-dialog>
   </div>
 

@@ -8,6 +8,15 @@
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260916" />
   <link rel="stylesheet" href="../../styles/main.css?v=20260916" />
+  <style>
+    /* 详情字段两列栅格：本构建未注册 el-descriptions（2.13+ 组件），手写栅格替代 */
+    .rsv-detail { display: flex; flex-wrap: wrap; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; }
+    .rsv-detail__item { display: flex; width: 50%; min-width: 0; border-bottom: 1px solid var(--border-default); }
+    .rsv-detail__item:nth-child(odd) { border-right: 1px solid var(--border-default); }
+    .rsv-detail__item.rsv-detail__item--full { width: 100%; border-right: 0; }
+    .rsv-detail__label { flex: 0 0 84px; padding: 8px 12px; background: var(--bg-page); color: var(--text-secondary); font-size: var(--font-size-sm); }
+    .rsv-detail__value { flex: 1; min-width: 0; padding: 8px 12px; color: var(--text-primary); font-size: var(--font-size-sm); word-break: break-word; }
+  </style>
 </head>
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
@@ -132,21 +141,48 @@
       :visible.sync="detailVisible"
       size="md"
     >
-      <el-descriptions :column="2" border size="small" v-if="detailData">
-        <el-descriptions-item label="客户姓名">{{ detailData.customerName }}</el-descriptions-item>
-        <el-descriptions-item label="手机号">{{ detailData.phone }}</el-descriptions-item>
-        <el-descriptions-item label="预订时间">{{ detailData.reservedTime }}</el-descriptions-item>
-        <el-descriptions-item label="人数">{{ detailData.seatCount || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="桌台">{{ detailData.tableName || '未指定' }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="statusTagType(detailData.status)" size="small">
-            {{ statusLabel(detailData.status) }}
-          </el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="备注" :span="2">{{ detailData.remark || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ detailData.createdTime || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="更新时间">{{ detailData.updateTime || '-' }}</el-descriptions-item>
-      </el-descriptions>
+      <div v-if="detailData" class="rsv-detail">
+        <div class="rsv-detail__item">
+          <span class="rsv-detail__label">客户姓名</span>
+          <span class="rsv-detail__value">{{ detailData.customerName || '-' }}</span>
+        </div>
+        <div class="rsv-detail__item">
+          <span class="rsv-detail__label">手机号</span>
+          <span class="rsv-detail__value">{{ detailData.phone || '-' }}</span>
+        </div>
+        <div class="rsv-detail__item">
+          <span class="rsv-detail__label">预订时间</span>
+          <span class="rsv-detail__value">{{ detailData.reservedTime || '-' }}</span>
+        </div>
+        <div class="rsv-detail__item">
+          <span class="rsv-detail__label">人数</span>
+          <span class="rsv-detail__value">{{ detailData.seatCount || '-' }} 人</span>
+        </div>
+        <div class="rsv-detail__item">
+          <span class="rsv-detail__label">桌台</span>
+          <span class="rsv-detail__value">{{ detailData.tableName || '未指定' }}</span>
+        </div>
+        <div class="rsv-detail__item">
+          <span class="rsv-detail__label">状态</span>
+          <span class="rsv-detail__value">
+            <el-tag :type="statusTagType(detailData.status)" size="small">
+              {{ statusLabel(detailData.status) }}
+            </el-tag>
+          </span>
+        </div>
+        <div class="rsv-detail__item rsv-detail__item--full">
+          <span class="rsv-detail__label">备注</span>
+          <span class="rsv-detail__value">{{ detailData.remark || '-' }}</span>
+        </div>
+        <div class="rsv-detail__item">
+          <span class="rsv-detail__label">创建时间</span>
+          <span class="rsv-detail__value">{{ detailData.createdTime || '-' }}</span>
+        </div>
+        <div class="rsv-detail__item">
+          <span class="rsv-detail__label">更新时间</span>
+          <span class="rsv-detail__value">{{ detailData.updateTime || '-' }}</span>
+        </div>
+      </div>
     </crud-dialog>
   </div>
 

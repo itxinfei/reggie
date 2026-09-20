@@ -65,7 +65,7 @@
       <table-bar
         :search-items="searchConfig"
         :actions="actionConfig"
-        @search="loadData"
+        @search="onBarSearch"
         @reset="reset"
         @action="onAction"
       >
@@ -173,11 +173,7 @@
       },
       created: function() {
         const self = this;
-        const now = new Date();
-        const first = new Date(now.getFullYear(), now.getMonth(), 1);
-        const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        var fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-        self.dateRange = [fmt(first), fmt(last)];
+        self.dateRange = self.monthRange();
         // 修改点：加载分类列表供筛选下拉使用
         categoryList().then(function(res) {
           if (res && res.code === 1 && res.data) {
@@ -214,6 +210,19 @@
         if (this.trendChart) { try { this.trendChart.dispose(); } catch(e) {} }
       },
       methods: {
+        // 默认查询区间：本月第一天 ~ 本月最后一天
+        monthRange: function() {
+          const now = new Date();
+          const fmt = function(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+          return [fmt(new Date(now.getFullYear(), now.getMonth(), 1)),
+                  fmt(new Date(now.getFullYear(), now.getMonth() + 1, 0))];
+        },
+        // table-bar 搜索桥接：组件内部 searchValues 不与页面 data 双向绑定，
+        // 必须在此把分类参数同步回 this.categoryId，否则筛选永远不生效
+        onBarSearch: function(params) {
+          this.categoryId = params && params.categoryId ? params.categoryId : null;
+          this.loadData();
+        },
         onAction: function(payload) {
           if (payload.key === 'export') {
             this.handleExport();
@@ -376,8 +385,11 @@
           this.$nextTick(function() { if (this.chart) { this.chart.resize(); } }.bind(this));
         },
         reset: function() {
-          this.dateRange = []; this.limit = 10; this.tableData = [];
-          if (this.chart) this.chart.clear(); if (this.trendChart) this.trendChart.clear();
+          // 恢复首屏默认条件（本月区间、Top10、全部分类）后重新查询，避免重置后页面留空
+          this.dateRange = this.monthRange();
+          this.limit = 10;
+          this.categoryId = null;
+          this.loadData();
         },
         // 修改点：改为导出当前表格数据生成 CSV（此前误调日报接口且扩展名 .csv 内容为 xlsx）
         handleExport: function() {

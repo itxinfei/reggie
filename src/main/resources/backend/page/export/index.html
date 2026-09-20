@@ -159,12 +159,14 @@
                         <span class="filter-label">订单状态</span>
                         <!-- 修改点(2026-09-15)：与全站统一为 el-select，替换原生 select -->
                         <el-select v-model="orderFilter.status" size="small" clearable placeholder="全部状态" style="width:160px">
+                            <!-- 与后端 OrderStatus 严格一致（1 基）：1待付款/2待接单/3配送中/4已完成/5已取消/6已退款 -->
                             <el-option label="全部状态" value=""></el-option>
+                            <el-option label="待付款" value="1"></el-option>
                             <el-option label="待接单" value="2"></el-option>
-                            <el-option label="已接单" value="3"></el-option>
-                            <el-option label="派送中" value="4"></el-option>
-                            <el-option label="已完成" value="5"></el-option>
-                            <el-option label="已取消" value="6"></el-option>
+                            <el-option label="配送中" value="3"></el-option>
+                            <el-option label="已完成" value="4"></el-option>
+                            <el-option label="已取消" value="5"></el-option>
+                            <el-option label="已退款" value="6"></el-option>
                         </el-select>
                     </div>
                 </div>
