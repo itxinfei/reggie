@@ -674,16 +674,18 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* 横向 padding 必须为 0：Element 的 .cell 自带左右 10px 内距，这里再加 20px 会叠加成
+   ~60px，70px 窄列内容区只剩几 px（“瓶”显示成“瓶..”）。纵向保留紧凑档。 */
 .el-table th {
   background: var(--bg-subtle) !important;
   color: var(--text-primary);
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-sm);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) 0;
 }
 
 .el-table td {
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) 0;
   border-bottom: var(--border-width-thin) var(--border-style-solid) var(--border-color-light);
   transition: var(--transition-color);
 }

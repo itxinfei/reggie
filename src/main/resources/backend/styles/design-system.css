@@ -253,25 +253,27 @@ a.breadcrumb__item:hover,
 .btn-warning-text:hover { color: var(--color-warning-dark) !important; }
 
 /* ========== 7. 品牌色按钮对齐（Element UI → token，主色=金） ========== */
-/* 主按钮：金色底 + 深色字（满足金色背景上 WCAG AA 对比度） */
-.el-button--primary {
+/* 主按钮：金色底 + 深色字（满足金色背景上 WCAG AA 对比度）
+   选择器写 .el-button.el-button--primary（0-2-0）：common-el.css 的基础块 .el-button
+   （白底灰字，0-1-0）加载更晚，同特异性会晚者胜导致金色失效，必须压一级 */
+.el-button.el-button--primary {
   background-color: var(--color-brand-500);
   border-color: var(--color-brand-500);
   color: var(--text-on-brand);
 }
-.el-button--primary:hover,
-.el-button--primary:focus {
+.el-button.el-button--primary:hover,
+.el-button.el-button--primary:focus {
   background-color: var(--color-brand-400);
   border-color: var(--color-brand-400);
   color: var(--text-on-brand);
 }
-.el-button--primary:active {
+.el-button.el-button--primary:active {
   background-color: var(--color-brand-600);
   border-color: var(--color-brand-600);
   color: var(--text-on-brand);
 }
-.el-button--primary.is-disabled,
-.el-button--primary.is-disabled:hover {
+.el-button.el-button--primary.is-disabled,
+.el-button.el-button--primary.is-disabled:hover {
   background-color: var(--color-brand-200);
   border-color: var(--color-brand-200);
   color: var(--color-brand-800);

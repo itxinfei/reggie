@@ -72,14 +72,8 @@
       font-size: var(--font-size-base); font-weight: 500; color: var(--text-primary);
     }
     .detail-sub__count { margin-left: 2px; font-weight: 400; font-size: var(--font-size-sm, 12px); color: var(--text-muted); }
-    /* body 表强制 fixed：common-el.css 只给 .el-table__header 设了 table-layout:fixed，body 表为 auto，
-       短内容列（单位）会被按内容压缩触发省略号；本弹窗两表列宽已按容器总宽精确声明，fixed 后严格按声明渲染 */
-    .detail-dialog__table .el-table__body { table-layout: fixed; }
-    /* 密集网格收窄单元格外距：unified-components 给 td/th 加了 20px 横向 padding，与 .cell 自带 10px 内距
-       叠加后窄列文本被省略号截断；弹窗表格改由 .cell 内距留白（与 common-el 复刻的 Element 默认节奏一致） */
-    .detail-dialog__table.el-table th,
-    .detail-dialog__table.el-table td { padding-left: 0; padding-right: 0; }
-    /* nowrap：窄列（单位/数量/单价/小计）表头与数字禁止折行；收货情况列的副文本是 block，仍独占一行 */
+    /* 弹窗密集数字列：表头与数字禁止折行（body 表 fixed、th/td 横向 padding 已在全站公共样式统一，无需局部免疫）；
+       收货情况列的副文本是 block，仍独占一行 */
     .detail-dialog__table .cell { font-variant-numeric: tabular-nums; white-space: nowrap; }
     .pd-amount { font-weight: 600; color: var(--text-primary); }
     /* 收货情况：主状态 + 部分收货时的「待收 N」副行 */
@@ -143,24 +137,6 @@
     }
     .rx-sum { font-size: var(--font-size-sm, 12px); color: var(--text-secondary); }
     .rx-sum b { color: var(--color-brand-700); font-size: var(--font-size-base); font-variant-numeric: tabular-nums; margin: 0 2px; }
-    /* 主按钮保金色：common-el.css 的 .el-button 基础块（白底灰字）与 design-system.css 的
-       .el-button--primary（金底深字）特异性相同且加载更晚，金色被覆盖；此处加 .detail-footer 提一级特异性收回 */
-    .detail-footer .el-button--primary {
-      background-color: var(--color-brand-500);
-      border-color: var(--color-brand-500);
-      color: var(--text-on-brand);
-    }
-    .detail-footer .el-button--primary:hover,
-    .detail-footer .el-button--primary:focus {
-      background-color: var(--color-brand-400);
-      border-color: var(--color-brand-400);
-      color: var(--text-on-brand);
-    }
-    .detail-footer .el-button--primary:active {
-      background-color: var(--color-brand-600);
-      border-color: var(--color-brand-600);
-      color: var(--text-on-brand);
-    }
 </style>
 </head>
 <body>
