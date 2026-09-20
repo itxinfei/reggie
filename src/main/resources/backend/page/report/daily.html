@@ -511,13 +511,12 @@
           return y + '-' + m + '-' + d
         },
 
-        // table-bar @reset — 重置日期到今天
+        // table-bar @reset — 恢复首屏默认条件（近7天）后重新查询，与首屏口径对齐
         onTableReset: function() {
           const today = new Date()
-          const y = today.getFullYear()
-          const m = String(today.getMonth() + 1).padStart(2, '0')
-          const d = String(today.getDate()).padStart(2, '0')
-          this.queryDate = [y + '-' + m + '-' + d, y + '-' + m + '-' + d]
+          const day7 = new Date(today)
+          day7.setDate(day7.getDate() - 6)
+          this.queryDate = [this.formatDate(day7), this.formatDate(today)]
           this.loadData()
         },
         onDateChange(val) {
