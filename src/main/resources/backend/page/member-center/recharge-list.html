@@ -77,11 +77,11 @@
         @size-change="onSizeChange"
       >
         <template #col-amount="{ row }">
-          <span class="ds-money--gold">￥{{ formatMoney(row.amount) }}</span>
+          <span class="ds-money--gold">¥{{ formatMoney(row.amount) }}</span>
         </template>
         <template #col-giftAmount="{ row }">
           <span :class="Number(row.giftAmount)>0 ? 'ds-money--success' : 'ds-money--muted'">
-            ￥{{ formatMoney(row.giftAmount) }}
+            ¥{{ formatMoney(row.giftAmount) }}
           </span>
         </template>
         <template #col-paymentMethod="{ row }">
@@ -107,7 +107,7 @@
             <div class="recharge-member">
               <i class="ri-wallet-3-line" aria-hidden="true"></i>
               <span><b>{{ rechargeMember.name }}</b>（{{ rechargeMember.phone }}）</span>
-              <span>当前余额：<b style="color:var(--color-success)">￥{{ formatMoney(rechargeMember.balance) }}</b></span>
+              <span>当前余额：<b style="color:var(--color-success)">¥{{ formatMoney(rechargeMember.balance) }}</b></span>
             </div>
           </el-form-item>
           <el-form-item label="充值金额：" prop="amount">
@@ -194,10 +194,10 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: '总额', icon: 'ri-money-cny-circle-line', label: '累计充值总额', value: '￥' + self.fmtMoney(self.stats.totalAmount), color: 'warning' },
-            { key: '今日', icon: 'ri-calendar-check-line', label: '今日充值', value: '￥' + self.fmtMoney(self.stats.todayAmount), color: 'success' },
-            { key: '本月', icon: 'ri-calendar-line', label: '本月充值', value: '￥' + self.fmtMoney(self.stats.monthAmount), color: 'primary' },
-            { key: '平均', icon: 'ri-bar-chart-2-line', label: '平均单笔充值', value: '￥' + self.fmtMoney(self.stats.avgAmount), color: 'info' }
+            { key: '总额', icon: 'ri-money-cny-circle-line', label: '累计充值总额', value: '¥' + self.fmtMoney(self.stats.totalAmount), color: 'warning' },
+            { key: '今日', icon: 'ri-calendar-check-line', label: '今日充值', value: '¥' + self.fmtMoney(self.stats.todayAmount), color: 'success' },
+            { key: '本月', icon: 'ri-calendar-line', label: '本月充值', value: '¥' + self.fmtMoney(self.stats.monthAmount), color: 'primary' },
+            { key: '平均', icon: 'ri-bar-chart-2-line', label: '平均单笔充值', value: '¥' + self.fmtMoney(self.stats.avgAmount), color: 'info' }
           ]
         }
       },

@@ -65,7 +65,7 @@
       <!-- 累计采购额列 -->
       <template #col-totalPurchaseAmount="{ row }">
         <span v-if="row.totalPurchaseAmount != null">
-          ￥{{ formatMoney(row.totalPurchaseAmount) }}
+          ¥{{ formatMoney(row.totalPurchaseAmount) }}
           <span style="color:var(--text-muted);font-size:var(--font-size-xs);margin-left:2px;" v-if="row.purchaseCount">/ {{ row.purchaseCount }} 单</span>
         </span>
         <span v-else style="color:var(--text-muted);">-</span>
@@ -138,7 +138,7 @@
     <el-table v-else :data="purchaseList" stripe border size="small" v-loading="purchaseLoading">
       <el-table-column prop="orderNo" label="采购单号" min-width="160" align="center"></el-table-column>
       <el-table-column prop="totalAmount" label="金额" width="110" align="center">
-        <template slot-scope="s">￥{{ formatMoney(s.row.totalAmount) }}</template>
+        <template slot-scope="s">¥{{ formatMoney(s.row.totalAmount) }}</template>
       </el-table-column>
       <el-table-column prop="status" label="状态" width="110" align="center">
         <template slot-scope="s">

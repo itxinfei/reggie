@@ -65,7 +65,7 @@
           {{ formatDiningType(row.source) }}
         </template>
         <template #col-amount="{ row }">
-          <span>￥{{ formatMoney(row.amount) }}</span>
+          <span>¥{{ formatMoney(row.amount) }}</span>
         </template>
         <template #actions="{ row }">
           <el-button type="text" @click="goDetail(row)" class="btn-view">查看</el-button>
@@ -126,7 +126,7 @@
                     <span class="od-item-qty">x {{ item.number }}</span>
                   </div>
                 </div>
-                <div class="od-item-amount">￥{{ Number(item.amount).toFixed(2) }}</div>
+                <div class="od-item-amount">¥{{ Number(item.amount).toFixed(2) }}</div>
               </div>
             </div>
             <div v-else class="od-empty">暂无菜品明细</div>
@@ -138,16 +138,16 @@
               <div class="od-card-title">金额汇总</div>
               <div class="od-amount-row">
                 <span>商品金额</span>
-                <span>￥{{ formatMoney(goodsTotal) }}</span>
+                <span>¥{{ formatMoney(goodsTotal) }}</span>
               </div>
               <div v-if="Number(diaForm.amount) - goodsTotal !== 0" class="od-amount-row">
                 <span>其他费用</span>
                 <span>{{ (Number(diaForm.amount) - goodsTotal) > 0 ? '+' : '-' }}
-                  ￥{{ formatMoney(Math.abs(Number(diaForm.amount) - goodsTotal)) }}</span>
+                  ¥{{ formatMoney(Math.abs(Number(diaForm.amount) - goodsTotal)) }}</span>
               </div>
               <div class="od-amount-total">
                 <span>实付金额</span>
-                <span>￥{{ formatMoney(diaForm.amount) }}</span>
+                <span>¥{{ formatMoney(diaForm.amount) }}</span>
               </div>
             </div>
 
@@ -195,7 +195,7 @@
           <span class="label">订单号：</span><span class="des">{{ refundForm.number }}</span>
         </div>
         <div class="item-box">
-          <span class="label">订单金额：</span><span class="des des-danger">￥{{ refundForm.amount }}</span>
+          <span class="label">订单金额：</span><span class="des des-danger">¥{{ refundForm.amount }}</span>
         </div>
         <div class="item-box">
           <span class="label">退款金额：</span>
@@ -203,7 +203,7 @@
         </div>
         <div class="item-box">
           <span class="label">可退上限：</span>
-          <span class="des des-danger">￥{{ refundForm.maxAmount }}</span>
+          <span class="des des-danger">¥{{ refundForm.maxAmount }}</span>
         </div>
         <div class="item-box">
           <span class="label">退款原因：</span>
@@ -534,7 +534,7 @@
           if (!self.refundForm.amount || parseFloat(self.refundForm.amount) <= 0) { ReggieUI.warning('请输入有效的退款金额'); return }
           // 修改点：前端硬限制退款金额不超过可退上限，避免用户误输入超限金额
           if (parseFloat(self.refundForm.amount) > parseFloat(self.refundForm.maxAmount)) {
-            ReggieUI.warning('退款金额不能超过可退上限 ￥' + self.refundForm.maxAmount)
+            ReggieUI.warning('退款金额不能超过可退上限 ¥' + self.refundForm.maxAmount)
             return
           }
           let reason = self.refundForm.reasonType
@@ -545,7 +545,7 @@
           }
           // 修改点：退款为资金敏感操作，ReggieUI.confirm 二次确认
           try {
-            await ReggieUI.confirm('确认向用户退款 ￥' + self.refundForm.amount + '？退款后不可撤销。', '订单退款确认', { confirmButtonText: '确认退款', cancelButtonText: '再想想', type: 'warning' })
+            await ReggieUI.confirm('确认向用户退款 ¥' + self.refundForm.amount + '？退款后不可撤销。', '订单退款确认', { confirmButtonText: '确认退款', cancelButtonText: '再想想', type: 'warning' })
           } catch (canceled) { return }
           self.refundLoading = true
           try {

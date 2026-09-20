@@ -80,7 +80,7 @@
         aria-label="时段分布数据"
       >
         <template #col-ratio="{ row }"><span>{{ calcPercent(row.count) }}%</span></template>
-        <template #col-amount="{ row }"><span>￥{{ formatMoney(row.amount) }}</span></template>
+        <template #col-amount="{ row }"><span>¥{{ formatMoney(row.amount) }}</span></template>
         <template #col-heat="{ row }">
           <el-progress :percentage="calcPercent(row.count)" :show-text="true"
             :stroke-width="12" :format="function(p) { return p + '%'; }"

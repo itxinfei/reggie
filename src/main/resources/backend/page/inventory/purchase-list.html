@@ -193,7 +193,6 @@
         :actions-width="320"
         @page-change="onPageChange"
         @size-change="onSizeChange">
-        <template #col-totalAmount="{ row }">￥{{ (row.totalAmount || 0).toString() }}</template>
         <template #col-status="{ row }">
           <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
         </template>
@@ -340,7 +339,7 @@
             <template slot-scope="scope">{{ fmtNum(scope.row.qty) }}</template>
           </el-table-column>
           <el-table-column label="单价(元)" width="120" align="center" :header-align="'center'">
-            <template slot-scope="scope">￥{{ fmtMoney(scope.row.unitPrice) }}</template>
+            <template slot-scope="scope">¥{{ fmtMoney(scope.row.unitPrice) }}</template>
           </el-table-column>
           <el-table-column label="收货情况" width="140" align="center" :header-align="'center'">
             <template slot-scope="scope">
@@ -355,12 +354,12 @@
             </template>
           </el-table-column>
           <el-table-column label="小计(元)" width="130" align="center" :header-align="'center'">
-            <template slot-scope="scope"><span class="pd-amount">￥{{ fmtMoney(scope.row.amount) }}</span></template>
+            <template slot-scope="scope"><span class="pd-amount">¥{{ fmtMoney(scope.row.amount) }}</span></template>
           </el-table-column>
         </el-table>
         <!-- 表底合计条：左合计金额，右整单收货进度 + 待收 -->
         <div v-if="detailRow.detailSummary" class="pd-summary">
-          <span>合计金额<b class="pd-total">￥{{ fmtMoney(detailRow.detailSummary.totalAmount) }}</b></span>
+          <span>合计金额<b class="pd-total">¥{{ fmtMoney(detailRow.detailSummary.totalAmount) }}</b></span>
           <span>
             已收货 <b :class="['pd-recv', detailRow.detailSummary.recvCls]">{{ fmtNum(detailRow.detailSummary.totalReceived) }}/{{ fmtNum(detailRow.detailSummary.totalQty) }}（{{ detailRow.detailSummary.percent }}%）</b>
             <span v-if="detailRow.detailSummary.totalRemain > 0" class="pd-wait">待收 {{ fmtNum(detailRow.detailSummary.totalRemain) }}</span>
@@ -417,7 +416,7 @@
               <el-button type="text" size="medium" @click="receiveAll">一键收齐</el-button>
             </template>
           </template>
-          <span v-else class="rx-sum">本次收货 <b>{{ rxCount }}</b> 项 · 合计金额 ￥{{ fmtMoney(rxAmount) }}</span>
+          <span v-else class="rx-sum">本次收货 <b>{{ rxCount }}</b> 项 · 合计金额 ¥{{ fmtMoney(rxAmount) }}</span>
         </span>
         <span>
           <el-button v-if="receiveMode" size="medium" @click="cancelReceive">取 消</el-button>

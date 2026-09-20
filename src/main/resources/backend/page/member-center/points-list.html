@@ -109,7 +109,7 @@
               <i class="ri-user-star-line" aria-hidden="true"></i>
               <span><b>{{ adjustMember.name }}</b>（{{ adjustMember.phone }}）</span>
               <span>当前积分：<b style="color:var(--color-brand-500)">{{ adjustMember.points != null ? adjustMember.points : 0 }}</b></span>
-              <span>余额：<b>￥{{ formatMoney(adjustMember.balance) }}</b></span>
+              <span>余额：<b>¥{{ formatMoney(adjustMember.balance) }}</b></span>
             </div>
           </el-form-item>
           <el-form-item label="调整方式：" prop="adjustType">

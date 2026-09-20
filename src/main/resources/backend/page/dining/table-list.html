@@ -149,7 +149,7 @@
             </el-select>
           </template>
           <template #col-minAmount="{ row }">
-            <span>{{ row.minAmount ? '￥' + row.minAmount : '-' }}</span>
+            <span>{{ row.minAmount ? formatMinAmount(row.minAmount) : '-' }}</span>
           </template>
           <!-- 操作列契约：状态主操作常显（≤3），其余收「更多」下拉 -->
           <template #actions="{ row }">
@@ -179,7 +179,7 @@
             <div class="card-meta">
               <span>区域：<strong>{{ row.areaName || '-' }}</strong></span>
               <span>座位：<strong>{{ row.seatCount || 0 }} 座</strong></span>
-              <span>最低消费：<strong>{{ row.minAmount ? '￥' + row.minAmount : '无' }}</strong></span>
+              <span>最低消费：<strong>{{ row.minAmount ? formatMinAmount(row.minAmount) : '无' }}</strong></span>
               <span>状态：<strong>{{ statusLabels[row.status] || row.status }}</strong></span>
             </div>
             <div class="card-actions">
@@ -256,7 +256,7 @@
                 <div class="map-detail__row"><span>状态</span><strong :style="{ color: mapStatusColor(mapSelected.status) }">{{ statusLabels[mapSelected.status] || mapSelected.status }}</strong></div>
                 <div class="map-detail__row"><span>区域</span><strong>{{ mapSelected.areaName || '-' }}</strong></div>
                 <div class="map-detail__row"><span>座位</span><strong>{{ mapSelected.seatCount || 0 }} 座</strong></div>
-                <div class="map-detail__row"><span>最低消费</span><strong>{{ mapSelected.minAmount ? '￥' + mapSelected.minAmount : '无' }}</strong></div>
+                <div class="map-detail__row"><span>最低消费</span><strong>{{ mapSelected.minAmount ? formatMinAmount(mapSelected.minAmount) : '无' }}</strong></div>
                 <div v-if="mapSelected.status === 'OCCUPIED'" class="map-detail__row"><span>当前订单</span><strong>#{{ mapOrder ? (mapOrder.orderNumber || mapOrder.currentOrderId) : (mapSelected.currentOrderId || '-') }}</strong></div>
               </div>
               <div class="map-detail__actions">
@@ -494,6 +494,10 @@
         })
       },
       methods: {
+        // 最低消费：半角 ¥ + 千分位两位小数（RgFormat 内部 Number 转换，字符串价格也不崩）
+        formatMinAmount: function(val) {
+          return '¥' + window.RgFormat.formatMoney(val)
+        },
         // 修改点：F9 性能 — 列表与全局统计分离，reloadStats=true 才重算（默认 true，分页传 false）
         init: function(reloadStats) {
           if (reloadStats === undefined) reloadStats = true

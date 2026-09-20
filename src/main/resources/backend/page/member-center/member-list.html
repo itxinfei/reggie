@@ -78,10 +78,10 @@
           <span :class="getLevelClass(row.levelName)">{{ row.levelName || '普通会员' }}</span>
         </template>
         <template #col-balance="{ row }">
-          <span style="color:var(--color-brand-700);font-weight:600;">￥{{ row.balance }}</span>
+          <span style="color:var(--color-brand-700);font-weight:600;">¥{{ formatMoney(row.balance) }}</span>
         </template>
         <template #col-totalConsumption="{ row }">
-          <span style="font-weight:500;">￥{{ row.totalConsumption }}</span>
+          <span style="font-weight:500;">¥{{ formatMoney(row.totalConsumption) }}</span>
         </template>
         <template #col-status="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">{{ row.status === 1 ? '正常' : '已禁用' }}</el-tag>
@@ -114,9 +114,9 @@
           <el-tag :type="selectedMember.status === 1 ? 'success' : 'info'" size="small">{{ selectedMember.status === 1 ? '正常' : '已禁用' }}</el-tag>
         </div>
         <div class="member-detail__metrics">
-          <div class="member-detail__metric"><span class="m-label">余额</span><span class="m-value">￥{{ selectedMember.balance }}</span></div>
+          <div class="member-detail__metric"><span class="m-label">余额</span><span class="m-value">¥{{ formatMoney(selectedMember.balance) }}</span></div>
           <div class="member-detail__metric"><span class="m-label">积分</span><span class="m-value">{{ selectedMember.points }}</span></div>
-          <div class="member-detail__metric"><span class="m-label">累计消费</span><span class="m-value">￥{{ selectedMember.totalConsumption }}</span></div>
+          <div class="member-detail__metric"><span class="m-label">累计消费</span><span class="m-value">¥{{ formatMoney(selectedMember.totalConsumption) }}</span></div>
         </div>
         <div class="member-detail__info">
           <div><span>手机号</span>{{ selectedMember.phone }}</div>
@@ -135,7 +135,7 @@
             <ul v-else class="member-detail__list">
               <li v-for="r in rechargeList" :key="r.id || r.recordId">
                 <span>{{ formatDateTime(r.createTime || r.createdTime) }}</span>
-                <span style="color:var(--color-success);font-weight:600;">+￥{{ formatMoney(Number(r.amount) + Number(r.giftAmount || 0)) }}</span>
+                <span style="color:var(--color-success);font-weight:600;">+¥{{ formatMoney(Number(r.amount) + Number(r.giftAmount || 0)) }}</span>
               </li>
             </ul>
           </el-tab-pane>

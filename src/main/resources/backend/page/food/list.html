@@ -97,7 +97,7 @@
                 @keyup.enter.native="commitInline('price', row)"
                 @blur="commitInline('price', row)"
               ></el-input>
-              <span v-else class="inline-value" title="点击编辑价格" tabindex="0" @click="startInline('price', row)" @keydown.enter.prevent="startInline('price', row)">￥{{ formatMoney(row.price) }}</span>
+              <span v-else class="inline-value" title="点击编辑价格" tabindex="0" @click="startInline('price', row)" @keydown.enter.prevent="startInline('price', row)">¥{{ formatMoney(row.price) }}</span>
             </template>
             <!-- 状态列（C.5 行内切换：点击 tag 启售/停售） -->
             <template #col-status="{ row }">

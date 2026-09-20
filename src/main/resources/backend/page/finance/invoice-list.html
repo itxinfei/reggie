@@ -88,7 +88,7 @@
       <div v-if="currentRow" class="issue-summary">
         <div>订单号：<span class="inv-no">{{ currentRow.orderNo }}</span></div>
         <div>抬头：{{ currentRow.title }}</div>
-        <div>开票金额：<strong>￥{{ formatMoney(currentRow.amount) }}</strong></div>
+        <div>开票金额：<strong>¥{{ formatMoney(currentRow.amount) }}</strong></div>
       </div>
       <el-form ref="issueForm" :model="issueForm" :rules="issueRules" label-width="110px" size="small">
         <el-form-item label="发票号码" prop="invoiceNo">

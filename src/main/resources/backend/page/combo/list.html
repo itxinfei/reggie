@@ -17,6 +17,9 @@
     /* 套餐名称列：缩略图 + 名称同一格（与菜品管理一致，取消独立图片列） */
     .combo-name-cell { display: inline-flex; align-items: center; gap: var(--space-2); max-width: 100%; }
     .combo-name-cell .combo-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* 已选菜品移除按钮（位图改 remixicon） */
+    .del { display: inline-flex; align-items: center; cursor: pointer; color: var(--text-muted); font-size: 18px; line-height: 1; transition: color var(--transition-base); }
+    .del:hover, .del:focus-visible { color: var(--color-danger); outline: none; }
     /* ========== 8.2.3 套餐定价试算 ========== */
     .price-calc {
       width: 100%;
@@ -99,9 +102,6 @@
           <span class="combo-name-text" :title="row.name">{{ row.name }}</span>
         </span>
       </template>
-      <template #col-price="{ row }">
-        <span>￥{{ row.price }}</span>
-      </template>
       <template #col-description="{ row }">
         <span :title="row.description || ''">{{ row.description || '-' }}</span>
       </template>
@@ -152,17 +152,17 @@
         <div class="price-calc" role="group" aria-label="套餐定价试算">
           <div class="price-calc__item">
             <span class="price-calc__label">明细原价合计</span>
-            <span class="price-calc__value">￥{{ formatMoney(pricingSummary.originTotal) }}</span>
+            <span class="price-calc__value">¥{{ formatMoney(pricingSummary.originTotal) }}</span>
             <span class="price-calc__tip">顾客单点这些菜的总价（含份数）</span>
           </div>
           <div class="price-calc__item">
             <span class="price-calc__label">建议售价（85折）</span>
-            <span class="price-calc__value price-calc__value--brand">￥{{ formatMoney(pricingSummary.suggestPrice) }}</span>
+            <span class="price-calc__value price-calc__value--brand">¥{{ formatMoney(pricingSummary.suggestPrice) }}</span>
             <span class="price-calc__tip">按原价合计 85% 估算，仅供参考</span>
           </div>
           <div class="price-calc__item">
             <span class="price-calc__label">顾客优惠</span>
-            <span class="price-calc__value" :class="pricingSummary.discount >= 0 ? 'price-calc__value--success' : 'price-calc__value--danger'">￥{{ formatMoney(pricingSummary.discount) }}</span>
+            <span class="price-calc__value" :class="pricingSummary.discount >= 0 ? 'price-calc__value--success' : 'price-calc__value--danger'">¥{{ formatMoney(pricingSummary.discount) }}</span>
             <span class="price-calc__tip">{{ pricingSummary.marginRate > 0 ? '约 ' + Math.round(pricingSummary.marginRate * 100) + ' 折' : '填写套餐售价后计算' }}</span>
           </div>
         </div>
@@ -176,7 +176,7 @@
               <el-table aria-label="数据表格" :data="comboDishTable" border size="small" class="tableBox">
                 <el-table-column prop="name" label="名称" width="180" align="center"></el-table-column>
                 <el-table-column prop="price" label="原价" width="180" align="center">
-                  <template slot-scope="scope">￥{{ scope.row.price }}</template>
+                  <template slot-scope="scope">¥{{ formatMoney(scope.row.price) }}</template>
                 </el-table-column>
                 <el-table-column prop="copies" label="份数" width="100" align="center">
                   <template slot-scope="scope">
@@ -269,7 +269,7 @@
                   <div class="item">
                     <span class="item-name">{{ item.dishName }}</span>
                     <el-tag :type="item.status == 0 ? 'danger' : 'success'" size="small">{{ item.status == 0 ? '停售' : '在售' }}</el-tag>
-                    <span>￥{{ item.price }}</span>
+                    <span>¥{{ formatMoney(item.price) }}</span>
                   </div>
                 </el-checkbox>
               </div>
@@ -283,9 +283,9 @@
         <div class="items">
           <div v-for="(item, ind) in selectedDishList" :key="ind" class="item">
             <span>{{ item.dishName }}</span>
-            <span class="price">￥{{ item.price }}</span>
+            <span class="price">¥{{ item.price }}</span>
             <span class="del" @click="removeSelectedDish(ind)" role="button" aria-label="移除该菜品" tabindex="0">
-              <img src="../../images/icons/btn_clean@2x.png" alt="" aria-hidden="true">
+              <i class="ri-close-circle-line" aria-hidden="true"></i>
             </span>
           </div>
         </div>
