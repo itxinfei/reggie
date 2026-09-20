@@ -978,6 +978,8 @@
               {
                 type: 'value',
                 name: '订单量(单)',
+                // 修改点：订单数为整数类目轴，强制刻度间隔 1，避免出现小数刻度
+                minInterval: 1,
                 nameTextStyle: { color: this.cssVar('--el-text-secondary') || RgPalette.textSecondary, fontSize: 12, padding: [0, 40, 0, 0] },
                 axisLabel: { color: this.cssVar('--el-text-secondary') || RgPalette.textSecondary, fontSize: 12 },
                 splitLine: { lineStyle: { color: RgPalette.bgLight, type: 'dashed' } },
@@ -1046,7 +1048,9 @@
                 }
               }
             ]
-          });
+            // 修改点：第二参 true（notMerge）——切换时间范围（今日/7日/30日）后清掉旧系列与旧类目轴，
+            // 防止点数缩短/空数据占位时残留旧柱；每次均传完整 option，不依赖 merge 动画
+          }, true);
           this.$nextTick(() => {
             if (this.trendChart) this.trendChart.resize();
           });
@@ -1133,7 +1137,9 @@
               },
               data: statusData
             }]
-          });
+            // 修改点：第二参 true（notMerge）——刷新/重查后状态集合可能增减（如从 6 类变 3 类），
+            // 清掉旧扇区与图例残留；每次均传完整 option，不依赖 merge
+          }, true);
           this.$nextTick(() => {
             if (this.statusChart) this.statusChart.resize();
           });

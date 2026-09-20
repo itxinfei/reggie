@@ -314,7 +314,11 @@
             this.revenueChart.setOption({ title: emptyTitle }, true)
           } else {
             this.revenueChart.setOption({
-              tooltip: { trigger: 'axis' },
+              // 金额 tooltip 统一半角 ¥ + 千分位（¥12,345.67）
+              tooltip: { trigger: 'axis', formatter: function(params) {
+                var p = params[0]
+                return p.name + '<br/>' + p.marker + p.seriesName + '：¥' + RgFormat.formatMoney(p.value)
+              } },
               grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
               xAxis: { type: 'category', data: labels },
               yAxis: { type: 'value', name: '营业额(元)', axisLabel: { formatter: '¥{value}' } },
@@ -322,7 +326,8 @@
                 name: '营业额',
                 type: 'bar',
                 data: revenues,
-                itemStyle: { color: RgPalette.linkBlue }
+                // 修改点：金额系列用金额绿 seriesGreen（原误用链接蓝 linkBlue）
+                itemStyle: { color: RgPalette.seriesGreen }
               }]
             }, true)
           }
@@ -332,7 +337,11 @@
             this.orderChart.setOption({ title: emptyTitle }, true)
           } else {
             this.orderChart.setOption({
-              tooltip: { trigger: 'axis' },
+              // 单数 tooltip：千分位整数 + 单位「单」
+              tooltip: { trigger: 'axis', formatter: function(params) {
+                var p = params[0]
+                return p.name + '<br/>' + p.marker + p.seriesName + '：' + RgFormat.formatNumber(p.value) + ' 单'
+              } },
               grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
               xAxis: { type: 'category', data: labels },
               yAxis: { type: 'value', name: '订单数(单)', minInterval: 1,
@@ -341,7 +350,8 @@
                 name: '订单数',
                 type: 'line',
                 data: orders,
-                itemStyle: { color: RgPalette.success },
+                // 修改点：单数系列统一用 seriesBlue（原误用 success 绿）
+                itemStyle: { color: RgPalette.seriesBlue },
                 areaStyle: { opacity: 0.3 }
               }]
             }, true)

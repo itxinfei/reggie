@@ -263,12 +263,13 @@
           if (yoyRev != null) subRev.push('同比' + fmtGrowth(yoyRev))
           var subOrd = momOrd != null ? '环比' + fmtGrowth(momOrd) : ''
           return [
-            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '总营业额', value: '￥' + self.formatMoney(rev), color: 'primary',
+            { key: 'revenue', icon: 'ri-money-cny-circle-line', label: '总营业额', value: '¥' + self.formatMoney(rev), color: 'primary',
               subText: subRev.join('  ') },
             { key: 'orders', icon: 'ri-shopping-bag-3-line', label: '总订单数', value: self.formatNumber(ord), color: 'success',
               subText: subOrd },
-            { key: 'avg', icon: 'ri-coupon-3-line', label: '客单价', value: ord > 0 ? '￥' + self.formatMoney(rev / ord) : '￥0.00', color: 'warning' },
-            { key: 'daily', icon: 'ri-calendar-check-line', label: '日均营业额', value: days > 0 ? '￥' + self.formatMoney(rev / days) : '￥0.00', color: 'info' }
+            // 修改点：金额符号统一用半角日元符号 U+00A5（原误用全角 U+FFE5）
+            { key: 'avg', icon: 'ri-coupon-3-line', label: '客单价', value: ord > 0 ? '¥' + self.formatMoney(rev / ord) : '¥0.00', color: 'warning' },
+            { key: 'daily', icon: 'ri-calendar-check-line', label: '日均营业额', value: days > 0 ? '¥' + self.formatMoney(rev / days) : '¥0.00', color: 'info' }
           ]
         },
         dateLabelText: function() {
@@ -425,12 +426,20 @@
           }
           var that = this
           this.trendChart.setOption({
-            tooltip: { trigger: 'axis' },
+            // tooltip：金额半角 ¥ + 千分位，单数千分位整数 + 单位「单」
+            tooltip: { trigger: 'axis', formatter: function(params) {
+              var lines = params.map(function(p) {
+                var v = p.seriesName === '营业额' ? '¥' + that.formatMoney(p.value) : that.formatNumber(p.value) + ' 单'
+                return p.marker + p.seriesName + '：' + v
+              })
+              return params[0].name + '<br/>' + lines.join('<br/>')
+            } },
             legend: { data: ['营业额', '订单数'], bottom: 0, textStyle: { fontSize: 12 } },
             grid: { left: 60, right: 45, top: 20, bottom: 35 },
             xAxis: { type: 'category', data: labels, axisLabel: { rotate: 40, fontSize: 10 } },
             yAxis: [
-              { type: 'value', name: '营业额', axisLabel: { formatter: function(v) { return '¥' + that.axisNum(v) } } },
+              // 修改点：金额轴用千分位完整数字（原 axisNum 的 1.2w/k 缩写废弃）
+              { type: 'value', name: '营业额', axisLabel: { formatter: function(v) { return '¥' + that.formatNumber(v) } } },
               { type: 'value', name: '订单数', splitLine: { show: false } }
             ],
             series: [
@@ -491,13 +500,21 @@
           var counts = rows.map(function(r) { return Number(r.count) || 0 })
           var amounts = rows.map(function(r) { return Number(r.amount) || 0 })
           this.slotChart.setOption({
-            tooltip: { trigger: 'axis' },
+            // tooltip：单数 + 单位「单」，金额半角 ¥ + 千分位
+            tooltip: { trigger: 'axis', formatter: function(params) {
+              var lines = params.map(function(p) {
+                var v = p.seriesName === '营业额' ? '¥' + that.formatMoney(p.value) : that.formatNumber(p.value) + ' 单'
+                return p.marker + p.seriesName + '：' + v
+              })
+              return params[0].name + '<br/>' + lines.join('<br/>')
+            } },
             legend: { data: ['订单数', '营业额'], bottom: 0, textStyle: { fontSize: 12 } },
             grid: { left: 50, right: 50, top: 20, bottom: 35 },
             xAxis: { type: 'category', data: labels, axisLabel: { fontSize: 10 } },
             yAxis: [
               { type: 'value', name: '订单数' },
-              { type: 'value', name: '营业额', splitLine: { show: false }, axisLabel: { formatter: function(v) { return '¥' + that.axisNum(v) } } }
+              // 修改点：金额轴用千分位完整数字（原 axisNum 的 1.2w/k 缩写废弃）
+              { type: 'value', name: '营业额', splitLine: { show: false }, axisLabel: { formatter: function(v) { return '¥' + that.formatNumber(v) } } }
             ],
             series: [
               { name: '订单数', type: 'bar', data: counts, barWidth: '50%',
@@ -581,12 +598,7 @@
           }, true)
         },
         // ===== 工具 =====
-        axisNum: function(v) {
-          var n = Number(v) || 0
-          if (n >= 10000) return (n / 10000).toFixed(1) + 'w'
-          if (n >= 1000) return (n / 1000).toFixed(1) + 'k'
-          return String(Math.round(n))
-        },
+        // 修改点：axisNum（1.2w/k 缩写）已废弃移除，金额轴统一千分位完整数字
         pieColor: function(idx) {
           var colors = [RgPalette.brand, RgPalette.emerald, RgPalette.amber500, RgPalette.blue500, RgPalette.violet500, RgPalette.danger, RgPalette.orange500, RgPalette.gray999]
           return colors[idx % colors.length]
