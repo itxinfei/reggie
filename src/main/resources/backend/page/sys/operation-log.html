@@ -47,7 +47,7 @@
         @size-change="onSizeChange"
       >
         <template #col-operationType="{ row }">
-          <el-tag size="small" :type="opTypeTag(row.operationType)">{{ row.operationType }}</el-tag>
+          <el-tag size="small" :type="opTypeTag(row.operationType)">{{ opTypeText(row.operationType) }}</el-tag>
         </template>
         <template #col-requestMethod="{ row }">
           <el-tag size="mini" effect="plain" :type="methodTag(row.requestMethod)">{{ row.requestMethod }}</el-tag>
@@ -102,15 +102,15 @@
           ],
           // 表格列配置
           columns: [
-            { prop: 'id', label: 'ID', width: 70, align: 'center' },
-            { prop: 'operatorId', label: '操作人ID', width: 80, align: 'center' },
+            { prop: 'id', label: 'ID', width: 80, align: 'center' },
+            { prop: 'operatorId', label: '操作人ID', width: 90, align: 'center' },
             { prop: 'operatorIp', label: '操作IP', width: 120, align: 'center' },
             { prop: 'operatorName', label: '操作人', width: 90, slot: true, align: 'center' },
             { prop: 'module', label: '操作模块', width: 105, align: 'center' },
             { prop: 'operationType', label: '操作类型', width: 80, align: 'center', slot: true },
             { prop: 'description', label: '操作描述', minWidth: 120, align: 'center' },
             { prop: 'requestUrl', label: '请求地址', minWidth: 120, align: 'center' },
-            { prop: 'requestMethod', label: '方法', width: 65, align: 'center', slot: true },
+            { prop: 'requestMethod', label: '方法', width: 76, align: 'center', slot: true },
             { prop: 'duration', label: '耗时(ms)', width: 85, type: 'number' },
             { prop: 'isSuccess', label: '状态', width: 65, align: 'center', slot: true },
             { prop: 'errorMsg', label: '错误信息', minWidth: 120, align: 'center' },
@@ -231,9 +231,14 @@
           this.init(false)
         },
         /* ========== 工具方法 ========== */
+        // 与后端 OperationLog.operationType 权威枚举对齐：INSERT/UPDATE/DELETE/OTHER
         opTypeTag(type) {
-          const map = { CREATE: 'success', UPDATE: 'warning', DELETE: 'danger', EXPORT: 'info', LOGIN: 'info' }
+          const map = { INSERT: 'success', UPDATE: 'warning', DELETE: 'danger', OTHER: 'info' }
           return map[type] || 'info'
+        },
+        opTypeText(type) {
+          const map = { INSERT: '新增', UPDATE: '修改', DELETE: '删除', OTHER: '其他' }
+          return map[type] || (type || '其他')
         },
         methodTag(method) {
           const map = { GET: 'info', POST: 'success', PUT: 'warning', DELETE: 'danger' }

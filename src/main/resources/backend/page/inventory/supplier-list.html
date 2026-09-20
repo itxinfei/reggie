@@ -98,14 +98,14 @@
     @submit="submitForm"
     @close="resetForm"
   >
-    <el-form ref="supplierForm" :model="formData" label-width="80px">
-      <el-form-item label="供应商名称：" prop="name" :rules="[{required: true, message: '请输入供应商名称', trigger: 'blur'}]">
+    <el-form ref="supplierForm" :model="formData" :rules="formRules" label-width="80px">
+      <el-form-item label="供应商名称：" prop="name">
         <el-input v-model="formData.name" placeholder="请输入供应商名称" maxlength="50" />
       </el-form-item>
       <el-form-item label="联系人：">
         <el-input v-model="formData.contact" placeholder="请输入联系人" maxlength="20" />
       </el-form-item>
-      <el-form-item label="联系电话：">
+      <el-form-item label="联系电话：" prop="phone">
         <el-input v-model="formData.phone" placeholder="请输入联系电话" maxlength="20" />
       </el-form-item>
       <el-form-item label="地址：">
@@ -198,6 +198,11 @@
             phone: '',
             address: '',
             status: '1'
+          },
+          // 名称必填；电话选填，填写则校验手机/座机格式（错误内联显示）
+          formRules: {
+            name: [{ required: true, whitespace: true, message: '请输入供应商名称', trigger: 'blur' }],
+            phone: [{ pattern: /^(1[3-9]\d{9}|0\d{2,3}-?\d{7,8})$/, message: '请输入正确的手机号或座机号', trigger: 'blur' }]
           },
 
           // ===== 组件配置 =====
@@ -429,8 +434,7 @@
               self.$refs.supplierForm.validate(function (valid) { valid ? resolve() : reject() })
             })
           } catch (e) {
-            ReggieUI.warning('请完善表单必填项')
-            return
+            return // 校验错误已在字段下方内联提示，不再 toast
           }
           self.doSave()
         },

@@ -105,7 +105,7 @@
     </main>
 
     <!-- 添加/编辑弹窗 -->
-    <crud-dialog :show-submit="true" :show-cancel="true" :title="dialogTitle" :visible.sync="dialogVisible" 
+    <crud-dialog size="lg" :show-submit="true" :show-cancel="true" :title="dialogTitle" :visible.sync="dialogVisible"
                :show-close="true" :close-on-click-modal="false" :submit-loading="submitting" @submit="submitForm">
         <!-- 修改点：补全 ref/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
         <el-form ref="providerForm" :model="form" :rules="providerRules" label-width="100px" size="small" class="dialog-form">
@@ -280,17 +280,22 @@
                 temperature: 0.7,
                 remark: ''
             },
-            // 修改点：AI 供应商表单校验规则（配合 el-form :rules + validate()）
-            providerRules: {
-                providerName: [{ required: true, whitespace: true, message: '请输入供应商名称', trigger: 'blur' }],
-                providerCode: [{ required: true, whitespace: true, message: '请输入供应商编码', trigger: 'blur' }],
-                baseUrl: [{ required: true, whitespace: true, message: '请输入 API 地址', trigger: 'blur' }],
-                modelName: [{ required: true, whitespace: true, message: '请输入模型名称', trigger: 'blur' }]
-            }
         },
 
-        // 修改点(2026-09-18)：端点实时预览，规则与后端 AiUrlUtils.resolveEndpoint 保持一致
+        // 校验规则随 form.id 动态生成：apiKey 新增必填、编辑时留空表示沿用原密钥（错误内联，不用 toast）
         computed: {
+            providerRules: function() {
+                return {
+                    providerName: [{ required: true, whitespace: true, message: '请输入供应商名称', trigger: 'blur' }],
+                    providerCode: [{ required: true, whitespace: true, message: '请输入供应商编码', trigger: 'blur' }],
+                    baseUrl: [{ required: true, whitespace: true, message: '请输入 API 地址', trigger: 'blur' }],
+                    modelName: [{ required: true, whitespace: true, message: '请输入模型名称', trigger: 'blur' }],
+                    apiKey: (!this.form || !this.form.id)
+                        ? [{ required: true, whitespace: true, message: '请输入 API 密钥', trigger: 'blur' }]
+                        : []
+                };
+            },
+            // 修改点(2026-09-18)：端点实时预览，规则与后端 AiUrlUtils.resolveEndpoint 保持一致
             resolvedEndpoint: function() {
                 var base = (this.form.baseUrl || '').trim().replace(/\/+$/, '');
                 if (!base) return '';
@@ -492,77 +497,48 @@
 
             submitForm: function() {
                 const self = this;
-                // 修改点：crud-dialog 内 el-dialog 设了 append-to-body，
-                // 表单被移出组件树，this.$refs.providerForm 取不到，故改本地校验。
-                const errMsg = self.validateForm();
-                if (errMsg) {
-                    ReggieUI.warning(errMsg);
+                // slot 内容的 $refs 注册在页面实例上（append-to-body 只移 DOM 不移 Vue 组件树）
+                const formRef = this.$refs.providerForm;
+                if (!formRef) {
+                    ReggieUI.error('表单未就绪，请重试');
                     return;
                 }
-                if (!self.form.id && !self.form.apiKey) {
-                    ReggieUI.warning('请输入 API 密钥');
-                    return;
-                }
+                formRef.validate(function(valid) {
+                    if (!valid) return;
+                    self.submitting = true;
 
-                self.submitting = true;
-
-                const payload = JSON.parse(JSON.stringify(self.form));
-                if (self.form.id && self.form._hasExistingKey && !self.form.apiKey) {
-                    delete payload.apiKey;
+                    const payload = JSON.parse(JSON.stringify(self.form));
+                    if (self.form.id && self.form._hasExistingKey && !self.form.apiKey) {
+                        delete payload.apiKey;
+                        delete payload._hasExistingKey;
+                    }
                     delete payload._hasExistingKey;
-                }
-                delete payload._hasExistingKey;
 
-                const api = this.form.id
-                    ? window.aiBackendApi.providerUpdate(payload)
-                    : window.aiBackendApi.providerAdd(payload);
+                    const api = self.form.id
+                        ? window.aiBackendApi.providerUpdate(payload)
+                        : window.aiBackendApi.providerAdd(payload);
 
-                api.then(function(res) {
-                    if (res.code === 1) {
-                        // 修改点：add 接口返回 { action:"新增"/"更新", msg }，update 返回简单字符串
-                        let msg = res.msg || '';
-                        if (res.data && res.data.msg) {
-                            msg = res.data.msg;
+                    api.then(function(res) {
+                        if (res.code === 1) {
+                            // 修改点：add 接口返回 { action:"新增"/"更新", msg }，update 返回简单字符串
+                            let msg = res.msg || '';
+                            if (res.data && res.data.msg) {
+                                msg = res.data.msg;
+                            }
+                            ReggieUI.success(msg || (self.form.id ? '更新成功' : '添加成功'));
+                            self.dialogVisible = false;
+                            self.modelList = [];
+                            self.modelFetchError = '';
+                            self.loadData();
+                        } else {
+                            ReggieUI.error(res.msg || '操作失败');
                         }
-                        ReggieUI.success(msg || (self.form.id ? '更新成功' : '添加成功'));
-                        self.dialogVisible = false;
-                        self.modelList = [];
-                        self.modelFetchError = '';
-                        self.loadData();
-                    } else {
-                        ReggieUI.error(res.msg || '操作失败');
-                    }
-                }).catch(function(err) {
-                    ReggieUI.error('操作失败：' + (err.message || err));
-                }).finally(function() {
-                    self.submitting = false;
+                    }).catch(function(err) {
+                        ReggieUI.error('操作失败：' + (err.message || err));
+                    }).finally(function() {
+                        self.submitting = false;
+                    });
                 });
-            },
-
-            // 修改点：本地必填校验（替代 el-form.validate，因表单被 append-to-body 移出组件树）
-            validateForm: function() {
-                const form = this.form || {};
-                const rules = this.providerRules || {};
-                const labels = {
-                    providerName: '供应商名称',
-                    providerCode: '供应商编码',
-                    baseUrl: 'API 地址',
-                    modelName: '模型名称'
-                };
-                for (const key in rules) {
-                    if (!Object.prototype.hasOwnProperty.call(rules, key)) continue;
-                    const rule = rules[key];
-                    const required = Array.isArray(rule)
-                        ? rule.some(function(r) { return r.required; })
-                        : rule.required;
-                    if (required) {
-                        const val = form[key];
-                        if (val === undefined || val === null || (typeof val === 'string' && val.trim() === '')) {
-                            return '请输入' + (labels[key] || key);
-                        }
-                    }
-                }
-                return '';
             },
 
             /* ── 预设初始化与模型列表 ── */
