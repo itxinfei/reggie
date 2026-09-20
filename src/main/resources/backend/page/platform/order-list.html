@@ -49,13 +49,20 @@
         <template #col-amount="{ row }">
           <span class="ds-money">¥{{ formatMoney(row.amount) }}</span>
         </template>
+        <!-- 操作列契约：查看+主流转常显（≤3），拒单/取消等否定操作收「更多」 -->
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="openDetail(row)">查看</el-button>
           <el-button v-if="row.status === 2" type="text" size="small" class="btn-view" @click="pushStatus(row, 'accept')">接单</el-button>
-          <el-button v-if="row.status === 2" type="text" size="small" class="btn-warning" @click="pushStatus(row, 'reject')">拒单</el-button>
           <el-button v-if="row.status === 3" type="text" size="small" class="btn-view" @click="pushStatus(row, 'prepare')">出餐</el-button>
           <el-button v-if="row.status === 3" type="text" size="small" class="btn-view" @click="pushStatus(row, 'complete')">完成</el-button>
-          <el-button v-if="row.status === 3" type="text" size="small" class="btn-delete" @click="pushStatus(row, 'cancel')">取消</el-button>
+          <el-dropdown v-if="row.status === 2 || row.status === 3" trigger="click"
+            @command="(cmd) => pushStatus(row, cmd)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item v-if="row.status === 2" command="reject" icon="ri-close-line" style="color:var(--color-danger);">拒单</el-dropdown-item>
+              <el-dropdown-item v-if="row.status === 3" command="cancel" icon="ri-close-circle-line" style="color:var(--color-danger);">取消</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </template>
       </crud-table>
   </main>
