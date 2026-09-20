@@ -431,10 +431,6 @@
             return 0
           }
         },
-        getFeeTypeClass(type) {
-          const map = { 1: 'fixed', 2: 'step', 3: 'dynamic' }
-          return map[type] || 'fixed'
-        },
         getFeeTypeTag(type) {
           const map = { 1: 'warning', 2: 'info', 3: 'danger' }
           return map[type] || 'info'

@@ -300,10 +300,6 @@
           const map = { 0: 'warning', 1: 'success', 2: 'success', 3: 'danger', 4: 'info' }
           return map[status] || 'info'
         },
-        getStatusClass(status) {
-          const map = { 0: 'pending', 1: 'approved', 2: 'paid', 3: 'rejected', 4: 'cancelled' }
-          return map[status] || 'pending'
-        },
         getStatusText(status) {
           const map = { 0: '待审核', 1: '审核通过', 2: '已打款', 3: '已拒绝', 4: '已取消' }
           return map[status] || '未知'

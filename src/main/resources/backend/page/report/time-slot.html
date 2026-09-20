@@ -264,12 +264,6 @@
                 emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' } } }]
             }, true);
           },
-          reset: function() {
-            this.dateRange = []; this.tableData = [];
-            [this.barChart, this.pieChart, this.heatmapChart].forEach(function(ch) {
-              if (ch && !ch.isDisposed()) ch.clear();
-            });
-          },
           calcPercent: function(count) {
             const t = this.totalCount; if (!t) return 0;
             // 修改点：Number 包裹，避免 toFixed 字符串触发 el-progress percentage 类型告警

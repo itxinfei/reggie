@@ -352,12 +352,6 @@
               ]
             }, true);
           },
-          reset: function() {
-            this.dateRange = []; this.tableData = [];
-            [this.pieChart, this.barChart, this.trendChart, this.refundChart].forEach(function(ch) {
-              if (ch && !ch.isDisposed()) ch.clear();
-            });
-          },
           convertToArray: function(data) {
             return Object.keys(CHANNEL_LABEL).filter(function(k) { return data[k] != null; })
               .map(function(k) { const item = data[k] || {}; return { key: k, channel: CHANNEL_LABEL[k],
