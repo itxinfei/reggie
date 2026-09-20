@@ -679,6 +679,14 @@ Vue.component('crud-table', {
       // 操作列：用 min-width 而非 width —— 页面手填值作为最小宽度，
       // 按钮数量变化时列自动扩宽，避免操作按钮被截断（M1 修复）
       // 修改点：支持 actionsFixed 固定到右侧，并加 crud-actions-col class 便于 CSS nowrap 防截断
+      //
+      // 【操作列收敛契约 —— 所有列表页 #actions 插槽必须遵守】
+      // 1. 常显主操作 ≤3 个；超出的操作收进「更多」el-dropdown（trigger="click"，@command 分发，
+      //    范本见 page/dining/table-list.html、page/platform/order-list.html）。
+      // 2. actions-width 宽度档：2 个元素 120 / 3 个元素 180 / 4 个元素 240（「更多」触发器算 1 个元素）。
+      // 3. 语义按钮类（styles/page.css）：查看/编辑 btn-view；启用/接单/上架等肯定流转 btn-success；
+      //    停用/暂停 btn-warning；删除/取消/拒单/退款等否定操作 btn-delete（dropdown 内项用内联 danger 色）。
+      // 4. 按钮统一 type="text" size="small"，禁止 mini；「更多」触发器用 class="text-info" + el-icon-arrow-down。
       '<el-table-column v-if="showActions" :label="actionsLabel" :min-width="actionsWidth" :align="actionsAlign" :header-align="actionsAlign" :fixed="actionsFixed ? \'right\' : false" class-name="crud-actions-col">' +
         '<template slot-scope="scope">' +
           '<el-button v-if="viewable" type="text" size="small" class="btn-view" @click="openView(scope.row)">查看</el-button>' +

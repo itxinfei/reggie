@@ -165,14 +165,15 @@
                     :percentage="Math.round((row.currentParticipants || 0) / row.maxParticipants * 100)"
                     :show-text="false" :stroke-width="4" class="status-progress" />
             </template>
+            <!-- 操作列契约：编辑+主状态流转常显（≤3 元素含「更多」，宽 180），推送/统计/删除收「更多」 -->
             <template #actions="{ row }">
                 <el-button type="text" size="small" class="btn-view" @click="openDialog('edit', row)">编辑</el-button>
-                <el-button type="text" size="small" v-if="row.status === 0" @click="publishCampaign(row)">发布</el-button>
-                <el-button type="text" size="small" v-if="row.status === 1" @click="pauseCampaign(row)">暂停</el-button>
-                <el-button type="text" size="small" class="btn-view" v-if="row.status === 1" @click="openPushDialog(row)">推送</el-button>
-                <el-dropdown trigger="click" @command="(cmd) => handleRowCommand(cmd, row)">
-                    <el-button type="text" size="small" class="text-info">更多</el-button>
+                <el-button type="text" size="small" class="btn-success" v-if="row.status === 0" @click="publishCampaign(row)">发布</el-button>
+                <el-button type="text" size="small" class="btn-warning" v-if="row.status === 1" @click="pauseCampaign(row)">暂停</el-button>
+                <el-dropdown trigger="click" @command="(cmd) => handleRowCommand(cmd, row)" @click.native.stop>
+                    <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
                     <el-dropdown-menu slot="dropdown">
+                        <el-dropdown-item v-if="row.status === 1" command="push" icon="ri-send-plane-line">推送</el-dropdown-item>
                         <el-dropdown-item command="stats" icon="ri-bar-chart-line">活动统计</el-dropdown-item>
                         <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
                     </el-dropdown-menu>
@@ -792,7 +793,9 @@
         /* ====== 行操作 ====== */
         // 修改点：统一处理统计和删除（从更多下拉菜单触发）
         handleRowCommand: function(cmd, row) {
-            if (cmd === 'stats') {
+            if (cmd === 'push') {
+                this.openPushDialog(row);
+            } else if (cmd === 'stats') {
                 this.viewStats(row);
             } else if (cmd === 'delete') {
                 this.deleteCampaign(row);
