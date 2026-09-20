@@ -346,19 +346,26 @@
             var pieData = this.tableData.map(function(r, i) { return { name: r.name, value: r.count,
               itemStyle: { color: COLORS[i % COLORS.length] } }; });
             var isEmpty = pieData.every(function(d) { return !d.value; }) || !pieData.length;
+            // 空态：与柱线图统一的居中文字范式（不渲染灰色假饼，legend 也不出现「暂无数据」）
+            if (isEmpty) {
+              this.pieChart.setOption({ title: { text: '暂无时段数据', left: 'center', top: 'center',
+                textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }, true);
+              return;
+            }
             this.pieChart.setOption({
               tooltip: { trigger: 'item', backgroundColor: RgPalette.white,
                 borderColor: RgPalette.borderLighter2, borderWidth: 1, textStyle: { color: RgPalette.textPrimary, fontSize: 13 },
                 formatter: function(p) { return '<b>' + p.name + '</b><br/>' + p.marker + ' 订单：<b>' + p.value + ' 单</b>（' + p.percent + '%）'; } },
               legend: { bottom: 0, left: 'center', itemWidth: 10, itemHeight: 10,
                 textStyle: { color: RgPalette.textRegular, fontSize: 12 } },
-              series: [{ type: 'pie', radius: isEmpty ? ['0%','55%'] : ['45%','68%'], center: ['50%','44%'],
+              title: { show: false },
+              series: [{ type: 'pie', radius: ['45%','68%'], center: ['50%','44%'],
                 avoidLabelOverlap: false, itemStyle: { borderRadius: RgPalette.radiusMd, borderColor: RgPalette.white, borderWidth: 3 },
-                label: { show: !isEmpty, position: 'outside', formatter: '{b}\n{d}%',
+                label: { show: true, position: 'outside', formatter: '{b}\n{d}%',
                   fontSize: 13, lineHeight: 18, color: RgPalette.textRegular },
-                labelLine: { show: !isEmpty, length: 25, length2: 20, lineStyle: { color: RgPalette.borderBase } },
+                labelLine: { show: true, length: 25, length2: 20, lineStyle: { color: RgPalette.borderBase } },
                 emphasis: { scaleSize: 10, label: { fontSize: 16, fontWeight: 'bold' } },
-                data: isEmpty ? [{ name: '暂无数据', value: 1, itemStyle: { color: RgPalette.borderLighter2 } }] : pieData }]
+                data: pieData }]
             }, true);
           },
           // 修改点：改为导出当前表格数据生成 CSV（此前误调日报接口且扩展名 .csv 内容为 xlsx）

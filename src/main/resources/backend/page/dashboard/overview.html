@@ -927,14 +927,22 @@
           const orders = this.trend.map(t => t.orderCount || 0);
           const revenues = this.trend.map(t => Number(t.revenue) || 0);
 
-          const emptyData = dates.length === 0;
+          // 空态：居中文字提示（不渲染 0 值灰柱 + 假类目轴），与全站报表图空态范式一致
+          if (dates.length === 0) {
+            this.trendChart.setOption({ title: { text: '所选时间范围内暂无销售数据',
+              left: 'center', top: 'center',
+              textStyle: { color: RgPalette.textSecondary, fontSize: 14, fontWeight: 'normal' } } }, true);
+            this.$nextTick(() => { if (this.trendChart) this.trendChart.resize(); });
+            return;
+          }
           // 数据点较多（切到 30 天）时常显柱顶/折点标签会互相压叠，超过 14 个点仅靠 tooltip 查看数值
-          const showPointLabel = !emptyData && dates.length <= 14;
-          const xData = emptyData ? ['暂无数据'] : dates;
-          const barData = emptyData ? [0] : orders;
-          const lineData = emptyData ? [0] : revenues;
+          const showPointLabel = dates.length <= 14;
+          const xData = dates;
+          const barData = orders;
+          const lineData = revenues;
 
           this.trendChart.setOption({
+            title: { show: false },
             color: [RgPalette.brand600, RgPalette.success],
             tooltip: {
               trigger: 'axis',
