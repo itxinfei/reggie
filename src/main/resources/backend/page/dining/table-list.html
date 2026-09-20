@@ -131,7 +131,7 @@
           :loading="loading"
           :show-index="true"
           :show-actions="true"
-          :actions-width="200"
+          :actions-width="120"
           :stripe="true"
           :border="true"
           aria-label="桌台列表"
@@ -148,22 +148,24 @@
               <el-option label="清洁中" value="CLEANING" :disabled="!canTransition(row.status, 'CLEANING')"></el-option>
             </el-select>
           </template>
-          <template #col-tag="{ row }">
-            <el-tag :type="tagType(row.status)" size="small">
-              {{ statusLabels[row.status] || row.status }}
-            </el-tag>
-          </template>
           <template #col-minAmount="{ row }">
             <span>{{ row.minAmount ? '￥' + row.minAmount : '-' }}</span>
           </template>
+          <!-- 操作列契约：状态主操作常显（≤3），其余收「更多」下拉 -->
           <template #actions="{ row }">
             <el-button v-if="row.status === 'FREE'" type="text" size="small" class="btn-view" @click="openTableHandle(row)">开台</el-button>
-            <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click="addDishHandle(row)">加菜</el-button>
-            <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click="transferHandle(row)">转台</el-button>
             <el-button v-if="row.status === 'OCCUPIED'" type="text" size="small" class="btn-view" @click="checkoutHandle(row)">结账</el-button>
-            <el-button type="text" size="small" @click="editHandle(row)">修改</el-button>
-            <el-button type="text" size="small" @click="showQrcode(row)">二维码</el-button>
-            <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
+            <el-button v-if="row.status !== 'FREE' && row.status !== 'OCCUPIED'" type="text" size="small" class="btn-view" @click="editHandle(row)">修改</el-button>
+            <el-dropdown trigger="click" @command="(cmd) => onTableCommand(cmd, row)" @click.native.stop>
+              <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item v-if="row.status === 'OCCUPIED'" command="addDish" icon="ri-restaurant-line">加菜</el-dropdown-item>
+                <el-dropdown-item v-if="row.status === 'OCCUPIED'" command="transfer" icon="ri-arrow-left-right-line">转台</el-dropdown-item>
+                <el-dropdown-item v-if="row.status === 'FREE' || row.status === 'OCCUPIED'" command="edit" icon="ri-edit-line">修改</el-dropdown-item>
+                <el-dropdown-item command="qrcode" icon="ri-qr-code-line">二维码</el-dropdown-item>
+                <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
           </template>
         </crud-table>
       </div>
@@ -400,7 +402,6 @@
             { prop: 'areaName', label: '区域', width: 70, align: 'center' },
             { prop: 'seatCount', label: '座位', width: 50, type: 'number' },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
-            { prop: 'tag', label: '标签', width: 60, align: 'center', slot: true },
             { prop: 'minAmount', label: '最低消费', width: 80, slot: true, type: 'money' },
             { prop: 'sort', label: '排序', width: 50, align: 'center' }
           ],
@@ -652,6 +653,16 @@
               }).catch(function(err) { ReggieUI.error('请求失败：' + (err.message || err)) })
             })
         },
+        // 操作列「更多」下拉命令分发
+        onTableCommand: function(cmd, row) {
+          switch (cmd) {
+            case 'addDish': this.addDishHandle(row); break
+            case 'transfer': this.transferHandle(row); break
+            case 'edit': this.editHandle(row); break
+            case 'qrcode': this.showQrcode(row); break
+            case 'delete': this.deleteHandle(row.id); break
+          }
+        },
         handleSizeChange: function(val) { this.pageSize = val; this.init(false) },
         handleCurrentChange: function(val) { this.page = val; this.init(false) },
         // 修改点：表格视图分页交由 crud-table 统一管理（@page-change 同时携带页码与每页条数）
@@ -768,14 +779,6 @@
             this.init()
             ReggieUI.success('结账成功，桌台状态已更新')
           }
-        },
-        // 状态标签颜色
-        tagType: function(status) {
-          if (status === 'FREE') return 'success'
-          if (status === 'OCCUPIED') return 'danger'
-          if (status === 'RESERVED') return 'warning'
-          if (status === 'CLEANING') return 'info'
-          return 'info'
         }
       }
     })
