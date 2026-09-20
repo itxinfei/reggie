@@ -149,6 +149,36 @@ CREATE TABLE `ai_attachment` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `ai_prompt_template`
+--
+
+DROP TABLE IF EXISTS `ai_prompt_template`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ai_prompt_template` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `code` varchar(64) NOT NULL COMMENT '模板编码：{type}_{scene}',
+  `scene` varchar(50) NOT NULL COMMENT '场景',
+  `type` varchar(16) NOT NULL COMMENT '类型：SYSTEM/WELCOME/QUICK',
+  `title` varchar(100) NOT NULL COMMENT '模板名称',
+  `content` text COMMENT '提示词/欢迎语文本',
+  `quick_questions` varchar(1000) DEFAULT NULL COMMENT '快捷问题JSON数组',
+  `builtin` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否内置',
+  `enabled` tinyint(1) NOT NULL DEFAULT '1' COMMENT '是否启用',
+  `sort` int NOT NULL DEFAULT '0' COMMENT '排序号',
+  `version` int NOT NULL DEFAULT '1' COMMENT '模板版本',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime NOT NULL COMMENT '更新时间',
+  `create_user` bigint DEFAULT NULL COMMENT '创建人',
+  `update_user` bigint DEFAULT NULL COMMENT '修改人',
+  `is_deleted` int NOT NULL DEFAULT '0' COMMENT '逻辑删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_code` (`code`),
+  KEY `idx_scene_type` (`scene`,`type`,`enabled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI提示词模板';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `ai_provider_config`
 --
 

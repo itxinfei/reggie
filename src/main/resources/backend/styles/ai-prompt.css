@@ -1,0 +1,22 @@
+/**
+ * AI 提示词模板页（page/ai/prompt-list.html）专属样式
+ * 仅放页面特有规则；表格/弹窗/提示文字等公共样式走 main.css 聚合层（tokens/page/components）。
+ */
+
+/* 内置模板提示条与下方表单的间距（4px 栅格：16px） */
+.prompt-builtin-tip {
+  margin-bottom: var(--space-4);
+}
+
+/* 排序项：数字输入框与提示语同行，窄屏自然换行 */
+.crud-dialog .el-dialog__body .el-input-number + .form-tip {
+  display: inline-block;
+  margin-top: 0;
+  margin-left: var(--space-3);
+}
+
+/* 长文本域占满弹窗内容宽度，保证 SYSTEM 提示词编辑空间 */
+.prompt-builtin-tip + .el-form .el-textarea,
+.crud-dialog .el-form-item__content .el-textarea {
+  width: 100%;
+}

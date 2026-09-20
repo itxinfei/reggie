@@ -28,6 +28,7 @@ import com.reggie.module.ai.provider.AiProviderManager;
 import com.reggie.module.ai.adapter.AbortableStreamCallback;
 import com.reggie.module.ai.service.AIChatService;
 import com.reggie.module.ai.service.AiAttachmentService;
+import com.reggie.module.ai.service.AiPromptTemplateService;
 import com.reggie.module.ai.service.ConversationContextService;
 import com.reggie.module.ai.service.AICacheService;
 import com.reggie.module.ai.service.conversation.AIConversationManagementService;
@@ -105,6 +106,10 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     /** 菜品数据缓存服务 */
     @Resource
     private AICacheService aiCacheService;
+
+    /** P3：系统提示词改由提示词模板库下发（缺失/异常时降级 yml 默认常量） */
+    @Resource
+    private AiPromptTemplateService promptTemplateService;
 
     /** JSON序列化工具 */
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
@@ -377,7 +382,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 dishName, categoryName, ingredients != null ? ingredients : "暂无");
 
         List<AIMessage> messages = Arrays.asList(
-                AIMessage.builder().role("system").content(aiConfig.getDishDescPrompt()).build(),
+                AIMessage.builder().role("system").content(getSystemPrompt("dish_desc")).build(),
                 AIMessage.builder().role("user").content(prompt).build()
         );
 
@@ -398,7 +403,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 + "请基于数据进行分析回答。";
 
         List<AIMessage> messages = Arrays.asList(
-                AIMessage.builder().role("system").content(aiConfig.getBusinessAnalysisPrompt()).build(),
+                AIMessage.builder().role("system").content(getSystemPrompt("business_analysis")).build(),
                 AIMessage.builder().role("user").content(prompt).build()
         );
 
@@ -805,14 +810,27 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         return a.equals(b);
     }
 
+    /**
+     * P3：优先取 ai_prompt_template 启用中的 SYSTEM 模板（后台可运营编辑），
+     * 库缺失/异常/空内容时降级 yml 配置常量（AIConfigProperties）。
+     */
     private String getSystemPrompt(String scene) {
-        if (scene == null) return aiConfig.getOrderAssistantPrompt();
-        switch (scene) {
-            case "order_assistant": return aiConfig.getOrderAssistantPrompt();
+        String key = scene != null ? scene : "order_assistant";
+        String templated = null;
+        try {
+            templated = promptTemplateService.getSystemPrompt(key);
+        } catch (Exception e) {
+            log.warn("读取提示词模板失败 scene={}, 降级默认配置: {}", key, e.getMessage());
+        }
+        if (templated != null && !templated.trim().isEmpty()) {
+            return templated;
+        }
+        switch (key) {
             case "dish_desc": return aiConfig.getDishDescPrompt();
             case "business_analysis": return aiConfig.getBusinessAnalysisPrompt();
             case "marketing":
                 return "你是一个营销文案专家。请根据用户需求生成吸引人的营销文案。文案要有感染力，适合外卖平台推送。";
+            case "order_assistant":
             default: return aiConfig.getOrderAssistantPrompt();
         }
     }

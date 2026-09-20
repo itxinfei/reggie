@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>提示词模板 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/ai-prompt.css?v=20260922" />
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
+  <div class="dashboard-container" id="prompt-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">AI 提示词模板</h1>
+
+      <!-- ========== 搜索与操作（统一 table-bar 组件） ========== -->
+      <table-bar
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        :loading="loading"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction">
+      </table-bar>
+
+      <!-- ========== 模板列表（统一 crud-table 组件） ========== -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="180"
+        empty-text="暂无提示词模板"
+        @page-change="onPageChange"
+        @size-change="onSizeChange">
+        <template #col-scene="{ row }">
+          <el-tag :type="sceneTagType(row.scene)" size="small">{{ sceneLabel(row.scene) }}</el-tag>
+        </template>
+        <template #col-type="{ row }">
+          <el-tag :type="typeTagType(row.type)" size="small" effect="plain">{{ typeLabel(row.type) }}</el-tag>
+        </template>
+        <template #col-enabled="{ row }">
+          <el-switch
+            :value="row.enabled"
+            @change="onToggleEnabled(row)">
+          </el-switch>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="openEdit(row)">修改</el-button>
+          <el-button
+            v-if="row.builtin"
+            type="text"
+            size="small"
+            class="btn-warning"
+            @click="onReset(row)">重置默认</el-button>
+          <el-button
+            v-else
+            type="text"
+            size="small"
+            class="btn-delete"
+            @click="onDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- ========== 新增/编辑弹窗（统一 crud-dialog 组件，xl 宽给长文本留足空间） ========== -->
+    <crud-dialog
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      size="xl"
+      :submit-loading="submitting"
+      :close-on-click-modal="false"
+      @submit="submitForm">
+      <el-alert
+        v-if="form.builtin"
+        class="prompt-builtin-tip"
+        type="info"
+        :closable="false"
+        show-icon
+        title="内置模板：场景、类型与编码不可修改；改动内容后可通过列表中的「重置默认」恢复原始文案。">
+      </el-alert>
+      <el-form
+        ref="promptForm"
+        label-width="92px"
+        size="small"
+        :model="form"
+        :rules="formRules">
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="模板名称：" prop="title">
+              <el-input v-model="form.title" placeholder="如：点餐助手 · 系统提示词" maxlength="100" show-word-limit></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="启用状态：">
+              <el-switch v-model="form.enabled" active-text="启用" inactive-text="停用"></el-switch>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="所属场景：" prop="scene">
+              <el-select v-model="form.scene" placeholder="请选择场景" :disabled="form.builtin" style="width: 100%;">
+                <el-option v-for="s in sceneOptions" :key="s.value" :label="s.label" :value="s.value"></el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="模板类型：" prop="type">
+              <el-select v-model="form.type" placeholder="请选择类型" :disabled="form.builtin" style="width: 100%;" @change="onTypeChange">
+                <el-option v-for="t in typeOptions" :key="t.value" :label="t.label" :value="t.value"></el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <!-- SYSTEM/WELCOME：正文 -->
+        <el-form-item v-if="form.type !== 'QUICK'" label="模板内容：" prop="content">
+          <el-input
+            type="textarea"
+            v-model="form.content"
+            :rows="14"
+            maxlength="4000"
+            show-word-limit
+            :placeholder="contentPlaceholder">
+          </el-input>
+          <div class="form-tip">系统提示词用于约束 AI 的角色与回答规则，<b>不会下发给浏览器</b>；欢迎语会展示在聊天页开场。</div>
+        </el-form-item>
+
+        <!-- QUICK：每行一条 -->
+        <el-form-item v-else label="快捷问题：" prop="quickText">
+          <el-input
+            type="textarea"
+            v-model="form.quickText"
+            :rows="10"
+            placeholder="每行一条快捷问题，最多 8 条，单条不超过 50 字">
+          </el-input>
+          <div class="form-tip">每行一条，展示为聊天页的快捷提问按钮；保存时自动去重并去除空行。</div>
+        </el-form-item>
+
+        <el-form-item label="排序：">
+          <el-input-number v-model="form.sort" :min="0" :max="9999"></el-input-number>
+          <span class="form-tip">数值越小越靠前；同场景同类型只取排序最前的启用模板。</span>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../api/ai.js?v=20260922"></script>
+  <script>
+    new Vue({
+      el: '#prompt-app',
+      mixins: [window.ReggieListMixin],
+      data() {
+        return {
+          // 字典接口失败时的本地兜底
+          sceneOptions: [
+            { value: 'business_analysis', label: '经营分析' },
+            { value: 'dish_desc', label: '菜品描述' },
+            { value: 'marketing', label: '营销文案' },
+            { value: 'order_assistant', label: '点餐助手' }
+          ],
+          typeOptions: [
+            { value: 'SYSTEM', label: '系统提示词' },
+            { value: 'WELCOME', label: '欢迎语' },
+            { value: 'QUICK', label: '快捷问题' }
+          ],
+          // 搜索条件（table-bar 回调写入）
+          searchParams: {},
+          searchConfig: [
+            { type: 'select', field: 'scene', placeholder: '全部场景', width: '130px', options: this.sceneOptions },
+            { type: 'select', field: 'type', placeholder: '全部类型', width: '130px', options: this.typeOptions },
+            { type: 'input', field: 'keyword', placeholder: '模板名称 / 编码', width: '200px' }
+          ],
+          actionConfig: [
+            { key: 'add', text: '+ 新增模板', type: 'primary' }
+          ],
+          tableData: [],
+          columns: [
+            { prop: 'title', label: '模板名称', minWidth: 200, showOverflowTooltip: true },
+            { prop: 'scene', label: '场景', width: 100, slot: true, align: 'center' },
+            { prop: 'type', label: '类型', width: 100, slot: true, align: 'center' },
+            { prop: 'code', label: '编码', width: 220, showOverflowTooltip: true },
+            { prop: 'enabled', label: '启用', width: 80, slot: true, align: 'center' },
+            { prop: 'sort', label: '排序', width: 70, align: 'center' },
+            { prop: 'updateTime', label: '更新时间', width: 160 }
+          ],
+          // 弹窗
+          dialogVisible: false,
+          dialogTitle: '新增提示词模板',
+          submitting: false,
+          form: this.buildEmptyForm(),
+          formRules: {
+            title: [
+              { required: true, message: '请输入模板名称', trigger: 'blur' },
+              { max: 100, message: '模板名称最多 100 字', trigger: 'blur' }
+            ],
+            scene: [{ required: true, message: '请选择所属场景', trigger: 'change' }],
+            type: [{ required: true, message: '请选择模板类型', trigger: 'change' }],
+            content: [{ validator: this.validateContent, trigger: 'blur' }],
+            quickText: [{ validator: this.validateQuickText, trigger: 'blur' }]
+          }
+        }
+      },
+      computed: {
+        contentPlaceholder() {
+          if (this.form.type === 'WELCOME') {
+            return '用户进入该场景聊天页时看到的开场白，一句话即可';
+          }
+          return '定义 AI 的角色、回答规则与输出格式要求';
+        }
+      },
+      created() {
+        this.loadMeta();
+        this.fetchData();
+      },
+      methods: {
+        /* ========== 字典 ========== */
+        async loadMeta() {
+          try {
+            const res = await aiBackendApi.promptMeta();
+            if (String(res.code) === '1' && res.data) {
+              if (Array.isArray(res.data.scenes) && res.data.scenes.length) {
+                this.sceneOptions = res.data.scenes;
+              }
+              if (Array.isArray(res.data.types) && res.data.types.length) {
+                this.typeOptions = res.data.types;
+              }
+            }
+          } catch (err) {
+            if (err && err.message === 'NOTLOGIN') return;
+            console.warn('加载提示词字典失败，使用本地兜底', err);
+          }
+        },
+
+        /* ========== 列表加载 ========== */
+        async fetchData() {
+          this.loading = true;
+          try {
+            const params = Object.assign({ page: this.page, pageSize: this.pageSize }, this.searchParams);
+            const res = await aiBackendApi.promptPage(params);
+            if (String(res.code) === '1' && res.data) {
+              this.tableData = res.data.records || [];
+              this.counts = Number(res.data.total) || 0;
+            } else {
+              ReggieUI.error(res.msg || '加载失败');
+            }
+          } catch (err) {
+            if (err && err.message === 'NOTLOGIN') return;
+            console.warn('加载提示词模板失败:', err);
+          } finally {
+            this.loading = false;
+          }
+        },
+        onSearch(searchParams) {
+          this.searchParams = searchParams || {};
+          this.page = 1;
+          this.fetchData();
+        },
+        onReset() {
+          this.searchParams = {};
+          this.page = 1;
+          this.fetchData();
+        },
+        onAction(payload) {
+          if (payload.key === 'add') this.openAdd();
+        },
+
+        /* ========== 标签映射 ========== */
+        sceneLabel(value) {
+          const hit = this.sceneOptions.find(function (s) { return s.value === value; });
+          return hit ? hit.label : value;
+        },
+        typeLabel(value) {
+          const hit = this.typeOptions.find(function (t) { return t.value === value; });
+          return hit ? hit.label : value;
+        },
+        sceneTagType(value) {
+          var map = { business_analysis: 'warning', dish_desc: 'success', marketing: 'danger', order_assistant: 'info' };
+          return map[value] || 'info';
+        },
+        typeTagType(value) {
+          var map = { SYSTEM: 'danger', WELCOME: 'success', QUICK: 'info' };
+          return map[value] || 'info';
+        },
+
+        /* ========== 新增 / 编辑 ========== */
+        buildEmptyForm() {
+          return {
+            id: null,
+            title: '',
+            scene: '',
+            type: 'SYSTEM',
+            content: '',
+            quickText: '',
+            enabled: true,
+            sort: 100,
+            builtin: false
+          };
+        },
+        openAdd() {
+          this.dialogTitle = '新增提示词模板';
+          this.form = this.buildEmptyForm();
+          this.dialogVisible = true;
+          this.$nextTick(() => {
+            this.$refs.promptForm && this.$refs.promptForm.clearValidate();
+          });
+        },
+        openEdit(row) {
+          this.dialogTitle = '修改提示词模板';
+          var quickText = '';
+          if (row.type === 'QUICK' && row.quickQuestions) {
+            // QUICK 存 JSON 数组，编辑框按「每行一条」回显
+            try {
+              var list = JSON.parse(row.quickQuestions);
+              if (Array.isArray(list)) quickText = list.join('\n');
+            } catch (e) {
+              quickText = '';
+            }
+          }
+          this.form = {
+            id: row.id,
+            title: row.title || '',
+            scene: row.scene,
+            type: row.type,
+            content: row.content || '',
+            quickText: quickText,
+            enabled: row.enabled !== false,
+            sort: row.sort != null ? row.sort : 100,
+            builtin: !!row.builtin
+          };
+          this.dialogVisible = true;
+          this.$nextTick(() => {
+            this.$refs.promptForm && this.$refs.promptForm.clearValidate();
+          });
+        },
+        onTypeChange() {
+          // 切换类型后清掉对侧校验红字
+          this.$nextTick(() => {
+            this.$refs.promptForm && this.$refs.promptForm.clearValidate(['content', 'quickText']);
+          });
+        },
+        validateContent(rule, value, callback) {
+          if (this.form.type !== 'QUICK') {
+            if (!this.form.content || !this.form.content.trim()) {
+              return callback(new Error('请输入模板内容'));
+            }
+            if (this.form.content.length > 4000) {
+              return callback(new Error('模板内容不能超过 4000 字'));
+            }
+          }
+          callback();
+        },
+        validateQuickText(rule, value, callback) {
+          if (this.form.type === 'QUICK') {
+            var lines = this.parseQuickLines(this.form.quickText);
+            if (lines.length === 0) {
+              return callback(new Error('请至少填写一条快捷问题'));
+            }
+            if (lines.length > 8) {
+              return callback(new Error('快捷问题最多 8 条'));
+            }
+            for (var i = 0; i < lines.length; i++) {
+              if (lines[i].length > 50) {
+                return callback(new Error('单条快捷问题不能超过 50 字：' + lines[i]));
+              }
+            }
+          }
+          callback();
+        },
+        parseQuickLines(raw) {
+          if (!raw) return [];
+          var parts = raw.split(/\r?\n/);
+          var seen = {};
+          var result = [];
+          for (var i = 0; i < parts.length; i++) {
+            var item = parts[i].trim();
+            if (!item || seen[item]) continue;
+            seen[item] = true;
+            result.push(item);
+          }
+          return result;
+        },
+        async submitForm() {
+          if (this.submitting) return;
+          try {
+            await this.$refs.promptForm.validate();
+          } catch (e) {
+            return;
+          }
+          this.submitting = true;
+          var payload = {
+            id: this.form.id,
+            title: this.form.title.trim(),
+            scene: this.form.scene,
+            type: this.form.type,
+            enabled: !!this.form.enabled,
+            sort: this.form.sort
+          };
+          if (this.form.type === 'QUICK') {
+            // 后端兼容「每行一条」纯文本，按行解析、去空去重
+            payload.quickQuestions = this.parseQuickLines(this.form.quickText).join('\n');
+          } else {
+            payload.content = this.form.content;
+          }
+          try {
+            var isEdit = !!this.form.id;
+            var res = isEdit
+              ? await aiBackendApi.promptUpdate(payload)
+              : await aiBackendApi.promptAdd(payload);
+            if (String(res.code) === '1') {
+              ReggieUI.success(isEdit ? '模板修改成功' : '模板新增成功');
+              this.dialogVisible = false;
+              this.fetchData();
+            } else {
+              ReggieUI.error(res.msg || '操作失败');
+            }
+          } catch (err) {
+            if (err && err.message === 'NOTLOGIN') return;
+            ReggieUI.error('请求失败：' + (err && err.message ? err.message : err));
+          } finally {
+            this.submitting = false;
+          }
+        },
+
+        /* ========== 行内启停 ========== */
+        onToggleEnabled(row) {
+          var next = !row.enabled;
+          var payload = {
+            id: row.id,
+            title: row.title,
+            scene: row.scene,
+            type: row.type,
+            enabled: next,
+            sort: row.sort
+          };
+          if (row.type === 'QUICK') {
+            payload.quickQuestions = row.quickQuestions || '';
+          } else {
+            payload.content = row.content || '';
+          }
+          aiBackendApi.promptUpdate(payload).then((res) => {
+            if (String(res.code) === '1') {
+              this.$set(row, 'enabled', next);
+              ReggieUI.success(next ? '已启用' : '已停用');
+            } else {
+              ReggieUI.error(res.msg || '操作失败');
+            }
+          }).catch((err) => {
+            if (err && err.message === 'NOTLOGIN') return;
+            ReggieUI.error('请求失败：' + (err && err.message ? err.message : err));
+          });
+        },
+
+        /* ========== 重置默认 / 删除 ========== */
+        onReset(row) {
+          ReggieUI.confirm('确认将「' + row.title + '」恢复为系统默认内容？当前修改会被覆盖。', '重置确认', {
+            confirmButtonText: '确定重置',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            aiBackendApi.promptReset(row.id).then((res) => {
+              if (String(res.code) === '1') {
+                ReggieUI.success('已重置为默认内容');
+                this.fetchData();
+              } else {
+                ReggieUI.error(res.msg || '操作失败');
+              }
+            }).catch(this.handleRequestError);
+          }).catch(() => {});
+        },
+        onDelete(row) {
+          ReggieUI.confirm('确认删除自定义模板「' + row.title + '」？删除后该场景将回落到内置默认模板。', '删除确认', {
+            confirmButtonText: '确定删除',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            aiBackendApi.promptDelete(row.id).then((res) => {
+              if (String(res.code) === '1') {
+                ReggieUI.success('删除成功');
+                // 删空当前页时回退一页
+                if (this.tableData.length === 1 && this.page > 1) {
+                  this.page = this.page - 1;
+                }
+                this.fetchData();
+              } else {
+                ReggieUI.error(res.msg || '操作失败');
+              }
+            }).catch(this.handleRequestError);
+          }).catch(() => {});
+        },
+        handleRequestError(err) {
+          if (err && err.message === 'NOTLOGIN') return;
+          ReggieUI.error('请求失败：' + (err && err.message ? err.message : err));
+        }
+      }
+    });
+  </script>
+</body>
+</html>

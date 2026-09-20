@@ -195,6 +195,27 @@
         },
         providerFetchModels: function(baseUrl, apiKey) {
             return $axios.post('/admin/ai/provider/fetch-models', { baseUrl: baseUrl, apiKey: apiKey });
+        },
+
+        // ==================== AI 提示词模板（P3） ====================
+
+        promptPage: function(params) {
+            return $axios({ url: '/admin/ai/prompt/page', method: 'get', params: params });
+        },
+        promptMeta: function() {
+            return $axios.get('/admin/ai/prompt/meta');
+        },
+        promptAdd: function(data) {
+            return $axios.post('/admin/ai/prompt/add', data);
+        },
+        promptUpdate: function(data) {
+            return $axios.post('/admin/ai/prompt/update', data);
+        },
+        promptDelete: function(id) {
+            return $axios.delete('/admin/ai/prompt/delete/' + id);
+        },
+        promptReset: function(id) {
+            return $axios.post('/admin/ai/prompt/reset/' + id);
         }
     };
 

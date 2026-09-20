@@ -44,8 +44,8 @@ public class MybatisPlusConfig {
      * 修改点（2026-09-14）：billing 模块已删除（假需求：默认MOCK模拟开通），billing_plan 白名单项一并移除。
      */
     private static final Set<String> IGNORE_TABLES = new HashSet<>(Arrays.asList(
-        "tenant", "employee", "shopping_cart", "ai_provider_config", "dish_evaluation",
-        "permission", "role_permission", "region"
+        "tenant", "employee", "shopping_cart", "ai_provider_config", "ai_prompt_template",
+        "dish_evaluation", "permission", "role_permission", "region"
     ));
 
     /**

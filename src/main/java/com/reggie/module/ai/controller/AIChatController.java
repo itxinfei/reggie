@@ -84,6 +84,10 @@ public class AIChatController {
     @Resource
     private com.reggie.module.ai.provider.AiProviderManager aiProviderManager;
 
+    /** P3：欢迎语/快捷问题由提示词模板库下发 */
+    @Resource
+    private com.reggie.module.ai.service.AiPromptTemplateService promptTemplateService;
+
     /**
      * AI 健康探活线程池（见 {@code AsyncConfig#aiHealthProbeExecutor}）。
      * 用于将探活调用与 HTTP 请求线程隔离，配合 Future.get(timeout) 实现有界超时。
@@ -655,7 +659,7 @@ public class AIChatController {
         return R.success(status);
     }
 
-    // ==================== 场景前端配置（P1 静态，P3 起由提示词模板服务下发） ====================
+    // ==================== 场景前端配置（P3 起由 ai_prompt_template 下发，静态 Map 仅作库异常降级） ====================
 
     /** 后台员工可选场景 */
     private static final List<String> EMPLOYEE_SCENES = Arrays.asList(
@@ -664,10 +668,10 @@ public class AIChatController {
     /** C 端用户唯一场景 */
     private static final String CUSTOMER_SCENE = "order_assistant";
 
-    /** 各场景面向用户的开场白（注意：不是 system prompt，system prompt 永不下发） */
+    /** 各场景开场白兜底（P3 起仅当模板库读取异常时降级使用；不是 system prompt，永不下发 system prompt） */
     private static final Map<String, String> SCENE_WELCOME = new HashMap<>();
 
-    /** 各场景快捷问题 */
+    /** 各场景快捷问题兜底（P3 起仅当模板库读取异常时降级使用） */
     private static final Map<String, List<String>> SCENE_QUICK_QUESTIONS = new HashMap<>();
 
     static {
@@ -727,10 +731,26 @@ public class AIChatController {
         capabilities.put("vision", Boolean.TRUE.equals(providerCaps.get("vision")));
         capabilities.put("tools", false);
 
+        // P3：欢迎语/快捷问题优先取模板库（后台「提示词模板」可运营），读取异常降级静态兜底
+        String welcome = null;
+        List<String> quickQuestions = null;
+        try {
+            welcome = promptTemplateService.getWelcome(resolvedScene);
+            quickQuestions = promptTemplateService.getQuickQuestions(resolvedScene);
+        } catch (Exception e) {
+            // 模板服务内部已异常安全，此处双保险
+        }
+        if (welcome == null || welcome.trim().isEmpty()) {
+            welcome = SCENE_WELCOME.get(resolvedScene);
+        }
+        if (quickQuestions == null || quickQuestions.isEmpty()) {
+            quickQuestions = SCENE_QUICK_QUESTIONS.get(resolvedScene);
+        }
+
         Map<String, Object> data = new HashMap<>();
         data.put("scene", resolvedScene);
-        data.put("welcome", SCENE_WELCOME.get(resolvedScene));
-        data.put("quickQuestions", SCENE_QUICK_QUESTIONS.get(resolvedScene));
+        data.put("welcome", welcome);
+        data.put("quickQuestions", quickQuestions);
         data.put("capabilities", capabilities);
         if (employee) {
             // 后台页场景切换条需要全量场景清单
