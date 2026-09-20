@@ -10,25 +10,8 @@
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: var(--bg-page); padding: 20px; font-family: var(--font-family-base); }
-        .dashboard-container { max-width: 1400px; margin: 0 auto; }
-        .container { background: var(--bg-surface); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-xs); }
-
-        /* 工具栏 */
-        .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--el-border-light); margin-bottom: var(--space-5); }
-        .toolbar .el-input, .toolbar .el-select { width: 180px; }
-        .toolbar .spacer { flex: 1; }
-
-        /* 表格 */
-        .store-table { margin-top: 4px; }
-        /* 修改点：窄屏兜底——外部分页(layout 全功能)在 269px 容器内溢出，允许容器横向滚动 */
-        @media (max-width: 768px) {
-          .store-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        }
-        .store-table .cell-status { display: flex; align-items: center; gap: 6px; }
-        .tag-active { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size:var(--font-size-xs); font-weight: 500; background: var(--color-success-light); color: var(--color-success); }
-        .tag-inactive { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size:var(--font-size-xs); font-weight: 500; background: var(--color-danger-light); color: var(--color-danger); }
+        /* 布局/容器/工具栏/分页全部走公共样式（consistency.css + table-bar/crud-table），
+           本页仅保留表格插槽与弹窗用到的局部类 */
         .amount-highlight { color: var(--color-warning); font-weight: 600; }
         .order-count { font-weight: 600; color: var(--el-color-primary); }
 
@@ -36,9 +19,6 @@
         .form-section-title { font-size:var(--font-size-base); font-weight: 600; color: var(--el-text-primary); margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px dashed var(--el-border-lighter2); }
         .form-section-title:first-child { margin-top: 0; }
         .footer-actions { text-align: right; padding-top: 8px; }
-
-        /* 空状态 */
-        .empty-wrap { text-align: center; padding: 60px 0; color: var(--color-info); }
 
         .sync-section { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -73,36 +53,17 @@
             <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
             <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
-            <!-- ===== 高级搜索 + 操作按钮 ===== -->
-            <div class="toolbar">
-                <el-input v-model="search.keyword" placeholder="门店名称 / 编码" clearable size="small" @clear="doSearch" @keyup.enter.native="doSearch">
-                    <i slot="prefix" class="el-input__icon ri-search-line"></i>
-                </el-input>
-                <el-select v-model="search.storeType" placeholder="门店类型" clearable size="small" @change="doSearch">
-                    <el-option label="全部类型" :value="null"></el-option>
-                    <el-option label="直营总店" :value="1"></el-option>
-                    <el-option label="直营分店" :value="2"></el-option>
-                    <el-option label="加盟店" :value="3"></el-option>
-                </el-select>
-                <el-select v-model="search.status" placeholder="门店状态" clearable size="small" @change="doSearch">
-                    <el-option label="全部状态" :value="null"></el-option>
-                    <el-option label="已启用" :value="1"></el-option>
-                    <el-option label="已停用" :value="0"></el-option>
-                </el-select>
-                <el-button size="small" type="primary" icon="ri-search-line" @click="doSearch">搜索</el-button>
-                <el-button size="small" icon="ri-refresh-line-left" @click="resetSearch">重置</el-button>
+            <!-- ===== 搜索 + 操作工具栏（筛选改选即查，批量按钮随勾选启停） ===== -->
+            <table-bar
+                :search-items="searchItems"
+                :actions="barActions"
+                @search="onBarSearch"
+                @reset="onBarReset"
+                @action="onBarAction">
+            </table-bar>
 
-                <span class="spacer"></span>
-
-                <el-button size="small" type="success" icon="ri-add-line" @click="openCreateDialog">新建门店</el-button>
-                <el-button size="small" type="warning" icon="ri-upload-line2" @click="batchEnable" :disabled="selection.length === 0">批量启用</el-button>
-                <el-button size="small" type="info" icon="ri-download-line" @click="batchDisable" :disabled="selection.length === 0">批量停用</el-button>
-                <el-button size="small" icon="ri-download-line" @click="doExport">导出数据</el-button>
-            </div>
-
-            <!-- ===== 数据表格 ===== -->
-            <div v-loading="loading" class="store-table">
-                <crud-table v-if="loading || tableData.length > 0" aria-label="数据表格"
+            <!-- ===== 数据表格（内置分页/骨架/空态） ===== -->
+            <crud-table aria-label="数据表格"
                     :data="tableData"
                     :columns="columns"
                     :loading="loading"
@@ -110,12 +71,17 @@
                     :actions-width="250"
                     :selection="true"
                     :show-index="true"
-                    :show-pagination="false"
+                    :page="pagination.current"
+                    :page-size="pagination.size"
+                    :total="pagination.total"
                     :default-sort="{prop: 'createTime', order: 'descending'}"
+                    empty-hint="暂无门店数据，点击上方「新建门店」创建第一家门店"
                     border stripe size="small"
                     @selection-change="onSelectionChange"
                     @sort-change="onSortChange"
-                    @row-click="onRowClick">
+                    @row-click="onRowClick"
+                    @page-change="onPageChange"
+                    @size-change="onPageSizeChange">
                     <template #col-storeName="{ row }">
                         <el-tag :type="storeTypeTag(row.storeType)" size="mini" effect="plain">{{ storeTypeName(row.storeType) }}</el-tag>
                         <span style="margin-left:6px; font-weight:500;">{{ row.storeName }}</span>
@@ -156,28 +122,7 @@
                         <el-button type="text" size="mini" icon="ri-toggle-line" @click.stop="switchToStore(row)">切换</el-button>
                         <el-button type="text" size="mini" icon="ri-refresh-line" @click.stop="openSyncDialog(row)">同步</el-button>
                     </template>
-                </crud-table>
-
-                <!-- 分页 -->
-                <el-pagination
-                    v-if="pagination.total > 0"
-                    style="margin-top:16px; text-align:right;"
-                    :current-page="Number(pagination.current)"
-                    :page-sizes="[10, 20, 50, 100]"
-                    :page-size="Number(pagination.size)"
-                    :total="Number(pagination.total)"
-                    layout="total, sizes, prev, pager, next, jumper"
-                    @size-change="onPageSizeChange"
-                    @current-change="onPageChange">
-                </el-pagination>
-
-                <!-- 空状态 -->
-                <div v-if="!loading && tableData.length === 0" class="empty-wrap">
-                    <i class="ri-store-line" style="font-size: 48px"></i>
-                    <p style="margin-top:12px;">暂无门店数据</p>
-                    <el-button type="primary" size="small" style="margin-top:12px;" @click="openCreateDialog">创建第一家门店</el-button>
-                </div>
-            </div>
+            </crud-table>
         </main>
     </div>
     <!-- #app（L68）的闭合在全部弹窗之后，见文件尾，确保弹窗在 Vue 编译范围内 -->
@@ -438,6 +383,19 @@
         activeFilter: '',
         // 搜索条件
         search: { keyword: '', storeType: null, status: null },
+        // table-bar 筛选项（组件内部 searchValues 不双向绑定，经 onBarSearch 桥接回 search）
+        searchItems: [
+            { type: 'input', field: 'keyword', label: '门店名称 / 编码', placeholder: '门店名称 / 编码', width: 180 },
+            { type: 'select', field: 'storeType', placeholder: '门店类型', width: 180, options: [
+                { label: '直营总店', value: 1 },
+                { label: '直营分店', value: 2 },
+                { label: '加盟店', value: 3 }
+            ] },
+            { type: 'select', field: 'status', placeholder: '门店状态', width: 180, options: [
+                { label: '已启用', value: 1 },
+                { label: '已停用', value: 0 }
+            ] }
+        ],
         // 排序
         sort: { sortBy: 'createTime', sortOrder: 'desc' },
         // 分页
@@ -488,6 +446,16 @@
                 { key: 'inactive', icon: 'ri-pause-circle-line', label: '已停用', value: self.stats.inactiveStores, color: 'warning', clickable: true, active: self.activeFilter === 'inactive' },
                 { key: 'today', icon: 'ri-money-cny-circle-line', label: '今日有营收门店', value: self.stats.todayTotalStores, color: 'info', unit: '家' }
             ]
+        },
+        // 工具栏操作：批量启用/停用随勾选启停；导出为真实 CSV 下载
+        barActions: function() {
+            var noSelection = this.selection.length === 0;
+            return [
+                { key: 'create', text: '新建门店', type: 'primary', icon: 'ri-add-line' },
+                { key: 'batchEnable', text: '批量启用', type: 'warning', icon: 'ri-upload-line2', disabled: noSelection },
+                { key: 'batchDisable', text: '批量停用', type: 'info', icon: 'ri-download-line', disabled: noSelection },
+                { key: 'export', text: '导出数据', icon: 'ri-download-line' }
+            ];
         }
     },
     created: function() { this.loadData(true); },
@@ -549,18 +517,32 @@
             this.pagination.current = 1
             this.loadData(false)
         },
-        // ========== 搜索 ==========
-        doSearch: function() {
+        // ========== 搜索（table-bar 桥接：回写 search 后查询） ==========
+        onBarSearch: function(params) {
+            this.search.keyword = params.keyword || '';
+            this.search.storeType = (params.storeType === '' || params.storeType === undefined || params.storeType === null)
+                ? null : Number(params.storeType);
+            this.search.status = (params.status === '' || params.status === undefined || params.status === null)
+                ? null : Number(params.status);
             this.pagination.current = 1;
             this.activeFilter = '';
             this.loadData(false);
         },
-        resetSearch: function() {
+        onBarReset: function() {
             this.search = { keyword: '', storeType: null, status: null };
             this.sort = { sortBy: 'createTime', sortOrder: 'desc' };
             this.activeFilter = '';
             this.pagination.current = 1;
             this.loadData(false);
+        },
+        // ========== 工具栏操作分发 ==========
+        onBarAction: function(payload) {
+            switch (payload.key) {
+                case 'create': this.openCreateDialog(); break;
+                case 'batchEnable': this.batchEnable(); break;
+                case 'batchDisable': this.batchDisable(); break;
+                case 'export': this.doExport(); break;
+            }
         },
 
         // ========== 排序 ==========
@@ -574,12 +556,13 @@
             this.loadData(false);
         },
 
-        // ========== 分页 ==========
-        onPageChange: function(page) {
-            this.pagination.current = page;
+        // ========== 分页（crud-table：page-change 载荷 {page,pageSize}，size-change 为数字） ==========
+        onPageChange: function(p) {
+            this.pagination.current = p.page;
             this.loadData(false);
         },
-        onPageSizeChange: function(size) {
+        onPageSizeChange: function(s) {
+            var size = (s && s.pageSize !== undefined) ? s.pageSize : s;
             this.pagination.size = size;
             this.pagination.current = 1;
             this.loadData(false);
