@@ -202,22 +202,17 @@
         },
         /* ========== 搜索与筛选 ========== */
         search() {
+          // 与 activeFilter 视觉态同步：卡片状态筛选不残留到关键字查询
           this.activeFilter = ''
+          this.query.status = ''
           this.page = 1
           this.fetchData(false)
         },
         onCardClick(payload) {
+          // 「在线」卡 clickable:false（统计维度，后端列表不支持按在线筛选），不会进入此处理
           const key = payload.activeKey
           this.activeFilter = key
-          if (key === 'online') {
-            // 在线为统计维度，无法直接筛选，清空其它筛选后展示全部
-            this.query.name = ''
-            this.query.code = ''
-            this.query.storeCode = ''
-            this.query.status = ''
-          } else {
-            this.query.status = key === '' ? '' : Number(key)
-          }
+          this.query.status = key === '' ? '' : Number(key)
           this.page = 1
           this.fetchData(false)
         },
