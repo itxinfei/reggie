@@ -346,7 +346,7 @@
             }).catch(err => {
               ReggieUI.error('请求失败：' + err)
             })
-          })
+          }).catch(() => {})
         },
         // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
       }

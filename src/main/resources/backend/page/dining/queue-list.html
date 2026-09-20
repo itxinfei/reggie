@@ -11,8 +11,6 @@
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
   <style>
-    .queue-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
-
     /* 修改点（2026-09-15）：筛选+叫号压缩为「单行」工具栏
        原实现标签位于控件上方（两行）→ 工具栏过高，且「重置」被挤到第二行。
        现改为标签与控件同行、控件统一 small 尺寸、降低纵向内边距，整条工具栏仅一行。 */
@@ -79,7 +77,7 @@
   <!-- 功能：堂食排队取号、叫号、入座全流程管理，支持按手机号/状态筛选、统计卡片快速过滤 -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="queue-app">
-    <main class="container queue-container" id="main-content" role="main" aria-label="排队叫号看板">
+    <main class="container" id="main-content" role="main" aria-label="排队叫号看板">
 
       <!-- 修改点：统计卡片支持点击筛选（点击按排队状态过滤数据，与状态下拉框联动） -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
@@ -536,6 +534,7 @@
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) }) }
             })
+            .catch(function() {})
         },
         // CANCELLED → WAITING（恢复排队，用于误取消纠错）
         reactivateHandle: function(id) {
@@ -547,6 +546,7 @@
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
+            .catch(function() {})
         },
         // 取消排队
         cancelHandle: function(id) {
@@ -558,6 +558,7 @@
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
+            .catch(function() {})
         }
       }
     })

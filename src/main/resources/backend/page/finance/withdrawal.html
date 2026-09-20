@@ -205,7 +205,7 @@
           ],
           // 操作按钮配置
           actionItems: [
-            { key: 'add', label: '申请提现', type: 'primary', icon: 'ri-add-line' }
+            { key: 'add', text: '申请提现', type: 'primary', icon: 'ri-add-line' }
           ],
           // 表格列配置
           columns: [
@@ -229,18 +229,18 @@
             remark: ''
           },
           addRules: {
-            amount: [{ required: true, message: 'Please enter amount', trigger: 'blur' }],
-            withdrawMethod: [{ required: true, message: 'Please select method', trigger: 'change' }],
-            receiveAccount: [{ required: true, message: 'Please enter account', trigger: 'blur' }],
-            receiveName: [{ required: true, message: 'Please enter name', trigger: 'blur' }]
+            amount: [{ required: true, message: '请输入提现金额', trigger: 'blur' }],
+            withdrawMethod: [{ required: true, message: '请选择提现方式', trigger: 'change' }],
+            receiveAccount: [{ required: true, message: '请输入收款账户', trigger: 'blur' }],
+            receiveName: [{ required: true, message: '请输入收款人姓名', trigger: 'blur' }]
           },
 
           reviewRules: {
-            status: [{ required: true, message: 'Please select result', trigger: 'change' }],
+            status: [{ required: true, message: '请选择审核结果', trigger: 'change' }],
             remark: [{ required: false, message: '', trigger: 'blur' }]
           },
           paymentRules: {
-            paymentNo: [{ required: true, message: 'Please enter payment number', trigger: 'blur' }]
+            paymentNo: [{ required: true, message: '请输入打款流水号', trigger: 'blur' }]
           },
 
           // Detail dialog
@@ -430,15 +430,15 @@
               remark: self.reviewForm.remark
             }).then(function(res) {
               if (res.code === 1) {
-                ReggieUI.success('Review completed')
+                ReggieUI.success('审核完成')
                 self.reviewDialogVisible = false
                 self.fetchData()
                 self.fetchStatistics()
               } else {
-                ReggieUI.error(res.msg || 'Review failed')
+                ReggieUI.error(res.msg || '审核失败')
               }
             }).catch(function(err) {
-              ReggieUI.error('Review failed')
+              ReggieUI.error('审核失败')
             }).finally(function() {
               self.submitLoading = false
             })
@@ -464,15 +464,15 @@
               paymentNo: self.paymentForm.paymentNo
             }).then(function(res) {
               if (res.code === 1) {
-                ReggieUI.success('Payment processed')
+                ReggieUI.success('打款成功')
                 self.paymentDialogVisible = false
                 self.fetchData()
                 self.fetchStatistics()
               } else {
-                ReggieUI.error(res.msg || 'Payment failed')
+                ReggieUI.error(res.msg || '打款失败')
               }
             }).catch(function(err) {
-              ReggieUI.error('Payment failed')
+              ReggieUI.error('打款失败')
             }).finally(function() {
               self.submitLoading = false
             })
@@ -480,19 +480,19 @@
         },
         async handleCancel(row) {
           try {
-            await ReggieUI.confirm('Are you sure to cancel this application?', 'Confirm', {
-              confirmButtonText: 'Yes',
-              cancelButtonText: 'No',
+            await ReggieUI.confirm('确定要取消该提现申请吗？', '取消确认', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
               type: 'warning'
             })
             
             const res = await cancelWithdrawal(row.id)
             if (res.code === 1) {
-              ReggieUI.success('Cancelled')
+              ReggieUI.success('已取消')
               this.fetchData()
               this.fetchStatistics()
             } else {
-              ReggieUI.error(res.msg || 'Cancellation failed')
+              ReggieUI.error(res.msg || '取消失败')
             }
           } catch (err) {
             if (err === 'cancel') return

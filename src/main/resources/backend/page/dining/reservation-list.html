@@ -22,8 +22,6 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="reservation-app">
     <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-      <el-button type="primary" icon="ri-add-line" size="small" @click="addHandle">新增预订</el-button>
-
       <!-- 统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -35,8 +33,10 @@
       <table-bar
         ref="tableBar"
         :search-items="searchConfig"
+        :actions="actionItems"
         @search="onSearch"
         @reset="onReset"
+        @action="onBarAction"
       ></table-bar>
 
       <!-- 数据表格 -->
@@ -245,6 +245,10 @@
             { type: 'date', field: 'reserveTime', placeholder: '选择预订时间', width: '360px',
               beginField: 'beginTime', endField: 'endTime' }
           ],
+          // 工具栏操作按钮（table-bar 内部状态不双向绑定，点击经 @action 事件桥接）
+          actionItems: [
+            { key: 'add', text: '新增预订', type: 'primary', icon: 'ri-add-line' }
+          ],
           // 表格列
           columns: [
             { prop: 'customerName', label: '客户姓名', width: 100, align: 'center' },
@@ -366,6 +370,12 @@
           this.form = { id: null, customerName: '', phone: '', reservedTime: '', seatCount: 2, tableId: null, remark: '' }
           if (this.$refs.reservationForm) {
             this.$refs.reservationForm.clearValidate()
+          }
+        },
+        // 工具栏按钮桥接：新增预订（保持原 addHandle 打开新增弹窗行为不变）
+        onBarAction: function(payload) {
+          if (payload.key === 'add') {
+            this.addHandle()
           }
         },
         addHandle: function() {

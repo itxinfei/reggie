@@ -579,7 +579,7 @@
               { required: true, message: '请输入规格组名称', trigger: 'blur' },
               { validator: function (rule, value, cb) { return vm.validateGroupNameUnique(rule, value, cb) }, trigger: 'blur' }
             ],
-            type: [{ required: true, message: '请选择选择方式', trigger: 'change' }]
+            type: [{ required: true, message: '请选择规格方式', trigger: 'change' }]
           },
           // 规格选项弹窗
           optionDialogVisible: false,

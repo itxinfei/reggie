@@ -9,6 +9,41 @@
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <style>
+    /* 任务详情弹窗（只读）：label 灰底固定宽、value 随右；打印报文灰底可滚动 */
+    .task-detail__row { margin-bottom: var(--space-3); }
+    .task-detail__label {
+      display: inline-block;
+      width: 96px;
+      padding: var(--space-1) var(--space-2);
+      margin-right: var(--space-2);
+      background: var(--bg-page);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: var(--font-size-base);
+      line-height: 20px;
+      vertical-align: top;
+    }
+    .task-detail__title {
+      margin: var(--space-4) 0 var(--space-2);
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .task-detail__content {
+      margin: 0;
+      padding: var(--space-3);
+      background: var(--bg-page);
+      border-radius: var(--radius-sm);
+      max-height: 240px;
+      overflow: auto;
+      font-size: var(--font-size-sm);
+      line-height: 1.6;
+      color: var(--text-secondary);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+  </style>
 </head>
 <body>
   <!-- ====== 打印任务管理页 ====== -->
@@ -79,7 +114,7 @@
           <el-tag :type="getStatusTag(row.status).type">{{ getStatusTag(row.status).label }}</el-tag>
         </template>
         <template #col-errorMsg="{ row }">
-          <span v-if="row.errorMsg" :title="row.errorMsg" class="cell-ellipsis">{{ row.errorMsg }}</span>
+          <span v-if="row.errorMsg">{{ row.errorMsg }}</span>
           <span v-else>-</span>
         </template>
         <template #actions="{ row }">
@@ -152,7 +187,7 @@
             { prop: 'createdTime', label: '创建时间', width: 160, align: 'center' },
             { prop: 'pulledTime', label: '领取时间', width: 160, align: 'center' },
             { prop: 'doneTime', label: '完成时间', width: 160, align: 'center' },
-            { prop: 'errorMsg', label: '失败原因', minWidth: 120, align: 'center', slot: true }
+            { prop: 'errorMsg', label: '失败原因', minWidth: 120, align: 'center', slot: true, showOverflowTooltip: true }
           ],
           stats: {
             totalTasks: 0,

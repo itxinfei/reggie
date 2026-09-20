@@ -68,11 +68,11 @@
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" @click="showDetail(row)">详情</el-button>
-          <el-button type="text" size="small" class="btn-accept" @click="acceptOrder(row)" v-if="row.status === 'PENDING'">接单</el-button>
-          <el-button type="text" size="small" class="btn-pick" @click="statusChange(row, 'PICKING')" v-if="row.status === 'ACCEPTED'">取餐</el-button>
-          <el-button type="text" size="small" class="btn-deliver" @click="statusChange(row, 'DELIVERING')" v-if="row.status === 'PICKING'">配送</el-button>
-          <el-button type="text" size="small" class="btn-complete" @click="statusChange(row, 'DELIVERED')" v-if="row.status === 'DELIVERING'">送达</el-button>
-          <el-button type="text" size="small" class="btn-cancel" @click="cancelOrder(row)" v-if="row.status !== 'DELIVERED' && row.status !== 'CANCELLED'">取消</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="acceptOrder(row)" v-if="row.status === 'PENDING'">接单</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="statusChange(row, 'PICKING')" v-if="row.status === 'ACCEPTED'">取餐</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="statusChange(row, 'DELIVERING')" v-if="row.status === 'PICKING'">配送</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="statusChange(row, 'DELIVERED')" v-if="row.status === 'DELIVERING'">送达</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="cancelOrder(row)" v-if="row.status !== 'DELIVERED' && row.status !== 'CANCELLED'">取消</el-button>
         </template>
       </crud-table>
 
