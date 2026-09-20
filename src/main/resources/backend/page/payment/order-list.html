@@ -73,7 +73,7 @@
         empty-hint="试试调整筛选条件"
         :data="tableData"
         :columns="columns"
-        :loading="false"
+        :loading="loading"
         :page="page"
         :page-size="pageSize"
         :total="counts"
@@ -96,7 +96,7 @@
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="viewDetail(row)">查看详情</el-button>
-          <el-button v-if="row.status === '成功'" type="text" size="small" class="btn-view" @click="openRefund(row)">退款</el-button>
+          <el-button v-if="row.status === '成功'" type="text" size="small" class="btn-delete" @click="openRefund(row)">退款</el-button>
         </template>
       </crud-table>
     </main>
@@ -116,7 +116,7 @@
         <!-- 头部概要：订单号 + 状态 -->
         <div class="detail-header">
           <span class="detail-title">支付订单 #{{ detailForm.id }}</span>
-          <el-tag :type="statusTagType(detailForm.status)" size="small" effect="plain">{{ statusLabel(detailForm.status) }}</el-tag>
+          <el-tag :type="statusTagType(detailForm.status)" size="small" effect="light">{{ statusLabel(detailForm.status) }}</el-tag>
         </div>
 
         <!-- 金额卡片 -->

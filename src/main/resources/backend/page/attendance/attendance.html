@@ -23,13 +23,13 @@
 
       <!-- 操作行：签到 / 签退 -->
       <div class="ds-actions-row">
-        <el-button type="primary" size="small" icon="ri-checkbox-circle-line" @click="handleClockIn" :loading="clockBtnLoading">签到打卡</el-button>
-        <el-button type="success" size="small" icon="ri-close-circle-line" @click="handleClockOut" :loading="clockBtnLoading">签退打卡</el-button>
+        <el-button type="primary" size="small" icon="ri-checkbox-circle-line" @click="handleClockIn" :loading="signInLoading">签到打卡</el-button>
+        <el-button type="success" size="small" icon="ri-close-circle-line" @click="handleClockOut" :loading="signOutLoading">签退打卡</el-button>
       </div>
 
       <!-- 今日考勤 + 本周异常 -->
       <el-row :gutter="24" class="content-row">
-        <el-col :span="12">
+        <el-col :xs="24" :sm="12" :span="12">
           <el-card shadow="never" class="section-card">
             <div class="section-header">
               <h3>今日考勤</h3>
@@ -57,7 +57,7 @@
             </div>
           </el-card>
         </el-col>
-        <el-col :span="12">
+        <el-col :xs="24" :sm="12" :span="12">
           <el-card shadow="never" class="section-card">
             <div class="section-header">
               <h3>本周异常考勤</h3>
@@ -144,7 +144,9 @@
         return {
           loading: false,
           calendarLoading: false,
-          clockBtnLoading: false,
+          // 修改点：签到/签退 loading 拆分，避免两按钮同时转圈
+          signInLoading: false,
+          signOutLoading: false,
           statsCards: [],
           todayList: [],
           abnormalList: [],
@@ -164,9 +166,9 @@
         // ===== 签到签退 =====
         handleClockIn: function () {
           const self = this
-          self.clockBtnLoading = true
+          self.signInLoading = true
           attendanceClockIn().then(function (res) {
-            self.clockBtnLoading = false
+            self.signInLoading = false
             if (String(res.code) === '1') {
               ReggieUI.success('签到成功')
               self.fetchAll()
@@ -174,15 +176,15 @@
               ReggieUI.error(res.msg || '签到失败')
             }
           }).catch(function (e) {
-            self.clockBtnLoading = false
+            self.signInLoading = false
             ReggieUI.error('签到失败，请稍后重试')
           })
         },
         handleClockOut: function () {
           const self = this
-          self.clockBtnLoading = true
+          self.signOutLoading = true
           attendanceClockOut({}).then(function (res) {
-            self.clockBtnLoading = false
+            self.signOutLoading = false
             if (String(res.code) === '1') {
               ReggieUI.success('签退成功')
               self.fetchAll()
@@ -190,7 +192,7 @@
               ReggieUI.error(res.msg || '签退失败')
             }
           }).catch(function (e) {
-            self.clockBtnLoading = false
+            self.signOutLoading = false
             ReggieUI.error('签退失败，请稍后重试')
           })
         },

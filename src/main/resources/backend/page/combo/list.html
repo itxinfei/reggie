@@ -77,6 +77,7 @@
       :total="counts"
       :loading="loading"
       :selection="true"
+      row-key="id"
       :show-actions="true" :viewable="true"
       :actions-width="200"
       @selection-change="handleSelectionChange"
@@ -264,7 +265,7 @@
               @change="onDishSelectionChange"
             >
               <div v-for="(item, index) in dishSelectList" :key="index" class="items">
-                <el-checkbox :label="item" :key="index">
+                <el-checkbox :label="item" :key="index" :disabled="item.status == 0">
                   <div class="item">
                     <span class="item-name">{{ item.dishName }}</span>
                     <el-tag :type="item.status == 0 ? 'danger' : 'success'" size="small">{{ item.status == 0 ? '停售' : '在售' }}</el-tag>
@@ -349,7 +350,7 @@ new Vue({
       // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
       columns: [
         { prop: 'name', label: '套餐名称', slot: true, minWidth: 150 },
-        { prop: 'categoryName', label: '分类', width: 60, align: 'center' },
+        { prop: 'categoryName', label: '分类', width: 100, align: 'center' },
         { prop: 'price', label: '价格', width: 110, slot: true, type: 'money' },
         { prop: 'status', label: '状态', width: 70, align: 'center', slot: true },
         { prop: 'description', label: '描述', minWidth: 180 },

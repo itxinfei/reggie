@@ -47,7 +47,7 @@
             <div class="prog-name">{{ item.name }}</div>
             <div class="prog-bar-wrap"><div class="prog-bar-fill" :style="{width: getBarWidth(idx), background: getBarColor(idx)}"></div></div>
             <div class="prog-pts">{{ item.minPoints }} 分</div>
-            <div class="prog-discount" v-if="item.discount != null">{{ (item.discount*100).toFixed(0) }}折</div>
+            <div class="prog-discount" v-if="item.discount != null">{{ (item.discount*10).toFixed(1) }}折</div>
           </div>
         </div>
       </div>
@@ -79,7 +79,7 @@
         <template #col-minPoints="{ row }"><span style="font-weight:600;color:var(--color-brand-700);">{{ row.minPoints }}</span></template>
         <template #col-discount="{ row }">
           <el-tag :type="row.discount >= 0.9 ? 'info' : row.discount >= 0.8 ? 'warning' : 'danger'" size="small" effect="dark">
-            {{ row.discount != null ? (row.discount * 100).toFixed(0) + '%' : '-' }}
+            {{ row.discount != null ? (row.discount * 10).toFixed(1) + '折' : '-' }}
           </el-tag>
         </template>
         <template #col-sort="{ row }"><span>{{ row.sort != null ? row.sort : '-' }}</span></template>
@@ -101,7 +101,7 @@
           <el-input v-model.number="formData.minPoints" type="number" placeholder="请输入所需积分" min="0"></el-input>
         </el-form-item>
         <el-form-item label="折扣率：" prop="discount">
-          <el-input v-model.number="formData.discount" type="number" placeholder="如 0.85 表示85折" min="0" max="1" step="0.01">
+          <el-input v-model.number="formData.discount" type="number" placeholder="如 0.85 表示8.5折" min="0" max="1" step="0.01">
             <template slot="append">折</template>
           </el-input>
         </el-form-item>

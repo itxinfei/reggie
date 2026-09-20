@@ -376,9 +376,9 @@
           // 表格列配置
           columns: [
             { prop: 'name', label: '菜品名称', slot: true, minWidth: 150 },
-            { prop: 'categoryName', label: '分类', width: 60, align: 'center' },
+            { prop: 'categoryName', label: '分类', width: 100, align: 'center' },
             { prop: 'price', label: '售价', slot: true, width: 110, type: 'money' },
-            { prop: 'status', label: '状态', slot: true, width: 50, align: 'center' },
+            { prop: 'status', label: '状态', slot: true, width: 76, align: 'center' },
             { prop: 'stock', label: '库存', slot: true, width: 70, type: 'number' },
             { prop: 'sort', label: '排序', width: 60, type: 'number' },
             { prop: 'description', label: '描述', minWidth: 180 },
@@ -420,7 +420,7 @@
           { key: '', icon: 'ri-restaurant-line', label: '菜品总数', value: self.stats.totalDishes, color: 'primary', clickable: true, active: self.activeFilter === '' },
           { key: '1', icon: 'ri-checkbox-circle-line', label: '已启售', value: self.stats.activeDishes, color: 'success', clickable: true, active: self.activeFilter === '1' },
           { key: '0', icon: 'ri-pause-circle-line', label: '已停售', value: self.stats.inactiveDishes, color: 'warning', clickable: true, active: self.activeFilter === '0' },
-          { key: 'deleted', icon: 'ri-delete-bin-line', label: '已删除', value: self.stats.deletedDishes, color: 'danger', clickable: true, active: self.activeFilter === 'deleted' }
+          { key: 'deleted', icon: 'ri-delete-bin-line', label: '已删除', value: self.stats.deletedDishes, color: 'danger', clickable: false }
         ]
       },
         dishRules: function() {

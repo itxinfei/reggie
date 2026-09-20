@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
     <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <!-- ==================== 菜品成本管理 ==================== -->
-  <!-- 功能说明：核算单菜品的食材/人工/其他成本与售价，计算毛利率，支持新增/编辑/删除/导出 -->
+  <!-- 功能说明：核算单菜品的食材/人工/其他成本与售价，计算毛利率，支持新增/编辑/删除 -->
   <style>
     /* ===== 毛利率等级样式（高>=30%/中>=10%/低<10%） ===== */
     .profit-rate {
@@ -48,6 +48,7 @@
         :data="filteredTableData"
         :columns="columns"
         :loading="loading"
+        :show-pagination="false"
         :show-actions="true" :viewable="true"
         :actions-width="160"
         border
@@ -162,8 +163,7 @@
           tableActions: [
             { key: 'sync', text: '从采购价同步', type: 'warning', icon: 'ri-refresh-line' },
             { key: 'add', text: '新增菜品成本', type: 'primary', icon: 'ri-add-line' },
-            { key: 'import', text: '批量导入', type: 'info', icon: 'ri-upload-2-line' },
-            { key: 'export', text: '导出', type: 'success', icon: 'ri-download-line' }
+            { key: 'import', text: '批量导入', type: 'info', icon: 'ri-upload-2-line' }
           ],
           tableData: [],
           columns: [
@@ -259,8 +259,6 @@
             this.handleAdd()
           } else if (action.key === 'sync') {
             this.handleSyncFromPurchase()
-          } else if (action.key === 'export') {
-            this.handleExport()
           } else if (action.key === 'import') {
             this.importCsvText = ''
             this.importDialogVisible = true
@@ -390,7 +388,7 @@
             this.$refs.costForm && this.$refs.costForm.clearValidate()
           })
         },
-        // ========== 删除/导出 ==========
+        // ========== 删除 ==========
         async handleDelete(row) {
           try {
             await ReggieUI.confirm('确定要删除该菜品成本吗？', '提示', {
@@ -455,9 +453,6 @@
               self.syncLoading = false
             })
           }).catch(function() {})
-        },
-        handleExport() {
-          ReggieUI.info('导出功能开发中...')
         }
       }
     })

@@ -81,11 +81,9 @@
       <!-- 搜索栏（统一 <table-bar> 组件） -->
       <table-bar
         :search-items="searchItems"
-        :actions="searchActions"
         :loading="loading"
         @search="handleSearch"
-        @reset="handleReset"
-        @action="handleAction">
+        @reset="handleReset">
       </table-bar>
 
       <!-- 图表区（el-row/el-col 24 栅格，小屏自动折叠为单列） -->
@@ -148,9 +146,6 @@
           // 修改点：<table-bar> 统一组件配置
           searchItems: [
             { type: 'daterange', field: 'dateRange', placeholder: '日期范围', width: '300px' }
-          ],
-          searchActions: [
-            { key: 'export', text: '导出报表', type: 'success', icon: 'ri-download-line' }
           ],
           summary: {
             totalCost: 0,
@@ -521,7 +516,7 @@
           }
           this.rankingChart.setOption(option, true)
         },
-        /* ── 筛选与导出 ── */
+        /* ── 筛选 ── */
         resetQuery() {
           const end = new Date()
           const start = new Date()
@@ -532,9 +527,6 @@
           ]
           this.fetchData()
         },
-        exportReport() {
-          ReggieUI.info('导出功能开发中...')
-        },
         // 修改点：<table-bar> 组件回调桥接
         handleSearch(params) {
           if (params && params.dateRange) {
@@ -544,11 +536,6 @@
         },
         handleReset() {
           this.resetQuery()
-        },
-        handleAction(action) {
-          if (action.key === 'export') {
-            this.exportReport()
-          }
         }
       }
     })
