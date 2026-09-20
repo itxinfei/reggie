@@ -13,57 +13,33 @@
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="platform-order-app">
   <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-    <!-- 页级操作：即时拉单 -->
-        <el-button type="primary" size="small" :loading="pulling" @click="openPull">
-          <i class="ri-refresh-line"></i> 即时拉单
-        </el-button>
-
     <!-- 统计卡片 -->
     <stat-cards :cards="statsCards"></stat-cards>
 
-    <!-- 筛选表单区 -->
-    <el-card shadow="never" class="ds-card ds-card--filter">
-      <el-form :inline="true" :model="filters" @submit.native.prevent class="ds-filter-form">
-        <el-form-item label="平台">
-          <el-select v-model="filters.platformType" placeholder="全部平台" clearable size="small" style="width:140px;">
-            <el-option label="美团" value="MEITUAN"></el-option>
-            <el-option label="饿了么" value="ELEME"></el-option>
-            <el-option label="抖音" value="DOUYIN"></el-option>
-            <el-option label="自营" value="SELF"></el-option>
-            <el-option label="其他" value="OTHER"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="filters.status" placeholder="全部状态" clearable size="small" style="width:140px;">
-            <el-option v-for="s in statusOptions" :key="s.value" :label="s.label" :value="s.value"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="平台订单号">
-          <el-input v-model="filters.platformOrderId" placeholder="模糊匹配" size="small" clearable style="width:180px;"></el-input>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" size="small" @click="search">查询</el-button>
-          <el-button size="small" @click="resetFilters">重置</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+    <!-- 工具栏：即时拉单 + 平台/状态/平台订单号筛选 -->
+    <table-bar
+      :search-items="searchItems"
+      :actions="barActions"
+      @search="onOrderSearch"
+      @reset="onOrderReset"
+      @action="onBarAction"
+    ></table-bar>
 
-    <!-- 数据表格 -->
-    <el-card shadow="never" class="ds-card">
-      <crud-table
-        v-if="loading || tableData.length > 0"
-        :data="tableData"
-        :columns="columns"
-        :page="page"
-        :page-size="pageSize"
-        :total="counts"
-        :loading="loading"
-        :show-actions="true"
-        :actions-width="120"
-        :actions-fixed="true"
-        @page-change="handlePageChange"
-        @size-change="handleSizeChange"
-      >
+    <!-- 数据表格（空态走 crud-table 内置 empty-hint） -->
+    <crud-table
+      :data="tableData"
+      :columns="columns"
+      :page="page"
+      :page-size="pageSize"
+      :total="counts"
+      :loading="loading"
+      :show-actions="true"
+      :actions-width="240"
+      :actions-fixed="true"
+      empty-hint="暂无平台订单，点击上方「即时拉单」从外卖平台获取"
+      @page-change="handlePageChange"
+      @size-change="handleSizeChange"
+    >
         <template #col-platformType="{ row }">
           <el-tag size="mini">{{ platformTypeText(row.platformType) }}</el-tag>
         </template>
@@ -71,22 +47,17 @@
           <el-tag :type="statusTagType(row.status)" size="mini">{{ statusText(row.status) }}</el-tag>
         </template>
         <template #col-amount="{ row }">
-          <span class="ds-money">￥{{ formatMoney(row.amount) }}</span>
+          <span class="ds-money">¥{{ formatMoney(row.amount) }}</span>
         </template>
         <template #actions="{ row }">
-          <el-button size="mini" type="text" @click="openDetail(row)">查看</el-button>
-          <el-button v-if="row.status === 2" size="mini" type="text" class="btn-view" @click="pushStatus(row, 'accept')">接单</el-button>
-          <el-button v-if="row.status === 2" size="mini" type="text" class="btn-warning" @click="pushStatus(row, 'reject')">拒单</el-button>
-          <el-button v-if="row.status === 3" size="mini" type="text" class="btn-view" @click="pushStatus(row, 'prepare')">出餐</el-button>
-          <el-button v-if="row.status === 3" size="mini" type="text" class="btn-view" @click="pushStatus(row, 'complete')">完成</el-button>
-          <el-button v-if="row.status === 3" size="mini" type="text" class="btn-delete" @click="pushStatus(row, 'cancel')">取消</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="openDetail(row)">查看</el-button>
+          <el-button v-if="row.status === 2" type="text" size="small" class="btn-view" @click="pushStatus(row, 'accept')">接单</el-button>
+          <el-button v-if="row.status === 2" type="text" size="small" class="btn-warning" @click="pushStatus(row, 'reject')">拒单</el-button>
+          <el-button v-if="row.status === 3" type="text" size="small" class="btn-view" @click="pushStatus(row, 'prepare')">出餐</el-button>
+          <el-button v-if="row.status === 3" type="text" size="small" class="btn-view" @click="pushStatus(row, 'complete')">完成</el-button>
+          <el-button v-if="row.status === 3" type="text" size="small" class="btn-delete" @click="pushStatus(row, 'cancel')">取消</el-button>
         </template>
       </crud-table>
-
-      <div v-if="!loading && tableData.length === 0" class="ds-empty">
-        暂无平台订单，点击右上角「即时拉单」从外卖平台获取
-      </div>
-    </el-card>
   </main>
 
   <!-- 订单详情弹窗（只读，仅有关闭按钮） -->
@@ -106,7 +77,9 @@
             <el-form-item label="平台">{{ platformTypeText(detail.platformType) }}</el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="状态">{{ statusText(detail.status) }}</el-form-item>
+            <el-form-item label="状态">
+              <el-tag size="small" :type="statusTagType(detail.status)">{{ statusText(detail.status) }}</el-tag>
+            </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="平台订单号">{{ detail.platformOrderId || '-' }}</el-form-item>
@@ -115,7 +88,7 @@
             <el-form-item label="本地订单号">{{ detail.number || '-' }}</el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="金额">￥{{ formatMoney(detail.amount) }}</el-form-item>
+            <el-form-item label="金额">¥{{ formatMoney(detail.amount) }}</el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="下单时间">{{ detail.orderTime || '-' }}</el-form-item>
@@ -141,7 +114,7 @@
         <el-table-column prop="dishFlavor" label="规格" min-width="120" align="center"></el-table-column>
         <el-table-column prop="number" label="数量" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true"></el-table-column>
         <el-table-column label="金额" width="100" align="center">
-          <template #default="{ row }">￥{{ formatMoney(row.amount) }}</template>
+          <template #default="{ row }">¥{{ formatMoney(row.amount) }}</template>
         </el-table-column>
       </el-table>
     </div>
@@ -210,12 +183,18 @@
           { prop: 'userName', label: '顾客', minWidth: 100, align: 'center' },
           { prop: 'orderTime', label: '下单时间', minWidth: 150, align: 'center' }
         ],
+        // 状态筛选项与 statusText 口径对齐（3=配送中，补 1=待付款）
         statusOptions: [
+          { value: 1, label: '待付款' },
           { value: 2, label: '待接单' },
-          { value: 3, label: '已接单' },
+          { value: 3, label: '配送中' },
           { value: 4, label: '已完成' },
           { value: 5, label: '已取消' },
           { value: 6, label: '已退款' }
+        ],
+        // 工具栏操作：即时拉单（弹窗内执行，loading 走弹窗提交按钮）
+        barActions: [
+          { key: 'pull', text: '即时拉单', type: 'primary', icon: 'ri-refresh-line' }
         ],
         // 修改点：详情弹窗
         detailVisible: false,
@@ -230,6 +209,21 @@
       this.fetchData(true)
     },
     computed: {
+      // table-bar 筛选项：平台下拉（改选即查）/ 状态下拉（与 statusOptions 同口径）/ 平台订单号
+      searchItems() {
+        return [
+          { type: 'select', field: 'platformType', placeholder: '全部平台', width: 140,
+            options: [
+              { label: '美团', value: 'MEITUAN' },
+              { label: '饿了么', value: 'ELEME' },
+              { label: '抖音', value: 'DOUYIN' },
+              { label: '自营', value: 'SELF' },
+              { label: '其他', value: 'OTHER' }
+            ] },
+          { type: 'select', field: 'status', placeholder: '全部状态', width: 140, options: this.statusOptions },
+          { type: 'input', field: 'platformOrderId', label: '平台订单号', placeholder: '模糊匹配', width: 180 }
+        ]
+      },
       statsCards() {
         const s = this.platformStats || {}
         return [
@@ -274,14 +268,23 @@
         }
       },
       /* ── 筛选与分页 ── */
-      search() {
+      // table-bar 查询：内部 searchValues 不双向绑定，桥接回 filters（查询重算统计）
+      onOrderSearch(params) {
+        this.filters.platformType = params.platformType || ''
+        this.filters.status = (params.status === undefined || params.status === null) ? '' : params.status
+        this.filters.platformOrderId = params.platformOrderId || ''
         this.page = 1
         this.fetchData(true)
       },
-      resetFilters() {
+      // table-bar 重置：清空全部筛选并重算统计
+      onOrderReset() {
         this.filters = { platformType: '', status: '', platformOrderId: '' }
         this.page = 1
         this.fetchData(true)
+      },
+      // table-bar 操作分发
+      onBarAction(payload) {
+        if (payload.key === 'pull') { this.openPull() }
       },
       handlePageChange(p) {
         // 修改点：crud-table emit 的是 {page, pageSize} 对象，需提取 page 数字
@@ -386,14 +389,7 @@
   })
 </script>
 <style>
-  .ds-filter-form { padding: 4px 0; }
   .ds-money { font-variant-numeric: tabular-nums; color: var(--el-text-primary); }
-  .ds-empty {
-    text-align: center;
-    padding: 40px 0;
-    color: var(--el-text-secondary);
-    font-size: var(--font-size-base);
-  }
   .po-detail__items-title {
     font-size: var(--font-size-base);
     font-weight: 500;
