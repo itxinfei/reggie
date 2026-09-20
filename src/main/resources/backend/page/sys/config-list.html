@@ -43,7 +43,7 @@
         :page="page"
         :page-size="pageSize"
         :total="counts"
-        :show-actions="true" :viewable="true"
+        :show-actions="true"
         :actions-width="260"
         @page-change="onPageChange"
         @size-change="onSizeChange"
@@ -134,7 +134,7 @@
           columns: [
             { prop: 'configKey', label: '配置键', minWidth: 180 },
             { prop: 'configValue', label: '配置值', minWidth: 160 },
-            { prop: 'configType', label: '类型', width: 80, align: 'center', slot: true },
+            { prop: 'configType', label: '类型', width: 100, align: 'center', slot: true },
             { prop: 'description', label: '说明', minWidth: 120 }
           ],
           // 弹窗表单
