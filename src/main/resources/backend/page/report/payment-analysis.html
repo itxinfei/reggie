@@ -17,7 +17,7 @@
       background: var(--bg-page);
       font-family: var(--font-family-base); }
     .payment-page { min-height: 100%; display: flex; flex-direction: column; }
-    .payment-page .container { flex: 1; background: transparent; padding: 24px 32px 32px;
+    .payment-page .container { flex: 1; background: transparent; padding: var(--space-2) var(--space-3);
       min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
     /* 工具栏统一走 table-bar 组件 + page.css 的 .container .tableBar 纯 flex 栏规则，
        不再私有卡片化覆盖；fl-label/fl-spacer 旧类已无引用。 */
@@ -33,11 +33,9 @@
     .refund-summary__value.is-success { color: var(--color-success); }
     .refund-summary__value.is-warning { color: var(--color-warning); }
     .refund-summary__label { font-size: var(--font-size-xs); color: var(--text-muted); }
-    @media (max-width: 1200px) { .payment-page .container { padding: 16px 20px 20px !important; }
-      .payment-page .charts-row { grid-template-columns: 1fr; } }
-    @media (max-width: 768px) { .payment-page .container { padding: 12px 16px 16px !important; }
+    @media (max-width: 1200px) { .payment-page .charts-row { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) { .payment-page .container { padding: var(--space-2); }
       .refund-summary { flex-direction: column; } }
-    @media (max-width: 768px) { .payment-page .container { padding: 12px 16px 16px !important; } }
   </style>
 </head>
 <body>
