@@ -13,27 +13,31 @@
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="platform-app">
   <main class="container" id="main-content" role="main" aria-label="页面主要内容">
-    <el-button type="primary" size="small" @click="openAdd">添加平台</el-button>
-
-    <!-- 修改点：统计卡片支持点击筛选（点击总数/已启用/已停用按状态过滤数据） -->
+    <!-- 统计卡片：点击总数/已启用/已停用按状态过滤 -->
     <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
-    <!-- 数据区：卡片容器 + 标准表格 -->
-    <el-card shadow="never" class="ds-card">
-      <crud-table
-        v-if="loading || tableData.length > 0"
-        :data="tableData"
-        :columns="columns"
-        :page="page"
-        :page-size="pageSize"
-        :total="counts"
-        :loading="loading"
-        :show-actions="true" :viewable="true"
-        :actions-width="220"
-        :actions-fixed="true"
-        @page-change="handlePageChange"
-        @size-change="handleSizeChange"
-      >
+    <!-- 工具栏：添加平台 -->
+    <table-bar
+      :show-search-btns="false"
+      :actions="barActions"
+      @action="onBarAction"
+    ></table-bar>
+
+    <!-- 数据表格（空态走 crud-table 内置 empty-hint） -->
+    <crud-table
+      :data="tableData"
+      :columns="columns"
+      :page="page"
+      :page-size="pageSize"
+      :total="counts"
+      :loading="loading"
+      :show-actions="true"
+      :actions-width="180"
+      :actions-fixed="true"
+      empty-hint="暂无平台配置，点击上方「添加平台」开始接入外卖平台"
+      @page-change="handlePageChange"
+      @size-change="handleSizeChange"
+    >
         <!-- 平台类型：标签展示 -->
         <template #col-platformType="{ row }">
           <el-tag size="mini">{{ platformTypeText(row.platformType) }}</el-tag>
@@ -49,21 +53,15 @@
             {{ row.enabled === 1 ? '启用' : '停用' }}
           </el-tag>
         </template>
-        <!-- 操作列 -->
+        <!-- 操作列：编辑 / 启停 / 删除（语义色走 btn-view/btn-warning/btn-success/btn-delete） -->
         <template #actions="{ row }">
-          <el-button size="mini" type="text" @click="openEdit(row)">编辑</el-button>
-          <el-button size="mini" type="text" :type="row.enabled === 1 ? 'warning' : 'success'" @click="toggle(row)">
+          <el-button type="text" size="small" class="btn-view" @click="openEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" :class="row.enabled === 1 ? 'btn-warning' : 'btn-success'" @click="toggle(row)">
             {{ row.enabled === 1 ? '停用' : '启用' }}
           </el-button>
-          <el-button size="mini" type="text" class="danger-link" @click="remove(row)">删除</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="remove(row)">删除</el-button>
         </template>
       </crud-table>
-
-      <!-- 空状态 -->
-      <div v-if="!loading && tableData.length === 0" class="ds-empty">
-        暂无平台配置，点击右上角「添加平台」开始接入外卖平台
-      </div>
-    </el-card>
   </main>
 
   <!-- 新增/编辑对话框 -->
@@ -77,7 +75,7 @@
   >
     <el-form :model="form" :rules="formRules" ref="formRef" label-width="100px">
       <el-row :gutter="16">
-        <el-col :span="12">
+        <el-col :xs="24" :sm="12">
           <el-form-item label="平台类型" prop="platformType">
             <el-select v-model="form.platformType" placeholder="请选择平台类型" style="width:100%;">
               <el-option label="美团外卖" value="MEITUAN"></el-option>
@@ -89,7 +87,7 @@
             </el-select>
           </el-form-item>
         </el-col>
-        <el-col :span="12">
+        <el-col :xs="24" :sm="12">
           <el-form-item label="平台名称" prop="platformName">
             <el-input v-model="form.platformName" placeholder="如：美团外卖-总店" maxlength="128"></el-input>
           </el-form-item>
@@ -99,12 +97,12 @@
         <el-input v-model="form.shopId" placeholder="平台侧门店 ID" maxlength="128"></el-input>
       </el-form-item>
       <el-row :gutter="16">
-        <el-col :span="12">
+        <el-col :xs="24" :sm="12">
           <el-form-item label="AppKey">
             <el-input v-model="form.appKey" placeholder="留空则不修改原值" maxlength="512"></el-input>
           </el-form-item>
         </el-col>
-        <el-col :span="12">
+        <el-col :xs="24" :sm="12">
           <el-form-item label="AccessToken">
             <el-input v-model="form.accessToken" placeholder="留空则不修改原值" maxlength="512"></el-input>
           </el-form-item>
@@ -128,10 +126,6 @@
         <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="500"></el-input>
       </el-form-item>
     </el-form>
-    <template #footer>
-      <el-button size="medium" @click="dialogVisible = false">取 消</el-button>
-      <el-button type="primary" size="medium" :loading="submitting" @click="submit">确 定</el-button>
-    </template>
   </crud-dialog>
 </div>
 
@@ -166,6 +160,10 @@
         ],
         // 修改点：对话框与表单状态
         action: '',
+        // 工具栏操作（无搜索项，show-search-btns=false）
+        barActions: [
+          { key: 'add', text: '添加平台', type: 'primary', icon: 'ri-add-line' }
+        ],
         submitting: false,
         dialogVisible: false,
         scopeBitsModel: ['1'],
@@ -260,6 +258,10 @@
         return { code: 0 }
       },
       /* ── 筛选与分页 ── */
+      // table-bar 操作桥接
+      onBarAction(payload) {
+        if (payload.key === 'add') { this.openAdd() }
+      },
       onCardClick(payload) {
         this.activeFilter = payload.activeKey
         this.page = 1
@@ -371,15 +373,8 @@
   })
 </script>
 <style>
-  /* 修改点：作用域样式，仅覆盖本页局部细节，主视觉走 tokens.css */
+  /* 本页局部细节，主视觉走 tokens.css */
   .scope-tag { margin-right: 4px; }
-  .ds-empty {
-    text-align: center;
-    padding: 40px 0;
-    color: var(--el-text-secondary);
-    font-size: var(--font-size-base);
-  }
-  .danger-link { color: var(--el-color-danger); }
 </style>
 </body>
 </html>
