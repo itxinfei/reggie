@@ -53,7 +53,7 @@
       >
         <template #col-printTypes="{ row }">
           <el-tag v-for="(t, i) in getPrintTypeTags(row.printTypes)" :key="i"
-            size="mini" :type="t.type" style="margin-right:4px;">{{ t.label }}</el-tag>
+            size="small" :type="t.type" style="margin-right:4px;">{{ t.label }}</el-tag>
         </template>
         <template #col-online="{ row }">
           <el-tag :type="isOnline(row) ? 'success' : 'info'">

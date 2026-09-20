@@ -259,7 +259,7 @@
                     导出记录
                     <span class="record-count-badge" v-if="history.length > 0">{{ history.length }}</span>
                 </div>
-                <el-button v-if="history.length > 0" type="danger" size="mini" plain @click.stop="clearHistory">清空记录</el-button>
+                <el-button v-if="history.length > 0" type="danger" size="small" plain @click.stop="clearHistory">清空记录</el-button>
                 <i :class="['ri-arrow-down-s-line expand-icon', { 'is-expanded': recordsExpanded }]"></i>
             </div>
             <div class="panel-body" v-show="recordsExpanded">
@@ -299,8 +299,8 @@
                                 </td>
                                 <td>
                                     <template v-if="item.status === 'success'">
-                                        <el-button type="text" size="mini" icon="ri-download-line" @click="reDownload(item)">重新下载</el-button>
-                                        <el-button type="text" size="mini" icon="ri-delete-bin-line" style="color:var(--color-danger);" @click="deleteRecord(index)">删除</el-button>
+                                        <el-button type="text" size="small" icon="ri-download-line" @click="reDownload(item)">重新下载</el-button>
+                                        <el-button type="text" size="small" icon="ri-delete-bin-line" style="color:var(--color-danger);" @click="deleteRecord(index)">删除</el-button>
                                     </template>
                                     <span v-else style="color:var(--text-muted);font-size:var(--font-size-xs);">--</span>
                                 </td>

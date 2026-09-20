@@ -446,7 +446,7 @@
         <stat-cards :cards="kpiCards" :loading="loading" @card-click="onKpiClick"></stat-cards>
         <!-- 修改点：营收目标设置入口 -->
         <el-tooltip content="设置营收目标" placement="top">
-          <el-button size="mini" circle style="position:absolute;top:8px;right:8px;" @click="openTargetDialog">
+          <el-button size="small" circle style="position:absolute;top:8px;right:8px;" @click="openTargetDialog">
             <i class="ri-settings-3-line"></i>
           </el-button>
         </el-tooltip>
@@ -501,7 +501,7 @@
           <div class="chart-title" style="display:flex;align-items:center;justify-content:space-between;">
             <span><i class="ri-line-chart-line" aria-hidden="true"></i> 近{{ trendDays }}日订单与营收趋势</span>
             <!-- 修改点：趋势图时间范围切换 -->
-            <el-radio-group v-model="trendDays" size="mini" @change="switchTrendDays" style="margin-left:12px;">
+            <el-radio-group v-model="trendDays" size="small" @change="switchTrendDays" style="margin-left:12px;">
               <el-radio-button :label="7">7天</el-radio-button>
               <el-radio-button :label="14">14天</el-radio-button>
               <el-radio-button :label="30">30天</el-radio-button>

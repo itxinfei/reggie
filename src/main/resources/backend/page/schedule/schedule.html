@@ -44,11 +44,11 @@
 
         <!-- 排班日历表格 -->
         <div class="schedule-legend">
-          <span class="legend-item"><el-tag type="success" size="mini">早班</el-tag></span>
-          <span class="legend-item"><el-tag type="info" size="mini">中班</el-tag></span>
-          <span class="legend-item"><el-tag type="info" size="mini">晚班</el-tag></span>
-          <span class="legend-item"><el-tag type="danger" size="mini">全天</el-tag></span>
-          <span class="legend-item"><el-tag type="info" size="mini">休息</el-tag></span>
+          <span class="legend-item"><el-tag type="success" size="small">早班</el-tag></span>
+          <span class="legend-item"><el-tag type="info" size="small">中班</el-tag></span>
+          <span class="legend-item"><el-tag type="info" size="small">晚班</el-tag></span>
+          <span class="legend-item"><el-tag type="danger" size="small">全天</el-tag></span>
+          <span class="legend-item"><el-tag type="info" size="small">休息</el-tag></span>
         </div>
         <div v-if="loading" class="schedule-table-wrap">
           <!-- 修改点：P2-1 骨架屏——排班表格加载态：5 行 × 8 列（员工列 + 一周近似）脉冲格 -->
@@ -75,7 +75,7 @@
                   <el-tag
                     v-if="getCell(emp.id, d)"
                     :type="getShiftTagType(getCell(emp.id, d).shift)"
-                    size="mini"
+                    size="small"
                     class="shift-tag"
                     @click="editCell(emp, d)"
                   >{{ getCell(emp.id, d).label }}</el-tag>

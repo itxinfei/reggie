@@ -104,10 +104,10 @@
           <div class="order-card__dishes">{{ o.dishNames || '--' }}</div>
           <!-- 修改点：订单卡片增加操作按钮，店员可直接接单/拒绝，无需跳转订单列表 -->
           <div class="order-card__actions" style="margin-top:var(--space-3);display:flex;gap:var(--space-2)">
-            <el-button type="success" size="mini" @click="confirmOne(o)" :loading="o._confirming" :aria-label="'接单 ' + (o.orderNo || '')">
+            <el-button type="success" size="small" @click="confirmOne(o)" :loading="o._confirming" :aria-label="'接单 ' + (o.orderNo || '')">
               <i class="ri-check-line"></i> 接单
             </el-button>
-            <el-button type="danger" size="mini" plain @click="rejectOne(o)" :loading="o._rejecting" :aria-label="'拒绝 ' + (o.orderNo || '')">
+            <el-button type="danger" size="small" plain @click="rejectOne(o)" :loading="o._rejecting" :aria-label="'拒绝 ' + (o.orderNo || '')">
               <i class="ri-close-line"></i> 拒绝
             </el-button>
           </div>

@@ -141,7 +141,7 @@
             <span style="font-weight:500;">{{ row.name }}</span>
           </template>
           <template #col-status="{ row }">
-            <el-select v-model="row.status" size="mini" style="width:72px;" @change="(val) => quickChangeStatus(row, val)">
+            <el-select v-model="row.status" size="small" style="width:72px;" @change="(val) => quickChangeStatus(row, val)">
               <el-option label="空闲" value="FREE" :disabled="!canTransition(row.status, 'FREE')"></el-option>
               <el-option label="占用" value="OCCUPIED" :disabled="!canTransition(row.status, 'OCCUPIED')"></el-option>
               <el-option label="预留" value="RESERVED" :disabled="!canTransition(row.status, 'RESERVED')"></el-option>

@@ -108,7 +108,7 @@
         @size-change="onSizeChange"
       >
         <template #col-taskType="{ row }">
-          <el-tag size="mini" :type="getTypeTag(row.taskType).type">{{ getTypeTag(row.taskType).label }}</el-tag>
+          <el-tag size="small" :type="getTypeTag(row.taskType).type">{{ getTypeTag(row.taskType).label }}</el-tag>
         </template>
         <template #col-status="{ row }">
           <el-tag :type="getStatusTag(row.status).type">{{ getStatusTag(row.status).label }}</el-tag>

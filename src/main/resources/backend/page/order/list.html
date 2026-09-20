@@ -112,7 +112,7 @@
           <section class="od-col od-col--main">
             <div class="od-section-label">
               商品明细
-              <el-tag size="mini" type="info" v-if="diaForm.orderDetails">{{ diaForm.orderDetails.length }} 项</el-tag>
+              <el-tag size="small" type="info" v-if="diaForm.orderDetails">{{ diaForm.orderDetails.length }} 项</el-tag>
             </div>
             <div v-if="diaForm.orderDetails && diaForm.orderDetails.length > 0" class="od-items">
               <div v-for="(item, idx) in diaForm.orderDetails" :key="idx" class="od-item">
@@ -171,7 +171,7 @@
                 <span>内部备注</span>
                 <div style="flex:1;display:flex;gap:8px;align-items:flex-start">
                   <el-input v-model="internalNote" type="textarea" :rows="2" size="small" placeholder="仅后台可见，用于记录运营信息" style="flex:1"></el-input>
-                  <el-button type="primary" size="mini" @click="saveNote" :loading="noteSaving" style="flex-shrink:0;margin-top:2px">保存</el-button>
+                  <el-button type="primary" size="small" @click="saveNote" :loading="noteSaving" style="flex-shrink:0;margin-top:2px">保存</el-button>
                 </div>
               </div>
             </div>

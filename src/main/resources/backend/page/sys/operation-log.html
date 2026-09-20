@@ -50,7 +50,7 @@
           <el-tag size="small" :type="opTypeTag(row.operationType)">{{ opTypeText(row.operationType) }}</el-tag>
         </template>
         <template #col-requestMethod="{ row }">
-          <el-tag size="mini" effect="plain" :type="methodTag(row.requestMethod)">{{ row.requestMethod }}</el-tag>
+          <el-tag size="small" effect="plain" :type="methodTag(row.requestMethod)">{{ row.requestMethod }}</el-tag>
         </template>
         <template #col-isSuccess="{ row }">
           <i class="ri-checkbox-circle-line" style="color:var(--color-success);font-size:var(--font-size-lg);" v-if="row.isSuccess === 1"></i>

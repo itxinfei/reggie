@@ -93,18 +93,18 @@
               <el-form size="small" label-width="100px">
                 <el-form-item label="平台订单号">{{ detailOrder.platformOrderId }}</el-form-item>
                 <el-form-item label="外卖平台">
-                  <el-tag v-if="detailOrder.platform === 'MEITUAN'" size="mini">美团</el-tag>
-                  <el-tag v-else-if="detailOrder.platform === 'ELEME'" type="success" size="mini">饿了么</el-tag>
-                  <el-tag v-else-if="detailOrder.platform === 'DOUYIN'" type="warning" size="mini">抖音</el-tag>
+                  <el-tag v-if="detailOrder.platform === 'MEITUAN'" size="small">美团</el-tag>
+                  <el-tag v-else-if="detailOrder.platform === 'ELEME'" type="success" size="small">饿了么</el-tag>
+                  <el-tag v-else-if="detailOrder.platform === 'DOUYIN'" type="warning" size="small">抖音</el-tag>
                 </el-form-item>
                 <el-form-item label="订单状态">
-                  <el-tag v-if="detailOrder.status === 'PENDING'" type="warning" size="mini">待接单</el-tag>
-                  <el-tag v-else-if="detailOrder.status === 'ACCEPTED'" size="mini">已接单</el-tag>
-                  <el-tag v-else-if="detailOrder.status === 'PICKING'" type="warning" size="mini">取餐中</el-tag>
-                  <el-tag v-else-if="detailOrder.status === 'DELIVERING'" type="warning" size="mini">配送中</el-tag>
-                  <el-tag v-else-if="detailOrder.status === 'DELIVERED'" type="success" size="mini">已送达</el-tag>
-                  <el-tag v-else-if="detailOrder.status === 'CANCELLED'" type="danger" size="mini">已取消</el-tag>
-                  <el-tag v-else size="mini">{{ statusLabelMap[detailOrder.status] || '未知状态' }}</el-tag>
+                  <el-tag v-if="detailOrder.status === 'PENDING'" type="warning" size="small">待接单</el-tag>
+                  <el-tag v-else-if="detailOrder.status === 'ACCEPTED'" size="small">已接单</el-tag>
+                  <el-tag v-else-if="detailOrder.status === 'PICKING'" type="warning" size="small">取餐中</el-tag>
+                  <el-tag v-else-if="detailOrder.status === 'DELIVERING'" type="warning" size="small">配送中</el-tag>
+                  <el-tag v-else-if="detailOrder.status === 'DELIVERED'" type="success" size="small">已送达</el-tag>
+                  <el-tag v-else-if="detailOrder.status === 'CANCELLED'" type="danger" size="small">已取消</el-tag>
+                  <el-tag v-else size="small">{{ statusLabelMap[detailOrder.status] || '未知状态' }}</el-tag>
                 </el-form-item>
                 <el-form-item label="订单金额"><b class="ds-money--danger">￥{{ detailOrder.amount }}</b></el-form-item>
                 <el-form-item label="菜品摘要">{{ detailOrder.dishSummary || '-' }}</el-form-item>

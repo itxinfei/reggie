@@ -312,11 +312,11 @@
                   <div class="spec-group-nav__main">
                     <span class="spec-group-nav__name" :title="g.name">{{ g.name }}</span>
                     <div class="spec-group-nav__tags">
-                      <el-tag :type="g.type === 1 ? 'info' : 'success'" size="mini">
+                      <el-tag :type="g.type === 1 ? 'info' : 'success'" size="small">
                         {{ g.type === 1 ? '单选' : '多选' }}
                       </el-tag>
-                      <el-tag v-if="g.required === 1" type="info" size="mini">必选</el-tag>
-                      <el-tag v-else type="info" size="mini" effect="plain">可选</el-tag>
+                      <el-tag v-if="g.required === 1" type="info" size="small">必选</el-tag>
+                      <el-tag v-else type="info" size="small" effect="plain">可选</el-tag>
                     </div>
                   </div>
                   <span

@@ -68,7 +68,7 @@
                     :columns="columns"
                     :loading="loading"
                     :show-actions="true"
-                    :actions-width="250"
+                    :actions-width="240"
                     :selection="true"
                     :show-index="true"
                     :page="pagination.current"
@@ -83,7 +83,7 @@
                     @page-change="onPageChange"
                     @size-change="onPageSizeChange">
                     <template #col-storeName="{ row }">
-                        <el-tag :type="storeTypeTag(row.storeType)" size="mini" effect="plain">{{ storeTypeName(row.storeType) }}</el-tag>
+                        <el-tag :type="storeTypeTag(row.storeType)" size="small" effect="plain">{{ storeTypeName(row.storeType) }}</el-tag>
                         <span style="margin-left:6px; font-weight:500;">{{ row.storeName }}</span>
                     </template>
                     <template #col-contact="{ row }">
@@ -106,21 +106,27 @@
                         <span class="amount-highlight">&yen;{{ fmtAmount(row.todayAmount) }}</span>
                     </template>
                     <template #col-pauseOrder="{ row }">
-                        <el-tag v-if="row.pauseOrder === 1" type="warning" size="mini" effect="plain">
+                        <el-tag v-if="row.pauseOrder === 1" type="warning" size="small" effect="plain">
                             <i class="ri-pause-circle-line" style="margin-right:2px;"></i>暂停接单
                         </el-tag>
-                        <el-tag v-else type="success" size="mini" effect="plain">
+                        <el-tag v-else type="success" size="small" effect="plain">
                             <i class="ri-play-circle-line" style="margin-right:2px;"></i>正常接单
                         </el-tag>
                     </template>
+                    <!-- 操作列契约：详情/编辑/接单状态 3 个常显，看板/切换/同步收「更多」，4 元素 240 档 -->
                     <template #actions="{ row }">
-                        <el-button type="text" size="mini" icon="ri-file-text-line" @click.stop="openDetail(row)">详情</el-button>
-                        <el-button type="text" size="mini" icon="ri-bar-chart-line" @click.stop="openDashboard(row)">看板</el-button>
-                        <el-button type="text" size="mini" icon="ri-edit-line" @click.stop="openEditDialog(row)">编辑</el-button>
-                        <el-button v-if="row.pauseOrder === 1" type="text" size="mini" icon="ri-play-circle-line" @click.stop="togglePause(row, false)" style="color:var(--color-success);">恢复接单</el-button>
-                        <el-button v-else type="text" size="mini" icon="ri-pause-circle-line" @click.stop="togglePause(row, true)" style="color:var(--color-warning);">暂停接单</el-button>
-                        <el-button type="text" size="mini" icon="ri-toggle-line" @click.stop="switchToStore(row)">切换</el-button>
-                        <el-button type="text" size="mini" icon="ri-refresh-line" @click.stop="openSyncDialog(row)">同步</el-button>
+                        <el-button type="text" size="small" class="btn-view" @click.stop="openDetail(row)">详情</el-button>
+                        <el-button type="text" size="small" class="btn-view" @click.stop="openEditDialog(row)">编辑</el-button>
+                        <el-button v-if="row.pauseOrder === 1" type="text" size="small" class="btn-success" @click.stop="togglePause(row, false)">恢复接单</el-button>
+                        <el-button v-else type="text" size="small" class="btn-warning" @click.stop="togglePause(row, true)">暂停接单</el-button>
+                        <el-dropdown trigger="click" @command="(cmd) => onStoreCommand(cmd, row)" @click.native.stop>
+                            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item command="dashboard" icon="ri-bar-chart-line">门店看板</el-dropdown-item>
+                                <el-dropdown-item command="switch" icon="ri-toggle-line">切换门店</el-dropdown-item>
+                                <el-dropdown-item command="sync" icon="ri-refresh-line">平台同步</el-dropdown-item>
+                            </el-dropdown-menu>
+                        </el-dropdown>
                     </template>
             </crud-table>
         </main>
@@ -291,11 +297,11 @@
                 <el-col :span="8"><span class="dt-label">配送费</span><span class="dt-value">&yen;{{ fmtAmount(detailData.deliveryFee) }}</span></el-col>
                 <el-col :span="8">
                     <span class="dt-label">支持外卖</span>
-                    <span class="dt-value"><el-tag :type="detailData.isDeliveryEnabled === 1 ? 'success' : 'info'" size="mini">{{ detailData.isDeliveryEnabled === 1 ? '支持' : '不支持' }}</el-tag></span>
+                    <span class="dt-value"><el-tag :type="detailData.isDeliveryEnabled === 1 ? 'success' : 'info'" size="small">{{ detailData.isDeliveryEnabled === 1 ? '支持' : '不支持' }}</el-tag></span>
                 </el-col>
                 <el-col :span="8">
                     <span class="dt-label">支持堂食</span>
-                    <span class="dt-value"><el-tag :type="detailData.isDineInEnabled === 1 ? 'success' : 'info'" size="mini">{{ detailData.isDineInEnabled === 1 ? '支持' : '不支持' }}</el-tag></span>
+                    <span class="dt-value"><el-tag :type="detailData.isDineInEnabled === 1 ? 'success' : 'info'" size="small">{{ detailData.isDineInEnabled === 1 ? '支持' : '不支持' }}</el-tag></span>
                 </el-col>
                 <el-col :span="8">
                     <span class="dt-label">数据完善度</span>
@@ -680,6 +686,17 @@
                 console.warn('[门店管理] 切换门店失败:', err);
                 ReggieUI.error('切换门店失败，请重试');
             });
+        },
+
+        // 操作列「更多」下拉命令分发
+        onStoreCommand: function(cmd, row) {
+            if (cmd === 'dashboard') {
+                this.openDashboard(row);
+            } else if (cmd === 'switch') {
+                this.switchToStore(row);
+            } else if (cmd === 'sync') {
+                this.openSyncDialog(row);
+            }
         },
 
         // ========== 详情 ==========

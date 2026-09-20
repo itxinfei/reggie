@@ -91,7 +91,7 @@
               <el-input
                 v-if="isEditing('price', row.id)"
                 v-model="row._priceEdit"
-                size="mini"
+                size="small"
                 :ref="'cell-price-' + row.id"
                 placeholder="价格"
                 @keyup.enter.native="commitInline('price', row)"
@@ -113,7 +113,7 @@
               <el-input
                 v-if="isEditing('stock', row.id)"
                 v-model="row._stockEdit"
-                size="mini"
+                size="small"
                 :ref="'cell-stock-' + row.id"
                 placeholder="库存"
                 @keyup.enter.native="commitInline('stock', row)"
@@ -122,8 +122,8 @@
               <span v-else class="inline-value" title="点击编辑库存" tabindex="0" @click="startInline('stock', row)" @keydown.enter.prevent="startInline('stock', row)" :style="{ color: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? 'var(--color-danger)' : 'var(--el-text-primary)', fontWeight: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? '600' : '400' }">
                 {{ row.stockQty != null ? row.stockQty : '-' }}
               </span>
-              <el-tag v-if="row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock && row.stockQty > 0" type="danger" size="mini" effect="plain" style="margin-left:4px;">低</el-tag>
-              <el-tag v-if="row.stockQty != null && row.stockQty == 0" type="danger" size="mini">售罄</el-tag>
+              <el-tag v-if="row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock && row.stockQty > 0" type="danger" size="small" effect="plain" style="margin-left:4px;">低</el-tag>
+              <el-tag v-if="row.stockQty != null && row.stockQty == 0" type="danger" size="small">售罄</el-tag>
             </template>
             <!-- 操作按钮 -->
             <template #actions="{ row }">
@@ -222,10 +222,10 @@
                 <div class="flavor-tags-dialog">
                   <el-tag v-for="(tag, tIdx) in item.value" :key="tIdx" size="small" closable type="info"
                     @close="delDialogFlavorLabel(index, tIdx)">{{ tag }}</el-tag>
-                  <el-input v-if="item.inputVisible" v-model="item.inputValue" size="mini"
+                  <el-input v-if="item.inputVisible" v-model="item.inputValue" size="small"
                     :ref="'dialogTagInput' + index" style="width: 80px;" maxlength="10"
                     @keyup.enter.native="confirmDialogTag(index)" @blur="confirmDialogTag(index)"></el-input>
-                  <el-button v-else size="mini" type="text" icon="ri-add-line" @click="showDialogTagInput(index)">添加标签</el-button>
+                  <el-button v-else size="small" type="text" icon="ri-add-line" @click="showDialogTagInput(index)">添加标签</el-button>
                 </div>
               </div>
               <el-button type="text" icon="ri-add-line" size="small" @click="addDialogFlavor" style="margin-top: 8px;">添加新口味</el-button>

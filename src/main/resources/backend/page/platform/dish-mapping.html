@@ -55,10 +55,10 @@
       @size-change="handleSizeChange"
     >
         <template #col-platformType="{ row }">
-          <el-tag size="mini">{{ platformTypeText(row.platformType) }}</el-tag>
+          <el-tag size="small">{{ platformTypeText(row.platformType) }}</el-tag>
         </template>
         <template #col-status="{ row }">
-          <el-tag :type="row.status === 1 ? 'success' : 'info'" size="mini">
+          <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
             {{ row.status === 1 ? '上架' : '下架' }}
           </el-tag>
         </template>

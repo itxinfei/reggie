@@ -40,16 +40,16 @@
     >
         <!-- 平台类型：标签展示 -->
         <template #col-platformType="{ row }">
-          <el-tag size="mini">{{ platformTypeText(row.platformType) }}</el-tag>
+          <el-tag size="small">{{ platformTypeText(row.platformType) }}</el-tag>
         </template>
         <!-- 同步范围：位标记拆解为标签 -->
         <template #col-syncScope="{ row }">
-          <el-tag v-for="s in scopeBits(row.syncScope)" :key="s" size="mini" type="info" class="scope-tag">{{ s }}</el-tag>
+          <el-tag v-for="s in scopeBits(row.syncScope)" :key="s" size="small" type="info" class="scope-tag">{{ s }}</el-tag>
           <span v-if="!scopeBits(row.syncScope).length" class="ds-text-secondary">—</span>
         </template>
         <!-- 状态：启用/停用 -->
         <template #col-enabled="{ row }">
-          <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="mini">
+          <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small">
             {{ row.enabled === 1 ? '启用' : '停用' }}
           </el-tag>
         </template>

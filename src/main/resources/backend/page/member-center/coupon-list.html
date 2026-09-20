@@ -123,10 +123,10 @@
             <div v-for="t in tableData" :key="t.id" class="coupon-card">
               <div class="coupon-card__head">
                 <span class="coupon-card__name" :title="t.name">{{ t.name }}</span>
-                <el-tag :type="t.type === 'FULL_REDUCTION' ? 'success' : t.type === 'DISCOUNT' ? 'warning' : 'info'" size="mini">
+                <el-tag :type="t.type === 'FULL_REDUCTION' ? 'success' : t.type === 'DISCOUNT' ? 'warning' : 'info'" size="small">
                   {{ t.type === 'FULL_REDUCTION' ? '满减' : t.type === 'DISCOUNT' ? '折扣' : '新客' }}
                 </el-tag>
-                <el-tag :type="t.status === 1 ? 'success' : 'info'" size="mini">{{ t.status === 1 ? '启用' : '禁用' }}</el-tag>
+                <el-tag :type="t.status === 1 ? 'success' : 'info'" size="small">{{ t.status === 1 ? '启用' : '禁用' }}</el-tag>
               </div>
               <div class="coupon-card__face">{{ faceText(t) }}</div>
               <div class="coupon-card__meta">
@@ -139,10 +139,10 @@
                 <span class="coupon-card__remain">剩 {{ t.remainCount || 0 }}</span>
               </div>
               <div class="coupon-card__ops">
-                <el-button type="primary" size="mini" :disabled="t.status !== 1" @click="openIssue(t)">发放</el-button>
-                <el-button size="mini" @click="showEffect(t)">效果</el-button>
-                <el-button size="mini" @click="editHandle(t)">修改</el-button>
-                <el-button size="mini" type="danger" @click="deleteHandle(t.id)">删除</el-button>
+                <el-button type="primary" size="small" :disabled="t.status !== 1" @click="openIssue(t)">发放</el-button>
+                <el-button size="small" @click="showEffect(t)">效果</el-button>
+                <el-button size="small" @click="editHandle(t)">修改</el-button>
+                <el-button size="small" type="danger" @click="deleteHandle(t.id)">删除</el-button>
               </div>
             </div>
           </div>
@@ -434,7 +434,7 @@
       <template v-else-if="effectData">
         <div class="effect-head">
           <span class="ds-text-semibold">{{ effectData.templateName }}</span>
-          <el-tag size="mini">{{ effectData.type === 'FULL_REDUCTION' ? '满减' : effectData.type === 'DISCOUNT' ? '折扣' : '新客' }}</el-tag>
+          <el-tag size="small">{{ effectData.type === 'FULL_REDUCTION' ? '满减' : effectData.type === 'DISCOUNT' ? '折扣' : '新客' }}</el-tag>
         </div>
         <div class="effect-grid">
           <div class="effect-stat"><div class="effect-stat__value">{{ effectData.issuedCount || 0 }}</div><div class="effect-stat__label">已发放</div></div>

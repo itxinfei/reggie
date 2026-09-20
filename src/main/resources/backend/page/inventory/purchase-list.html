@@ -240,9 +240,9 @@
             </el-select>
             <el-input v-model="item.qty" placeholder="数量" type="number" class="rg-w-100" />
             <el-input v-model="item.unitPrice" placeholder="单价" type="number" class="rg-w-100" />
-            <el-button type="danger" size="mini" @click="removeDetail(index)">删除</el-button>
+            <el-button type="danger" size="small" @click="removeDetail(index)">删除</el-button>
           </div>
-          <el-button type="primary" size="mini" @click="addDetail">+ 添加明细</el-button>
+          <el-button type="primary" size="small" @click="addDetail">+ 添加明细</el-button>
         </el-form-item>
       </el-form>
     </crud-dialog>

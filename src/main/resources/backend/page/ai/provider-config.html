@@ -26,7 +26,7 @@
                 </div>
                 <div class="provider-detail">
                     <div class="name">{{ activeProvider.providerName }}
-                        <el-tag size="mini" type="success" style="margin-left:var(--space-2);">当前使用</el-tag>
+                        <el-tag size="small" type="success" style="margin-left:var(--space-2);">当前使用</el-tag>
                     </div>
                     <div class="model">模型：{{ activeProvider.modelName }}</div>
                     <div class="url">接口地址：{{ activeProvider.baseUrl }}</div>
@@ -137,7 +137,7 @@
                 <div style="display:flex;gap:var(--space-2);width:100%;">
                     <el-input v-model="form.modelName" placeholder="deepseek-chat / qwen-turbo / glm-4"
                         style="flex:1;" />
-                    <el-button size="mini" type="success" @click="fetchModelList"
+                    <el-button size="small" type="success" @click="fetchModelList"
                         :loading="fetchingModels" :disabled="!form.baseUrl || !form.apiKey">
                         {{ fetchingModels ? '获取中...' : '获取模型列表' }}
                     </el-button>
@@ -211,7 +211,7 @@
             </el-form-item>
             <!-- 修改点(2026-09-18)：新增 —— 弹窗内连通测试（编辑模式，使用数据库已保存配置） -->
             <el-form-item v-if="form.id" label="连通测试">
-                <el-button size="mini" type="warning" plain :loading="dialogTesting" @click="testFromDialog">
+                <el-button size="small" type="warning" plain :loading="dialogTesting" @click="testFromDialog">
                     {{ dialogTesting ? '测试中...' : '测试已保存的配置' }}
                 </el-button>
                 <div v-if="dialogTestResult" :class="['key-hint', dialogTestOk ? 'dialog-test-ok' : 'dialog-test-ng']">

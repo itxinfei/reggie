@@ -111,7 +111,7 @@
             <div class="member-detail__name">{{ selectedMember.name }}</div>
             <span :class="getLevelClass(selectedMember.levelName)">{{ selectedMember.levelName || '普通会员' }}</span>
           </div>
-          <el-tag :type="selectedMember.status === 1 ? 'success' : 'info'" size="mini">{{ selectedMember.status === 1 ? '正常' : '已禁用' }}</el-tag>
+          <el-tag :type="selectedMember.status === 1 ? 'success' : 'info'" size="small">{{ selectedMember.status === 1 ? '正常' : '已禁用' }}</el-tag>
         </div>
         <div class="member-detail__metrics">
           <div class="member-detail__metric"><span class="m-label">余额</span><span class="m-value">￥{{ selectedMember.balance }}</span></div>
@@ -145,7 +145,7 @@
             <ul v-else class="member-detail__list">
               <li v-for="(c, i) in couponList" :key="i">
                 <span style="max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ c.couponName || c.name || '优惠券' }}</span>
-                <el-tag size="mini" :type="couponTagType(c.status)">{{ couponStatusText(c.status) }}</el-tag>
+                <el-tag size="small" :type="couponTagType(c.status)">{{ couponStatusText(c.status) }}</el-tag>
               </li>
             </ul>
           </el-tab-pane>

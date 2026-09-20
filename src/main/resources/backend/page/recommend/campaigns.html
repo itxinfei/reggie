@@ -296,7 +296,7 @@
                 <div class="push-preview">
                     <div class="preview-item" v-for="(u, i) in pushPreview" :key="i">
                         <span>{{ u.name || ('用户' + u.userId) }}</span>
-                        <el-tag size="mini" type="info">{{ u.matchReason || '' }}</el-tag>
+                        <el-tag size="small" type="info">{{ u.matchReason || '' }}</el-tag>
                     </div>
                 </div>
             </el-form-item>
@@ -336,7 +336,7 @@
                 <div class="item-box"><span class="label">活动名称：</span><span class="des">{{ statsCampaign.name }}</span></div>
                 <div class="item-box"><span class="label">活动类型：</span><span class="des">{{ typeMap[statsCampaign.campaignType] }}</span></div>
                 <div class="item-box"><span class="label">参与上限：</span><span class="des">{{ statsCampaign.maxParticipants || '不限' }}</span></div>
-                <div class="item-box"><span class="label">活动状态：</span><span class="des"><el-tag :type="statusTagType(statsCampaign.status)" size="mini">{{ statusMap[statsCampaign.status] }}</el-tag></span></div>
+                <div class="item-box"><span class="label">活动状态：</span><span class="des"><el-tag :type="statusTagType(statsCampaign.status)" size="small">{{ statusMap[statsCampaign.status] }}</el-tag></span></div>
             </div>
             <div class="chart-box" id="campaignStatsChart" style="height:280px;"></div>
         </div>

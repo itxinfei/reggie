@@ -141,9 +141,9 @@
       <div class="perm-toolbar">
         <div class="perm-toolbar__info">
           当前角色：<strong>{{ currentRole ? currentRole.roleName : '' }}</strong>
-          <span class="perm-toolbar__count">已选 <el-tag type="success" size="mini">{{ checkedCount }}</el-tag> 项</span>
+          <span class="perm-toolbar__count">已选 <el-tag type="success" size="small">{{ checkedCount }}</el-tag> 项</span>
         </div>
-        <el-radio-group v-model="permTypeFilter" size="mini" class="perm-toolbar__types">
+        <el-radio-group v-model="permTypeFilter" size="small" class="perm-toolbar__types">
           <el-radio-button label="">全部</el-radio-button>
           <el-radio-button label="1">仅菜单</el-radio-button>
           <el-radio-button label="2">仅按钮</el-radio-button>
@@ -159,9 +159,9 @@
           prefix-icon="ri-search-line"
           placeholder="搜索权限名称或标识"
         ></el-input>
-        <el-button size="mini" @click="toggleExpand">{{ expanded ? '折叠全部' : '展开全部' }}</el-button>
-        <el-button size="mini" type="primary" plain @click="quickSelect('all')">全选</el-button>
-        <el-button size="mini" type="danger" plain @click="quickSelect('clear')">清空已选</el-button>
+        <el-button size="small" @click="toggleExpand">{{ expanded ? '折叠全部' : '展开全部' }}</el-button>
+        <el-button size="small" type="primary" plain @click="quickSelect('all')">全选</el-button>
+        <el-button size="small" type="danger" plain @click="quickSelect('clear')">清空已选</el-button>
       </div>
       <el-tree
         ref="permTree"
@@ -177,8 +177,8 @@
           <span class="perm-header" @click.stop="toggleNodeCheck(data)">
             <i :class="nodeIcon(data)" class="perm-header__icon"></i>
             <span class="perm-header__name">{{ data.permissionName }}</span>
-            <el-tag v-if="data.permissionType == 2" type="warning" size="mini" effect="plain">{{ data.permissionKey || '按钮' }}</el-tag>
-            <el-tag v-else-if="data.permissionKey" type="info" size="mini" effect="plain">{{ data.permissionKey }}</el-tag>
+            <el-tag v-if="data.permissionType == 2" type="warning" size="small" effect="plain">{{ data.permissionKey || '按钮' }}</el-tag>
+            <el-tag v-else-if="data.permissionKey" type="info" size="small" effect="plain">{{ data.permissionKey }}</el-tag>
           </span>
         </template>
       </el-tree>
