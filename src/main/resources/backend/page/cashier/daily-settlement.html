@@ -139,7 +139,11 @@
         </div>
         <div class="dt-item">
           <span class="dt-label">状态</span>
-          <span class="dt-value">{{ currentDetail.status === 1 ? '已结算' : '未结算' }}</span>
+          <span class="dt-value">
+            <el-tag size="small" :type="currentDetail.status === 1 ? 'success' : 'warning'">
+              {{ currentDetail.status === 1 ? '已结算' : '未结算' }}
+            </el-tag>
+          </span>
         </div>
       </div>
     </crud-dialog>

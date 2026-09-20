@@ -96,7 +96,9 @@
         <div class="dt-item"><span class="dt-label">提现金额</span><span class="dt-value ds-money--danger">¥{{ formatMoney(detailRow.amount) }}</span></div>
         <div class="dt-item"><span class="dt-label">提现方式</span><span class="dt-value">{{ getWithdrawMethodText(detailRow.withdrawMethod) }}</span></div>
         <div class="dt-item"><span class="dt-label">收款账户</span><span class="dt-value">{{ detailRow.receiveAccount }}</span></div>
-        <div class="dt-item"><span class="dt-label">状态</span><span class="dt-value">{{ getStatusText(detailRow.status) }}</span></div>
+        <div class="dt-item"><span class="dt-label">状态</span><span class="dt-value">
+          <el-tag size="small" :type="getStatusTag(detailRow.status)">{{ getStatusText(detailRow.status) }}</el-tag>
+        </span></div>
         <div class="dt-item"><span class="dt-label">申请时间</span><span class="dt-value">{{ detailRow.createTime }}</span></div>
         <div v-if="detailRow.reviewRemark" class="dt-item"><span class="dt-label">审核备注</span><span class="dt-value">{{ detailRow.reviewRemark }}</span></div>
       </div>
