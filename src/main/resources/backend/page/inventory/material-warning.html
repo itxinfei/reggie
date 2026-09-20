@@ -12,19 +12,6 @@
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
   <style>
-    .warn-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
-
-    /* 筛选栏 */
-    .filter-bar { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: flex-end; gap: var(--space-4); margin-bottom: var(--space-6); flex-wrap: wrap }
-    .filter-bar__label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap }
-    .filter-bar__col { display: flex; flex-direction: column; gap: 4px }
-    .filter-bar__input { height: 36px }
-    .filter-bar__btn { height: 36px; font-size: var(--font-size-base) }
-
-    /* 批量补货按钮行 */
-    .batch-bar { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); flex-wrap: wrap }
-    .batch-bar__tip { font-size: var(--font-size-xs); color: var(--text-muted) }
-
     /* 阈值比例进度条 */
     .ratio-cell { display: flex; align-items: center; gap: 8px; width: 160px }
     .ratio-bar { flex: 1; height: 6px; background: var(--border-default); border-radius: var(--radius-sm); overflow: hidden }
@@ -39,22 +26,19 @@
     .suggest-item__value { font-size: var(--font-size-base); color: var(--text-primary); width: 60px; text-align: right; font-variant-numeric: tabular-nums }
     .suggest-item__qty { width: 90px }
 
-    /* 空态 */
-    .empty-state { text-align: center; padding: 60px var(--space-4); color: var(--text-muted); font-size: var(--font-size-base) }
-    .empty-state__icon { font-size: 48px; line-height: 1; margin-bottom: var(--space-4) }
-    .empty-state__desc { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: var(--space-2) }
-
     /* 严重度标签样式微调 */
     .severity-tag { font-weight: 500 }
 
     /* C.4 双 Tab */
     .warn-tabs { margin-bottom: var(--space-4) }
+    /* Tab 内 table-bar 与表格间距 */
+    .warn-tabs .tableBar { margin-bottom: var(--space-3) }
   </style>
 </head>
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="warn-app">
-    <main class="container warn-container" id="main-content" role="main" aria-label="库存预警看板">
+    <main class="container" id="main-content" role="main" aria-label="库存预警看板">
 
       <!-- 统计卡片（固定 4 个） -->
       <stat-cards :cards="statsCards" :loading="statsLoading"></stat-cards>
@@ -62,50 +46,17 @@
       <!-- C.4：库存预警 / 智能补货 双 Tab（原 smart-replenish 收敛至此） -->
       <el-tabs v-model="activeTab" class="warn-tabs" @tab-click="onTabChange">
         <el-tab-pane label="库存预警" name="warning">
-      <!-- 筛选栏 -->
-      <div class="filter-bar">
-        <div class="filter-bar__col">
-          <span class="filter-bar__label">食材分类：</span>
-          <el-select v-model="categoryId" class="filter-bar__input" style="width: 200px" filterable clearable @change="onFilterChange" aria-label="食材分类" placeholder="全部分类">
-            <el-option v-for="c in categoryOptions" :key="c.value" :label="c.label" :value="c.value"></el-option>
-          </el-select>
-        </div>
-        <div class="filter-bar__col">
-          <span class="filter-bar__label">严重度：</span>
-          <el-select v-model="severity" class="filter-bar__input" style="width:160px" clearable @change="onFilterChange" aria-label="严重度" placeholder="全部严重度">
-            <el-option :value="'CRITICAL'" label="严重"></el-option>
-            <el-option :value="'WARNING'" label="警告"></el-option>
-            <el-option :value="'LOW'" label="低危"></el-option>
-          </el-select>
-        </div>
-        <div class="filter-bar__col">
-          <span class="filter-bar__label">统计天数：</span>
-          <el-select v-model="suggestDays" class="filter-bar__input" style="width:120px" @change="loadSuggest" aria-label="统计天数">
-            <el-option :value="7" label="7天"></el-option>
-            <el-option :value="30" label="30天"></el-option>
-            <el-option :value="60" label="60天"></el-option>
-          </el-select>
-        </div>
-        <el-button type="primary" size="small" @click="onFilterChange" class="filter-bar__btn">查询</el-button>
-        <el-button size="small" @click="refreshAll">刷新全部</el-button>
-      </div>
+      <!-- 工具栏：分类/严重度/统计天数筛选 + 批量补货/补货建议/刷新 -->
+      <table-bar
+        :search-items="warningSearchItems"
+        :actions="warningActions"
+        @search="onWarningSearch"
+        @reset="onWarningReset"
+        @action="onWarningAction">
+      </table-bar>
 
-      <!-- 批量补货按钮 -->
-      <div class="batch-bar" v-if="counts > 0">
-        <el-button
-          type="primary"
-          size="small"
-          :disabled="selectedRows.length === 0"
-          @click="openRestockDialog"
-        >批量补货</el-button>
-        <el-button type="info" size="small" @click="openSuggestDialog">查看补货建议</el-button>
-        <span class="batch-bar__tip" v-if="selectedRows.length > 0">已选 {{ selectedRows.length }} 条，可一键生成采购单并自动入库</span>
-        <span class="batch-bar__tip" v-else>勾选预警食材，可批量补货</span>
-      </div>
-
-      <!-- 明细表格 -->
+      <!-- 明细表格（空态交 crud-table 内置 empty-hint） -->
       <crud-table
-        v-if="counts > 0 || tableLoading"
         ref="crudTable"
         :data="tableData"
         :columns="columns"
@@ -115,6 +66,7 @@
         :page-sizes="[10,20,30,40]"
         :total="counts"
         :selection="true"
+        empty-hint="所有食材库存充足，暂无预警"
         @page-change="onPageChange"
         @size-change="onSizeChange"
         @selection-change="onSelectionChange"
@@ -144,25 +96,15 @@
           <span class="ds-num">¥{{ row.unitPrice | toDecimal }}</span>
         </template>
       </crud-table>
-
-      <div v-if="counts === 0 && !tableLoading" class="empty-state">
-        <div class="empty-state__icon"><i class="ri-checkbox-circle-line" aria-hidden="true"></i></div>
-        <div>暂无库存预警食材</div>
-        <div class="empty-state__desc">所有食材库存充足，无需补货</div>
-      </div>
         </el-tab-pane>
         <!-- C.4：智能补货 Tab -->
         <el-tab-pane label="智能补货" name="replenish">
-          <div class="batch-bar">
-            <el-button
-              type="primary"
-              size="small"
-              :disabled="smartSelectedRows.length === 0"
-              @click="openSmartRestock(smartSelectedRows)"
-            >批量补货</el-button>
-            <span class="batch-bar__tip" v-if="smartSelectedRows.length > 0">已选 {{ smartSelectedRows.length }} 条，可一键生成采购单并自动入库</span>
-            <span class="batch-bar__tip" v-else>基于近 {{ suggestDays }} 天出库量预测日均消耗，勾选食材后可批量补货</span>
-          </div>
+          <!-- 仅操作按钮的工具栏（无筛选，隐藏查询/重置） -->
+          <table-bar
+            :show-search-btns="false"
+            :actions="smartActions"
+            @action="onSmartAction">
+          </table-bar>
           <crud-table
             ref="smartTable"
             :data="smartTableData"
@@ -173,6 +115,7 @@
             :page-sizes="[10,20,30,40]"
             :total="smartTotal"
             :selection="true"
+            empty-hint="暂无智能补货建议"
             :show-actions="true"
             :actions-width="90"
             @page-change="onPageChange"
@@ -365,6 +308,35 @@
               { prop: 'minStock', label: '最低库存', slot: true, width: 90, align: 'center' },
               { prop: 'unitPrice', label: '单价', slot: true, width: 90, align: 'center', type: 'money' }
             ]
+          },
+          // 库存预警 Tab 工具栏筛选项（分类异步选项；table-bar 内部状态经 @search 桥接回 data）
+          warningSearchItems: function () {
+            return [
+              { type: 'select', field: 'categoryId', placeholder: '食材分类', width: '200px', options: this.categoryOptions },
+              { type: 'select', field: 'severity', placeholder: '严重度', width: '150px', options: [
+                { label: '严重', value: 'CRITICAL' },
+                { label: '警告', value: 'WARNING' },
+                { label: '低危', value: 'LOW' }
+              ] },
+              { type: 'select', field: 'suggestDays', placeholder: '统计天数', width: '120px', options: [
+                { label: '7天', value: 7 },
+                { label: '30天', value: 30 },
+                { label: '60天', value: 60 }
+              ] }
+            ]
+          },
+          // 批量补货随勾选启停；补货建议/刷新始终可用
+          warningActions: function () {
+            return [
+              { key: 'restock', text: '批量补货', type: 'primary', icon: 'ri-add-line', disabled: this.selectedRows.length === 0 },
+              { key: 'suggest', text: '补货建议', icon: 'ri-lightbulb-line' },
+              { key: 'refresh', text: '刷新全部', icon: 'ri-refresh-line' }
+            ]
+          },
+          smartActions: function () {
+            return [
+              { key: 'restock', text: '批量补货', type: 'primary', icon: 'ri-add-line', disabled: this.smartSelectedRows.length === 0 }
+            ]
           }
       },
       created() {
@@ -390,12 +362,34 @@
           if (severity === 'WARNING') return 'var(--color-warning)'
           return 'var(--color-success)'
         },
-        onFilterChange() {
+        // ===== table-bar 桥接（组件内部 searchValues 不与 data 双向绑定，事件中回写） =====
+        onWarningSearch(params) {
+          this.categoryId = params.categoryId || null
+          this.severity = params.severity || null
+          if (params.suggestDays) this.suggestDays = Number(params.suggestDays)
           this.page = 1
           this.tableData = []
           this.counts = 0
           this.selectedRows = []
           this.loadTable()
+          this.loadSuggest()
+        },
+        onWarningReset() {
+          this.categoryId = null
+          this.severity = null
+          this.suggestDays = 30
+          this.page = 1
+          this.selectedRows = []
+          this.loadTable()
+          this.loadSuggest()
+        },
+        onWarningAction(payload) {
+          if (payload.key === 'restock') this.openRestockDialog()
+          else if (payload.key === 'suggest') this.openSuggestDialog()
+          else if (payload.key === 'refresh') this.refreshAll()
+        },
+        onSmartAction(payload) {
+          if (payload.key === 'restock') this.openSmartRestock(this.smartSelectedRows)
         },
         refreshAll() {
           this.loadCategories()
