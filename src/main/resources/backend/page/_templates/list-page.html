@@ -23,6 +23,10 @@
     5. 分页逻辑 → mixins:[window.ReggieListMixin]，实现 fetchData()
     6. 通用方法 → formatMoney/formatDate/rgStatusText/rgStatusTag/rgPreview
     7. 状态枚举 → window.ReggieStatus.register('模块', textMap, tagMap)
+    8. 操作列 → #actions 插槽契约：常显主操作 ≤3 个，超出收「更多」el-dropdown；
+       宽度档 2 元素 120 / 3 元素 180 / 4 元素 240（更多触发器算 1 个元素）；
+       语义类 查看/编辑 btn-view、启用 btn-success、停用/暂停 btn-warning、删除/取消 btn-delete
+       （完整契约注释见 js/components.js crud-table 操作列处；落地范本 dining/table-list、platform/order-list）
   ============================================================
 -->
 <html lang="zh-CN">
@@ -44,9 +48,6 @@
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
       <!-- 页面唯一主标题：视觉隐藏（.sr-only），仅供屏幕阅读器播报，配合 main 的 aria-labelledby -->
       <h1 class="sr-only" id="page-title">页面标题</h1>
-
-      
-      
 
       <!-- ① 统计卡片（按需）：cards 配置见 components.js 的 stat-cards -->
       <!--
@@ -71,7 +72,8 @@
         :total="counts"
         :loading="loading"
         :show-actions="true"
-        :actions-width="240"
+        :actions-width="120"
+        empty-hint="暂无数据，点击上方「新增」创建第一条记录"
         aria-label="数据列表"
         @page-change="onPageChange"
         @size-change="onSizeChange"
@@ -80,10 +82,23 @@
         <template #col-status="{ row }">
           <el-tag :type="rgStatusTag('demo', row.status)" size="small">{{ rgStatusText('demo', row.status) }}</el-tag>
         </template>
-        <!-- 操作列：固定插槽名 #actions -->
+        <!--
+          操作列契约（固定插槽名 #actions）：
+          - 常显主操作 ≤3 个；删除/取消等低频或否定操作收进「更多」el-dropdown（trigger="click"）
+          - 宽度档：2 元素 120 / 3 元素 180 / 4 元素 240（「更多」触发器算 1 个元素）
+          - 语义类：查看/编辑 btn-view、启用 btn-success、停用/暂停 btn-warning、删除/取消 btn-delete
+          - 按钮统一 type="text" size="small"；更多触发器 class="text-info" + 下拉箭头
+          本例「编辑 + 更多」= 2 元素 → 120；若只有 2~3 个高频操作，也可不收下拉直接常显。
+        -->
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="onEdit(row)">编辑</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="onDelete(row.id)">删除</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => onRowCommand(cmd, row)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <!-- 危险项标红；继续加项时常用在前、删除收尾 -->
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </template>
       </crud-table>
     </main>
@@ -134,10 +149,12 @@
               { label: '启用', value: 1 }, { label: '禁用', value: 0 }
             ] }
           ],
-          // 操作按钮配置（详见 components.js 的 table-bar）
+          // 操作按钮配置（详见 components.js 的 table-bar，文案字段是 text 不是 label）
           actions: [
-            { key: 'add', text: '+ 新增', type: 'primary' }
+            { key: 'add', text: '新增', type: 'primary', icon: 'ri-add-line' }
           ],
+          // 页面自有筛选状态：table-bar 内部 searchValues 不双向绑定，需在 onSearch/onReset 桥接回写
+          filters: { name: '', status: '' },
           // 列配置（详见 components.js 的 crud-table）
           columns: [
             { prop: 'id', label: 'ID', width: 80 },
@@ -175,16 +192,25 @@
           }, 200)
           // ===== mock 结束 =====
         },
+        // 注意：table-bar 的内部 searchValues 不与页面 data 双向绑定，
+        // 必须在 @search 回调把 params 桥接回写 this.filters，否则筛选条件丢失
         onSearch(params) {
+          this.filters.name = params.name || ''
+          this.filters.status = (params.status === undefined || params.status === null) ? '' : params.status
           this.page = 1
           this.fetchData()
         },
         onReset() {
+          this.filters = { name: '', status: '' }
           this.page = 1
           this.fetchData()
         },
         onAction(payload) {
           if (payload.key === 'add') this.onAdd()
+        },
+        // 操作列「更多」下拉命令分发（command 与 el-dropdown-item 的 command 对应）
+        onRowCommand(cmd, row) {
+          if (cmd === 'delete') this.onDelete(row.id)
         },
         onAdd() {
           this.form = { title: '新增', id: undefined, name: '', visible: true }
@@ -226,7 +252,3 @@
   </script>
 </body>
 </html>
-
-
-
-
