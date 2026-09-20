@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.BaseContext;
@@ -14,6 +15,7 @@ import com.reggie.module.dish.mapper.DishMapper;
 import com.reggie.module.ai.config.AIConfigProperties;
 import com.reggie.module.ai.mapper.AIConversationMapper;
 import com.reggie.module.ai.mapper.AIMessageRecordMapper;
+import com.reggie.module.ai.dto.AiAttachmentVO;
 import com.reggie.module.ai.model.AiChatConstants;
 import com.reggie.module.ai.model.AIChatRequest;
 import com.reggie.module.ai.model.AIChatResponse;
@@ -25,6 +27,7 @@ import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.provider.AiProviderManager;
 import com.reggie.module.ai.adapter.AbortableStreamCallback;
 import com.reggie.module.ai.service.AIChatService;
+import com.reggie.module.ai.service.AiAttachmentService;
 import com.reggie.module.ai.service.ConversationContextService;
 import com.reggie.module.ai.service.AICacheService;
 import com.reggie.module.ai.service.conversation.AIConversationManagementService;
@@ -41,10 +44,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -110,6 +116,10 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     /** 对话管理服务（对话 CRUD / 反馈 / 权限校验） */
     @Resource
     private AIConversationManagementService conversationManagementService;
+
+    /** 图片附件服务（P2：归属校验、元数据落库、模型 base64 装配） */
+    @Resource
+    private AiAttachmentService aiAttachmentService;
 
     // ==================== 流式对话 ====================
 
@@ -308,6 +318,12 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
      */
     @Override
     public AIChatResponse orderAssistant(String userMessage, Long userId, String conversationId) {
+        return orderAssistant(userMessage, userId, conversationId, null, null, null);
+    }
+
+    @Override
+    public AIChatResponse orderAssistant(String userMessage, Long userId, String conversationId,
+                                         List<String> attachmentIds, String actorType, Long tenantId) {
         // 修改点：异步刷新用户画像（不阻塞对话）
         if (userId != null) {
             CompletableFuture.runAsync(() -> {
@@ -323,7 +339,7 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
         // 修改点：仅在未提供conversationId时新建对话，避免Controller层与Service层双重创建导致孤立对话
         if (conversationId == null || conversationId.isEmpty()) {
-            AIConversation conv = createConversation(userId, null, "order_assistant");
+            AIConversation conv = createConversation(userId, actorType, "order_assistant");
             conversationId = conv.getConversationId();
         }
 
@@ -334,6 +350,9 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 .scene("order_assistant")
                 .conversationId(conversationId)
                 .userId(userId)
+                .actorType(actorType)
+                .tenantId(tenantId)
+                .attachments(attachmentIds)
                 .context(context)
                 .build();
 
@@ -576,10 +595,15 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                             .getConversationId());
                     List<AIMessage> historyMessages = new ArrayList<>();
                     dbHistory.forEach(record -> {
-                        if (record.getContent() != null) {
+                        // P2：历史 user 消息解析 attachments JSON 还原附件ID（运行时再校验归属读图）
+                        List<Long> imgIds = "user".equals(record.getRole())
+                                ? extractAttachmentIds(record.getAttachments()) : null;
+                        boolean hasImages = imgIds != null && !imgIds.isEmpty();
+                        if (record.getContent() != null || hasImages) {
                             historyMessages.add(AIMessage.builder()
                                     .role(record.getRole())
                                     .content(record.getContent())
+                                    .attachmentIds(hasImages ? imgIds : null)
                                     .build());
                         }
                     });
@@ -624,13 +648,161 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         // 修改点(2026-09-20)：saveUserMessage 已把本轮消息写入上下文缓存（DB 重建路径同样包含），
         // 若末条已是相同的用户消息则不再追加，修复每轮问题被重复发送两次给模型的缺陷；
         // 重新生成场景（末轮 user 来自 DB 重建）也由此天然去重。
+        // P2：去重同时比较附件ID集合（同文案带不同图算两条消息）；重生成不带附件、
+        // 末条即被重放的原问题，仅比文本即可，避免把历史图片误判为差异而重复追加。
+        List<Long> currentImageIds = parseAttachmentIds(request.getAttachments());
+        boolean isRegenerate = Boolean.TRUE.equals(request.getRegenerate());
         AIMessage lastCtx = ctxMessages.isEmpty() ? null : ctxMessages.get(ctxMessages.size() - 1);
         boolean ctxHasCurrent = lastCtx != null && "user".equals(lastCtx.getRole())
-                && request.getMessage() != null && request.getMessage().equals(lastCtx.getContent());
+                && Objects.equals(request.getMessage(), lastCtx.getContent())
+                && (isRegenerate || sameImageIds(currentImageIds, lastCtx.getAttachmentIds()));
         if (!ctxHasCurrent) {
-            messages.add(AIMessage.builder().role("user").content(request.getMessage()).build());
+            messages.add(AIMessage.builder().role("user").content(request.getMessage())
+                    .attachmentIds(currentImageIds.isEmpty() ? null : currentImageIds)
+                    .build());
         }
+
+        // 6) P2：历史 + 本轮图片统一做 owner 校验并读 base64 装配（最近 3 张），
+        //    适配器按协议分流；失败静默降级为纯文本，不阻断对话
+        attachImageDataUrls(messages, request);
         return messages;
+    }
+
+    /**
+     * 把消息列表中全部 user 图片（按时间正序）限量最近 {@link AiAttachmentService#MAX_IMAGES_PER_REQUEST}
+     * 张，经附件服务归属校验后读为 data URL，回填到各消息的 imageDataUrls。
+     * <p>身份缺失（内部场景）/无附件/读图失败一律静默跳过，按纯文本对话处理。</p>
+     */
+    private void attachImageDataUrls(List<AIMessage> messages, AIChatRequest request) {
+        if (request.getUserId() == null || request.getActorType() == null) {
+            return;
+        }
+        List<AIMessage> userImageMessages = new ArrayList<>();
+        List<Long> allImageIds = new ArrayList<>();
+        for (AIMessage msg : messages) {
+            if ("user".equals(msg.getRole()) && msg.getAttachmentIds() != null
+                    && !msg.getAttachmentIds().isEmpty()) {
+                userImageMessages.add(msg);
+                allImageIds.addAll(msg.getAttachmentIds());
+            }
+        }
+        if (allImageIds.isEmpty()) {
+            return;
+        }
+        // 只装配最近 N 张（保留消息内先后顺序），控制 token 与上游请求体体积
+        int maxImages = AiAttachmentService.MAX_IMAGES_PER_REQUEST;
+        List<Long> limitedIds = allImageIds.size() > maxImages
+                ? new ArrayList<>(allImageIds.subList(allImageIds.size() - maxImages, allImageIds.size()))
+                : allImageIds;
+
+        Map<Long, String> dataUrls;
+        try {
+            dataUrls = aiAttachmentService.mapDataUrls(limitedIds, request.getUserId(),
+                    request.getActorType(), request.getTenantId(), maxImages);
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，附件服务异常时降级纯文本
+            log.warn("装配图片base64失败，本轮按纯文本继续: conversationId={}",
+                    request.getConversationId(), e);
+            return;
+        }
+        if (dataUrls.isEmpty()) {
+            return;
+        }
+        for (AIMessage msg : userImageMessages) {
+            List<String> urls = new ArrayList<>();
+            for (Long id : msg.getAttachmentIds()) {
+                String url = dataUrls.get(id);
+                if (url != null) {
+                    urls.add(url);
+                }
+            }
+            if (!urls.isEmpty()) {
+                msg.setImageDataUrls(urls);
+            }
+        }
+    }
+
+    /**
+     * 解析前端传入的附件ID字符串列表：去空白、去重、过滤非法值，限量
+     * {@link AiAttachmentService#MAX_IMAGES_PER_REQUEST} 张。ID 归属校验在附件服务完成。
+     */
+    private List<Long> parseAttachmentIds(List<String> rawIds) {
+        List<Long> ids = new ArrayList<>();
+        if (rawIds == null || rawIds.isEmpty()) {
+            return ids;
+        }
+        Set<Long> seen = new HashSet<>();
+        for (String raw : rawIds) {
+            if (raw == null) {
+                continue;
+            }
+            String trimmed = raw.trim();
+            // 雪花 ID 最多 19 位，超长直接丢弃，避免无意义 Long 解析异常
+            if (trimmed.isEmpty() || trimmed.length() > 20) {
+                continue;
+            }
+            try {
+                Long id = Long.valueOf(trimmed);
+                if (id > 0L && seen.add(id)) {
+                    ids.add(id);
+                }
+            } catch (NumberFormatException ignore) {
+                // 非数字附件ID忽略
+            }
+            if (ids.size() >= AiAttachmentService.MAX_IMAGES_PER_REQUEST) {
+                break;
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * 从附件元数据 JSON（ai_message.attachments）中还原附件ID（保序），坏 JSON 返回空列表。
+     */
+    private List<Long> extractAttachmentIds(String attachmentsJson) {
+        if (attachmentsJson == null || attachmentsJson.isEmpty()) {
+            return Collections.emptyList();
+        }
+        try {
+            List<AiAttachmentVO> views = OBJECT_MAPPER.readValue(attachmentsJson,
+                    new TypeReference<List<AiAttachmentVO>>() {
+                    });
+            List<Long> ids = new ArrayList<>();
+            for (AiAttachmentVO view : views) {
+                if (view != null && view.getAttachmentId() != null) {
+                    ids.add(view.getAttachmentId());
+                }
+            }
+            return ids;
+        } catch (Exception e) {
+            // 宽异常兜底：坏 JSON 不阻断历史加载，仅丢失该条图片
+            log.warn("解析消息附件JSON失败: json={}", attachmentsJson, e);
+            return Collections.emptyList();
+        }
+    }
+
+    /** 从归属校验后的权威 VO 列表提取ID（保序） */
+    private List<Long> extractViewIds(List<AiAttachmentVO> views) {
+        List<Long> ids = new ArrayList<>();
+        for (AiAttachmentVO view : views) {
+            if (view != null && view.getAttachmentId() != null) {
+                ids.add(view.getAttachmentId());
+            }
+        }
+        return ids;
+    }
+
+    /** 比较两批附件ID是否等价（null/空 视为相同的「无图」） */
+    private boolean sameImageIds(List<Long> a, List<Long> b) {
+        boolean hasA = a != null && !a.isEmpty();
+        boolean hasB = b != null && !b.isEmpty();
+        if (!hasA && !hasB) {
+            return true;
+        }
+        if (hasA != hasB) {
+            return false;
+        }
+        return a.equals(b);
     }
 
     private String getSystemPrompt(String scene) {
@@ -918,6 +1090,17 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 return existingMsg.getId();
             }
 
+            // P2：附件ID经归属校验后转权威 VO 列表落库（防前端伪造 mime/url/尺寸），
+            // 同时作为上下文缓存中该条消息的 attachmentIds（只存ID，不缓存 base64）
+            List<Long> attachmentIds = parseAttachmentIds(request.getAttachments());
+            List<AiAttachmentVO> attachmentViews = null;
+            if (!attachmentIds.isEmpty() && request.getUserId() != null
+                    && request.getActorType() != null) {
+                attachmentViews = aiAttachmentService.describeViews(attachmentIds,
+                        request.getUserId(), request.getActorType(), request.getTenantId(),
+                        AiAttachmentService.MAX_IMAGES_PER_REQUEST);
+            }
+
             AIMessageRecord record = new AIMessageRecord();
             record.setConversationId(request.getConversationId());
             record.setUserId(request.getUserId());
@@ -928,11 +1111,16 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             record.setClientMsgId(clientMsgId);
             record.setIsDeleted(0);
             record.setCreateTime(LocalDateTime.now());
+            if (attachmentViews != null && !attachmentViews.isEmpty()) {
+                record.setAttachments(OBJECT_MAPPER.writeValueAsString(attachmentViews));
+            }
             messageRecordMapper.insert(record);
 
-            // 注入上下文记忆
+            // 注入上下文记忆（带附件ID，纯图消息 content 可空）
             conversationContextService.addMessage(
-                    request.getConversationId(), "user", request.getMessage());
+                    request.getConversationId(), "user", request.getMessage(),
+                    attachmentViews != null && !attachmentViews.isEmpty()
+                            ? extractViewIds(attachmentViews) : null);
 
             // 更新会话消息计数
             updateMessageCount(request.getConversationId());
@@ -1217,10 +1405,11 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
          */
         private void execute() {
             try {
-                // 1) 能力事件（P1：vision/tools 待后续分期开放）
+                // 1) 能力事件：按供应商配置 capabilities 下发（P2 vision；P4 tools 暂恒 false）
+                Map<String, Boolean> providerCaps = aiProviderManager.getCapabilities();
                 Map<String, Object> caps = new HashMap<>();
                 caps.put("chat", Boolean.TRUE);
-                caps.put("vision", Boolean.FALSE);
+                caps.put("vision", Boolean.TRUE.equals(providerCaps.get("vision")));
                 caps.put("tools", Boolean.FALSE);
                 try {
                     emitter.send(SseEmitter.event().name("capabilities").data(caps));

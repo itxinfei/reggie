@@ -38,6 +38,9 @@ public class AIChatRequest {
     /** 归属身份类型：EMPLOYEE/CUSTOMER（由控制器从登录会话解析，防止员工与用户ID撞号） */
     private String actorType;
 
+    /** 租户ID（控制器在 HTTP 线程从 BaseContext 强制填充；SSE 异步线程 ThreadLocal 不传递） */
+    private Long tenantId;
+
     /** 前端消息幂等键（同一会话重复提交只落一条用户消息；重生成时为空） */
     private String clientMsgId;
 

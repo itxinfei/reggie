@@ -6,7 +6,7 @@
     <title>AI 经营分析助手 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../styles/tokens.css?v=20260920a" />
     <link rel="stylesheet" href="../../styles/main.css?v=20260920a" />
-    <link rel="stylesheet" href="../../styles/ai-chat.css?v=20260920a" />
+    <link rel="stylesheet" href="../../styles/ai-chat.css?v=20260921" />
 </head>
 <body>
     <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -156,8 +156,19 @@
                                     <!-- AI 回复：安全 Markdown 渲染（先转义后白名单替换） -->
                                     <div v-else-if="msg.role === 'assistant'"
                                          class="md-body" v-html="renderMarkdown(msg.content)"></div>
-                                    <!-- 用户消息：纯文本，保留换行 -->
-                                    <span v-else class="user-text">{{ msg.content }}</span>
+                                    <!-- 用户消息：图片附件（鉴权 URL，同域自动带 cookie）+ 文本（保留换行，纯图可无文本） -->
+                                    <div v-else class="user-bubble-inner">
+                                        <div class="msg-images" v-if="msg.attachments && msg.attachments.length">
+                                            <a v-for="att in msg.attachments" :key="att.attachmentId"
+                                               class="msg-image-link"
+                                               :href="att.url" target="_blank" rel="noopener"
+                                               @click="openImagePreview($event, att.url)">
+                                                <img :src="att.url" class="msg-image"
+                                                     alt="聊天图片" loading="lazy">
+                                            </a>
+                                        </div>
+                                        <span class="user-text" v-if="msg.content">{{ msg.content }}</span>
+                                    </div>
                                 </div>
 
                                 <!-- 推荐菜品卡片（点餐场景兜底） -->
@@ -217,28 +228,70 @@
                     </template>
                 </div>
 
-                <!-- 输入区：多行 textarea，Enter 发送 / Shift+Enter 换行 -->
+                <!-- 输入区：图片附件 + 多行 textarea，Enter 发送 / Shift+Enter 换行 -->
                 <div class="input-area">
-                    <div class="input-wrap">
-                        <textarea
-                            ref="inputEl"
-                            v-model="inputText"
-                            rows="1"
-                            :placeholder="inputPlaceholder"
-                            @keydown="onInputKeydown"
-                            @input="autoGrow"
-                            maxlength="4000"
-                            aria-label="消息输入框"
-                        ></textarea>
-                        <span class="char-count" :class="{ over: inputText.length >= 4000 }">
-                            {{ inputText.length }}/4000
-                        </span>
+                    <div class="composer">
+                        <!-- 待发送图片缩略图 -->
+                        <div class="attach-bar" v-if="pendingAttachments.length">
+                            <div class="attach-thumb" v-for="(att, aIdx) in pendingAttachments" :key="att.uid">
+                                <img :src="att.localUrl || att.url" alt="待发送图片">
+                                <div class="attach-mask" v-if="att.uploading">
+                                    <i class="ri-loader-4-line attach-spin" aria-hidden="true"></i>
+                                </div>
+                                <button type="button" class="attach-remove"
+                                        :disabled="loading || att.uploading"
+                                        @click="removePendingImage(aIdx)"
+                                        title="移除图片" aria-label="移除图片">
+                                    <i class="ri-close-line" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="composer-row">
+                            <!-- 图片按钮：供应商无 vision 能力时置灰，点击给明确提示 -->
+                            <button type="button" class="image-btn"
+                                    :class="{ 'is-off': !visionEnabled }"
+                                    :disabled="loading"
+                                    :title="imageButtonTitle"
+                                    @click="pickImage" aria-label="上传图片">
+                                <i class="ri-image-add-line" aria-hidden="true"></i>
+                            </button>
+                            <div class="input-wrap">
+                                <textarea
+                                    ref="inputEl"
+                                    v-model="inputText"
+                                    rows="1"
+                                    :placeholder="inputPlaceholder"
+                                    @keydown="onInputKeydown"
+                                    @paste="onPasteImage"
+                                    @input="autoGrow"
+                                    maxlength="4000"
+                                    aria-label="消息输入框"
+                                ></textarea>
+                                <span class="char-count" :class="{ over: inputText.length >= 4000 }">
+                                    {{ inputText.length }}/4000
+                                </span>
+                            </div>
+                            <button v-if="!loading" class="send-btn" @click="sendMessage()" :disabled="!canSend">
+                                发送
+                            </button>
+                            <button v-else class="stop-btn" @click="stopGenerate" aria-label="停止生成">
+                                <i class="ri-stop-fill" aria-hidden="true"></i> 停止
+                            </button>
+                        </div>
                     </div>
-                    <button v-if="!loading" class="send-btn" @click="sendMessage()" :disabled="!canSend">
-                        发送
-                    </button>
-                    <button v-else class="stop-btn" @click="stopGenerate" aria-label="停止生成">
-                        <i class="ri-stop-fill" aria-hidden="true"></i> 停止
+                    <!-- 隐藏的文件选择框：JPG/PNG/WebP，最多 3 张 -->
+                    <input ref="imageInput" type="file" class="native-file-input"
+                           :accept="imageAccept" multiple
+                           @change="onImagePicked">
+                </div>
+
+                <!-- 图片大图预览（点击聊天图/缩略图放大，点遮罩或按 Esc 关闭） -->
+                <div class="image-lightbox" v-if="previewImageUrl"
+                     @click.self="closeImagePreview" role="dialog" aria-label="图片预览">
+                    <img :src="previewImageUrl" alt="放大的聊天图片">
+                    <button type="button" class="lightbox-close"
+                            @click="closeImagePreview" aria-label="关闭预览">
+                        <i class="ri-close-line" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
@@ -252,8 +305,8 @@
     <script src="../../js/components.js?v=20260915c"></script>
     <script src="../../js/accessibility-utils.js?v=20260915c"></script>
     <script src="../../js/performance-utils.js?v=20260915c"></script>
-    <script src="../../js/ai/ai-chat-core.js?v=20260920a"></script>
-    <script src="../../api/ai.js?v=20260920a"></script>
+    <script src="../../js/ai/ai-chat-core.js?v=20260921"></script>
+    <script src="../../api/ai.js?v=20260921"></script>
     <script>
     (function() {
         'use strict';
@@ -317,6 +370,10 @@
                 loading: false,
                 currentRequestId: 0,
 
+                /* P2 待发送图片附件（上传成功后为后端权威 VO + 本地预览 localUrl） */
+                pendingAttachments: [],
+                previewImageUrl: '',
+
                 /* 对话管理 */
                 conversations: [],
                 currentConversationId: null,
@@ -375,9 +432,35 @@
                     };
                     return map[this.currentScene] || '输入消息...';
                 },
+                /** 供应商是否具备视觉能力（scene-config + SSE capabilities 事件双重来源） */
+                visionEnabled: function() {
+                    return !!(this.capabilities && this.capabilities.vision === true);
+                },
+                /** 图片上传中数量（上传未完成不允许发送） */
+                uploadingCount: function() {
+                    return this.pendingAttachments.filter(function(a) { return !!a.uploading; }).length;
+                },
+                /** 已上传完成、可随消息发送的附件（后端 VO 形态） */
+                readyAttachments: function() {
+                    return this.pendingAttachments.filter(function(a) { return !a.uploading && a.attachmentId; });
+                },
+                imageAccept: function() {
+                    return window.AiChatCore.AttachmentUploader.ACCEPT;
+                },
+                imageButtonTitle: function() {
+                    if (!this.visionEnabled) {
+                        return '当前 AI 模型不支持图片，可在「AI 配置」中勾选视觉能力';
+                    }
+                    if (this.pendingAttachments.length >= 3) {
+                        return '每条消息最多发送 3 张图片';
+                    }
+                    return '发送图片（JPG/PNG/WebP，单张≤10MB）';
+                },
                 canSend: function() {
                     var text = this.inputText.trim();
-                    return !!text && this.inputText.length <= 4000 && !this.loading;
+                    var hasReadyImages = this.readyAttachments.length > 0;
+                    return (!this.uploadingCount) && (!!text || hasReadyImages)
+                        && this.inputText.length <= 4000 && !this.loading;
                 },
                 currentConversation: function() {
                     var self = this;
@@ -393,6 +476,16 @@
                 this.loadConversations();
                 this.loadSceneConfig();
                 this.checkStatus();
+                var self = this;
+                // Esc 关闭图片大图预览
+                this._onPreviewEsc = function(e) {
+                    if (e.key === 'Escape' && self.previewImageUrl) self.closeImagePreview();
+                };
+                document.addEventListener('keydown', this._onPreviewEsc);
+            },
+            beforeDestroy: function() {
+                if (this._onPreviewEsc) document.removeEventListener('keydown', this._onPreviewEsc);
+                this.clearPendingAttachments();
             },
 
             methods: {
@@ -455,6 +548,9 @@
                     if (self.currentConversationId === conv.conversationId && self.messages.length > 0) return;
                     self.currentConversationId = conv.conversationId;
                     self.currentScene = conv.scene || 'business_analysis';
+                    self.clearPendingAttachments();
+                    self.inputText = '';
+                    self.autoGrowReset();
                     self.loadConversationMessages(conv.conversationId);
                 },
 
@@ -484,6 +580,7 @@
                     this.currentConversationId = null;
                     this.messages = [];
                     this.inputText = '';
+                    this.clearPendingAttachments();
                     this.autoGrowReset();
                     this.loadConversations();
                     this.focusInput();
@@ -558,26 +655,70 @@
 
                 // ==================== 消息发送（POST + SSE） ====================
 
-                sendMessage: function(overrideText) {
-                    var text = (overrideText != null ? String(overrideText) : this.inputText).trim();
-                    if (!text || this.loading || this.inputText.length > 4000) return;
+                /**
+                 * 发送消息。
+                 * @param {string} [overrideText] 快捷问题/重试时外部传入文本
+                 * @param {Array} [overrideAttachments] 重试时复用原消息附件 VO
+                 */
+                sendMessage: function(overrideText, overrideAttachments) {
+                    if (this.loading) return;
+                    var hasOverride = overrideText != null || !!overrideAttachments;
+                    var text;
+                    var views;
+                    if (hasOverride) {
+                        text = overrideText != null ? String(overrideText).trim() : '';
+                        views = this.normalizeAttachments(overrideAttachments);
+                    } else {
+                        text = this.inputText.trim();
+                        if (this.uploadingCount) {
+                            if (window.ReggieUI) ReggieUI.warning('图片正在上传，请稍候');
+                            return;
+                        }
+                        views = this.readyAttachments.slice();
+                    }
+                    if ((!text && !views.length) || this.inputText.length > 4000) return;
 
-                    var userMsg = window.AiChatCore.MessageFactory.createUserMessage(text);
+                    var userMsg = window.AiChatCore.MessageFactory.createUserMessage(
+                        text, { attachments: views.length ? views : null });
                     var aiMsg = window.AiChatCore.MessageFactory.createAssistantMessage();
                     this.messages.push(userMsg);
                     this.messages.push(aiMsg);
 
-                    this.inputText = '';
-                    this.autoGrowReset();
+                    if (!hasOverride) {
+                        this.clearPendingAttachments();
+                        this.inputText = '';
+                        this.autoGrowReset();
+                    }
                     this.loading = true;
                     this.scrollToBottom();
 
                     this.runStream(aiMsg, {
                         regenerate: false,
                         text: text,
+                        attachments: views,
                         clientMsgId: userMsg.clientMsgId,
                         fallbackUsed: false
                     });
+                },
+
+                /** 规整附件参数：只保留含 attachmentId 的后端 VO 形态 */
+                normalizeAttachments: function(list) {
+                    var out = [];
+                    if (!list || !list.length) return out;
+                    list.forEach(function(a) {
+                        if (a && a.attachmentId) {
+                            out.push({
+                                attachmentId: a.attachmentId,
+                                type: a.type || 'image',
+                                mime: a.mime || '',
+                                url: a.url,
+                                width: a.width || null,
+                                height: a.height || null,
+                                fileSize: a.fileSize || null
+                            });
+                        }
+                    });
+                    return out;
                 },
 
                 /**
@@ -595,6 +736,11 @@
                     } else {
                         body.message = opts.text;
                         body.clientMsgId = opts.clientMsgId;
+                        if (opts.attachments && opts.attachments.length) {
+                            body.attachments = opts.attachments.map(function(a) {
+                                return String(a.attachmentId);
+                            });
+                        }
                     }
 
                     var client = new window.AiChatCore.ChatClient();
@@ -602,6 +748,11 @@
                     client.stream({
                         url: aiBackendApi.streamUrl,
                         body: body,
+                        onCapabilities: function(caps) {
+                            if (requestId !== self.currentRequestId) return;
+                            // SSE 实时能力优先于进页面时的 scene-config（供应商刚改配置也能立即生效）
+                            if (caps) self.capabilities = caps;
+                        },
                         onToken: function(token) {
                             if (requestId !== self.currentRequestId) return;
                             aiMsg.content += token;
@@ -637,7 +788,7 @@
                             // 网络失败且尚无内容：自动降级一次非流式接口
                             if (!opts.regenerate && !opts.fallbackUsed && info.network && !aiMsg.content) {
                                 opts.fallbackUsed = true;
-                                self.fallbackNonStream(aiMsg, opts.text);
+                                self.fallbackNonStream(aiMsg, opts.text, opts.attachments);
                                 return;
                             }
                             aiMsg.streaming = false;
@@ -656,8 +807,12 @@
                 },
 
                 /** 流式不可用时的非流式降级（显式建会话，保证后续多轮不丢上下文） */
-                fallbackNonStream: function(aiMsg, text) {
+                fallbackNonStream: function(aiMsg, text, attachments) {
                     var self = this;
+                    var attachmentIds = null;
+                    if (attachments && attachments.length) {
+                        attachmentIds = attachments.map(function(a) { return String(a.attachmentId); });
+                    }
                     var ensureConversation;
                     if (self.currentConversationId) {
                         ensureConversation = Promise.resolve(self.currentConversationId);
@@ -670,7 +825,7 @@
                             });
                     }
                     ensureConversation.then(function(cid) {
-                        return aiBackendApi.chat(text, self.currentScene, cid);
+                        return aiBackendApi.chat(text, self.currentScene, cid, attachmentIds);
                     }).then(function(res) {
                         var data = unwrap(res) || {};
                         aiMsg.content = data.content || '服务暂时不可用，请稍后重试';
@@ -712,9 +867,10 @@
                     var userMsg = idx > 0 ? this.messages[idx - 1] : null;
                     if (!userMsg || userMsg.role !== 'user') return;
                     var text = userMsg.content;
-                    // 删除失败 AI 消息与其用户消息，用原文重新发送（新 clientMsgId 走幂等）
+                    var views = this.normalizeAttachments(userMsg.attachments);
+                    // 删除失败 AI 消息与其用户消息，用原文+原图重新发送（新 clientMsgId 走幂等）
                     this.messages.splice(idx - 1, 2);
-                    this.sendMessage(text);
+                    this.sendMessage(text, views.length ? views : null);
                 },
 
                 canRegenerate: function(idx) {
@@ -775,6 +931,128 @@
                     }
                     this.currentScene = scene;
                     this.loadSceneConfig();
+                },
+
+                // ==================== 图片附件（P2 视觉多模态） ====================
+
+                /** 点击图片按钮：无视觉能力给明确提示，否则打开文件选择 */
+                pickImage: function() {
+                    if (this.loading) return;
+                    if (!this.visionEnabled) {
+                        if (window.ReggieUI) {
+                            ReggieUI.warning('当前 AI 模型不支持图片，可在「AI 配置」中勾选视觉能力');
+                        }
+                        return;
+                    }
+                    if (this.pendingAttachments.length >= 3) {
+                        if (window.ReggieUI) ReggieUI.warning('每条消息最多发送 3 张图片');
+                        return;
+                    }
+                    var input = this.$refs.imageInput;
+                    if (input) { input.value = ''; input.click(); }
+                },
+
+                /** 文件选择回调（多选，逐张校验+压缩+上传） */
+                onImagePicked: function(e) {
+                    var files = e.target && e.target.files;
+                    if (files && files.length) this.addImageFiles(files);
+                },
+
+                /** textarea 粘贴图片（截图/复制图片直接粘贴） */
+                onPasteImage: function(e) {
+                    if (!this.visionEnabled || !e.clipboardData) return;
+                    var items = e.clipboardData.items;
+                    if (!items) return;
+                    var imageFiles = [];
+                    for (var i = 0; i < items.length; i++) {
+                        if (items[i].kind === 'file' && items[i].type.indexOf('image/') === 0) {
+                            var f = items[i].getAsFile();
+                            if (f) imageFiles.push(f);
+                        }
+                    }
+                    if (imageFiles.length) {
+                        e.preventDefault();
+                        this.addImageFiles(imageFiles);
+                    }
+                },
+
+                /**
+                 * 批量加入图片：数量控制 → 本地预览占位 → 压缩上传 → 成功替换为后端 VO。
+                 * 上传期间不阻断继续输入；发送按钮等待全部上传完成。
+                 */
+                addImageFiles: function(fileList) {
+                    var self = this;
+                    var uploader = window.AiChatCore.AttachmentUploader;
+                    var files = Array.prototype.slice.call(fileList);
+                    files.forEach(function(file) {
+                        if (self.pendingAttachments.length >= uploader.MAX_IMAGES) {
+                            if (window.ReggieUI) ReggieUI.warning('每条消息最多发送 ' + uploader.MAX_IMAGES + ' 张图片');
+                            return;
+                        }
+                        var check = uploader.validateFile(file);
+                        if (!check.ok) {
+                            if (window.ReggieUI) ReggieUI.warning(check.message);
+                            return;
+                        }
+                        var item = {
+                            uid: window.AiChatCore.genId('att'),
+                            localUrl: window.URL ? window.URL.createObjectURL(file) : '',
+                            url: '',
+                            uploading: true
+                        };
+                        self.pendingAttachments.push(item);
+                        uploader.upload(file, self.currentScene).then(function(vo) {
+                            // 合并后端权威 VO，保留本地预览地址直到消息发出
+                            Object.keys(vo).forEach(function(k) {
+                                self.$set(item, k, vo[k]);
+                            });
+                            item.uploading = false;
+                        }).catch(function(err) {
+                            if (err && err.notLogin) {
+                                notifyNotLogin();
+                                return;
+                            }
+                            if (window.ReggieUI) ReggieUI.error((err && err.message) || '图片上传失败');
+                            self.removePendingItem(item);
+                        });
+                    });
+                },
+
+                removePendingImage: function(idx) {
+                    var item = this.pendingAttachments[idx];
+                    this.pendingAttachments.splice(idx, 1);
+                    this.revokeLocalUrl(item);
+                },
+
+                /** 上传失败按对象移除（索引可能已变化） */
+                removePendingItem: function(item) {
+                    var idx = this.pendingAttachments.indexOf(item);
+                    if (idx >= 0) this.pendingAttachments.splice(idx, 1);
+                    this.revokeLocalUrl(item);
+                },
+
+                /** 发送后清空全部待发图片并释放本地预览 URL */
+                clearPendingAttachments: function() {
+                    if (this.pendingAttachments && this.pendingAttachments.length) {
+                        this.pendingAttachments.forEach(this.revokeLocalUrl);
+                    }
+                    this.pendingAttachments = [];
+                },
+
+                revokeLocalUrl: function(item) {
+                    if (item && item.localUrl && window.URL) {
+                        try { window.URL.revokeObjectURL(item.localUrl); } catch (e) { /* noop */ }
+                    }
+                },
+
+                /** 点击聊天图片：自建 lightbox 放大（鉴权图同域带 cookie，可直接显示） */
+                openImagePreview: function(e, url) {
+                    e.preventDefault();
+                    this.previewImageUrl = url;
+                },
+
+                closeImagePreview: function() {
+                    this.previewImageUrl = '';
                 },
 
                 // ==================== 输入框 ====================

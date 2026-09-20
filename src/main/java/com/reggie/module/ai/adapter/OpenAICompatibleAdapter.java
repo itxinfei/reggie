@@ -75,12 +75,9 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             Map<String, Object> requestBody = new LinkedHashMap<>();
             requestBody.put("model", config.getModelName());
 
-            List<Map<String, String>> msgList = new ArrayList<>();
+            List<Map<String, Object>> msgList = new ArrayList<>();
             for (AIMessage msg : messages) {
-                Map<String, String> m = new LinkedHashMap<>();
-                m.put("role", msg.getRole());
-                m.put("content", msg.getContent());
-                msgList.add(m);
+                msgList.add(buildMessagePayload(msg));
             }
             requestBody.put("messages", msgList);
             requestBody.put("max_tokens", resolveMaxTokens(maxTokens, config));
@@ -125,6 +122,39 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                 conn.disconnect();
             }
         }
+    }
+
+    /**
+     * 构造单条消息体。纯文本保持 String content（兼容性最好）；
+     * 携带图片的 user 消息使用多模态 content 数组：
+     * <pre>[{type:"text",text}, {type:"image_url",image_url:{url:"data:image/jpeg;base64,..."}}]</pre>
+     */
+    private Map<String, Object> buildMessagePayload(AIMessage msg) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("role", msg.getRole());
+        List<String> images = msg.getImageDataUrls();
+        boolean multimodal = "user".equals(msg.getRole()) && images != null && !images.isEmpty();
+        if (!multimodal) {
+            m.put("content", msg.getContent());
+            return m;
+        }
+        List<Map<String, Object>> parts = new ArrayList<>();
+        if (msg.getContent() != null && !msg.getContent().isEmpty()) {
+            Map<String, Object> textPart = new LinkedHashMap<>();
+            textPart.put("type", "text");
+            textPart.put("text", msg.getContent());
+            parts.add(textPart);
+        }
+        for (String dataUrl : images) {
+            Map<String, Object> imagePart = new LinkedHashMap<>();
+            imagePart.put("type", "image_url");
+            Map<String, String> imageUrl = new LinkedHashMap<>();
+            imageUrl.put("url", dataUrl);
+            imagePart.put("image_url", imageUrl);
+            parts.add(imagePart);
+        }
+        m.put("content", parts);
+        return m;
     }
 
     /**
@@ -241,12 +271,9 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             Map<String, Object> requestBody = new LinkedHashMap<>();
             requestBody.put("model", config.getModelName());
 
-            List<Map<String, String>> msgList = new ArrayList<>();
+            List<Map<String, Object>> msgList = new ArrayList<>();
             for (AIMessage msg : messages) {
-                Map<String, String> m = new LinkedHashMap<>();
-                m.put("role", msg.getRole());
-                m.put("content", msg.getContent());
-                msgList.add(m);
+                msgList.add(buildMessagePayload(msg));
             }
             requestBody.put("messages", msgList);
             requestBody.put("max_tokens", resolveMaxTokens(maxTokens, config));

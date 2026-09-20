@@ -12,18 +12,22 @@
         // ==================== 核心对话 ====================
 
         /**
-         * 通用AI对话（非流式）
-         * @param {string} message - 用户消息
+         * 通用AI对话（非流式，流式网络失败时的降级通道）
+         * @param {string} message - 用户消息（携带附件时可空字符串）
          * @param {string} scene - 场景：business_analysis / dish_desc / marketing
          * @param {string} conversationId - 会话ID（可选，不传则后端自动创建）
+         * @param {string[]} [attachmentIds] - 附件ID列表（P2 视觉多模态，可选）
          */
-        chat: function(message, scene, conversationId) {
+        chat: function(message, scene, conversationId, attachmentIds) {
             var params = {
                 message: message,
                 scene: scene || 'business_analysis'
             };
             if (conversationId) {
                 params.conversationId = conversationId;
+            }
+            if (attachmentIds && attachmentIds.length) {
+                params.attachments = attachmentIds;
             }
             return $axios.post('/api/ai/chat', params);
         },

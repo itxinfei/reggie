@@ -688,3 +688,99 @@
 .ai-container.dark-mode blockquote,
 .ai-container.dark-mode .md-body blockquote { background: rgba(255,255,255,0.06); }
 
+/* ========== P2 图片附件（视觉多模态，能力开关由供应商配置控制） ========== */
+
+/* 原生选文件输入隐藏 */
+.native-file-input { display: none; }
+
+/* 输入区改为纵向：缩略图条在上、输入行在下 */
+.input-area { flex-direction: column; align-items: stretch; gap: 8px; }
+.composer-row { display: flex; gap: 10px; align-items: flex-end; }
+.composer-row .input-wrap { flex: 1; min-width: 0; }
+
+/* 图片按钮（与语音/发送按钮同规格圆形） */
+.image-btn {
+    width: 40px; height: 40px; border-radius: var(--radius-round);
+    border: 1px solid var(--bg-hover); background: var(--bg-card);
+    color: var(--color-text-secondary); font-size: 19px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    cursor: pointer; transition: all 0.2s; user-select: none; padding: 0;
+}
+.image-btn:active:not(:disabled) { background: var(--bg-page); transform: scale(0.95); }
+.image-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+/* 供应商无视觉能力：置灰 + help 光标提示点按看说明 */
+.image-btn.is-off {
+    color: var(--color-text-hint); background: var(--bg-card);
+    cursor: help; opacity: 0.7;
+}
+
+/* 待发送缩略图条 */
+.attach-bar { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 2px; }
+.attach-thumb {
+    position: relative; width: 56px; height: 56px;
+    border-radius: var(--radius-sm); overflow: hidden;
+    border: 1px solid var(--ai-border-light); background: var(--bg-page);
+}
+.attach-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.attach-mask {
+    position: absolute; inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--color-text-white); font-size: 20px;
+}
+.ai-attach-spin { animation: ai-attach-spin 1s linear infinite; }
+@keyframes ai-attach-spin { to { transform: rotate(360deg); } }
+.attach-remove {
+    position: absolute; top: 2px; right: 2px;
+    width: 18px; height: 18px; padding: 0; border: none; border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55); color: var(--color-text-white);
+    font-size: 12px; line-height: 18px; text-align: center; cursor: pointer;
+}
+.attach-remove:active { background: var(--color-danger); }
+
+/* 用户气泡内图片（金底气泡内用白底衬边，避免图片直接贴金底） */
+.user-bubble-inner { display: flex; flex-direction: column; gap: 6px; }
+.msg-images { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.msg-images a { display: block; border-radius: var(--radius-sm); overflow: hidden; line-height: 0; background: var(--bg-card); }
+.msg-image {
+    display: block; width: 150px; height: 120px; object-fit: cover;
+    border-radius: var(--radius-sm); cursor: zoom-in;
+    transition: opacity 0.2s;
+}
+.msg-image:active { opacity: 0.85; }
+
+/* 大图预览 lightbox */
+.image-lightbox {
+    position: fixed; inset: 0; z-index: 3000;
+    background: rgba(0, 0, 0, 0.78);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+}
+.image-lightbox img {
+    max-width: 100%; max-height: 100%;
+    border-radius: var(--radius-sm); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+.lightbox-close {
+    position: absolute; top: 16px; right: 16px;
+    width: 40px; height: 40px; border: none; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15); color: var(--color-text-white);
+    font-size: 22px; cursor: pointer; transition: background 0.2s;
+}
+.lightbox-close:active { background: rgba(255, 255, 255, 0.3); }
+
+/* 暗色模式微调 */
+.ai-container.dark-mode .image-btn {
+    background: var(--ai-dark-bg-input); border-color: var(--ai-dark-border-input);
+    color: var(--ai-dark-text-secondary);
+}
+.ai-container.dark-mode .image-btn.is-off { color: var(--ai-dark-text-muted); }
+.ai-container.dark-mode .attach-thumb { background: var(--ai-dark-bg-input); border-color: var(--ai-dark-border-input); }
+.ai-container.dark-mode .msg-images a { background: var(--ai-dark-bg-bubble); }
+
+/* 小屏：按钮与缩略图收紧 */
+@media screen and (max-width: 360px) {
+    .image-btn { width: 36px; height: 36px; font-size: var(--font-size-lg); }
+    .msg-image { width: 120px; height: 96px; }
+    .attach-thumb { width: 50px; height: 50px; }
+}
+

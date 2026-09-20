@@ -216,6 +216,14 @@
     border: 1px solid var(--legacy-fde2e2);
 }
 
+/* P2 模型能力勾选组：换行排列，避免长表单挤压 */
+.capability-group {
+    display: flex; flex-wrap: wrap; gap: 4px 20px;
+}
+.capability-group .el-checkbox {
+    margin-right: 0;
+}
+
 @media (max-width: 768px) {
     .provider-grid { grid-template-columns: 1fr; }
     .active-provider-info { flex-direction: column; text-align: center; }

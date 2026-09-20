@@ -27,6 +27,11 @@ spring:
   devtools:
     restart:
       enabled: false
+  # P2 AI 视觉多模态图片上传：默认 1MB 会导致 413，放宽到单文件 10MB / 单请求 12MB
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
 
 # MyBatis Plus 配置
 mybatis-plus:

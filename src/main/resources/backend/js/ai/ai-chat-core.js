@@ -1,11 +1,12 @@
 /**
  * AI 聊天公共内核（管理后台 + C 端共用，零框架依赖，ES5 语法）
  *
- * 提供三个模块，挂在 window.AiChatCore：
- * 1. ChatClient     —— POST fetch + ReadableStream 消费 SSE（\n\n 分帧），
- *                     AbortController 停止生成，CSRF 头自动携带，非流式兜底
- * 2. Markdown       —— 安全 Markdown 渲染（先 HTML 转义再白名单替换，零第三方依赖）
- * 3. MessageFactory —— 消息模型工厂（本地临时 key + done 回填真实 messageId）
+ * 提供四个模块，挂在 window.AiChatCore：
+ * 1. ChatClient         —— POST fetch + ReadableStream 消费 SSE（\n\n 分帧），
+ *                         AbortController 停止生成，CSRF 头自动携带，非流式兜底
+ * 2. Markdown           —— 安全 Markdown 渲染（先 HTML 转义再白名单替换，零第三方依赖）
+ * 3. MessageFactory     —— 消息模型工厂（本地临时 key + done 回填真实 messageId）
+ * 4. AttachmentUploader —— 图片校验/canvas 压缩/multipart 上传（P2 视觉多模态）
  *
  * SSE 事件协议（与后端 ChatStreamSession 对齐）：
  *   capabilities {chat, vision, tools}
@@ -633,6 +634,171 @@
         }
     };
 
+    /* ============================== 图片附件上传（P2 视觉多模态） ============================== */
+
+    /**
+     * 图片附件上传：类型/大小校验 → canvas 压缩（长边 1568、JPEG 0.82）→ multipart 上传。
+     * 后端按魔数二次校验；返回 AiAttachmentVO（attachmentId/url/mime/width/height/fileSize）。
+     * 注意：multipart 请求不能手动设置 Content-Type，由浏览器自动补 boundary。
+     */
+    var AttachmentUploader = {
+
+        /** 单条消息最多图片数（与后端 AiAttachmentService.MAX_IMAGES_PER_REQUEST 对齐） */
+        MAX_IMAGES: 3,
+
+        /** 单图大小上限（与后端 multipart max-file-size=10MB 对齐） */
+        MAX_FILE_SIZE: 10 * 1024 * 1024,
+
+        /** 压缩长边像素 */
+        LONG_EDGE: 1568,
+
+        /** JPEG 压缩质量 */
+        JPEG_QUALITY: 0.82,
+
+        /** 文件选择框 accept */
+        ACCEPT: 'image/jpeg,image/png,image/webp',
+
+        /**
+         * 校验文件类型与大小
+         * @return {{ok:boolean, message?:string}}
+         */
+        validateFile: function (file) {
+            if (!file) {
+                return { ok: false, message: '请选择图片' };
+            }
+            var allowed = { 'image/jpeg': 1, 'image/png': 1, 'image/webp': 1 };
+            if (!allowed[file.type]) {
+                return { ok: false, message: '仅支持 JPG、PNG、WebP 格式图片' };
+            }
+            if (file.size > AttachmentUploader.MAX_FILE_SIZE) {
+                return { ok: false, message: '图片大小不能超过 10MB' };
+            }
+            return { ok: true };
+        },
+
+        /**
+         * canvas 压缩：长边超 1568 等比缩小，统一重编码 JPEG 0.82（白底防透明变黑）；
+         * 任何失败或压缩后异常变大都降级返回原文件（后端魔数兜底校验）。
+         * @return Promise<Blob|File>
+         */
+        compressImage: function (file) {
+            return new Promise(function (resolve) {
+                if (!file.type || file.type.indexOf('image/') !== 0
+                        || typeof document === 'undefined' || typeof FileReader === 'undefined') {
+                    resolve(file);
+                    return;
+                }
+                var reader = new FileReader();
+                reader.onload = function () {
+                    var img = new Image();
+                    img.onload = function () {
+                        try {
+                            var w = img.width;
+                            var h = img.height;
+                            var longEdge = Math.max(w, h);
+                            var scale = longEdge > AttachmentUploader.LONG_EDGE
+                                ? AttachmentUploader.LONG_EDGE / longEdge : 1;
+                            var tw = Math.max(1, Math.round(w * scale));
+                            var th = Math.max(1, Math.round(h * scale));
+                            var canvas = document.createElement('canvas');
+                            canvas.width = tw;
+                            canvas.height = th;
+                            var ctx = canvas.getContext('2d');
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(0, 0, tw, th);
+                            ctx.drawImage(img, 0, 0, tw, th);
+                            var blob = dataUrlToBlob(canvas.toDataURL('image/jpeg',
+                                    AttachmentUploader.JPEG_QUALITY));
+                            // 重编码后明显变大（简单图形/截图）时保留原文件
+                            resolve(blob.size > 0 && blob.size <= file.size * 1.5 ? blob : file);
+                        } catch (e) {
+                            resolve(file);
+                        }
+                    };
+                    img.onerror = function () { resolve(file); };
+                    img.src = String(reader.result);
+                };
+                reader.onerror = function () { resolve(file); };
+                reader.readAsDataURL(file);
+            });
+        },
+
+        /**
+         * 校验 + 压缩 + 上传单张图片
+         * @param {File} file 图片文件
+         * @param {string} [scene] 场景标识（可选）
+         * @return Promise<AiAttachmentVO>，失败 reject Error（Error.notLogin=true 表示登录失效）
+         */
+        upload: function (file, scene) {
+            var check = AttachmentUploader.validateFile(file);
+            if (!check.ok) {
+                return Promise.reject(new Error(check.message));
+            }
+            return AttachmentUploader.compressImage(file).then(function (blob) {
+                var form = new FormData();
+                var fileName = file.name || 'image.jpg';
+                if (!/\.(jpe?g|png|webp)$/i.test(fileName)) {
+                    fileName += '.jpg';
+                }
+                // 重编码为 JPEG 后同步扩展名，避免 image/jpeg 配 .png 的困惑
+                if (blob.type === 'image/jpeg') {
+                    fileName = fileName.replace(/\.(png|webp)$/i, '.jpg');
+                }
+                form.append('file', blob, fileName);
+                if (scene) {
+                    form.append('scene', scene);
+                }
+                var headers = { 'X-Requested-With': 'XMLHttpRequest' };
+                var token = getCsrfToken();
+                if (token) {
+                    headers['X-CSRF-Token'] = token;
+                }
+                return window.fetch('/api/ai/attachments/image', {
+                    method: 'POST',
+                    headers: headers,
+                    body: form,
+                    credentials: 'same-origin'
+                }).then(function (res) {
+                    return res.text().then(function (text) {
+                        var parsed = null;
+                        try {
+                            parsed = text ? JSON.parse(text) : null;
+                        } catch (e) {
+                            parsed = null;
+                        }
+                        var msg = parsed && parsed.msg ? parsed.msg : '';
+                        if (res.status === 401 || /NOTLOGIN|登录/.test(msg)) {
+                            var loginErr = new Error(msg || '登录已过期，请重新登录');
+                            loginErr.notLogin = true;
+                            throw loginErr;
+                        }
+                        if (!res.ok) {
+                            throw new Error(msg || ('图片上传失败（HTTP ' + res.status + '）'));
+                        }
+                        if (!parsed || parsed.code !== 1 || !parsed.data) {
+                            throw new Error(msg || '图片上传失败');
+                        }
+                        return parsed.data;
+                    });
+                });
+            });
+        }
+    };
+
+    /** data URL 转 Blob（canvas 压缩结果转 FormData 用） */
+    function dataUrlToBlob(dataUrl) {
+        var parts = dataUrl.split(',');
+        var match = /:(.*?);/.exec(parts[0]);
+        var mime = match ? match[1] : 'image/jpeg';
+        var binary = window.atob(parts[1]);
+        var len = binary.length;
+        var bytes = new Uint8Array(len);
+        for (var i = 0; i < len; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return new Blob([bytes], { type: mime });
+    }
+
     /* ============================== 剪贴板 ============================== */
 
     /**
@@ -663,6 +829,7 @@
     AiChatCore.ChatClient = ChatClient;
     AiChatCore.Markdown = Markdown;
     AiChatCore.MessageFactory = MessageFactory;
+    AiChatCore.AttachmentUploader = AttachmentUploader;
     AiChatCore.copyText = copyText;
     AiChatCore.getCsrfToken = getCsrfToken;
     AiChatCore.genId = genId;

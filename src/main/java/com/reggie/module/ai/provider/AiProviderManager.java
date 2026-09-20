@@ -1,6 +1,7 @@
 package com.reggie.module.ai.provider;
 
 import cn.hutool.core.util.StrUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.module.ai.adapter.AiModelAdapter.StreamCallback;
 import com.reggie.module.ai.adapter.AbortableStreamCallback;
@@ -20,6 +21,8 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +57,16 @@ public class AiProviderManager {
      * <p>使用 LinkedHashMap 保持注册顺序</p>
      */
     private final Map<String, AiModelAdapter> adapterRegistry = new LinkedHashMap<>();
+
+    /** 能力 JSON 解析（capabilities 列是简单 JSON，无需注入 Spring 托管 Mapper） */
+    private static final ObjectMapper CAPS_MAPPER = new ObjectMapper();
+
+    /** 能力键：视觉多模态 */
+    public static final String CAP_VISION = "vision";
+    /** 能力键：函数调用 */
+    public static final String CAP_TOOLS = "tools";
+    /** 能力键：向量嵌入 */
+    public static final String CAP_EMBEDDING = "embedding";
 
     /**
      * 注册所有内置适配器
@@ -381,6 +394,50 @@ public class AiProviderManager {
         fallback.setApiFormat(OpenAICompatibleAdapter.FORMAT_ID);
         fallback.setEnabled(true);
         return fallback;
+    }
+
+    /**
+     * 解析当前激活供应商的能力开关。
+     * <p>capabilities 列形如 {"chat":true,"vision":false,"tools":false,"embedding":false}；
+     * 为 null/空/坏 JSON 时退化为仅 chat（兼容历史供应商与 yml 兜底配置）。</p>
+     *
+     * @return 不可变能力映射，键为 chat/vision/tools/embedding
+     */
+    public Map<String, Boolean> getCapabilities() {
+        Map<String, Boolean> caps = new HashMap<>();
+        caps.put("chat", Boolean.TRUE);
+        caps.put(CAP_VISION, Boolean.FALSE);
+        caps.put(CAP_TOOLS, Boolean.FALSE);
+        caps.put(CAP_EMBEDDING, Boolean.FALSE);
+
+        AiProviderConfig config;
+        try {
+            config = getActiveConfig();
+        } catch (Exception e) {
+            log.warn("读取供应商能力失败，按仅 chat 兜底: {}", e.getMessage());
+            return Collections.unmodifiableMap(caps);
+        }
+        if (config == null) {
+            return Collections.unmodifiableMap(caps);
+        }
+        String json = config.getCapabilities();
+        if (StrUtil.isBlank(json)) {
+            return Collections.unmodifiableMap(caps);
+        }
+        try {
+            Map<?, ?> parsed = CAPS_MAPPER.readValue(json, Map.class);
+            caps.put(CAP_VISION, Boolean.TRUE.equals(parsed.get(CAP_VISION)));
+            caps.put(CAP_TOOLS, Boolean.TRUE.equals(parsed.get(CAP_TOOLS)));
+            caps.put(CAP_EMBEDDING, Boolean.TRUE.equals(parsed.get(CAP_EMBEDDING)));
+        } catch (Exception e) {
+            log.warn("供应商能力JSON解析失败，按仅 chat 兜底: capabilities={}", json, e);
+        }
+        return Collections.unmodifiableMap(caps);
+    }
+
+    /** 当前激活供应商是否支持视觉多模态 */
+    public boolean supportsVision() {
+        return Boolean.TRUE.equals(getCapabilities().get(CAP_VISION));
     }
 
     /**

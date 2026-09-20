@@ -532,6 +532,86 @@
   font-weight: 600; margin-bottom: 6px; color: var(--text-primary);
 }
 
+/* ========== P2 图片附件 ========== */
+
+/* 输入区 composer：缩略图条 + 输入行 */
+.native-file-input { display: none; }
+.composer { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.composer-row { display: flex; gap: 10px; align-items: flex-end; }
+.composer-row .input-wrap { flex: 1; min-width: 0; }
+
+/* 图片按钮 */
+.image-btn {
+  width: 40px; height: 40px; flex-shrink: 0;
+  border: 1px solid var(--border-default); background: var(--bg-surface);
+  border-radius: var(--radius-md); color: var(--text-secondary);
+  font-size: 20px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all var(--transition-fast);
+}
+.image-btn:hover:not(:disabled) {
+  border-color: var(--color-brand-500); color: var(--color-brand-600);
+  background: var(--color-brand-50, #fff8e0);
+}
+.image-btn:disabled { cursor: not-allowed; }
+.image-btn.is-off { color: var(--text-muted); background: var(--bg-subtle); cursor: help; }
+
+/* 待发送缩略图条 */
+.attach-bar { display: flex; flex-wrap: wrap; gap: 8px; }
+.attach-thumb {
+  position: relative; width: 60px; height: 60px;
+  border-radius: var(--radius-sm); overflow: hidden;
+  border: 1px solid var(--border-default); background: var(--bg-subtle);
+}
+.attach-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.attach-thumb .attach-mask {
+  position: absolute; inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 20px;
+}
+.attach-spin { animation: ai-attach-spin 1s linear infinite; }
+@keyframes ai-attach-spin { to { transform: rotate(360deg); } }
+.attach-remove {
+  position: absolute; top: 2px; right: 2px;
+  width: 18px; height: 18px; padding: 0; border: none; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 12px; line-height: 18px;
+  text-align: center; cursor: pointer;
+}
+.attach-remove:hover { background: var(--color-danger); }
+.attach-remove:disabled { cursor: default; }
+
+/* 气泡内图片（历史与本轮一致） */
+.user-bubble-inner { display: flex; flex-direction: column; gap: 6px; }
+.msg-images { display: flex; flex-wrap: wrap; gap: 6px; }
+.chat-msg.user .msg-images { justify-content: flex-end; }
+.msg-image-link { display: block; border-radius: var(--radius-sm); overflow: hidden; line-height: 0; }
+.msg-image {
+  display: block; max-width: 220px; max-height: 180px;
+  border-radius: var(--radius-sm); cursor: zoom-in;
+  transition: opacity var(--transition-fast);
+}
+.msg-image:hover { opacity: 0.9; }
+
+/* 大图预览 lightbox */
+.image-lightbox {
+  position: fixed; inset: 0; z-index: 3000;
+  background: rgba(0, 0, 0, 0.78);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-6);
+}
+.image-lightbox img {
+  max-width: 100%; max-height: 100%;
+  border-radius: var(--radius-sm); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+.lightbox-close {
+  position: absolute; top: 20px; right: 24px;
+  width: 40px; height: 40px; border: none; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15); color: #fff; font-size: 22px;
+  cursor: pointer; transition: background var(--transition-fast);
+}
+.lightbox-close:hover { background: rgba(255, 255, 255, 0.3); }
+
 /* ========== 响应式 ========== */
 @media (max-width: 900px) {
   .ai-chat-layout { max-width: 100%; margin: 0; border-radius: 0; }
@@ -540,4 +620,5 @@
   .header-scenes { display: none; }
   .chat-msg { max-width: 92%; }
   .send-btn, .stop-btn { padding: 8px 16px; }
+  .msg-image { max-width: 150px; max-height: 130px; }
 }

@@ -73,7 +73,16 @@ public class BaiduAdapter extends BaseModelAdapter {
                 if ("system".equals(msg.getRole())) {
                     promptBuilder.append("【系统指令】").append(msg.getContent()).append("\n");
                 } else if ("user".equals(msg.getRole())) {
-                    promptBuilder.append("用户：").append(msg.getContent()).append("\n");
+                    // 百度压平协议不支持图片入参：以 [图片] 占位提示模型用户附带了图片（vision 不应在此格式勾选）
+                    List<String> images = msg.getImageDataUrls();
+                    promptBuilder.append("用户：");
+                    if (images != null && !images.isEmpty()) {
+                        for (int i = 0; i < images.size(); i++) {
+                            promptBuilder.append("[图片]");
+                        }
+                        promptBuilder.append(" ");
+                    }
+                    promptBuilder.append(msg.getContent()).append("\n");
                 } else {
                     promptBuilder.append("助手：").append(msg.getContent()).append("\n");
                 }

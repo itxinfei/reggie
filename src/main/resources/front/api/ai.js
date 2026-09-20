@@ -6,31 +6,41 @@ var aiApi = {
     // ==================== 核心对话 ====================
 
     /**
-     * 智能点餐推荐
-     * @param {string} message - 用户自然语言输入
+     * 智能点餐推荐（非流式，流式失败时的降级通道）
+     * @param {string} message - 用户自然语言输入（携带附件时可空字符串）
      * @param {number|null} userId - 用户ID（可选，用于个性化推荐）
      * @param {string} conversationId - 对话ID（用于上下文）
+     * @param {string[]} [attachmentIds] - 附件ID列表（P2 视觉多模态，可选）
      */
-    orderAssistant: function(message, userId, conversationId) {
-        return $axios.post('/api/ai/order-assistant', {
+    orderAssistant: function(message, userId, conversationId, attachmentIds) {
+        var params = {
             message: message,
             userId: userId || null,
             conversationId: conversationId || null
-        });
+        };
+        if (attachmentIds && attachmentIds.length) {
+            params.attachments = attachmentIds;
+        }
+        return $axios.post('/api/ai/order-assistant', params);
     },
 
     /**
-     * 通用AI对话
-     * @param {string} message - 用户消息
+     * 通用AI对话（非流式，流式网络失败时的降级通道）
+     * @param {string} message - 用户消息（携带附件时可空字符串）
      * @param {string} scene - 场景：order_assistant/dish_desc/business_analysis/marketing
      * @param {string} conversationId - 对话ID
+     * @param {string[]} [attachmentIds] - 附件ID列表（P2 视觉多模态，可选）
      */
-    chat: function(message, scene, conversationId) {
-        return $axios.post('/api/ai/chat', {
+    chat: function(message, scene, conversationId, attachmentIds) {
+        var params = {
             message: message,
             scene: scene || 'order_assistant',
             conversationId: conversationId || null
-        });
+        };
+        if (attachmentIds && attachmentIds.length) {
+            params.attachments = attachmentIds;
+        }
+        return $axios.post('/api/ai/chat', params);
     },
 
     /**

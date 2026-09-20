@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
-    <link rel="stylesheet" href="../../styles/ai-provider.css?v=20260915c" />
+    <link rel="stylesheet" href="../../styles/ai-provider.css?v=20260921" />
 </head>
 <body>
 <!-- ====== AI 服务商配置管理页 ====== -->
@@ -90,6 +90,10 @@
                         <i v-else class="ri-close-circle-line test-ng" aria-hidden="true"></i>
                         {{ provider.lastTestResult === 'success' ? ' 测试通过' : ' 测试失败' }}
                     </span>
+                    <!-- P2 能力标签（chat 恒具备不展示，仅展示扩展能力） -->
+                    <el-tag v-if="capOn(provider, 'vision')" type="success" size="mini" effect="plain">视觉</el-tag>
+                    <el-tag v-if="capOn(provider, 'tools')" type="warning" size="mini" effect="plain">工具</el-tag>
+                    <el-tag v-if="capOn(provider, 'embedding')" type="info" size="mini" effect="plain">嵌入</el-tag>
                 </div>
                 <div class="card-actions">
                     <el-button v-if="!provider.isActive" type="success" size="small"
@@ -188,6 +192,24 @@
                 </el-select>
                 <div class="field-tip">国内主流网关/GPT/DeepSeek/千问/GLM 均选「OpenAI 兼容格式」；360、自定义也按 OpenAI 兼容处理</div>
             </el-form-item>
+            <!-- P2：模型能力开关（chat 固定具备；vision 控制聊天页图片入口） -->
+            <el-divider content-position="left">模型能力</el-divider>
+            <el-form-item label="能力开关">
+                <el-checkbox-group v-model="form.capabilityList" class="capability-group">
+                    <el-checkbox label="chat" disabled>文本对话（必选）</el-checkbox>
+                    <el-checkbox label="vision">图片视觉</el-checkbox>
+                    <el-checkbox label="tools">工具调用</el-checkbox>
+                    <el-checkbox label="embedding">向量嵌入</el-checkbox>
+                </el-checkbox-group>
+                <div class="field-tip">
+                    勾选后聊天页按能力开放功能：「图片视觉」开启图片发送入口（模型本身须支持识图，如 GPT-4o、Qwen-VL、GLM-4V）；
+                    「工具调用」「向量嵌入」为经营数据问答与知识库能力预留
+                </div>
+            </el-form-item>
+            <el-form-item label="向量维度" v-if="form.capabilityList.indexOf('embedding') >= 0">
+                <el-input-number v-model="form.embeddingDimensions" :min="1" :max="32768" />
+                <div class="field-tip">embedding 模型输出维度（知识库 RAG 使用，常见 1024 / 1536 / 2048）</div>
+            </el-form-item>
             <el-divider content-position="left">生成参数</el-divider>
             <el-row :gutter="16">
                 <el-col :span="12">
@@ -231,7 +253,7 @@
 <script src="../../js/accessibility-utils.js?v=20260915c"></script>
 <script src="../../js/performance-utils.js?v=20260915c"></script>
   <script src="../../js/components.js?v=20260915c"></script>
-<script src="../../api/ai.js?v=20260915c"></script>
+<script src="../../api/ai.js?v=20260921"></script>
 <script>
 (function() {
     'use strict';
@@ -278,7 +300,10 @@
                 timeout: 60,
                 maxTokens: 2048,
                 temperature: 0.7,
-                remark: ''
+                remark: '',
+                // P2 能力开关：弹窗工作态数组（提交时序列化为 capabilities JSON 字符串）
+                capabilityList: ['chat'],
+                embeddingDimensions: null
             },
         },
 
@@ -314,6 +339,18 @@
 
         created: function() {
             this.loadData();
+        },
+
+        watch: {
+            // P2：按模型名启发式勾选视觉能力（运营选模型后免手动；仅自动勾选不自动取消）
+            'form.modelName': function(val) {
+                if (!val || !this.form.capabilityList) return;
+                var name = String(val).toLowerCase();
+                if (/(^|[-_])vl([-_]|$)|vision|visual|4o|glm-4v|qwen-vl|image/.test(name)
+                        && this.form.capabilityList.indexOf('vision') < 0) {
+                    this.form.capabilityList.push('vision');
+                }
+            }
         },
 
         methods: {
@@ -444,12 +481,43 @@
             },
 
             /* ── 弹窗表单（新增/编辑/提交） ── */
+
+            /** P2：列表卡片判断某能力是否开启（坏 JSON/缺字段一律视为关闭） */
+            capOn: function(provider, key) {
+                var caps = provider && provider.capabilities;
+                var obj = null;
+                if (caps && typeof caps === 'object') {
+                    obj = caps;
+                } else if (caps) {
+                    try { obj = JSON.parse(caps); } catch (e) { obj = null; }
+                }
+                return !!(obj && obj[key] === true);
+            },
+
+            /** P2：解析后端 capabilities（JSON 字符串/对象）为复选框数组；chat 恒在 */
+            parseCapabilityList: function(caps) {
+                var list = ['chat'];
+                var obj = null;
+                if (caps && typeof caps === 'object') {
+                    obj = caps;
+                } else if (caps) {
+                    try { obj = JSON.parse(caps); } catch (e) { obj = null; }
+                }
+                if (obj) {
+                    ['vision', 'tools', 'embedding'].forEach(function(k) {
+                        if (obj[k] === true && list.indexOf(k) < 0) list.push(k);
+                    });
+                }
+                return list;
+            },
+
             openAddDialog: function() {
                 this.form = {
                     id: null, providerCode: '', providerName: '',
                     baseUrl: '', modelName: '', apiKey: '',
                     apiFormat: 'openai_compatible', timeout: 60,
-                    maxTokens: 2048, temperature: 0.7, remark: ''
+                    maxTokens: 2048, temperature: 0.7, remark: '',
+                    capabilityList: ['chat'], embeddingDimensions: null
                 };
                 // 修改点：重置模型列表状态
                 this.modelList = [];
@@ -467,6 +535,9 @@
                 this.form = JSON.parse(JSON.stringify(provider));
                 // 修改点(2026-09-18)：列表返回的 apiKey 也是脱敏值，立即清空防止误提交覆盖真实密钥
                 this.form.apiKey = '';
+                // P2：capabilities 为 JSON 字符串，解析为弹窗工作态数组（坏 JSON 降级为仅 chat）
+                this.form.capabilityList = this.parseCapabilityList(provider.capabilities);
+                this.form.embeddingDimensions = provider.embeddingDimensions || null;
                 const self = this;
                 // 修改点(2026-09-18)：重置连通测试状态
                 this.dialogTesting = false;
@@ -487,6 +558,9 @@
                         // 保存时原样重新加密入库，效果等同「不修改」；后端仍保留 **** 掩码防护
                         self.form.apiKey = res.data.apiKey || '';
                         self.form._hasExistingKey = !!(res.data.apiKey);
+                        // P2：详情接口的能力配置比列表项更权威，重新解析回填
+                        self.form.capabilityList = self.parseCapabilityList(res.data.capabilities);
+                        self.form.embeddingDimensions = res.data.embeddingDimensions || null;
                     }
                 }).catch(function() {
                     if (self.form._hasExistingKey) {
@@ -513,6 +587,15 @@
                         delete payload._hasExistingKey;
                     }
                     delete payload._hasExistingKey;
+                    // P2：工作态数组 → 后端 capabilities JSON 字符串（chat 恒为 true）
+                    var caps = { chat: true, vision: false, tools: false, embedding: false };
+                    (self.form.capabilityList || []).forEach(function(k) {
+                        if (k === 'vision' || k === 'tools' || k === 'embedding') caps[k] = true;
+                    });
+                    payload.capabilities = JSON.stringify(caps);
+                    // 非嵌入模型不带维度，避免残留旧值
+                    if (!caps.embedding) payload.embeddingDimensions = null;
+                    delete payload.capabilityList;
 
                     const api = self.form.id
                         ? window.aiBackendApi.providerUpdate(payload)

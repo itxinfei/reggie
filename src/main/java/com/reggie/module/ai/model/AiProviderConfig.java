@@ -50,6 +50,12 @@ public class AiProviderConfig {
     /** API格式类型：openai_compatible / baidu / 360 / custom */
     private String apiFormat;
 
+    /** 能力开关JSON：{"chat":true,"vision":false,"tools":false,"embedding":false}，null 视为仅 chat */
+    private String capabilities;
+
+    /** 向量维度（embedding 模型，P5 RAG 使用） */
+    private Integer embeddingDimensions;
+
     /** 额外请求头（JSON），如 {"api-key": "xxx"} 百度专用 */
     private String extraHeaders;
 

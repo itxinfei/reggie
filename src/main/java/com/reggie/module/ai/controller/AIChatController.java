@@ -102,9 +102,12 @@ public class AIChatController {
     @RateLimit(maxRequestsPerSecond = 2, type = RateLimitType.USER)
     @Operation(summary = "通用AI对话", description = "支持多场景：点餐推荐、菜品描述、经营分析、营销文案")
     public R<AIChatResponse> chat(@Parameter(description = "AI对话请求参数（消息内容、场景、对话ID）", required =
-            true) @Valid @RequestBody AIChatRequest request) {
+            true) @Valid @RequestBody AIChatRequest request, HttpServletRequest httpRequest) {
         Long userId = BaseContext.getCurrentId();
         if (userId != null) request.setUserId(userId);
+        // 身份/租户强制以服务端会话为准，忽略请求体伪造值（附件归属校验依赖）
+        request.setActorType(resolveActorType(httpRequest));
+        request.setTenantId(BaseContext.getCurrentTenantId());
         log.info("AI对话请求: userId={}, scene={}, messageLength={}",
                 userId, request.getScene(),
                 request.getMessage() != null ? request.getMessage().length() : 0);
@@ -176,7 +179,9 @@ public class AIChatController {
         String actorType = resolveActorType(httpRequest);
         boolean regenerate = Boolean.TRUE.equals(params.getRegenerate());
         String message = params.getMessage();
-        if (!regenerate && (message == null || message.trim().isEmpty())) {
+        // P2：允许纯图片消息（文本为空但携带附件ID）
+        boolean hasAttachments = params.getAttachments() != null && !params.getAttachments().isEmpty();
+        if (!regenerate && !hasAttachments && (message == null || message.trim().isEmpty())) {
             throw new CustomException("消息内容不能为空");
         }
         String scene = params.getScene() != null ? params.getScene() : "order_assistant";
@@ -200,6 +205,7 @@ public class AIChatController {
                 .conversationId(conversationId)
                 .userId(userId)
                 .actorType(actorType)
+                .tenantId(BaseContext.getCurrentTenantId())
                 .clientMsgId(params.getClientMsgId())
                 .attachments(params.getAttachments())
                 .context(params.getContext())
@@ -228,22 +234,33 @@ public class AIChatController {
     @PostMapping("/order-assistant")
     @RateLimit(maxRequestsPerSecond = 2, type = RateLimitType.USER)
     @Operation(summary = "智能点餐助手", description = "用户用自然语言描述需求，AI推荐最合适的菜品")
-    public R<AIChatResponse> orderAssistant(@Parameter(description = "点餐推荐请求参数（消息内容、对话ID）", required =
-            true) @Valid @RequestBody OrderAssistantRequest params) {
+    public R<AIChatResponse> orderAssistant(@Parameter(description = "点餐推荐请求参数（消息内容、对话ID、附件）", required =
+            true) @Valid @RequestBody OrderAssistantRequest params, HttpServletRequest httpRequest) {
         String message = params.getMessage();
+        // P2：允许纯图片消息（文本为空但携带附件ID）
+        boolean hasAttachments = params.getAttachments() != null && !params.getAttachments().isEmpty();
+        if (!hasAttachments && (message == null || message.trim().isEmpty())) {
+            throw new CustomException("消息内容不能为空");
+        }
         // #10 安全修复：删除客户端 userId 入参，统一从登录上下文获取，防止越权 IDOR
         Long userId = BaseContext.getCurrentId();
+        // 身份/租户强制以服务端会话为准（附件 owner 归属校验依赖）
+        String actorType = resolveActorType(httpRequest);
+        Long tenantId = BaseContext.getCurrentTenantId();
         String conversationId = params.getConversationId();
 
-        log.info("智能点餐请求: userId={}, messageLength={}", userId, message.length());
+        log.info("智能点餐请求: userId={}, actorType={}, messageLength={}, attachments={}",
+                userId, actorType, message != null ? message.length() : 0,
+                hasAttachments ? params.getAttachments().size() : 0);
 
         if (conversationId == null || conversationId.isEmpty()) {
-            AIConversation conv = aiChatService.createConversation(userId, null, "order_assistant");
+            AIConversation conv = aiChatService.createConversation(userId, actorType, "order_assistant");
             conversationId = conv.getConversationId();
         }
 
         // 修改点：已在Controller层统一创建对话，Service层复用此conversationId避免重复创建
-        AIChatResponse response = aiChatService.orderAssistant(message, userId, conversationId);
+        AIChatResponse response = aiChatService.orderAssistant(message, userId, conversationId,
+                params.getAttachments(), actorType, tenantId);
         // 附加 conversationId 到响应中，方便前端后续使用
         if (response != null && response.getData() == null) {
             response.setData(new HashMap<>());
@@ -703,10 +720,12 @@ public class AIChatController {
             resolvedScene = CUSTOMER_SCENE.equals(scene) ? scene : CUSTOMER_SCENE;
         }
 
+        // P2：vision 按供应商配置 capabilities 下发；tools 链路 P4 才完成，暂恒 false
+        Map<String, Boolean> providerCaps = aiProviderManager.getCapabilities();
         Map<String, Object> capabilities = new HashMap<>();
         capabilities.put("chat", true);
-        capabilities.put("vision", false); // P2 视觉多模态按供应商能力开放
-        capabilities.put("tools", false);  // P4 经营数据工具开放后置位
+        capabilities.put("vision", Boolean.TRUE.equals(providerCaps.get("vision")));
+        capabilities.put("tools", false);
 
         Map<String, Object> data = new HashMap<>();
         data.put("scene", resolvedScene);

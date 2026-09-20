@@ -48,6 +48,16 @@ public interface AIChatService extends IService<AIConversation> {
     AIChatResponse orderAssistant(String userMessage, Long userId, String conversationId);
 
     /**
+     * 智能点餐推荐（非流式，P2 支持图片附件与身份透传）。
+     *
+     * @param attachmentIds 附件ID列表（可空）；服务层装配前做 owner 归属校验
+     * @param actorType     EMPLOYEE/CUSTOMER（控制器从登录会话解析，可空时按历史行为处理）
+     * @param tenantId      租户ID（控制器在 HTTP 线程强制填充）
+     */
+    AIChatResponse orderAssistant(String userMessage, Long userId, String conversationId,
+                                  java.util.List<String> attachmentIds, String actorType, Long tenantId);
+
+    /**
      * 生成菜品描述
      */
     String generateDishDescription(String dishName, String categoryName, String ingredients);

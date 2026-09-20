@@ -99,14 +99,27 @@ public class ConversationContextService {
      * @param content        消息内容
      */
     public void addMessage(String conversationId, String role, String content) {
-        if (conversationId == null || conversationId.isEmpty()
-                || content == null || content.isEmpty()) {
+        addMessage(conversationId, role, content, null);
+    }
+
+    /**
+     * 添加消息到上下文（P2：携带附件ID，仅持有轻量 ID 不缓存 base64）。
+     * <p>纯图片消息允许 content 为空；图片缺省（如 assistant 消息）attachmentIds 传 null。</p>
+     *
+     * @param attachmentIds 附件ID列表（仅 user 图片消息），可空
+     */
+    public void addMessage(String conversationId, String role, String content,
+                           List<Long> attachmentIds) {
+        boolean hasContent = content != null && !content.isEmpty();
+        boolean hasImages = attachmentIds != null && !attachmentIds.isEmpty();
+        if (conversationId == null || conversationId.isEmpty() || (!hasContent && !hasImages)) {
             return;
         }
         ContextState state = contextCache.computeIfAbsent(conversationId, k -> new ContextState());
         AIMessage msg = AIMessage.builder()
                 .role(role)
                 .content(content)
+                .attachmentIds(hasImages ? new ArrayList<>(attachmentIds) : null)
                 .build();
         state.messages.add(msg);
 

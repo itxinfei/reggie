@@ -83,15 +83,15 @@ public class AnthropicAdapter extends BaseModelAdapter {
 
             // 分离 system 消息和对话消息
             String systemPrompt = null;
-            List<Map<String, String>> msgList = new ArrayList<>();
+            List<Map<String, Object>> msgList = new ArrayList<>();
             for (AIMessage msg : messages) {
                 if ("system".equals(msg.getRole())) {
                     systemPrompt = (systemPrompt == null ? "" : systemPrompt + "\n") + msg.getContent();
                 } else {
-                    Map<String, String> m = new LinkedHashMap<>();
+                    Map<String, Object> m = new LinkedHashMap<>();
                     m.put("role", "user".equals(msg.getRole()) || "assistant".equals(msg.getRole())
                             ? msg.getRole() : "user");
-                    m.put("content", msg.getContent());
+                    m.put("content", buildAnthropicContent(msg));
                     msgList.add(m);
                 }
             }
@@ -139,6 +139,62 @@ public class AnthropicAdapter extends BaseModelAdapter {
                 conn.disconnect();
             }
         }
+    }
+
+    /**
+     * 构造 Anthropic content：纯文本返回 String；带图 user 消息返回 content blocks，
+     * 图片块在前（image/source.base64）、文本块在后。
+     */
+    private Object buildAnthropicContent(AIMessage msg) {
+        List<String> images = msg.getImageDataUrls();
+        if (!"user".equals(msg.getRole()) || images == null || images.isEmpty()) {
+            return msg.getContent();
+        }
+        List<Map<String, Object>> blocks = new ArrayList<>();
+        for (String dataUrl : images) {
+            String[] parsed = parseDataUrl(dataUrl);
+            if (parsed == null) {
+                continue;
+            }
+            Map<String, Object> imageBlock = new LinkedHashMap<>();
+            imageBlock.put("type", "image");
+            Map<String, String> source = new LinkedHashMap<>();
+            source.put("type", "base64");
+            source.put("media_type", parsed[0]);
+            source.put("data", parsed[1]);
+            imageBlock.put("source", source);
+            blocks.add(imageBlock);
+        }
+        if (msg.getContent() != null && !msg.getContent().isEmpty()) {
+            Map<String, Object> textBlock = new LinkedHashMap<>();
+            textBlock.put("type", "text");
+            textBlock.put("text", msg.getContent());
+            blocks.add(textBlock);
+        }
+        // 图片全部解析失败时回退为纯文本，避免发出空 content
+        return blocks.isEmpty() ? msg.getContent() : blocks;
+    }
+
+    /**
+     * 解析 data URL：data:image/jpeg;base64,xxxx → [mime, base64]；非法返回 null。
+     */
+    private String[] parseDataUrl(String dataUrl) {
+        if (dataUrl == null || !dataUrl.startsWith("data:") || dataUrl.length() < 12) {
+            return null;
+        }
+        int comma = dataUrl.indexOf(',');
+        if (comma < 0) {
+            return null;
+        }
+        String meta = dataUrl.substring(5, comma);
+        String mime = "image/jpeg";
+        int semi = meta.indexOf(';');
+        if (semi > 0) {
+            mime = meta.substring(0, semi);
+        } else if (!meta.isEmpty()) {
+            mime = meta;
+        }
+        return new String[]{mime, dataUrl.substring(comma + 1)};
     }
 
     /**

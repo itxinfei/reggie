@@ -116,6 +116,39 @@ CREATE TABLE `ai_message` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `ai_attachment`
+--
+
+DROP TABLE IF EXISTS `ai_attachment`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ai_attachment` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `tenant_id` bigint DEFAULT NULL COMMENT '租户ID',
+  `actor_type` varchar(16) NOT NULL COMMENT '上传者身份：EMPLOYEE/CUSTOMER',
+  `owner_id` bigint NOT NULL COMMENT '上传者用户ID',
+  `scene` varchar(50) DEFAULT NULL COMMENT '上传场景',
+  `file_name` varchar(200) NOT NULL COMMENT '存储文件名（UUID）',
+  `original_name` varchar(200) DEFAULT NULL COMMENT '原始文件名',
+  `content_type` varchar(100) NOT NULL COMMENT 'MIME类型：image/jpeg、image/png、image/webp',
+  `file_size` bigint NOT NULL DEFAULT '0' COMMENT '文件大小（字节）',
+  `width` int DEFAULT NULL COMMENT '图片宽度（像素）',
+  `height` int DEFAULT NULL COMMENT '图片高度（像素）',
+  `sha256` varchar(64) NOT NULL COMMENT '文件内容SHA256',
+  `storage_path` varchar(500) NOT NULL COMMENT '相对存储路径：images/ai/{tenantId}/{actorType}/{uuid}.{ext}',
+  `is_deleted` int NOT NULL DEFAULT '0' COMMENT '逻辑删除',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime NOT NULL COMMENT '更新时间',
+  `create_user` bigint DEFAULT NULL COMMENT '创建人',
+  `update_user` bigint DEFAULT NULL COMMENT '修改人',
+  PRIMARY KEY (`id`),
+  KEY `idx_tenant_owner` (`tenant_id`,`actor_type`,`owner_id`),
+  KEY `idx_owner_scene` (`owner_id`,`scene`),
+  KEY `idx_sha256` (`sha256`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI聊天图片附件';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `ai_provider_config`
 --
 
@@ -133,6 +166,8 @@ CREATE TABLE `ai_provider_config` (
   `max_tokens` int DEFAULT '4096' COMMENT '最大Token数',
   `temperature` decimal(3,2) DEFAULT '0.70' COMMENT '温度参数',
   `api_format` varchar(50) DEFAULT 'openai_compatible' COMMENT 'API格式类型',
+  `capabilities` varchar(200) DEFAULT NULL COMMENT '能力开关JSON：{chat,vision,tools,embedding}',
+  `embedding_dimensions` int DEFAULT NULL COMMENT '向量维度（embedding模型）',
   `extra_headers` varchar(1000) DEFAULT NULL COMMENT '额外请求头（JSON）',
   `request_template` varchar(2000) DEFAULT NULL COMMENT '请求体映射模板',
   `response_path` varchar(500) DEFAULT NULL COMMENT '响应解析路径',
