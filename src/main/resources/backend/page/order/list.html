@@ -196,7 +196,7 @@
           <span class="label">订单号：</span><span class="des">{{ refundForm.number }}</span>
         </div>
         <div class="item-box">
-          <span class="label">订单金额：</span><span class="des des-danger">¥{{ refundForm.amount }}</span>
+          <span class="label">订单金额：</span><span class="des des-danger">¥{{ refundForm.orderAmount }}</span>
         </div>
         <div class="item-box">
           <span class="label">退款金额：</span>
@@ -537,7 +537,7 @@
             })
         },
         openRefund: function(row) {
-          this.refundForm = { id: row.id, number: row.number, amount: row.amount, maxAmount: row.amount, reasonType: '', reasonDetail: '' }
+          this.refundForm = { id: row.id, number: row.number, orderAmount: row.amount, amount: row.amount, maxAmount: row.amount, reasonType: '', reasonDetail: '' }
           this.refundVisible = true
         },
         async submitRefund() {

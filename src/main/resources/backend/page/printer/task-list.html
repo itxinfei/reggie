@@ -284,6 +284,9 @@
             this.query.orderId = ''
             this.query.taskType = ''
             this.query.timeRange = []
+          } else {
+            // 再次点击已选卡片或点「打印次数」卡：取消状态筛选，回到全量（保留其他筛选条件）
+            this.query.status = ''
           }
           this.page = 1
           this.fetchData(false)
