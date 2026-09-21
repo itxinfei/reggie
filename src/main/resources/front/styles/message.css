@@ -230,6 +230,37 @@
   margin-bottom: var(--spacing-lg);
 }
 
+/* 详情后续操作出口 */
+#messageApp .detail-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+#messageApp .detail-btn {
+  flex: 1;
+  padding: 10rem;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+#messageApp .detail-btn-primary {
+  background: var(--color-primary);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+#messageApp .detail-btn-plain {
+  background: var(--bg-input);
+  color: var(--color-text-secondary);
+}
+
+#messageApp .detail-btn-primary:active { background: var(--color-primary-dark); }
+#messageApp .detail-btn-plain:active { background: var(--color-text-disabled); }
+
 #messageApp .detail-close {
   width: 100%;
   padding: 10rem;

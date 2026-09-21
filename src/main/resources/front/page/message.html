@@ -107,6 +107,13 @@
                 <div class="detail-title">{{ detail.title }}</div>
                 <div class="detail-content">{{ detail.content }}</div>
                 <div class="detail-time">{{ formatTime(detail.createTime) }}</div>
+                <!-- 后续操作出口：消除详情"死胡同"。优惠券消息引导去点餐用券，其余通用 -->
+                <div class="detail-actions">
+                    <button class="detail-btn detail-btn-primary" @click="goFromDetail('/front/index.html')">
+                        {{ detail.pushType === 4 ? '去点餐使用' : '去点餐' }}
+                    </button>
+                    <button class="detail-btn detail-btn-plain" @click="goFromDetail('/front/page/order.html')">查看订单</button>
+                </div>
                 <button class="detail-close" @click="closeDetail()">关闭</button>
             </div>
         </div>
@@ -138,6 +145,7 @@
                         show: false,
                         title: '',
                         content: '',
+                        pushType: null,
                         createTime: ''
                     }
                 };
@@ -224,6 +232,7 @@
                 openDetail: function(msg) {
                     this.detail.title = msg.title || '系统消息';
                     this.detail.content = msg.content || '';
+                    this.detail.pushType = msg.pushType;
                     this.detail.createTime = msg.createTime;
                     this.detail.show = true;
 
@@ -244,6 +253,12 @@
 
                 closeDetail: function() {
                     this.detail.show = false;
+                },
+
+                // 从详情弹窗跳转到后续页面（关闭弹层后导航）
+                goFromDetail: function(url) {
+                    this.detail.show = false;
+                    window.requestAnimationFrame(function() { window.location.href = url; });
                 },
 
                 fetchUnreadCount: function() {
