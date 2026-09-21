@@ -104,7 +104,7 @@
         :total="counts"
         :loading="loading"
         :show-actions="true"
-        :actions-width="90"
+        :actions-width="120"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -120,6 +120,7 @@
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="showDetail(row)">查看</el-button>
+          <el-button v-if="row.orderId" type="text" size="small" class="btn-view" @click="reprint(row)">补打</el-button>
         </template>
       </crud-table>
     </main>
@@ -157,8 +158,9 @@
   <script src="../../js/request.js?v=20260915c"></script>
   <script src="../../js/accessibility-utils.js?v=20260915c"></script>
   <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../api/printer.js?v=20260915c"></script>
+  <script src="../../api/printer.js?v=20260921"></script>
   <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../js/print-util.js?v=20260921"></script>
   <script>
     new Vue({
       el: '#printer-task-app',
@@ -300,6 +302,16 @@
         showDetail(row) {
           this.dialog.row = row
           this.dialog.visible = true
+        },
+        // 补打：按原记录类型重新渲染小票（后端同时新增一条打印记录），调浏览器打印
+        reprint(row) {
+          printerPrint(row.orderId, row.taskType || 'BILL').then(function(res) {
+            if (res && String(res.code) === '1' && res.data) {
+              window.PrintUtil.printText(res.data, '补打小票 ' + row.orderId)
+            } else {
+              ReggieUI.error((res && res.msg) || '补打失败')
+            }
+          }).catch(function() {})
         },
         formatContent(content) {
           if (!content) return '-'
