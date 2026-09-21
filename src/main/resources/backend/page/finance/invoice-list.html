@@ -13,6 +13,18 @@
     .inv-no { font-variant-numeric: tabular-nums; }
     .inv-actions { display: inline-flex; align-items: center; gap: 4px; }
     .inv-tip { font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: 8px; }
+    /* 开票摘要：灰底信息块，三行信息有行距，与下方表单分隔出层次 */
+    .issue-summary {
+      margin-bottom: 16px;
+      padding: var(--space-3) var(--space-4);
+      background: var(--bg-page);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-base);
+      line-height: 1.9;
+      color: var(--text-secondary);
+    }
+    .issue-summary strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
@@ -68,7 +80,7 @@
         </template>
         <template #actions="{ row }">
           <div class="inv-actions">
-            <el-button v-if="row.status == 1" type="text" size="small" class="btn-edit" @click="openIssueDialog(row)">开具</el-button>
+            <el-button v-if="row.status == 1" type="text" size="small" class="btn-view" @click="openIssueDialog(row)">开具</el-button>
             <el-button v-if="row.status == 2 && row.invoiceUrl" type="text" size="small" class="btn-view" @click="openInvoiceUrl(row.invoiceUrl)">查看票面</el-button>
             <el-button v-if="row.status == 2" type="text" size="small" class="btn-delete" @click="voidHandle(row)">作废</el-button>
           </div>

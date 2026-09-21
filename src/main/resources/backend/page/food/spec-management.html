@@ -228,6 +228,11 @@
     /* 工具栏（统计卡置顶后的第二区块）：按钮横排，与下方主体保持紧凑间距 */
     .spec-toolbar { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); flex-wrap: wrap; }
 
+    /* 删除文字按钮：红色语义（与全站 btn-delete 一致），hover 保持红色可辨 */
+    .el-button--text.btn-danger-text { color: var(--color-danger); }
+    .el-button--text.btn-danger-text:hover,
+    .el-button--text.btn-danger-text:focus { color: var(--color-danger); }
+
     @media (max-width: 1200px) {
       .spec-search { width: 150px; }
     }
