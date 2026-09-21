@@ -246,34 +246,6 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         }
     }
 
-    /**
-     * 处理 order assistant stream。
-     * @param userMessage 参数 userMessage
-     * @param userId 参数 userId
-     * @param conversationId 参数 conversationId
-     * @return 返回结果
-     */
-    @Override
-    public SseEmitter orderAssistantStream(String userMessage, Long userId, String conversationId) {
-        Map<String, Object> context = buildOrderContext(userId);
-
-        // 创建或获取对话
-        if (conversationId == null || conversationId.isEmpty()) {
-            AIConversation conv = createConversation(userId, null, "order_assistant");
-            conversationId = conv.getConversationId();
-        }
-
-        AIChatRequest request = AIChatRequest.builder()
-                .message(userMessage)
-                .scene("order_assistant")
-                .conversationId(conversationId)
-                .userId(userId)
-                .context(context)
-                .build();
-
-        return chatStream(request);
-    }
-
     // ==================== 非流式对话 ====================
 
     /**
@@ -1161,14 +1133,14 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
             if (clientMsgId != null && !clientMsgId.isEmpty()) {
                 // 修改点(2026-09-20)：POST 流式按 (conversationId, clientMsgId) 幂等去重。
                 // 旧的「时间窗 + content 全等」会吞掉同文案带图消息与重新生成后的正常消息；
-                // MySQL 唯一索引对 NULL 不去重，不带 clientMsgId 的旧 GET 端点走下方时间窗兜底。
+                // MySQL 唯一索引对 NULL 不去重，不带 clientMsgId 的非流式 /chat 链路走下方时间窗兜底。
                 LambdaQueryWrapper<AIMessageRecord> idempotentWrapper = new LambdaQueryWrapper<>();
                 idempotentWrapper.eq(AIMessageRecord::getConversationId, request.getConversationId())
                         .eq(AIMessageRecord::getClientMsgId, clientMsgId)
                         .eq(AIMessageRecord::getIsDeleted, 0);
                 existingMsg = messageRecordMapper.selectOne(idempotentWrapper);
             } else {
-                // 兼容旧 GET EventSource 端点（无幂等键）：5 秒时间窗 + 内容全等去重
+                // 非流式 /chat 链路（无幂等键）：5 秒时间窗 + 内容全等去重
                 LambdaQueryWrapper<AIMessageRecord> dedupWrapper = new LambdaQueryWrapper<>();
                 dedupWrapper.eq(AIMessageRecord::getConversationId, request.getConversationId())
                         .eq(AIMessageRecord::getRole, "user")

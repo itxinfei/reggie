@@ -134,39 +134,6 @@ public class AIChatController {
     }
 
     /**
-     * 通用AI对话接口（SSE流式）
-     * @param message 用户消息
-     * @param scene 场景类型（可选）
-     * @param conversationId 对话ID（可选）
-     * @return SSE流式响应
-     */
-    @GetMapping("/chat/stream")
-    @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
-    @Operation(summary = "AI流式对话", description = "SSE流式输出，逐字显示AI回复")
-    @Parameter(description = "用户消息")
-    public SseEmitter chatStream(@RequestParam @Size(max = 2000, message = "消息长度不能超过2000字符") String message,
-                                  @RequestParam(required = false) String scene,
-                                  @Parameter(description = "对话ID")
-                                  @RequestParam(required = false) String conversationId) {
-        Long userId = BaseContext.getCurrentId();
-        log.info("AI流式对话: userId={}, scene={}, messageLength={}", userId, scene, message.length());
-
-        if (conversationId == null || conversationId.isEmpty()) {
-            AIConversation conv = aiChatService.createConversation(userId, null,
-                    scene != null ? scene : "order_assistant");
-            conversationId = conv.getConversationId();
-        }
-
-        AIChatRequest request = AIChatRequest.builder()
-                .message(message)
-                .scene(scene != null ? scene : "order_assistant")
-                .conversationId(conversationId)
-                .userId(userId)
-                .build();
-        return aiChatService.chatStream(request);
-    }
-
-    /**
      * 通用AI对话接口（POST SSE流式，P1 新协议）。
      * <p>POST 化目的：携带 clientMsgId 幂等键、附件、context；前端可用 AbortController
      * 主动停止生成（断开连接触发后端中止上游请求）。</p>
@@ -273,24 +240,6 @@ public class AIChatController {
             response.getData().put("conversationId", conversationId);
         }
         return R.success(response);
-    }
-
-    /**
-     * 智能点餐推荐（SSE流式）
-     * @param message 用户消息
-     * @param conversationId 对话ID（可选）
-     * @return SSE流式响应
-     */
-    @GetMapping("/order-assistant/stream")
-    @RateLimit(maxRequestsPerSecond = 1, type = RateLimitType.USER)
-    @Operation(summary = "智能点餐助手（流式）", description = "SSE流式输出推荐结果")
-    @Parameter(description = "用户消息")
-    public SseEmitter orderAssistantStream(@RequestParam @Size(max = 2000, message = "消息长度不能超过2000字符") String message,
-                                            @Parameter(description = "对话ID")
-                                            @RequestParam(required = false) String conversationId) {
-        Long userId = BaseContext.getCurrentId();
-        log.info("智能点餐流式: userId={}, messageLength={}", userId, message.length());
-        return aiChatService.orderAssistantStream(message, userId, conversationId);
     }
 
     // ==================== 辅助功能 ====================

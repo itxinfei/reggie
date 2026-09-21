@@ -37,11 +37,6 @@ public interface AIChatService extends IService<AIConversation> {
     AIChatResponse chat(AIChatRequest request);
 
     /**
-     * 智能点餐推荐（流式）
-     */
-    SseEmitter orderAssistantStream(String userMessage, Long userId, String conversationId);
-
-    /**
      * 智能点餐推荐（非流式）
      * 修改点：新增conversationId参数，避免Controller和Service各自创建对话导致孤立数据
      */
