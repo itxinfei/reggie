@@ -384,10 +384,7 @@
                         <tr v-for="r in records" :key="r.id">
                             <td>{{ r.id }}</td>
                             <td>
-                                <span class="channel-tag" :class="{'channel-sms': r.channel===1,
-                                    'channel-push': r.channel===2, 'channel-both': r.channel===3}">
-                                    {{ channelName(r.channel) }}
-                                </span>
+                                <el-tag size="small" :type="channelTagType(r.channel)" disable-transitions>{{ channelName(r.channel) }}</el-tag>
                             </td>
                             <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                                 {{ r.content || '-' }}
@@ -448,10 +445,7 @@
                             <td><strong>{{ t.templateName }}</strong></td>
                             <td>{{ bizTypeName(t.bizType) }}</td>
                             <td>
-                                <span class="channel-tag" :class="{'channel-sms': t.channel===1,
-                                    'channel-push': t.channel===2, 'channel-both': t.channel===3}">
-                                    {{ channelName(t.channel) }}
-                                </span>
+                                <el-tag size="small" :type="channelTagType(t.channel)" disable-transitions>{{ channelName(t.channel) }}</el-tag>
                             </td>
                             <td>{{ t.templateCode || '-' }}</td>
                             <td>
@@ -993,6 +987,11 @@
                 channelName: function(ch) {
                     const map = { 1: '短信', 2: 'APP推送', 3: '短信+APP推送' };
                     return map[ch] || '未知';
+                },
+                // 渠道标签类型：短信→warning、APP推送→success、短信+APP推送→info（el-tag 浅底标签，替代无样式的 channel-tag）
+                channelTagType: function(ch) {
+                    const map = { 1: 'warning', 2: 'success', 3: 'info' };
+                    return map[ch] || 'info';
                 },
 
                 // 修改点：补 status 0(待发送)/4(部分成功) 映射，与发送记录状态下拉选项对齐

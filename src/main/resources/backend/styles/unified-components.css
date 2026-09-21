@@ -139,6 +139,19 @@
   color: var(--text-secondary);
 }
 
+.od-item-flavor {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.od-item-qty {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
 .od-item-amount {
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
@@ -201,6 +214,33 @@
   font-size: 20px;
   font-weight: var(--font-weight-bold);
   color: var(--color-danger);
+}
+
+/* 详情卡内键值对：键弱化居左、值居右，长值换行不溢出错位；多行组件行由页面行内 align-items 控制 */
+.od-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 5px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.od-kv + .od-kv {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.od-kv > span:first-child {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.od-kv > span:last-child {
+  color: var(--text-primary);
+  text-align: right;
+  min-width: 0;
+  word-break: break-word;
 }
 
 /* ========== 统计卡片 / 图表卡片 / 工具栏 / 状态标签 ==========

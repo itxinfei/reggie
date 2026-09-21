@@ -97,7 +97,7 @@
           </el-tag>
         </template>
         <template #actions="{ row }">
-          <el-button type="text" size="small" class="btn-edit" @click="openDialog(row)">编辑</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="openDialog(row)">编辑</el-button>
           <el-button type="text" size="small" class="btn-view" @click="toggleStatus(row)">
             {{ row.status === 1 ? '停用' : '启用' }}
           </el-button>

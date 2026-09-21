@@ -38,6 +38,109 @@
     .price-calc__value--success { color: var(--color-success); }
     .price-calc__value--danger { color: var(--color-danger); }
     .price-calc__tip { font-size: var(--font-size-xs); color: var(--text-muted); }
+
+    /* ========== 添加菜品弹窗：左右两栏（分类 + 菜品 | 已选预览） ========== */
+    .dishSelectContent {
+      display: flex;
+      gap: var(--space-4);
+      height: 420px;
+    }
+    /* 左栏：分类 tab + 菜品列表 */
+    .dishSelectContent .leftCont {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      gap: var(--space-3);
+    }
+    .dishSelectContent .tabBut {
+      width: 108px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow-y: auto;
+    }
+    .dishSelectContent .tabBut span {
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-base);
+      color: var(--text-secondary);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+    .dishSelectContent .tabBut span:hover { background: var(--bg-subtle); color: var(--text-primary); }
+    .dishSelectContent .tabBut span.act {
+      background: var(--color-brand-500);
+      color: var(--text-on-brand);
+      font-weight: 600;
+    }
+    .dishSelectContent .tabList {
+      flex: 1;
+      min-width: 0;
+      overflow-y: auto;
+      padding: var(--space-2);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+    }
+    .dishSelectContent .tabList .items { padding: 2px 4px; border-radius: var(--radius-sm); transition: background var(--transition-fast); }
+    .dishSelectContent .tabList .items:hover { background: var(--bg-subtle); }
+    .dishSelectContent .tabList .item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .dishSelectContent .item-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* 右栏：已选菜品预览 */
+    .dishSelectContent .ritCont {
+      width: 220px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      padding: var(--space-3);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+    }
+    .dishSelectContent .ritCont .tit {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+      padding-bottom: var(--space-2);
+      margin-bottom: var(--space-2);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .dishSelectContent .ritCont .items { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+    .dishSelectContent .ritCont .item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 4px 0;
+      font-size: var(--font-size-base);
+    }
+    .dishSelectContent .ritCont .item span:first-child {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .dishSelectContent .price { color: var(--text-secondary); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+    /* 细滚动条 */
+    .dishSelectContent .tabBut,
+    .dishSelectContent .tabList,
+    .dishSelectContent .ritCont .items { scrollbar-width: thin; }
+    .dishSelectContent ::-webkit-scrollbar { width: 6px; height: 6px; }
+    .dishSelectContent ::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+    .dishSelectContent ::-webkit-scrollbar-track { background: transparent; }
   </style>
 </head>
 <body>

@@ -89,7 +89,7 @@
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="openPermDialog(row)">权限分配</el-button>
           <el-button type="text" size="small" class="btn-view" @click="openUserDialog(row)">分配用户</el-button>
-          <el-button type="text" size="small" class="btn-edit" @click="openDialog(row)">编辑</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="openDialog(row)">编辑</el-button>
           <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
         </template>
       </crud-table>

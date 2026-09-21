@@ -52,7 +52,7 @@
           <el-tag size="small" :type="typeTagType(row.configType)">{{ typeName(row.configType) }}</el-tag>
         </template>
         <template #actions="{ row }">
-          <el-button type="text" size="small" class="btn-edit" @click="editRow(row)">编辑</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="editRow(row)">编辑</el-button>
           <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
         </template>
       </crud-table>
