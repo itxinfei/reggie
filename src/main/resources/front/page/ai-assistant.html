@@ -1016,6 +1016,17 @@
                  */
                 sendMessage: function(overrideText, overrideAttachments) {
                     if (this.loading) return;
+                    // 修改点(P2-13)：未登录不发起 AI 对话，引导登录（否则无效调用，也无法关联购物车/地址上下文）
+                    if (!sessionStorage.getItem('userId') && !sessionStorage.getItem('userPhone')) {
+                        vant.Dialog.confirm({
+                            title: '未登录',
+                            message: '请先登录后再与助手对话',
+                            confirmButtonText: '去登录'
+                        }).then(function(){
+                            redirectToLogin();
+                        }).catch(function(e){ console.warn('[ai-assistant.html] 用户取消登录跳转:', e); });
+                        return;
+                    }
                     var hasOverride = arguments.length > 0;
                     var text;
                     var views;

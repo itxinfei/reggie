@@ -65,6 +65,14 @@
             .pay-bar .confirm-btn[disabled] { background: var(--border-light); color: var(--color-text-hint); }
             .cashier-state { padding: 80rem 24rem; text-align: center; color: var(--color-text-hint); }
             .cashier-state i { font-size: 48rem; display: block; margin-bottom: 12rem; }
+            /* 错误态出口按钮（修死胡同） */
+            .state-actions { display: flex; gap: 12rem; justify-content: center; margin-top: 20rem; }
+            .state-btn { display: inline-flex; align-items: center; justify-content: center; height: 40rem;
+                padding: 0 24rem; border-radius: var(--btn-radius); font-size: 14rem; text-decoration: none;
+                box-sizing: border-box; border: 1px solid var(--border-light);
+                color: var(--color-text-secondary); background: var(--bg-card); }
+            .state-btn-primary { background: var(--color-primary); border-color: var(--color-primary);
+                color: #4a3500; font-weight: 600; }
         </style>
     </head>
     <body>
@@ -99,10 +107,14 @@
                 </div>
             </div>
 
-            <!-- 参数缺失/订单加载失败态 -->
+            <!-- 参数缺失/订单加载失败态（2026-09-21：补可点出口，修死胡同） -->
             <div class="cashier-state" v-if="loadError">
                 <i class="ri-file-warning-line"></i>
                 <p>{{ loadError }}</p>
+                <div class="state-actions">
+                    <button class="state-btn state-btn-primary" @click="goBack">返回上一页</button>
+                    <a class="state-btn" href="/front/index.html">返回首页</a>
+                </div>
             </div>
 
             <div class="pay-bar" v-if="loaded">

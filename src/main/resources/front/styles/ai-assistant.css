@@ -85,6 +85,11 @@
     --ai-dark-user-bubble-text: #fff;
     background: var(--ai-dark-bg-base);
 }
+/* 手动暗色下推荐菜卡：深底 + 浅色文字（2026-09-21 修菜卡白底、深色菜名压深底不可见） */
+.ai-container.dark-mode .dish-card { background: var(--ai-dark-bg-bubble); border-color: var(--ai-dark-border); }
+.ai-container.dark-mode .dish-card img { background: var(--ai-dark-bg-input); }
+.ai-container.dark-mode .dish-card .dish-name { color: var(--ai-dark-text); }
+.ai-container.dark-mode .dish-card .dish-reason {color: var(--ai-dark-text-muted); }
 .ai-container.dark-mode .ai-header--custom {
     background: linear-gradient(135deg, var(--ai-dark-bg-elevated) 0%, var(--ai-dark-bg-deep) 100%);
     /* 修改点：暗色头部深底 → 亮色文字，与亮色模式金底深字区分层级 */
