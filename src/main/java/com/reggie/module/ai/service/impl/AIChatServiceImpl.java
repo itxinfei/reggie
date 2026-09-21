@@ -30,6 +30,7 @@ import com.reggie.module.ai.adapter.AbortableStreamCallback;
 import com.reggie.module.ai.adapter.AiModelAdapter;
 import com.reggie.module.ai.tool.AiToolOrchestrator;
 import com.reggie.module.ai.tool.BusinessSnapshotService;
+import com.reggie.module.ai.rag.service.KnowledgeRetrievalService;
 import com.reggie.module.ai.tool.ToolEvent;
 import com.reggie.module.ai.tool.ToolEventSink;
 import com.reggie.module.ai.service.AIChatService;
@@ -140,6 +141,10 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
     /** P4：不支持工具调用的供应商走经营快照注入降级 */
     @Resource
     private BusinessSnapshotService businessSnapshotService;
+
+    /** P5：知识库 RAG 片段检索注入（失败静默降级） */
+    @Resource
+    private KnowledgeRetrievalService knowledgeRetrievalService;
 
     // ==================== 流式对话 ====================
 
@@ -684,6 +689,25 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                     // 宽异常兜底：快照失败退化为无快照对话，不阻断聊天
                     log.warn("注入经营快照失败，降级为无快照对话: {}", e.getMessage());
                 }
+            }
+        }
+
+        // 4.6) P5 知识库 RAG：按受众注入相关知识片段——
+        //      后台（EMPLOYEE）全场景可见 MERCHANT/BOTH 文档；C 端仅点餐场景见 CUSTOMER/BOTH；
+        //      检索/注入失败静默降级为普通对话，不阻断聊天
+        boolean customerActor = "CUSTOMER".equals(request.getActorType());
+        boolean ragSceneEnabled = !customerActor || "order_assistant".equals(request.getScene());
+        if (ragSceneEnabled && request.getMessage() != null
+                && !request.getMessage().trim().isEmpty()) {
+            try {
+                String ragAudience = customerActor ? "CUSTOMER" : "MERCHANT";
+                String ragPrompt = knowledgeRetrievalService
+                        .buildKnowledgePrompt(request.getMessage(), ragAudience);
+                if (ragPrompt != null && !ragPrompt.isEmpty()) {
+                    messages.add(AIMessage.builder().role("system").content(ragPrompt).build());
+                }
+            } catch (Exception e) {
+                log.warn("注入知识库片段失败，降级为普通对话: {}", e.getMessage());
             }
         }
 

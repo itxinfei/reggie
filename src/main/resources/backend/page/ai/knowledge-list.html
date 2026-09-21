@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>知识库 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+</head>
+<body>
+  <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
+  <div class="dashboard-container" id="knowledge-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">AI 知识库</h1>
+
+      <!-- ========== 状态统计卡片（统一 stat-cards 组件） ========== -->
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+
+      <!-- ========== 搜索与操作（统一 table-bar 组件） ========== -->
+      <table-bar
+        :search-items="searchConfig"
+        :actions="actionConfig"
+        :loading="loading"
+        @search="onSearch"
+        @reset="onReset"
+        @action="onAction">
+      </table-bar>
+
+      <!-- ========== 文档列表（统一 crud-table 组件） ========== -->
+      <crud-table
+        :data="tableData"
+        :columns="columns"
+        :page="page"
+        :page-size="pageSize"
+        :total="counts"
+        :loading="loading"
+        :show-actions="true"
+        :actions-width="180"
+        empty-text="暂无知识库文档，可点击右上角「新增文档」创建"
+        @page-change="onPageChange"
+        @size-change="onSizeChange">
+        <!-- 类型 -->
+        <template #col-docType="{ row }">
+          <el-tag :type="docTypeTagType(row.docType)" size="small" effect="plain">{{ docTypeLabel(row.docType) }}</el-tag>
+        </template>
+        <!-- 受众 -->
+        <template #col-audience="{ row }">
+          <el-tag :type="audienceTagType(row.audience)" size="small">{{ audienceLabel(row.audience) }}</el-tag>
+        </template>
+        <!-- 状态（失败/降级原因通过 tooltip 展示） -->
+        <template #col-status="{ row }">
+          <el-tooltip
+            v-if="row.errorMsg"
+            :content="row.errorMsg"
+            placement="top"
+            :open-delay="300">
+            <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
+          </el-tooltip>
+          <el-tag v-else :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
+        </template>
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="openEdit(row)">修改</el-button>
+          <el-button type="text" size="small" class="btn-success" @click="onReindex(row)">重建索引</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="onDelete(row)">删除</el-button>
+        </template>
+      </crud-table>
+    </main>
+
+    <!-- ========== 新增/编辑弹窗（统一 crud-dialog 组件，lg 宽） ========== -->
+    <crud-dialog
+      :title="dialogTitle"
+      :visible.sync="dialogVisible"
+      size="lg"
+      :submit-loading="submitting"
+      :close-on-click-modal="false"
+      @submit="submitForm">
+      <el-form
+        ref="docForm"
+        label-width="92px"
+        size="small"
+        :model="form"
+        :rules="formRules">
+        <el-form-item label="文档标题：" prop="title">
+          <el-input v-model="form.title" placeholder="如：营业时间说明、常见问题" maxlength="100" show-word-limit></el-input>
+        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="文档类型：" prop="docType">
+              <el-radio-group v-model="form.docType">
+                <el-radio label="FAQ">FAQ 问答</el-radio>
+                <el-radio label="TEXT">知识文本</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="面向受众：" prop="audience">
+              <el-select v-model="form.audience" style="width: 100%;">
+                <el-option label="仅顾客（C 端）" value="CUSTOMER"></el-option>
+                <el-option label="仅商家（后台）" value="MERCHANT"></el-option>
+                <el-option label="双方可见" value="BOTH"></el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="文档内容：" prop="content">
+          <el-input
+            type="textarea"
+            v-model="form.content"
+            :rows="14"
+            maxlength="20000"
+            show-word-limit
+            placeholder="粘贴 FAQ 或知识文本；保存后系统自动按段落切块并建立索引">
+          </el-input>
+          <div class="form-tip">保存后自动切块索引；配置了 embedding 模型时按向量语义检索，否则降级为全文检索匹配。</div>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../api/ai.js?v=20260924"></script>
+  <script>
+    new Vue({
+      el: '#knowledge-app',
+      mixins: [window.ReggieListMixin],
+      data() {
+        return {
+          // 状态卡片高亮（与状态筛选联动）
+          activeFilter: '',
+          // 统计数据
+          statsData: { total: 0, ready: 0, indexing: 0, failed: 0 },
+          // 搜索条件（table-bar 回调写入）
+          searchParams: {},
+          // 受众字典
+          audienceOptions: [
+            { value: 'CUSTOMER', label: '仅顾客' },
+            { value: 'MERCHANT', label: '仅商家' },
+            { value: 'BOTH', label: '双方可见' }
+          ],
+          // 状态字典
+          statusOptions: [
+            { value: 'DRAFT', label: '草稿' },
+            { value: 'INDEXING', label: '索引中' },
+            { value: 'READY', label: '已就绪' },
+            { value: 'FAILED', label: '失败' }
+          ],
+          searchConfig: [
+            { type: 'select', field: 'audience', placeholder: '全部受众', width: '130px', options: this.audienceOptions },
+            { type: 'select', field: 'status', placeholder: '全部状态', width: '130px', options: this.statusOptions },
+            { type: 'input', field: 'keyword', placeholder: '文档标题', width: '200px' }
+          ],
+          actionConfig: [
+            { key: 'add', text: '+ 新增文档', type: 'primary' }
+          ],
+          tableData: [],
+          columns: [
+            { prop: 'title', label: '文档标题', minWidth: 220, showOverflowTooltip: true },
+            { prop: 'docType', label: '类型', width: 110, slot: true, align: 'center' },
+            { prop: 'audience', label: '受众', width: 100, slot: true, align: 'center' },
+            { prop: 'status', label: '状态', width: 100, slot: true, align: 'center' },
+            { prop: 'chunkCount', label: '切块数', width: 90, align: 'center' },
+            { prop: 'updateTime', label: '更新时间', width: 160 }
+          ],
+          // 弹窗
+          dialogVisible: false,
+          dialogTitle: '新增知识文档',
+          submitting: false,
+          form: this.buildEmptyForm(),
+          formRules: {
+            title: [
+              { required: true, message: '请输入文档标题', trigger: 'blur' },
+              { max: 100, message: '标题最多 100 字', trigger: 'blur' }
+            ],
+            docType: [{ required: true, message: '请选择文档类型', trigger: 'change' }],
+            audience: [{ required: true, message: '请选择面向受众', trigger: 'change' }],
+            content: [
+              { required: true, message: '请输入文档内容', trigger: 'blur' },
+              { max: 20000, message: '内容最多 20000 字', trigger: 'blur' }
+            ]
+          }
+        }
+      },
+      computed: {
+        statsCards() {
+          const stats = this.statsData
+          return [
+            { key: '', icon: 'ri-database-2-line', label: '文档总数', value: stats.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+            { key: 'READY', icon: 'ri-checkbox-circle-line', label: '已就绪', value: stats.ready || 0, color: 'success', clickable: true, active: this.activeFilter === 'READY' },
+            { key: 'INDEXING', icon: 'ri-loader-4-line', label: '处理中', value: stats.indexing || 0, color: 'warning', clickable: false },
+            { key: 'FAILED', icon: 'ri-error-warning-line', label: '失败', value: stats.failed || 0, color: 'danger', clickable: true, active: this.activeFilter === 'FAILED' }
+          ]
+        }
+      },
+      created() {
+        this.fetchData(true)
+      },
+      methods: {
+        /* ========== 数据加载 ========== */
+        async fetchData(reloadStats) {
+          this.loading = true
+          const tasks = [this.loadPage()]
+          if (reloadStats) {
+            tasks.push(this.loadStats())
+          }
+          try {
+            await Promise.all(tasks)
+          } finally {
+            this.loading = false
+          }
+        },
+
+        async loadPage() {
+          try {
+            const params = Object.assign({ page: this.page, pageSize: this.pageSize }, this.searchParams)
+            const res = await aiBackendApi.knowledgePage(params)
+            if (String(res.code) === '1' && res.data) {
+              this.tableData = res.data.records || []
+              this.counts = Number(res.data.total) || 0
+            } else {
+              ReggieUI.error(res.msg || '加载失败')
+            }
+          } catch (err) {
+            if (err && err.message === 'NOTLOGIN') return
+            console.warn('加载知识库列表失败:', err)
+          }
+        },
+
+        async loadStats() {
+          try {
+            const res = await aiBackendApi.knowledgeStats()
+            if (String(res.code) === '1' && res.data) {
+              this.statsData = res.data
+            }
+          } catch (err) {
+            if (err && err.message === 'NOTLOGIN') return
+            console.warn('加载知识库统计失败:', err)
+          }
+        },
+
+        onSearch(searchParams) {
+          this.searchParams = searchParams || {}
+          this.activeFilter = this.searchParams.status || ''
+          this.page = 1
+          this.fetchData(false)
+        },
+        onReset() {
+          this.searchParams = {}
+          this.activeFilter = ''
+          this.page = 1
+          this.fetchData(true)
+        },
+        onAction(payload) {
+          if (payload.key === 'add') this.openAdd()
+        },
+
+        /* ========== 状态卡片点击筛选 ========== */
+        onCardClick(payload) {
+          this.activeFilter = payload.activeKey
+          this.searchParams = Object.assign({}, this.searchParams, {
+            status: this.activeFilter || null
+          })
+          this.page = 1
+          this.fetchData(false)
+        },
+
+        /* ========== 标签映射 ========== */
+        docTypeLabel(value) {
+          return value === 'FAQ' ? 'FAQ 问答' : '知识文本'
+        },
+        audienceLabel(value) {
+          const hit = this.audienceOptions.find(function (item) { return item.value === value })
+          return hit ? hit.label : value
+        },
+        statusLabel(value) {
+          const hit = this.statusOptions.find(function (item) { return item.value === value })
+          return hit ? hit.label : value
+        },
+        docTypeTagType(value) {
+          return value === 'FAQ' ? 'warning' : 'info'
+        },
+        audienceTagType(value) {
+          const map = { CUSTOMER: 'success', MERCHANT: 'info', BOTH: 'warning' }
+          return map[value] || 'info'
+        },
+        statusTagType(value) {
+          const map = { READY: 'success', DRAFT: 'info', INDEXING: 'warning', FAILED: 'danger' }
+          return map[value] || 'info'
+        },
+
+        /* ========== 新增 / 编辑 ========== */
+        buildEmptyForm() {
+          return {
+            id: null,
+            title: '',
+            docType: 'TEXT',
+            audience: 'BOTH',
+            content: ''
+          }
+        },
+        openAdd() {
+          this.dialogTitle = '新增知识文档'
+          this.form = this.buildEmptyForm()
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.docForm && this.$refs.docForm.clearValidate()
+          })
+        },
+        openEdit(row) {
+          this.dialogTitle = '修改知识文档'
+          this.form = {
+            id: row.id,
+            title: row.title || '',
+            docType: row.docType || 'TEXT',
+            audience: row.audience || 'BOTH',
+            content: row.content || ''
+          }
+          this.dialogVisible = true
+          this.$nextTick(() => {
+            this.$refs.docForm && this.$refs.docForm.clearValidate()
+          })
+        },
+        submitForm() {
+          this.$refs.docForm.validate(async valid => {
+            if (!valid) {
+              return
+            }
+            this.submitting = true
+            try {
+              const payload = {
+                title: this.form.title.trim(),
+                docType: this.form.docType,
+                audience: this.form.audience,
+                content: this.form.content.trim()
+              }
+              let res
+              if (this.form.id) {
+                payload.id = this.form.id
+                res = await aiBackendApi.knowledgeUpdate(payload)
+              } else {
+                res = await aiBackendApi.knowledgeAdd(payload)
+              }
+              if (String(res.code) === '1') {
+                ReggieUI.success(this.form.id ? '更新成功，索引重建中' : '新增成功，正在建立索引')
+                this.dialogVisible = false
+                // 索引为异步任务，延迟一次刷新展示 READY 状态
+                setTimeout(() => { this.fetchData(true) }, 1800)
+              } else {
+                ReggieUI.error(res.msg || '保存失败')
+              }
+            } catch (err) {
+              if (err && err.message === 'NOTLOGIN') return
+              console.warn('保存知识文档失败:', err)
+            } finally {
+              this.submitting = false
+            }
+          })
+        },
+
+        /* ========== 重建索引 ========== */
+        onReindex(row) {
+          aiBackendApi.knowledgeReindex(row.id).then(res => {
+            if (String(res.code) === '1') {
+              ReggieUI.success('索引任务已提交')
+              setTimeout(() => { this.fetchData(true) }, 1800)
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(err => {
+            if (err && err.message === 'NOTLOGIN') return
+            console.warn('重建索引失败:', err)
+          })
+        },
+
+        /* ========== 删除（二次确认） ========== */
+        onDelete(row) {
+          ReggieUI.confirm('确认删除文档「' + row.title + '」？其全部切块将一并删除，且不可恢复。',
+            '删除确认', { type: 'warning' }).then(() => {
+              aiBackendApi.knowledgeDelete(row.id).then(res => {
+                if (String(res.code) === '1') {
+                  ReggieUI.success('删除成功')
+                  // 当前页删空且非首页时回退页码
+                  if (this.tableData.length === 1 && this.page > 1) {
+                    this.page -= 1
+                  }
+                  this.fetchData(true)
+                } else {
+                  ReggieUI.error(res.msg || '删除失败')
+                }
+              }).catch(err => {
+                if (err && err.message === 'NOTLOGIN') return
+                console.warn('删除知识文档失败:', err)
+              })
+            }).catch(() => {})
+        }
+      }
+    })
+  </script>
+</body>
+</html>

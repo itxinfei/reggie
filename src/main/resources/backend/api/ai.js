@@ -216,6 +216,27 @@
         },
         promptReset: function(id) {
             return $axios.post('/admin/ai/prompt/reset/' + id);
+        },
+
+        // ==================== AI 知识库（P5 RAG） ====================
+
+        knowledgePage: function(params) {
+            return $axios({ url: '/admin/ai/knowledge/page', method: 'get', params: params });
+        },
+        knowledgeStats: function() {
+            return $axios.get('/admin/ai/knowledge/stats');
+        },
+        knowledgeAdd: function(data) {
+            return $axios.post('/admin/ai/knowledge/add', data);
+        },
+        knowledgeUpdate: function(data) {
+            return $axios.post('/admin/ai/knowledge/update', data);
+        },
+        knowledgeDelete: function(id) {
+            return $axios.delete('/admin/ai/knowledge/delete/' + id);
+        },
+        knowledgeReindex: function(id) {
+            return $axios.post('/admin/ai/knowledge/reindex/' + id);
         }
     };
 

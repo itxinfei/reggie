@@ -221,6 +221,57 @@ CREATE TABLE `ai_provider_config` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `ai_knowledge_doc`
+--
+
+DROP TABLE IF EXISTS `ai_knowledge_doc`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ai_knowledge_doc` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `tenant_id` bigint NOT NULL COMMENT '租户ID',
+  `title` varchar(200) NOT NULL COMMENT '标题',
+  `doc_type` varchar(16) NOT NULL DEFAULT 'TEXT' COMMENT '类型：FAQ/TEXT',
+  `audience` varchar(16) NOT NULL DEFAULT 'BOTH' COMMENT '受众：CUSTOMER/MERCHANT/BOTH',
+  `content` mediumtext NOT NULL COMMENT '原文内容',
+  `status` varchar(16) NOT NULL DEFAULT 'DRAFT' COMMENT '状态：DRAFT/INDEXING/READY/FAILED',
+  `chunk_count` int NOT NULL DEFAULT '0' COMMENT '切块数量',
+  `error_msg` varchar(500) DEFAULT NULL COMMENT '失败/降级原因',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime NOT NULL COMMENT '更新时间',
+  `create_user` bigint DEFAULT NULL COMMENT '创建人',
+  `update_user` bigint DEFAULT NULL COMMENT '修改人',
+  `is_deleted` int NOT NULL DEFAULT '0' COMMENT '逻辑删除',
+  PRIMARY KEY (`id`),
+  KEY `idx_tenant_status` (`tenant_id`,`status`),
+  KEY `idx_tenant_audience` (`tenant_id`,`audience`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI知识库文档';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `ai_knowledge_chunk`
+--
+
+DROP TABLE IF EXISTS `ai_knowledge_chunk`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `ai_knowledge_chunk` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `tenant_id` bigint NOT NULL COMMENT '租户ID',
+  `doc_id` bigint NOT NULL COMMENT '文档ID',
+  `chunk_index` int NOT NULL COMMENT '序号',
+  `content` varchar(1000) NOT NULL COMMENT '切块内容',
+  `embedding` mediumtext DEFAULT NULL COMMENT '向量JSON',
+  `embed_model` varchar(100) DEFAULT NULL COMMENT '向量模型名',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime NOT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_tenant_doc` (`tenant_id`,`doc_id`),
+  FULLTEXT KEY `ft_content` (`content`) WITH PARSER ngram
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='AI知识库切块';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `ai_user_profile`
 --
 
