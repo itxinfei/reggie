@@ -19,6 +19,8 @@ const levelStats = () => $axios({ url: '/api/member/level/stats', method: 'get' 
 
 const rechargePage = (params) => $axios({ url: '/api/member/recharge/page', method: 'get', params })
 const rechargeStats = () => $axios({ url: '/api/member/recharge/stats', method: 'get' })
+// 门店确认到账：C端发起的PENDING充值，员工确认收款后原子入账（rechargeNo走query）
+const confirmRechargeApi = (rechargeNo) => $axios({ url: '/api/member/member/recharge/confirm', method: 'post', params: { rechargeNo } })
 
 const pointsPage = (params) => $axios({ url: '/api/member/points/page', method: 'get', params })
 const pointsStats = () => $axios({ url: '/api/member/points/stats', method: 'get' })
