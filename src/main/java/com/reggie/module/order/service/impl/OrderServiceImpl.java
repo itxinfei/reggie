@@ -42,6 +42,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -145,6 +146,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     @Autowired(required = false)
     private com.reggie.module.member.service.MemberService memberService;
 
+    /** 营销服务（满减引擎真正参与下单计费，与券可叠加；缺失时降级跳过满减） */
+    @Autowired(required = false)
+    private com.reggie.module.marketing.service.MarketingService marketingService;
+
     /** 下单幂等锁过期时间（分钟） */
     private static final long IDEMPOTENCY_TTL_MINUTES = 30;
 
@@ -203,6 +208,28 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         // 配送费计入订单总额
         BigDecimal finalAmount = totalAmount.add(deliveryFee);
 
+        // 满减优惠（真满减：按商品金额试算，不含配送费；与券可叠加，先满减后券，美团口径）
+        // 试算与下单同源，避免前端展示优惠与实际扣费不一致的信任问题
+        Map<String, Object> frHit = null;
+        BigDecimal fullReductionAmount = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        if (marketingService != null) {
+            Map<String, Object> frEval = marketingService.evaluateFullReduction(totalAmount, userId,
+                    currentTenantId);
+            Object frDiscountObj = frEval.get("discount");
+            BigDecimal frDiscount = frDiscountObj instanceof BigDecimal ? (BigDecimal) frDiscountObj
+                    : new BigDecimal(String.valueOf(frDiscountObj));
+            if (frDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                fullReductionAmount = frDiscount.setScale(2, RoundingMode.HALF_UP);
+                finalAmount = finalAmount.subtract(fullReductionAmount);
+                frHit = new HashMap<>();
+                frHit.put("campaignId", frEval.get("campaignId"));
+                frHit.put("ruleId", frEval.get("ruleId"));
+                frHit.put("discount", fullReductionAmount);
+                frHit.put("goodsAmount", totalAmount);
+            }
+        }
+        orders.setFullReductionAmount(fullReductionAmount);
+
         // 优惠券折扣（等价抽取）
         Map<String, Object> couponHolder = resolveCouponDiscount(orders, userId, orderId, totalAmount);
         BigDecimal couponDiscount = (BigDecimal) couponHolder.get("couponDiscount");
@@ -228,7 +255,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         boolean lockAcquired = lockState == 1;
 
         // 落库订单与明细、扣库存、清空购物车（失败释放幂等锁）（等价抽取）
-        saveOrderWithLockRelease(orders, orderDetails, shoppingCarts, wrapper, lockAcquired, lockKey);
+        saveOrderWithLockRelease(orders, orderDetails, shoppingCarts, wrapper, lockAcquired, lockKey, frHit);
     }
 
     /**
@@ -556,11 +583,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      */
     private void saveOrderWithLockRelease(Orders orders, List<OrderDetail> orderDetails,
             List<ShoppingCart> shoppingCarts, LambdaQueryWrapper<ShoppingCart> wrapper, boolean lockAcquired,
-            String lockKey) {
+            String lockKey, Map<String, Object> frHit) {
         try {
             this.save(orders);
             //向订单明细表插入数据，多条数据
             orderDetailService.saveBatch(orderDetails);
+            // 满减核销：订单与明细落库成功后写入，支撑每人限次与对账；后续步骤失败随事务一并回滚
+            recordFullReductionIfHit(orders, frHit);
             this.deductStockForOrder(shoppingCarts);
             //清空购物车数据
             shoppingCartService.remove(wrapper);
@@ -575,6 +604,25 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             }
             throw e;
         }
+    }
+
+    /**
+     * 订单落库成功后写入满减核销记录（无命中或营销服务缺失则跳过）。
+     */
+    private void recordFullReductionIfHit(Orders orders, Map<String, Object> frHit) {
+        if (frHit == null || marketingService == null) {
+            return;
+        }
+        Long campaignId = (Long) frHit.get("campaignId");
+        Long ruleId = (Long) frHit.get("ruleId");
+        BigDecimal frDiscount = (BigDecimal) frHit.get("discount");
+        BigDecimal goodsAmount = (BigDecimal) frHit.get("goodsAmount");
+        if (campaignId == null || ruleId == null || frDiscount == null || goodsAmount == null) {
+            return;
+        }
+        marketingService.recordFullReductionUsage(campaignId, ruleId, orders.getId(), orders.getNumber(),
+                orders.getUserId(), goodsAmount, frDiscount, goodsAmount.subtract(frDiscount),
+                orders.getTenantId());
     }
 
     /**

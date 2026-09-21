@@ -198,6 +198,10 @@
                         <span>配送费</span>
                         <span>￥{{Number(deliveryFee || 0).toFixed(2)}}</span>
                     </div>
+                    <div class="price-row discount" v-if="frDiscount > 0">
+                        <span>满减优惠</span>
+                        <span>-￥{{Number(frDiscount || 0).toFixed(2)}}</span>
+                    </div>
                     <div class="price-row discount" v-if="selectedCoupon">
                         <span>优惠券</span>
                         <span>-￥{{Number(selectedCoupon.discountAmount || 0).toFixed(2)}}</span>
@@ -268,6 +272,7 @@
         <script src="./../api/order.js?v=20260917"></script>
         <script src="./../api/coupon.js?v=20260917"></script>
         <script src="./../api/payment.js?v=20260917"></script>
+        <script src="./../api/marketing.js?v=20260921"></script>
         <script>
             new Vue({
                 el:"#add_order",
@@ -309,6 +314,9 @@
                         deliveryMode: 0,
                         // 配送费：按收货地址实时试算（与下单扣费同源）
                         deliveryFee: 0,
+                        // 满减优惠（与下单同源试算；续付订单不重算，走订单落库应付）
+                        frDiscount: 0,
+                        frEval: null,
                         // 试算是否阻断下单（超范围/未达起送价/商品失效）及说明
                         feeBlocked: false,
                         feeMessage: '',
@@ -381,7 +389,7 @@
                         if(this.reorderId){
                             return this.orderAmount == null ? 0 : Math.round(this.orderAmount * 100) / 100
                         }
-                        const raw = Math.max(0, this.goodsPrice + this.deliveryFee - this.discountAmount)
+                        const raw = Math.max(0, this.goodsPrice + this.deliveryFee - this.frDiscount - this.discountAmount)
                         // 修改点：四舍五入到分，避免浮点数减法误差
                         return Math.round(raw * 100) / 100
                     },
@@ -579,6 +587,24 @@
                         } finally {
                             // 修改点：购物车数据就绪后再加载可用优惠券，避免 $nextTick 时 goodsPrice 仍为 0
                             this.loadUsableCoupons()
+                            // 新建订单：商品金额就绪后同源试算满减（续付订单走落库应付，不重算）
+                            if(!this.reorderId){
+                                this.loadFullReduction()
+                            }
+                        }
+                    },
+                    // 满减试算（与下单计费同源；失败不阻断下单，仅不展示满减行）
+                    async loadFullReduction(){
+                        try{
+                            const amount = this.goodsPrice
+                            if(!(amount > 0)){ this.frDiscount = 0; return }
+                            const res = await evaluateFullReduction(amount)
+                            if(res && res.code === 1){
+                                this.frEval = res.data
+                                this.frDiscount = Number(res.data.discount) || 0
+                            }
+                        }catch(e){
+                            console.warn('[add-order] 满减试算失败:', e)
                         }
                     },
                     // 修改点：选择优惠券（传入券对象，再次点击相同券取消选中）

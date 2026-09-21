@@ -339,6 +339,17 @@
             <i class="ri-close-line"></i>
           </div>
         </div>
+        <!-- 满减凑单进度条（数据来自同源试算 frBar） -->
+        <div class="fr-bar" v-if="frBar">
+          <div class="fr-bar-head">
+            <span class="fr-bar-tag">满减</span>
+            <span class="fr-bar-text">{{ frBar.text }}</span>
+          </div>
+          <div class="fr-bar-track">
+            <div class="fr-bar-fill" :style="{ width: frBar.progress + '%' }"></div>
+          </div>
+          <div class="fr-bar-sub">{{ frBar.sub }}</div>
+        </div>
         <div class="divCartContent">
           <div v-for="item in cartData" :key="item.id" class="divCartItem">
             <img :src="imgPath(item.image)" @error="imgError" class="cart-img" loading="lazy" :alt="item.name || '菜品图片'">
@@ -651,6 +662,8 @@
         <script src="./api/evaluation.js?v=20260917"></script>
         <!-- 修改点：引入AI助手API -->
         <script src="./api/ai.js?v=20260917"></script>
+        <!-- 满减档位与试算 -->
+        <script src="./api/marketing.js?v=20260921"></script>
   </body>
   <script>
       new Vue({
@@ -671,6 +684,8 @@
               // 修改点(2026-09-17)：已进入视口、需要真实渲染的分类（true = 渲染其下菜品）
               visibleCats:{},
               cartData:[],
+              // 满减试算结果（与下单计费同源，由 /api/marketing/full-reduction/evaluate 返回）
+              frEval:null,
               // 修改点：存储当前登录用户信息
               userPhone: '',
               userName: '',
@@ -754,12 +769,49 @@
             minOrderAmount(){
               return Number(this.restaurantInfo.minOrder || 0)
             },
+            // 购物车面板满减凑单条（数据全部来自后端同源试算，不在前端算优惠金额）
+            frBar(){
+              const fr = this.frEval
+              if(!fr || !fr.available) return null
+              const discount = Number(fr.discount)||0
+              const gap = Number(fr.gap)||0
+              const nextDiscount = Number(fr.nextDiscount)||0
+              const isGift = Number(fr.nextDiscountType) === 3
+              let text = '', sub = ''
+              if(fr.hit){
+                text = '已享满减优惠 ¥'+discount.toFixed(2)
+                if(fr.nextMinAmount){
+                  sub = isGift
+                    ? ('再买¥'+gap.toFixed(2)+'，可享「'+(fr.nextRuleName||'赠品')+'」')
+                    : ('再买¥'+gap.toFixed(2)+'，可再减¥'+nextDiscount.toFixed(2))
+                }else{
+                  sub = '已享最高档优惠'
+                }
+              }else if(fr.nextMinAmount){
+                text = '还差¥'+gap.toFixed(2)+' 享满减'
+                sub = isGift
+                  ? ('满¥'+Number(fr.nextMinAmount).toFixed(2)+'可享「'+(fr.nextRuleName||'赠品')+'」')
+                  : ('满¥'+Number(fr.nextMinAmount).toFixed(2)+'可减¥'+nextDiscount.toFixed(2))
+              }else{
+                return null
+              }
+              return { progress: Math.min(100, Math.max(0, Number(fr.progress)||0)), text:text, sub:sub }
+            },
             // 修改点：当前选中分类名称，用于右侧列表标题
             activeCategoryName(){
               if(this.activeType >= 0 && this.categoryList[this.activeType]){
                 return this.categoryList[this.activeType].name
               }
               return ''
+            }
+          },
+          watch:{
+            // 商品金额变化即重新试算满减（防抖，连续加减购物车只请求一次）
+            goodsPrice(newVal){
+              if(this._frTimer){ clearTimeout(this._frTimer) }
+              // 购物车清空：无需试算
+              if(!(newVal > 0)){ this.frEval = null; return }
+              this._frTimer = setTimeout(()=>{ this.refreshFullReduction(newVal) }, 200)
             }
           },
           created(){
@@ -798,6 +850,18 @@
             document.removeEventListener('keydown', this._handleEscKey)
           },
           methods:{
+            // 满减试算：金额变化时拉取与下单同源的优惠/凑单数据
+            async refreshFullReduction(amount){
+              try{
+                const res = await evaluateFullReduction(amount)
+                if(res && res.code === 1){
+                  this.frEval = res.data
+                }
+              }catch(e){
+                // 试算失败不阻断点餐，仅不展示凑单条（下单时后端仍会真实计费）
+                console.warn('[满减] 试算失败:', e)
+              }
+            },
             // 修改点：将common.js的全局函数imgPath注册为Vue实例方法，Vue模板中无法访问全局函数
             imgPath(path){
               if (!path) return './images/noImg.png'

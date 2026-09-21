@@ -6,8 +6,10 @@ import com.reggie.module.marketing.mapper.FullReductionRuleMapper;
 import com.reggie.module.marketing.model.FullReductionRule;
 import com.reggie.module.marketing.model.DiscountRule;
 import com.reggie.module.marketing.model.CampaignUsageRecord;
+import com.reggie.module.marketing.model.MarketingCampaign;
 import com.reggie.module.marketing.mapper.DiscountRuleMapper;
 import com.reggie.module.marketing.mapper.CampaignUsageRecordMapper;
+import com.reggie.module.marketing.mapper.MarketingCampaignMapper;
 import com.reggie.module.marketing.service.MarketingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -42,6 +44,10 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
 
     @Autowired
     private CampaignUsageRecordMapper usageRecordMapper;
+
+    /** 营销活动主表 Mapper（精确查询生效中的满减活动） */
+    @Autowired
+    private MarketingCampaignMapper campaignMapper;
 
     // ==================== 满减规则管理 ====================
 
@@ -373,6 +379,186 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
 
         result.put("orderAmount", orderAmount);
         return result;
+    }
+
+    // ==================== C 端满减（生效活动 / 凑单试算 / 核销） ====================
+
+    /**
+     * 查询当前生效满减活动（类型=满减、状态=进行中、当前时间在活动区间）下的全部启用档位。
+     * <p>与 {@link #loadActiveFrRules} 的区别：本方法校验活动本身状态/时间/类型，可用于计费。</p>
+     */
+    private List<FullReductionRule> loadActiveFullReductionRules(Long tenantId) {
+        List<FullReductionRule> all = new ArrayList<>();
+        if (tenantId == null) {
+            return all;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        LambdaQueryWrapper<MarketingCampaign> campaignQw = new LambdaQueryWrapper<>();
+        campaignQw.eq(MarketingCampaign::getTenantId, tenantId)
+                .eq(MarketingCampaign::getCampaignType, MarketingCampaign.TYPE_FULL_REDUCTION)
+                .eq(MarketingCampaign::getStatus, MarketingCampaign.STATUS_ACTIVE)
+                .le(MarketingCampaign::getStartTime, now)
+                .ge(MarketingCampaign::getEndTime, now);
+        List<MarketingCampaign> campaigns = campaignMapper.selectList(campaignQw);
+        for (MarketingCampaign campaign : campaigns) {
+            all.addAll(getFullReductionRules(campaign.getId(), tenantId));
+        }
+        return all;
+    }
+
+    /**
+     * 计算单个档位在给定商品金额下的优惠金额。
+     * <p>减固定金额=discountValue；打折=金额×(1-折扣率)，受 maxDiscountAmount 封顶；赠品不计金额优惠。</p>
+     */
+    private BigDecimal ruleDiscount(FullReductionRule rule, BigDecimal goodsAmount) {
+        Integer type = rule.getDiscountType();
+        if (type != null && type == FullReductionRule.TYPE_REDUCE_AMOUNT) {
+            return rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
+        }
+        if (type != null && type == FullReductionRule.TYPE_DISCOUNT) {
+            BigDecimal rate = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
+            BigDecimal discount = goodsAmount.multiply(BigDecimal.ONE.subtract(rate));
+            return rule.getMaxDiscountAmount() != null ? discount.min(rule.getMaxDiscountAmount()) : discount;
+        }
+        return BigDecimal.ZERO;
+    }
+
+    @Override
+    public List<Map<String, Object>> getActiveFullReductionTiers(Long tenantId) {
+        List<FullReductionRule> rules = loadActiveFullReductionRules(tenantId);
+        List<Map<String, Object>> tiers = new ArrayList<>();
+        for (FullReductionRule rule : rules) {
+            Map<String, Object> tier = new HashMap<>();
+            tier.put("campaignId", rule.getCampaignId());
+            tier.put("ruleId", rule.getId());
+            tier.put("ruleName", rule.getRuleName());
+            tier.put("discountType", rule.getDiscountType());
+            tier.put("minAmount", rule.getMinAmount());
+            tier.put("discountValue", rule.getDiscountValue());
+            tier.put("maxDiscountAmount", rule.getMaxDiscountAmount());
+            tiers.add(tier);
+        }
+        return tiers;
+    }
+
+    @Override
+    public Map<String, Object> evaluateFullReduction(BigDecimal goodsAmount, Long userId, Long tenantId) {
+        Map<String, Object> result = new HashMap<>();
+        BigDecimal amount = goodsAmount != null ? goodsAmount : BigDecimal.ZERO;
+        result.put("goodsAmount", amount.setScale(2, RoundingMode.HALF_UP));
+
+        List<FullReductionRule> rules = loadActiveFullReductionRules(tenantId);
+        if (rules.isEmpty()) {
+            result.put("available", false);
+            result.put("hit", false);
+            result.put("discount", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            result.put("gap", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            result.put("progress", 0);
+            result.put("tiers", new ArrayList<>());
+            return result;
+        }
+        result.put("available", true);
+
+        // 一次性查当前用户各档核销计数（内存过滤 perUserLimit，避免 N+1）
+        Map<String, Integer> usageMap = userId != null
+                ? loadUsageCountMap(userId, tenantId) : new HashMap<>();
+
+        List<Map<String, Object>> tierViews = new ArrayList<>();
+        BigDecimal bestDiscount = BigDecimal.ZERO;
+        FullReductionRule hitRule = null;
+        FullReductionRule nextRule = null;
+
+        for (FullReductionRule rule : rules) {
+            BigDecimal min = rule.getMinAmount() != null ? rule.getMinAmount() : BigDecimal.ZERO;
+            boolean reached = amount.compareTo(min) >= 0;
+            boolean limited = false;
+            if (reached && rule.getPerUserLimit() != null && rule.getPerUserLimit() > 0) {
+                Integer used = usageMap.get(rule.getCampaignId() + "_" + rule.getId());
+                if (used != null && used >= rule.getPerUserLimit()) {
+                    limited = true;
+                }
+            }
+            BigDecimal discount = reached && !limited ? ruleDiscount(rule, amount) : BigDecimal.ZERO;
+
+            Map<String, Object> view = new HashMap<>();
+            view.put("ruleId", rule.getId());
+            view.put("ruleName", rule.getRuleName());
+            view.put("discountType", rule.getDiscountType());
+            view.put("minAmount", min);
+            view.put("reached", reached);
+            view.put("limited", limited);
+            view.put("previewDiscount", discount.setScale(2, RoundingMode.HALF_UP));
+            tierViews.add(view);
+
+            // 命中：已达成且未超每人限次，取优惠最大的一档
+            if (reached && !limited && discount.compareTo(bestDiscount) > 0) {
+                bestDiscount = discount;
+                hitRule = rule;
+            }
+            // 下一档：门槛高于当前金额的最近一档
+            if (!reached && (nextRule == null || min.compareTo(nextRule.getMinAmount()) < 0)) {
+                nextRule = rule;
+            }
+        }
+
+        result.put("tiers", tierViews);
+        result.put("discount", bestDiscount.setScale(2, RoundingMode.HALF_UP));
+        if (hitRule != null) {
+            result.put("hit", true);
+            result.put("campaignId", hitRule.getCampaignId());
+            result.put("ruleId", hitRule.getId());
+            result.put("ruleName", hitRule.getRuleName());
+            result.put("discountType", hitRule.getDiscountType());
+            result.put("currentMinAmount", hitRule.getMinAmount());
+        } else {
+            result.put("hit", false);
+        }
+
+        if (nextRule != null) {
+            BigDecimal gap = nextRule.getMinAmount().subtract(amount);
+            if (gap.compareTo(BigDecimal.ZERO) < 0) {
+                gap = BigDecimal.ZERO;
+            }
+            result.put("nextMinAmount", nextRule.getMinAmount());
+            result.put("nextRuleName", nextRule.getRuleName());
+            result.put("nextDiscountType", nextRule.getDiscountType());
+            // 达成下一档门槛时可享优惠（按门槛金额试算，供凑单文案；类型3赠品为0）
+            result.put("nextDiscount", ruleDiscount(nextRule, nextRule.getMinAmount())
+                    .setScale(2, RoundingMode.HALF_UP));
+            result.put("gap", gap.setScale(2, RoundingMode.HALF_UP));
+            // 进度 = 当前金额 / 下一档门槛 ×100（0~99，达成即100）
+            BigDecimal progress = amount.multiply(BigDecimal.valueOf(100))
+                    .divide(nextRule.getMinAmount(), 0, RoundingMode.DOWN);
+            if (progress.compareTo(BigDecimal.valueOf(99)) > 0) {
+                progress = BigDecimal.valueOf(99);
+            }
+            result.put("progress", progress.intValue());
+        } else {
+            // 无更高门槛档：已达最高档
+            result.put("nextMinAmount", null);
+            result.put("gap", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            result.put("progress", 100);
+        }
+        return result;
+    }
+
+    @Override
+    public void recordFullReductionUsage(Long campaignId, Long ruleId, Long orderId, String orderNumber, Long userId,
+            BigDecimal goodsAmount, BigDecimal discount, BigDecimal actualAmount, Long tenantId) {
+        CampaignUsageRecord record = new CampaignUsageRecord();
+        record.setCampaignId(campaignId);
+        record.setRuleId(ruleId);
+        record.setRuleType(1);
+        record.setOrderId(orderId);
+        record.setOrderNumber(orderNumber);
+        record.setUserId(userId);
+        record.setOrderAmount(goodsAmount);
+        record.setDiscountAmount(discount);
+        record.setActualAmount(actualAmount);
+        record.setUseTime(LocalDateTime.now());
+        record.setCreateTime(LocalDateTime.now());
+        record.setTenantId(tenantId);
+        usageRecordMapper.insert(record);
     }
 
     /**

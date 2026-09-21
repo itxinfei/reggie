@@ -1699,6 +1699,7 @@ CREATE TABLE `orders` (
   `pay_method` int NOT NULL DEFAULT '1' COMMENT '攻方式',
   `amount` decimal(10,2) NOT NULL COMMENT '实收金',
   `delivery_fee` decimal(10,2) DEFAULT NULL COMMENT '配费（卖单配费，堂食为 null',
+  `full_reduction_amount` decimal(10,2) DEFAULT '0.00' COMMENT '满减优惠金额（满减活动扣减，未享受为0）',
   `remark` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '备注',
   `expect_delivery_time` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '预送达时间',
   `phone` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL,

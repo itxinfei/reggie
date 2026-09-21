@@ -24,7 +24,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -110,6 +112,34 @@ public class OrderControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.data.id").exists())
                 .andExpect(jsonPath("$.data.number").exists())
                 .andExpect(jsonPath("$.data.duplicate").value(false));
+    }
+
+    @Test
+    void testSubmitWithFullReduction() throws Exception {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        // 生效满减活动：满20减5（setUp 购物车商品金额=2×10=20，正好命中）
+        jdbcTemplate.update("INSERT INTO marketing_campaign (id, tenant_id, name, campaign_type, status, start_time, end_time, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                10L, 1L, "满20减5", 1, 1, now.minusDays(1), now.plusDays(1), now, now);
+        jdbcTemplate.update("INSERT INTO full_reduction_rule (id, campaign_id, rule_name, discount_type, min_amount, discount_value, status, tenant_id, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                1L, 10L, "满20减5", 1, new BigDecimal("20.00"), new BigDecimal("5.00"), 1, 1L, now, now);
+
+        mockMvc.perform(withCsrfToken(mockMvc, post("/order/submit")
+                .sessionAttr("user", 1L)
+                .sessionAttr("tenantId", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"addressBookId\":1}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 商品20（无配送费/券）- 满减5 = 实付15，且满减金额落库
+        Map<String, Object> orderRow = jdbcTemplate.queryForMap(
+                "SELECT amount, full_reduction_amount FROM orders ORDER BY id DESC LIMIT 1");
+        assertEquals(0, new BigDecimal(String.valueOf(orderRow.get("amount"))).compareTo(new BigDecimal("15.00")));
+        assertEquals(0, new BigDecimal(String.valueOf(orderRow.get("full_reduction_amount"))).compareTo(new BigDecimal("5.00")));
+        // 核销记录1条，支撑每人限次与对账
+        Integer usageCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM campaign_usage_record WHERE campaign_id = 10 AND rule_id = 1", Integer.class);
+        assertEquals(1, usageCount);
     }
 
     @Test

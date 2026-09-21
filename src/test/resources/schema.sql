@@ -91,7 +91,6 @@ CREATE TABLE category (
   type int NOT NULL DEFAULT 1 COMMENT '类型 1 菜品分类 2 套餐分类',
   name varchar(64) NOT NULL COMMENT '分类名称',
   sort int NOT NULL DEFAULT 0 COMMENT '顺序',
-  status tinyint(1) NOT NULL DEFAULT 1 COMMENT '菜品及套餐分类',
   create_time datetime NOT NULL COMMENT '创建时间',
   update_time datetime NOT NULL COMMENT '更新时间',
   create_user bigint NOT NULL COMMENT '创建人',
@@ -195,6 +194,7 @@ CREATE TABLE orders (
   pay_method int NULL DEFAULT NULL COMMENT '攻方式',
   amount decimal(10,2) NOT NULL COMMENT '实收金',
   delivery_fee decimal(10,2) NULL DEFAULT NULL COMMENT '配送费（外卖单独立存储，堂食为0）',
+  full_reduction_amount decimal(10,2) NULL DEFAULT 0.00 COMMENT '满减优惠金额（满减活动扣减，未享受为0）',
   remark varchar(100) NULL DEFAULT NULL COMMENT '备注',
   internal_remark varchar(500) NULL DEFAULT NULL COMMENT '内部备注（仅后台可见）',
   expect_delivery_time varchar(20) NULL DEFAULT NULL COMMENT '预送达时间',
@@ -205,9 +205,6 @@ CREATE TABLE orders (
   dining_type varchar(20) NULL DEFAULT 'OUTSIDE' COMMENT '用类型',
   table_id bigint NULL DEFAULT NULL COMMENT '堂桌台ID',
   table_name varchar(32) NULL DEFAULT NULL COMMENT '堂桌台名称',
-  queue_id bigint NULL DEFAULT NULL COMMENT '排队记录ID',
-  reservation_id bigint NULL DEFAULT NULL COMMENT '预记录ID',
-  customer_count int NULL DEFAULT NULL COMMENT '用人数',
   idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等',
   stock_refunded int NULL DEFAULT 0 COMMENT '已库存数量',
   used_coupon_id bigint NULL DEFAULT NULL COMMENT '优惠券ID',
@@ -286,7 +283,6 @@ CREATE TABLE employee (
   update_user bigint NOT NULL COMMENT '修改人',
   password varchar(255) NOT NULL COMMENT '密码',
   password_type varchar(32) NOT NULL DEFAULT 'MD5' COMMENT '密码加密类型 MD5/BCRYPT',
-  is_deleted int NOT NULL DEFAULT 0 COMMENT '员工信息',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   role int NOT NULL DEFAULT 2 COMMENT '角色 1:超级管理员 2:普通员工',
   PRIMARY KEY (id)
@@ -654,4 +650,78 @@ CREATE INDEX idx_operation_log_tenant ON operation_log(tenant_id);
 CREATE INDEX idx_operation_log_operator ON operation_log(operator_id);
 CREATE INDEX idx_operation_log_module ON operation_log(module);
 CREATE INDEX idx_operation_log_time ON operation_log(create_time);
+
+-- ==================== 营销活动 / 满减规则 / 核销（满减引擎计费依赖） ====================
+CREATE TABLE marketing_campaign (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  tenant_id bigint NOT NULL COMMENT '租户ID',
+  name varchar(100) NOT NULL COMMENT '活动名称',
+  description varchar(500) NULL DEFAULT NULL COMMENT '活动描述',
+  campaign_type int NOT NULL COMMENT '活动类型 1:满减 2:折扣 3:赠品 4:首单 5:会员专享 6:秒杀',
+  target_type int NOT NULL DEFAULT 1 COMMENT '目标类型 1全部 2新用户 3高价值 4流失 5指定等级',
+  target_value varchar(500) NULL DEFAULT NULL COMMENT '目标值',
+  rule_json longtext NULL COMMENT '规则JSON',
+  status int NOT NULL DEFAULT 0 COMMENT '状态 0草稿 1进行中 2已结束 3暂停',
+  priority int NOT NULL DEFAULT 0 COMMENT '优先级',
+  start_time datetime NOT NULL COMMENT '开始时间',
+  end_time datetime NOT NULL COMMENT '结束时间',
+  max_participants int NULL DEFAULT NULL COMMENT '最大参与人数',
+  current_participants int NOT NULL DEFAULT 0 COMMENT '当前参与人数',
+  coupon_template_id bigint NULL DEFAULT NULL COMMENT '关联券模板ID',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '修改人',
+  create_time datetime NOT NULL COMMENT '创建时间',
+  update_time datetime NOT NULL COMMENT '更新时间',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_mc_tenant_status ON marketing_campaign(tenant_id, status);
+CREATE INDEX idx_mc_time ON marketing_campaign(start_time, end_time);
+
+CREATE TABLE full_reduction_rule (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  campaign_id bigint NOT NULL COMMENT '活动ID',
+  rule_name varchar(100) NULL DEFAULT NULL COMMENT '规则名称',
+  discount_type int NOT NULL COMMENT '类型 1减固定 2打折 3赠品',
+  min_amount decimal(10,2) NOT NULL COMMENT '门槛金额',
+  discount_value decimal(10,2) NOT NULL COMMENT '优惠值/折扣率',
+  max_discount_amount decimal(10,2) NULL DEFAULT NULL COMMENT '最大优惠金额',
+  gift_dish_id bigint NULL DEFAULT NULL COMMENT '赠品菜品ID',
+  gift_quantity int NULL DEFAULT NULL COMMENT '赠品数量',
+  stackable int NULL DEFAULT 0 COMMENT '是否可叠加',
+  daily_limit int NULL DEFAULT NULL COMMENT '每日限次',
+  per_user_limit int NULL DEFAULT NULL COMMENT '每人限次',
+  sort_order int NULL DEFAULT 0 COMMENT '排序',
+  status int NULL DEFAULT 1 COMMENT '状态 0禁用 1启用',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '更新人',
+  create_time datetime NOT NULL COMMENT '创建时间',
+  update_time datetime NOT NULL COMMENT '更新时间',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_frr_campaign ON full_reduction_rule(campaign_id);
+CREATE INDEX idx_frr_tenant ON full_reduction_rule(tenant_id);
+
+CREATE TABLE campaign_usage_record (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  campaign_id bigint NOT NULL COMMENT '活动ID',
+  rule_id bigint NULL DEFAULT NULL COMMENT '规则ID',
+  rule_type int NULL DEFAULT NULL COMMENT '类型 1满减 2折扣',
+  order_id bigint NULL DEFAULT NULL COMMENT '订单ID',
+  order_number varchar(50) NULL DEFAULT NULL COMMENT '订单号',
+  user_id bigint NULL DEFAULT NULL COMMENT '用户ID',
+  order_amount decimal(10,2) NULL DEFAULT NULL COMMENT '商品金额',
+  discount_amount decimal(10,2) NULL DEFAULT NULL COMMENT '优惠金额',
+  actual_amount decimal(10,2) NULL DEFAULT NULL COMMENT '满减后金额',
+  use_time datetime NULL DEFAULT NULL COMMENT '使用时间',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  create_time datetime NOT NULL COMMENT '创建时间',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_cur_campaign ON campaign_usage_record(campaign_id);
+CREATE INDEX idx_cur_user ON campaign_usage_record(user_id);
+CREATE INDEX idx_cur_order ON campaign_usage_record(order_id);
+CREATE INDEX idx_cur_time ON campaign_usage_record(use_time);
+CREATE INDEX idx_cur_tenant ON campaign_usage_record(tenant_id);
 

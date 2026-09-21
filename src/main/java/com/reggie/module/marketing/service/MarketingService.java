@@ -125,6 +125,42 @@ public interface MarketingService extends IService<FullReductionRule> {
      */
     Map<String, Object> calculateBestDiscount(BigDecimal orderAmount, List<Long> dishIds, Long userId, Long tenantId);
 
+    // ==================== C 端满减（生效活动 / 凑单试算 / 核销） ====================
+
+    /**
+     * 查询当前生效满减活动的全部启用档位（不含金额，供首页凑单进度条本地计算差额）
+     *
+     * @param tenantId 租户ID
+     * @return 档位列表，每项含 campaignId/ruleId/ruleName/discountType/minAmount/discountValue/maxDiscountAmount
+     */
+    List<Map<String, Object>> getActiveFullReductionTiers(Long tenantId);
+
+    /**
+     * 权威满减试算（结算页展示与下单计费同源，永不漂移）。
+     *
+     * @param goodsAmount 商品金额（不含配送费）
+     * @param userId      用户ID
+     * @param tenantId    租户ID
+     * @return 试算结果：available/discount/命中档/下一档门槛/差额/进度/全部档位
+     */
+    Map<String, Object> evaluateFullReduction(BigDecimal goodsAmount, Long userId, Long tenantId);
+
+    /**
+     * 记录满减核销（订单落库成功后写入 campaign_usage_record，支撑每人限次与对账）。
+     *
+     * @param campaignId   活动ID
+     * @param ruleId       规则ID
+     * @param orderId      订单ID
+     * @param orderNumber  订单号
+     * @param userId       用户ID
+     * @param goodsAmount  商品金额
+     * @param discount     满减优惠金额
+     * @param actualAmount 满减后商品金额
+     * @param tenantId     租户ID
+     */
+    void recordFullReductionUsage(Long campaignId, Long ruleId, Long orderId, String orderNumber, Long userId,
+            BigDecimal goodsAmount, BigDecimal discount, BigDecimal actualAmount, Long tenantId);
+
     // ==================== 使用记录 ====================
 
     /**
