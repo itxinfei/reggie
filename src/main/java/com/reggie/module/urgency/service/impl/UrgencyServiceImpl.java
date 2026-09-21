@@ -189,6 +189,52 @@ public class UrgencyServiceImpl implements UrgencyService {
     }
 
     /**
+     * C 端顾客催单：校验租户/归属/状态后复用频率控制与落库，并通知店长。
+     *
+     * @param orderId       订单ID
+     * @param currentUserId 当前登录顾客ID
+     * @return 催单结果（含今日已用/剩余次数）
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public R<Map<String, Object>> customerTrigger(Long orderId, Long currentUserId) {
+        log.info("[催单] C端顾客催单: orderId={}, userId={}", orderId, currentUserId);
+        if (orderId == null) {
+            return R.error("订单ID不能为空");
+        }
+        if (currentUserId == null) {
+            return R.error("用户信息缺失");
+        }
+        Orders order = orderMapper.selectById(orderId);
+        if (order == null) {
+            return R.error("订单不存在");
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null || !tenantId.equals(order.getTenantId())) {
+            return R.error("订单信息异常");
+        }
+        // 归属校验：仅订单本人可催
+        if (!currentUserId.equals(order.getUserId())) {
+            log.warn("[催单] 非本人催单被拦: orderId={}, operator={}, owner={}",
+                    orderId, currentUserId, order.getUserId());
+            return R.error("只能对自己的订单催单");
+        }
+        // 状态校验：待接单/配送中才可催
+        Integer orderStatus = order.getStatus();
+        if (orderStatus == null || !PENDING_STATUSES.contains(orderStatus)) {
+            return R.error("当前订单状态暂不需要催单");
+        }
+        // 复用每日限次 + 催单记录落库
+        R<Map<String, Object>> triggered = triggerUrgency(orderId, currentUserId, order.getNumber());
+        if (triggered != null && triggered.getCode() != null && triggered.getCode() == 1) {
+            // 通知店长；控制台短信模式仅打印不调接口，异常已在 notifyManagers 内兜底，不影响催单结果
+            notifyManagers(tenantId, "顾客催单提醒",
+                    "顾客对订单 " + tail(order.getNumber()) + " 发起催单，请尽快处理");
+        }
+        return triggered;
+    }
+
+    /**
      * 查询催单记录列表
      *
      * @param memberId 会员ID
@@ -587,6 +633,13 @@ public class UrgencyServiceImpl implements UrgencyService {
      * 短信默认 Mock 模式仅打日志，生产需配置阿里云短信凭证并关闭 mock-mode。
      */
     private void notifyManagers(Long tenantId, String content) {
+        notifyManagers(tenantId, "未接单告警", content);
+    }
+
+    /**
+     * 通知在职且有手机号的店长（短信；未配置短信接口时仅控制台打印，不调接口）。
+     */
+    private void notifyManagers(Long tenantId, String title, String content) {
         try {
             List<Employee> managers = employeeService.lambdaQuery()
                     .eq(Employee::getTenantId, tenantId)
@@ -607,8 +660,8 @@ public class UrgencyServiceImpl implements UrgencyService {
             if (phones.isEmpty()) {
                 return;
             }
-            notificationService.sendSimpleMessage(1, phones, "未接单告警", content);
-            log.info("[漏单预警] 已通知店长: tenantId={}, phones={}", tenantId, phones);
+            notificationService.sendSimpleMessage(1, phones, title, content);
+            log.info("[漏单预警] 已通知店长: tenantId={}, title={}, phones={}", tenantId, title, phones);
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[漏单预警] 通知店长失败: tenantId={}, error={}", tenantId, e.getMessage());

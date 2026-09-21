@@ -144,9 +144,11 @@
                     <div class="act-btn act-primary" @click="goToPay">去支付</div>
                 </template>
                 <template v-if="order.status === 2">
+                    <div class="act-btn act-outline" @click="urgeOrder">催单</div>
                     <div class="act-btn act-outline" @click="viewTracking">查看配送</div>
                 </template>
                 <template v-if="order.status === 3">
+                    <div class="act-btn act-outline" @click="urgeOrder">催单</div>
                     <div class="act-btn act-outline" @click="viewTracking">查看配送</div>
                     <div class="act-btn act-primary" @click="confirmReceipt">确认收货</div>
                 </template>
@@ -253,6 +255,31 @@
                         })
                     } else {
                         vant.Toast.fail('该订单暂无配送追踪信息')
+                    }
+                },
+                urgeOrder: async function() {
+                    if (this._urging) return
+                    this._urging = true
+                    try {
+                        var res = await $axios({
+                            url: '/api/urgency/customer/trigger/' + this.orderId,
+                            method: 'post'
+                        })
+                        if (res && res.code === 1) {
+                            var d = res.data || {}
+                            if (d.remainCount !== undefined && d.remainCount !== null) {
+                                vant.Toast.success('已通知商家，今日还可催' + d.remainCount + '次')
+                            } else {
+                                vant.Toast.success('已通知商家，请耐心等待')
+                            }
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '催单失败，请稍后重试')
+                        }
+                    } catch (e) {
+                        console.warn('[order-detail] 催单失败:', e)
+                        vant.Toast.fail('网络异常，请稍后重试')
+                    } finally {
+                        this._urging = false
                     }
                 },
                 cancelOrder: function() {

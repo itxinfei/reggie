@@ -76,6 +76,15 @@ public interface UrgencyService {
     R<Map<String, Object>> triggerUrgency(Long orderId, Long memberId, String orderNo);
 
     /**
+     * C 端顾客催单（校验订单归属、租户与状态后复用频率控制与落库，并通知店长）
+     *
+     * @param orderId       订单ID
+     * @param currentUserId 当前登录顾客ID
+     * @return 催单结果（含今日已用/剩余次数）
+     */
+    R<Map<String, Object>> customerTrigger(Long orderId, Long currentUserId);
+
+    /**
      * 查询催单记录列表
      *
      * @param memberId 会员ID
