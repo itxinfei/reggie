@@ -309,8 +309,8 @@
           </div>
         </div>
         <div class="divBottom">
-          <div><span class="spanMoney">￥</span>{{ Number(dialogFlavor.price || 0).toFixed(2) }}</div>
-          <div @click="dialogFlavorAddCart">加入购物车</div>
+          <div class="flavor-price"><span class="spanMoney">¥</span>{{ Number(dialogFlavor.price || 0).toFixed(2) }}</div>
+          <div class="flavor-cta" @click="dialogFlavorAddCart">加入购物车</div>
         </div>
         <div class="divFlavorClose" @click="dialogFlavor.show = false">
           <i class="ri-close-line"></i>
@@ -359,11 +359,13 @@
         class="detailsDialog"
         ref="detailsDialog"
       >
+        <!-- 顶部全出血固定比例大图（object-fit:cover，长图不再撑爆弹窗），点击可放大预览 -->
+        <div class="dialog-hero">
+          <img :src="imgPath(detailsDialog.item.image)" @error="imgError" @click.stop="previewDishImage(imgPath(detailsDialog.item.image))" loading="lazy" :alt="detailsDialog.item.name || '菜品大图'">
+        </div>
         <div class="divContainer">
-          <!-- 修改点：菜品图加点击预览（van-image-preview 大图），解决小图看不清问题 -->
-          <img :src="imgPath(detailsDialog.item.image)" @error="imgError" class="dialog-img" @click.stop="previewDishImage(imgPath(detailsDialog.item.image))" loading="lazy" :alt="detailsDialog.item.name || '菜品大图'">
           <div class="title">{{ detailsDialog.item.name }}</div>
-          <div class="content">{{ detailsDialog.item.description }}</div>
+          <div class="content" v-if="detailsDialog.item.description">{{ detailsDialog.item.description }}</div>
           <!-- 评价展示 -->
           <div class="eval-section" v-if="detailsDialog.item.evalStats">
             <div class="eval-summary">
@@ -389,17 +391,19 @@
         </div>
         <div class="divNum">
           <div class="left">
-            <span>￥</span><span>{{ Number(detailsDialog.item.price || 0).toFixed(2) }}</span>
+            <span>¥</span><span>{{ Number(detailsDialog.item.price || 0).toFixed(2) }}</span>
           </div>
           <div class="right">
-            <div class="divSubtract" v-if="detailsDialog.item.number > 0">
-              <i class="ri-subtract-line" @click="subtractCart(detailsDialog.item)"></i>
-            </div>
-            <div class="divDishNum" v-if="detailsDialog.item.number">{{ detailsDialog.item.number }}</div>
-            <div class="divTypes" v-if="detailsDialog.item.flavors && detailsDialog.item.flavors.length > 0 && !detailsDialog.item.number" @click="chooseFlavorClick(detailsDialog.item)">选择规格</div>
-            <div class="divAdd" v-else>
-              <i class="ri-add-line" @click="addCart(detailsDialog.item)"></i>
-            </div>
+            <!-- 已加入：减/数量/加 圆钮组 -->
+            <template v-if="detailsDialog.item.number">
+              <span class="dd-sub" @click="subtractCart(detailsDialog.item)"><i class="ri-subtract-line"></i></span>
+              <span class="dd-num">{{ detailsDialog.item.number }}</span>
+              <span class="dd-add" @click="addCart(detailsDialog.item)"><i class="ri-add-line"></i></span>
+            </template>
+            <!-- 未加入：金色大胶囊（有规格点「选规格」，否则直接加入购物车） -->
+            <span class="dd-cta" v-else
+              @click="(detailsDialog.item.flavors && detailsDialog.item.flavors.length > 0) ? chooseFlavorClick(detailsDialog.item) : addCart(detailsDialog.item)"
+            >{{ (detailsDialog.item.flavors && detailsDialog.item.flavors.length > 0) ? '选规格' : '加入购物车' }}</span>
           </div>
         </div>
         <div class="detailsDialogClose" @click="detailsDialog.show = false">
@@ -417,29 +421,32 @@
         <div class="divContainer">
           <div class="title">{{ setMealDialog.item.name }}</div>
           <div class="item" v-for="(item,index) in setMealDialog.item.list" :key="index">
-            <!-- 修改点：套餐子项图加点击预览，与菜品详情一致 -->
-            <img :src="imgPath(item.image)" @error="imgError" class="meal-img" @click.stop="previewDishImage(imgPath(item.image), setMealDialog.item.list.map(s => imgPath(s.image)), index)" loading="lazy" :alt="item.name || '套餐菜品图'">
-            <div class="divSubTitle">{{ item.name + '(' + item.copies + '份)' }}
-              <div class="divPrice">
-                <span>￥</span><span>{{ Number(item.price || 0).toFixed(2) }}</span>
+            <!-- 横向明细行：小缩略图 + 右侧名称份数/描述/价格 -->
+            <div class="meal-body">
+              <img :src="imgPath(item.image)" @error="imgError" class="meal-img" @click.stop="previewDishImage(imgPath(item.image), setMealDialog.item.list.map(s => imgPath(s.image)), index)" loading="lazy" :alt="item.name || '套餐菜品图'">
+              <div class="meal-info">
+                <div class="meal-name-row">
+                  <span class="meal-name">{{ item.name }}<em class="meal-copies">×{{ item.copies }}</em></span>
+                  <span class="divPrice"><span>¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
+                </div>
+                <div class="content" v-if="item.description">{{ item.description }}</div>
               </div>
             </div>
-            <div class="content">{{ item.description }}</div>
           </div>
         </div>
         <div class="divNum">
           <div class="left">
-            <span>￥</span><span>{{ Number(setMealDialog.item.price || 0).toFixed(2) }}</span>
+            <span>¥</span><span>{{ Number(setMealDialog.item.price || 0).toFixed(2) }}</span>
           </div>
           <div class="right">
-            <div class="divSubtract" v-if="setMealDialog.item.number > 0">
-              <i class="ri-subtract-line" @click="subtractCart(setMealDialog.item)"></i>
-            </div>
-            <div class="divDishNum" v-if="setMealDialog.item.number">{{ setMealDialog.item.number }}</div>
-            <div class="divAdd" v-if="setMealDialog.item.number">
-              <i class="ri-add-line" @click="addCart(setMealDialog.item)"></i>
-            </div>
-            <div class="addCart" @click="addCart(setMealDialog.item)" v-if="!setMealDialog.item.number">加入购物车</div>
+            <!-- 已加入：减/数量/加 圆钮组 -->
+            <template v-if="setMealDialog.item.number">
+              <span class="dd-sub" @click="subtractCart(setMealDialog.item)"><i class="ri-subtract-line"></i></span>
+              <span class="dd-num">{{ setMealDialog.item.number }}</span>
+              <span class="dd-add" @click="addCart(setMealDialog.item)"><i class="ri-add-line"></i></span>
+            </template>
+            <!-- 未加入：金色大胶囊 -->
+            <span class="dd-cta" v-else @click="addCart(setMealDialog.item)">加入购物车</span>
           </div>
         </div>
         <div class="detailsDialogClose" @click="setMealDialog.show = false">

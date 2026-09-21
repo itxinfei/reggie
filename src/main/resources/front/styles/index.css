@@ -74,6 +74,7 @@
 
   /* ---- 星级（评价/评分统一） ---- */
   --color-star: #f7ba2a;
+  --color-star-tint: rgba(247, 186, 42, 0.14);
 
   /* ---- 购物车底部栏（深色） ---- */
   --bg-cart-bar: #3B3B3B;
@@ -173,6 +174,46 @@
   /* ---- 动画 ---- */
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ================================================================
+     2026-09-21 对标美团/饿了么增补：功能图标多色 / 线条 / CTA / 弹窗
+     规则：金色只留品牌头部、主 CTA、选中态；功能图标一律走下方语义色
+     ================================================================ */
+  /* 功能图标多色体系（图标色 + 10% 底色，低饱和） */
+  --icon-order: #4a7dff;
+  --icon-order-bg: rgba(74, 125, 255, 0.10);     /* 订单蓝 */
+  --icon-coupon: #f34346;
+  --icon-coupon-bg: rgba(243, 67, 70, 0.10);     /* 红包红 */
+  --icon-address: #2ba471;
+  --icon-address-bg: rgba(43, 164, 113, 0.10);   /* 地址绿 */
+  --icon-favorite: #ff8800;
+  --icon-favorite-bg: rgba(255, 136, 0, 0.10);   /* 收藏橙 */
+  --icon-service: #13c2c2;
+  --icon-service-bg: rgba(19, 194, 194, 0.10);   /* 客服蓝绿 */
+  --icon-invoice: #7a6cf5;
+  --icon-invoice-bg: rgba(122, 108, 245, 0.10);  /* 发票紫 */
+  --icon-message: #fa8c16;
+  --icon-message-bg: rgba(250, 140, 22, 0.10);   /* 消息橙 */
+
+  /* 线条（全站禁用 2px/2rem/3px 分隔线，进度线/时间线除外） */
+  --separator: 1px solid var(--border-light);
+  --separator-dashed: 1px dashed var(--border-light);
+
+  /* 按钮 / CTA 规范 */
+  --btn-h: 44rem;
+  --btn-md-h: 36rem;
+  --btn-sm-h: 28rem;
+  --btn-radius: 999rem;
+  --btn-font: 16rem;
+  --btn-px: 28rem;
+  --btn-secondary-border: 1px solid var(--border-medium);
+  --shadow-cta: 0 4rem 12rem rgba(255, 154, 0, 0.25);
+  /* 浮层/底部弹层顶投影（悬浮提升场景复用现有 --shadow-card-hover） */
+  --shadow-sheet: 0 -4rem 20rem rgba(0, 0, 0, 0.08);
+
+  /* 弹窗统一尺寸 */
+  --dialog-width: 335rem;
+  --dialog-radius: var(--radius-xl);
 }
 /* 修改点(2026-09-17)：全站骨架屏动画统一为 @keyframes rg-skeleton-shine，各页面删除独立定义 */
 @keyframes rg-skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }

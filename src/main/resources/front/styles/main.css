@@ -226,12 +226,12 @@
 }
 
 /* ---- 商家信息卡片 ---- */
-/* 修改点(2026-09-14 对齐美团)：放大圆角与留白、logo 更大更圆、店名加重 */
+/* 修改点(2026-09-21)：圆角 14→12、暖色投影换中性 shadow-card */
 .restaurant-card {
   background: var(--bg-card);
-  border-radius: 14rem;
+  border-radius: var(--radius-lg);
   padding: 16rem 14rem 10rem 14rem;
-  box-shadow: 0 6rem 18rem rgba(120, 80, 0, 0.08);
+  box-shadow: var(--shadow-card);
   position: relative;
   z-index: 2;
 }
@@ -243,9 +243,9 @@
 }
 
 .restaurant-card .rc-logo {
-  width: 60rem;
-  height: 60rem;
-  border-radius: 10rem;
+  width: 56rem;
+  height: 56rem;
+  border-radius: var(--radius-md);
   flex-shrink: 0;
   margin-right: 12rem;
   object-fit: cover;
@@ -264,11 +264,11 @@
 }
 
 .restaurant-card .rc-name {
-  font-size: 19rem;
-  font-weight: 800;
+  font-size: 17rem;
+  font-weight: 700;
   color: var(--color-text-primary);
   margin-right: 6rem;
-  line-height: 24rem;
+  line-height: 22rem;
 }
 
 .restaurant-card .rc-brand {
@@ -436,9 +436,9 @@
   position: relative;
 }
 
-/* ---- 左侧分类栏（精确美团样式） ---- */
+/* ---- 左侧分类栏（2026-09-21 宽度 86→80，学饿了么窄侧栏） ---- */
 .category-sidebar {
-  width: 86rem;
+  width: 80rem;
   flex-shrink: 0;
   /* 修改点(2026-09-16)：绑定固定高度，使其成为独立滚动容器（修复无法滑动） */
   height: 100%;
@@ -605,11 +605,11 @@
 }
 
 /* 菜品条目 */
-/* 修改点(2026-09-14 对齐美团)：行高留白 +2rem，缩略图 88→90rem，分割线起点随之后移 */
+/* 修改点(2026-09-21 学饿了么紧凑)：padding 14→10，缩略图 90→80，分割线起点随之后移 */
 .dish-item {
   display: flex;
   align-items: flex-start;
-  padding: 14rem 14rem;
+  padding: 10rem;
   position: relative;
 }
 
@@ -617,8 +617,8 @@
   content: '';
   position: absolute;
   bottom: 0;
-  left: 118rem;
-  right: 14rem;
+  left: 102rem;
+  right: 10rem;
   height: 1px;
   background: var(--bg-hover);
 }
@@ -628,9 +628,9 @@
 }
 
 .dish-item .di-image {
-  width: 90rem;
-  height: 90rem;
-  border-radius: 8rem;
+  width: 80rem;
+  height: 80rem;
+  border-radius: var(--radius-md);
   flex-shrink: 0;
   overflow: hidden;
   position: relative;
@@ -639,17 +639,7 @@
   background: var(--bg-input);
 }
 
-.dish-item .di-image img {
-  width: 100%;
-  height: 100%;
-}
-
-.dish-item .di-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
+.dish-item .di-image img,
 .dish-item .di-image .image-slot img {
   width: 100%;
   height: 100%;
@@ -678,7 +668,7 @@
   display: flex;
   flex-direction: column;
   padding-right: 0;
-  min-height: 90rem;
+  min-height: 80rem;
 }
 
 .dish-item .di-name {
@@ -983,45 +973,55 @@
 /* Vant van-dialog 默认 overflow:hidden，需用 !important 覆盖以确保关闭按钮可见 */
 #main .dialogFlavor {
   background: var(--bg-card);
-  border-radius: var(--radius-xl);
-  overflow: visible !important;
+  border-radius: var(--dialog-radius);
+  /* 2026-09-21：弹窗宽度/最大高度显式管理，flex 列布局（标题固定/规格滚动/底栏固定） */
+  width: var(--dialog-width);
+  max-width: calc(100vw - 40rem);
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
 }
 
 #main .dialogFlavor .dialogTitle {
-  margin-top: 22rem;
-  margin-bottom: 14rem;
-  font-size: 18rem;
+  flex-shrink: 0;
+  padding: 20rem 40rem 12rem;
+  font-size: 17rem;
   font-weight: 700;
   color: var(--color-text-primary);
   text-align: center;
 }
 
 #main .dialogFlavor .divContent {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   margin: 0 16rem;
 }
 
 #main .dialogFlavor .divContent .divFlavorTitle {
-  font-size: 14rem;
-  color: var(--color-text-secondary);
+  font-size: 13rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
   line-height: 20rem;
-  margin-left: 4rem;
   margin-bottom: 8rem;
-  margin-top: 8rem;
+  margin-top: 4rem;
 }
 
 #main .dialogFlavor .divContent span {
   display: inline-block;
-  height: 30rem;
+  height: 32rem;
   background: var(--bg-card);
-  border: 1px solid var(--color-text-disabled);
-  border-radius: var(--radius-lg);
-  line-height: 30rem;
-  padding: 0 14rem;
-  margin: 0 4rem 8rem 4rem;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  line-height: 32rem;
+  padding: 0 16rem;
+  margin: 0 6rem 8rem 0;
   font-size: 13rem;
   color: var(--color-text-primary);
   cursor: pointer;
   transition: all 0.15s;
+  box-sizing: border-box;
 }
 
 #main .dialogFlavor .divContent span:active {
@@ -1035,14 +1035,15 @@
 }
 
 #main .dialogFlavor .divBottom {
-  margin: 16rem 0;
-  padding: 0 20rem;
+  flex-shrink: 0;
+  padding: 10rem 16rem 14rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-top: var(--separator);
 }
 
-#main .dialogFlavor .divBottom div:first-child {
+#main .dialogFlavor .divBottom .flavor-price {
   font-size: 20rem;
   font-weight: 700;
   color: var(--color-price);
@@ -1051,26 +1052,26 @@
   line-height: 30rem;
 }
 
-#main .dialogFlavor .divBottom div:first-child .spanMoney {
+#main .dialogFlavor .divBottom .flavor-price .spanMoney {
   font-size: 14rem;
 }
 
-#main .dialogFlavor .divBottom div:last-child {
-  width: 110rem;
-  height: 34rem;
+#main .dialogFlavor .divBottom .flavor-cta {
+  width: 132rem;
+  height: 40rem;
   background: var(--color-primary-gradient);
-  border-radius: var(--radius-xl);
+  border-radius: var(--btn-radius);
   text-align: center;
-  line-height: 34rem;
-  font-size: 14rem;
+  line-height: 40rem;
+  font-size: 15rem;
   font-weight: 700;
   color: var(--color-text-primary);
   cursor: pointer;
   transition: all 0.15s;
 }
 
-#main .dialogFlavor .divBottom div:last-child:active {
-  transform: scale(0.95);
+#main .dialogFlavor .divBottom .flavor-cta:active {
+  transform: scale(0.96);
 }
 
 /* 修改点：关闭按钮从弹窗下方移到弹窗内部右上角，避免被 overflow:hidden 裁剪 */
@@ -1189,8 +1190,9 @@
 }
 
 #main .dialogCart .divCartContent .cart-img {
-  width: 50rem;
-  height: 50rem;
+  /* 2026-09-21：50→64，与结算页缩略图档位统一（美团购物车 64） */
+  width: 64rem;
+  height: 64rem;
   flex-shrink: 0;
   margin-right: 12rem;
   border-radius: var(--radius-md);
@@ -1230,18 +1232,39 @@
 #main .dialogCart .divCartContent .divCartItem .divNum {
   display: flex;
   align-items: center;
-  gap: 4rem;
+  gap: 6rem;
 }
 
+/* 2026-09-21：加减由 26 线图标统一为 26 圆钮（+ 金实圆 / − 白金边），与菜品行同款 */
 #main .dialogCart .divCartContent .divCartItem .divNum i {
-  font-size: 26rem;
+  width: 26rem;
+  height: 26rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: transform 0.12s;
-  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+#main .dialogCart .divCartContent .divCartItem .divNum .ri-add-line {
+  background: var(--color-primary-gradient);
+  box-shadow: 0 2rem 6rem var(--color-primary-shadow);
+  font-size: 16rem;
+  color: var(--color-text-white);
+}
+
+#main .dialogCart .divCartContent .divCartItem .divNum .ri-subtract-line {
+  background: var(--color-text-white);
+  border: 1px solid var(--color-primary);
+  box-sizing: border-box;
+  font-size: 15rem;
+  color: var(--color-primary-dark);
 }
 
 #main .dialogCart .divCartContent .divCartItem .divNum i:active {
-  transform: scale(0.82);
+  transform: scale(0.85);
 }
 
 #main .dialogCart .divCartContent .divCartItem .divNum .divDishNum {
@@ -1255,7 +1278,7 @@
 #main .dialogCart .divCartContent .divCartItem .divSplit {
   position: absolute;
   bottom: 0;
-  left: 62rem;
+  left: 76rem;
   right: 0;
   height: 1px;
   background: var(--bg-page);
@@ -1268,152 +1291,206 @@
 /* ================================================================
    菜品详情弹窗
    ================================================================ */
-/* 修改点：添加 overflow: visible !important 覆盖 Vant van-dialog 默认 overflow:hidden */
+/* 2026-09-21 对标美团重构：顶部全出血大图 + 主体滚动 + 固定底栏 */
 #main .detailsDialog {
   display: flex;
   flex-direction: column;
-  text-align: center;
-  overflow: visible !important;
+  text-align: left;
+  width: var(--dialog-width);
+  max-width: calc(100vw - 40rem);
+  max-height: 78vh;
+  border-radius: var(--dialog-radius);
+  overflow: hidden !important;
+}
+
+/* 顶部全出血固定比例大图（仅顶部跟随弹窗圆角），长图不再撑爆弹窗 */
+#main .detailsDialog .dialog-hero {
+  flex-shrink: 0;
+  position: relative;
+  height: 220rem;
+  border-radius: var(--dialog-radius) var(--dialog-radius) 0 0;
+  overflow: hidden;
+}
+
+#main .detailsDialog .dialog-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: zoom-in;
 }
 
 #main .detailsDialog .divContainer {
-  padding: 20rem 20rem 0 20rem;
-  overflow: auto;
-  max-height: 50vh;
-}
-
-#main .detailsDialog .dialog-img {
-  width: 100%;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-#main .detailsDialog .dialog-img img {
-  width: 100%;
-  border-radius: var(--radius-lg);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16rem;
 }
 
 #main .detailsDialog .title {
-  font-size: 18rem;
+  font-size: 17rem;
   font-weight: 700;
   color: var(--color-text-primary);
-  line-height: 28rem;
-  margin-top: 14rem;
-  margin-bottom: 8rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 24rem;
+  margin-bottom: 6rem;
 }
 
 #main .detailsDialog .content {
-  font-size: 14rem;
+  font-size: 13rem;
   color: var(--color-text-secondary);
-  line-height: 22rem;
-  text-align: justify;
+  line-height: 20rem;
 }
 
 #main .detailsDialog .divNum {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 18rem;
-  margin-bottom: 16rem;
-  padding: 0 20rem;
+  padding: 10rem 16rem 12rem;
+  border-top: var(--separator);
 }
 
-#main .detailsDialog .divNum .left {
+/* ================================================================
+   2026-09-21 菜品/套餐详情弹窗 —— 底栏通用元素（两弹窗共用）
+   ================================================================ */
+#main .detailsDialog .divNum .left,
+#main .setMealDetailsDialog .divNum .left {
+  display: flex;
+  align-items: baseline;
+  color: var(--color-price);
   font-size: 20rem;
   font-weight: 700;
-  color: var(--color-price);
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
-  line-height: 36rem;
 }
 
-#main .detailsDialog .divNum .left span:first-child {
-  font-size: 12rem;
+#main .detailsDialog .divNum .left span:first-child,
+#main .setMealDetailsDialog .divNum .left span:first-child {
+  font-size: 14rem;
+  font-weight: 600;
+  margin-right: 2rem;
 }
 
-#main .detailsDialog .divNum .right {
+#main .detailsDialog .divNum .right,
+#main .setMealDetailsDialog .divNum .right {
   display: flex;
   align-items: center;
-  gap: 4rem;
+  gap: 8rem;
 }
 
-#main .detailsDialog .divNum .divDishNum {
-  font-size: 15rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  min-width: 18rem;
-  text-align: center;
-}
-
-#main .detailsDialog .divNum .divTypes {
-  height: 28rem;
+/* 主 CTA：金色大胶囊（高 40、999 圆角、深字） */
+#main .detailsDialog .dd-cta,
+#main .setMealDetailsDialog .dd-cta {
+  height: 40rem;
+  padding: 0 24rem;
+  border-radius: 999rem;
   background: var(--color-primary-gradient);
-  border-radius: var(--radius-lg);
-  font-size: 12rem;
-  font-weight: 600;
+  box-shadow: var(--shadow-cta);
   color: var(--color-text-primary);
-  line-height: 28rem;
-  padding: 0 14rem;
+  font-size: 15rem;
+  font-weight: 700;
+  line-height: 40rem;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: transform 0.12s;
 }
 
-#main .detailsDialog .divNum .divTypes:active {
+#main .detailsDialog .dd-cta:active,
+#main .setMealDetailsDialog .dd-cta:active {
   transform: scale(0.95);
 }
 
-#main .detailsDialog .divNum i {
-  font-size: 26rem;
+/* 已加入后：减 / 数量 / 加 圆钮组（与菜品行、购物车同款） */
+#main .detailsDialog .dd-add,
+#main .setMealDetailsDialog .dd-add,
+#main .detailsDialog .dd-sub,
+#main .setMealDetailsDialog .dd-sub {
+  width: 28rem;
+  height: 28rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  flex-shrink: 0;
   transition: transform 0.12s;
-  color: var(--color-primary);
 }
 
-#main .detailsDialog .divNum i:active {
-  transform: scale(0.82);
+#main .detailsDialog .dd-add,
+#main .setMealDetailsDialog .dd-add {
+  background: var(--color-primary-gradient);
+  box-shadow: 0 2rem 6rem var(--color-primary-shadow);
 }
 
-/* 修改点：修复关闭按钮位置，避免被 van-dialog overflow:hidden 裁剪 */
+#main .detailsDialog .dd-add i,
+#main .setMealDetailsDialog .dd-add i {
+  font-size: 16rem;
+  color: var(--color-text-white);
+}
+
+#main .detailsDialog .dd-sub,
+#main .setMealDetailsDialog .dd-sub {
+  background: var(--color-text-white);
+  border: 1px solid var(--color-primary);
+  box-sizing: border-box;
+}
+
+#main .detailsDialog .dd-sub i,
+#main .setMealDetailsDialog .dd-sub i {
+  font-size: 15rem;
+  color: var(--color-primary-dark);
+}
+
+#main .detailsDialog .dd-add:active,
+#main .setMealDetailsDialog .dd-add:active,
+#main .detailsDialog .dd-sub:active,
+#main .setMealDetailsDialog .dd-sub:active {
+  transform: scale(0.85);
+}
+
+#main .detailsDialog .dd-num,
+#main .setMealDetailsDialog .dd-num {
+  min-width: 22rem;
+  text-align: center;
+  font-size: 15rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* 关闭钮叠在 hero 右上角：深色半透明圆 + 白色 X（美团式） */
 #main .detailsDialog .detailsDialogClose {
   position: absolute;
-  top: 8rem;
-  right: 8rem;
-  width: 32rem;
-  height: 32rem;
+  top: 10rem;
+  right: 10rem;
+  width: 28rem;
+  height: 28rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 10;
   border-radius: 50%;
-  background: var(--mask-light);
+  background: rgba(0, 0, 0, 0.35);
   transition: background 0.2s;
 }
 
 #main .detailsDialog .detailsDialogClose:active {
-  background: var(--mask-light-active);
-}
-/* 修改点：扩展点击热区至 ≥44rem（视觉保持 32rem） */
-#main .detailsDialog .detailsDialogClose::after {
-  content: '';
-  position: absolute;
-  inset: -6rem;
-  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
 }
 
 #main .detailsDialog .detailsDialogClose i {
-  font-size: 18rem;
-  color: var(--color-text-secondary);
+  font-size: 16rem;
+  color: var(--color-text-white);
+  line-height: 1;
 }
 
 /* ====== 菜品详情弹窗 - 评价展示 ====== */
 #main .detailsDialog .eval-section {
   margin-top: 16rem;
   padding-top: 16rem;
-  border-top: 1px solid var(--bg-hover);
+  border-top: var(--separator);
   text-align: left;
 }
 
@@ -1425,7 +1502,7 @@
 }
 
 #main .detailsDialog .eval-rating {
-  font-size: 22rem;
+  font-size: 18rem;
   font-weight: 700;
   color: var(--color-star);
 }
@@ -1504,63 +1581,95 @@
 /* ================================================================
    套餐详情弹窗
    ================================================================ */
-/* 修改点：添加 overflow: visible !important 覆盖 Vant van-dialog 默认 overflow:hidden */
+/* 2026-09-21 对标美团重构：子项改横向小缩略图，关闭钮收回弹窗内 */
 #main .setMealDetailsDialog {
   display: flex;
   flex-direction: column;
-  text-align: center;
-  overflow: visible !important;
+  text-align: left;
+  width: var(--dialog-width);
+  max-width: calc(100vw - 40rem);
+  max-height: 78vh;
+  border-radius: var(--dialog-radius);
+  overflow: hidden !important;
 }
 
 #main .setMealDetailsDialog .divContainer {
-  padding: 20rem 20rem 0 20rem;
-  overflow: auto;
-  max-height: 50vh;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16rem;
 }
 
 #main .setMealDetailsDialog .title {
-  font-size: 18rem;
+  font-size: 17rem;
   font-weight: 700;
   color: var(--color-text-primary);
-  line-height: 28rem;
-  margin-bottom: 10rem;
+  line-height: 24rem;
+  margin-bottom: 12rem;
+  /* 避开右上角关闭钮 */
+  padding-right: 36rem;
+}
+
+#main .setMealDetailsDialog .item {
+  margin-bottom: 12rem;
+}
+
+#main .setMealDetailsDialog .item:last-child {
+  margin-bottom: 0;
+}
+
+/* 横向明细行：56 小缩略图 + 右侧名称份数/描述/价格 */
+#main .setMealDetailsDialog .meal-body {
+  display: flex;
+  align-items: flex-start;
 }
 
 #main .setMealDetailsDialog .meal-img {
-  width: 100%;
+  width: 56rem;
+  height: 56rem;
+  flex-shrink: 0;
+  margin-right: 12rem;
   border-radius: var(--radius-md);
-  overflow: hidden;
+  object-fit: cover;
+  cursor: zoom-in;
 }
 
-#main .setMealDetailsDialog .meal-img img {
-  width: 100%;
-  border-radius: var(--radius-md);
+#main .setMealDetailsDialog .meal-info {
+  flex: 1;
+  min-width: 0;
 }
 
-#main .setMealDetailsDialog .divSubTitle {
-  text-align: left;
-  margin-top: 12rem;
+#main .setMealDetailsDialog .meal-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 4rem;
-  font-size: 15rem;
+}
+
+#main .setMealDetailsDialog .meal-name {
+  font-size: 14rem;
   font-weight: 600;
   color: var(--color-text-primary);
-  line-height: 22rem;
-  position: relative;
 }
 
-#main .setMealDetailsDialog .divContainer .item .divSubTitle .divPrice {
-  position: absolute;
-  right: 0;
-  top: 0;
-  font-size: 16rem;
+#main .setMealDetailsDialog .meal-copies {
+  font-style: normal;
+  font-size: 12rem;
+  font-weight: 400;
+  color: var(--color-text-hint);
+  margin-left: 4rem;
+}
+
+#main .setMealDetailsDialog .divPrice {
+  font-size: 14rem;
   font-weight: 700;
   color: var(--color-price);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
-  line-height: 22rem;
+  flex-shrink: 0;
 }
 
-#main .setMealDetailsDialog .divContainer .item .divSubTitle .divPrice span:first-child {
+#main .setMealDetailsDialog .divPrice span {
   font-size: 12rem;
 }
 
@@ -1568,95 +1677,42 @@
   font-size: 12rem;
   color: var(--color-text-hint);
   line-height: 18rem;
-  text-align: left;
 }
 
 #main .setMealDetailsDialog .divNum {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 18rem;
-  padding-bottom: 14rem;
-  padding-left: 20rem;
-  padding-right: 20rem;
+  padding: 10rem 16rem 12rem;
+  border-top: var(--separator);
 }
 
-#main .setMealDetailsDialog .divNum .left {
-  font-size: 20rem;
-  font-weight: 700;
-  color: var(--color-price);
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
-  line-height: 36rem;
-}
-
-#main .setMealDetailsDialog .divNum .left span:first-child {
-  font-size: 12rem;
-}
-
-#main .setMealDetailsDialog .divNum .right {
-  display: flex;
-  align-items: center;
-  gap: 4rem;
-}
-
-#main .setMealDetailsDialog .divNum .divDishNum {
-  font-size: 15rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  min-width: 18rem;
-  text-align: center;
-}
-
-#main .setMealDetailsDialog .divNum .divTypes {
-  height: 28rem;
-  background: var(--color-primary-gradient);
-  border-radius: var(--radius-lg);
-  font-size: 12rem;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  line-height: 28rem;
-  padding: 0 12rem;
-  cursor: pointer;
-}
-
-#main .setMealDetailsDialog .divNum i {
-  font-size: 26rem;
-  cursor: pointer;
-  transition: transform 0.12s;
-  color: var(--color-primary);
-}
-
-#main .setMealDetailsDialog .divNum i:active {
-  transform: scale(0.82);
-}
-
-#main .setMealDetailsDialog .divNum .right .addCart {
-  width: 100rem;
-  height: 32rem;
-  background: var(--color-primary-gradient);
-  border-radius: var(--radius-xl);
-  font-size: 14rem;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  line-height: 32rem;
-  cursor: pointer;
-}
-
-#main .setMealDetailsDialog .divNum .right .addCart:active {
-  transform: scale(0.95);
-}
-
+/* 关闭钮收回弹窗内右上角（浅灰底深字，无图弹窗风格） */
 #main .setMealDetailsDialog .detailsDialogClose {
   position: absolute;
-  bottom: -55rem;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 10rem;
+  right: 10rem;
+  width: 28rem;
+  height: 28rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  border-radius: 50%;
+  background: var(--mask-light);
+  transition: background 0.2s;
+}
+
+#main .setMealDetailsDialog .detailsDialogClose:active {
+  background: var(--mask-light-active);
 }
 
 #main .setMealDetailsDialog .detailsDialogClose i {
-  font-size: 36rem;
+  font-size: 18rem;
   color: var(--color-text-secondary);
+  line-height: 1;
 }
 
 /* ================================================================
@@ -1690,7 +1746,7 @@
   background: var(--bg-card);
   gap: 10rem;
   flex-shrink: 0;
-  border-bottom: 0.5px solid var(--bg-hover);
+  border-bottom: 1px solid var(--bg-hover);
 }
 
 .search-input-wrap {
