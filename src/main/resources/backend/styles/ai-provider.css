@@ -5,13 +5,13 @@
  * @since 2026-07-10
  */
 
-/* 激活供应商高亮卡片 */
+/* 激活供应商高亮卡片（品牌浅金底 + 1px 金边，配色与全站金色系一致） */
 .active-provider-card {
-    background: var(--antd-info-bg);
-    border: 2px solid var(--color-brand-500);
-    border-radius: 10px;
-    padding: 20px 24px;
-    margin-bottom: 24px;
+    background: var(--color-brand-50);
+    border: 1px solid var(--color-brand-500);
+    border-radius: var(--radius-md);
+    padding: var(--space-5) var(--space-6);
+    margin-bottom: var(--space-6);
     position: relative;
     overflow: hidden;
 }
@@ -21,10 +21,10 @@
     top: 0;
     right: 0;
     background: var(--color-brand-500);
-    color: var(--color-white);
+    color: var(--text-on-brand); /* 金底深字，保证对比度 */
     font-size: 12px;
     padding: 4px 14px;
-    border-radius: 0 10px 0 10px;
+    border-radius: 0 var(--radius-md) 0 var(--radius-md);
     font-weight: 500;
 }
 .active-provider-info {
@@ -76,8 +76,8 @@
 .provider-card {
     background: var(--color-white);
     border: 1px solid var(--el-border-lighter2);
-    border-radius: 10px;
-    padding: 18px 20px;
+    border-radius: var(--radius-md);
+    padding: var(--space-4) var(--space-5);
     transition: all 0.25s;
     cursor: pointer;
     position: relative;
@@ -90,7 +90,7 @@
 }
 .provider-card.active-card {
     border-color: var(--color-brand-500);
-    background: var(--legacy-f0f9ff);
+    background: var(--color-brand-50);
 }
 .provider-card.disabled-card {
     opacity: 0.55;
@@ -103,7 +103,7 @@
 }
 .card-icon {
     width: 44px; height: 44px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     background: var(--el-bg-subtle);
     display: flex;
     align-items: center;
@@ -120,7 +120,7 @@
     font-size: 13px; color: var(--el-text-regular); margin-top: 4px;
 }
 .card-status {
-    padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 500;
+    padding: 3px 10px; border-radius: var(--radius-md); font-size: 12px; font-weight: 500;
     flex-shrink: 0;
 }
 .card-status.active { background: var(--color-success-light); color: var(--legacy-52b818); }
@@ -171,7 +171,7 @@
 .model-list-panel {
     margin-top: 8px;
     border: 1px solid var(--el-border-default);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: var(--el-bg-base);
     overflow: hidden;
 }
@@ -206,7 +206,7 @@
     background: var(--color-brand-50);
 }
 .model-chip.active {
-    border-color: var(--color-brand-500); color: var(--color-white);
+    border-color: var(--color-brand-500); color: var(--text-on-brand);
     background: var(--color-brand-500);
 }
 .model-fetch-error {
@@ -214,6 +214,51 @@
     background: var(--color-danger-light); color: var(--color-danger);
     font-size: 12px; border-radius: 4px;
     border: 1px solid var(--legacy-fde2e2);
+}
+
+/* 无激活模型空态：居中提示与按钮纵向排列 */
+.active-provider-card--empty {
+    text-align: center;
+    padding: var(--space-10);
+}
+.active-provider-card--empty p {
+    color: var(--el-text-regular);
+    font-size: var(--font-size-base);
+    margin: 0;
+}
+.active-provider-card--empty .el-button { margin-top: 14px; }
+
+/* 区块标题右侧操作区（替代行内 style） */
+.section-title .section-actions {
+    margin-left: auto;
+    display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px;
+}
+
+/* 模型名称：输入框 + 获取按钮同行（窄屏按钮不缩） */
+.model-name-row { display: flex; gap: var(--space-2); width: 100%; }
+.model-name-input { flex: 1; min-width: 0; }
+
+/* 「当前使用」标签与名称间距 */
+.provider-detail .current-tag { margin-left: var(--space-2); }
+
+/* 弹窗内下拉统一全宽（替代行内 width:100%） */
+.dialog-form .el-select { width: 100%; }
+
+/* API 地址实际请求预览（2026-09-18 新增功能，样式补齐收口于此） */
+.endpoint-preview {
+    margin-top: 6px;
+    padding: 6px 10px;
+    display: flex; align-items: center; gap: 6px;
+    background: var(--color-brand-50);
+    border: 1px solid var(--color-brand-200);
+    border-radius: var(--radius-sm);
+    font-size: 12px; color: var(--color-brand-700);
+}
+.endpoint-preview i { flex-shrink: 0; }
+.endpoint-preview code {
+    font-family: Consolas, Monaco, 'Courier New', monospace;
+    color: var(--text-primary);
+    word-break: break-all;
 }
 
 /* P2 模型能力勾选组：换行排列，避免长表单挤压 */
