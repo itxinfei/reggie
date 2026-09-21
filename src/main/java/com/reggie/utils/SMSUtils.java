@@ -80,14 +80,18 @@ public final class SMSUtils {
 	 * @param param         短信参数
 	 */
 	public static void sendMessage(String signName, String templateCode,String phoneNumbers,String param){
-	    if (accessKeyId == null || accessKeyId.isEmpty() || accessKeySecret == null || accessKeySecret.isEmpty()) {
-	        log.warn("[短信Mock] 未配置SMS凭证，模拟发送: phone={}, sign={}, template={}, param={}",
+	    // 真实发送就绪条件：阿里云凭证(accessKeyId/secret) 与短信模板(templateCode) 均配置，且客户端已初始化。
+	    // 任一缺失即进入"控制台模式"。
+	    boolean smsReady = acsClient != null
+	            && accessKeyId != null && !accessKeyId.isEmpty()
+	            && accessKeySecret != null && !accessKeySecret.isEmpty()
+	            && templateCode != null && !templateCode.isEmpty();
+	    if (!smsReady) {
+	        // 控制台模式（非 Mock）：不调用任何短信接口，验证码直接打印到服务端控制台，业务流程正常继续。
+	        // 开发/测试可从日志读取验证码；生产环境配置 reggie.sms 凭证与模板后即自动切换为真实发送。
+	        log.warn("[短信-控制台模式] 短信凭证或模板未配置，验证码不实际发送。phone={}, sign={}, template={}, 验证码={}",
 	                LogMaskUtils.maskPhone(phoneNumbers), signName, templateCode, param);
 	        return;
-	    }
-	    if (acsClient == null) {
-	        log.error("[短信] 客户端未初始化，请先调用 init() 方法");
-	        throw new CustomException("短信服务未就绪，请稍后重试");
 	    }
 
 		SendSmsRequest request = new SendSmsRequest();
@@ -107,7 +111,9 @@ public final class SMSUtils {
 		try {
 			SendSmsResponse response = acsClient.getAcsResponse(request);
 			if ("OK".equals(response.getCode())) {
-				log.info("短信发送成功，phone={}, bizId={}", LogMaskUtils.maskPhone(phoneNumbers), response.getBizId());
+				// 真实发送同样在控制台打印验证码，便于联调与核验
+				log.info("[短信-真实发送] 阿里云短信已发送，phone={}, bizId={}, 验证码={}",
+						LogMaskUtils.maskPhone(phoneNumbers), response.getBizId(), param);
 			} else {
 				log.error("短信发送失败，phone={}, code={}, message={}",
 					LogMaskUtils.maskPhone(phoneNumbers), response.getCode(), response.getMessage());

@@ -58,8 +58,6 @@ public class UserController {
     /**
      * 当前激活的Spring Profile（dev / prod），用于区分开发/生产环境
      */
-    @Value("${spring.profiles.active:dev}")
-    private String activeProfile;
 
     /**
      * 短信签名（从配置文件注入，生产环境需配置）
@@ -127,26 +125,16 @@ public class UserController {
         session.setAttribute("smsCode_" + phone, codeStr);
         session.setAttribute("smsCode_" + phone + "_time", System.currentTimeMillis());
 
-        if("dev".equals(activeProfile)){
-            // 开发环境：在控制台打印完整验证码，方便调试（仅 dev 生效，生产走 else 不打印）
-            log.info("【开发环境】验证码已生成 -> 手机号：{}，验证码：{}", LogMaskUtils.maskPhone(phone), codeStr);
-        } else {
-            // 生产环境：仅记录脱敏日志；若配置了短信模板则通过阿里云发送真实短信
-            log.info("【生产环境】验证码已生成 -> 手机号：{}，验证码：****", LogMaskUtils.maskPhone(phone));
-            if(smsTemplateCode != null && !smsTemplateCode.isEmpty()){
-                try {
-                    SMSUtils.sendMessage(smsSignName, smsTemplateCode, phone, codeStr);
-                } catch (Exception e){
-                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                    log.error("短信发送失败，phone={}, error={}", LogMaskUtils.maskPhone(phone), e.getMessage(), e);
-                    // 短信发送失败时清除Session中的验证码，避免无效验证码残留
-                    session.removeAttribute("smsCode_" + phone);
-                    session.removeAttribute("smsCode_" + phone + "_time");
-                    return R.error("短信发送失败，请稍后再试");
-                }
-            } else {
-                log.warn("【生产环境】短信模板未配置，验证码不会实际发送。请在application-prod.yml中配置reggie.sms.template-code");
-            }
+        // 发送短信：凭证+模板配置完整则真实发送（同时在日志打印验证码），否则进入控制台模式——
+        // 验证码仅打印到服务端日志、不调用外部接口、流程继续。控制台模式不抛错，无需返回失败。
+        try {
+            SMSUtils.sendMessage(smsSignName, smsTemplateCode, phone, codeStr);
+        } catch (Exception e) {
+            // 仅真实发送链路异常才会进入：清除本次验证码并提示用户稍后重试
+            log.error("短信发送失败，phone={}, error={}", LogMaskUtils.maskPhone(phone), e.getMessage(), e);
+            session.removeAttribute("smsCode_" + phone);
+            session.removeAttribute("smsCode_" + phone + "_time");
+            return R.error("短信发送失败，请稍后再试");
         }
         return R.success("短信发送成功");
     }

@@ -486,8 +486,10 @@ public class EmployeeController {
                             .maskPhone(employee.getPhone()), e.getMessage(), e);
                 }
             } else {
-                log.info("【开发环境/Mock模式】员工初始密码已生成 - 姓名：{}，手机号：{}", employee.getName(), LogMaskUtils.maskPhone(employee
-                        .getPhone()));
+                // 控制台模式（非 Mock）：未配置短信或处于 mock-mode，不调用短信接口，
+                // 初始密码打印到控制台，员工可据此登录
+                log.warn("[短信-控制台模式] 员工初始密码不实际发送 - 姓名：{}，手机号：{}，初始密码：{}",
+                        employee.getName(), LogMaskUtils.maskPhone(employee.getPhone()), initialPassword);
             }
         }
 
