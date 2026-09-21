@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+        <title>订单详情 - 瑞吉外卖</title>
+        <link rel="icon" href="./../images/favico.ico">
+        <!--不同屏幕尺寸根字体设置-->
+        <script src="./../js/base.js?v=20260917"></script>
+        <!--引入vant样式-->
+        <link rel="stylesheet" href="../styles/vant.min.css"/>
+        <!-- 引入样式  -->
+        <link rel="stylesheet" href="../styles/index.css?v=20260921" />
+        <!--订单域样式（含本详情页 .od-* 与复用的 .dish-*/.act-btn 等）-->
+        <link rel="stylesheet" href="./../styles/order.css?v=20260921" />
+        <!-- 加载 remixicon 图标库 -->
+        <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+        <script src="./../js/icon-fallback.js?v=20260917"></script>
+    </head>
+    <body>
+        <div id="order" class="app">
+            <div class="divHead">
+                <div class="divTitle">
+                    <i class="ri-arrow-left-s-line" @click="goBack"></i>订单详情
+                </div>
+            </div>
+
+            <div class="od-body">
+                <div v-if="loading" class="od-loading">
+                    <van-skeleton :row="6" title :avatar="true"></van-skeleton>
+                </div>
+
+                <template v-else-if="order.id">
+                    <!-- 状态横幅 -->
+                    <div :class="['od-card od-hero', 's-' + order.status]">
+                        <i :class="['od-hero-icon', statusIcon]"></i>
+                        <div class="od-hero-main">
+                            <span class="od-hero-title">{{ getStatus(order.status) }}</span>
+                            <span class="od-hero-desc">{{ statusDesc }}</span>
+                        </div>
+                    </div>
+
+                    <!-- 收货地址 / 堂食桌台 -->
+                    <div class="od-card">
+                        <div v-if="isEatIn" class="od-row">
+                            <span class="od-label">就餐桌台</span>
+                            <span class="od-value">{{ order.tableName }} · 堂食点餐</span>
+                        </div>
+                        <template v-else>
+                            <div class="od-row">
+                                <span class="od-label">收货人</span>
+                                <span class="od-value">{{ order.consignee }}　{{ order.phone }}</span>
+                            </div>
+                            <div class="od-row">
+                                <span class="od-label">收货地址</span>
+                                <span class="od-value">{{ order.address }}</span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- 菜品明细 -->
+                    <div class="od-card">
+                        <div class="od-section-title">商品清单</div>
+                        <div class="od-goods">
+                            <div v-for="(d, di) in (order.orderDetails || [])" :key="di" class="dish-item">
+                                <img v-if="d.image || d.dishImage" :src="imgPath(d.image || d.dishImage)" loading="lazy" class="dish-img" :alt="d.name || '菜品图片'" @error="$event.target.src='./../images/noImg.png'"/>
+                                <div v-else class="dish-img dish-img-placeholder"><i class="ri-restaurant-line"></i></div>
+                                <div class="dish-info">
+                                    <span class="dish-name">{{ d.name }}</span>
+                                    <span v-if="d.dishFlavor" class="od-flavor">{{ d.dishFlavor }}</span>
+                                </div>
+                                <span class="dish-qty">x{{ d.number }}</span>
+                                <span class="dish-price">￥{{ Number(d.amount || 0).toFixed(2) }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 价格明细 -->
+                    <div class="od-card">
+                        <div class="od-section-title">价格明细</div>
+                        <div class="od-rows">
+                            <div class="od-row">
+                                <span class="od-label">商品小计</span>
+                                <span class="od-value">￥{{ goodsAmount.toFixed(2) }}</span>
+                            </div>
+                            <div class="od-row" v-if="Number(order.deliveryFee || 0) > 0">
+                                <span class="od-label">配送费</span>
+                                <span class="od-value">￥{{ Number(order.deliveryFee || 0).toFixed(2) }}</span>
+                            </div>
+                            <div class="od-row" v-if="discount > 0">
+                                <span class="od-label">优惠</span>
+                                <span class="od-value od-discount">-￥{{ discount.toFixed(2) }}</span>
+                            </div>
+                            <div class="od-row od-pay-row">
+                                <span class="od-label">实付款</span>
+                                <span class="od-value od-pay-value">￥{{ Number(order.amount || 0).toFixed(2) }}</span>
+                            </div>
+                        </div>
+                        <div v-if="order.status === 4" class="od-invoice-link" @click="openInvoice">
+                            <i class="ri-file-list-3-line"></i>申请开票<i class="ri-arrow-right-s-line"></i>
+                        </div>
+                    </div>
+
+                    <!-- 订单信息 -->
+                    <div class="od-card">
+                        <div class="od-section-title">订单信息</div>
+                        <div class="od-rows">
+                            <div class="od-row">
+                                <span class="od-label">订单号</span>
+                                <span class="od-value">{{ order.number || order.id }}</span>
+                            </div>
+                            <div class="od-row">
+                                <span class="od-label">下单时间</span>
+                                <span class="od-value">{{ order.orderTime }}</span>
+                            </div>
+                            <div class="od-row">
+                                <span class="od-label">支付方式</span>
+                                <span class="od-value">{{ payMethodText }}</span>
+                            </div>
+                            <div class="od-row" v-if="!isEatIn && order.expectDeliveryTime">
+                                <span class="od-label">期望送达</span>
+                                <span class="od-value">{{ order.expectDeliveryTime }}</span>
+                            </div>
+                            <div class="od-row" v-if="order.remark">
+                                <span class="od-label">备注</span>
+                                <span class="od-value">{{ order.remark }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- 不存在 / 无权查看 -->
+                <div v-else class="od-card od-notfound">
+                    <i class="ri-file-unknow-line"></i>
+                    <p>未找到该订单</p>
+                </div>
+            </div>
+
+            <!-- 底部操作栏：按订单状态 -->
+            <div v-if="!loading && order.id" class="od-bar">
+                <template v-if="order.status === 1">
+                    <div class="act-btn act-outline" @click="cancelOrder">取消订单</div>
+                    <div class="act-btn act-primary" @click="goToPay">去支付</div>
+                </template>
+                <template v-if="order.status === 2">
+                    <div class="act-btn act-outline" @click="viewTracking">查看配送</div>
+                </template>
+                <template v-if="order.status === 3">
+                    <div class="act-btn act-outline" @click="viewTracking">查看配送</div>
+                    <div class="act-btn act-primary" @click="confirmReceipt">确认收货</div>
+                </template>
+                <template v-if="order.status === 4">
+                    <div class="act-btn act-outline" @click="applyRefund">申请售后</div>
+                    <div class="act-btn act-outline" @click="evaluate">去评价</div>
+                    <div class="act-btn act-primary" @click="addOrderAgain">再来一单</div>
+                </template>
+                <template v-if="order.status === 5 || order.status === 6">
+                    <div class="act-btn act-primary" @click="addOrderAgain">再来一单</div>
+                </template>
+            </div>
+        </div>
+
+        <script src="../../backend/plugins/vue/vue.js"></script>
+        <script src="./../js/vant.min.js"></script>
+        <script src="../../backend/plugins/axios/axios.min.js"></script>
+        <script src="./../js/request.js?v=20260917"></script>
+        <script src="./../api/main.js?v=20260921"></script>
+        <script src="./../js/common.js?v=20260917"></script>
+        <script src="./../api/order.js?v=20260917"></script>
+        <script>
+        new Vue({
+            el: '#order',
+            data: function() {
+                return {
+                    orderId: null,
+                    order: {},
+                    loading: true,
+                    submitting: false
+                }
+            },
+            computed: {
+                isEatIn: function() { return !!this.order.tableId },
+                // 菜品小计（服务端核价口径，明细行金额求和）
+                goodsAmount: function() {
+                    var sum = 0
+                    var list = this.order.orderDetails || []
+                    for (var i = 0; i < list.length; i++) { sum += Number(list[i].amount || 0) }
+                    return Math.round(sum * 100) / 100
+                },
+                // 优惠金额 = 小计 + 配送费 - 实付（>0 才有优惠，无需后端额外字段）
+                discount: function() {
+                    var d = this.goodsAmount + Number(this.order.deliveryFee || 0) - Number(this.order.amount || 0)
+                    return d > 0 ? Math.round(d * 100) / 100 : 0
+                },
+                payMethodText: function() {
+                    var map = { 1: '店内支付', 2: '微信支付', 3: '支付宝支付', 6: '货到付款' }
+                    return map[this.order.payMethod] || ('方式' + this.order.payMethod)
+                },
+                statusIcon: function() {
+                    var map = {
+                        1: 'ri-secure-payment-line',
+                        2: 'ri-file-check-line',
+                        3: 'ri-e-bike-2-line',
+                        4: 'ri-checkbox-circle-line',
+                        5: 'ri-close-circle-line',
+                        6: 'ri-refund-2-line'
+                    }
+                    return map[this.order.status] || 'ri-file-list-line'
+                },
+                statusDesc: function() {
+                    var map = {
+                        1: '请尽快完成支付，超时订单将自动取消',
+                        2: '商家已接单，正在为您准备',
+                        3: '骑手正在火速配送，请保持电话畅通',
+                        4: '感谢您的惠顾，欢迎再次光临',
+                        5: '订单已取消',
+                        6: '退款将按原支付路径返回'
+                    }
+                    return map[this.order.status] || ''
+                }
+            },
+            created: function() {
+                this.orderId = new URLSearchParams(window.location.search).get('id')
+                this.loadDetail()
+            },
+            methods: {
+                goBack: function() { goBack() },
+                imgPath: function(p) { return imgPath(p) },
+                getStatus: function(status) { return getStatus(status) },
+                loadDetail: async function() {
+                    if (!this.orderId) { this.loading = false; return }
+                    this.loading = true
+                    try {
+                        var res = await getOrderDetailApi(this.orderId)
+                        if (res && res.code === 1) { this.order = res.data || {} }
+                    } catch (e) {
+                        console.warn('[order-detail] 加载失败:', e)
+                    } finally {
+                        this.loading = false
+                    }
+                },
+                goToPay: function() {
+                    window.requestAnimationFrame(function() {
+                        window.location.href = '/front/page/add-order.html?reorderId=' + this.orderId
+                    }.bind(this))
+                },
+                viewTracking: function() {
+                    var pId = this.order.platformOrderId || this.order.number
+                    if (pId) {
+                        window.requestAnimationFrame(function() {
+                            window.location.href = '/front/page/tracking.html?orderId=' + encodeURIComponent(pId)
+                        })
+                    } else {
+                        vant.Toast.fail('该订单暂无配送追踪信息')
+                    }
+                },
+                cancelOrder: function() {
+                    var self = this
+                    vant.Dialog.confirm({
+                        title: '取消订单',
+                        message: '确定要取消该订单吗？',
+                        confirmButtonText: '确定',
+                        cancelButtonText: '再看看'
+                    }).then(async function() {
+                        self.submitting = true
+                        try {
+                            var res = await cancelOrderApi({ id: self.orderId })
+                            if (res && res.code === 1) {
+                                vant.Toast.success('订单已取消')
+                                self.loadDetail()
+                            } else {
+                                vant.Toast.fail((res && res.msg) || '取消失败')
+                            }
+                        } catch (e) {
+                            vant.Toast.fail('网络异常，请稍后重试')
+                        } finally {
+                            self.submitting = false
+                        }
+                    }).catch(function() {})
+                },
+                confirmReceipt: function() {
+                    var self = this
+                    vant.Dialog.confirm({
+                        title: '确认收货',
+                        message: '确认已收到商品？确认后订单将完成。',
+                        confirmButtonText: '确认收货',
+                        cancelButtonText: '再等等'
+                    }).then(async function() {
+                        self.submitting = true
+                        try {
+                            var res = await confirmReceiptApi({ id: self.orderId })
+                            if (res && res.code === 1) {
+                                vant.Toast.success('已确认收货')
+                                self.loadDetail()
+                            } else {
+                                vant.Toast.fail((res && res.msg) || '确认失败')
+                            }
+                        } catch (e) {
+                            vant.Toast.fail('网络异常，请稍后重试')
+                        } finally {
+                            self.submitting = false
+                        }
+                    }).catch(function() {})
+                },
+                applyRefund: function() {
+                    var self = this
+                    vant.Dialog.confirm({
+                        title: '申请售后',
+                        message: '确定要为此订单申请售后退款吗？提交后客服将尽快处理。',
+                        confirmButtonText: '提交申请',
+                        cancelButtonText: '取消'
+                    }).then(function() {
+                        return vant.Dialog.prompt({
+                            title: '退款原因',
+                            message: '请简要描述退款原因（如商品质量问题、漏送、错送等）',
+                            inputPlaceholder: '请输入退款原因',
+                            inputValidator: function(val) {
+                                if (!val || !val.trim()) { return '退款原因不能为空' }
+                                if (val.trim().length > 200) { return '退款原因不超过 200 字' }
+                                return true
+                            },
+                            confirmButtonText: '提交',
+                            cancelButtonText: '取消'
+                        })
+                    }).then(async function(val) {
+                        var reason = (val && val.trim) ? val.trim() : ('' + val).trim()
+                        self.submitting = true
+                        try {
+                            var res = await applyRefundApi({ id: self.orderId, reason: reason })
+                            if (res && res.code === 1) {
+                                var data = res.data || {}
+                                vant.Toast.success('售后申请已提交：' + (data.refundNo || ''))
+                                self.loadDetail()
+                            } else {
+                                vant.Toast.fail((res && res.msg) || '申请失败')
+                            }
+                        } catch (e) {
+                            vant.Toast.fail('网络异常，请稍后重试')
+                        } finally {
+                            self.submitting = false
+                        }
+                    }).catch(function(e) { console.warn('[order-detail] 用户取消售后:', e) })
+                },
+                evaluate: function() {
+                    window.requestAnimationFrame(function() {
+                        window.location.href = '/front/page/my-evaluations.html?orderId=' + this.orderId
+                    }.bind(this))
+                },
+                openInvoice: function() {
+                    var amount = this.order.amount != null ? this.order.amount : ''
+                    window.requestAnimationFrame(function() {
+                        window.location.href = '/front/page/invoice.html?orderId=' + this.orderId
+                            + '&orderNo=' + encodeURIComponent(this.order.number || '') + '&amount=' + amount
+                    }.bind(this))
+                },
+                addOrderAgain: async function() {
+                    if (this.submitting) { return }
+                    this.submitting = true
+                    try {
+                        var res = await orderAgainApi({ id: this.orderId })
+                        if (res && res.code === 1) {
+                            window.requestAnimationFrame(function() {
+                                window.location.href = '/front/index.html'
+                            })
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '操作失败')
+                        }
+                    } catch (e) {
+                        vant.Toast.fail('网络异常，请稍后重试')
+                    } finally {
+                        this.submitting = false
+                    }
+                }
+            }
+        })
+        </script>
+    </body>
+</html>

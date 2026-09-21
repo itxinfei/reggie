@@ -50,7 +50,7 @@
                     finished-text="没有更多了"
                     @load="getList"
                     >
-                    <van-cell v-for="order in orderList" :key="order.id" class="item">
+                    <van-cell v-for="order in orderList" :key="order.id" class="item" @click="openDetail(order)">
                         <!-- 卡片头部：订单号 + 时间 + 状态 -->
                         <div class="order-header">
                             <div class="order-meta">
@@ -88,7 +88,7 @@
                             <span class="price">￥{{ Number(order.amount || 0).toFixed(2) }}</span>
                         </div>
                         <!-- 操作按钮：对齐美团——主按钮2个 + 更多菜单 -->
-                        <div class="order-actions">
+                        <div class="order-actions" @click.stop>
                             <!-- 待付款 -->
                             <template v-if="order.status === 1">
                                 <div class="act-btn act-outline" @click="cancelOrder(order)">取消订单</div>
@@ -106,6 +106,7 @@
                             <!-- 已完成 -->
                             <template v-if="order.status === 4">
                                 <div class="act-btn act-outline" @click="applyRefund(order)">申请售后</div>
+                                <div class="act-btn act-outline" @click="evaluateOrder(order)">去评价</div>
                                 <div class="act-btn act-primary" @click="addOrderAgain(order)">再来一单</div>
                             </template>
                             <!-- 已取消/已退款 -->
@@ -364,14 +365,13 @@
                         document.body.removeChild(ta)
                     }
                 },
-                // 修改点：申请开票（已完成订单 → 发票页）
-                openInvoice(order){
-                    if(!order || !order.id) return
-                    var amount = order.amount !== undefined && order.amount !== null ? order.amount : ''
-                    var orderNo = order.orderNo || ''
-                    window.requestAnimationFrame(()=>{
-                        window.location.href = '/front/page/invoice.html?orderId=' + order.id + '&orderNo=' + encodeURIComponent(orderNo) + '&amount=' + amount
-                    })
+                // 修改点：点击订单卡进入订单详情页（完整明细、开票、评价等均在详情页）
+                openDetail(order){
+                    if(order && order.id){
+                        window.requestAnimationFrame(()=>{
+                            window.location.href = '/front/page/order-detail.html?id=' + order.id
+                        })
+                    }
                 },
                 // 修改点：评价订单
                 evaluateOrder(order){

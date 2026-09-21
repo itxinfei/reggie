@@ -377,3 +377,149 @@
 
 
 /* 修改点(2026-09-17)：删除 #order .divNoData 自定义空态样式，统一使用全局 .empty-state */
+
+/* =========================================================================
+   订单详情页（order-detail.html）—— 复用上方 .dish-*/.act-btn/status 卡片样式
+   ========================================================================= */
+
+#order .od-body {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  /* 给固定底部操作栏留位（栏高 + 安全区） */
+  padding-bottom: calc(72rem + env(safe-area-inset-bottom, 0rem));
+}
+
+#order .od-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+}
+
+/* 状态横幅：履约积极态用品牌金，完成绿、取消灰、退款红 */
+#order .od-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  background: var(--color-primary-gradient);
+  color: var(--color-text-primary);
+}
+
+#order .od-hero.s-4 { background: var(--color-success); color: #fff; }
+#order .od-hero.s-5 { background: var(--bg-hover); color: var(--color-text-secondary); }
+#order .od-hero.s-6 { background: var(--color-danger); color: #fff; }
+
+#order .od-hero-icon { font-size: 34rem; line-height: 1; }
+
+#order .od-hero-main { display: flex; flex-direction: column; gap: 4rem; }
+
+#order .od-hero-title { font-size: 18rem; font-weight: 700; line-height: 1.2; }
+
+#order .od-hero-desc { font-size: 12rem; opacity: .85; }
+
+/* 信息 / 价格行 */
+#order .od-rows { display: flex; flex-direction: column; gap: 12rem; }
+
+#order .od-row {
+  display: flex;
+  align-items: flex-start;
+  font-size: 14rem;
+  line-height: 20rem;
+}
+
+#order .od-label {
+  flex-shrink: 0;
+  width: 72rem;
+  color: var(--color-text-secondary);
+}
+
+#order .od-value {
+  flex: 1;
+  color: var(--color-text-primary);
+  text-align: right;
+  word-break: break-all;
+}
+
+#order .od-section-title {
+  font-size: 14rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 12rem;
+}
+
+/* 菜品明细：行间 1px 分隔 */
+#order .od-goods .dish-item + .dish-item {
+  border-top: var(--separator);
+}
+
+#order .dish-info { gap: 2rem; }
+
+#order .od-flavor {
+  font-size: 12rem;
+  color: var(--color-text-hint);
+}
+
+/* 价格明细 */
+#order .od-discount { color: var(--color-price); }
+
+#order .od-pay-row {
+  border-top: var(--separator);
+  padding-top: 12rem;
+  align-items: center;
+}
+
+#order .od-pay-value {
+  color: var(--color-price);
+  font-family: var(--font-family-number);
+  font-size: 18rem;
+  font-weight: 700;
+}
+
+#order .od-invoice-link {
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+  margin-top: 12rem;
+  padding-top: 12rem;
+  border-top: var(--separator);
+  font-size: 13rem;
+  color: var(--color-text-secondary);
+}
+
+#order .od-invoice-link i:last-child { margin-left: auto; }
+
+/* 加载 / 缺单 */
+#order .od-loading { background: var(--bg-card); border-radius: var(--radius-md); padding: var(--spacing-lg); }
+
+#order .od-notfound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rem;
+  padding: 60rem var(--spacing-lg);
+  color: var(--color-text-hint);
+}
+
+#order .od-notfound i { font-size: 48rem; }
+
+#order .od-notfound p { font-size: 14rem; margin: 0; }
+
+/* 固定底部操作栏 */
+#order .od-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+  padding: 12rem var(--spacing-lg);
+  padding-bottom: calc(12rem + env(safe-area-inset-bottom, 0rem));
+  background: var(--bg-card);
+  border-top: var(--separator);
+}
+
+#order .od-bar .act-btn { margin: 0; }

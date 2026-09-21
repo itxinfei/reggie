@@ -610,6 +610,16 @@
                                     }
                                     if(!found){ this.selectedCoupon = null }
                                 }
+                                // 新建订单且用户尚未手动选券：自动选面额最大的可用券（用户仍可手动改）
+                                if(!this.reorderId && !this.selectedCoupon && this.couponList.length){
+                                    var best = this.couponList[0]
+                                    for(var j=1;j<this.couponList.length;j++){
+                                        if(Number(this.couponList[j].discountAmount) > Number(best.discountAmount)){
+                                            best = this.couponList[j]
+                                        }
+                                    }
+                                    this.selectedCoupon = best
+                                }
                             }else{
                                 this.couponList = []
                             }
