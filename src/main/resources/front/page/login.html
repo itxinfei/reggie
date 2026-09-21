@@ -83,7 +83,7 @@
             <button
                 :class="['btnLogin', canLogin ? 'btnActive' : 'btnDisabled']"
                 @click="btnLogin"
-                :disabled="!canLogin || loading">
+                :disabled="loading">
                 {{ loading ? '登录中...' : '登录' }}
             </button>
 

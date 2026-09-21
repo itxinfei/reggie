@@ -335,7 +335,7 @@
               <div class="name">{{ item.name }}</div>
               <div class="price">
                 <!-- 修改点：Number() 保护缺失金额不报错 -->
-                <span class="spanMoney">￥</span>{{ (Number(item.amount) || 0).toFixed(2) }}
+                <span class="spanMoney">¥</span>{{ (Number(item.amount) || 0).toFixed(2) }}
               </div>
             </div>
             <div class="divNum">
