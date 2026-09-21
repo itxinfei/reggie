@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.reggie.module.dish.model.DishEvaluation;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 import java.util.Map;
@@ -84,5 +85,17 @@ public interface DishEvaluationMapper extends BaseMapper<DishEvaluation> {
      */
     int countByStatus(@Param("tenantId") Long tenantId,
                       @Param("status") Integer status);
+
+    /**
+     * 按门店（租户）聚合全部已通过菜品评价的平均评分。
+     * <p>本系统评价为菜品级，门店评分取该租户所有 status=1 评价 star_rating 的均值；
+     * 无任何已通过评价时 AVG 返回 null（新店/暂无评分）。</p>
+     *
+     * @param tenantId 租户ID
+     * @return 评分均值（1-5），无评价返回 null
+     */
+    @Select("SELECT AVG(star_rating) FROM dish_evaluation "
+            + "WHERE tenant_id = #{tenantId} AND status = 1 AND is_deleted = 0")
+    Double getStoreAverageRating(@Param("tenantId") Long tenantId);
 }
 

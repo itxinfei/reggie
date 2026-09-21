@@ -456,6 +456,11 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         stats.put("rejected", rejected);
         return stats;
     }
+
+    @Override
+    public Double getStoreAverageRating(Long tenantId) {
+        return this.baseMapper.getStoreAverageRating(tenantId);
+    }
 }
 
 

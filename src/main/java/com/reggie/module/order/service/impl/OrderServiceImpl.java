@@ -339,40 +339,139 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     /**
-     * 校验起送价并计算配送费（等价抽取，降低方法长度）。
+     * 校验起送价并计算配送费（下单用：不满足约束时抛 CustomException）。
+     * 计算委托 {@link #evaluateDelivery}，与 C 端配送费试算共用同一核心，保证下单实扣与试算永远一致。
      */
     private BigDecimal computeDeliveryFee(boolean deliveryCheckEnabled, StoreInfo storeInfo, AddressBook addressBook,
             BigDecimal totalAmount, Long currentTenantId) {
-        BigDecimal deliveryFee = BigDecimal.ZERO;
         if (!deliveryCheckEnabled) {
-            return deliveryFee;
+            return BigDecimal.ZERO;
         }
-        // 起送价精确校验（服务端核价完成后再计算，免运门槛基于真实菜品金额）
+        Map<String, Object> r = evaluateDelivery(storeInfo, addressBook, totalAmount, currentTenantId);
+        if (Boolean.TRUE.equals(r.get("belowMinOrder"))) {
+            throw new CustomException("订单金额未达到起送价 " + storeInfo.getMinDeliveryAmount() + " 元，无法下单");
+        }
+        if (Boolean.TRUE.equals(r.get("rangeChecked")) && Boolean.FALSE.equals(r.get("inRange"))) {
+            throw new CustomException("收货地址不在配送范围内");
+        }
+        return (BigDecimal) r.get("fee");
+    }
+
+    /**
+     * 配送费计算核心（不抛异常、返回结构化结果），下单与试算共用。语义与历史下单逻辑严格对齐：
+     * 1) 起送价基于服务端核价后菜品金额判断，结果放在 belowMinOrder；
+     * 2) 门店或地址经纬度任一缺失时不做范围校验（rangeChecked=false）、fee=0，兼容无地图 Key 环境；
+     * 3) 坐标齐全时按门店→地址直线距离匹配配送规则，透出 inRange/fee/distance/ruleName/免门槛等。
+     */
+    private Map<String, Object> evaluateDelivery(StoreInfo storeInfo, AddressBook addressBook,
+            BigDecimal totalAmount, Long currentTenantId) {
+        Map<String, Object> r = new HashMap<>();
+        r.put("goodsAmount", totalAmount);
+        r.put("minDeliveryAmount", storeInfo.getMinDeliveryAmount());
+        r.put("fee", BigDecimal.ZERO);
+        r.put("rangeChecked", false);
+        r.put("inRange", null);
+
+        // 起送价精确校验（免运门槛基于真实菜品金额）
         BigDecimal minAmount = storeInfo.getMinDeliveryAmount();
-        if (minAmount != null && minAmount.compareTo(BigDecimal.ZERO) > 0
-                && totalAmount.compareTo(minAmount) < 0) {
-            throw new CustomException("订单金额未达到起送价 " + minAmount + " 元，无法下单");
-        }
-        // 配送范围 + 配送费（地址经纬度存在时才校验，避免无地图 Key 环境阻断下单）
+        r.put("belowMinOrder", minAmount != null && minAmount.compareTo(BigDecimal.ZERO) > 0
+                && totalAmount.compareTo(minAmount) < 0);
+
+        // 地址经纬度存在时才做范围校验，避免无地图 Key 环境阻断
         BigDecimal addrLon = addressBook.getLongitude();
         BigDecimal addrLat = addressBook.getLatitude();
         BigDecimal storeLon = storeInfo.getLongitude();
         BigDecimal storeLat = storeInfo.getLatitude();
-        if (addrLon != null && addrLat != null && storeLon != null && storeLat != null) {
-            BigDecimal distance = deliveryEnhancedService.calculateDistance(storeLon, storeLat, addrLon, addrLat);
-            // 修复免运门槛失效：传真实核价后 totalAmount，满额自动免配送费
-            java.util.Map<String, Object> feeResult = deliveryEnhancedService.calculateFee(
-                    addrLon, addrLat, distance, totalAmount, currentTenantId);
-            Boolean inRange = (Boolean) feeResult.get("inRange");
-            if (inRange != null && !inRange) {
-                throw new CustomException("收货地址不在配送范围内");
-            }
-            Object feeObj = feeResult.get("fee");
-            if (feeObj instanceof BigDecimal) {
-                deliveryFee = ((BigDecimal) feeObj).setScale(2, java.math.RoundingMode.HALF_UP);
+        if (addrLon == null || addrLat == null || storeLon == null || storeLat == null) {
+            return r;
+        }
+        BigDecimal distance = deliveryEnhancedService.calculateDistance(storeLon, storeLat, addrLon, addrLat);
+        r.put("distance", distance);
+        // 传真实核价 totalAmount，满免配送门槛自动免配送费
+        Map<String, Object> feeResult = deliveryEnhancedService.calculateFee(
+                addrLon, addrLat, distance, totalAmount, currentTenantId);
+        r.put("rangeChecked", true);
+        Boolean inRange = (Boolean) feeResult.get("inRange");
+        r.put("inRange", Boolean.TRUE.equals(inRange));
+        r.put("ruleId", feeResult.get("ruleId"));
+        r.put("ruleName", feeResult.get("ruleName"));
+        r.put("freeThreshold", feeResult.get("freeThreshold"));
+        r.put("isFree", feeResult.get("isFree"));
+        Object feeObj = feeResult.get("fee");
+        if (feeObj instanceof BigDecimal) {
+            r.put("fee", ((BigDecimal) feeObj).setScale(2, java.math.RoundingMode.HALF_UP));
+        }
+        return r;
+    }
+
+    @Override
+    public long countCompletedOrdersSince(LocalDateTime since) {
+        LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
+        qw.eq(Orders::getTenantId, BaseContext.getCurrentTenantId())
+                .eq(Orders::getStatus, Orders.STATUS_COMPLETED)
+                .ge(Orders::getOrderTime, since);
+        return this.count(qw);
+    }
+
+    @Override
+    public Map<String, Object> previewDeliveryFee(Long addressBookId) {
+        Long userId = BaseContext.getCurrentId();
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        StoreInfo storeInfo = (storeService != null) ? storeService.findByTenantId(currentTenantId) : null;
+        boolean enabled = deliveryEnhancedService != null && storeInfo != null
+                && storeInfo.getIsDeliveryEnabled() != null && storeInfo.getIsDeliveryEnabled() == 1;
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("checkEnabled", enabled);
+        result.put("fee", BigDecimal.ZERO);
+
+        if (addressBookId == null) {
+            result.put("message", "请先选择收货地址");
+            return result;
+        }
+        AddressBook addressBook = addressBookService.getById(addressBookId);
+        // 校验地址归属，防止越权读取/试算他人地址
+        if (addressBook == null || !userId.equals(addressBook.getUserId())) {
+            result.put("addressInvalid", true);
+            result.put("message", "收货地址不可用");
+            return result;
+        }
+
+        // 购物车实时核价（空购物车按 0 元，供首页按距离展示标准配送费）
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        LambdaQueryWrapper<ShoppingCart> cartWrapper = new LambdaQueryWrapper<>();
+        cartWrapper.eq(ShoppingCart::getUserId, userId);
+        List<ShoppingCart> carts = shoppingCartService.list(cartWrapper);
+        if (carts != null && !carts.isEmpty()) {
+            try {
+                Map<String, Object> holder = buildOrderDetailsAndComputeAmount(carts, IdWorker.getId(),
+                        currentTenantId);
+                totalAmount = (BigDecimal) holder.get("totalAmount");
+            } catch (CustomException e) {
+                // 含停售/跨租户菜：透出不可下单原因，不再给配送费
+                result.put("goodsInvalid", true);
+                result.put("goodsAmount", BigDecimal.ZERO);
+                if (storeInfo != null) {
+                    result.put("minDeliveryAmount", storeInfo.getMinDeliveryAmount());
+                }
+                result.put("message", e.getMessage());
+                return result;
             }
         }
-        return deliveryFee;
+
+        if (!enabled) {
+            // 与下单降级一致：未开启外卖/无配送配置时不计算配送费
+            result.put("goodsAmount", totalAmount);
+            return result;
+        }
+        result.putAll(evaluateDelivery(storeInfo, addressBook, totalAmount, currentTenantId));
+        if (Boolean.TRUE.equals(result.get("belowMinOrder"))) {
+            result.put("message", "未达到起送价");
+        } else if (Boolean.TRUE.equals(result.get("rangeChecked"))
+                && Boolean.FALSE.equals(result.get("inRange"))) {
+            result.put("message", "收货地址不在配送范围内");
+        }
+        return result;
     }
 
     /**

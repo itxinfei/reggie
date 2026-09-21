@@ -125,5 +125,13 @@ public interface DishEvaluationService extends IService<DishEvaluation> {
      * @return 包含 total, pending, approved, rejected 的 Map
      */
     Map<String, Object> getStatsAggregation(Long tenantId);
+
+    /**
+     * 获取门店（租户）平均评分（全部已通过菜品评价的均值）。
+     *
+     * @param tenantId 租户ID
+     * @return 评分均值 1-5，无已通过评价返回 null
+     */
+    Double getStoreAverageRating(Long tenantId);
 }
 

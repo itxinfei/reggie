@@ -176,5 +176,23 @@ public interface OrderService extends IService<Orders> {
      * @param items   加菜明细列表（每项含 dishId/setmealId + number + flavor）
      */
     void addItemsToCurrentOrder(Long orderId, List<com.reggie.module.dining.dto.AddItemsToOrderDTO.OrderItem> items);
+
+    // ==================== C端门店真实数据 ====================
+
+    /**
+     * 统计当前门店自指定时间以来「已完成」订单数量（用于真实月售，排除未支付/取消/退款）。
+     *
+     * @param since 起始时间（含）
+     * @return 已完成订单数
+     */
+    long countCompletedOrdersSince(java.time.LocalDateTime since);
+
+    /**
+     * 配送费试算：按收货地址 + 当前用户购物车实时核价，与下单扣费使用同一计算核心。
+     *
+     * @param addressBookId 收货地址ID
+     * @return fee/checkEnabled/goodsAmount/distance/inRange/belowMinOrder 等试算字段
+     */
+    Map<String, Object> previewDeliveryFee(Long addressBookId);
 }
 
