@@ -1,0 +1,365 @@
+/* ============================================================
+   C 端在线客服 / 投诉（customer-service.html）
+   全屏：头部固定 + 消息区弹性滚动 + 底部输入栏；投诉表单独立滚动
+   ============================================================ */
+#csPage {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+#csPage .divHead {
+  flex: none;
+}
+.cs-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.chat-wrap,
+.complaint-wrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- 顶部提示 ---------- */
+.chat-tip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6rem;
+  padding: 8rem 12rem;
+  font-size: 12rem;
+  line-height: 17rem;
+  color: var(--color-text-secondary);
+  background: rgba(255, 194, 0, .14);
+}
+.chat-tip i {
+  font-size: 16rem;
+  color: var(--color-primary);
+}
+
+/* ---------- 常见问题 ---------- */
+.quick-asks {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rem;
+  padding: 12rem;
+}
+.quick-ask {
+  padding: 7rem 14rem;
+  font-size: 13rem;
+  color: #333;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, .08);
+  border-radius: 18rem;
+}
+.quick-ask:active {
+  background: var(--bg-page);
+}
+
+/* ---------- 消息列表 ---------- */
+.msg-list {
+  flex: 1;
+  min-height: 0;
+  padding: 12rem;
+  overflow-y: auto;
+  background: var(--bg-page);
+  box-sizing: border-box;
+}
+.chat-loading {
+  padding: 20rem 0;
+  font-size: 13rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+.msg-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 14rem;
+}
+.msg-row.is-system {
+  justify-content: center;
+}
+.sys-msg {
+  padding: 3rem 12rem;
+  font-size: 12rem;
+  color: var(--color-text-secondary);
+  background: rgba(0, 0, 0, .06);
+  border-radius: 6rem;
+}
+.avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36rem;
+  height: 36rem;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+.agent-avatar {
+  margin-right: 8rem;
+  font-size: 20rem;
+  color: #fff;
+  background: var(--color-primary);
+}
+.user-avatar {
+  margin-left: 8rem;
+  font-size: 20rem;
+  color: #888;
+  background: #e7e7e7;
+}
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.bubble {
+  max-width: 70%;
+  padding: 10rem 12rem;
+  font-size: 15rem;
+  line-height: 21rem;
+  word-break: break-word;
+  box-sizing: border-box;
+}
+.agent-bubble {
+  color: #222;
+  background: #fff;
+  border-radius: var(--radius-md);
+  border-top-left-radius: 4rem;
+}
+.user-bubble {
+  color: #333;
+  background: var(--color-primary);
+  border-radius: var(--radius-md);
+  border-top-right-radius: 4rem;
+}
+.bubble-img {
+  display: block;
+  max-width: 160rem;
+  max-height: 200rem;
+  border-radius: var(--radius-md);
+}
+.session-end {
+  padding: 8rem;
+  font-size: 12rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+/* ---------- 底部输入栏 ---------- */
+.input-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  padding: 8rem 12rem;
+  background: #fff;
+  border-top: 1px solid rgba(0, 0, 0, .06);
+}
+.input-icon {
+  flex: none;
+  font-size: 26rem;
+  color: #666;
+}
+.text-input {
+  flex: 1;
+  min-width: 0;
+  height: 38rem;
+  padding: 0 14rem;
+  font-size: 15rem;
+  background: var(--bg-page);
+  border: none;
+  border-radius: 19rem;
+  outline: none;
+  box-sizing: border-box;
+}
+.send-btn {
+  flex: none;
+  height: 36rem;
+  padding: 0 18rem;
+  font-size: 15rem;
+  color: #999;
+  background: #e7e7e7;
+  border: none;
+  border-radius: 18rem;
+}
+.send-btn.active {
+  font-weight: 600;
+  color: #333;
+  background: var(--color-primary);
+}
+
+/* ============================================================
+   投诉表单
+   ============================================================ */
+.complaint-wrap {
+  overflow-y: auto;
+  padding-bottom: 20rem;
+  background: var(--bg-page);
+}
+.block {
+  margin: 10rem 12rem 0;
+  padding: 12rem;
+  background: #fff;
+  border-radius: var(--radius-md);
+}
+.block-label {
+  margin-bottom: 10rem;
+  font-size: 14rem;
+  font-weight: 600;
+  color: #222;
+}
+.type-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rem;
+}
+.type-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rem;
+  width: calc((100% - 24rem) / 3);
+  padding: 12rem 0;
+  font-size: 12rem;
+  color: var(--color-text-secondary);
+  border: 1px solid rgba(0, 0, 0, .08);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+.type-cell i {
+  font-size: 24rem;
+}
+.type-cell.on {
+  color: #333;
+  background: rgba(255, 194, 0, .1);
+  border-color: var(--color-primary);
+}
+.type-cell.on i {
+  color: var(--color-primary);
+}
+.order-pick {
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  font-size: 14rem;
+}
+.order-pick > span:first-child {
+  flex: 1;
+}
+.order-pick .ph {
+  color: #999;
+}
+.order-pick i {
+  font-size: 18rem;
+  color: #999;
+}
+.cs-input {
+  width: 100%;
+  height: 40rem;
+  padding: 0 12rem;
+  font-size: 14rem;
+  background: var(--bg-page);
+  border: none;
+  border-radius: var(--radius-md);
+  outline: none;
+  box-sizing: border-box;
+}
+.cs-textarea {
+  width: 100%;
+  height: 120rem;
+  padding: 10rem 12rem;
+  font-size: 14rem;
+  background: var(--bg-page);
+  border: none;
+  border-radius: var(--radius-md);
+  outline: none;
+  resize: none;
+  box-sizing: border-box;
+}
+.char-count {
+  margin-top: 4rem;
+  font-size: 11rem;
+  color: #999;
+  text-align: right;
+}
+.submit-complaint {
+  display: block;
+  width: calc(100% - 24rem);
+  height: 46rem;
+  margin: 20rem 12rem 0;
+  font-size: 16rem;
+  font-weight: 600;
+  color: #333;
+  background: var(--color-primary);
+  border: none;
+  border-radius: 23rem;
+}
+.submit-complaint:active {
+  opacity: .85;
+}
+.submit-complaint:disabled {
+  opacity: .6;
+}
+.complaint-note {
+  margin-top: 10rem;
+  font-size: 12rem;
+  color: #999;
+  text-align: center;
+}
+
+/* ---------- 关联订单选择弹层 ---------- */
+.order-pick-popup {
+  display: flex;
+  flex-direction: column;
+  max-height: 60vh;
+  background: #fff;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+.pop-title {
+  flex: none;
+  padding: 14rem;
+  font-size: 15rem;
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, .06);
+}
+.pop-scroll {
+  overflow-y: auto;
+}
+.pop-order {
+  display: flex;
+  align-items: center;
+  padding: 14rem;
+  border-bottom: 1px solid rgba(0, 0, 0, .04);
+}
+.pop-order-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4rem;
+}
+.pop-order-no {
+  font-size: 14rem;
+  color: #222;
+}
+.pop-order-time {
+  font-size: 12rem;
+  color: #999;
+}
+.pop-order > i {
+  color: #999;
+}
+.pop-empty {
+  padding: 30rem 0;
+  font-size: 13rem;
+  color: #999;
+  text-align: center;
+}

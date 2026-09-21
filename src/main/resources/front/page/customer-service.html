@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>在线客服 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js?v=20260917"></script>
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/index.css?v=20260921" />
+    <link rel="stylesheet" href="../styles/cs.css?v=20260921" />
+    <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+    <script src="../js/icon-fallback.js?v=20260917"></script>
+</head>
+<body>
+    <div id="csPage" class="app">
+        <div class="divHead">
+            <div class="divTitle">
+                <i class="ri-arrow-left-s-line" @click="goBack"></i>{{ view === 'chat' ? '在线客服' : '我要投诉' }}
+            </div>
+            <i v-if="view==='chat'" class="ri-error-warning-line head-home-btn" @click="view='complaint'"
+               aria-label="我要投诉" title="我要投诉"></i>
+            <i v-else class="ri-customer-service-2-line head-home-btn" @click="view='chat'"
+               aria-label="返回客服" title="返回客服"></i>
+        </div>
+
+        <div class="cs-body">
+            <!-- ================= 聊天视图 ================= -->
+            <div class="chat-wrap" v-show="view==='chat'">
+                <div class="chat-tip">
+                    <i class="ri-customer-service-2-line"></i>
+                    <span>留言后客服会尽快回复，繁忙时可能需要稍等</span>
+                </div>
+
+                <!-- 无消息时的常见问题，点击直接发送 -->
+                <div class="quick-asks" v-if="messages.length===0 && !loading">
+                    <span class="quick-ask" v-for="q in quickQuestions" :key="q" @click="quickSend(q)">{{ q }}</span>
+                </div>
+
+                <div class="msg-list" ref="msgList">
+                    <div v-if="loading" class="chat-loading">加载中…</div>
+                    <div class="msg-row" v-for="m in messages" :key="m.id"
+                         :class="{ 'is-agent': m.senderType===2, 'is-system': m.senderType===3 }">
+                        <div v-if="m.senderType===3" class="sys-msg">{{ m.content }}</div>
+                        <template v-else-if="m.senderType===2">
+                            <div class="avatar agent-avatar"><i class="ri-customer-service-2-line"></i></div>
+                            <div class="bubble agent-bubble">
+                                <img v-if="m.messageType===2" class="bubble-img" :src="imgPath(m.imageUrl)"
+                                     @click="previewImage(m.imageUrl)" alt="客服图片">
+                                <span v-else>{{ m.content }}</span>
+                            </div>
+                        </template>
+                        <template v-else>
+                            <div class="bubble user-bubble">
+                                <img v-if="m.messageType===2" class="bubble-img" :src="imgPath(m.imageUrl)"
+                                     @click="previewImage(m.imageUrl)" alt="我发送的图片">
+                                <span v-else>{{ m.content }}</span>
+                            </div>
+                            <div class="avatar user-avatar">
+                                <img v-if="userAvatar" :src="imgPath(userAvatar)" alt="用户头像">
+                                <i v-else class="ri-user-3-line"></i>
+                            </div>
+                        </template>
+                    </div>
+                    <div v-if="sessionClosed" class="session-end">— 会话已结束 —</div>
+                </div>
+
+                <!-- 输入栏 -->
+                <div class="input-bar" v-if="!sessionClosed">
+                    <i class="ri-image-line input-icon" @click="pickImage" aria-label="发送图片"></i>
+                    <input type="file" ref="imgFile" accept="image/*" hidden @change="onImagePicked">
+                    <input class="text-input" v-model="draft" type="text" maxlength="500"
+                           placeholder="请输入您的问题" @keyup.enter="sendText">
+                    <button class="send-btn" :class="{ active: canSend }" :disabled="!canSend || sending"
+                            @click="sendText">发送</button>
+                </div>
+            </div>
+
+            <!-- ================= 投诉视图 ================= -->
+            <div class="complaint-wrap" v-show="view==='complaint'">
+                <div class="block">
+                    <div class="block-label">投诉类型</div>
+                    <div class="type-grid">
+                        <div class="type-cell" :class="{ on: form.complaintType===t.v }"
+                             v-for="t in complaintTypes" :key="t.v" @click="form.complaintType=t.v">
+                            <i :class="t.icon"></i>
+                            <span>{{ t.label }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="block">
+                    <div class="block-label">关联订单（选填）</div>
+                    <div class="order-pick" @click="openOrderPick">
+                        <span v-if="form.orderNumber">{{ form.orderNumber }}</span>
+                        <span v-else class="ph">选择相关订单，便于更快核实处理</span>
+                        <i class="ri-close-circle-line" v-if="form.orderId" @click.stop="clearOrder"></i>
+                        <i class="ri-arrow-right-s-line" v-else></i>
+                    </div>
+                </div>
+
+                <div class="block">
+                    <div class="block-label">投诉标题</div>
+                    <input class="cs-input" v-model="form.title" maxlength="200" type="text"
+                           placeholder="一句话概括遇到的问题">
+                </div>
+
+                <div class="block">
+                    <div class="block-label">详细描述</div>
+                    <textarea class="cs-textarea" v-model="form.content" maxlength="1000"
+                              placeholder="请描述问题发生的时间、经过等（至少5个字）"></textarea>
+                    <div class="char-count">{{ (form.content||'').length }}/1000</div>
+                </div>
+
+                <div class="block">
+                    <div class="block-label">上传凭证（最多3张）</div>
+                    <van-uploader
+                        class="cs-uploader"
+                        :file-list="fileList"
+                        :max-count="3"
+                        :max-size="5*1024*1024"
+                        :after-read="afterRead"
+                        :delete-image="afterDelete"
+                        @oversize="onOversize"
+                    ></van-uploader>
+                </div>
+
+                <button class="submit-complaint" :disabled="submitting" @click="submitComplaint">
+                    {{ submitting ? '提交中…' : '提交投诉' }}
+                </button>
+                <div class="complaint-note">我们会尽快核实并通过客服或电话与您联系</div>
+            </div>
+        </div>
+
+        <!-- 关联订单选择 -->
+        <van-popup v-model="orderPickShow" position="bottom" round>
+            <div class="order-pick-popup">
+                <div class="pop-title">选择关联订单</div>
+                <div class="pop-scroll">
+                    <div class="pop-order" v-for="o in recentOrders" :key="o.id" @click="pickOrder(o)">
+                        <div class="pop-order-main">
+                            <span class="pop-order-no">{{ o.number }}</span>
+                            <span class="pop-order-time">{{ o.orderTime }}</span>
+                        </div>
+                        <i class="ri-arrow-right-s-line"></i>
+                    </div>
+                    <div v-if="recentOrders.length===0" class="pop-empty">暂无历史订单</div>
+                </div>
+            </div>
+        </van-popup>
+    </div>
+
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="./../js/vant.min.js"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js?v=20260917"></script>
+    <script src="./../js/common.js?v=20260917"></script>
+    <script src="./../api/order.js?v=20260917"></script>
+    <script src="./../api/cs.js?v=20260921"></script>
+    <script>
+        new Vue({
+            el: '#csPage',
+            data: function () {
+                return {
+                    view: 'chat',
+                    loading: false,
+                    activeSession: null,
+                    messages: [],
+                    draft: '',
+                    sending: false,
+                    userAvatar: '',
+                    quickQuestions: ['我的订单还要多久送到？', '可以修改收货地址吗？', '餐品少送/错送怎么办？', '如何申请退款？'],
+                    // 投诉表单
+                    form: { complaintType: 1, title: '', content: '', orderId: null, orderNumber: '' },
+                    fileList: [],
+                    submitting: false,
+                    orderPickShow: false,
+                    recentOrders: [],
+                    ordersLoaded: false,
+                    complaintTypes: [
+                        { v: 1, label: '食品质量', icon: 'ri-restaurant-line' },
+                        { v: 2, label: '配送问题', icon: 'ri-bike-line' },
+                        { v: 3, label: '服务态度', icon: 'ri-emotion-unhappy-line' },
+                        { v: 4, label: '价格问题', icon: 'ri-money-cny-box-line' },
+                        { v: 5, label: '其他', icon: 'ri-more-2-line' }
+                    ]
+                };
+            },
+            computed: {
+                canSend: function () {
+                    return (this.draft || '').trim().length > 0 && !!this.activeSession;
+                },
+                sessionClosed: function () {
+                    return this.activeSession && this.activeSession.status === 2;
+                }
+            },
+            created: function () {
+                this.userAvatar = sessionStorage.getItem('userAvatar') || '';
+                if (!sessionStorage.getItem('userPhone')) {
+                    window.location.href = '/front/page/login.html?redirect='
+                        + encodeURIComponent('/front/page/customer-service.html');
+                    return;
+                }
+                this.initChat();
+                document.addEventListener('visibilitychange', this.onVisibility);
+            },
+            beforeDestroy: function () {
+                this.stopPolling();
+                document.removeEventListener('visibilitychange', this.onVisibility);
+            },
+            methods: {
+                goBack: function () { goBack(); },
+                imgPath: function (path) {
+                    if (!path) return './../images/noImg.png';
+                    if (path.indexOf('http://') === 0 || path.indexOf('https://') === 0) return path;
+                    return '/common/download?name=' + path;
+                },
+                previewImage: function (url) {
+                    if (url) { vant.ImagePreview([this.imgPath(url)]); }
+                },
+                onVisibility: function () {
+                    if (document.hidden) {
+                        this.stopPolling();
+                    } else if (this.view === 'chat') {
+                        this.pollMessages();
+                        this.startPolling();
+                    }
+                },
+
+                // ---------- 会话初始化 ----------
+                initChat: async function () {
+                    this.loading = true;
+                    try {
+                        // 从订单详情带入 orderId：优先复用该订单的进行中会话，否则创建订单类型会话
+                        var presetOrderId = new URLSearchParams(window.location.search).get('orderId');
+                        var res = await csMySessions();
+                        if (res && res.code === 1) {
+                            var list = res.data || [];
+                            var active = null;
+                            for (var i = 0; i < list.length; i++) {
+                                if (list[i].status !== 2) {
+                                    if (presetOrderId) {
+                                        if (list[i].orderId != null && String(list[i].orderId) === presetOrderId) { active = list[i]; break; }
+                                    } else {
+                                        active = list[i]; break;
+                                    }
+                                }
+                            }
+                            if (active) {
+                                this.activeSession = active;
+                            } else {
+                                var cr = await csCreateSession(presetOrderId ? 2 : 1, presetOrderId || null);
+                                if (cr && cr.code === 1) { this.activeSession = cr.data; }
+                            }
+                        }
+                        if (this.activeSession) {
+                            await this.loadMessages();
+                            this.startPolling();
+                        }
+                    } catch (e) {
+                        console.error('[客服] 初始化失败:', e);
+                        vant.Toast.fail('客服加载失败，请稍后重试');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                loadMessages: async function () {
+                    var res = await csListMessages(this.activeSession.id);
+                    if (res && res.code === 1) {
+                        this.messages = res.data || [];
+                        this.scrollBottom();
+                        // 进入/查看时把客服未读标记已读
+                        csMarkRead(this.activeSession.id);
+                    }
+                },
+                pollMessages: async function () {
+                    if (!this.activeSession) { return; }
+                    try {
+                        var res = await csListMessages(this.activeSession.id);
+                        if (res && res.code === 1) {
+                            var list = res.data || [];
+                            if (list.length !== this.messages.length) {
+                                this.messages = list;
+                                var last = list[list.length - 1];
+                                this.scrollBottom();
+                                if (last && last.senderType === 2 && last.isRead === 0) {
+                                    csMarkRead(this.activeSession.id);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        // 轮询失败静默，下一次重试
+                    }
+                },
+                startPolling: function () {
+                    this.stopPolling();
+                    this._timer = setInterval(this.pollMessages, 4000);
+                },
+                stopPolling: function () {
+                    if (this._timer) { clearInterval(this._timer); this._timer = null; }
+                },
+                scrollBottom: function () {
+                    this.$nextTick(function () {
+                        var box = this.$refs.msgList;
+                        if (box) { box.scrollTop = box.scrollHeight; }
+                    });
+                },
+
+                // ---------- 发送 ----------
+                quickSend: function (q) {
+                    this.draft = q;
+                    this.sendText();
+                },
+                sendText: async function () {
+                    var text = (this.draft || '').trim();
+                    if (!text || this.sending || !this.activeSession) { return; }
+                    this.sending = true;
+                    try {
+                        var res = await csSendMessage({
+                            sessionId: this.activeSession.id, messageType: 1, content: text
+                        });
+                        if (res && res.code === 1) {
+                            this.draft = '';
+                            await this.loadMessages();
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '发送失败');
+                        }
+                    } catch (e) {
+                        console.error('[客服] 发送失败:', e);
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    } finally {
+                        this.sending = false;
+                    }
+                },
+                pickImage: function () {
+                    this.$refs.imgFile.click();
+                },
+                onImagePicked: async function (e) {
+                    var file = e.target.files && e.target.files[0];
+                    e.target.value = '';
+                    if (!file) { return; }
+                    if (file.size > 5 * 1024 * 1024) {
+                        vant.Toast.fail('图片大小不能超过5MB');
+                        return;
+                    }
+                    var fd = new FormData();
+                    fd.append('file', file);
+                    vant.Toast.loading({ message: '发送中', forbidClick: true, duration: 0 });
+                    try {
+                        var up = await $axios({ url: '/common/upload', method: 'post', data: fd });
+                        if (up && up.code === 1 && up.data) {
+                            var res = await csSendMessage({
+                                sessionId: this.activeSession.id, messageType: 2, imageUrl: up.data
+                            });
+                            if (res && res.code === 1) {
+                                await this.loadMessages();
+                            } else {
+                                vant.Toast.fail((res && res.msg) || '发送失败');
+                            }
+                        } else {
+                            vant.Toast.fail((up && up.msg) || '图片上传失败');
+                        }
+                    } catch (e) {
+                        console.error('[客服] 图片发送失败:', e);
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    } finally {
+                        vant.Toast.clear();
+                    }
+                },
+
+                // ---------- 投诉 ----------
+                afterRead: function (file) {
+                    if (Array.isArray(file)) {
+                        for (var a = 0; a < file.length; a++) { this.afterRead(file[a]); }
+                        return;
+                    }
+                    var item = { content: file.content || '', status: 'uploading', message: '上传中' };
+                    this.fileList.push(item);
+                    var raw = file.file;
+                    if (!raw) { item.status = 'failed'; item.message = '读取失败'; return; }
+                    var fd = new FormData();
+                    fd.append('file', raw);
+                    var self = this;
+                    $axios({ url: '/common/upload', method: 'post', data: fd }).then(function (up) {
+                        if (up && up.code === 1 && up.data) {
+                            item.path = up.data;
+                            item.status = 'done';
+                            item.message = '';
+                        } else {
+                            item.status = 'failed';
+                            item.message = (up && up.msg) || '上传失败';
+                        }
+                    }).catch(function () {
+                        item.status = 'failed';
+                        item.message = '网络异常';
+                    });
+                },
+                afterDelete: function (file, detail) {
+                    var fi = this.fileList.indexOf(file);
+                    if (fi < 0 && detail && typeof detail.index === 'number') { fi = detail.index; }
+                    if (fi >= 0) { this.fileList.splice(fi, 1); }
+                },
+                onOversize: function () {
+                    vant.Toast.fail('图片大小不能超过5MB');
+                },
+                clearOrder: function () {
+                    this.form.orderId = null;
+                    this.form.orderNumber = '';
+                },
+                openOrderPick: async function () {
+                    this.orderPickShow = true;
+                    if (!this.ordersLoaded) {
+                        try {
+                            var res = await orderPagingApi({ page: 1, pageSize: 10 });
+                            if (res && res.code === 1) {
+                                this.recentOrders = (res.data && res.data.records) || [];
+                            }
+                        } catch (e) {
+                            console.error('[投诉] 订单加载失败:', e);
+                        }
+                        this.ordersLoaded = true;
+                    }
+                },
+                pickOrder: function (o) {
+                    this.form.orderId = o.id;
+                    this.form.orderNumber = o.number;
+                    this.orderPickShow = false;
+                },
+                resetComplaint: function () {
+                    this.form = { complaintType: 1, title: '', content: '', orderId: null, orderNumber: '' };
+                    this.fileList = [];
+                },
+                submitComplaint: async function () {
+                    if (this.submitting) { return; }
+                    var content = (this.form.content || '').trim();
+                    if (content.length < 5) {
+                        vant.Toast.fail('请至少填写5个字的详细描述');
+                        return;
+                    }
+                    var urls = [];
+                    for (var i = 0; i < this.fileList.length; i++) {
+                        var f = this.fileList[i];
+                        if (f.status === 'uploading') {
+                            vant.Toast.fail('图片还在上传，请稍候');
+                            return;
+                        }
+                        if (f.status === 'failed') {
+                            vant.Toast.fail('有图片上传失败，请删除后重试');
+                            return;
+                        }
+                        if (f.path) { urls.push(f.path); }
+                    }
+                    this.submitting = true;
+                    try {
+                        var payload = {
+                            complaintType: this.form.complaintType,
+                            title: (this.form.title || '').trim() || '投诉',
+                            content: content,
+                            imageUrls: urls.length ? urls.join(',') : null
+                        };
+                        if (this.form.orderId) {
+                            payload.orderId = this.form.orderId;
+                            payload.orderNumber = this.form.orderNumber;
+                        }
+                        var res = await csCreateComplaint(payload);
+                        if (res && res.code === 1) {
+                            vant.Toast.success('投诉已提交，请留意处理进展');
+                            this.resetComplaint();
+                            this.view = 'chat';
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '提交失败');
+                        }
+                    } catch (e) {
+                        console.error('[投诉] 提交失败:', e);
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    } finally {
+                        this.submitting = false;
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

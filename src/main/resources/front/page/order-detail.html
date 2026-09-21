@@ -137,6 +137,13 @@
                 </div>
             </div>
 
+            <!-- 联系客服 / 投诉（携带订单ID，客服侧自动关联本单） -->
+            <div v-if="!loading && order.id" class="od-invoice-link od-cs-link" @click="contactService">
+                <i class="ri-customer-service-2-line"></i>
+                <span>联系客服 / 投诉</span>
+                <i class="ri-arrow-right-s-line"></i>
+            </div>
+
             <!-- 底部操作栏：按订单状态 -->
             <div v-if="!loading && order.id" class="od-bar">
                 <template v-if="order.status === 1">
@@ -256,6 +263,12 @@
                     } else {
                         vant.Toast.fail('该订单暂无配送追踪信息')
                     }
+                },
+                contactService: function() {
+                    var oid = this.order.id
+                    window.requestAnimationFrame(function() {
+                        window.location.href = '/front/page/customer-service.html?orderId=' + oid
+                    })
                 },
                 urgeOrder: async function() {
                     if (this._urging) return

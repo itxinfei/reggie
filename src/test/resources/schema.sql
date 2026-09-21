@@ -738,3 +738,71 @@ CREATE TABLE user_favorite (
 CREATE UNIQUE INDEX uq_user_favorite ON user_favorite(user_id, target_type, target_id, tenant_id);
 CREATE INDEX idx_uf_user ON user_favorite(user_id);
 
+
+-- ==================== 在线客服 / 投诉 ====================
+CREATE TABLE cs_session (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  session_no varchar(50) NULL DEFAULT NULL COMMENT '会话编号',
+  user_id bigint NULL DEFAULT NULL COMMENT '用户ID',
+  user_name varchar(50) NULL DEFAULT NULL COMMENT '用户',
+  agent_id bigint NULL DEFAULT NULL COMMENT '客服ID',
+  agent_name varchar(50) NULL DEFAULT NULL COMMENT '客服姓名',
+  session_type int NULL DEFAULT NULL COMMENT '会话类型 1通用 2订单 3投诉',
+  order_id bigint NULL DEFAULT NULL COMMENT '关联订单ID',
+  status int NULL DEFAULT 0 COMMENT '状态 0等待 1进行中 2已关闭',
+  first_response_time datetime NULL DEFAULT NULL COMMENT '首次响应时间',
+  close_time datetime NULL DEFAULT NULL COMMENT '关闭时间',
+  satisfaction_rating int NULL DEFAULT NULL COMMENT '满意度评分(1-5)',
+  user_feedback varchar(500) NULL DEFAULT NULL COMMENT '用户反馈',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_css_user ON cs_session(user_id);
+CREATE INDEX idx_css_tenant ON cs_session(tenant_id);
+
+CREATE TABLE cs_message (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  session_id bigint NOT NULL COMMENT '会话ID',
+  sender_type int NULL DEFAULT NULL COMMENT '发送方 1用户 2客服 3系统',
+  sender_id bigint NULL DEFAULT NULL COMMENT '发送方ID',
+  sender_name varchar(50) NULL DEFAULT NULL COMMENT '发送方',
+  message_type int NULL DEFAULT 1 COMMENT '消息类型 1文本 2图片 3订单卡片',
+  content text NULL DEFAULT NULL COMMENT '消息内容',
+  image_url varchar(500) NULL DEFAULT NULL COMMENT '图片URL',
+  is_read int NULL DEFAULT 0 COMMENT '是否已读 0否 1是',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_csm_session ON cs_message(session_id);
+CREATE INDEX idx_csm_tenant ON cs_message(tenant_id);
+
+CREATE TABLE complaint (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  complaint_no varchar(50) NULL DEFAULT NULL COMMENT '投诉编号',
+  user_id bigint NULL DEFAULT NULL COMMENT '用户ID',
+  user_name varchar(50) NULL DEFAULT NULL COMMENT '用户',
+  user_phone varchar(20) NULL DEFAULT NULL COMMENT '用户手机',
+  order_id bigint NULL DEFAULT NULL COMMENT '订单ID',
+  order_number varchar(50) NULL DEFAULT NULL COMMENT '订单编号',
+  complaint_type int NULL DEFAULT NULL COMMENT '投诉类型 1食品质量 2配送 3服务态度 4价格 5其他',
+  title varchar(200) NULL DEFAULT NULL COMMENT '投诉标题',
+  content text NULL DEFAULT NULL COMMENT '投诉内容',
+  image_urls varchar(1000) NULL DEFAULT NULL COMMENT '图片URL(逗号分隔)',
+  status int NULL DEFAULT 0 COMMENT '状态 0待处理 1处理中 2已解决 3已关闭',
+  handler_id bigint NULL DEFAULT NULL COMMENT '处理人ID',
+  handler_name varchar(50) NULL DEFAULT NULL COMMENT '处理人',
+  handle_result varchar(500) NULL DEFAULT NULL COMMENT '处理结果',
+  compensation_amount decimal(10,2) NULL DEFAULT NULL COMMENT '补偿金',
+  handle_time datetime NULL DEFAULT NULL COMMENT '处理时间',
+  satisfaction int NULL DEFAULT NULL COMMENT '满意度 1-5',
+  user_feedback varchar(500) NULL DEFAULT NULL COMMENT '用户反馈',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_cp_user ON complaint(user_id);
+CREATE INDEX idx_cp_tenant ON complaint(tenant_id);

@@ -479,15 +479,10 @@
                 },
                 // 联系客服（拨打电话或显示联系方式）
                 contactService: function(){
-                    vant.Dialog.confirm({
-                        title: '联系客服',
-                        // 修改点(2026-09-17 UX)：客服电话与 login.html 协议中的号码统一为 400-8820-888
-                        message: '客服电话：400-8820-888\n服务时间：09:00-22:00',
-                        confirmButtonText: '拨打',
-                        cancelButtonText: '取消'
-                    }).then(function(){
-                        window.location.href = 'tel:4008820888'
-                    }).catch(function(){})
+                    // C 端在线客服 / 投诉：进入客服会话页（仅需登录态，未登录由该页跳登录）
+                    window.requestAnimationFrame(function(){
+                        window.location.href = '/front/page/customer-service.html'
+                    })
                 },
                 // 设置页（暂用 toast 提示）
                 toSettings: function(){
