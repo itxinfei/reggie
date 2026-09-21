@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>我的收藏 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js?v=20260917"></script>
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/index.css?v=20260921" />
+    <link rel="stylesheet" href="../styles/frequent-orders.css?v=20260921" />
+    <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+    <script src="../js/icon-fallback.js?v=20260917"></script>
+</head>
+<body>
+    <div id="favorites" class="app">
+        <div class="divHead">
+            <div class="divTitle">
+                <i class="ri-arrow-left-s-line" @click="goBack"></i>我的收藏
+            </div>
+            <i class="ri-home-5-line head-home-btn" @click="window.location.href='/front/index.html'"
+               aria-label="回到首页" title="回到首页"></i>
+        </div>
+
+        <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+        <div class="frequent-container">
+            <div class="quick-header">
+                <div class="qi-icon">
+                    <i class="ri-star-line"></i>
+                </div>
+                <div class="qi-text">
+                    <div class="qi-title">我的收藏</div>
+                    <div class="qi-desc">收藏的菜品都在这里，方便快速下单</div>
+                </div>
+            </div>
+
+            <template v-if="items.length > 0">
+                <div class="group-title">共 {{ items.length }} 件</div>
+                <div class="dish-card" :class="{ 'is-invalid': !item.available }"
+                     v-for="item in items" :key="item.targetId">
+                    <img v-if="item.image" :src="imgPath(item.image)" loading="lazy" class="dish-img"
+                         :alt="item.name || '菜品图片'"
+                         @error="$event.target.src='./../images/noImg.png'"/>
+                    <div v-else class="dish-img-placeholder">
+                        <i class="ri-restaurant-line"></i>
+                    </div>
+                    <div class="dish-info">
+                        <div>
+                            <div class="dish-name">{{ item.name }}</div>
+                            <div class="dish-meta">
+                                <span v-if="!item.available" class="fav-state-tag invalid">已失效</span>
+                                <span v-else-if="!item.onSale" class="fav-state-tag soldout">已停售</span>
+                            </div>
+                        </div>
+                        <div class="dish-price-row">
+                            <div v-if="item.available" class="dish-price">{{ Number(item.price || 0).toFixed(2) }}</div>
+                            <button v-if="item.available && item.onSale"
+                                    class="add-circle-btn"
+                                    :class="{ 'is-loading': submitting === item.targetId }"
+                                    :disabled="submitting === item.targetId"
+                                    aria-label="加入购物车"
+                                    @click="addCart(item)">
+                                <i v-if="submitting === item.targetId" class="ri-loader-4-line"></i>
+                                <i v-else class="ri-add-line" aria-hidden="true"></i>
+                            </button>
+                            <span v-else class="fav-remove-btn" @click="removeFav(item)">取消收藏</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bottom-hint">停售或失效的菜品可取消收藏</div>
+            </template>
+
+            <!-- 加载失败态（区别于真空态） -->
+            <div class="empty-state" v-else-if="!pageLoading && loadError">
+                <i class="ri-wifi-line"></i>
+                <p class="empty-text">加载失败</p>
+                <p class="empty-sub">网络好像开小差了，请稍后重试</p>
+                <button class="empty-action" @click="initData">重新加载</button>
+            </div>
+
+            <!-- 空状态 -->
+            <div class="empty-state" v-else-if="!pageLoading">
+                <i class="ri-star-line"></i>
+                <p class="empty-text">暂无收藏</p>
+                <p class="empty-sub">看到喜欢的菜品，点星标收藏起来吧</p>
+                <button class="empty-action" @click="window.location.href='/front/index.html'">去点餐</button>
+            </div>
+        </div>
+        </van-pull-refresh>
+    </div>
+
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="./../js/vant.min.js"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js?v=20260917"></script>
+    <script src="./../js/common.js?v=20260917"></script>
+    <script src="./../api/main.js?v=20260918"></script>
+    <script src="./../api/favorite.js?v=20260921"></script>
+    <script>
+        new Vue({
+            el: '#favorites',
+            data() {
+                return {
+                    pageLoading: false,
+                    loadError: false,
+                    refreshing: false,
+                    submitting: null,
+                    items: []
+                };
+            },
+            created() {
+                this.initData();
+            },
+            methods: {
+                goBack() {
+                    goBack();
+                },
+                imgPath(path) {
+                    if (!path) return './../images/noImg.png';
+                    if (path.indexOf('http://') === 0 || path.indexOf('https://') === 0) return path;
+                    return '/common/download?name=' + path;
+                },
+                async onRefresh() {
+                    try { await this.initData() } finally { this.refreshing = false }
+                },
+                async initData() {
+                    this.pageLoading = true;
+                    this.loadError = false;
+                    try {
+                        const res = await getFavoriteList(1);
+                        if (res && res.code === 1) {
+                            this.items = Array.isArray(res.data) ? res.data : [];
+                        } else {
+                            this.loadError = true;
+                        }
+                    } catch (e) {
+                        this.loadError = true;
+                    } finally {
+                        this.pageLoading = false;
+                    }
+                },
+                async addCart(item) {
+                    if (this.submitting) return;
+                    this.submitting = item.targetId;
+                    try {
+                        const res = await addCartApi({
+                            dishId: item.targetId,
+                            amount: parseFloat(Number(item.price || 0).toFixed(2)),
+                            name: item.name,
+                            image: item.image || ''
+                        });
+                        if (res && res.code === 1) {
+                            vant.Toast.success('已加入购物车');
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '添加失败');
+                        }
+                    } catch (e) {
+                        console.error('收藏加购失败:', e);
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    } finally {
+                        this.submitting = null;
+                    }
+                },
+                async removeFav(item) {
+                    try {
+                        const res = await toggleFavorite(1, item.targetId);
+                        if (res && res.code === 1) {
+                            this.items = this.items.filter(fav => fav.targetId !== item.targetId);
+                            vant.Toast('已取消收藏');
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '操作失败');
+                        }
+                    } catch (e) {
+                        console.error('取消收藏失败:', e);
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

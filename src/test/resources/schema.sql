@@ -725,3 +725,16 @@ CREATE INDEX idx_cur_order ON campaign_usage_record(order_id);
 CREATE INDEX idx_cur_time ON campaign_usage_record(use_time);
 CREATE INDEX idx_cur_tenant ON campaign_usage_record(tenant_id);
 
+-- ==================== 用户收藏 ====================
+CREATE TABLE user_favorite (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  user_id bigint NOT NULL COMMENT '用户ID',
+  target_type int NOT NULL COMMENT '类型 1菜品 2商家',
+  target_id bigint NOT NULL COMMENT '收藏对象ID',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  create_time datetime NOT NULL COMMENT '收藏时间',
+  PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX uq_user_favorite ON user_favorite(user_id, target_type, target_id, tenant_id);
+CREATE INDEX idx_uf_user ON user_favorite(user_id);
+

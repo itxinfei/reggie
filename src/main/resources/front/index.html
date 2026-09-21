@@ -386,7 +386,10 @@
           <img :src="imgPath(detailsDialog.item.image)" @error="imgError" @click.stop="previewDishImage(imgPath(detailsDialog.item.image))" loading="lazy" :alt="detailsDialog.item.name || '菜品大图'">
         </div>
         <div class="divContainer">
-          <div class="title">{{ detailsDialog.item.name }}</div>
+          <div class="title detail-title-row">
+            <span class="detail-name">{{ detailsDialog.item.name }}</span>
+            <i class="fav-star" :class="[isFavoriteDish(detailsDialog.item.id) ? 'ri-star-fill active' : 'ri-star-line']" @click.stop="toggleFavoriteDish(detailsDialog.item)"></i>
+          </div>
           <div class="content" v-if="detailsDialog.item.description">{{ detailsDialog.item.description }}</div>
           <!-- 评价展示 -->
           <div class="eval-section" v-if="detailsDialog.item.evalStats">
@@ -664,6 +667,8 @@
         <script src="./api/ai.js?v=20260917"></script>
         <!-- 满减档位与试算 -->
         <script src="./api/marketing.js?v=20260921"></script>
+        <!-- 用户收藏 -->
+        <script src="./api/favorite.js?v=20260921"></script>
   </body>
   <script>
       new Vue({
@@ -686,6 +691,8 @@
               cartData:[],
               // 满减试算结果（与下单计费同源，由 /api/marketing/full-reduction/evaluate 返回）
               frEval:null,
+              // 已收藏菜品ID集合（详情弹窗星标初始态）
+              favoriteIds:[],
               // 修改点：存储当前登录用户信息
               userPhone: '',
               userName: '',
@@ -826,6 +833,7 @@
             // （与下方 initData 的 isLogin 守卫保持一致）
             if (this.userPhone) {
               this.fetchUnreadCount()
+              this.loadFavoriteIds()
             }
           },
           mounted(){
@@ -860,6 +868,61 @@
               }catch(e){
                 // 试算失败不阻断点餐，仅不展示凑单条（下单时后端仍会真实计费）
                 console.warn('[满减] 试算失败:', e)
+              }
+            },
+            // 收藏：登录后拉取已收藏菜品ID，初始化星标态
+            async loadFavoriteIds(){
+              try{
+                const res = await getFavoriteIds(1)
+                if(res && res.code === 1){
+                  this.favoriteIds = Array.isArray(res.data) ? res.data : []
+                }
+              }catch(e){
+                console.warn('[收藏] 加载收藏ID失败:', e)
+              }
+            },
+            isFavoriteDish(id){
+              return this.favoriteIds.indexOf(id) >= 0
+            },
+            // 收藏/取消收藏：乐观更新星标，接口返回后以后端为准校正，失败回滚
+            async toggleFavoriteDish(item){
+              if(!item || !item.id) return
+              if(this._favLock === item.id) return
+              if(!this.userPhone){
+                vant.Toast.fail('请先登录')
+                window.location.href = '/front/page/login.html?redirect=' + encodeURIComponent(window.location.pathname)
+                return
+              }
+              this._favLock = item.id
+              var wasFav = this.isFavoriteDish(item.id)
+              var removeId = function(fid){ return fid !== item.id }
+              if(wasFav){
+                this.favoriteIds = this.favoriteIds.filter(removeId)
+              }else{
+                this.favoriteIds = this.favoriteIds.concat([item.id])
+              }
+              try{
+                const res = await toggleFavorite(1, item.id)
+                if(res && res.code === 1){
+                  var favorited = !!(res.data && res.data.favorited)
+                  var ids = this.favoriteIds.filter(removeId)
+                  if(favorited){ ids = ids.concat([item.id]) }
+                  this.favoriteIds = ids
+                  vant.Toast(favorited ? '已收藏' : '已取消收藏')
+                }else{
+                  this.favoriteIds = wasFav
+                    ? this.favoriteIds.concat([item.id])
+                    : this.favoriteIds.filter(removeId)
+                  vant.Toast.fail((res && res.msg) || '操作失败')
+                }
+              }catch(e){
+                this.favoriteIds = wasFav
+                  ? this.favoriteIds.concat([item.id])
+                  : this.favoriteIds.filter(removeId)
+                console.warn('[收藏] 切换失败:', e)
+                vant.Toast.fail('操作失败，请稍后重试')
+              }finally{
+                this._favLock = null
               }
             },
             // 修改点：将common.js的全局函数imgPath注册为Vue实例方法，Vue模板中无法访问全局函数

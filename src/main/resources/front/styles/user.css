@@ -560,6 +560,10 @@
   background: var(--icon-favorite-bg);
   color: var(--icon-favorite);
 }
+#user .divLinks .item .link-icon.li-favorite {
+  background: var(--icon-favorite-bg);
+  color: var(--icon-favorite);
+}
 #user .divLinks .item .link-icon.li-evaluate {
   background: var(--color-star-tint);
   color: var(--color-star);

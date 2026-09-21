@@ -2138,3 +2138,26 @@
   font-size: 11rem;
   color: var(--color-text-secondary);
 }
+
+/* 菜品详情收藏星标（未收藏灰、已收藏金，点击区扩大到约44rem） */
+.detail-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rem;
+}
+.detail-name {
+  flex: 1;
+  min-width: 0;
+}
+.fav-star {
+  flex: none;
+  font-size: 24rem;
+  line-height: 1;
+  color: #c9c9c9;
+  padding: 10rem;
+  margin: -10rem -2rem;
+}
+.fav-star.active {
+  color: var(--color-primary);
+}

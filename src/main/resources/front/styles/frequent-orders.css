@@ -243,3 +243,27 @@
   animation: rg-skeleton-shine 1.5s ease-in-out infinite;
 }
 /* 修改点(2026-09-17)：复用全局 @keyframes rg-skeleton-shine */
+/* ===== 我的收藏页（my-favorites.html）复用本文件，以下为收藏专属 ===== */
+.dish-card.is-invalid {
+  opacity: .6;
+}
+.fav-state-tag {
+  display: inline-block;
+  font-size: 11rem;
+  line-height: 1;
+  padding: 3rem 6rem;
+  border-radius: 4rem;
+}
+.fav-state-tag.invalid {
+  color: var(--color-text-secondary);
+  background: rgba(0, 0, 0, .06);
+}
+.fav-state-tag.soldout {
+  color: var(--color-text-secondary);
+  background: rgba(0, 0, 0, .06);
+}
+.fav-remove-btn {
+  font-size: 13rem;
+  color: var(--color-danger);
+  padding: 8rem 4rem;
+}

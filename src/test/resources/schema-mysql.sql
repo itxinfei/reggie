@@ -3069,6 +3069,26 @@ CREATE TABLE `supplier_settlement` (
   KEY `idx_status` (`status`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='状';
 
+--
+-- Table structure for table `user_favorite`
+--
+
+DROP TABLE IF EXISTS `user_favorite`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_favorite` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `target_type` tinyint NOT NULL COMMENT '收藏类型 1=菜品 2=商家',
+  `target_id` bigint NOT NULL COMMENT '收藏对象ID',
+  `tenant_id` bigint DEFAULT NULL COMMENT '租户ID',
+  `create_time` datetime NOT NULL COMMENT '收藏时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_user_target` (`user_id`,`target_type`,`target_id`,`tenant_id`) USING BTREE,
+  KEY `idx_uf_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户收藏表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
