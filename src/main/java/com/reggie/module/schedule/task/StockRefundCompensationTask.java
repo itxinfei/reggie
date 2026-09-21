@@ -7,6 +7,7 @@ import com.reggie.module.order.model.Orders;
 import com.reggie.module.setmeal.model.SetmealDish;
 import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.dish.service.DishService;
+import com.reggie.module.inventory.service.MaterialStockService;
 import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.setmeal.service.SetmealDishService;
@@ -53,6 +54,10 @@ public class StockRefundCompensationTask {
     /** 菜品服务 */
     @Autowired
     private DishService dishService;
+
+    /** 原料库存服务（可选注入，补偿时按 BOM 同步恢复原料） */
+    @Autowired(required = false)
+    private MaterialStockService materialStockService;
 
     /** 租户服务（用于获取活跃租户列表） */
     @Autowired
@@ -227,6 +232,11 @@ public class StockRefundCompensationTask {
         }
         try {
             dishService.addStock(dishId, qty);
+
+            // 原料库存联动：按 BOM 恢复原料（修复此前补偿只回菜品、原料永不回补）
+            if (materialStockService != null) {
+                materialStockService.restoreMaterialStock(dishId, qty);
+            }
 
             // 回退后检查是否需要自动恢复起售
             try {

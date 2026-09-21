@@ -91,6 +91,10 @@ public class PaymentController {
     @Autowired
     private com.reggie.module.member.service.MemberRewardService memberRewardService;
 
+    /** 全额退款时同步回补菜品+原料库存（幂等） */
+    @Autowired
+    private com.reggie.module.order.service.OrderStockRefundService orderStockRefundService;
+
     @Autowired
     private PlatformTransactionManager transactionManager;
 
@@ -458,6 +462,18 @@ public class PaymentController {
                         .eq(Orders::getId, order.getId())
                         .set(Orders::getStatus, Orders.STATUS_REFUNDED)
                         .update();
+                // 全额售后退款：同步回补菜品+原料库存（失败仅日志，补偿任务兜底）
+                try {
+                    orderStockRefundService.restoreForOrder(order.getId());
+                } catch (Exception ex) {
+                    log.error("[售后退款] 库存回补异常，待补偿任务兜底: orderId={}", order.getId(), ex);
+                }
+                // 该路径原本未回退会员权益，补齐积分回退 + 优惠券恢复
+                try {
+                    memberRewardService.reverseRewards(order.getId(), paymentOrder.getTenantId());
+                } catch (Exception ex) {
+                    log.error("[售后退款] 会员权益回退失败，需人工核查: orderId={}", order.getId(), ex);
+                }
             }
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
@@ -746,6 +762,12 @@ public class PaymentController {
             } catch (Exception e) {
                 // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[会员权益回退] 退款后权益回退失败，需人工核查: orderId={}", latest.getOrderId(), e);
+            }
+            // 同步回补菜品+原料库存（失败仅日志，不阻断退款，由库存补偿任务兜底）
+            try {
+                orderStockRefundService.restoreForOrder(latest.getOrderId());
+            } catch (Exception e) {
+                log.error("[库存回补] 退款触发库存回补异常，待补偿任务兜底: orderId={}", latest.getOrderId(), e);
             }
             log.info("退款成功联动更新订单: orderId={}, orderStatus=已退款", latest.getOrderId());
         } else if (curStatus != null && curStatus == Orders.STATUS_REFUNDED) {
