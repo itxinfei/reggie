@@ -4,18 +4,9 @@ import com.reggie.common.BaseContext;
 import com.reggie.test.TestDatabaseCleaner;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
-import com.reggie.module.printer.adapter.WindowsSystemPrinterAdapter;
 import com.reggie.module.printer.core.PrinterTemplate;
-import com.reggie.module.printer.mapper.PrintTaskMapper;
-import com.reggie.module.printer.mapper.PrintTerminalMapper;
 import com.reggie.module.printer.model.PrintJob;
 import com.reggie.module.printer.model.PrintLine;
-import com.reggie.module.printer.model.PrintTask;
-import com.reggie.module.printer.model.PrintTerminal;
-import com.reggie.module.printer.model.PrinterConfig;
-import com.reggie.module.printer.model.PrinterStatus;
-import com.reggie.module.printer.service.PrinterService;
-import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.order.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,7 +16,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
-import javax.print.PrintService;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -33,6 +23,11 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * 打印模板渲染集成测试。
+ * <p>打印已改为员工在浏览器手动调本地打印机（见 print-util.js），本类只覆盖
+ * {@link PrinterTemplate} 的三类小票文本渲染，不再涉及终端入队/系统直连。</p>
+ */
 @SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
@@ -43,22 +38,7 @@ public class PrinterServiceTest {
     private PrinterTemplate printerTemplate;
 
     @Autowired
-    private PrinterService printerService;
-
-    @Autowired
     private OrderService orderService;
-
-    @Autowired
-    private OrderDetailService orderDetailService;
-
-    @Autowired
-    private PrintTerminalMapper printTerminalMapper;
-
-    @Autowired
-    private PrintTaskMapper printTaskMapper;
-
-    @Autowired
-    private WindowsSystemPrinterAdapter windowsSystemPrinterAdapter;
 
     @Autowired
     private TestDatabaseCleaner cleaner;
@@ -68,8 +48,7 @@ public class PrinterServiceTest {
 
     @BeforeEach
     void setUp() {
-        cleaner.cleanTables("order_detail", "orders", "print_task", "print_terminal", "printer_log",
-                "printer_template", "printer_config");
+        cleaner.cleanTables("order_detail", "orders", "print_task");
         BaseContext.setCurrentTenantId(1L);
         testOrder = new Orders();
         testOrder.setId(100L);
@@ -185,93 +164,4 @@ public class PrinterServiceTest {
         assertTrue(joined.contains("备注: 少放辣"), "应输出订单备注: " + joined);
         assertTrue(joined.contains("合计"), "应输出合计: " + joined);
     }
-
-    @Test
-    void testPrintOrder() {
-        for (OrderDetail d : testDetails) {
-            orderDetailService.save(d);
-        }
-
-        // 门店 PC 打印代理终端（新模型：订单打印任务入队到终端）
-        PrintTerminal terminal = new PrintTerminal();
-        terminal.setTenantId(1L);
-        terminal.setStoreCode("S0001");
-        terminal.setTerminalCode("T-TEST-001");
-        terminal.setToken("test-token");
-        terminal.setName("测试终端");
-        terminal.setPrinterName("TEST_PRINTER");
-        terminal.setPaperSize("80mm");
-        terminal.setPrintTypes("BILL");
-        terminal.setClientVersion("1.0.0");
-        terminal.setStatus(1);
-        terminal.setCreatedTime(LocalDateTime.now());
-        terminal.setUpdateTime(LocalDateTime.now());
-        printTerminalMapper.insertIgnoreTenant(terminal);
-
-        printerService.printOrder(testOrder.getId(), "BILL");
-
-        // 断言：任务已入队（PENDING），内容为小票模板
-        List<PrintTask> tasks = printTaskMapper.listPending(terminal.getId(), 10);
-        assertEquals(1, tasks.size());
-        assertEquals("BILL", tasks.get(0).getTaskType());
-        assertEquals("PENDING", tasks.get(0).getStatus());
-        assertTrue(tasks.get(0).getContent() != null && tasks.get(0).getContent().contains("收银小票"));
-    }
-
-    @Test
-    void testPrintOrderNoTerminal() {
-        for (OrderDetail d : testDetails) {
-            orderDetailService.save(d);
-        }
-        // 无启用终端：打印任务不派发且不抛异常（不影响下单流程）
-        printerService.printOrder(testOrder.getId(), "BILL");
-        assertEquals(0, printTaskMapper.listPending(999L, 10).size());
-    }
-
-    @Test
-    void testListSystemPrinters() {
-        List<PrintService> printers = windowsSystemPrinterAdapter.listSystemPrinters();
-        assertNotNull(printers);
-    }
-
-    @Test
-    void testWindowsAdapterQueryStatusWithNullName() {
-        PrinterConfig config = new PrinterConfig();
-        config.setDeviceId(null);
-
-        PrinterStatus status = windowsSystemPrinterAdapter.queryStatus(config);
-        assertNotNull(status);
-        assertFalse(status.isOnline());
-        assertEquals("打印机名称为空", status.getDetail());
-    }
-
-    @Test
-    void testWindowsAdapterTestConnectionWithNullName() {
-        PrinterConfig config = new PrinterConfig();
-        config.setDeviceId(null);
-
-        boolean result = windowsSystemPrinterAdapter.testConnection(config);
-        assertFalse(result);
-    }
-
-    @Test
-    void testWindowsAdapterQueryStatusWithNonExistentPrinter() {
-        PrinterConfig config = new PrinterConfig();
-        config.setDeviceId("不存在的打印机12345");
-
-        PrinterStatus status = windowsSystemPrinterAdapter.queryStatus(config);
-        assertNotNull(status);
-        assertFalse(status.isOnline());
-        assertEquals("打印机不存在", status.getDetail());
-    }
-
-    @Test
-    void testWindowsAdapterTestConnectionWithNonExistentPrinter() {
-        PrinterConfig config = new PrinterConfig();
-        config.setDeviceId("不存在的打印机12345");
-
-        boolean result = windowsSystemPrinterAdapter.testConnection(config);
-        assertFalse(result);
-    }
 }
-

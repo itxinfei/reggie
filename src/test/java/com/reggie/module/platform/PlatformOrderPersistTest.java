@@ -8,10 +8,6 @@ import com.reggie.module.platform.adapter.PlatformOrder;
 import com.reggie.module.platform.model.PlatformConfig;
 import com.reggie.module.platform.service.PlatformConfigService;
 import com.reggie.module.platform.service.PlatformOrderPersistService;
-import com.reggie.module.printer.mapper.PrintTaskMapper;
-import com.reggie.module.printer.mapper.PrintTerminalMapper;
-import com.reggie.module.printer.model.PrintTask;
-import com.reggie.module.printer.model.PrintTerminal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +17,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * 平台订单落库（幂等去重）集成测试
- * <p>覆盖：字段映射、租户隔离、重复拉单去重、明细落库、落库后自动打印。</p>
+ * <p>覆盖：字段映射、租户隔离、重复拉单去重、明细落库。</p>
  *
  * @author reggie
  * @since 2026-08-24
@@ -47,31 +42,8 @@ public class PlatformOrderPersistTest {
     private OrderMapper orderMapper;
     @Autowired
     private PlatformConfigService configService;
-    @Autowired
-    private PrintTerminalMapper printTerminalMapper;
-    @Autowired
-    private PrintTaskMapper printTaskMapper;
 
     private static final Long TENANT = 1L;
-
-    /** 预置门店 PC 打印代理终端（tenant=1，print_types 为空=接收全部类型） */
-    private Long setupTerminal() {
-        PrintTerminal terminal = new PrintTerminal();
-        terminal.setTenantId(TENANT);
-        terminal.setStoreCode("S0001");
-        terminal.setTerminalCode("T-PLATFORM-001");
-        terminal.setToken("test-token");
-        terminal.setName("测试终端");
-        terminal.setPrinterName("TEST_PRINTER");
-        terminal.setPaperSize("80mm");
-        terminal.setPrintTypes("");
-        terminal.setClientVersion("1.0.0");
-        terminal.setStatus(1);
-        terminal.setCreatedTime(LocalDateTime.now());
-        terminal.setUpdateTime(LocalDateTime.now());
-        printTerminalMapper.insertIgnoreTenant(terminal);
-        return terminal.getId();
-    }
 
     @BeforeEach
     void setUp() {
@@ -127,36 +99,8 @@ public class PlatformOrderPersistTest {
     }
 
     @Test
-    void testPersistTriggersAutoPrint() {
-        Long terminalId = setupTerminal();
-
-        List<PlatformOrder> orders = new ArrayList<>();
-        orders.add(buildOrder("MT202608240005", "D005"));
-
-        int inserted = persistService.persistOrders("MEITUAN", "shop_001", TENANT, orders);
-        assertEquals(1, inserted);
-
-        // 落库后自动入队打印任务：外卖单 + 后厨单
-        List<PrintTask> tasks = printTaskMapper.listPending(terminalId, 10);
-        assertEquals(2, tasks.size());
-        assertTrue(tasks.stream().anyMatch(t -> "DELIVERY".equals(t.getTaskType())));
-        assertTrue(tasks.stream().anyMatch(t -> "KITCHEN".equals(t.getTaskType())));
-        PrintTask delivery = tasks.stream()
-                .filter(t -> "DELIVERY".equals(t.getTaskType()))
-                .findFirst().orElse(null);
-        assertNotNull(delivery);
-        assertEquals("PENDING", delivery.getStatus());
-        assertTrue(delivery.getContent() != null && delivery.getContent().contains("外卖单"));
-
-        // 重复拉单去重：不新增订单，也不重复打印
-        int insertedAgain = persistService.persistOrders("MEITUAN", "shop_001", TENANT, orders);
-        assertEquals(0, insertedAgain);
-        assertEquals(2, printTaskMapper.listPending(terminalId, 10).size());
-    }
-
-    @Test
     void testPersistWithoutTerminalDoesNotBreak() {
-        // 无启用终端：落库成功且不抛异常（自动打印静默跳过）
+        // 平台订单正常落库（打印已改为员工浏览器手动发起，落库环节不触发打印）
         List<PlatformOrder> orders = new ArrayList<>();
         orders.add(buildOrder("MT202608240006", "D006"));
         int inserted = persistService.persistOrders("ELEME", "shop_001", TENANT, orders);
