@@ -241,7 +241,7 @@
           >
             <div class="category-dish-title" :data-category-id="cat.id">{{ cat.name }}</div>
             <template v-if="visibleCats[cat.id]">
-              <div v-for="(item,idx) in catItems(cat.id)" :key="'dish-'+(item.id||idx)" class="dish-item">
+              <div v-for="(item,idx) in catItems(cat.id)" :key="'dish-'+(item.id||idx)" :class="['dish-item', {'dish-soldout': Number(item.status) === 0}]">
                 <div class="di-image" @click="previewDishImage(imgPath(item.image))">
                   <img :src="imgPath(item.image)" @error="imgError" loading="lazy" :alt="item.name || '菜品图片'">
                   <div class="di-tag" v-if="item.saleNum > 100">热卖</div>
@@ -258,10 +258,13 @@
                   </div>
                 </div>
                 <div class="di-action">
-                  <i class="ri-subtract-line" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"></i>
-                  <span class="di-num" v-if="item.number">{{ item.number }}</span>
-                  <span class="di-spec" v-if="item.flavors && item.flavors.length > 0 && !item.number" @click.prevent.stop="chooseFlavorClick(item)">选规格</span>
-                  <i class="ri-add-line" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"></i>
+                  <span v-if="Number(item.status) === 0" class="di-soldout">已售罄</span>
+                  <template v-else>
+                    <i class="ri-subtract-line" v-if="item.number > 0" @click.prevent.stop="subtractCart(item)"></i>
+                    <span class="di-num" v-if="item.number">{{ item.number }}</span>
+                    <span class="di-spec" v-if="item.flavors && item.flavors.length > 0 && !item.number" @click.prevent.stop="chooseFlavorClick(item)">选规格</span>
+                    <i class="ri-add-line" v-if="!item.flavors || !item.flavors.length || item.number" @click.prevent.stop="addCart(item)"></i>
+                  </template>
                 </div>
               </div>
             </template>
@@ -1352,16 +1355,23 @@
                   const batch = this.categoryList.slice(start, start + BATCH_SIZE)
                   const results = await Promise.all(batch.map(cat => {
                     if(cat.type === 1){
-                      return dishListApi({ categoryId: cat.id, status: 1 })
+                      // includeSoldOut：菜单需返回停售菜并沉底；套餐接口不传 status 即返回全部状态
+                      return dishListApi({ categoryId: cat.id, includeSoldOut: true })
                     }
-                    return setmealListApi({ categoryId: cat.id, status: 1 })
+                    return setmealListApi({ categoryId: cat.id })
                   }))
                   batch.forEach((cat, i) => {
                     const res = results[i]
                     flat.push({ _title: true, _categoryId: cat.id, name: cat.name, type: cat.type })
                     const items = []
                     if(res && res.code === 1 && res.data && res.data.length){
-                      res.data.forEach(d => {
+                      // 售罄沉底：在售(status=1)在前、停售(status=0)在后，分类内其余相对顺序保持不变
+                      const sortedList = res.data.slice().sort((a,b) => {
+                        const sa = Number(a.status) === 1 ? 0 : 1
+                        const sb = Number(b.status) === 1 ? 0 : 1
+                        return sa - sb
+                      })
+                      sortedList.forEach(d => {
                         let num = 0
                         if(cat.type === 1){
                           const c = cartData.find(c => c.dishId === d.id)
@@ -1466,6 +1476,8 @@
             //菜单中往购物车中添加商品
             // 修改点：修复菜品/套餐误判 — item.flavors !== undefined 可靠区分（菜品有flavors字段，套餐无）
             async addCart(item){
+              // 停售商品不可加购（UI 已禁用，此处兜底防御）
+              if(item && Number(item.status) === 0){ vant.Toast.fail('该商品已售罄'); return }
               // 修改点：按菜品维度防重复提交——同一菜品（含口味）在飞时忽略连点，避免数量异常；
               // 不同菜品各自独立加锁，不再因全局锁静默丢弃用户对其他菜品的快速加购。
               var cartKey = (item.flavors !== undefined ? 'd' : 's') + '_' + item.id + '_' + (item.dishFlavor || '')
@@ -1744,6 +1756,8 @@
               })
             },
             async dishDetails(item){
+              // 停售商品不进入详情弹窗（UI 已置灰，此处兜底防御）
+              if(item && Number(item.status) === 0) return
               //先清除对象数据，如果不行的话dialog使用v-if
               this.detailsDialog.item = {}
               this.setMealDialog.item = {}

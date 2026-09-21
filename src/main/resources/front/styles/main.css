@@ -825,6 +825,21 @@
   transform: scale(0.93);
 }
 
+/* 售罄标识与整行置灰 —— 停售菜沉底展示但不可加购（对标美团） */
+.dish-item .di-action .di-soldout {
+  font-size: 13rem;
+  color: var(--color-text-hint);
+  white-space: nowrap;
+}
+
+.dish-item.dish-soldout {
+  opacity: .55;
+}
+
+.dish-item.dish-soldout .di-image img {
+  filter: grayscale(1);
+}
+
 /* 修改点(2026-09-17)：删除 .empty-tip 自定义空态类——首页菜单空态已统一为全站标准 .empty-state，
    该类已无页面引用（死代码），避免与 .empty-state 两套空态样式并存 */
 

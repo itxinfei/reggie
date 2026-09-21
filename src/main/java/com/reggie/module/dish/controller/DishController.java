@@ -292,15 +292,17 @@ public class DishController {
     @GetMapping("/list")
     @Operation(summary = "查询菜品列表", description = "根据条件查询在售菜品数据，自动过滤停售菜品，最多返回200条")
     @Parameter(name = "dish", description = "菜品查询条件（categoryId分类ID、name名称模糊查询）")
-    public R<List<DishDto>> list(Dish dish){
+    public R<List<DishDto>> list(Dish dish,
+            @RequestParam(value = "includeSoldOut", required = false, defaultValue = "false") Boolean includeSoldOut){
         int maxPageSize = 200;
 
         //构造查询条件
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(dish.getCategoryId() != null ,Dish::getCategoryId,dish.getCategoryId());
         queryWrapper.like(dish.getName() != null && !dish.getName().trim().isEmpty(), Dish::getName, dish.getName());
-        //添加条件，查询状态为1（起售状态）的菜品
-        queryWrapper.eq(Dish::getStatus, DishStatus.ENABLED.getValue());
+        // C 端点餐菜单传 includeSoldOut=true：返回含停售菜品，由前端沉底并禁用加购；
+        // 默认（后台 / 搜索等调用）仅返回在售，保持既有行为不变。
+        queryWrapper.eq(includeSoldOut == null || !includeSoldOut, Dish::getStatus, DishStatus.ENABLED.getValue());
 
         //添加排序条件
         queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
