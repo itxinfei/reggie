@@ -243,9 +243,13 @@
             vant.Toast.fail('请填写抬头名称')
             return
           }
-          if (this.editForm.type === 2 && !taxNumber) {
-            vant.Toast.fail('企业抬头请填写税号')
-            return
+          if (this.editForm.type === 2) {
+            var edited = this.normalizeTaxNumber(taxNumber)
+            if (!edited) {
+              vant.Toast.fail('请填写正确的企业税号（15/18位字母或数字）')
+              return
+            }
+            taxNumber = edited
           }
           this.editing = true
           invoiceTitleUpdateApi(this.editForm.id, {
@@ -266,6 +270,14 @@
             self.editing = false
           })
         },
+        // 校验企业纳税人识别号格式：15/17/18/20 位字母或数字（18位统一社会信用代码、15位老税号等）
+        // 返回大写后的税号；格式非法返回 null
+        normalizeTaxNumber: function(taxNumber) {
+          var v = (taxNumber || '').trim().toUpperCase()
+          var ok = /^[0-9A-Z]{15}$/.test(v) || /^[0-9A-Z]{17}$/.test(v)
+            || /^[0-9A-Z]{18}$/.test(v) || /^[0-9A-Z]{20}$/.test(v)
+          return ok ? v : null
+        },
         // 保存抬头
         saveTitle: function() {
           var self = this
@@ -275,9 +287,13 @@
             vant.Toast.fail('请填写抬头名称')
             return
           }
-          if (this.form.type === 2 && !taxNumber) {
-            vant.Toast.fail('企业抬头请填写税号')
-            return
+          if (this.form.type === 2) {
+            var normalized = this.normalizeTaxNumber(taxNumber)
+            if (!normalized) {
+              vant.Toast.fail('请填写正确的企业税号（15/18位字母或数字）')
+              return
+            }
+            taxNumber = normalized
           }
           this.saving = true
           invoiceTitleSaveApi({ type: this.form.type, title: title, taxNumber: taxNumber }).then(function(res) {

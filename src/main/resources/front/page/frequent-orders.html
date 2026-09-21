@@ -101,6 +101,14 @@
                 <div class="bottom-hint">基于您的历史订单生成</div>
             </template>
 
+            <!-- 加载失败态（区别于真空态，避免网络失败伪装成"暂无常购"） -->
+            <div class="empty-state" v-else-if="!pageLoading && loadError">
+                <i class="ri-wifi-line"></i>
+                <p class="empty-text">加载失败</p>
+                <p class="empty-sub">网络好像开小差了，请稍后重试</p>
+                <button class="empty-action" @click="initData">重新加载</button>
+            </div>
+
             <!-- 空状态 -->
             <div class="empty-state" v-else-if="!pageLoading && items.length === 0">
                 <i class="ri-shopping-bag-line"></i>
@@ -126,6 +134,7 @@
             data() {
                 return {
                     pageLoading: false,
+                    loadError: false,
                     refreshing: false,
                     submitting: null,
                     items: [],
@@ -153,10 +162,12 @@
                 },
                 async initData() {
                     this.pageLoading = true;
+                    this.loadError = false;
                     try {
                         await this.loadOrderHistory();
                     } catch (e) {
-                        vant.Toast.fail('加载失败，请稍后重试');
+                        // 标记失败态：空态区据此显示"加载失败+重试"，而非伪装成"暂无常购菜品"
+                        this.loadError = true;
                     } finally {
                         this.pageLoading = false;
                     }
