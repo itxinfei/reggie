@@ -411,8 +411,22 @@
           this.cartDialogVisible = false
           this.submitDialogVisible = true
         },
-        confirmSubmit: function() {
+        confirmSubmit: async function() {
           var self = this
+          // 桌台信息缺失（无效二维码/桌台不存在/弱网）：提交前补拉一次，仍拿不到则阻断，
+          // 避免把订单下到不存在的桌台（提交后端此前未强校验 tableId 真实性）
+          if (!this.tableInfo) {
+            try {
+              const r = await tableInfo(this.tableId)
+              if (r && r.code === 1 && r.data) this.tableInfo = r.data
+            } catch (e) {
+              console.warn('[qrcode-order] 提交前补拉桌台信息失败:', e)
+            }
+          }
+          if (!this.tableInfo) {
+            vant.Toast.fail('未获取到有效桌台信息，请重新扫描桌上二维码')
+            return
+          }
           if (!this.submitForm.contactName.trim()) {
             vant.Toast.fail('请输入联系人姓名')
             return
