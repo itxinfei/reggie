@@ -244,6 +244,12 @@
 /* 弹窗内下拉统一全宽（替代行内 width:100%） */
 .dialog-form .el-select { width: 100%; }
 
+/* 连接测试 / 密钥提示图标的语义色（HTML 已挂类，补颜色后成功/失败/警告可辨） */
+.test-ok,
+.key-ok { color: var(--color-success); }
+.test-ng { color: var(--color-danger); }
+.key-warn { color: var(--color-warning); }
+
 /* API 地址实际请求预览（2026-09-18 新增功能，样式补齐收口于此） */
 .endpoint-preview {
     margin-top: 6px;

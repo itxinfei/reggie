@@ -459,6 +459,11 @@
 .msg-action-btn:hover { background: var(--bg-subtle); color: var(--text-primary); }
 .msg-action-btn.active-good { color: var(--color-success); }
 .msg-action-btn.active-bad { color: var(--color-danger); }
+/* 复制/重生成 与 反馈按钮之间的竖向分隔线（HTML 已挂类，补齐样式） */
+.msg-action-divider {
+  width: 1px; height: 14px; align-self: center;
+  background: var(--border-default); margin: 0 4px; flex-shrink: 0;
+}
 .msg-action-text {
   font-size: 12px; color: var(--text-muted); margin-left: 2px;
 }
