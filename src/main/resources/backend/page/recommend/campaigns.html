@@ -74,7 +74,8 @@
 <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">营销活动管理</h1>
 
         <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
         <stat-cards :cards="statsCards" :active-key.sync="searchStatus" @card-click="onCardClick"></stat-cards>
@@ -193,7 +194,7 @@
       @submit="submitForm"
       @close="resetForm"
     >
-        <el-form :model="form" :rules="rules" ref="campaignForm" label-width="90px" size="small">
+        <el-form :model="form" :rules="rules" ref="campaignForm" label-width="100px" size="small">
             <el-row :gutter="16">
                 <el-col :span="14">
                     <el-form-item label="活动名称" prop="name">
@@ -273,7 +274,7 @@
       @submit="doPush"
       @close="pushDialogVisible = false"
     >
-        <el-form label-width="90px" size="small">
+        <el-form label-width="100px" size="small">
             <el-form-item label="活动名称">
                 <el-tag type="info">{{ pushTargetCampaign ? pushTargetCampaign.name : '' }}</el-tag>
             </el-form-item>

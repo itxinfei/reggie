@@ -51,7 +51,8 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="payment-app" v-loading="loading">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">支付管理</h1>
       <!-- 数据统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -78,7 +79,7 @@
         :page-size="pageSize"
         :total="counts"
         :show-actions="true"
-        :actions-width="260"
+        :actions-width="120"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >

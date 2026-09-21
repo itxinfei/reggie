@@ -38,7 +38,8 @@
   <!-- 功能：查看会员积分变动记录，支持按手机号/类型筛选，含趋势图与饼图统计，支持手动积分调整 -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="points-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">积分管理</h1>
       <!-- 统计卡片（第一区块） -->
       <stat-cards :cards="statsCards"></stat-cards>
 
@@ -96,7 +97,7 @@
 
     <!-- ===== 积分调整弹窗（8.4.3：发放/扣减/说明） ===== -->
     <crud-dialog :show-submit="true" :show-cancel="true" title="积分调整" :visible.sync="adjustForm.dialogVisible" :submit-loading="adjustLoading" size="md" @submit="submitAdjust">
-      <el-form :model="adjustForm" :rules="adjustRules" ref="adjustFormRef" label-width="90px" size="small">
+      <el-form :model="adjustForm" :rules="adjustRules" ref="adjustFormRef" label-width="100px" size="small">
         <el-form-item label="会员手机：" prop="phone">
           <div style="display:flex;gap:8px;width:100%;">
             <el-input v-model="adjustForm.phone" placeholder="输入会员手机号" clearable style="flex:1" @keyup.enter.native="queryAdjustMember"></el-input>

@@ -45,7 +45,8 @@
   <!-- 功能：管理会员信息、等级与余额，支持新增/编辑/充值/启禁用/删除会员，详情弹窗展示充值记录与优惠券 -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="member-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">会员管理</h1>
       <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -70,7 +71,7 @@
         :page-size="pageSize"
         :total="counts"
         :show-actions="true"
-        :actions-width="340"
+        :actions-width="180"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -89,9 +90,14 @@
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="selectMember(row)">详情</el-button>
           <el-button type="text" size="small" class="btn-view" @click="showRecharge(row)">充值</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="showEdit(row)">编辑</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="toggleStatus(row)">{{ row.status === 1 ? '禁用' : '启用' }}</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => onRowCommand(cmd, row)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="edit" icon="ri-edit-line">编辑</el-dropdown-item>
+              <el-dropdown-item command="toggle" :icon="row.status === 1 ? 'ri-pause-circle-line' : 'ri-play-circle-line'">{{ row.status === 1 ? '禁用' : '启用' }}</el-dropdown-item>
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </template>
       </crud-table>
     </main>
@@ -156,7 +162,7 @@
     <!-- ===== 充值弹窗 ===== -->
     <crud-dialog :show-submit="true" :show-cancel="true" title="会员充值" :visible.sync="rechargeDialogVisible" :submit-loading="submitting" size="sm" @submit="submitRecharge">
       <!-- 修改点：补全 ref/:model/:rules 启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
-      <el-form ref="rechargeFormRef" :model="rechargeForm" :rules="rechargeRules" label-width="110px" size="small">
+      <el-form ref="rechargeFormRef" :model="rechargeForm" :rules="rechargeRules" label-width="100px" size="small">
         <el-form-item label="会员名称："><span style="font-weight:600;">{{ rechargeMember.name }}</span></el-form-item>
         <el-form-item label="手机号："><span>{{ rechargeMember.phone }}</span></el-form-item>
         <el-form-item label="充值金额：" prop="amount">
@@ -304,6 +310,12 @@
           this.$nextTick(function() {
             if (this.$refs.memberFormRef) this.$refs.memberFormRef.clearValidate()
           }.bind(this))
+        },
+        // 修改点：操作列「更多」下拉命令分发（编辑/启停/删除）
+        onRowCommand: function(cmd, row) {
+          if (cmd === 'edit') this.showEdit(row)
+          else if (cmd === 'toggle') this.toggleStatus(row)
+          else if (cmd === 'delete') this.handleDelete(row)
         },
         // 修改点：编辑会员弹窗
         showEdit: function(row) {

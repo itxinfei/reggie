@@ -36,7 +36,8 @@
   <!-- 功能：查看会员充值流水，支持按手机号/支付方式筛选，含趋势图与支付方式分布图，支持手动充值 -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="recharge-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">充值记录</h1>
       <!-- 统计卡片（第一区块） -->
       <stat-cards :cards="statsCards"></stat-cards>
 
@@ -95,7 +96,7 @@
 
     <!-- ===== 手动充值弹窗（8.4.3：金额/赠送/支付方式，充值后余额即时更新） ===== -->
     <crud-dialog :show-submit="true" :show-cancel="true" title="手动充值" :visible.sync="rechargeForm.dialogVisible" :submit-loading="rechargeLoading" size="md" @submit="submitRecharge">
-      <el-form :model="rechargeForm" :rules="rechargeRules" ref="rechargeFormRef" label-width="90px" size="small">
+      <el-form :model="rechargeForm" :rules="rechargeRules" ref="rechargeFormRef" label-width="100px" size="small">
         <el-form-item label="会员手机：" prop="phone">
           <div style="display:flex;gap:8px;width:100%;">
             <el-input v-model="rechargeForm.phone" placeholder="输入会员手机号" clearable style="flex:1" @keyup.enter.native="queryRechargeMember"></el-input>

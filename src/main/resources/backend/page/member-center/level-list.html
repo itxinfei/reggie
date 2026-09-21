@@ -34,7 +34,8 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="level-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">会员等级</h1>
       <!-- 修改点：使用 <stat-cards> 统一组件 -->
       <stat-cards :cards="statsCards"></stat-cards>
 
@@ -93,7 +94,7 @@
     <!-- ===== 弹窗 ===== -->
     <!-- 修改点：使用 <crud-dialog :show-submit="true" :show-cancel="true"> 统一组件替代手写 el-dialog，默认 footer 提供"取消/确定" -->
     <crud-dialog :show-submit="true" :show-cancel="true" :title="formData.title" :visible.sync="formData.dialogVisible" :submit-loading="submitting" size="md" @submit="submitForm">
-      <el-form label-width="90px" :model="formData" :rules="formRules" ref="levelForm">
+      <el-form label-width="100px" :model="formData" :rules="formRules" ref="levelForm">
         <el-form-item label="等级名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入等级名称" maxlength="20"></el-input>
         </el-form-item>
