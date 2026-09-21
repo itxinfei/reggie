@@ -157,7 +157,13 @@
         message = "系统接口请求超时";
       }
       else if (message.includes("Request failed with status code")) {
-        message = "系统接口" + message.substring(message.length - 3) + "异常";
+        var httpStatus = error.response ? error.response.status : 0;
+        if (httpStatus === 403) {
+          // 无权限：明确告知原因与解决途径，而非笼统的系统异常
+          message = "您没有该操作的访问权限，请联系管理员开通";
+        } else {
+          message = "系统接口" + message.substring(message.length - 3) + "异常";
+        }
       }
       if (window.ReggieUI && window.ReggieUI.error) {
         // 统一走 ReggieUI 反馈入口（common.js 规范：禁止混用 $message / ElMessage 直写）；
