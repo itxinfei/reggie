@@ -216,20 +216,24 @@
   color: var(--color-danger);
 }
 
-/* 主要按钮（空状态"去下单"） */
+/* 主要按钮（空状态"去下单"）：44 金胶囊（2026-09-21 规范统一） */
 .btn-primary {
   background: var(--color-primary-gradient);
   color: var(--color-text-primary);
   border: none;
-  border-radius: var(--radius-xl);
-  padding: 8rem 24rem;
-  font-size: 14rem;
+  height: 44rem;
+  padding: 0 28rem;
+  border-radius: var(--btn-radius);
+  box-shadow: var(--shadow-cta);
+  font-size: var(--btn-font);
+  font-weight: 600;
   cursor: pointer;
   margin-top: 12rem;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, transform 0.12s;
 }
 .btn-primary:active {
-  opacity: 0.85;
+  opacity: 0.9;
+  transform: scale(0.97);
 }
 
 /* 评价提交弹窗样式 */
@@ -260,7 +264,8 @@
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 8rem 32rem var(--mask-medium);
+  /* 2026-09-21：大投影 → 轻量弹窗阴影 */
+  box-shadow: var(--shadow-md);
 }
 .submit-modal-header {
   position: relative;

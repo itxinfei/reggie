@@ -3,7 +3,7 @@
 
     /* ---- 会员中心专属令牌（收敛硬编码 hex） ---- */
     :root {
-      --mc-card-shadow: 0 8rem 30rem rgba(224, 144, 0, 0.3);  /* 会员卡金色投影 */
+      --mc-card-shadow: var(--shadow-card);  /* 2026-09-21：大金色投影 → 中性卡片阴影 */
     }
 
     /* ---- 头部 ---- */
@@ -52,10 +52,10 @@
       color: var(--color-text-primary); }
     .mc-card-stats { display: flex; position: relative; z-index: 1; }
     .mc-card-stat { flex: 1; text-align: center; }
-    .mc-card-stat .val { font-size: 24rem; font-weight: 700; color: var(--color-text-primary);
+    .mc-card-stat .val { font-size: 20rem; font-weight: 700; color: var(--color-text-primary);
       font-family: var(--font-family-number); line-height: 1.2; }
     .mc-card-stat .lbl { font-size: 12rem; color: var(--gold-text-muted); margin-top: 4rem; }
-    .mc-card-stat-divider { width: 1rem; background: var(--gold-text); margin: 4rem 0; }
+    .mc-card-stat-divider { width: 1px; background: var(--gold-text); margin: 4rem 0; }
     .mc-card-progress { margin-top: 14rem; position: relative; z-index: 1; }
     .mc-prog-label { display: flex; justify-content: space-between; font-size: 12rem;
       color: var(--gold-text-muted); margin-bottom: 6rem; }
@@ -70,7 +70,7 @@
     .mc-section { margin: 0 16rem 14rem; background: var(--bg-card); border-radius: var(--radius-lg);
       overflow: hidden; box-shadow: var(--shadow-card); }
     .mc-section-title { font-size: 15rem; font-weight: 600; color: var(--color-text-primary);
-      padding: 16rem 18rem 12rem; border-bottom: 1rem solid var(--bg-hover);
+      padding: 16rem 18rem 12rem; border-bottom: 1px solid var(--bg-hover);
       display: flex; align-items: center; gap: 8rem; }
     .mc-section-title .count { font-size: 12rem; color: var(--color-text-hint); font-weight: 400; }
 
@@ -90,7 +90,7 @@
     .mc-benefit-desc { font-size: 12rem; color: var(--color-text-hint); margin-top: 2rem; }
 
     /* ---- Tab ---- */
-    .mc-tabs { display: flex; border-bottom: 1rem solid var(--bg-hover); }
+    .mc-tabs { display: flex; border-bottom: 1px solid var(--bg-hover); }
     .mc-tab { flex: 1; text-align: center; padding: 14rem 0; font-size: 14rem;
       color: var(--color-text-hint); cursor: pointer; transition: color 0.2s;
       position: relative; user-select: none; }
@@ -108,7 +108,7 @@
        避免数据被遮挡；由页面整体滚动承载。 */
     .mc-points-list { padding: 0 16rem; }
     .mc-point-item { display: flex; align-items: center; padding: 12rem 0;
-      border-bottom: 1rem solid var(--bg-hover); }
+      border-bottom: 1px solid var(--bg-hover); }
     .mc-point-item:last-child { border-bottom: none; }
     .mc-point-icon { width: 36rem; height: 36rem; border-radius: var(--radius-md);
       display: flex; align-items: center; justify-content: center; font-size: 16rem;
@@ -131,7 +131,7 @@
     .mc-coupon.used { opacity: 0.55; }
     .mc-coupon-left { width: 100rem; padding: 14rem 12rem; display: flex;
       flex-direction: column; align-items: center; justify-content: center;
-      border-right: 1rem dashed var(--bg-hover); flex-shrink: 0; position: relative; }
+      border-right: 1px dashed var(--bg-hover); flex-shrink: 0; position: relative; }
     .mc-coupon-left::before,.mc-coupon-left::after {
       content: ''; position: absolute; right: -5rem; width: 10rem; height: 10rem;
       border-radius: 50%; background: var(--bg-page); }
@@ -157,7 +157,7 @@
        修改点(2026-09-01)：移除 max-height + overflow-y 截断，全量展示所有充值记录。 */
     .mc-recharge-list { padding: 0 16rem; }
     .mc-recharge-item { display: flex; align-items: center; padding: 12rem 0;
-      border-bottom: 1rem solid var(--bg-hover); }
+      border-bottom: 1px solid var(--bg-hover); }
     .mc-recharge-item:last-child { border-bottom: none; }
     .mc-recharge-amount { font-size: 16rem; font-weight: 600; color: var(--color-primary-dark);
       margin-right: 12rem; min-width: 80rem; }
@@ -195,7 +195,7 @@
       padding: 16rem 18rem; box-shadow: var(--shadow-card);
     }
     .skeleton-section-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16rem; }
-    .skeleton-row { display: flex; align-items: center; justify-content: space-between; padding: 12rem 0; border-bottom: 1rem solid var(--bg-hover); }
+    .skeleton-row { display: flex; align-items: center; justify-content: space-between; padding: 12rem 0; border-bottom: 1px solid var(--bg-hover); }
     .skeleton-row:last-child { border-bottom: none; }
     .skeleton-tag { width: 50rem; height: 20rem; border-radius: var(--radius-round); }
     .skeleton-line { height: 14rem; border-radius: var(--radius-sm); }

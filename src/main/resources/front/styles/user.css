@@ -6,7 +6,7 @@
 /* ---- 头部：统一品牌渐变色 + 增大头像 + 优化布局 ---- */
 #user .divHead {
   width: 100%;
-  height: 164rem;
+  height: 140rem;
   background: var(--color-primary-gradient);
   box-sizing: border-box;
   padding: 0 var(--spacing-lg) var(--spacing-lg);
@@ -20,8 +20,9 @@
   text-align: center;
   color: var(--color-text-primary);
   line-height: 25rem;
-  padding-top: 48rem;
-  margin-bottom: 16rem;
+  /* 2026-09-21：48rem 过度下移 → 安全区 + 8，头高 164→140 */
+  padding-top: calc(env(safe-area-inset-top, 0px) + 8rem);
+  margin-bottom: 12rem;
   position: relative;
 }
 
@@ -42,17 +43,7 @@
   align-items: center;
 }
 
-#user .divHead .divUser > img {
-  width: 64rem;
-  height: 64rem;
-  border-radius: var(--radius-round);
-  margin-right: var(--spacing-lg);
-  /* 修改点(2026-09-17)：px→rem 统一（宽屏下随根字号缩放） */
-  border: 3rem solid rgba(255, 255, 255, 0.7);
-  background: var(--bg-hover);
-  object-fit: cover;
-  box-shadow: 0 2rem 8rem rgba(0, 0, 0, 0.15);
-}
+/* 头像样式已迁移至文件末尾 .avatar-wrap（2026-09-21，自 user.html 内联样式迁入） */
 
 #user .divHead .divUser .desc {
   display: flex;
@@ -89,9 +80,9 @@
   color: rgba(51, 51, 51, 0.75);
 }
 
-/* 修改点：divContent 高度与头部精确匹配 —— 头部 #user .divHead 高度 164rem */
+/* 2026-09-21：divContent 高度与头部精确匹配 —— 头部高度 140rem */
 #user .divContent {
-  height: calc(100% - 164rem);
+  height: calc(100% - 140rem);
   overflow-y: auto;
   padding-bottom: var(--spacing-xl);
 }
@@ -187,7 +178,7 @@
   font-weight: 600;
   text-align: left;
   color: var(--color-text-primary);
-  border-bottom: 2rem solid var(--bg-hover);
+  border-bottom: 1px solid var(--bg-hover);
 }
 
 #user .divOrders .timeStatus {
@@ -201,7 +192,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2rem dashed var(--bg-hover);
+  border-bottom: 1px dashed var(--bg-hover);
 }
 
 #user .divOrders .timeStatus span:first-child {
@@ -236,8 +227,8 @@
 
 /* 修改点：美团式菜品行——小图(72rem圆角缩略图) + 菜名自适应 + x数量，点整行或小图可全屏预览 */
 #user .divOrders .dishList .item .dish-thumb {
-  width: 72rem;
-  height: 72rem;
+  width: 56rem;
+  height: 56rem;
   border-radius: var(--radius-md);
   object-fit: cover;
   flex-shrink: 0;
@@ -449,14 +440,27 @@
   position: relative;
 }
 
-/* 修改点(2026-09-14 统一设计语言)：原 5 个订单入口混用 金/绿/金/红 三色，视觉杂乱；
-   统一为品牌金底 + 深金字，数量信息由红色角标承载（更贴近美团订单入口的克制配色） */
-#user .order-quick-item .oq-icon.oq-pending,
-#user .order-quick-item .oq-icon.oq-delivering,
-#user .order-quick-item .oq-icon.oq-evaluate,
+/* 2026-09-21：订单入口语义色（学美团克制多色，金色收敛）
+   待付款橙 / 待接单蓝 / 配送绿 / 评价星 / 退款红；容器统一 40 方 radius-md */
+#user .order-quick-item .oq-icon.oq-pending {
+  background: var(--icon-favorite-bg);
+  color: var(--icon-favorite);
+}
+#user .order-quick-item .oq-icon.oq-accepted {
+  background: var(--icon-order-bg);
+  color: var(--icon-order);
+}
+#user .order-quick-item .oq-icon.oq-delivering {
+  background: var(--icon-address-bg);
+  color: var(--icon-address);
+}
+#user .order-quick-item .oq-icon.oq-evaluate {
+  background: var(--color-star-tint);
+  color: var(--color-star);
+}
 #user .order-quick-item .oq-icon.oq-refund {
-  background: var(--color-primary-tint);
-  color: var(--color-primary-dark);
+  background: var(--color-danger-tint);
+  color: var(--color-danger);
 }
 
 #user .order-quick-item .oq-badge {
@@ -524,3 +528,189 @@
 }
 
 /* 订单状态色：HTML 直接使用 index.css 共享层 .status-xxx 类，无需页面级重复定义 */
+
+/* ================================================================
+   以下自 user.html 内联 <style> 迁入（2026-09-21）：
+   服务图标语义色 / 会员卡 / 骨架屏 / 头像上传 / 编辑资料弹窗
+   ================================================================ */
+
+/* ---- 服务图标语义色（容器沿用上方统一 36 方 radius-md，仅换底色与字色） ----
+   会员金 / 编辑蓝 / 地址绿 / 历史蓝 / 消息橙 / 常购橙 / 评价星 / 发票紫 / 客服蓝绿 */
+#user .divLinks .item .link-icon.li-member {
+  background: var(--color-primary-tint);
+  color: var(--color-primary-dark);
+}
+#user .divLinks .item .link-icon.li-edit {
+  background: var(--icon-order-bg);
+  color: var(--icon-order);
+}
+#user .divLinks .item .link-icon.li-address {
+  background: var(--icon-address-bg);
+  color: var(--icon-address);
+}
+#user .divLinks .item .link-icon.li-history {
+  background: var(--icon-order-bg);
+  color: var(--icon-order);
+}
+#user .divLinks .item .link-icon.li-message {
+  background: var(--icon-message-bg);
+  color: var(--icon-message);
+}
+#user .divLinks .item .link-icon.li-frequent {
+  background: var(--icon-favorite-bg);
+  color: var(--icon-favorite);
+}
+#user .divLinks .item .link-icon.li-evaluate {
+  background: var(--color-star-tint);
+  color: var(--color-star);
+}
+#user .divLinks .item .link-icon.li-invoice {
+  background: var(--icon-invoice-bg);
+  color: var(--icon-invoice);
+}
+#user .divLinks .item .link-icon.li-service {
+  background: var(--icon-service-bg);
+  color: var(--icon-service);
+}
+
+/* ---- 会员卡片（品牌金卡，金色属品牌展示保留；投影中性化） ---- */
+#user .member-card {
+  margin: 12rem;
+  background: var(--color-primary-gradient-card);
+  border-radius: var(--radius-xl);
+  padding: 16rem 18rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+#user .member-card::before {
+  content: ''; position: absolute; top: -30rem; right: -30rem;
+  width: 120rem; height: 120rem; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.35) 0%, transparent 70%);
+}
+#user .member-card .card-top {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rem;
+  position: relative; z-index: 1;
+}
+#user .member-card .card-level-badge {
+  background: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-primary); font-size: 11rem; font-weight: 700;
+  padding: 3rem 10rem; border-radius: var(--radius-round); letter-spacing: 0.5rem;
+}
+#user .member-card .card-level-badge.standard {
+  background: rgba(51, 51, 51, 0.12); color: var(--color-text-primary);
+}
+#user .member-card .card-arrow { color: var(--gold-text); font-size: 14rem; }
+#user .member-card .card-stats { display: flex; position: relative; z-index: 1; }
+#user .member-card .card-stat { flex: 1; text-align: center; position: relative; }
+#user .member-card .card-stat:not(:last-child)::after {
+  content: ''; position: absolute; right: 0; top: 15%;
+  width: 1px; height: 70%; background: rgba(51, 51, 51, 0.15);
+}
+#user .member-card .card-stat .val {
+  font-size: 20rem; font-weight: 700; color: var(--color-text-primary);
+  font-family: var(--font-family-number);
+}
+#user .member-card .card-stat .lbl {
+  font-size: 11rem; color: var(--gold-text); margin-top: 2rem;
+}
+#user .member-card .card-coupon-tag {
+  margin-top: 10rem; font-size: 12rem; color: var(--gold-text);
+  display: flex; align-items: center; gap: 6rem; position: relative; z-index: 1;
+}
+#user .member-card .card-coupon-tag .coupon-count {
+  background: rgba(255, 255, 255, 0.45); border-radius: var(--radius-md);
+  padding: 3rem 8rem; color: var(--color-text-primary); font-weight: 600;
+}
+#user .member-card .non-member-tip {
+  text-align: center; color: var(--gold-text); font-size: 13rem;
+  padding: 6rem 0; position: relative; z-index: 1;
+}
+
+/* ---- 骨架屏（头部 / 金卡用品牌金，保留） ---- */
+#user .skeleton-container { padding: 12rem; }
+#user .skeleton-user { display: flex; align-items: center; padding: 20rem 12rem; background: var(--color-primary-gradient); border-radius: var(--radius-xl); margin-bottom: 12rem; }
+#user .skeleton-avatar { width: 60rem; height: 60rem; border-radius: 50%; background: linear-gradient(90deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
+#user .skeleton-user-info { flex: 1; margin-left: 12rem; }
+#user .skeleton-member-card { padding: 16rem 18rem; background: var(--color-primary-gradient); border-radius: var(--radius-xl); margin-bottom: 12rem; }
+#user .skeleton-stats { display: flex; gap: 16rem; margin-top: 12rem; }
+#user .skeleton-stat { flex: 1; height: 40rem; border-radius: var(--radius-md); background: linear-gradient(90deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; }
+#user .skeleton-links { background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; }
+#user .skeleton-link-item { display: flex; align-items: center; padding: 16rem; border-bottom: 1px solid var(--border-light); }
+#user .skeleton-link-item:last-child { border-bottom: none; }
+#user .skeleton-icon { width: 24rem; height: 24rem; border-radius: var(--radius-sm); background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; margin-right: 12rem; }
+#user .skeleton-line { height: 14rem; border-radius: var(--radius-sm); background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; margin-bottom: 8rem; }
+#user .skeleton-line:last-child { margin-bottom: 0; }
+#user .skeleton-w30 { width: 30%; }
+#user .skeleton-w40 { width: 40%; }
+#user .skeleton-w50 { width: 50%; }
+#user .skeleton-w60 { width: 60%; }
+
+/* ---- 头像上传交互 ---- */
+#user .avatar-wrap {
+  position: relative;
+  width: 56rem; height: 56rem;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: var(--spacing-lg);
+  cursor: pointer;
+  border: 2rem solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2rem 6rem rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s ease;
+  background: var(--bg-hover);
+  -webkit-tap-highlight-color: transparent;
+}
+#user .avatar-wrap:active { transform: scale(0.97); }
+#user .avatar-wrap.dragging { border-color: var(--color-primary); border-style: dashed; }
+#user .avatar-wrap .avatar-img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+  border-radius: 50%;
+}
+#user .avatar-edit-hint {
+  position: absolute; right: 0; bottom: 0;
+  width: 20rem; height: 20rem;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-white); font-size: 12rem;
+  display: flex; align-items: center; justify-content: center;
+}
+#user .avatar-mask {
+  position: absolute; inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--color-text-white); font-size: 24rem;
+  display: flex; align-items: center; justify-content: center;
+}
+#user .rotating { animation: avatar-spin 0.9s linear infinite; }
+@keyframes avatar-spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+#user .avatar-input {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0; cursor: pointer; font-size: 0;
+}
+#user .edit-profile-icon {
+  margin-left: 8rem; font-size: 15rem; color: var(--gold-text);
+  cursor: pointer; vertical-align: middle;
+}
+
+/* ---- 编辑资料弹窗 ---- */
+#user .edit-profile-body { padding: 8rem 16rem 4rem; }
+#user .ep-field { display: flex; align-items: center; margin-bottom: 14rem; }
+#user .ep-label { width: 44rem; flex-shrink: 0; font-size: 14rem; color: var(--color-text-secondary); }
+#user .ep-input {
+  flex: 1; height: 36rem; padding: 0 10rem;
+  border: 1px solid var(--border-light); border-radius: var(--radius-md);
+  font-size: 14rem; outline: none; box-sizing: border-box;
+  background: var(--bg-card); color: var(--color-text-primary);
+}
+#user .ep-input:focus { border-color: var(--color-primary); }
+#user .ep-gender { display: flex; gap: 10rem; }
+#user .ep-gender-opt {
+  padding: 6rem 16rem; border: 1px solid var(--border-light); border-radius: var(--btn-radius);
+  font-size: 13rem; color: var(--color-text-secondary); cursor: pointer;
+}
+#user .ep-gender-opt.active {
+  background: var(--color-primary); color: var(--color-text-primary);
+  border-color: var(--color-primary); font-weight: 600;
+}

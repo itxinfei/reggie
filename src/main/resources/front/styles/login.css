@@ -35,10 +35,12 @@
   /* 修改点(2026-09-17)：新增占位符聚焦色、图标暖灰色令牌，收敛剩余「使用态」硬编码 hex */
   --login-text-placeholder-focus: #dfd0b8;
   --login-icon-muted: #c3b79f;
-  --login-shadow-card: 0 16rem 40rem rgba(180, 120, 0, 0.12), 0 4rem 12rem rgba(180, 120, 0, 0.06);
-  --login-shadow-card-focus: 0 20rem 48rem rgba(255, 160, 0, 0.18), 0 4rem 14rem rgba(180, 120, 0, 0.08);
+  /* 2026-09-21：大扩散暖色投影 → 中性 shadow-md */
+  --login-shadow-card: var(--shadow-md);
+  --login-shadow-card-focus: var(--shadow-md);
   --login-ring: 0 0 0 4rem rgba(255, 180, 0, 0.16);
-  --login-shadow-btn: 0 10rem 24rem rgba(255, 170, 0, 0.34), 0 2rem 6rem rgba(255, 150, 0, 0.18);
+  /* 2026-09-21：按钮大扩散金影 → shadow-cta（小而聚焦） */
+  --login-shadow-btn: var(--shadow-cta);
 
   /* ---- 品牌 logo SVG 令牌（收敛 SVG 内硬编码 fill/stroke） ---- */
   --logo-bowl: var(--color-primary);        /* 碗体主色（统一品牌金 #ffb200） */
@@ -450,23 +452,18 @@ body.login-page {
   background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 50%, var(--color-primary-dark) 100%);
   /* 修改点：硬编码 #4a3000 → --login-text-brand */
   color: var(--login-text-brand);
-  box-shadow:
-    0 4rem 16rem rgba(255, 180, 0, 0.3),
-    0 1rem 3rem var(--color-primary-dark-tint);
+  /* 2026-09-21：多层大金色投影 → shadow-cta */
+  box-shadow: var(--shadow-cta);
 }
 
 #login .btnActive:hover {
-  box-shadow:
-    0 6rem 24rem var(--color-primary-shadow),
-    0 2rem 6rem rgba(255, 160, 0, 0.25);
+  box-shadow: var(--shadow-cta);
   transform: translateY(-1.5rem);
 }
 
 #login .btnActive:active {
   background: var(--color-primary-dark);
-  box-shadow:
-    0 2rem 8rem rgba(255, 180, 0, 0.15),
-    0 0 1rem rgba(255, 160, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   transform: scale(0.975);
 }
 
@@ -565,7 +562,7 @@ body.login-page {
 #login .checkIcon.checked {
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   border-color: var(--color-primary);
-  box-shadow: 0 0 10rem rgba(255, 180, 0, 0.35);
+  box-shadow: 0 2rem 6rem var(--color-primary-shadow);
 }
 
 #login .checkIcon .check-mark {

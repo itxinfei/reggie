@@ -14,152 +14,6 @@
     <link rel="stylesheet" href="./../styles/user.css?v=20260918" />
     <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
     <link rel="stylesheet" href="../styles/tabbar.css?v=20260917" />
-    <style>
-        /* 会员卡片 */
-        .member-card {
-            /* 修改点(2026-09-14)：顶部留 12rem 与金色头部拉开层次（原 margin-top:0 与头部糊在一起） */
-            margin: 12rem 12rem 12rem;
-            /* 修改点(2026-09-17)：土棕深金渐变与头部亮金割裂 → 亮金卡片渐变，与头部色彩体系连贯 */
-            background: var(--color-primary-gradient-card);
-            border-radius: var(--radius-xl);
-            padding: 16rem 18rem;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4rem 12rem rgba(184, 125, 0, 0.18);
-        }
-        .member-card::before {
-            content: ''; position: absolute; top: -30rem; right: -30rem;
-            width: 120rem; height: 120rem; border-radius: 50%;
-            background: radial-gradient(circle, rgba(255,255,255,0.35) 0%, transparent 70%);
-        }
-        .member-card .card-top {
-            display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rem;
-            position: relative; z-index: 1;
-        }
-        .member-card .card-level-badge {
-            background: rgba(255,255,255,0.45);
-            color: var(--color-text-primary); font-size: 11rem; font-weight: 700;
-            padding: 3rem 10rem; border-radius: var(--radius-round); letter-spacing: 0.5rem;
-        }
-        .member-card .card-level-badge.standard {
-            background: rgba(51,51,51,0.12); color: var(--color-text-primary);
-        }
-        .member-card .card-arrow { color: var(--gold-text); font-size: 14rem; }
-        .member-card .card-stats {
-            display: flex; gap: 0; position: relative; z-index: 1;
-        }
-        .member-card .card-stat {
-            flex: 1; text-align: center; position: relative;
-        }
-        .member-card .card-stat:not(:last-child)::after {
-            content: ''; position: absolute; right: 0; top: 15%;
-            width: 1px; height: 70%;
-            background: rgba(51,51,51,0.15);
-        }
-        .member-card .card-stat .val {
-            font-size: 20rem; font-weight: 700; color: var(--color-text-primary);
-            font-family: var(--font-family-number);
-        }
-        .member-card .card-stat .lbl {
-            font-size: 11rem; color: var(--gold-text); margin-top: 2rem;
-        }
-        .member-card .card-coupon-tag {
-            margin-top: 10rem; font-size: 12rem; color: var(--gold-text);
-            display: flex; align-items: center; gap: 6rem; position: relative; z-index: 1;
-        }
-        .member-card .card-coupon-tag .coupon-count {
-            background: rgba(255,255,255,0.45); border-radius: 8rem;
-            padding: 3rem 8rem; color: var(--color-text-primary); font-weight: 600;
-        }
-        .member-card .non-member-tip {
-            text-align: center; color: var(--gold-text); font-size: 13rem;
-            padding: 6rem 0; position: relative; z-index: 1;
-        }
-        /* 骨架屏样式 */
-        .skeleton-container { padding: 12rem; }
-        .skeleton-user { display: flex; align-items: center; padding: 20rem 12rem; background: var(--color-primary-gradient); border-radius: var(--radius-xl); margin-bottom: 12rem; }
-        .skeleton-avatar { width: 60rem; height: 60rem; border-radius: 50%; background: linear-gradient(90deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
-        .skeleton-user-info { flex: 1; margin-left: 12rem; }
-        .skeleton-member-card { padding: 16rem 18rem; background: var(--color-primary-gradient); border-radius: var(--radius-xl); margin-bottom: 12rem; }
-        .skeleton-stats { display: flex; gap: 16rem; margin-top: 12rem; }
-        .skeleton-stat { flex: 1; height: 40rem; border-radius: var(--radius-md); background: linear-gradient(90deg, rgba(255,255,255,0.3) 25%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 75%); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; }
-        .skeleton-links { background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; }
-        .skeleton-link-item { display: flex; align-items: center; padding: 16rem; border-bottom: 1px solid var(--border-light); }
-        .skeleton-link-item:last-child { border-bottom: none; }
-        .skeleton-icon { width: 24rem; height: 24rem; border-radius: var(--radius-sm); background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; margin-right: 12rem; }
-        .skeleton-line { height: 14rem; border-radius: 4rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; margin-bottom: 8rem; }
-        .skeleton-line:last-child { margin-bottom: 0; }
-        .skeleton-w30 { width: 30%; }
-        .skeleton-w40 { width: 40%; }
-        .skeleton-w50 { width: 50%; }
-        .skeleton-w60 { width: 60%; }
-        /* 修改点(2026-09-17)：复用全局 @keyframes rg-skeleton-shine */
-
-        /* 修改点(2026-09-16)：头像上传交互样式（点击/拖拽、即时预览、上传遮罩） */
-        .avatar-wrap {
-            position: relative;
-            width: 56rem; height: 56rem;
-            border-radius: 50%;
-            overflow: hidden;
-            flex-shrink: 0;
-            cursor: pointer;
-            border: 2rem solid rgba(255,255,255,0.9);
-            box-shadow: 0 2rem 6rem rgba(0,0,0,0.12);
-            transition: transform .15s ease;
-            background: #f2f2f2;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .avatar-wrap:active { transform: scale(0.97); }
-        .avatar-wrap.dragging { border-color: var(--color-primary, #e94e3c); border-style: dashed; }
-        .avatar-wrap .avatar-img {
-            width: 100%; height: 100%;
-            object-fit: cover; display: block;
-            border-radius: 50%;
-        }
-        .avatar-edit-hint {
-            position: absolute; right: 0; bottom: 0;
-            width: 20rem; height: 20rem;
-            border-radius: 50%;
-            background: rgba(0,0,0,0.45);
-            color: #fff; font-size: 12rem;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .avatar-mask {
-            position: absolute; inset: 0;
-            background: rgba(0,0,0,0.45);
-            color: #fff; font-size: 24rem;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .rotating { animation: avatar-spin 0.9s linear infinite; }
-        @keyframes avatar-spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
-        .avatar-input {
-            position: absolute; inset: 0;
-            width: 100%; height: 100%;
-            opacity: 0; cursor: pointer; font-size: 0;
-        }
-        .edit-profile-icon {
-            margin-left: 8rem; font-size: 15rem; color: var(--gold-text, #b87d00);
-            cursor: pointer; vertical-align: middle;
-        }
-        .edit-profile-body { padding: 8rem 16rem 4rem; }
-        .ep-field { display: flex; align-items: center; margin-bottom: 14rem; }
-        .ep-label { width: 44rem; flex-shrink: 0; font-size: 14rem; color: #666; }
-        .ep-input {
-            flex: 1; height: 36rem; padding: 0 10rem;
-            border: 1px solid #e5e5e5; border-radius: 6rem;
-            font-size: 14rem; outline: none; box-sizing: border-box;
-        }
-        .ep-input:focus { border-color: var(--color-primary, #e94e3c); }
-        .ep-gender { display: flex; gap: 10rem; }
-        .ep-gender-opt {
-            padding: 6rem 16rem; border: 1px solid #e5e5e5; border-radius: 18rem;
-            font-size: 13rem; color: #666; cursor: pointer;
-        }
-        .ep-gender-opt.active {
-            background: var(--color-primary, #e94e3c); color: #fff;
-            border-color: var(--color-primary, #e94e3c);
-        }
-    </style>
 </head>
 <body>
     <div id="user" class="app" style="position:relative;">
@@ -279,7 +133,7 @@
                     <span class="oq-label">待付款</span>
                 </div>
                 <div class="order-quick-item" @click="toOrderPageWithStatus(2)">
-                    <span class="oq-icon">
+                    <span class="oq-icon oq-accepted">
                         <i class="ri-restaurant-line"></i>
                     </span>
                     <span class="oq-label">待接单</span>
@@ -309,32 +163,32 @@
                 <!-- 第一组：常用服务 -->
                 <div class="menu-group-title">常用服务</div>
                 <div class="item" @click="goMemberCenter">
-                    <i class="ri-vip-crown-2-line link-icon" aria-hidden="true"></i>
+                    <i class="ri-vip-crown-2-line link-icon li-member" aria-hidden="true"></i>
                     <span>会员中心</span>
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="openEditProfile">
-                    <i class="ri-edit-box-line link-icon" aria-hidden="true"></i>
+                    <i class="ri-edit-box-line link-icon li-edit" aria-hidden="true"></i>
                     <span>编辑资料</span>
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toAddressPage">
-                    <i class="ri-map-pin-line link-icon" aria-hidden="true"></i>
+                    <i class="ri-map-pin-line link-icon li-address" aria-hidden="true"></i>
                     <span>地址管理</span>
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <!-- 第二组：订单与消息 -->
                 <div class="menu-group-title">订单与消息</div>
                 <div class="item" @click="toOrderPage">
-                    <i class="ri-file-list-3-line link-icon" aria-hidden="true"></i>
+                    <i class="ri-file-list-3-line link-icon li-history" aria-hidden="true"></i>
                     <span>历史订单</span>
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toMessagePage" style="position:relative">
-                    <i class="ri-notification-2-line link-icon" aria-hidden="true"></i>
+                    <i class="ri-notification-2-line link-icon li-message" aria-hidden="true"></i>
                     <span>消息中心</span>
                     <span v-if="unreadCount > 0" class="msg-badge">{{ unreadCount }}</span>
                     <i class="ri-arrow-right-s-line"></i>
@@ -342,25 +196,25 @@
                 <!-- 第三组：更多 -->
                 <div class="menu-group-title">更多</div>
                 <div class="item" @click="toFrequentPage">
-                    <i class="ri-shopping-basket-line link-icon" aria-hidden="true"></i>
+                    <i class="ri-shopping-basket-line link-icon li-frequent" aria-hidden="true"></i>
                     <span>常购清单</span>
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toEvaluationPage">
-                    <i class="ri-star-line link-icon" aria-hidden="true"></i>
+                    <i class="ri-star-line link-icon li-evaluate" aria-hidden="true"></i>
                     <span>我的评价</span>
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="toInvoicePage">
-                    <i class="ri-receipt-line link-icon" aria-hidden="true"></i>
+                    <i class="ri-receipt-line link-icon li-invoice" aria-hidden="true"></i>
                     <span>我的发票</span>
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
                 <div class="item" @click="contactService">
-                    <i class="ri-customer-service-2-line link-icon" aria-hidden="true"></i>
+                    <i class="ri-customer-service-2-line link-icon li-service" aria-hidden="true"></i>
                     <span>联系客服</span>
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
@@ -410,6 +264,7 @@
             title="编辑资料"
             show-cancel-button
             confirm-button-text="保存"
+            confirm-button-color="var(--color-primary)"
             cancel-button-text="取消"
             :before-close="onEditProfileBeforeClose">
             <div class="edit-profile-body">

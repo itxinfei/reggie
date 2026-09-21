@@ -5,31 +5,9 @@
 
 /* ---- AI 助手暗色模式专属令牌（收敛暗色硬编码 hex，便于整体换肤） ---- */
 :root {
-  /* 暗色背景层级（由浅到深） */
-  --ai-dark-bg-base: #1a1a2e;
-  --ai-dark-bg-elevated: #16213e;
-  --ai-dark-bg-deep: #0f3460;
-  --ai-dark-bg-bubble: #2a2a4a;
-  --ai-dark-bg-input: #3a3a5a;
-  /* 暗色边框 */
-  --ai-dark-border: #2a2a4a;
-  --ai-dark-border-input: #3a3a5a;
-  --ai-dark-border-btn: #444;
-  /* 暗色文字 */
-  --ai-dark-text: var(--border-light);
-  --ai-dark-text-muted: #aaa;
-  --ai-dark-text-secondary: #ccc;
-  --ai-dark-text-placeholder: #8888aa;
-  --ai-dark-text-tab-inactive: var(--surface-white-50);
-  /* 暗色品牌主色 */
-  --ai-dark-primary: #ffb300;
-  /* 暗色遮罩 */
-  --ai-dark-overlay: rgba(0,0,0,0.6);
-  /* 暗色用户气泡 */
-  --ai-dark-user-bubble-text: #fff;
-  /* 网络提示 */
+  /* 网络提示（亮色模式） */
   --ai-network-banner-text: #000;
-  /* 浅灰边框/分割线（亮色模式下，复用全局边框令牌） */
+  /* 浅灰边框/分割线（亮色模式下复用全局边框令牌） */
   --ai-border-light: var(--border-light);
   --ai-border-medium: var(--border-medium);
 }
@@ -88,6 +66,23 @@
 /* ========== 暗色模式 ========== */
 .ai-container.dark-mode {
     --primary-dark-mode: var(--ai-dark-primary);
+    /* 暗色令牌自全局 :root 下移至此作用域（2026-09-21），仅暗色时生效 */
+    --ai-dark-bg-base: #1a1a2e;
+    --ai-dark-bg-elevated: #16213e;
+    --ai-dark-bg-deep: #0f3460;
+    --ai-dark-bg-bubble: #2a2a4a;
+    --ai-dark-bg-input: #3a3a5a;
+    --ai-dark-border: #2a2a4a;
+    --ai-dark-border-input: #3a3a5a;
+    --ai-dark-border-btn: #444;
+    --ai-dark-text: var(--border-light);
+    --ai-dark-text-muted: #aaa;
+    --ai-dark-text-secondary: #ccc;
+    --ai-dark-text-placeholder: #8888aa;
+    --ai-dark-text-tab-inactive: var(--surface-white-50);
+    --ai-dark-primary: #ffb300;
+    --ai-dark-overlay: rgba(0,0,0,0.6);
+    --ai-dark-user-bubble-text: #fff;
     background: var(--ai-dark-bg-base);
 }
 .ai-container.dark-mode .ai-header--custom {
@@ -406,33 +401,33 @@
 
 /* ========== 推荐菜品卡片 ========== */
 .dish-recommendations {
-    display: flex; flex-direction: column; gap: var(--spacing-sm); margin-top: 10px;
+    display: flex; flex-direction: column; gap: var(--spacing-sm); margin-top: 10rem;
 }
 .dish-card {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px; background: var(--bg-card); border-radius: 10px;
+    display: flex; align-items: center; gap: 10rem;
+    padding: 10rem; background: var(--bg-card); border-radius: var(--radius-md);
     border: 1px solid var(--ai-border-light); cursor: pointer; transition: box-shadow 0.2s;
 }
 .dish-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 .dish-card img {
-    width: 56px; height: 56px; border-radius: var(--radius-md);
+    width: 56rem; height: 56rem; border-radius: var(--radius-md);
     object-fit: cover; background: var(--bg-hover); flex-shrink: 0;
 }
 .dish-card .dish-info { flex: 1; min-width: 0; }
 .dish-card .dish-name {
-    font-size: 13px; font-weight: 500; color: var(--color-text-primary);
+    font-size: 13rem; font-weight: 500; color: var(--color-text-primary);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.dish-card .dish-reason { font-size: 11px; color: var(--color-text-hint); margin-top: 2px; }
-.dish-card .dish-price { font-size: var(--font-size-md); color: var(--color-price); font-weight: 600; margin-top: 4px; }
+.dish-card .dish-reason { font-size: 11rem; color: var(--color-text-hint); margin-top: 2rem; }
+.dish-card .dish-price { font-size: var(--font-size-md); color: var(--color-price); font-weight: 600; margin-top: 4rem; }
 .dish-card .add-btn {
-    width: 28px; height: 28px; border-radius: var(--radius-round); background: var(--color-primary);
+    width: var(--btn-sm-h); height: var(--btn-sm-h); border-radius: var(--radius-round); background: var(--color-primary);
     color: var(--color-text-primary); border: none; font-size: var(--font-size-lg); cursor: pointer;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     position: relative;
 }
 .dish-card .add-btn::after {
-    content: ''; position: absolute; inset: -8px; border-radius: var(--radius-round);
+    content: ''; position: absolute; inset: -8rem; border-radius: var(--radius-round);
 }
 
 /* ========== P4 经营数据工具调用状态条 ========== */

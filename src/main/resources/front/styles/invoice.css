@@ -1,0 +1,123 @@
+/* ========== 开发票页（自 invoice.html 内联样式迁入，2026-09-21） ========== */
+body { background: var(--bg-page); }
+
+#invoice-app .inv-container { padding: var(--spacing-lg) var(--spacing-lg) 40rem; }
+
+/* ---- 订单信息卡 ---- */
+#invoice-app .order-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg) 18rem;
+  margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-card);
+}
+#invoice-app .order-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6rem 0;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+#invoice-app .order-row .mono {
+  font-family: var(--font-family-number);
+  color: var(--color-text-secondary);
+  font-size: 13rem;
+}
+/* 订单金额：价格红（语义统一，原误用品品牌金） */
+#invoice-app .order-row .price {
+  color: var(--color-price);
+  font-weight: 700;
+  font-size: 16rem;
+}
+
+/* ---- 发票状态卡 ---- */
+#invoice-app .status-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 18rem;
+  margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-card);
+}
+#invoice-app .status-card .status-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rem;
+}
+#invoice-app .status-card .status-title {
+  font-size: 15rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+#invoice-app .rec-row {
+  font-size: 13rem;
+  color: var(--color-text-secondary);
+  padding: 4rem 0;
+  line-height: 1.6;
+}
+#invoice-app .rec-row .mono { font-family: var(--font-family-number); }
+#invoice-app .view-btn { margin-top: 12rem; }
+
+/* ---- 申请区 ---- */
+#invoice-app .apply-wrap {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 18rem;
+  box-shadow: var(--shadow-card);
+}
+#invoice-app .section-title {
+  font-size: 15rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 12rem;
+}
+/* 抬头项 */
+#invoice-app .title-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rem 4rem;
+  border-bottom: 1px solid var(--border-light);
+}
+#invoice-app .title-item .tax {
+  font-size: 12rem;
+  color: var(--color-text-hint);
+}
+#invoice-app .title-item .ops {
+  display: flex;
+  align-items: center;
+  gap: 16rem;
+}
+#invoice-app .title-item .icon-btn {
+  color: var(--color-text-disabled);
+  font-size: 18rem;
+  padding: 4rem;
+}
+/* 编辑图标：白底用深金更清晰（原亮金对比偏弱） */
+#invoice-app .title-item .icon-btn.edit { color: var(--color-primary-dark); }
+#invoice-app .new-title-title {
+  font-size: 14rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 18rem 0 4rem;
+}
+#invoice-app .apply-btn { margin-top: 20rem; }
+#invoice-app .tip {
+  font-size: 12rem;
+  color: var(--color-text-hint);
+  margin-top: 10rem;
+  line-height: 1.6;
+}
+
+/* ---- 编辑抬头弹窗 ---- */
+#invoice-app .edit-popup {
+  padding: 20rem 16rem calc(20rem + env(safe-area-inset-bottom));
+}
+#invoice-app .edit-popup-title {
+  font-size: 16rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-align: center;
+  margin-bottom: 16rem;
+}

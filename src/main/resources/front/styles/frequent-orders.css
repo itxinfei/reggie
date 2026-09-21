@@ -89,17 +89,17 @@
   position: relative;
 }
 #frequent .dish-card .dish-img {
-  width: 90rem;
-  height: 90rem;
-  border-radius: var(--radius-sm);
+  width: 64rem;
+  height: 64rem;
+  border-radius: var(--radius-md);
   object-fit: cover;
   flex-shrink: 0;
   background: var(--bg-hover);
 }
 #frequent .dish-card .dish-img-placeholder {
-  width: 90rem;
-  height: 90rem;
-  border-radius: var(--radius-sm);
+  width: 64rem;
+  height: 64rem;
+  border-radius: var(--radius-md);
   background: var(--bg-hover);
   display: flex;
   align-items: center;
@@ -107,7 +107,7 @@
   flex-shrink: 0;
 }
 #frequent .dish-card .dish-img-placeholder i {
-  font-size: 32rem;
+  font-size: 24rem;
   color: var(--color-text-disabled);
 }
 #frequent .dish-card .dish-info {
@@ -159,24 +159,41 @@
   font-size: var(--font-size-sm);
   margin-right: 1rem;
 }
-#frequent .dish-card .reorder-btn {
-  padding: 6rem 16rem;
-  background: var(--color-primary-gradient);
+/* 加购钮：金渐变文字块 → 金圆加钮（与首页菜品行同构，饿了么式紧凑）。
+   视觉 32 圆，透明 ::after 扩命中区至 44，不改视觉只增手感 */
+#frequent .dish-card .add-circle-btn {
+  width: 32rem;
+  height: 32rem;
+  padding: 0;
+  background: var(--color-primary);
   color: var(--color-text-primary);
   border: none;
-  border-radius: 16rem;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
+  border-radius: var(--radius-round);
+  font-size: 20rem;
+  line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
-  transition: opacity var(--transition-fast);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast);
 }
-#frequent .dish-card .reorder-btn:active {
-  opacity: 0.8;
+#frequent .dish-card .add-circle-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6rem;
+  border-radius: var(--radius-round);
 }
-#frequent .dish-card .reorder-btn:disabled {
-  background: var(--color-text-disabled);
-  cursor: not-allowed;
+#frequent .dish-card .add-circle-btn:active {
+  transform: scale(0.88);
+}
+#frequent .dish-card .add-circle-btn.is-loading i {
+  animation: loading-spin 1s linear infinite;
+}
+#frequent .dish-card .add-circle-btn:disabled {
+  cursor: default;
 }
 
 /* 分组标题 */

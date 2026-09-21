@@ -12,42 +12,7 @@
   <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
   <!-- 修改点(2026-09-17)：补引 icon-fallback.js（其余页均成对引入），字体加载失败时图标降级而非空白 -->
   <script src="./../js/icon-fallback.js?v=20260917"></script>
-  <style>
-    body { background: var(--bg-page); }
-    .inv-container { padding: 16rem 16rem 40rem; }
-
-    /* 订单信息卡 */
-    .order-card { background: var(--bg-card); border-radius: 12rem; padding: 16rem 18rem; margin-bottom: 16rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
-    .order-row { display: flex; justify-content: space-between; align-items: center; padding: 6rem 0; font-size: 14rem; color: var(--color-text-primary); }
-    .order-row .mono { font-family: var(--font-family-number, monospace); color: var(--color-text-secondary); font-size: 13rem; }
-    .order-row .price { color: var(--color-primary); font-weight: 700; font-size: 16rem; }
-
-    /* 发票状态卡 */
-    .status-card { background: var(--bg-card); border-radius: 12rem; padding: 18rem; margin-bottom: 16rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
-    .status-card .status-line { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rem; }
-    .status-card .status-title { font-size: 15rem; font-weight: 600; color: var(--color-text-primary); }
-    .rec-row { font-size: 13rem; color: var(--color-text-secondary); padding: 4rem 0; line-height: 1.6; }
-    .rec-row .mono { font-family: var(--font-family-number, monospace); }
-    .view-btn { margin-top: 12rem; }
-
-    /* 申请区 */
-    .apply-wrap { background: var(--bg-card); border-radius: 12rem; padding: 18rem; box-shadow: 0 2rem 10rem rgba(0,0,0,0.04); }
-    .section-title { font-size: 15rem; font-weight: 600; color: var(--color-text-primary); margin-bottom: 12rem; }
-    /* 抬头项 */
-    .title-item { display: flex; align-items: center; justify-content: space-between; padding: 12rem 4rem; border-bottom: 1rem solid var(--border-light); }
-    .title-item .tax { font-size: 12rem; color: var(--color-text-hint); }
-    .title-item .ops { display: flex; align-items: center; gap: 16rem; }
-    .title-item .icon-btn { color: var(--color-text-disabled); font-size: 18rem; padding: 4rem; }
-    .title-item .icon-btn.edit { color: var(--color-primary); }
-    /* 修改点(2026-09-17)：空态统一使用全局 .empty-state，删除 .empty-tip 自定义类 */
-    .new-title-title { font-size: 14rem; font-weight: 600; color: var(--color-text-primary); margin: 18rem 0 4rem; }
-    .apply-btn { margin-top: 20rem; }
-    .tip { font-size: 12rem; color: var(--color-text-hint); margin-top: 10rem; line-height: 1.6; }
-
-    /* 编辑抬头弹窗 */
-    .edit-popup { padding: 20rem 16rem calc(20rem + env(safe-area-inset-bottom)); }
-    .edit-popup-title { font-size: 16rem; font-weight: 600; color: var(--color-text-primary); text-align: center; margin-bottom: 16rem; }
-  </style>
+  <link rel="stylesheet" href="../styles/invoice.css?v=20260921" />
 </head>
 <body>
   <div id="invoice-app">

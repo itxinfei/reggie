@@ -68,7 +68,7 @@ body.scrollable-page {
   background: var(--color-primary-gradient);
   position: relative;
   flex-shrink: 0;
-  box-shadow: 0 2rem 12rem var(--color-primary-dark-tint-lg);
+  box-shadow: var(--shadow-sm);
   z-index: 10;
 }
 #address_edit .divHead .divTitle {
@@ -268,11 +268,11 @@ body.scrollable-page {
   font-size: 16rem;
 }
 #address_edit .divContent .formGroup .sexBtn.sexBtnActive {
-  background: var(--color-primary-gradient);
+  background: var(--color-primary);
   border-color: var(--color-primary-dark);
   color: var(--color-text-primary);
   font-weight: 600;
-  box-shadow: 0 3rem 10rem var(--color-primary-dark-tint-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 /* ============================================
@@ -325,7 +325,6 @@ body.scrollable-page {
   font-weight: 600;
   background: linear-gradient(135deg, var(--color-primary-light), var(--addr-region-filled-end));
   border-color: var(--color-primary);
-  box-shadow: 0 1rem 4rem rgba(255, 154, 0, 0.1);
 }
 #address_edit .divContent .formGroup .regionSlot.regionFilled .regionArrow { color: var(--color-primary-dark); }
 /* 禁用/占位 */
@@ -403,8 +402,8 @@ body.scrollable-page {
 /* 保存按钮 */
 #address_edit .divFooter .btnSave {
   height: 48rem;
-  background: var(--color-primary-gradient);
-  border-radius: var(--radius-xl);
+  background: var(--color-primary);
+  border-radius: var(--btn-radius);
   font-size: 16rem;
   font-weight: 600;
   color: var(--color-text-primary);
@@ -414,7 +413,7 @@ body.scrollable-page {
   cursor: pointer;
   user-select: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 6rem 20rem rgba(255, 154, 0, 0.35);
+  box-shadow: var(--shadow-cta);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -422,7 +421,7 @@ body.scrollable-page {
 }
 #address_edit .divFooter .btnSave:active:not(.btnSaveDisabled) {
   transform: scale(0.96);
-  box-shadow: 0 2rem 10rem rgba(255, 154, 0, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 #address_edit .divFooter .btnSave.btnSaveDisabled {
   background: linear-gradient(135deg, var(--color-primary-light), var(--addr-save-disabled-end));

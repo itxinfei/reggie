@@ -38,7 +38,7 @@
   color: var(--color-text-secondary);
 }
 #invoice-list-app .inv-card .row .mono { font-family: var(--font-family-number, monospace); color: var(--color-text-primary); }
-#invoice-list-app .inv-card .row .price { color: var(--color-primary); font-weight: 700; font-size: 15rem; font-family: var(--font-family-number, monospace); }
+#invoice-list-app .inv-card .row .price { color: var(--color-price); font-weight: 700; font-size: 15rem; font-family: var(--font-family-number, monospace); }
 #invoice-list-app .inv-card .row .label { color: var(--color-text-hint); }
 
 /* 分页 */

@@ -85,16 +85,9 @@
   box-shadow: var(--shadow-card-hover);
 }
 
-#messageApp .msg-card.unread {
-  border-left: 3px solid var(--color-primary-dark);
-}
-
+/* 修改点(2026-09-21)：删除未读 3px 金左边框，未读仅靠红点 + 标题加粗区分 */
 #messageApp .msg-card.unread .msg-title {
-  font-weight: 600;
-}
-
-#messageApp .msg-card.read {
-  border-left: 3px solid transparent;
+  font-weight: 700;
 }
 
 /* ---- 未读红点 ---- */
