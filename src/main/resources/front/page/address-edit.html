@@ -472,8 +472,14 @@
                 }
                 // 修改点：街道/乡镇不入库（AddressBook.streetCode/Name 为 @TableField(exist=false)），
                 // 编辑回填时无法反查 streetId，此前强校验导致编辑已有地址永远无法保存；
-                // 后端同样未对街道做必填校验，故只要求省/市/区完整（三者可逐级反查）
-                if (!this.provinceId || !this.cityId || !this.districtId) {
+                // 后端同样未对街道做必填校验，故只要求省/市/区完整。
+                // 弱网兼容：编辑回填逐级反查 region id 失败时 id 为 null，但 form 里省/市/区 code+name
+                // 完整（来自详情接口），后端按 code+name 保存、不依赖 id，此时应允许直接保存，
+                // 避免用户仅改门牌号却被强制重新逐级选择省/市/区。
+                var regionOk = (this.provinceId || (f.provinceCode && f.provinceName))
+                    && (this.cityId || (f.cityCode && f.cityName))
+                    && (this.districtId || (f.districtCode && f.districtName))
+                if (!regionOk) {
                     this.errors.region = '请选择完整的省/市/区'
                     ok = false
                 }
