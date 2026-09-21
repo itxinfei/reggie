@@ -76,6 +76,15 @@ function fetchRestaurantInfo() {
     })
 }
 
+// 配送费试算：按收货地址 + 当前购物车实时核价，与下单扣费同源
+function previewDeliveryFeeApi(params) {
+    return $axios({
+        'url': '/restaurant/delivery-fee-preview',
+        'method': 'get',
+        params: params
+    })
+}
+
 // 修改点：搜索联想建议（仅返回名称列表，轻量级）
 function searchSuggestApi(data) {
     return $axios({

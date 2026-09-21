@@ -252,7 +252,7 @@
                 </div>
                 <div class="divPrice"></div>
                 <!-- 修改点(2026-09-17 UX)：提交中按钮文案变为"支付中…"，配合 isLoading 样式给出明确提交反馈 -->
-                <div :class="{btnSubmitActive: reorderId || (cartData && cartData.length > 0), btnSubmit: !reorderId && (!cartData || cartData.length < 1), isLoading: loading}" @click="goToPaySuccess">{{ loading ? '支付中…' : (reorderId ? '继续支付' : '去支付') }}</div>
+                <div :class="{btnSubmitActive: !feeBlocked && (reorderId || (cartData && cartData.length > 0)), btnSubmit: feeBlocked || (!reorderId && (!cartData || cartData.length < 1)), isLoading: loading}" @click="goToPaySuccess">{{ loading ? '支付中…' : (feeBlocked ? '暂不可下单' : (reorderId ? '继续支付' : '去支付')) }}</div>
               </div>
         </div>
         <!-- 开发环境版本，包含了有帮助的命令行警告 -->
@@ -307,8 +307,11 @@
                         couponLoading:false,
                         // 配送方式：0=立即配送，1=预约配送
                         deliveryMode: 0,
-                        // 配送费（从商家信息获取，展示用；后端按距离实际计算为准）
+                        // 配送费：按收货地址实时试算（与下单扣费同源）
                         deliveryFee: 0,
+                        // 试算是否阻断下单（超范围/未达起送价/商品失效）及说明
+                        feeBlocked: false,
+                        feeMessage: '',
                         // 送达时间选择（立即配送）
                         showTimePicker: false,
                         selectedTimeIdx: 0,
@@ -426,14 +429,10 @@
                         return
                     }
                     this.initData()
-                    // 修改点：加载商家配送费，用于结算页展示（后端按距离实际计算为准）
+                    // bfcache 兜底：从地址页用浏览器"返回"恢复时，重新加载地址并重试配送费
                     var self = this
-                    fetchRestaurantInfo().then(function(res){
-                        if(res.code === 1 && res.data){
-                            self.deliveryFee = Number(res.data.deliveryFee) || 0
-                        }
-                    }).catch(function(err){
-                        console.warn('[add-order] 加载配送费失败，使用默认值 0:', err)
+                    window.addEventListener('pageshow', function(e){
+                        if(e.persisted){ self.defaultAddress() }
                     })
                 },
                 methods:{
@@ -497,6 +496,8 @@
                            // 修改点：防御 res.data 为 null，避免 addressFull computed 访问空对象属性抛错
                            this.address = res.data || {}
                            this.finishTime = getFinishTime()
+                           // 新建订单：地址就绪后按地址试算真实配送费（续付按订单落库金额，不试算）
+                           if(!this.reorderId){ this.loadDeliveryFee() }
                            // 修改点：动态计算各送达时间选项的预计时刻
                            const base = new Date()
                            const h = base.getHours()
@@ -533,6 +534,30 @@
                         window.requestAnimationFrame(()=>{
                             window.location.href = '/front/page/address.html'
                         })
+                    },
+                    // 按收货地址试算配送费（后端按购物车实时核价，与下单扣费同源）
+                    async loadDeliveryFee(){
+                        if(!this.address || !this.address.id){ return }
+                        try{
+                            const res = await previewDeliveryFeeApi({ addressBookId: this.address.id })
+                            if(res.code !== 1 || !res.data){ return }
+                            const d = res.data
+                            this.deliveryFee = Number(d.fee) || 0
+                            if(d.goodsInvalid || d.addressInvalid){
+                                this.feeBlocked = true
+                                this.feeMessage = d.message || '当前商品或地址不可用'
+                                return
+                            }
+                            if(d.checkEnabled && ((d.rangeChecked && d.inRange === false) || d.belowMinOrder)){
+                                this.feeBlocked = true
+                                this.feeMessage = d.belowMinOrder ? '未达到起送价' : '收货地址不在配送范围内'
+                                return
+                            }
+                            this.feeBlocked = false
+                            this.feeMessage = ''
+                        }catch(e){
+                            console.warn('[add-order] 配送费试算失败:', e)
+                        }
                     },
                     //获取购物车数据
                     async getCartData(){
@@ -690,6 +715,10 @@
                         }
                         if(!this.address.id){
                             vant.Toast.fail('请先添加收货地址');
+                            return
+                        }
+                        if(this.feeBlocked){
+                            vant.Toast.fail(this.feeMessage || '当前地址暂不可下单');
                             return
                         }
                         if(this.loading) return;

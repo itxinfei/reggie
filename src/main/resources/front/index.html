@@ -138,21 +138,27 @@
             <div class="rc-info">
               <div class="rc-name-row">
                 <span class="rc-name">{{ restaurantInfo.name || '瑞吉外卖' }}</span>
-                <span class="rc-brand" v-if="restaurantInfo.brand">品牌</span>
               </div>
               <div class="rc-meta">
-                <span class="rc-stars">★{{ restaurantInfo.stars || '4.8' }}</span>
-                <span class="rc-divider">|</span>
-                <span>月售{{ restaurantInfo.monthlySales || '999+' }}</span>
-                <span class="rc-divider">|</span>
-                <span>{{ restaurantInfo.deliveryTime || '约30分钟' }}</span>
+                <span class="rc-stars" v-if="restaurantInfo.stars != null">★{{ restaurantInfo.stars }}</span>
+                <span v-else>暂无评分</span>
+                <template v-if="restaurantInfo.monthlySales != null">
+                  <span class="rc-divider">|</span>
+                  <span>月售{{ restaurantInfo.monthlySales }}</span>
+                </template>
               </div>
               <div class="rc-delivery">
-                <span>配送费¥{{ restaurantInfo.deliveryFee || '6' }}</span>
-                <span class="rc-divider">|</span>
-                <span>距{{ restaurantInfo.distance || '1.5km' }}</span>
-                <span class="rc-divider">|</span>
-                <span>¥{{ restaurantInfo.minOrder || '15' }}起送</span>
+                <span v-if="feePreview.checkEnabled && feePreview.rangeChecked">配送费¥{{ Number(feePreview.fee || 0).toFixed(2) }}</span>
+                <span v-else-if="addressInfo">配送费按地址计算</span>
+                <span v-else>配送费按收货地址计算</span>
+                <template v-if="feePreview.distance != null">
+                  <span class="rc-divider">|</span>
+                  <span>{{ formatDistance(feePreview.distance) }}</span>
+                </template>
+                <template v-if="restaurantInfo.minOrder != null">
+                  <span class="rc-divider">|</span>
+                  <span>¥{{ restaurantInfo.minOrder }}起送</span>
+                </template>
               </div>
             </div>
           </div>
@@ -670,6 +676,8 @@
               addressInfo: null,
               // 修改点：商家信息（从后端动态获取）
               restaurantInfo: {},
+              // 配送费试算结果（按默认地址 + 当前购物车实时核价，与下单同源）
+              feePreview: {},
               dialogFlavor:{
                 name:'',
                 flavors:[],
@@ -739,9 +747,9 @@
               // 修改点：四舍五入到分，避免浮点数累加误差（如 3.7199999999999998）
               return Math.round(price * 100) / 100
             },
-            // 起送门槛（从商家信息获取，默认15元）
+            // 起送门槛（取真实起送价；后端未配置时为0即不限，不再用写死的15元兜底）
             minOrderAmount(){
-              return Number(this.restaurantInfo.minOrder || 15)
+              return Number(this.restaurantInfo.minOrder || 0)
             },
             // 修改点：当前选中分类名称，用于右侧列表标题
             activeCategoryName(){
@@ -1121,6 +1129,19 @@
                 window.location.href = '/front/page/address.html'
               })
             },
+            // 按当前默认地址试算配送费（后端按购物车实时核价，与下单扣费同源）
+            loadFeePreview(){
+              if(!this.addressInfo || !this.addressInfo.id){ return }
+              previewDeliveryFeeApi({ addressBookId: this.addressInfo.id }).then(res=>{
+                if(res && res.code === 1){ this.feePreview = res.data || {} }
+              }).catch(()=>{})
+            },
+            // 距离（米）格式化为 m / km
+            formatDistance(meters){
+              const m = Number(meters || 0)
+              if(m >= 1000){ return (Math.round(m / 100) / 10) + 'km' }
+              return Math.round(m) + 'm'
+            },
             // 修改点：点击优惠券栏展开优惠券详情
             showCouponDetail(){
               // 修改点(2026-09-18)：只展示后端真实券；无真实券时券栏本就不渲染，此处双保险
@@ -1199,6 +1220,8 @@
                 // 修改点：设置地址信息（仅登录后，索引2）
                 if(isLogin && res[2] && res[2].code === 1){
                   this.addressInfo = res[2].data
+                  // 拿到默认地址后试算真实配送费（与下单扣费同源）
+                  this.loadFeePreview()
                 }
                 // 修改点：设置商家信息（索引3 或 索引1）
                 const restaurantRes = isLogin ? res[3] : res[1]
