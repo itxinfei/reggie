@@ -50,7 +50,7 @@
         :selection="true"
         row-key="id"
         :show-actions="true"
-        :actions-width="180"
+        :actions-width="240"
         @selection-change="onSelectionChange"
         @page-change="onPageChange"
         @size-change="onSizeChange"
@@ -69,6 +69,7 @@
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" @click="goDetail(row)" class="btn-view">查看</el-button>
+          <el-button type="text" size="small" @click="printReceipt(row)" class="btn-view">打印</el-button>
           <el-button v-if="row.status === 2" type="text" size="small" @click="cancelOrDeliveryOrComplete(3, row.id)" class="btn-view">派送</el-button>
           <el-button v-if="row.status === 3" type="text" size="small" @click="cancelOrDeliveryOrComplete(4, row.id)" class="btn-view">完成</el-button>
           <el-button v-if="row.status === 4" type="text" size="small" class="btn-delete" @click="openRefund(row)">退款</el-button>
@@ -230,7 +231,9 @@
   <script src="../../js/accessibility-utils.js?v=20260915c"></script>
   <script src="../../js/performance-utils.js?v=20260915c"></script>
   <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../js/print-util.js?v=20260921"></script>
   <script src="../../api/order.js?v=20260915c"></script>
+  <script src="../../api/printer.js?v=20260921"></script>
   <script src="../../api/payment.js?v=20260915c"></script>
   <script src="../../api/export.js?v=20260915c"></script>
   <script src="../../api/meta.js?v=20260915c"></script>
@@ -467,6 +470,16 @@
         // 订单详情表格：单元格样式
         tableCellStyle: function() {
           return { fontSize: '13px' }
+        },
+        // 手动打印小票：后端渲染文本并落一条打印记录，返回文本后由浏览器调本地打印机
+        printReceipt: function(row) {
+          printerPrint(row.id, 'BILL').then(function(res) {
+            if (res && String(res.code) === '1' && res.data) {
+              window.PrintUtil.printText(res.data, '小票 ' + (row.number || row.id))
+            } else {
+              window.ReggieUI.error((res && res.msg) || '打印失败')
+            }
+          }).catch(function() {})
         },
         goDetail: function(row) {
           this.dialogVisible = true

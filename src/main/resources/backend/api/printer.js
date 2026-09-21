@@ -1,14 +1,9 @@
-// 打印模块接口（门店 PC 本地打印）
-// 打印终端（门店 PC 打印代理）
-const printerTerminalPage = (params) => $axios({ url: '/printer/terminal/page', method: 'get', params })
-const printerTerminalStats = () => $axios({ url: '/printer/terminal/stats', method: 'get' })
-const printerTerminalStatus = (id, status) => $axios({ url: `/printer/terminal/status/${id}`, method: 'put', params: { status } })
-const printerTerminalTest = (id) => $axios({ url: `/printer/terminal/test/${id}`, method: 'post' })
-const printerTerminalDelete = (id) => $axios({ url: `/printer/terminal/${id}`, method: 'delete' })
+// 打印模块接口（员工在浏览器手动调本地打印机打印）
 
-// 打印任务（门店 PC 打印代理执行流水）
+// 打印记录（员工发起打印的流水）
 const printerTaskPage = (params) => $axios({ url: '/printer/task/page', method: 'get', params })
 const printerTaskStats = () => $axios({ url: '/printer/task/stats', method: 'get' })
 
-// 订单打印（入队到门店终端）
+// 渲染订单小票并保存一条打印记录，返回小票纯文本供浏览器 window.print() 打印
+// type: BILL-收银小票、KITCHEN-厨房制作单、DELIVERY-配送单
 const printerPrint = (orderId, type) => $axios({ url: `/printer/print/${orderId}`, method: 'post', params: { type } })

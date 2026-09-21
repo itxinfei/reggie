@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>打印任务 - 瑞吉外卖管理端</title>
+  <title>打印记录 - 瑞吉外卖管理端</title>
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
@@ -46,13 +46,13 @@
   </style>
 </head>
 <body>
-  <!-- ====== 打印任务管理页 ====== -->
-  <!-- 功能：查看门店 PC 打印代理的执行流水，支持按类型/状态/时间筛选、查看任务详情 -->
+  <!-- ====== 打印记录页 ====== -->
+  <!-- 功能：查看员工发起的打印流水，支持按类型/状态/时间筛选、查看记录详情 -->
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="printer-task-app">
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
-      <h1 class="sr-only" id="page-title">打印任务管理</h1>
+      <h1 class="sr-only" id="page-title">打印记录</h1>
       <!-- 数据统计卡片 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
       <!-- 筛选 + 操作 -->
@@ -179,7 +179,7 @@
             { key: 'refresh', text: '刷新', type: 'primary', icon: 'ri-refresh-line' }
           ],
           columns: [
-            { prop: 'id', label: '任务ID', width: 80, align: 'center' },
+            { prop: 'id', label: '记录ID', width: 80, align: 'center' },
             { prop: 'orderId', label: '订单ID', width: 100, align: 'center' },
             { prop: 'taskType', label: '类型', width: 80, align: 'center', slot: true },
             { prop: 'status', label: '状态', width: 90, align: 'center', slot: true },
@@ -198,7 +198,7 @@
           },
           activeFilter: '',
           dialog: {
-            title: '打印任务详情',
+            title: '打印记录详情',
             visible: false,
             row: {}
           }
@@ -211,8 +211,8 @@
         statsCards() {
           const self = this
           return [
-            { key: '', icon: 'ri-file-list-3-line', label: '任务总数', value: self.stats.totalTasks || 0, color: 'primary', clickable: true },
-            { key: 'todaySuccess', icon: 'ri-checkbox-circle-line', label: '今日成功', value: self.stats.todaySuccess || 0, color: 'success', clickable: false },
+            { key: '', icon: 'ri-file-list-3-line', label: '打印次数', value: self.stats.totalTasks || 0, color: 'primary', clickable: true },
+            { key: 'todaySuccess', icon: 'ri-checkbox-circle-line', label: '今日打印', value: self.stats.todaySuccess || 0, color: 'success', clickable: false },
             { key: 'todayFailed', icon: 'ri-close-circle-line', label: '今日失败', value: self.stats.todayFailed || 0, color: 'danger', clickable: false },
             { key: 'pending', icon: 'ri-time-line', label: '待打印', value: self.stats.pending || 0, color: 'warning', clickable: false }
           ]
