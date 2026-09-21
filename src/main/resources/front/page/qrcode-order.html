@@ -127,6 +127,11 @@
       <a class="qr-home-btn" href="/front/index.html" aria-label="返回首页"><i class="ri-home-4-line"></i></a>
     </div>
 
+    <!-- 桌台凭据条：让顾客确认在哪个区域/哪桌下单；桌台信息弱网拉取失败时兜底桌台ID -->
+    <div class="table-info-bar" v-if="!loading && !invalidTable">
+      <i class="ri-map-pin-line" aria-hidden="true"></i>{{ tableCredential }} · 扫码点餐
+    </div>
+
     <!-- 加载中 -->
     <div v-if="loading" class="loading-wrap">
       <div class="loading-spinner"></div>
@@ -161,7 +166,7 @@
         <div class="dish-info">
           <div class="dish-name">{{ dish.name }}</div>
           <div class="dish-bottom">
-            <div class="dish-price">¥{{ Number(dish.price || 0).toFixed(2) }}</div>
+            <div class="dish-price">{{ Number(dish.price || 0).toFixed(2) }}</div>
             <div class="dish-stock" v-if="dish.stockQty != null">库存{{ dish.stockQty }}</div>
           </div>
         </div>
@@ -280,6 +285,18 @@
           if (this.activeCategory === 0) return this.dishes
           var catId = this.activeCategory
           return this.dishes.filter(function(d) { return d.categoryId === catId })
+        },
+        // 桌台凭据：区域 · 桌台 · 座位数；tableInfo 弱网未拉到时兜底桌台ID，避免"扫码却不知在哪桌"
+        tableCredential: function() {
+          if (this.tableInfo) {
+            var t = this.tableInfo
+            var parts = []
+            if (t.areaName) parts.push(t.areaName)
+            parts.push(t.name ? (t.name + '桌') : ('桌台' + this.tableId))
+            if (t.seatCount != null && t.seatCount > 0) parts.push(t.seatCount + '人位')
+            return parts.join(' · ')
+          }
+          return '桌台' + this.tableId
         }
       },
       created: function() {
