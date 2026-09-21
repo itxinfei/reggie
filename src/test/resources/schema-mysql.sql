@@ -1028,6 +1028,7 @@ CREATE TABLE `dish_evaluation` (
   `star_rating` int DEFAULT NULL COMMENT '评分(1-5)',
   `content` varchar(500) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '评价内容',
   `images` varchar(2000) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '评价图片JSON数组',
+  `anonymous` int DEFAULT '0' COMMENT '是否匿名 0=实名 1=匿名',
   `reply_content` varchar(500) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '商品回复内容',
   `reply_time` datetime DEFAULT NULL COMMENT '商品回复时间',
   `status` int DEFAULT '0' COMMENT '审核状态：0待审核，1通过，2拒绝',

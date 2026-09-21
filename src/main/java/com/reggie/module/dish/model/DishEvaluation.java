@@ -61,6 +61,9 @@ public class DishEvaluation implements Serializable {
     @Schema(description = "评价图片JSON数组", example = "[\"https://xxx.com/1.jpg\"]")
     private String images;
 
+    @Schema(description = "是否匿名：0=实名，1=匿名（匿名时公开列表不展示真实用户名）", example = "0")
+    private Integer anonymous;
+
     @Schema(description = "商家回复内容", example = "感谢您的好评！")
     private String replyContent;
 

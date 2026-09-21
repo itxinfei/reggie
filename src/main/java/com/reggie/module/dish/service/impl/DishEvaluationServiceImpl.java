@@ -84,7 +84,14 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
                 .orderByDesc(DishEvaluation::getCreateTime);
 
         Page<DishEvaluation> pageObj = PageUtils.of(page, pageSize);
-        return this.page(pageObj, queryWrapper);
+        Page<DishEvaluation> result = this.page(pageObj, queryWrapper);
+        // 匿名评价在公开列表隐藏真实用户名（userId 不出现在 C 端响应，仅脱敏 userName）
+        for (DishEvaluation record : result.getRecords()) {
+            if (record.getAnonymous() != null && record.getAnonymous() == 1) {
+                record.setUserName("匿名用户");
+            }
+        }
+        return result;
     }
 
     /**
@@ -171,6 +178,11 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         // 设置默认审核状态为待审核
         if (evaluation.getStatus() == null) {
             evaluation.setStatus(0);
+        }
+
+        // 匿名标记默认实名；user_id/user_name 仍落库供内部追责，仅在公开查询时脱敏
+        if (evaluation.getAnonymous() == null) {
+            evaluation.setAnonymous(0);
         }
 
         // XSS防护：对评价内容和菜品名称进行HTML转义

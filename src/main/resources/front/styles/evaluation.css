@@ -451,3 +451,50 @@
     max-width: 420rem;
   }
 }
+
+/* 匿名评价勾选行 */
+.eval-anony-row {
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  padding: 12rem 4rem 4rem;
+  cursor: pointer;
+}
+.eval-anony-box {
+  width: 20rem;
+  height: 20rem;
+  border-radius: var(--radius-round);
+  border: 1px solid var(--border-medium);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--bg-card);
+}
+.eval-anony-box.checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.eval-anony-box i {
+  font-size: 14rem;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+.eval-anony-label {
+  font-size: 14rem;
+  color: var(--color-text-primary);
+}
+.eval-anony-label em {
+  font-style: normal;
+  font-size: 12rem;
+  color: var(--color-text-secondary);
+  margin-left: 8rem;
+}
+/* 我的评价列表中的“匿名”小标记 */
+.eval-anony-flag {
+  font-size: 11rem;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-tint);
+  border-radius: var(--radius-sm);
+  padding: 1rem 6rem;
+}

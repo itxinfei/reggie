@@ -83,6 +83,7 @@
                                     <i v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (item.starRating || 0) }">★</i>
                                 </span>
                                 <span class="eval-date">{{ formatDate(item.createTime) }}</span>
+                                <span v-if="Number(item.anonymous) === 1" class="eval-anony-flag">匿名</span>
                             </div>
                         </div>
                     </div>
@@ -176,6 +177,13 @@
                                 @oversize="onEvalOversize"
                             ></van-uploader>
                         </div>
+                        <!-- 匿名评价：整单一个开关，勾选后公开列表显示“匿名用户” -->
+                        <div class="eval-anony-row" @click="submitData.anonymous = !submitData.anonymous">
+                            <span class="eval-anony-box" :class="{checked: submitData.anonymous}">
+                                <i v-if="submitData.anonymous" class="ri-check-line"></i>
+                            </span>
+                            <span class="eval-anony-label">匿名评价<em>公开后隐藏你的昵称</em></span>
+                        </div>
                     </div>
                 </div>
                 <div class="submit-modal-footer">
@@ -217,7 +225,7 @@
                     // 提交评价
                     submitVisible: false,
                     submitLoading: false,
-                    submitData: { orderId: null, dishes: [] },
+                    submitData: { orderId: null, dishes: [], anonymous: false },
                     // 快捷评价标签
                     quickTags: ['味道好', '分量足', '配送快', '包装好', '食材新鲜', '性价比高'],
                     // 下拉刷新状态
@@ -577,7 +585,7 @@
                         vant.Toast.fail('暂无可评价的菜品')
                         return
                     }
-                    this.submitData = { orderId: orderId || this.pendingOrder.id || '', dishes: dishes }
+                    this.submitData = { orderId: orderId || this.pendingOrder.id || '', dishes: dishes, anonymous: false }
                     this.submitVisible = true
                 },
                 // 在用户已完成订单列表中定位指定订单
@@ -630,7 +638,8 @@
                                 orderId: orderId,
                                 dishId: dish.dishId,
                                 starRating: dish.starRating,
-                                content: (dish.content || '').trim()
+                                content: (dish.content || '').trim(),
+                                anonymous: this.submitData.anonymous ? 1 : 0
                             }
                             if (dish.dishName) payload.dishName = dish.dishName
                             // images 后端为 String（存 JSON 数组），有序图片路径
@@ -651,7 +660,7 @@
                         if (remain === 0) {
                             vant.Toast.success('评价提交成功，感谢您的反馈')
                             this.submitVisible = false
-                            this.submitData = { orderId: null, dishes: [] }
+                            this.submitData = { orderId: null, dishes: [], anonymous: false }
                             this.loadData()
                             // 修改点(P1-2)：强制刷新已评集合（含刚提交项），再重算待评价提示
                             await this.ensureEvaluatedSet(true)
