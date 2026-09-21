@@ -1,566 +1,536 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>消息通知管理 - 瑞吉外卖管理端</title>
 
-  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
-
-  <!-- 修改点：P3-4 CSS 加载链路瘦身——移除与 main.css 重复的 page/components/design-system 引用（main.css 已 @import 全部），仅保留 main + tokens + stat-cards（stat-cards 为非工程化页面使用的独立构建产物，main.css 的 @import 与 link 会重复加载，但各 100 行内，命中浏览器缓存） -->
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+    <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+    <!-- main.css 已 @import tokens/element 样式/各组件样式，仅额外引 stat-cards 独立产物 -->
+    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
     <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: var(--font-family-base);
                background: var(--bg-page); color: var(--text-primary); }
 
-        .app-container { max-width: 1400px; margin: 0 auto; padding: var(--space-5); }
-/* Tab */
-        .tabs { display: flex; gap: 0; background: var(--bg-surface); border-radius: var(--radius-md); overflow: hidden;
-                border: 1px solid var(--border-default); border-bottom: none; }
-        .tab-btn { padding: 12px 24px; cursor: pointer; border: none; background: var(--bg-surface); font-size:var(--font-size-base);
-                   color: var(--text-secondary); border-bottom: 2px solid transparent; transition: all var(--transition-base); position: relative; }
-        .tab-btn.active { color: var(--color-brand-500); border-bottom-color: var(--color-brand-500); font-weight: 600; }
-        .tab-btn:hover { color: var(--color-brand-500); }
-        .tab-content { display: none; background: var(--bg-surface); border-radius: 0 0 var(--radius-md) var(--radius-md); padding: var(--space-5);
-                       box-shadow: var(--shadow-xs); border: 1px solid var(--border-default); border-top: none; }
-        .tab-content.active { display: block; }
+        /* Tab 内容区统一留白（el-tabs 头部保持 Element 默认样式） */
+        .tab-pane-body { padding: var(--space-2) 0 0; }
 
-        /* 用户选择区 */
+        /* Mock 模式提示横幅 */
+        .mock-banner { background: var(--color-warning-light); border: 1px solid var(--color-warning);
+                       border-radius: var(--radius-md); padding: var(--space-2) var(--space-4);
+                       margin-bottom: var(--space-4); font-size: var(--font-size-sm);
+                       color: var(--color-warning-dark); display: flex; align-items: center; gap: var(--space-2); }
+
+        /* ===== 双栏穿梭选择（短信/APP推送） ===== */
         .user-select-panel { display: flex; gap: var(--space-4); min-height: 400px; }
-        .user-select-left { flex: 1; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden;
-                            display: flex; flex-direction: column; }
+        .user-select-left { flex: 1; border: 1px solid var(--border-default); border-radius: var(--radius-md);
+                            overflow: hidden; display: flex; flex-direction: column; }
         .user-select-right { width: 380px; border: 1px solid var(--border-default); border-radius: var(--radius-md);
                              display: flex; flex-direction: column; }
 
-        .panel-header { padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--border-subtle); background: var(--el-bg-base);
-                        font-size:var(--font-size-sm); font-weight: 600; color: var(--text-primary); display: flex;
-                        justify-content: space-between; align-items: center; }
+        .panel-header { padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--border-subtle);
+                        background: var(--bg-subtle); font-size: var(--font-size-sm); font-weight: 600;
+                        color: var(--text-primary); display: flex; justify-content: space-between; align-items: center; }
         .panel-body { flex: 1; overflow-y: auto; padding: var(--space-2) 0; }
 
-        /* 搜索栏 */
-        .search-bar { padding: var(--space-2) var(--space-3); display: flex; gap: var(--space-2); border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; border-radius: var(--radius-sm); }
-        .search-bar input { width: 140px; }
-        .search-bar select { width: 100px; }
+        /* 穿梭左栏搜索 */
+        .search-bar { padding: var(--space-2) var(--space-3); display: flex; gap: var(--space-2);
+                      border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; }
+        .search-bar .el-input { width: 140px; }
 
-        /* 用户列表 */
+        /* 穿梭用户表 */
         .user-list-table { width: 100%; border-collapse: collapse; }
-        /* 修改点(2026-09-01)：表头/内容统一居中 */
-        .user-list-table th { background: var(--el-bg-base); padding: var(--space-2) 10px; text-align: center; font-size:var(--font-size-xs);
-                               font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border-default);
-                               position: sticky; top: 0; z-index: 1; }
-        .user-list-table td { padding: 7px 10px; font-size:var(--font-size-sm); text-align: center; border-bottom: 1px solid var(--border-subtle); }
+        .user-list-table th { background: var(--bg-subtle); padding: var(--space-2) 10px; text-align: center;
+                              font-size: var(--font-size-xs); font-weight: 600; color: var(--text-primary);
+                              border-bottom: 1px solid var(--border-default); position: sticky; top: 0; z-index: 1; }
+        .user-list-table td { padding: 7px 10px; font-size: var(--font-size-sm); text-align: center;
+                              border-bottom: 1px solid var(--border-subtle); }
+        .user-list-table tr { cursor: pointer; }
         .user-list-table tr:hover td { background: var(--color-brand-50); }
         .user-list-table tr.selected td { background: var(--color-brand-100); }
         .user-list-table input[type="checkbox"] { cursor: pointer; }
 
-        .user-pagination { padding: var(--space-2) var(--space-3); border-top: 1px solid var(--border-subtle); display: flex;
-                           justify-content: center; align-items: center; gap: var(--space-2); font-size:var(--font-size-xs); }
-        .user-pagination button { padding: 3px 10px; border: 1px solid var(--border-default); background: var(--bg-surface);
-                                   border-radius: var(--radius-sm); cursor: pointer; font-size:var(--font-size-xs); }
+        .user-pagination { padding: var(--space-2) var(--space-3); border-top: 1px solid var(--border-subtle);
+                           display: flex; justify-content: center; align-items: center; gap: var(--space-2);
+                           font-size: var(--font-size-xs); }
+        .user-pagination button { padding: 3px 10px; border: 1px solid var(--border-default);
+                                  background: var(--bg-surface); border-radius: var(--radius-sm);
+                                  cursor: pointer; font-size: var(--font-size-xs); }
         .user-pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-        /* 已选用户列表 */
+        /* 已选用户 */
         .selected-users { flex: 1; overflow-y: auto; padding: var(--space-1) 0; }
         .selected-user-item { display: flex; align-items: center; justify-content: space-between;
-                padding: 6px var(--space-3); font-size:var(--font-size-sm); border-bottom: 1px solid var(--border-subtle); }
-        .selected-user-item .remove-btn { color: var(--color-danger); cursor: pointer; font-size:var(--font-size-base);
-                                           background: none; border: none; padding: 2px var(--space-2); }
+                              padding: 6px var(--space-3); font-size: var(--font-size-sm);
+                              border-bottom: 1px solid var(--border-subtle); }
+        .selected-user-item .remove-btn { color: var(--color-danger); cursor: pointer; font-size: var(--font-size-base);
+                                          background: none; border: none; padding: 2px var(--space-2); }
         .selected-user-item .remove-btn:hover { background: var(--color-danger-light); border-radius: var(--radius-sm); }
 
-        /* 消息编辑区 */
-        .msg-compose { padding: var(--space-3); border-top: 1px solid var(--border-default); border-radius: var(--radius-sm); }
+        /* 消息编辑 */
+        .msg-compose { padding: var(--space-3); border-top: 1px solid var(--border-default); }
         .msg-compose textarea { min-height: 60px; }
-        .msg-compose .field-label { font-size:var(--font-size-xs); color: var(--text-muted); margin-bottom: 3px; display: block; }
+        .msg-compose .field-label { font-size: var(--font-size-xs); color: var(--text-muted);
+                                    margin-bottom: 3px; display: block; }
 
-        /* 发送结果弹窗 */
-        .send-result { margin-top: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); font-size:var(--font-size-sm); }
-        .send-result.success { background: var(--color-success-light); border: 1px solid var(--color-success); color: var(--color-success-dark); }
-        .send-result.partial { background: var(--color-warning-light); border: 1px solid var(--color-warning); color: var(--color-warning-dark); }
-        .send-result.error { background: var(--color-danger-light); border: 1px solid var(--color-danger); color: var(--color-danger-dark); }
-        .send-result .close-result { margin-left: auto; cursor: pointer; color: var(--text-muted); font-size:var(--font-size-lg);
-                                       background: none; border: none; line-height: 1; }
+        /* 发送结果条 */
+        .send-result { margin-top: var(--space-3); padding: var(--space-3) var(--space-4);
+                       border-radius: var(--radius-md); font-size: var(--font-size-sm); position: relative; }
+        .send-result.success { background: var(--color-success-light); border: 1px solid var(--color-success);
+                               color: var(--color-success-dark); }
+        .send-result.partial { background: var(--color-warning-light); border: 1px solid var(--color-warning);
+                               color: var(--color-warning-dark); }
+        .send-result.error { background: var(--color-danger-light); border: 1px solid var(--color-danger);
+                             color: var(--color-danger-dark); }
+        .send-result .close-result { position: absolute; top: 6px; right: 10px; cursor: pointer;
+                                     color: var(--text-muted); font-size: var(--font-size-lg);
+                                     background: none; border: none; line-height: 1; }
 
-        /* 记录列表 */
-        table { width: 100%; border-collapse: collapse; }
-        th { background: var(--el-bg-base); padding: var(--space-3) var(--space-3); text-align: center; font-size:var(--font-size-sm); font-weight: 600;
-             color: var(--text-primary); border-bottom: 2px solid var(--border-default); white-space: nowrap; }
-        td { padding: var(--space-3) var(--space-3); font-size:var(--font-size-sm); text-align: center; border-bottom: 1px solid var(--border-subtle); }
-        tr:hover td { background: var(--color-brand-50); }
+        /* 用户状态小徽标（穿梭表内） */
+        .status-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm);
+                        font-size: var(--font-size-xs); }
+        .status-on { background: var(--color-success-light); color: var(--color-success);
+                     border: 1px solid var(--color-success); }
+        .status-off { background: var(--color-danger-light); color: var(--color-danger);
+                      border: 1px solid var(--color-danger); }
 
-        .status-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size:var(--font-size-xs); }
-        .status-on { background: var(--color-success-light); color: var(--color-success); border: 1px solid var(--color-success); }
-        .status-off { background: var(--color-danger-light); color: var(--color-danger); border: 1px solid var(--color-danger); }
+        .col-success { color: var(--color-success); font-weight: 600; }
+        .col-fail { color: var(--color-danger); font-weight: 600; }
 
-        .channel-sms { background: var(--color-brand-50); color: var(--color-brand-700); }
-        .channel-push { background: var(--color-brand-50); color: var(--color-brand-500); }
-        .channel-both { background: var(--color-warning-light); color: var(--color-warning-dark); }
+        .empty-inline { text-align: center; padding: var(--space-6); color: var(--text-muted); }
 
-        .pagination { display: flex; justify-content: flex-end; align-items: center; gap: var(--space-2);
-                      margin-top: var(--space-4); font-size:var(--font-size-sm); }
-        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .pagination span { color: var(--text-secondary); }
-
-        .empty-state { text-align: center; padding: var(--space-8); color: var(--text-muted); }
-
-        .toolbar { display: flex; gap: var(--space-3); margin-bottom: var(--space-5); flex-wrap: wrap; align-items: center; }
-
-        .mock-banner { background: var(--color-warning-light); border: 1px solid var(--color-warning); border-radius: var(--radius-md); padding: var(--space-2) var(--space-4);
-                       margin-bottom: var(--space-4); font-size:var(--font-size-sm); color: var(--color-warning-dark); display: flex; align-items: center; gap: var(--space-2); }
+        @media (max-width: 900px) {
+            .user-select-panel { flex-direction: column; }
+            .user-select-right { width: 100%; }
+        }
     </style>
 </head>
 <body>
     <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
     <a href="#main-content" class="skip-link">跳转到主内容</a>
 
-    <div id="app">
-        <main class="app-container ds-page" id="main-content" role="main" aria-labelledby="page-title">
-            <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
+    <div class="dashboard-container" id="app">
+        <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
             <h1 class="sr-only" id="page-title">消息通知管理</h1>
 
-            <!-- 修改点：使用 <stat-cards> 统一组件替代手写 stats-cards -->
+            <!-- 顶部统计 -->
             <stat-cards :cards="statsCards"></stat-cards>
 
-            <!-- Mock模式提示 -->
+            <!-- Mock模式提示（短信/推送仅打印日志，不会真实发送） -->
             <div class="mock-banner" v-if="isMockMode">
                 <i class="ri-error-warning-line"></i> 当前为开发Mock模式，短信/推送仅打印日志，不会真实发送。生产环境请配置阿里云短信参数。
             </div>
 
-            <!-- Tab切换 -->
-            <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('sms')"><i class="ri-smartphone-line" aria-hidden="true"></i> 发送短信</button>
-                <button class="tab-btn" onclick="switchTab('push')"><i class="ri-notification-3-line" aria-hidden="true"></i> APP推送</button>
-                <button class="tab-btn" onclick="switchTab('record')"><i class="ri-file-list-3-line" aria-hidden="true"></i> 发送记录</button>
-                <button class="tab-btn" onclick="switchTab('template')"><i class="ri-edit-2-line" aria-hidden="true"></i> 通知模板</button>
-            </div>
+            <!-- Tab 切换（el-tabs 替代原手写 .tabs） -->
+            <el-tabs v-model="activeTab" @tab-click="onTabClick">
+                <!-- ===== Tab 1：发送短信（双栏穿梭，原样保留） ===== -->
+                <el-tab-pane name="sms">
+                    <span slot="label"><i class="ri-smartphone-line"></i> 发送短信</span>
+                    <div class="tab-pane-body">
+                        <div class="user-select-panel">
+                            <!-- 左：用户列表 -->
+                            <div class="user-select-left">
+                                <div class="panel-header">
+                                    <span>选择接收用户</span>
+                                    <span style="font-weight:400;color:var(--text-muted);">共 {{ userTotal }} 个用户</span>
+                                </div>
+                                <div class="search-bar">
+                                    <el-input v-model="userSearch.name" placeholder="姓名搜索"
+                                              @keyup.enter.native="searchUsers()"></el-input>
+                                    <el-input v-model="userSearch.phone" placeholder="手机号搜索"
+                                              @keyup.enter.native="searchUsers()"></el-input>
+                                    <el-button size="small" type="primary" @click="searchUsers()">搜索</el-button>
+                                    <el-button size="small" @click="selectAllPage()">本页全选</el-button>
+                                    <el-button size="small" @click="deselectAll()">清空选择</el-button>
+                                </div>
+                                <div class="panel-body">
+                                    <table class="user-list-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:36px;">
+                                                    <input type="checkbox" :checked="isAllPageSelected"
+                                                           @change="toggleAllPage($event)" />
+                                                </th>
+                                                <th>姓名</th>
+                                                <th>手机号</th>
+                                                <th>状态</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="u in users" :key="u.id"
+                                                :class="{selected: selectedIds.has(u.id)}"
+                                                @click="toggleUser(u)">
+                                                <td>
+                                                    <input type="checkbox" :checked="selectedIds.has(u.id)"
+                                                           @click.stop="toggleUser(u)" />
+                                                </td>
+                                                <td>{{ u.name || '未设置' }}</td>
+                                                <td>{{ u.phone }}</td>
+                                                <td>
+                                                    <span class="status-badge"
+                                                          :class="u.status === 1 ? 'status-on' : 'status-off'">
+                                                        {{ u.status === 1 ? '正常' : '禁用' }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr v-if="users.length === 0">
+                                                <td colspan="4" class="empty-inline">暂无用户数据</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="user-pagination" v-if="userTotal > 0">
+                                    <button :disabled="userPage <= 1" @click="loadUsers(userPage - 1)">上一页</button>
+                                    <span>第 {{ userPage }}/{{ Math.ceil(userTotal / userSize) }} 页</span>
+                                    <button :disabled="userPage >= Math.ceil(userTotal / userSize)"
+                                            @click="loadUsers(userPage + 1)">下一页</button>
+                                </div>
+                            </div>
 
-            <!-- ========== Tab 1: 发送短信 ========== -->
-            <div class="tab-content active" id="tab-sms">
-                <div class="user-select-panel">
-                    <!-- 左侧：用户列表 -->
-                    <div class="user-select-left">
-                        <div class="panel-header">
-                            <span>选择接收用户</span>
-                            <span style="font-weight:400;color:var(--text-muted);">共 {{ userTotal }} 个用户</span>
-                        </div>
-                        <div class="search-bar">
-                            <input type="text" v-model="userSearch.name" placeholder="姓名搜索"
-                                   @keyup.enter="searchUsers()" />
-                            <input type="text" v-model="userSearch.phone" placeholder="手机号搜索"
-                                   @keyup.enter="searchUsers()" />
-                            <button class="app-btn app-btn-primary app-btn-sm" @click="searchUsers()">搜索</button>
-                            <button class="app-btn app-btn-default app-btn-sm" @click="selectAllPage()">本页全选</button>
-                            <button class="app-btn app-btn-default app-btn-sm" @click="deselectAll()">清空选择</button>
-                        </div>
-                        <div class="panel-body">
-                            <table class="user-list-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width:36px;text-align:center;">
-                                            <input type="checkbox" :checked="isAllPageSelected"
-                                                   @change="toggleAllPage($event)" />
-                                        </th>
-                                        <th>姓名</th>
-                                        <th>手机号</th>
-                                        <th>状态</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="u in users" :key="u.id"
-                                        :class="{selected: selectedIds.has(u.id)}"
-                                        @click="toggleUser(u)">
-                                        <td style="text-align:center;">
-                                            <input type="checkbox" :checked="selectedIds.has(u.id)"
-                                                   @click.stop="toggleUser(u)" />
-                                        </td>
-                                        <td>{{ u.name || '未设置' }}</td>
-                                        <td>{{ u.phone }}</td>
-                                        <td>
-                                            <span class="status-badge"
-                                                  :class="u.status === 1 ? 'status-on' : 'status-off'">
-                                                {{ u.status === 1 ? '正常' : '禁用' }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="users.length === 0">
-                                        <td colspan="4" class="empty-state">暂无用户数据</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="user-pagination" v-if="userTotal > 0">
-                            <button :disabled="userPage <= 1" @click="loadUsers(userPage - 1)">上一页</button>
-                            <span>第 {{ userPage }}/{{ Math.ceil(userTotal / userSize) }} 页</span>
-                            <button :disabled="userPage >= Math.ceil(userTotal / userSize)"
-                                    @click="loadUsers(userPage + 1)">下一页</button>
-                        </div>
-                    </div>
-
-                    <!-- 右侧：已选用户 + 消息编辑 -->
-                    <div class="user-select-right">
-                        <div class="panel-header">
-                            <span>已选用户 ({{ selectedUsers.length }})</span>
-                            <button class="app-btn app-btn-default app-btn-sm" @click="deselectAll()"
-                                    v-if="selectedUsers.length > 0">全部移除</button>
-                        </div>
-                        <div class="selected-users">
-                            <div class="selected-user-item" v-for="su in selectedUsers" :key="su.id">
-                                <span>{{ su.name || '未设置' }} <span style="color:var(--gray-999);">{{ su.phone }}</span></span>
-                                <button class="remove-btn" @click="removeSelected(su.id)">✕</button>
-                            </div>
-                            <div class="empty-state" v-if="selectedUsers.length === 0" style="padding:30px;">
-                                请在左侧选择用户
-                            </div>
-                        </div>
-                        <!-- 消息编辑 -->
-                        <div class="msg-compose">
-                            <label class="field-label" for="inp-sms-content">消息内容（短信最多70字）</label>
-                            <textarea id="inp-sms-content" v-model="smsForm.content" rows="4"
-                                      placeholder="请输入短信内容...&#10;示例：尊敬的顾客，您的外卖订单已开始配送，预计30分钟内送达。"
-                                      maxlength="200"></textarea>
-                            <div class="hint" style="text-align:right;">
-                                {{ smsForm.content.length }}/200 字符
-                            </div>
-                            <div class="app-btn-group">
-                                <button class="app-btn app-btn-success"
-                                        :disabled="smsForm.sending || selectedUsers.length === 0 || !smsForm.content"
-                                        @click="doSendSms()">
-                                    <i class="ri-smartphone-line" aria-hidden="true"></i> {{ smsForm.sending ? '发送中...' : '发送短信 (' + selectedUsers.length + '人)' }}
-                                </button>
-                            </div>
-                            <div class="send-result"
-                                 :class="smsForm.sending ? '' : (smsForm.result && smsForm.result.status === 2 ? 'success' : (smsForm.result && smsForm.result.status === 4 ? 'partial' : 'error'))"
-                                 v-if="smsForm.result && !smsForm.sending">
-                                <button class="close-result" @click="smsForm.result = null">&times;</button>
-                                <strong>发送完成！</strong>
-                                成功: {{ smsForm.result.successCount }} | 失败: {{ smsForm.result.failCount }}
-                                <div v-if="smsForm.result.failReason" style="color:var(--antd-error-d);margin-top:4px;font-size:var(--font-size-xs);">
-                                    {{ smsForm.result.failReason }}
+                            <!-- 右：已选用户 + 短信编辑 -->
+                            <div class="user-select-right">
+                                <div class="panel-header">
+                                    <span>已选用户 ({{ selectedUsers.length }})</span>
+                                    <el-button size="mini" @click="deselectAll()"
+                                               v-if="selectedUsers.length > 0">全部移除</el-button>
+                                </div>
+                                <div class="selected-users">
+                                    <div class="selected-user-item" v-for="su in selectedUsers" :key="su.id">
+                                        <span>{{ su.name || '未设置' }} <span style="color:var(--text-muted);">{{ su.phone }}</span></span>
+                                        <button class="remove-btn" @click="removeSelected(su.id)">✕</button>
+                                    </div>
+                                    <div class="empty-inline" v-if="selectedUsers.length === 0" style="padding:30px;">
+                                        请在左侧选择用户
+                                    </div>
+                                </div>
+                                <div class="msg-compose">
+                                    <label class="field-label" for="inp-sms-content">消息内容（短信最多70字）</label>
+                                    <el-input id="inp-sms-content" v-model="smsForm.content" type="textarea" :rows="4"
+                                              maxlength="200"
+                                              placeholder="请输入短信内容...&#10;示例：尊敬的顾客，您的外卖订单已开始配送，预计30分钟内送达。"></el-input>
+                                    <div style="text-align:right;color:var(--text-muted);font-size:var(--font-size-xs);">
+                                        {{ smsForm.content.length }}/200 字符
+                                    </div>
+                                    <div>
+                                        <el-button type="success" style="width:100%;"
+                                                   :disabled="smsForm.sending || selectedUsers.length === 0 || !smsForm.content"
+                                                   @click="doSendSms()">
+                                            <i class="ri-smartphone-line"></i> {{ smsForm.sending ? '发送中...' : '发送短信 (' + selectedUsers.length + '人)' }}
+                                        </el-button>
+                                    </div>
+                                    <div class="send-result"
+                                         :class="smsForm.result && smsForm.result.status === 2 ? 'success' : (smsForm.result && smsForm.result.status === 4 ? 'partial' : 'error')"
+                                         v-if="smsForm.result && !smsForm.sending">
+                                        <button class="close-result" @click="smsForm.result = null">&times;</button>
+                                        <strong>发送完成！</strong>
+                                        成功: {{ smsForm.result.successCount }} | 失败: {{ smsForm.result.failCount }}
+                                        <div v-if="smsForm.result.failReason" style="color:var(--color-danger);margin-top:4px;font-size:var(--font-size-xs);">
+                                            {{ smsForm.result.failReason }}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                </el-tab-pane>
 
-            <!-- ========== Tab 2: APP推送 ========== -->
-            <div class="tab-content" id="tab-push">
-                <div class="user-select-panel">
-                    <div class="user-select-left">
-                        <div class="panel-header">
-                            <span>选择推送用户</span>
-                            <span style="font-weight:400;color:var(--gray-999);">共 {{ pushUserTotal }} 个用户</span>
-                        </div>
-                        <div class="search-bar">
-                            <input type="text" v-model="pushUserSearch.name" placeholder="姓名搜索"
-                                   @keyup.enter="searchPushUsers()" />
-                            <input type="text" v-model="pushUserSearch.phone" placeholder="手机号搜索"
-                                   @keyup.enter="searchPushUsers()" />
-                            <button class="app-btn app-btn-primary app-btn-sm" @click="searchPushUsers()">搜索</button>
-                            <button class="app-btn app-btn-default app-btn-sm" @click="selectAllPushPage()">本页全选</button>
-                            <button class="app-btn app-btn-default app-btn-sm" @click="deselectAllPush()">清空选择</button>
-                        </div>
-                        <div class="panel-body">
-                            <table class="user-list-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width:36px;text-align:center;">
-                                            <input type="checkbox" :checked="isAllPushPageSelected"
-                                                   @change="toggleAllPushPage($event)" />
-                                        </th>
-                                        <th>姓名</th>
-                                        <th>手机号</th>
-                                        <th>状态</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="u in pushUsers" :key="u.id"
-                                        :class="{selected: pushSelectedIds.has(u.id)}"
-                                        @click="togglePushUser(u)">
-                                        <td style="text-align:center;">
-                                            <input type="checkbox" :checked="pushSelectedIds.has(u.id)"
-                                                   @click.stop="togglePushUser(u)" />
-                                        </td>
-                                        <td>{{ u.name || '未设置' }}</td>
-                                        <td>{{ u.phone }}</td>
-                                        <td>
-                                            <span class="status-badge"
-                                                  :class="u.status === 1 ? 'status-on' : 'status-off'">
-                                                {{ u.status === 1 ? '正常' : '禁用' }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr v-if="pushUsers.length === 0">
-                                        <td colspan="4" class="empty-state">暂无用户数据</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="user-pagination" v-if="pushUserTotal > 0">
-                            <button :disabled="pushUserPage <= 1" @click="loadPushUsers(pushUserPage - 1)">上一页</button>
-                            <span>第 {{ pushUserPage }}/{{ Math.ceil(pushUserTotal / pushUserSize) }} 页</span>
-                            <button :disabled="pushUserPage >= Math.ceil(pushUserTotal / pushUserSize)"
-                                    @click="loadPushUsers(pushUserPage + 1)">下一页</button>
+                <!-- ===== Tab 2：APP推送（双栏穿梭，原样保留） ===== -->
+                <el-tab-pane name="push">
+                    <span slot="label"><i class="ri-notification-3-line"></i> APP推送</span>
+                    <div class="tab-pane-body">
+                        <div class="user-select-panel">
+                            <div class="user-select-left">
+                                <div class="panel-header">
+                                    <span>选择推送用户</span>
+                                    <span style="font-weight:400;color:var(--text-muted);">共 {{ pushUserTotal }} 个用户</span>
+                                </div>
+                                <div class="search-bar">
+                                    <el-input v-model="pushUserSearch.name" placeholder="姓名搜索"
+                                              @keyup.enter.native="searchPushUsers()"></el-input>
+                                    <el-input v-model="pushUserSearch.phone" placeholder="手机号搜索"
+                                              @keyup.enter.native="searchPushUsers()"></el-input>
+                                    <el-button size="small" type="primary" @click="searchPushUsers()">搜索</el-button>
+                                    <el-button size="small" @click="selectAllPushPage()">本页全选</el-button>
+                                    <el-button size="small" @click="deselectAllPush()">清空选择</el-button>
+                                </div>
+                                <div class="panel-body">
+                                    <table class="user-list-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:36px;">
+                                                    <input type="checkbox" :checked="isAllPushPageSelected"
+                                                           @change="toggleAllPushPage($event)" />
+                                                </th>
+                                                <th>姓名</th>
+                                                <th>手机号</th>
+                                                <th>状态</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="u in pushUsers" :key="u.id"
+                                                :class="{selected: pushSelectedIds.has(u.id)}"
+                                                @click="togglePushUser(u)">
+                                                <td>
+                                                    <input type="checkbox" :checked="pushSelectedIds.has(u.id)"
+                                                           @click.stop="togglePushUser(u)" />
+                                                </td>
+                                                <td>{{ u.name || '未设置' }}</td>
+                                                <td>{{ u.phone }}</td>
+                                                <td>
+                                                    <span class="status-badge"
+                                                          :class="u.status === 1 ? 'status-on' : 'status-off'">
+                                                        {{ u.status === 1 ? '正常' : '禁用' }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <tr v-if="pushUsers.length === 0">
+                                                <td colspan="4" class="empty-inline">暂无用户数据</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="user-pagination" v-if="pushUserTotal > 0">
+                                    <button :disabled="pushUserPage <= 1" @click="loadPushUsers(pushUserPage - 1)">上一页</button>
+                                    <span>第 {{ pushUserPage }}/{{ Math.ceil(pushUserTotal / pushUserSize) }} 页</span>
+                                    <button :disabled="pushUserPage >= Math.ceil(pushUserTotal / pushUserSize)"
+                                            @click="loadPushUsers(pushUserPage + 1)">下一页</button>
+                                </div>
+                            </div>
+
+                            <div class="user-select-right">
+                                <div class="panel-header">
+                                    <span>已选用户 ({{ pushSelectedUsers.length }})</span>
+                                    <el-button size="mini" @click="deselectAllPush()"
+                                               v-if="pushSelectedUsers.length > 0">全部移除</el-button>
+                                </div>
+                                <div class="selected-users">
+                                    <div class="selected-user-item" v-for="su in pushSelectedUsers" :key="su.id">
+                                        <span>{{ su.name || '未设置' }} <span style="color:var(--text-muted);">ID: {{ su.id }}</span></span>
+                                        <button class="remove-btn" @click="removePushSelected(su.id)">✕</button>
+                                    </div>
+                                    <div class="empty-inline" v-if="pushSelectedUsers.length === 0" style="padding:30px;">
+                                        请在左侧选择用户
+                                    </div>
+                                </div>
+                                <div class="msg-compose">
+                                    <label class="field-label">推送标题</label>
+                                    <el-input v-model="pushForm.title" placeholder="如：新菜品上线通知" maxlength="30"></el-input>
+                                    <label class="field-label" style="margin-top:8px;">推送内容</label>
+                                    <el-input v-model="pushForm.content" type="textarea" :rows="4"
+                                              maxlength="500" placeholder="请输入推送内容..."></el-input>
+                                    <div style="text-align:right;color:var(--text-muted);font-size:var(--font-size-xs);">
+                                        {{ pushForm.content.length }}/500 字符
+                                    </div>
+                                    <div>
+                                        <el-button type="primary" style="width:100%;"
+                                                   :disabled="pushForm.sending || pushSelectedUsers.length === 0 || !pushForm.title || !pushForm.content"
+                                                   @click="doSendPush()">
+                                            <i class="ri-notification-3-line"></i> {{ pushForm.sending ? '推送中...' : '发送APP推送 (' + pushSelectedUsers.length + '人)' }}
+                                        </el-button>
+                                    </div>
+                                    <div class="send-result"
+                                         :class="pushForm.result && pushForm.result.status === 2 ? 'success' : (pushForm.result && pushForm.result.status === 4 ? 'partial' : 'error')"
+                                         v-if="pushForm.result && !pushForm.sending">
+                                        <button class="close-result" @click="pushForm.result = null">&times;</button>
+                                        <strong>推送完成！</strong>
+                                        成功: {{ pushForm.result.successCount }} | 失败: {{ pushForm.result.failCount }}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </el-tab-pane>
 
-                    <div class="user-select-right">
-                        <div class="panel-header">
-                            <span>已选用户 ({{ pushSelectedUsers.length }})</span>
-                            <button class="app-btn app-btn-default app-btn-sm" @click="deselectAllPush()"
-                                    v-if="pushSelectedUsers.length > 0">全部移除</button>
-                        </div>
-                        <div class="selected-users">
-                            <div class="selected-user-item" v-for="su in pushSelectedUsers" :key="su.id">
-                                <span>{{ su.name || '未设置' }} <span style="color:var(--gray-999);">ID: {{ su.id }}</span></span>
-                                <button class="remove-btn" @click="removePushSelected(su.id)">✕</button>
-                            </div>
-                            <div class="empty-state" v-if="pushSelectedUsers.length === 0" style="padding:30px;">
-                                请在左侧选择用户
-                            </div>
-                        </div>
-                        <div class="msg-compose">
-                            <label class="field-label">推送标题</label>
-                            <input type="text" v-model="pushForm.title" placeholder="如：新菜品上线通知" maxlength="30" />
-                            <label class="field-label" style="margin-top:8px;">推送内容</label>
-                            <textarea v-model="pushForm.content" rows="4"
-                                      placeholder="请输入推送内容..." maxlength="500"></textarea>
-                            <div class="hint" style="text-align:right;">
-                                {{ pushForm.content.length }}/500 字符
-                            </div>
-                            <div class="app-btn-group">
-                                <button class="app-btn app-btn-purple"
-                                        :disabled="pushForm.sending || pushSelectedUsers.length === 0 || !pushForm.title || !pushForm.content"
-                                        @click="doSendPush()">
-                                    <i class="ri-notification-3-line" aria-hidden="true"></i> {{ pushForm.sending ? '推送中...' : '发送APP推送 (' + pushSelectedUsers.length + '人)' }}
-                                </button>
-                            </div>
-                            <div class="send-result"
-                                 :class="pushForm.result && pushForm.result.status === 2 ? 'success' : (pushForm.result && pushForm.result.status === 4 ? 'partial' : 'error')"
-                                 v-if="pushForm.result && !pushForm.sending">
-                                <button class="close-result" @click="pushForm.result = null">&times;</button>
-                                <strong>推送完成！</strong>
-                                成功: {{ pushForm.result.successCount }} | 失败: {{ pushForm.result.failCount }}
-                            </div>
-                        </div>
+                <!-- ===== Tab 3：发送记录（crud-table） ===== -->
+                <el-tab-pane name="record">
+                    <span slot="label"><i class="ri-file-list-3-line"></i> 发送记录</span>
+                    <div class="tab-pane-body">
+                        <table-bar
+                            :search-items="recordSearchItems"
+                            :show-search-btns="false"
+                            @search="onRecordSearch"
+                            @reset="onRecordReset"
+                        ></table-bar>
+                        <crud-table
+                            :data="records"
+                            :columns="recordColumns"
+                            :page="recordPage"
+                            :page-size="recordSize"
+                            :total="recordTotal"
+                            :loading="recordLoading"
+                            empty-hint="暂无发送记录"
+                            @page-change="onRecordPageChange"
+                            @size-change="onRecordSizeChange"
+                        >
+                            <template #col-channel="{ row }">
+                                <el-tag size="small" :type="channelTagType(row.channel)" disable-transitions>{{ channelName(row.channel) }}</el-tag>
+                            </template>
+                            <template #col-successCount="{ row }">
+                                <span class="col-success">{{ row.successCount }}</span>
+                            </template>
+                            <template #col-failCount="{ row }">
+                                <span class="col-fail">{{ row.failCount }}</span>
+                            </template>
+                            <template #col-status="{ row }">
+                                <el-tag size="small" :type="recordStatusTag(row.status)" disable-transitions>{{ recordStatusName(row.status) }}</el-tag>
+                            </template>
+                            <template #col-createTime="{ row }">
+                                {{ formatDate(row.createTime) }}
+                            </template>
+                        </crud-table>
                     </div>
-                </div>
-            </div>
+                </el-tab-pane>
 
-            <!-- ========== Tab 3: 发送记录 ========== -->
-            <div class="tab-content" id="tab-record">
-                <div class="toolbar">
-                    <select v-model="recordForm.status" @change="loadRecords(1)">
-                        <option value="">所有状态</option>
-                        <option :value="0">待发送</option>
-                        <option :value="2">发送成功</option>
-                        <option :value="3">发送失败</option>
-                        <option :value="4">部分成功</option>
-                    </select>
-                    <select v-model="recordForm.channel" @change="loadRecords(1)">
-                        <option value="">所有渠道</option>
-                        <option :value="1">短信</option>
-                        <option :value="2">APP推送</option>
-                        <option :value="3">短信+APP推送</option>
-                    </select>
-                    <button class="app-btn app-btn-default app-btn-sm" @click="loadRecords(1)">刷新</button>
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>渠道</th>
-                            <th>内容预览</th>
-                            <th>目标数</th>
-                            <th>成功</th>
-                            <th>失败</th>
-                            <th>状态</th>
-                            <th>发送时间</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="r in records" :key="r.id">
-                            <td>{{ r.id }}</td>
-                            <td>
-                                <el-tag size="small" :type="channelTagType(r.channel)" disable-transitions>{{ channelName(r.channel) }}</el-tag>
-                            </td>
-                            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                                {{ r.content || '-' }}
-                            </td>
-                            <td>{{ r.targetCount }}</td>
-                            <td style="color:var(--antd-success)">{{ r.successCount }}</td>
-                            <td style="color:var(--antd-error)">{{ r.failCount }}</td>
-                            <td>
-                                <span :class="{ 'status-sending': r.status===0||r.status===1,
-                                    'status-success': r.status===2, 'status-fail': r.status===3,
-                                    'status-partial': r.status===4 }"
-                                      style="font-size:var(--font-size-xs);font-weight:600;">
-                                    {{ recordStatusName(r.status) }}
-                                </span>
-                            </td>
-                            <td>{{ formatDate(r.createTime) }}</td>
-                        </tr>
-                        <tr v-if="records.length===0">
-                            <td colspan="8" class="empty-state">暂无发送记录</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <div class="pagination" v-if="recordTotal > 0">
-                    <button :disabled="recordPage <= 1" @click="loadRecords(recordPage - 1)">上一页</button>
-                    <span>第 {{ recordPage }}/{{ Math.ceil(recordTotal / recordSize) }} 页，共 {{ recordTotal }} 条</span>
-                    <button :disabled="recordPage >= Math.ceil(recordTotal / recordSize)"
-                            @click="loadRecords(recordPage + 1)">下一页</button>
-                </div>
-            </div>
-
-            <!-- ========== Tab 4: 通知模板 ========== -->
-            <div class="tab-content" id="tab-template">
-                <div class="toolbar">
-                    <select v-model="templateFilter.bizType" @change="loadTemplates(1)">
-                        <option value="">所有业务类型</option>
-                        <option value="ORDER_NOTICE">订单通知</option>
-                        <option value="PROMOTION">营销推送</option>
-                        <option value="VERIFY_CODE">验证码</option>
-                        <option value="SYSTEM">系统通知</option>
-                        <option value="JOB_NOTICE">工作通知</option>
-                    </select>
-                    <button class="app-btn app-btn-primary" @click="openTemplateModal()">+ 新增模板</button>
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>模板名称</th>
-                            <th>业务类型</th>
-                            <th>渠道</th>
-                            <th>外部编码</th>
-                            <th>状态</th>
-                            <th>更新时间</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="t in templates" :key="t.id">
-                            <td><strong>{{ t.templateName }}</strong></td>
-                            <td>{{ bizTypeName(t.bizType) }}</td>
-                            <td>
-                                <el-tag size="small" :type="channelTagType(t.channel)" disable-transitions>{{ channelName(t.channel) }}</el-tag>
-                            </td>
-                            <td>{{ t.templateCode || '-' }}</td>
-                            <td>
-                                <span class="status-badge" :class="t.status===1?'status-on':'status-off'">
-                                    {{ t.status === 1 ? '启用' : '停用' }}
-                                </span>
-                            </td>
-                            <td>{{ formatDate(t.updateTime) }}</td>
-                            <td>
-                                <button class="app-btn app-btn-default app-btn-sm" @click="openTemplateModal(t)">编辑</button>
-                                <button class="app-btn app-btn-default app-btn-sm"
-                                        @click="toggleTemplate(t)">{{ t.status===1?'停用':'启用' }}</button>
-                                <button class="app-btn app-btn-danger app-btn-sm" @click="deleteTemplate(t.id)">删除</button>
-                            </td>
-                        </tr>
-                        <tr v-if="templates.length===0">
-                            <td colspan="7" class="empty-state">暂无通知模板</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <div class="pagination" v-if="templateTotal > 0">
-                    <button :disabled="templatePage <= 1" @click="loadTemplates(templatePage - 1)">上一页</button>
-                    <span>第 {{ templatePage }}/{{ Math.ceil(templateTotal / templateSize) }} 页，共 {{ templateTotal }} 条</span>
-                    <button :disabled="templatePage >= Math.ceil(templateTotal / templateSize)"
-                            @click="loadTemplates(templatePage + 1)">下一页</button>
-                </div>
-            </div>
+                <!-- ===== Tab 4：通知模板（crud-table） ===== -->
+                <el-tab-pane name="template">
+                    <span slot="label"><i class="ri-edit-2-line"></i> 通知模板</span>
+                    <div class="tab-pane-body">
+                        <table-bar
+                            :search-items="templateSearchItems"
+                            :actions="templateActions"
+                            :show-search-btns="false"
+                            @search="onTemplateSearch"
+                            @reset="onTemplateReset"
+                            @action="onTemplateAction"
+                        ></table-bar>
+                        <crud-table
+                            :data="templates"
+                            :columns="templateColumns"
+                            :page="templatePage"
+                            :page-size="templateSize"
+                            :total="templateTotal"
+                            :loading="templateLoading"
+                            :show-actions="true"
+                            :actions-width="180"
+                            :actions-fixed="true"
+                            empty-hint="暂无通知模板，点击上方「新增模板」创建"
+                            @page-change="onTemplatePageChange"
+                            @size-change="onTemplateSizeChange"
+                        >
+                            <template #col-channel="{ row }">
+                                <el-tag size="small" :type="channelTagType(row.channel)" disable-transitions>{{ channelName(row.channel) }}</el-tag>
+                            </template>
+                            <template #col-status="{ row }">
+                                <el-tag size="small" :type="row.status === 1 ? 'success' : 'info'" disable-transitions>
+                                    {{ row.status === 1 ? '启用' : '停用' }}
+                                </el-tag>
+                            </template>
+                            <template #col-updateTime="{ row }">
+                                {{ formatDate(row.updateTime) }}
+                            </template>
+                            <template #actions="{ row }">
+                                <el-button type="text" size="small" class="btn-view" @click="openTemplateModal(row)">编辑</el-button>
+                                <el-button type="text" size="small"
+                                           :class="row.status === 1 ? 'btn-warning' : 'btn-success'"
+                                           @click="toggleTemplate(row)">{{ row.status === 1 ? '停用' : '启用' }}</el-button>
+                                <el-button type="text" size="small" class="btn-delete" @click="deleteTemplate(row.id)">删除</el-button>
+                            </template>
+                        </crud-table>
+                    </div>
+                </el-tab-pane>
+            </el-tabs>
         </main>
 
-        <!-- ==================== 模板编辑弹窗 ==================== -->
-        <div class="modal-overlay" :class="{show: templateModal.show}" @click.self="closeTemplateModal()">
-            <div class="modal">
-                <div class="modal-header">
-                    <h3>{{ templateModal.isEdit ? '编辑通知模板' : '新增通知模板' }}</h3>
-                    <button class="modal-close" @click="closeTemplateModal()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="inp-tpl-name">模板名称 *</label>
-                        <input id="inp-tpl-name" v-model="templateModal.form.templateName" placeholder="如：订单确认通知" />
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="sel-tpl-biztype">业务类型 *</label>
-                            <select id="sel-tpl-biztype" v-model="templateModal.form.bizType">
+        <!-- 模板新增/编辑弹窗（crud-dialog + 校验） -->
+        <crud-dialog
+            :title="templateModal.isEdit ? '编辑通知模板' : '新增通知模板'"
+            :visible.sync="templateModal.show"
+            size="lg"
+            :close-on-click-modal="false"
+            :submit-loading="templateModal.saving"
+            @submit="saveTemplate"
+        >
+            <el-form ref="templateForm" :model="templateModal.form" :rules="templateRules" label-width="110px">
+                <el-row :gutter="16">
+                    <el-col :span="12" :xs="24">
+                        <el-form-item label="模板名称" prop="templateName">
+                            <el-input v-model="templateModal.form.templateName" placeholder="如：订单确认通知" maxlength="64"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12" :xs="24">
+                        <el-form-item label="业务类型" prop="bizType">
+                            <el-select v-model="templateModal.form.bizType" style="width:100%;">
                                 <option value="ORDER_NOTICE">订单通知</option>
                                 <option value="PROMOTION">营销推送</option>
                                 <option value="VERIFY_CODE">验证码</option>
                                 <option value="SYSTEM">系统通知</option>
                                 <option value="JOB_NOTICE">工作通知</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="sel-tpl-channel">发送渠道 *</label>
-                            <select id="sel-tpl-channel" v-model="templateModal.form.channel">
-                                <option :value="1">短信</option>
-                                <option :value="2">APP推送</option>
-                                <option :value="3">短信+APP推送</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group" v-if="templateModal.form.channel !== 2">
-                        <label for="inp-tpl-code">外部模板编码（阿里云SMS模板CODE）</label>
-                        <input id="inp-tpl-code" v-model="templateModal.form.templateCode" placeholder="如: SMS_ORDER_CONFIRM" />
-                    </div>
-                    <div class="form-group" v-if="templateModal.form.channel !== 2">
-                        <label for="inp-tpl-sign">短信签名</label>
-                        <input id="inp-tpl-sign" v-model="templateModal.form.signName" placeholder="如: 瑞吉外卖" />
-                    </div>
-                    <div class="form-group" v-if="templateModal.form.channel !== 1">
-                        <label for="inp-notify-title">推送标题（APP推送用）</label>
-                        <input id="inp-notify-title" v-model="templateModal.form.title" placeholder="如: 订单已确认" />
-                    </div>
-                    <div class="form-group">
-                        <label for="inp-tpl-content">模板内容 *（支持占位符 ${paramName}）</label>
-                        <textarea id="inp-tpl-content" v-model="templateModal.form.content" rows="4"
-                                  placeholder="尊敬的${userName}，您的订单${orderNo}已确认，预计${deliveryTime}送达。"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="inp-tpl-params">参数列表（JSON数组）</label>
-                        <input id="inp-tpl-params" v-model="templateModal.form.paramList"
-                               placeholder='["userName","orderNo","deliveryTime"]' />
-                        <div class="hint">对应模板内容中的占位符变量名</div>
-                    </div>
-                    <div class="form-group">
-                        <label for="inp-tpl-remark">备注</label>
-                        <input id="inp-tpl-remark" v-model="templateModal.form.remark" placeholder="模板使用说明" />
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="app-btn app-btn-default" @click="closeTemplateModal()">取消</button>
-                    <button class="app-btn app-btn-primary" @click="saveTemplate()">保存</button>
-                </div>
-            </div>
-        </div>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12" :xs="24">
+                        <el-form-item label="发送渠道" prop="channel">
+                            <el-select v-model="templateModal.form.channel" style="width:100%;">
+                                <el-option :value="1" label="短信"></el-option>
+                                <el-option :value="2" label="APP推送"></el-option>
+                                <el-option :value="3" label="短信+APP推送"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12" :xs="24" v-if="templateModal.form.channel !== 2">
+                        <el-form-item label="外部模板编码">
+                            <el-input v-model="templateModal.form.templateCode" placeholder="阿里云SMS模板CODE，如 SMS_ORDER_CONFIRM"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12" :xs="24" v-if="templateModal.form.channel !== 2">
+                        <el-form-item label="短信签名">
+                            <el-input v-model="templateModal.form.signName" placeholder="如：瑞吉外卖"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12" :xs="24" v-if="templateModal.form.channel !== 1">
+                        <el-form-item label="推送标题">
+                            <el-input v-model="templateModal.form.title" placeholder="如：订单已确认" maxlength="30"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-form-item label="模板内容" prop="content">
+                    <el-input v-model="templateModal.form.content" type="textarea" :rows="4"
+                              placeholder="尊敬的${userName}，您的订单${orderNo}已确认，预计${deliveryTime}送达。"></el-input>
+                </el-form-item>
+                <el-row :gutter="16">
+                    <el-col :span="12" :xs="24">
+                        <el-form-item label="参数列表">
+                            <el-input v-model="templateModal.form.paramList"
+                                      placeholder='JSON数组，如 ["userName","orderNo","deliveryTime"]'></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12" :xs="24">
+                        <el-form-item label="备注">
+                            <el-input v-model="templateModal.form.remark" placeholder="模板使用说明" maxlength="200"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+            </el-form>
+        </crud-dialog>
     </div>
 
     <script src="../../plugins/vue/vue.js"></script>
+    <!-- 补入 element-ui（原页漏引导致 el-* 不渲染） -->
+    <script src="../../plugins/element-ui/index.js?v=20260915"></script>
     <script src="../../plugins/axios/axios.min.js"></script>
     <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
+    <script src="../../js/accessibility-utils.js?v=20260915c"></script>
+    <script src="../../js/performance-utils.js?v=20260915c"></script>
     <script src="../../api/user.js?v=20260915c"></script>
     <script src="../../js/components.js?v=20260915c"></script>
     <script src="../../api/notification.js?v=20260915c"></script>
     <script>
-        // 修改点：全新消息通知管理 - 支持用户选择器、短信发送、APP推送
-        const app = new Vue({
+        new Vue({
             el: '#app',
             data: {
-                // 统计
+                // 当前激活 Tab
+                activeTab: 'sms',
+
+                // 顶部统计
                 stats: { todaySms: 0, todayPush: 0, todaySuccess: 0, todayFail: 0 },
                 isMockMode: true,
 
-                // ---- 短信发送 Tab ----
+                // ---- 短信发送 ----
                 users: [],
                 userPage: 1,
                 userSize: 10,
@@ -569,7 +539,7 @@
                 selectedIds: new Set(),
                 smsForm: { content: '', sending: false, result: null },
 
-                // ---- APP推送 Tab ----
+                // ---- APP推送 ----
                 pushUsers: [],
                 pushUserPage: 1,
                 pushUserSize: 10,
@@ -578,250 +548,257 @@
                 pushSelectedIds: new Set(),
                 pushForm: { title: '', content: '', sending: false, result: null },
 
-                // ---- 发送记录 Tab ----
+                // ---- 发送记录 ----
                 records: [],
                 recordPage: 1,
                 recordSize: 10,
                 recordTotal: 0,
+                recordLoading: false,
                 recordForm: { status: '', channel: '' },
 
-                // ---- 模板 Tab ----
+                // ---- 通知模板 ----
                 templates: [],
                 templatePage: 1,
                 templateSize: 10,
                 templateTotal: 0,
+                templateLoading: false,
                 templateFilter: { bizType: '' },
                 templateModal: {
-                    show: false, isEdit: false,
+                    show: false, isEdit: false, saving: false,
                     form: { channel: 1, bizType: 'ORDER_NOTICE', status: 1 }
                 }
             },
 
             computed: {
-                // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
-                statsCards: function() {
-                    const self = this;
+                statsCards: function () {
+                    var self = this;
                     return [
                         { key: 'sms', icon: 'ri-smartphone-line', label: '今日短信发送', value: self.stats.todaySms || 0, color: 'primary' },
                         { key: 'push', icon: 'ri-notification-3-line', label: '今日APP推送', value: self.stats.todayPush || 0, color: 'info' },
                         { key: 'success', icon: 'ri-checkbox-circle-line', label: '发送成功', value: self.stats.todaySuccess || 0, color: 'success' },
                         { key: 'fail', icon: 'ri-close-circle-line', label: '发送失败', value: self.stats.todayFail || 0, color: 'danger' }
-                    ]
+                    ];
                 },
-                selectedUsers: function() {
-                    const self = this;
-                    return self.users.filter(function(u) { return self.selectedIds.has(u.id); });
+                selectedUsers: function () {
+                    var self = this;
+                    return self.users.filter(function (u) { return self.selectedIds.has(u.id); });
                 },
-                isAllPageSelected: function() {
+                isAllPageSelected: function () {
                     if (this.users.length === 0) return false;
-                    const self = this;
-                    return this.users.every(function(u) { return self.selectedIds.has(u.id); });
+                    var self = this;
+                    return this.users.every(function (u) { return self.selectedIds.has(u.id); });
                 },
-                pushSelectedUsers: function() {
-                    const self = this;
-                    return self.pushUsers.filter(function(u) { return self.pushSelectedIds.has(u.id); });
+                pushSelectedUsers: function () {
+                    var self = this;
+                    return self.pushUsers.filter(function (u) { return self.pushSelectedIds.has(u.id); });
                 },
-                isAllPushPageSelected: function() {
+                isAllPushPageSelected: function () {
                     if (this.pushUsers.length === 0) return false;
-                    const self = this;
-                    return this.pushUsers.every(function(u) { return self.pushSelectedIds.has(u.id); });
+                    var self = this;
+                    return this.pushUsers.every(function (u) { return self.pushSelectedIds.has(u.id); });
+                },
+
+                // 记录 Tab 筛选项
+                recordSearchItems: function () {
+                    return [
+                        { type: 'select', field: 'status', placeholder: '所有状态', width: 140, options: [
+                            { label: '待发送', value: 0 }, { label: '发送成功', value: 2 },
+                            { label: '发送失败', value: 3 }, { label: '部分成功', value: 4 }
+                        ] },
+                        { type: 'select', field: 'channel', placeholder: '所有渠道', width: 140, options: [
+                            { label: '短信', value: 1 }, { label: 'APP推送', value: 2 }, { label: '短信+APP推送', value: 3 }
+                        ] }
+                    ];
+                },
+                recordColumns: function () {
+                    return [
+                        { prop: 'id', label: 'ID', width: 70 },
+                        { prop: 'channel', label: '渠道', width: 120, slot: true },
+                        { prop: 'content', label: '内容预览', minWidth: 200, showOverflowTooltip: true },
+                        { prop: 'targetCount', label: '目标数', width: 80 },
+                        { prop: 'successCount', label: '成功', width: 80, slot: true },
+                        { prop: 'failCount', label: '失败', width: 80, slot: true },
+                        { prop: 'status', label: '状态', width: 100, slot: true },
+                        { prop: 'createTime', label: '发送时间', width: 160, slot: true }
+                    ];
+                },
+
+                // 模板 Tab 筛选项 / 操作 / 列
+                templateSearchItems: function () {
+                    return [
+                        { type: 'select', field: 'bizType', placeholder: '所有业务类型', width: 160, options: [
+                            { label: '订单通知', value: 'ORDER_NOTICE' },
+                            { label: '营销推送', value: 'PROMOTION' },
+                            { label: '验证码', value: 'VERIFY_CODE' },
+                            { label: '系统通知', value: 'SYSTEM' },
+                            { label: '工作通知', value: 'JOB_NOTICE' }
+                        ] }
+                    ];
+                },
+                templateActions: function () {
+                    return [
+                        { key: 'add', text: '新增模板', type: 'primary', icon: 'ri-add-line' }
+                    ];
+                },
+                templateColumns: function () {
+                    return [
+                        { prop: 'templateName', label: '模板名称', minWidth: 140 },
+                        { prop: 'bizType', label: '业务类型', width: 110 },
+                        { prop: 'channel', label: '渠道', width: 120, slot: true },
+                        { prop: 'templateCode', label: '外部编码', minWidth: 150 },
+                        { prop: 'status', label: '状态', width: 90, slot: true },
+                        { prop: 'updateTime', label: '更新时间', width: 160, slot: true }
+                    ];
                 }
             },
 
-            mounted: function() {
+            mounted: function () {
                 this.loadUsers(1);
                 this.checkMockMode();
-                // 修改点：页面初始化即加载统计，避免卡片始终显示 0
                 this.loadStats();
             },
 
             methods: {
+                // Tab 切换：按需加载（保持原 switchTab 的加载时机）
+                onTabClick: function (tab) {
+                    var name = tab.name;
+                    if (name === 'sms') { this.loadUsers(this.userPage); this.loadStats(); }
+                    else if (name === 'push') { this.loadPushUsers(this.pushUserPage); }
+                    else if (name === 'record') { this.loadRecords(1); this.loadStats(); }
+                    else if (name === 'template') { this.loadTemplates(this.templatePage); }
+                },
+
                 // ==================== 用户查询 ====================
-                loadUsers: function(page) {
-                    const self = this;
+                loadUsers: function (page) {
+                    var self = this;
                     self.userPage = page;
-                    const params = { page: self.userPage, pageSize: self.userSize };
+                    var params = { page: self.userPage, pageSize: self.userSize };
                     if (self.userSearch.name) params.name = self.userSearch.name;
                     if (self.userSearch.phone) params.phone = self.userSearch.phone;
 
-                    userPage(params).then(function(res) {
+                    userPage(params).then(function (res) {
                         if (res && res.code === 1 && res.data) {
                             self.users = res.data.records || [];
                             self.userTotal = res.data.total || 0;
                         }
-                    }).catch(function(err) {
+                    }).catch(function () {
                         ReggieUI.error('加载用户失败');
                     });
                 },
+                searchUsers: function () { this.loadUsers(1); },
 
-                searchUsers: function() {
-                    this.loadUsers(1);
-                },
-
-                // 用户选择
-                toggleUser: function(user) {
-                    if (this.selectedIds.has(user.id)) {
-                        this.selectedIds.delete(user.id);
-                    } else {
-                        this.selectedIds.add(user.id);
-                    }
-                    // 触发Vue响应式更新
+                toggleUser: function (user) {
+                    if (this.selectedIds.has(user.id)) this.selectedIds.delete(user.id);
+                    else this.selectedIds.add(user.id);
                     this.selectedIds = new Set(this.selectedIds);
                 },
-
-                selectAllPage: function() {
-                    const self = this;
-                    self.users.forEach(function(u) { self.selectedIds.add(u.id); });
+                selectAllPage: function () {
+                    var self = this;
+                    self.users.forEach(function (u) { self.selectedIds.add(u.id); });
                     self.selectedIds = new Set(self.selectedIds);
                 },
-
-                deselectAll: function() {
-                    this.selectedIds = new Set();
+                deselectAll: function () { this.selectedIds = new Set(); },
+                toggleAllPage: function (ev) {
+                    if (ev.target.checked) this.selectAllPage();
+                    else this.deselectAll();
                 },
-
-                toggleAllPage: function(ev) {
-                    if (ev.target.checked) {
-                        this.selectAllPage();
-                    } else {
-                        this.deselectAll();
-                    }
-                },
-
-                removeSelected: function(id) {
+                removeSelected: function (id) {
                     this.selectedIds.delete(id);
                     this.selectedIds = new Set(this.selectedIds);
                 },
 
-                // ==================== APP推送用户查询 ====================
-                loadPushUsers: function(page) {
-                    const self = this;
+                // ==================== 推送用户查询 ====================
+                loadPushUsers: function (page) {
+                    var self = this;
                     self.pushUserPage = page;
-                    const params = { page: self.pushUserPage, pageSize: self.pushUserSize };
+                    var params = { page: self.pushUserPage, pageSize: self.pushUserSize };
                     if (self.pushUserSearch.name) params.name = self.pushUserSearch.name;
                     if (self.pushUserSearch.phone) params.phone = self.pushUserSearch.phone;
 
-                    userPage(params).then(function(res) {
+                    userPage(params).then(function (res) {
                         if (res && res.code === 1 && res.data) {
                             self.pushUsers = res.data.records || [];
                             self.pushUserTotal = res.data.total || 0;
                         }
-                    }).catch(function(err) {
+                    }).catch(function () {
                         ReggieUI.error('加载推送用户失败');
                     });
                 },
+                searchPushUsers: function () { this.loadPushUsers(1); },
 
-                searchPushUsers: function() {
-                    this.loadPushUsers(1);
-                },
-
-                togglePushUser: function(user) {
-                    if (this.pushSelectedIds.has(user.id)) {
-                        this.pushSelectedIds.delete(user.id);
-                    } else {
-                        this.pushSelectedIds.add(user.id);
-                    }
+                togglePushUser: function (user) {
+                    if (this.pushSelectedIds.has(user.id)) this.pushSelectedIds.delete(user.id);
+                    else this.pushSelectedIds.add(user.id);
                     this.pushSelectedIds = new Set(this.pushSelectedIds);
                 },
-
-                selectAllPushPage: function() {
-                    const self = this;
-                    self.pushUsers.forEach(function(u) { self.pushSelectedIds.add(u.id); });
+                selectAllPushPage: function () {
+                    var self = this;
+                    self.pushUsers.forEach(function (u) { self.pushSelectedIds.add(u.id); });
                     self.pushSelectedIds = new Set(self.pushSelectedIds);
                 },
-
-                deselectAllPush: function() {
-                    this.pushSelectedIds = new Set();
-                },
-
-                toggleAllPushPage: function(ev) {
+                deselectAllPush: function () { this.pushSelectedIds = new Set(); },
+                toggleAllPushPage: function (ev) {
                     if (ev.target.checked) this.selectAllPushPage();
                     else this.deselectAllPush();
                 },
-
-                removePushSelected: function(id) {
+                removePushSelected: function (id) {
                     this.pushSelectedIds.delete(id);
                     this.pushSelectedIds = new Set(this.pushSelectedIds);
                 },
 
                 // ==================== 发送短信 ====================
-                doSendSms: function() {
-                    const self = this;
-                    var phones = self.selectedUsers.map(function(u) { return u.phone; }).filter(function(p) { return p; });
+                doSendSms: function () {
+                    var self = this;
+                    var phones = self.selectedUsers.map(function (u) { return u.phone; }).filter(function (p) { return p; });
 
-                    if (phones.length === 0) {
-                        ReggieUI.warning('所选用户没有手机号，无法发送短信');
-                        return;
-                    }
-                    if (!self.smsForm.content.trim()) {
-                        ReggieUI.warning('请输入短信内容');
-                        return;
-                    }
+                    if (phones.length === 0) { ReggieUI.warning('所选用户没有手机号，无法发送短信'); return; }
+                    if (!self.smsForm.content.trim()) { ReggieUI.warning('请输入短信内容'); return; }
 
                     self.smsForm.sending = true;
                     self.smsForm.result = null;
 
-                    // 构造模板参数，用户名为占位符值
-                    let params = {};
-                    if (self.smsForm.content.indexOf('${') < 0) {
-                        // 无占位符，直接作为模板内容发送
-                        params = { content: self.smsForm.content };
-                    }
-
-                    // 修改点：新增简单短信发送，无需依赖阿里云模板
-                    const sendData = {
+                    var sendData = {
                         channel: 1,
                         targets: phones,
                         content: self.smsForm.content.trim()
                     };
 
-                    notificationApi.sendSimpleMessage(sendData).then(function(res) {
+                    notificationApi.sendSimpleMessage(sendData).then(function (res) {
                         if (res && res.code === 1 && res.data) {
                             self.smsForm.result = res.data;
-                            // 刷新统计
                             self.loadStats();
                         } else {
                             self.smsForm.result = { status: 3, successCount: 0, failCount: phones.length,
                                 failReason: res ? res.msg : '发送失败' };
                         }
-                    }).catch(function(err) {
+                    }).catch(function () {
                         ReggieUI.error('短信发送异常');
                         self.smsForm.result = { status: 3, successCount: 0, failCount: phones.length,
                             failReason: '网络异常，请重试' };
-                    }).finally(function() {
+                    }).finally(function () {
                         self.smsForm.sending = false;
                     });
                 },
 
                 // ==================== 发送APP推送 ====================
-                doSendPush: function() {
-                    const self = this;
-                    if (self.pushSelectedUsers.length === 0) {
-                        ReggieUI.warning('请选择推送用户');
-                        return;
-                    }
-                    if (!self.pushForm.title.trim()) {
-                        ReggieUI.warning('请输入推送标题');
-                        return;
-                    }
-                    if (!self.pushForm.content.trim()) {
-                        ReggieUI.warning('请输入推送内容');
-                        return;
-                    }
+                doSendPush: function () {
+                    var self = this;
+                    if (self.pushSelectedUsers.length === 0) { ReggieUI.warning('请选择推送用户'); return; }
+                    if (!self.pushForm.title.trim()) { ReggieUI.warning('请输入推送标题'); return; }
+                    if (!self.pushForm.content.trim()) { ReggieUI.warning('请输入推送内容'); return; }
 
                     self.pushForm.sending = true;
                     self.pushForm.result = null;
 
-                    var userIds = self.pushSelectedUsers.map(function(u) { return u.id; });
-
-                    // 修改点：修正推送数据格式，title和content提到顶层（后端sendSimpleMessage直接读取）
-                    const data = {
+                    var userIds = self.pushSelectedUsers.map(function (u) { return u.id; });
+                    var data = {
                         channel: 2,
                         targets: userIds.map(String),
                         title: self.pushForm.title.trim(),
                         content: self.pushForm.content.trim()
                     };
 
-                    notificationApi.sendSimpleMessage(data).then(function(res) {
+                    notificationApi.sendSimpleMessage(data).then(function (res) {
                         if (res && res.code === 1 && res.data) {
                             self.pushForm.result = res.data;
                             self.loadStats();
@@ -829,42 +806,61 @@
                             self.pushForm.result = { status: 3, successCount: 0, failCount: userIds.length,
                                 failReason: res ? res.msg : '推送失败' };
                         }
-                    }).catch(function(err) {
+                    }).catch(function () {
                         ReggieUI.error('推送异常');
                         self.pushForm.result = { status: 3, successCount: 0, failCount: userIds.length,
                             failReason: '网络异常，请重试' };
-                    }).finally(function() {
+                    }).finally(function () {
                         self.pushForm.sending = false;
                     });
                 },
 
                 // ==================== 发送记录 ====================
-                loadRecords: function(page) {
-                    const self = this;
+                loadRecords: function (page) {
+                    var self = this;
+                    self.recordLoading = true;
                     self.recordPage = page;
-                    const params = {};
+                    var params = {};
                     if (self.recordForm.status !== '') params.status = self.recordForm.status;
                     if (self.recordForm.channel) params.channel = self.recordForm.channel;
                     params.page = self.recordPage;
                     params.pageSize = self.recordSize;
 
-                    notificationApi.getRecordPage(params).then(function(res) {
+                    notificationApi.getRecordPage(params).then(function (res) {
                         if (res && res.code === 1 && res.data) {
                             self.records = res.data.records || [];
                             self.recordTotal = res.data.total || 0;
                         }
-                    }).catch(function(err) {
+                    }).catch(function () {
                         ReggieUI.error('加载记录失败');
+                    }).finally(function () {
+                        self.recordLoading = false;
                     });
+                },
+                onRecordSearch: function (params) {
+                    this.recordForm.status = (params.status === undefined || params.status === null) ? '' : params.status;
+                    this.recordForm.channel = (params.channel === undefined || params.channel === null) ? '' : params.channel;
+                    this.loadRecords(1);
+                },
+                onRecordReset: function () {
+                    this.recordForm = { status: '', channel: '' };
+                    this.loadRecords(1);
+                },
+                onRecordPageChange: function (p) {
+                    this.recordPage = p.page;
+                    this.loadRecords(this.recordPage);
+                },
+                onRecordSizeChange: function (s) {
+                    this.recordSize = s;
+                    this.loadRecords(1);
                 },
 
                 // ==================== 统计 ====================
-                loadStats: function() {
-                    const self = this;
-                    // 修改点：改为调用后端 /notification/record/stats SQL 聚合接口，避免 pageSize:999 拉全量后前端 forEach 计算
-                    notificationApi.getRecordStats().then(function(res) {
+                loadStats: function () {
+                    var self = this;
+                    notificationApi.getRecordStats().then(function (res) {
                         if (res && res.code === 1 && res.data) {
-                            const d = res.data;
+                            var d = res.data;
                             self.stats = {
                                 todaySms: Number(d.todaySms) || 0,
                                 todayPush: Number(d.todayPush) || 0,
@@ -872,39 +868,59 @@
                                 todayFail: Number(d.todayFail) || 0
                             };
                         }
-                    }).catch(function(err) { console.warn('[通知] 加载统计数据失败:', err) });
+                    }).catch(function (err) { console.warn('[通知] 加载统计数据失败:', err); });
                 },
-
-                checkMockMode: function() {
-                    // 通过是否成功调用健康检查来判断
-                    const self = this;
-                    notificationApi.getHealth().then(function(res) {
+                checkMockMode: function () {
+                    var self = this;
+                    notificationApi.getHealth().then(function (res) {
                         self.isMockMode = !!(res && res.data && res.data.mockMode);
-                    }).catch(function() {
+                    }).catch(function () {
                         self.isMockMode = true;
                     });
                 },
 
                 // ==================== 模板管理 ====================
-                loadTemplates: function(page) {
-                    const self = this;
+                loadTemplates: function (page) {
+                    var self = this;
+                    self.templateLoading = true;
                     self.templatePage = page;
-                    const params = {};
+                    var params = {};
                     if (self.templateFilter.bizType) params.bizType = self.templateFilter.bizType;
                     params.page = self.templatePage;
                     params.pageSize = self.templateSize;
 
-                    notificationApi.getTemplatePage(params).then(function(res) {
+                    notificationApi.getTemplatePage(params).then(function (res) {
                         if (res && res.code === 1 && res.data) {
                             self.templates = res.data.records || [];
                             self.templateTotal = res.data.total || 0;
                         }
-                    }).catch(function(err) {
+                    }).catch(function () {
                         ReggieUI.error('加载模板失败');
+                    }).finally(function () {
+                        self.templateLoading = false;
                     });
                 },
+                onTemplateSearch: function (params) {
+                    this.templateFilter.bizType = params.bizType || '';
+                    this.loadTemplates(1);
+                },
+                onTemplateReset: function () {
+                    this.templateFilter = { bizType: '' };
+                    this.loadTemplates(1);
+                },
+                onTemplateAction: function (payload) {
+                    if (payload.key === 'add') this.openTemplateModal();
+                },
+                onTemplatePageChange: function (p) {
+                    this.templatePage = p.page;
+                    this.loadTemplates(this.templatePage);
+                },
+                onTemplateSizeChange: function (s) {
+                    this.templateSize = s;
+                    this.loadTemplates(1);
+                },
 
-                openTemplateModal: function(template) {
+                openTemplateModal: function (template) {
                     this.templateModal.isEdit = !!template;
                     if (template) {
                         this.templateModal.form = JSON.parse(JSON.stringify(template));
@@ -913,118 +929,87 @@
                     }
                     this.templateModal.show = true;
                 },
+                closeTemplateModal: function () { this.templateModal.show = false; },
 
-                closeTemplateModal: function() {
-                    this.templateModal.show = false;
-                },
-
-                saveTemplate: function() {
-                    const self = this;
-                    const form = self.templateModal.form;
-                    if (!form.templateName || !form.content) {
-                        ReggieUI.warning('模板名称和内容不能为空');
-                        return;
-                    }
-                    const apiCall = self.templateModal.isEdit
-                        ? notificationApi.updateTemplate(form)
-                        : notificationApi.addTemplate(form);
-                    apiCall.then(function(res) {
-                        if (res && res.code === 1) {
-                            self.closeTemplateModal();
-                            self.loadTemplates(self.templatePage);
-                        } else {
-                            ReggieUI.error(res ? res.msg : '保存失败');
-                        }
-                    }).catch(function(err) {
-                        ReggieUI.error('保存失败，请检查网络连接');
+                saveTemplate: function () {
+                    var self = this;
+                    self.$refs.templateForm.validate(function (valid) {
+                        if (!valid) return;
+                        var form = self.templateModal.form;
+                        self.templateModal.saving = true;
+                        var apiCall = self.templateModal.isEdit
+                            ? notificationApi.updateTemplate(form)
+                            : notificationApi.addTemplate(form);
+                        apiCall.then(function (res) {
+                            if (res && res.code === 1) {
+                                self.templateModal.show = false;
+                                self.loadTemplates(self.templatePage);
+                            } else {
+                                ReggieUI.error(res ? res.msg : '保存失败');
+                            }
+                        }).catch(function () {
+                            ReggieUI.error('保存失败，请检查网络连接');
+                        }).finally(function () {
+                            self.templateModal.saving = false;
+                        });
                     });
                 },
 
-                toggleTemplate: function(t) {
-                    const newStatus = t.status === 1 ? 0 : 1;
-                    notificationApi.toggleTemplate(t.id, newStatus).then(function(res) {
-                        if (res && res.code === 1) {
-                            t.status = newStatus;
-                        }
-                    }).catch(function(err) {
+                toggleTemplate: function (t) {
+                    var newStatus = t.status === 1 ? 0 : 1;
+                    notificationApi.toggleTemplate(t.id, newStatus).then(function (res) {
+                        if (res && res.code === 1) t.status = newStatus;
+                    }).catch(function () {
                         ReggieUI.error('切换模板状态异常');
                     });
                 },
 
-                deleteTemplate: function(id) {
-                    const self = this;
+                deleteTemplate: function (id) {
+                    var self = this;
                     ReggieUI.confirm('确定删除该模板吗？', '提示', {
-                        confirmButtonText: '确定',
-                        cancelButtonText: '取消',
-                        type: 'warning'
-                    }).then(function() {
-                        notificationApi.deleteTemplate(id).then(function(res) {
-                            if (res && res.code === 1) {
-                                self.loadTemplates(self.templatePage);
-                            }
-                        }).catch(function(err) {
+                        confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
+                    }).then(function () {
+                        notificationApi.deleteTemplate(id).then(function (res) {
+                            if (res && res.code === 1) self.loadTemplates(self.templatePage);
+                        }).catch(function () {
                             ReggieUI.error('删除模板异常');
                         });
-                    }).catch(function(err) { console.warn('[通知] 删除模板确认取消或失败:', err) });
+                    }).catch(function (err) { console.warn('[通知] 删除确认取消或失败:', err); });
                 },
 
                 // ==================== 工具方法 ====================
-                // 修改点：bizType 映射改为字符串枚举（模板编辑/筛选选项为 ORDER_NOTICE/PROMOTION 等，
-                // 此前的数字 key 导致模板列表业务类型恒显示「未知类型」）
-                bizTypeName: function(type) {
-                    const map = {
-                        ORDER_NOTICE: '订单通知',
-                        PROMOTION: '营销推送',
-                        VERIFY_CODE: '验证码',
-                        SYSTEM: '系统通知',
-                        JOB_NOTICE: '工作通知'
+                bizTypeName: function (type) {
+                    var map = {
+                        ORDER_NOTICE: '订单通知', PROMOTION: '营销推送', VERIFY_CODE: '验证码',
+                        SYSTEM: '系统通知', JOB_NOTICE: '工作通知'
                     };
                     return map[type] || '未知类型';
                 },
-
-                // 修改点：渠道映射对齐发送记录筛选选项 {1:短信, 2:APP推送, 3:短信+APP推送}，
-                // 此前误用「站内信/邮件」导致渠道显示错位
-                channelName: function(ch) {
-                    const map = { 1: '短信', 2: 'APP推送', 3: '短信+APP推送' };
+                channelName: function (ch) {
+                    var map = { 1: '短信', 2: 'APP推送', 3: '短信+APP推送' };
                     return map[ch] || '未知';
                 },
-                // 渠道标签类型：短信→warning、APP推送→success、短信+APP推送→info（el-tag 浅底标签，替代无样式的 channel-tag）
-                channelTagType: function(ch) {
-                    const map = { 1: 'warning', 2: 'success', 3: 'info' };
+                channelTagType: function (ch) {
+                    var map = { 1: 'warning', 2: 'success', 3: 'info' };
                     return map[ch] || 'info';
                 },
-
-                // 修改点：补 status 0(待发送)/4(部分成功) 映射，与发送记录状态下拉选项对齐
-                recordStatusName: function(st) {
-                    const map = { 0: '待发送', 1: '发送中', 2: '发送成功', 3: '发送失败', 4: '部分成功' };
+                recordStatusName: function (st) {
+                    var map = { 0: '待发送', 1: '发送中', 2: '发送成功', 3: '发送失败', 4: '部分成功' };
                     return map[st] || '未知';
                 },
-
-                formatDate: function(dateStr) {
+                recordStatusTag: function (st) {
+                    var map = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger', 4: 'warning' };
+                    return map[st] || 'info';
+                },
+                formatDate: function (dateStr) {
                     if (!dateStr) return '-';
-                    const d = new Date(dateStr);
-                    var pad = function(n) { return String(n).padStart(2, '0'); };
-                    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+                    var d = new Date(dateStr);
+                    var pad = function (n) { return String(n).padStart(2, '0'); };
+                    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
                         ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
                 }
             }
         });
-
-        // Tab切换
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
-            document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-            const btn = document.querySelector('.tab-btn[onclick="switchTab(\'' + tab + '\')"]');
-            if (btn) btn.classList.add('active');
-            document.getElementById('tab-' + tab).classList.add('active');
-
-            if (tab === 'sms') { app.loadUsers(app.userPage); app.loadStats(); }
-            else if (tab === 'push') { app.loadPushUsers(app.pushUserPage); }
-            else if (tab === 'record') { app.loadRecords(1); app.loadStats(); }
-            else if (tab === 'template') { app.loadTemplates(app.templatePage); }
-        }
     </script>
 </body>
 </html>
-
-
