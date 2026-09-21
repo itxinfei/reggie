@@ -51,7 +51,8 @@
 <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="app">
-  <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+  <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">推荐概览</h1>
     <!-- 统一布局：统计卡片置顶，操作行第二 -->
     <stat-cards :cards="statsCards"></stat-cards>
 
