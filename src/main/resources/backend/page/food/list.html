@@ -35,7 +35,8 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
 
   <div class="dashboard-container" id="food-app">
-    <main class="container ds-page" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">菜品管理</h1>
       <!-- 数据统计卡片 -->
       <stat-cards
             :cards="statsCards"
@@ -65,7 +66,7 @@
             :selection="true"
             row-key="id"
             :show-actions="true" :viewable="true"
-            :actions-width="260"
+            :actions-width="180"
             :actions-fixed="true"
             @page-change="onPageChange"
             @size-change="onSizeChange"
@@ -128,10 +129,18 @@
             <!-- 操作按钮 -->
             <template #actions="{ row }">
               <el-button type="text" size="small" class="btn-view" @click="addFoodtype(row.id)">修改</el-button>
-              <el-button type="text" size="small" class="btn-view" @click="statusHandle(row)">{{ row.status == '0' ? '启售' : '停售' }}</el-button>
-              <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', row)">删除</el-button>
-              <el-button type="text" size="small" @click="editStock(row)">库存</el-button>
-              <el-button type="text" size="small" @click="editBOM(row)">配方</el-button>
+              <el-button v-if="row.status == '0'" type="text" size="small" class="btn-success" @click="statusHandle(row)">启售</el-button>
+              <el-button v-else type="text" size="small" class="btn-warning" @click="statusHandle(row)">停售</el-button>
+              <el-dropdown trigger="click"
+                @command="function(cmd){ if(cmd==='stock'){ editStock(row); } else if(cmd==='bom'){ editBOM(row); } else if(cmd==='delete'){ deleteHandle('单删', row); } }"
+                @click.native.stop>
+                <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+                <el-dropdown-menu slot="dropdown">
+                  <el-dropdown-item command="stock">库存</el-dropdown-item>
+                  <el-dropdown-item command="bom">配方</el-dropdown-item>
+                  <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </el-dropdown>
             </template>
           </crud-table>
     </main>

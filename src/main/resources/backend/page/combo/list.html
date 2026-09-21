@@ -185,7 +185,7 @@
       :selection="true"
       row-key="id"
       :show-actions="true" :viewable="true"
-      :actions-width="200"
+      :actions-width="180"
       @selection-change="handleSelectionChange"
       @page-change="onPageChange"
       @size-change="onSizeChange"
@@ -215,9 +215,8 @@
       </template>
       <template #actions="{ row }">
         <el-button type="text" size="small" class="btn-view" @click="addSetMeal(row.id)">修改</el-button>
-        <el-button type="text" size="small" class="btn-view" @click="statusHandle(row)">
-          {{ row.status == '0' ? '启售' : '停售' }}
-        </el-button>
+        <el-button v-if="row.status == '0'" type="text" size="small" class="btn-success" @click="statusHandle(row)">启售</el-button>
+        <el-button v-else type="text" size="small" class="btn-warning" @click="statusHandle(row)">停售</el-button>
         <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', row)">删除</el-button>
       </template>
     </crud-table>
@@ -231,7 +230,7 @@
     size="xl"
     :close-on-click-modal="false"
   >
-    <el-form ref="comboForm" :model="comboForm" :rules="comboRules" label-width="90px">
+    <el-form ref="comboForm" :model="comboForm" :rules="comboRules" label-width="100px">
       <!-- 双列栅格：大屏两列、小屏单列（CLAUDE.md 7.2 场景C）；试算卡/套餐菜品/图片/描述含复杂组件，保持跨全宽 -->
       <el-row :gutter="20">
         <el-col :xs="24" :sm="12">
@@ -315,9 +314,9 @@
       </el-form-item>
     </el-form>
     <template #footer>
-      <el-button size="medium" @click="handleDialogClose">取 消</el-button>
-      <el-button type="primary" size="medium" :loading="submitting" @click="submitComboForm()">确 定</el-button>
-      <el-button v-if="comboDialog.actionType == 'add'" type="primary" size="medium" class="continue" :loading="submitting" @click="submitComboForm('continue')">保存并继续添加</el-button>
+      <el-button @click="handleDialogClose">取 消</el-button>
+      <el-button type="primary" :loading="submitting" @click="submitComboForm()">确 定</el-button>
+      <el-button v-if="comboDialog.actionType == 'add'" type="primary" class="continue" :loading="submitting" @click="submitComboForm('continue')">保存并继续添加</el-button>
     </template>
   </crud-dialog>
 
@@ -396,8 +395,8 @@
     </div>
 
     <template #footer>
-      <el-button size="medium" @click="handleDishSelectClose">取 消</el-button>
-      <el-button type="primary" size="medium" @click="confirmDishSelection">确 定</el-button>
+      <el-button @click="handleDishSelectClose">取 消</el-button>
+      <el-button type="primary" @click="confirmDishSelection">确 定</el-button>
     </template>
   </crud-dialog>
 </div>
