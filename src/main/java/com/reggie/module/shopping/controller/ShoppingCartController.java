@@ -214,6 +214,11 @@ public class ShoppingCartController {
         wrapper.eq(ShoppingCart::getUserId, BaseContext.getCurrentId());
         if (shoppingCart.getDishId() != null) {
             wrapper.eq(ShoppingCart::getDishId, shoppingCart.getDishId());
+            // 多口味菜同一 dishId 在购物车按口味存多条：必须带 dishFlavor 精确匹配，
+            // 否则下方 getOne 命中多行抛异常（多口味减购失败 Bug）。无口味菜 dishFlavor 为 null，不加此条件。
+            if (shoppingCart.getDishFlavor() != null) {
+                wrapper.eq(ShoppingCart::getDishFlavor, shoppingCart.getDishFlavor());
+            }
         } else if (shoppingCart.getSetmealId() != null) {
             wrapper.eq(ShoppingCart::getSetmealId, shoppingCart.getSetmealId());
         } else {

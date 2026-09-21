@@ -77,17 +77,9 @@ public class RestaurantController {
         info.put("businessHours", businessHours);
         info.put("notice", "欢迎光临！本店精选新鲜食材，用心烹饪每一道菜品");
 
-        // 优惠券信息（前端可据此动态展示优惠栏）
-        Map<String, String> coupon1 = new HashMap<>();
-        coupon1.put("tag", "减");
-        coupon1.put("text", "满25减5");
-        Map<String, String> coupon2 = new HashMap<>();
-        coupon2.put("tag", "折");
-        coupon2.put("text", "新客立减3元");
-        Map<String, String> coupon3 = new HashMap<>();
-        coupon3.put("tag", "减");
-        coupon3.put("text", "满50减10");
-        info.put("coupons", new Map[]{coupon1, coupon2, coupon3});
+        // 优惠券不再由本接口写死返回。历史曾在此硬编码「满25减5/新客立减3元/满50减10」，
+        // 但这些券在券系统中并不存在、结算页无法核销，构成虚假营销（用户凑够金额却减不了）。
+        // 首页券栏只渲染真实活动；如需展示满减，应由券/营销系统返回可用数据。
 
         return R.success(info);
     }
