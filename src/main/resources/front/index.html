@@ -244,7 +244,9 @@
                   <div class="di-name">{{ item.name }}</div>
                   <div class="di-desc" v-if="item.description">{{ item.description }}</div>
                   <!-- 修改点(2026-09-18 UX)：移除写死的「好评率98%」，后端无此数据，属虚假展示 -->
-                  <div class="di-sales">月售{{ item.saleNum || 0 }}</div>
+                  <!-- 修改点(2026-09-21)：Dish 无销量字段，saleNum 恒空，不再显示"月售0"造成死店感；
+                       未来接入真实销量后，有正销量才显示（与门店"月售999+"的矛盾也随之消除） -->
+                  <div class="di-sales" v-if="item.saleNum">月售{{ item.saleNum }}</div>
                   <div class="di-price-row">
                     <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
                   </div>
@@ -1497,6 +1499,19 @@
                   let params = {}
                   if(isDish){
                     params.dishId = item.id
+                    // 多规格菜：菜单行不携带具体口味，从购物车记录解析；
+                    // 若该菜在购物车有多个口味，无法判断减哪条，打开购物车让用户按口味减
+                    if(item.flavors && item.flavors.length){
+                      var flavorRecs = this.cartData.filter(function(c){ return c.dishId === item.id })
+                      if(flavorRecs.length > 1){
+                        this.cartDialogShow = true
+                        vant.Toast('该菜有多个口味，请在购物车中按口味减少')
+                        return
+                      }
+                      if(flavorRecs.length === 1){
+                        params.dishFlavor = flavorRecs[0].dishFlavor
+                      }
+                    }
                   }else{
                     params.setmealId = item.id
                   }
@@ -1553,6 +1568,8 @@
                 let params = {
                     dishId:item.dishId,
                     setmealId:item.setmealId,
+                    // 多口味菜按口味精确减（后端据此匹配，避免同一dishId命中多条报错）
+                    dishFlavor:item.dishFlavor,
                   }
                   const res = await updateCartApi(params)
                   if(!res) return
