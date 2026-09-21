@@ -2,58 +2,51 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="X-UA-Compatible" content="IE=edge">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>客服管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
-
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
   <style>
-    .cs-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5) }
+    .cs-tabs { margin-bottom: var(--space-4); }
 
-    .cs-tabs { margin-bottom: var(--space-6) }
+    .cs-filter { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md);
+                 box-shadow: var(--shadow-sm); display: flex; align-items: flex-end; gap: var(--space-4);
+                 margin-bottom: var(--space-5); flex-wrap: wrap; }
+    .cs-filter__col { display: flex; flex-direction: column; gap: 4px; }
+    .cs-filter__label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap; }
+    .cs-filter__input { height: 36px; }
+    .cs-filter__btn { height: 36px; }
 
-    .cs-filter { padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; align-items: flex-end; gap: var(--space-4); margin-bottom: var(--space-6); flex-wrap: wrap }
-    .cs-filter__col { display: flex; flex-direction: column; gap: 4px }
-    .cs-filter__label { font-size: var(--font-size-base); color: var(--text-primary); font-weight: 500; white-space: nowrap }
-    .cs-filter__input { height: 36px }
-    .cs-filter__btn { height: 36px }
+    .cs-msg-area { margin-top: var(--space-4); }
+    .cs-msg-list { max-height: 300px; overflow-y: auto; padding: var(--space-4); background: var(--bg-subtle);
+                   border-radius: var(--radius-md); margin-bottom: var(--space-4); }
+    .cs-msg-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); }
+    .cs-msg-item:last-child { border-bottom: none; }
+    .cs-msg-item__avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--color-brand-500);
+                           color: var(--text-on-brand); display: flex; align-items: center; justify-content: center;
+                           font-size: var(--font-size-base); font-weight: 600; flex-shrink: 0; }
+    .cs-msg-item.user .cs-msg-item__avatar { background: var(--color-info); }
+    .cs-msg-item__body { flex: 1; }
+    .cs-msg-item__header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .cs-msg-item__name { font-weight: 600; font-size: var(--font-size-sm); color: var(--text-primary); }
+    .cs-msg-item__time { font-size: var(--font-size-xs); color: var(--text-muted); }
+    .cs-msg-item__content { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 1.5; }
+    /* 回复表单：el-form 横排，输入框自适应 */
+    .cs-msg-send { display: flex; gap: var(--space-3); align-items: flex-start; }
+    .cs-msg-send .el-form-item { flex: 1; margin-bottom: 0; margin-right: var(--space-3); }
 
-    .cs-msg-area { margin-top: var(--space-4) }
-    .cs-msg-list { max-height: 300px; overflow-y: auto; padding: var(--space-4); background: var(--el-bg-ghost); border-radius: var(--radius-md); margin-bottom: var(--space-4) }
-    .cs-msg-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border-default) }
-    .cs-msg-item:last-child { border-bottom: none }
-    .cs-msg-item__avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--color-brand-500); color: var(--text-on-brand); display: flex; align-items: center; justify-content: center; font-size: var(--font-size-base); font-weight: 600; flex-shrink: 0 }
-    .cs-msg-item.user .cs-msg-item__avatar { background: var(--color-info) }
-    .cs-msg-item__body { flex: 1 }
-    .cs-msg-item__header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px }
-    .cs-msg-item__name { font-weight: 600; font-size: var(--font-size-sm); color: var(--text-primary) }
-    .cs-msg-item__time { font-size: var(--font-size-xs); color: var(--text-muted) }
-    .cs-msg-item__content { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 1.5 }
-    .cs-msg-send { display: flex; gap: var(--space-3) }
-    .cs-msg-send__input { flex: 1 }
-
-    .cs-complaint-actions { display: flex; gap: var(--space-3); align-items: center }
-
-    .empty-state { text-align: center; padding: 60px var(--space-4); color: var(--text-muted); font-size: var(--font-size-base) }
-    .empty-state__icon { font-size: 48px; line-height: 1; margin-bottom: var(--space-4) }
-
-    /* 修改点：分页容器 —— 与全站列表页一致，右对齐 + 24px 上间距 */
-    .cs-pager { display: flex; justify-content: flex-end; margin-top: var(--space-6) }
-    /* 移动端分页居中并允许换行，避免窄屏溢出 */
-    @media (max-width: 768px) {
-      .cs-pager { justify-content: center }
-      .cs-pager .el-pagination { white-space: normal; text-align: center }
-    }
+    .empty-state { text-align: center; padding: 60px var(--space-4); color: var(--text-muted); font-size: var(--font-size-base); }
+    .empty-state__icon { font-size: 48px; line-height: 1; margin-bottom: var(--space-4); }
   </style>
 </head>
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
-  <div class="cs-container" id="cs-app">
+  <!-- 标准外壳（原 .cs-container 左右灰边已去除） -->
+  <div class="dashboard-container" id="cs-app">
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
-      <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
       <h1 class="sr-only" id="page-title">客服管理</h1>
 
       <el-tabs v-model="activeTab" class="cs-tabs" @tab-click="onTabClick">
@@ -62,7 +55,7 @@
         <el-tab-pane label="客服统计" name="statistics"></el-tab-pane>
       </el-tabs>
 
-      <!-- 会话管理 Tab -->
+      <!-- ==================== 会话管理 Tab ==================== -->
       <div v-if="activeTab === 'session'">
         <stat-cards :cards="sessionStatsCards" :loading="sessionLoading"></stat-cards>
 
@@ -83,73 +76,39 @@
           <el-button class="cs-filter__btn" @click="resetSessionFilter">重置</el-button>
         </div>
 
-        <!-- 修改点：P2-1 骨架屏——会话列表首次加载显示脉冲骨架（复用全局 .ds-skeleton-* 类），替代纯转圈 -->
-        <div v-if="sessionLoading && sessionPagedList.length === 0" class="cs-skeleton">
-          <div class="ds-skeleton">
-            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
-            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
-            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
-            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
-            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
-          </div>
-        </div>
-        <!-- 修改点：:loading 不是 el-table 的合法 prop（加载态永远不显示），改为 v-loading 指令；
-             :data 改为分页后的切片 sessionPagedList -->
-        <el-table v-else v-loading="sessionLoading" :data="sessionPagedList" border stripe style="width:100%" size="medium" aria-label="会话列表">
-          <el-table-column prop="sessionNo" label="会话号" width="180" align="center"></el-table-column>
-          <el-table-column prop="userName" label="用户" width="120" align="center"></el-table-column>
-          <el-table-column prop="sessionType" label="类型" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
-            <template slot-scope="{row}">
-              <!-- 修改点：普通会话 el-tag type 由空字符串改为 info（Element UI 无空 type 样式，此前仅"订单"有样式） -->
-              <el-tag :type="row.sessionType === 1 ? 'info' : 'success'" size="small">
-                {{ row.sessionType === 1 ? '普通' : '订单' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="agentName" label="客服" width="120" align="center"></el-table-column>
-          <el-table-column label="状态" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
-            <template slot-scope="{row}">
-              <el-tag :type="row.status === 1 ? 'success' : (row.status === 0 ? 'warning' : 'info')" size="small">
-                {{ statusTextSession(row.status) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="createTime" label="创建时间" width="170" align="center"></el-table-column>
-          <el-table-column prop="closeTime" label="结束时间" width="170" align="center"></el-table-column>
-          <el-table-column label="操作" width="260" align="center" fixed="right">
-            <template slot-scope="{row}">
-              <el-button type="text" size="small" @click="onViewSession(row)">查看</el-button>
-              <el-button type="text" size="small" v-if="row.status === 0" @click="onAssign(row)">分配</el-button>
-              <el-button type="text" size="small" v-if="row.status === 1" @click="onCloseSession(row)">结束</el-button>
-            </template>
-          </el-table-column>
-          <!-- 修改点：补空状态提示，避免无数据时表格区域纯空白。
-               注意：el-empty 是 Element Plus(Vue3) 组件，本项目 Element UI 2.x 无此组件，
-               故复用页面既有 .empty-state 样式 -->
-          <template slot="empty">
-            <div class="empty-state">
-              <div class="empty-state__icon"><i class="ri-chat-smile-3-line" aria-hidden="true"></i></div>
-              <div>暂无会话数据</div>
-            </div>
+        <crud-table
+          :data="sessionPagedList"
+          :columns="sessionColumns"
+          :page="sessionPager.page"
+          :page-size="sessionPager.pageSize"
+          :total="sessionList.length"
+          :loading="sessionLoading"
+          :show-actions="true"
+          :actions-width="120"
+          :actions-fixed="true"
+          empty-hint="暂无会话数据"
+          @page-change="onSessionPageChange"
+          @size-change="onSessionSizeChange"
+        >
+          <template #col-sessionType="{ row }">
+            <el-tag :type="row.sessionType === 1 ? 'info' : 'success'" size="small">
+              {{ row.sessionType === 1 ? '普通' : '订单' }}
+            </el-tag>
           </template>
-        </el-table>
-
-        <!-- 修改点：补分页（后端 /cs/session/list 返回全量列表，此处做前端分页，避免会话多时长列表无法翻页） -->
-        <div class="cs-pager">
-          <el-pagination
-            background
-            layout="total, sizes, prev, pager, next, jumper"
-            :current-page="sessionPager.page"
-            :page-size="sessionPager.pageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="sessionList.length"
-            @current-change="onSessionPageChange"
-            @size-change="onSessionSizeChange">
-          </el-pagination>
-        </div>
+          <template #col-status="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : (row.status === 0 ? 'warning' : 'info')" size="small">
+              {{ statusTextSession(row.status) }}
+            </el-tag>
+          </template>
+          <template #actions="{ row }">
+            <el-button type="text" size="small" class="btn-view" @click="onViewSession(row)">查看</el-button>
+            <el-button v-if="row.status === 0" type="text" size="small" class="btn-success" @click="onAssign(row)">分配</el-button>
+            <el-button v-if="row.status === 1" type="text" size="small" class="btn-warning" @click="onCloseSession(row)">结束</el-button>
+          </template>
+        </crud-table>
       </div>
 
-      <!-- 投诉处理 Tab -->
+      <!-- ==================== 投诉处理 Tab ==================== -->
       <div v-else-if="activeTab === 'complaint'">
         <stat-cards :cards="complaintStatsCards" :loading="complaintLoading"></stat-cards>
 
@@ -157,7 +116,6 @@
           <div class="cs-filter__col">
             <span class="cs-filter__label">状态</span>
             <el-select v-model="complaintFilter.status" placeholder="全部状态" class="cs-filter__input" clearable>
-              <!-- 状态值对齐后端 Complaint 常量：0待处理 1处理中 2已解决 3已关闭 -->
               <el-option label="待处理" :value="0"></el-option>
               <el-option label="处理中" :value="1"></el-option>
               <el-option label="已解决" :value="2"></el-option>
@@ -182,71 +140,41 @@
           <el-button class="cs-filter__btn" @click="resetComplaintFilter">重置</el-button>
         </div>
 
-        <!-- 修改点：P2-1 骨架屏——投诉列表首次加载显示脉冲骨架（复用全局 .ds-skeleton-* 类），替代纯转圈 -->
-        <div v-if="complaintLoading && complaintPagedList.length === 0" class="cs-skeleton">
-          <div class="ds-skeleton">
-            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
-            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
-            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
-            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
-            <div class="ds-skeleton-row"><div class="ds-skeleton-cell"><div class="ds-skeleton-bar"></div></div></div>
-          </div>
-        </div>
-        <!-- 修改点：:loading -> v-loading（同上），:data 改为分页切片 complaintPagedList -->
-        <el-table v-else v-loading="complaintLoading" :data="complaintPagedList" border stripe style="width:100%" size="medium" aria-label="投诉列表">
-          <el-table-column prop="complaintNo" label="投诉号" width="170" align="center"></el-table-column>
-          <el-table-column prop="userName" label="用户" width="100" align="center"></el-table-column>
-          <el-table-column prop="userPhone" label="电话" width="130" align="center"></el-table-column>
-          <el-table-column label="类型" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
-            <template slot-scope="{row}">
-              <el-tag size="small" :type="complaintTypeTagType(row.complaintType)">{{ typeTextComplaint(row.complaintType) }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="title" label="标题" min-width="150" align="center"></el-table-column>
-          <el-table-column label="状态" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
-            <template slot-scope="{row}">
-              <el-tag :type="statusTagComplaint(row.status)" size="small">{{ statusTextComplaint(row.status) }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="createTime" label="创建时间" width="170" align="center"></el-table-column>
-          <el-table-column label="操作" width="260" align="center" fixed="right">
-            <template slot-scope="{row}">
-              <el-button type="text" size="small" @click="onViewComplaint(row)">查看</el-button>
-              <el-button type="text" size="small" v-if="row.status === 0 || row.status === 1" @click="onHandleComplaint(row)">处理</el-button>
-              <el-button type="text" size="small" v-if="row.status === 2" @click="onCloseComplaint(row.id)">关闭</el-button>
-            </template>
-          </el-table-column>
-          <!-- 修改点：补空状态提示（同上，不用 el-empty） -->
-          <template slot="empty">
-            <div class="empty-state">
-              <div class="empty-state__icon"><i class="ri-file-list-3-line" aria-hidden="true"></i></div>
-              <div>暂无投诉数据</div>
-            </div>
+        <crud-table
+          :data="complaintPagedList"
+          :columns="complaintColumns"
+          :page="complaintPager.page"
+          :page-size="complaintPager.pageSize"
+          :total="complaintList.length"
+          :loading="complaintLoading"
+          :show-actions="true"
+          :actions-width="120"
+          :actions-fixed="true"
+          empty-hint="暂无投诉数据"
+          @page-change="onComplaintPageChange"
+          @size-change="onComplaintSizeChange"
+        >
+          <template #col-complaintType="{ row }">
+            <el-tag size="small" :type="complaintTypeTagType(row.complaintType)">{{ typeTextComplaint(row.complaintType) }}</el-tag>
           </template>
-        </el-table>
-
-        <!-- 修改点：补分页（后端返回全量列表，前端分页） -->
-        <div class="cs-pager">
-          <el-pagination
-            background
-            layout="total, sizes, prev, pager, next, jumper"
-            :current-page="complaintPager.page"
-            :page-size="complaintPager.pageSize"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="complaintList.length"
-            @current-change="onComplaintPageChange"
-            @size-change="onComplaintSizeChange">
-          </el-pagination>
-        </div>
+          <template #col-status="{ row }">
+            <el-tag :type="statusTagComplaint(row.status)" size="small">{{ statusTextComplaint(row.status) }}</el-tag>
+          </template>
+          <template #actions="{ row }">
+            <el-button type="text" size="small" class="btn-view" @click="onViewComplaint(row)">查看</el-button>
+            <el-button v-if="row.status === 0 || row.status === 1" type="text" size="small" class="btn-view" @click="onHandleComplaint(row)">处理</el-button>
+            <el-button v-if="row.status === 2" type="text" size="small" class="btn-warning" @click="onCloseComplaint(row.id)">关闭</el-button>
+          </template>
+        </crud-table>
       </div>
 
-      <!-- 客服统计 Tab -->
+      <!-- ==================== 客服统计 Tab ==================== -->
       <div v-else-if="activeTab === 'statistics'">
         <div class="cs-filter" style="justify-content:flex-end">
-          <el-date-picker v-model="statsDateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" class="cs-filter__input" style="width:280px" @change="fetchStatistics"></el-date-picker>
+          <el-date-picker v-model="statsDateRange" type="daterange" range-separator="至" start-placeholder="开始日期"
+            end-placeholder="结束日期" class="cs-filter__input" style="width:280px" @change="fetchStatistics"></el-date-picker>
         </div>
         <el-row :gutter="16" style="margin-bottom:var(--space-6)">
-          <!-- 修改点：补响应式断点，原固定 :span="8" 在移动端会挤成 3 列不可读 -->
           <el-col :xs="24" :sm="12" :md="8" v-for="item in statsDetail" :key="item.label">
             <el-card shadow="hover" style="border-radius:var(--radius-md)">
               <div style="text-align:center;padding:var(--space-4)">
@@ -258,8 +186,9 @@
         </el-row>
       </div>
 
-      <!-- 会话查看弹窗 -->
-      <crud-dialog :title="'会话详情 - ' + sessionDetail.sessionNo" :visible.sync="sessionDetail.visible" size="lg" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
+      <!-- 会话查看弹窗（含消息列表 + 回复表单） -->
+      <crud-dialog :title="'会话详情 - ' + sessionDetail.sessionNo" :visible.sync="sessionDetail.visible"
+                   size="lg" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
         <div v-if="sessionDetail.sessionNo">
           <div style="margin-bottom:var(--space-3)">
             <span style="font-size:var(--font-size-sm);color:var(--text-muted)">用户：</span>
@@ -280,17 +209,20 @@
             </div>
             <div v-if="sessionMessages.length === 0" style="text-align:center;color:var(--text-muted);padding:var(--space-5)">暂无消息</div>
           </div>
-          <div class="cs-msg-send">
-            <el-input v-model="newMessage" class="cs-msg-send__input" placeholder="输入回复内容" @keyup.enter.native="onSendMessage"></el-input>
-            <el-button type="primary" @click="onSendMessage" :disabled="!newMessage.trim()">发送</el-button>
-          </div>
+          <el-form ref="replyFormRef" :model="replyForm" :rules="replyRules" class="cs-msg-send">
+            <el-form-item prop="content">
+              <el-input v-model="replyForm.content" placeholder="输入回复内容" @keyup.enter.native="onSendMessage"></el-input>
+            </el-form-item>
+            <el-button type="primary" @click="onSendMessage" :disabled="!replyForm.content.trim()">发送</el-button>
+          </el-form>
         </div>
       </crud-dialog>
 
       <!-- 分配客服弹窗 -->
-      <crud-dialog :show-submit="true" :show-cancel="true" title="分配客服" :visible.sync="assignForm.visible" size="sm" :submit-loading="dialogSubmitting" @submit="onSubmitAssign">
-        <el-form label-width="80px">
-          <el-form-item label="客服姓名：" required>
+      <crud-dialog :show-submit="true" :show-cancel="true" title="分配客服" :visible.sync="assignForm.visible"
+                   size="sm" :submit-loading="dialogSubmitting" @submit="onSubmitAssign">
+        <el-form ref="assignFormRef" :model="assignForm" :rules="assignRules" label-width="90px">
+          <el-form-item label="客服姓名" prop="agentId">
             <el-select v-model="assignForm.agentId" placeholder="请选择客服" filterable clearable style="width:100%">
               <el-option v-for="emp in agentOptions" :key="emp.id" :label="emp.name" :value="emp.id"></el-option>
             </el-select>
@@ -299,7 +231,8 @@
       </crud-dialog>
 
       <!-- 投诉查看弹窗 -->
-      <crud-dialog :title="'投诉详情 - ' + complaintDetail.complaintNo" :visible.sync="complaintDetail.visible" size="md" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
+      <crud-dialog :title="'投诉详情 - ' + complaintDetail.complaintNo" :visible.sync="complaintDetail.visible"
+                   size="md" :show-submit="false" :show-cancel="true" cancel-text="关 闭">
         <div v-if="complaintDetail.complaintNo">
           <el-row :gutter="16" style="margin-bottom:var(--space-3)">
             <el-col :span="12"><span style="color:var(--text-muted);font-size:var(--font-size-sm)">投诉人：</span>{{ complaintDetail.userName }}</el-col>
@@ -316,17 +249,17 @@
       </crud-dialog>
 
       <!-- 处理投诉弹窗 -->
-      <crud-dialog :show-submit="true" :show-cancel="true" title="处理投诉" :visible.sync="handleForm.visible" size="md" :submit-loading="dialogSubmitting" @submit="onSubmitHandleComplaint">
-        <el-form label-width="100px">
-          <el-form-item label="处理结果：" required>
+      <crud-dialog :show-submit="true" :show-cancel="true" title="处理投诉" :visible.sync="handleForm.visible"
+                   size="md" :submit-loading="dialogSubmitting" @submit="onSubmitHandleComplaint">
+        <el-form ref="handleFormRef" :model="handleForm" :rules="handleRules" label-width="90px">
+          <el-form-item label="处理结果" prop="handleResult">
             <el-input type="textarea" v-model="handleForm.handleResult" :rows="3" placeholder="请输入处理结果说明"></el-input>
           </el-form-item>
-          <el-form-item label="补偿金额：">
+          <el-form-item label="补偿金额">
             <el-input-number v-model="handleForm.compensationAmount" :min="0" :precision="2" placeholder="0.00"></el-input-number>
           </el-form-item>
         </el-form>
       </crud-dialog>
-
     </main>
   </div>
 
@@ -336,33 +269,43 @@
   <script src="../../js/request.js?v=20260915c"></script>
   <script src="../../api/customer-service.js?v=20260915c"></script>
   <script src="../../js/components.js?v=20260915c"></script>
-<script>
+  <script>
     new Vue({
       el: '#cs-app',
       data() {
         return {
           activeTab: 'session',
 
-          // 统计数据
+          // 统计
           stats: { totalSessions: 0, activeSessions: 0, avgFirstResponse: 0, avgSatisfaction: 0 },
           complaintStats: { totalComplaints: 0, pendingComplaints: 0, resolvedComplaints: 0, totalCompensation: '0.00' },
           statsDetail: [],
-          statsDateRange: null, // 修改点：默认 null，有值时才传参；改为今日默认值避免 created 时参数缺失
+          statsDateRange: null,
 
           // 会话
           sessionList: [],
           sessionLoading: false,
           sessionFilter: { status: '', keyword: '' },
-          // 修改点：新增前端分页状态
           sessionPager: { page: 1, pageSize: 10 },
+          sessionColumns: [
+            { prop: 'sessionNo', label: '会话号', width: 180 },
+            { prop: 'userName', label: '用户', width: 120 },
+            { prop: 'sessionType', label: '类型', width: 100, slot: true },
+            { prop: 'agentName', label: '客服', width: 120 },
+            { prop: 'status', label: '状态', width: 100, slot: true },
+            { prop: 'createTime', label: '创建时间', width: 170 },
+            { prop: 'closeTime', label: '结束时间', width: 170 }
+          ],
           sessionDetail: { visible: false, sessionNo: '', userName: '', agentName: '' },
           sessionMessages: [],
-          newMessage: '',
+          replyForm: { content: '' },
+          replyRules: { content: [{ required: true, message: '请输入回复内容', trigger: 'change' }] },
           currentSessionId: null,
           sending: false,
 
           // 分配
           assignForm: { visible: false, id: null, agentId: null, agentName: '' },
+          assignRules: { agentId: [{ required: true, message: '请选择客服', trigger: 'change' }] },
           agentOptions: [],
           dialogSubmitting: false,
 
@@ -370,31 +313,34 @@
           complaintList: [],
           complaintLoading: false,
           complaintFilter: { status: '', type: '', keyword: '' },
-          // 修改点：新增前端分页状态
           complaintPager: { page: 1, pageSize: 10 },
+          complaintColumns: [
+            { prop: 'complaintNo', label: '投诉号', width: 170 },
+            { prop: 'userName', label: '用户', width: 100 },
+            { prop: 'userPhone', label: '电话', width: 130 },
+            { prop: 'complaintType', label: '类型', width: 100, slot: true },
+            { prop: 'title', label: '标题', minWidth: 150 },
+            { prop: 'status', label: '状态', width: 100, slot: true },
+            { prop: 'createTime', label: '创建时间', width: 170 }
+          ],
           complaintDetail: { visible: false },
-          handleForm: { visible: false, id: null, handleResult: '', compensationAmount: null }
+          handleForm: { visible: false, id: null, handleResult: '', compensationAmount: null },
+          handleRules: { handleResult: [{ required: true, message: '请输入处理结果', trigger: 'blur' }] }
         }
       },
       created() {
-        // 修改点：初始化日期范围为今天，避免首次调用时缺少必填参数
         const today = new Date()
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
         const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59)
         this.statsDateRange = [startOfDay, endOfDay]
-        // 加载可选客服列表
         getAgentOptions().then(function(res) {
-          if (res.code === 1 && res.data) {
-            this.agentOptions = res.data
-          }
+          if (res.code === 1 && res.data) this.agentOptions = res.data
         }.bind(this)).catch(function() {})
         this.fetchStatistics()
         this.fetchSessionList()
         this.fetchComplaintList()
       },
-      // 修改点：新增计算属性，按分页状态切片，复杂逻辑放 computed 而非模板
       computed: {
-        // 统计卡片（固定 4 个）：会话管理
         sessionStatsCards() {
           const s = this.stats || {}
           return [
@@ -404,7 +350,6 @@
             { key: 'rating', icon: 'ri-star-line', label: '平均评分', value: s.avgSatisfaction || 0, color: 'danger', subText: '满意度评价' }
           ]
         },
-        // 统计卡片（固定 4 个）：投诉处理
         complaintStatsCards() {
           const c = this.complaintStats || {}
           return [
@@ -424,16 +369,16 @@
         }
       },
       methods: {
-        // ===== 分页事件（修改点） =====
-        onSessionPageChange(page) {
-          this.sessionPager.page = page
+        // ===== 分页（crud-table：page-change 传对象，size-change 传裸值） =====
+        onSessionPageChange(payload) {
+          this.sessionPager.page = payload.page
         },
         onSessionSizeChange(size) {
           this.sessionPager.pageSize = size
           this.sessionPager.page = 1
         },
-        onComplaintPageChange(page) {
-          this.complaintPager.page = page
+        onComplaintPageChange(payload) {
+          this.complaintPager.page = payload.page
         },
         onComplaintSizeChange(size) {
           this.complaintPager.pageSize = size
@@ -452,7 +397,6 @@
           try {
             var params = {}
             if (this.statsDateRange && this.statsDateRange[0] && this.statsDateRange[1]) {
-              // 修改点：Date → 'yyyy-MM-dd HH:mm:ss'，后端 @DateTimeFormat(pattern=...) 只认该格式，原 ISO 串(T/Z)直接 500
               var fmtDate = function(d) {
                 var p = function(n) { return (n < 10 ? '0' : '') + n; };
                 return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
@@ -463,8 +407,6 @@
             }
             var resp = await getCustomerServiceStatistics(params)
             if (resp.code === 1 && resp.data) {
-              // 修改点：字段名对齐后端 getCustomerServiceStatistics 返回值
-              // 后端返回 waitingSessions/avgResponseTime，前端原用 activeSessions/avgFirstResponse 导致恒 0
               var d = resp.data
               var activeSessions = (d.totalSessions || 0) - (d.closedSessions || 0) - (d.waitingSessions || 0)
               this.stats = {
@@ -509,7 +451,7 @@
                 })
               }
               this.sessionList = list
-              this.sessionPager.page = 1 // 修改点：筛选/刷新后回到第 1 页，避免停留在越界空页
+              this.sessionPager.page = 1
             }
           } catch(e) {
             console.error('获取会话列表失败', e)
@@ -528,6 +470,7 @@
           return '已结束'
         },
         async onViewSession(row) {
+          this.replyForm.content = ''
           this.sessionDetail = { visible: true, sessionNo: row.sessionNo, userName: row.userName, agentName: row.agentName || '未分配' }
           this.currentSessionId = row.id
           this.sessionMessages = []
@@ -539,58 +482,59 @@
           }
         },
         async onSendMessage() {
-          if (this.sending) return // 提交防重：防止连点重复发送
-          if (!this.newMessage.trim() || !this.currentSessionId) return
-          this.sending = true
-          try {
-            await sendMessage({
-              sessionId: this.currentSessionId,
+          if (this.sending) return
+          var self = this
+          this.$refs.replyFormRef.validate(function(valid) {
+            if (!valid) return false
+            if (!self.currentSessionId) return false
+            self.sending = true
+            sendMessage({
+              sessionId: self.currentSessionId,
               senderType: 2,
               messageType: 1,
-              content: this.newMessage
+              content: self.replyForm.content
+            }).then(function() {
+              self.replyForm.content = ''
+              return getSessionMessages(self.currentSessionId)
+            }).then(function(resp) {
+              if (resp && resp.code === 1) self.sessionMessages = resp.data || []
+            }).catch(function(e) {
+              console.error('发送消息失败', e)
+              ReggieUI.error('发送失败，请重试')
+            }).finally(function() {
+              self.sending = false
             })
-            this.newMessage = ''
-            // 刷新消息列表
-            var resp = await getSessionMessages(this.currentSessionId)
-            if (resp.code === 1) this.sessionMessages = resp.data || []
-          } catch(e) {
-            console.error('发送消息失败', e)
-            ReggieUI.error('发送失败，请重试')
-          } finally {
-            this.sending = false
-          }
+          })
         },
         onAssign(row) {
           this.assignForm = { visible: true, id: row.id, agentId: row.agentId || null, agentName: '' }
         },
         async onSubmitAssign() {
-          if (this.dialogSubmitting) { return }
-          if (!this.assignForm.agentId) {
-            ReggieUI.warning('请选择客服')
-            return
-          }
-          // 找到选中的员工姓名
-          var selectedEmp = this.agentOptions.find(function(emp) {
-            return emp.id === this.assignForm.agentId
-          }.bind(this))
-          var agentName = selectedEmp ? selectedEmp.name : ''
-          this.dialogSubmitting = true
-          try {
-            await assignSession(this.assignForm.id, {
-              agentId: this.assignForm.agentId,
-              agentName: agentName
+          if (this.dialogSubmitting) return
+          var self = this
+          this.$refs.assignFormRef.validate(function(valid) {
+            if (!valid) return
+            var selectedEmp = self.agentOptions.find(function(emp) {
+              return emp.id === self.assignForm.agentId
             })
-            this.assignForm.visible = false
-            ReggieUI.success('分配成功')
-            this.fetchSessionList()
-          } catch(e) {
-            console.error('分配失败', e)
-            ReggieUI.error('分配失败，请稍后重试')
-          } finally {
-            this.dialogSubmitting = false
-          }
+            var agentName = selectedEmp ? selectedEmp.name : ''
+            self.dialogSubmitting = true
+            assignSession(self.assignForm.id, {
+              agentId: self.assignForm.agentId,
+              agentName: agentName
+            }).then(function() {
+              self.assignForm.visible = false
+              ReggieUI.success('分配成功')
+              self.fetchSessionList()
+            }).catch(function(e) {
+              console.error('分配失败', e)
+              ReggieUI.error('分配失败，请稍后重试')
+            }).finally(function() {
+              self.dialogSubmitting = false
+            })
+          })
         },
-        async onCloseSession(row) {
+        onCloseSession(row) {
           ReggieUI.confirm('确认结束该会话？', '提示', { type: 'warning' }).then(async () => {
             try {
               await closeSession(row.id, {})
@@ -622,7 +566,7 @@
                 })
               }
               this.complaintList = list
-              this.complaintPager.page = 1 // 修改点：筛选/刷新后回到第 1 页
+              this.complaintPager.page = 1
             }
           } catch(e) {
             console.error('获取投诉列表失败', e)
@@ -659,29 +603,28 @@
           this.handleForm = { visible: true, id: row.id, handleResult: '', compensationAmount: null }
         },
         async onSubmitHandleComplaint() {
-          if (this.dialogSubmitting) { return }
-          if (!this.handleForm.handleResult.trim()) {
-            ReggieUI.warning('请输入处理结果')
-            return
-          }
-          this.dialogSubmitting = true
-          try {
-            var params = { handleResult: this.handleForm.handleResult }
-            if (this.handleForm.compensationAmount !== null && this.handleForm.compensationAmount !== undefined) {
-              params.compensationAmount = this.handleForm.compensationAmount
+          if (this.dialogSubmitting) return
+          var self = this
+          this.$refs.handleFormRef.validate(function(valid) {
+            if (!valid) return
+            self.dialogSubmitting = true
+            var params = { handleResult: self.handleForm.handleResult }
+            if (self.handleForm.compensationAmount !== null && self.handleForm.compensationAmount !== undefined) {
+              params.compensationAmount = self.handleForm.compensationAmount
             }
-            await handleComplaint(this.handleForm.id, params)
-            this.handleForm.visible = false
-            ReggieUI.success('处理成功')
-            this.fetchComplaintList()
-          } catch(e) {
-            console.error('处理投诉失败', e)
-            ReggieUI.error('处理投诉失败，请稍后重试')
-          } finally {
-            this.dialogSubmitting = false
-          }
+            handleComplaint(self.handleForm.id, params).then(function() {
+              self.handleForm.visible = false
+              ReggieUI.success('处理成功')
+              self.fetchComplaintList()
+            }).catch(function(e) {
+              console.error('处理投诉失败', e)
+              ReggieUI.error('处理投诉失败，请稍后重试')
+            }).finally(function() {
+              self.dialogSubmitting = false
+            })
+          })
         },
-        async onCloseComplaint(id) {
+        onCloseComplaint(id) {
           ReggieUI.confirm('确认关闭该投诉？', '提示', { type: 'warning' }).then(async () => {
             try {
               await closeComplaint(id)
