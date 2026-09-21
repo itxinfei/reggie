@@ -127,12 +127,20 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         if (userId == null || !Objects.equals(order.getUserId(), userId)) {
             throw new CustomException("无权操作该订单");
         }
-        // 检查是否已申请过
+        // 检查是否已有有效（非作废）发票：已申请/已开具不允许重复申请；
+        // 仅存在已作废记录时允许重新申请（税务上发票作废/红冲后可重开）
         LambdaQueryWrapper<InvoiceRecord> existQw = new LambdaQueryWrapper<>();
         existQw.eq(InvoiceRecord::getOrderId, orderId);
         existQw.eq(InvoiceRecord::getTenantId, tenantId);
-        InvoiceRecord existing = getOne(existQw, false);
-        if (existing != null) {
+        List<InvoiceRecord> existRecords = list(existQw);
+        boolean hasActive = false;
+        for (InvoiceRecord r : existRecords) {
+            if (r.getStatus() == null || r.getStatus() != InvoiceRecord.STATUS_VOIDED) {
+                hasActive = true;
+                break;
+            }
+        }
+        if (hasActive) {
             throw new CustomException("该订单已申请过发票");
         }
 
@@ -173,7 +181,18 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
         LambdaQueryWrapper<InvoiceRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(InvoiceRecord::getOrderId, orderId);
         qw.eq(InvoiceRecord::getTenantId, tenantId);
-        return getOne(qw, false);
+        // 重申后同一订单可能有多条记录（旧作废 + 新申请）：取最新，且优先返回有效（非作废）发票
+        qw.orderByDesc(InvoiceRecord::getId);
+        List<InvoiceRecord> records = list(qw);
+        if (records == null || records.isEmpty()) {
+            return null;
+        }
+        for (InvoiceRecord r : records) {
+            if (r.getStatus() == null || r.getStatus() != InvoiceRecord.STATUS_VOIDED) {
+                return r;
+            }
+        }
+        return records.get(0);
     }
 
     /**
