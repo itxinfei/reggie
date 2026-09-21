@@ -39,6 +39,9 @@ public class TableDetailVO implements Serializable {
     @Schema(description = "用餐人数")
     private Integer customerCount;
 
+    @Schema(description = "当前关联订单ID（结账/加菜依据，指向最早一笔活跃订单；无则为空）")
+    private Long currentOrderId;
+
     @Schema(description = "该桌台下的订单列表")
     private List<TableOrder> orders;
 

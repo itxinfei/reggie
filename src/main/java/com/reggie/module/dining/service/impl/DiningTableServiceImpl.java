@@ -874,6 +874,18 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
         }
         vo.setCustomerCount(customerCount);
         vo.setOrders(tableOrders);
+        // currentOrderId 必须指向当前活跃订单：桌台字段命中活跃集合则用之；否则以最早一笔
+        // 活跃订单兜底（兼容历史脏数据/字段缺失）；无活跃订单则为 null，前端据此提示先开台点单。
+        // orders 按下单时间倒序，最早一笔在列表末尾（与收银台「最早一张为主单」同口径）
+        Long currentOrderId = table.getCurrentOrderId();
+        java.util.Set<Long> activeIds = new java.util.HashSet<Long>();
+        for (Orders o : orders) {
+            activeIds.add(o.getId());
+        }
+        if (currentOrderId == null || !activeIds.contains(currentOrderId)) {
+            currentOrderId = orders.isEmpty() ? null : orders.get(orders.size() - 1).getId();
+        }
+        vo.setCurrentOrderId(currentOrderId);
         return vo;
     }
 }
