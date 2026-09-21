@@ -216,3 +216,106 @@
       animation: rg-skeleton-shine 1.5s ease-in-out infinite;
     }
     /* 修改点(2026-09-17)：复用全局 @keyframes rg-skeleton-shine */
+
+/* ============================================================
+   会员在线充值（门店确认到账模式，预留在线支付渠道）
+   ============================================================ */
+.mc-recharge-entry {
+  display: flex;
+  align-items: center;
+  margin-top: 12rem;
+  padding: 12rem;
+  font-size: 14rem;
+  color: #333;
+  background: var(--bg-page);
+  border-radius: var(--radius-md);
+}
+.mc-recharge-entry .ri-wallet-3-line { font-size: 18rem; color: var(--color-primary); margin-right: 8rem; }
+.mc-recharge-entry span { flex: 1; }
+.mc-recharge-entry .ri-arrow-right-s-line { color: #999; }
+
+.rc-sheet { padding: 16rem 16rem 20rem; }
+.rc-sheet-title { margin-bottom: 14rem; font-size: 16rem; font-weight: 600; color: #222; text-align: center; }
+.rc-amount-grid { display: flex; flex-wrap: wrap; gap: 12rem; }
+.rc-amount-cell {
+  width: calc((100% - 36rem) / 4);
+  padding: 12rem 0;
+  font-size: 14rem;
+  color: #333;
+  text-align: center;
+  background: var(--bg-page);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+.rc-amount-cell.on { background: rgba(255, 194, 0, .12); border-color: var(--color-primary); }
+.rc-custom-input {
+  width: 100%;
+  height: 42rem;
+  margin-top: 12rem;
+  padding: 0 12rem;
+  font-size: 14rem;
+  background: var(--bg-page);
+  border: none;
+  border-radius: var(--radius-md);
+  outline: none;
+  box-sizing: border-box;
+}
+.rc-channel-label { margin: 16rem 0 10rem; font-size: 13rem; color: var(--color-text-secondary); }
+.rc-channel-row { display: flex; gap: 12rem; }
+.rc-channel {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8rem;
+  height: 44rem;
+  font-size: 14rem;
+  color: #555;
+  background: var(--bg-page);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+.rc-channel i { font-size: 20rem; }
+.rc-channel.on { color: #333; background: rgba(255, 194, 0, .1); border-color: var(--color-primary); }
+.rc-submit {
+  width: 100%;
+  height: 46rem;
+  margin-top: 20rem;
+  font-size: 16rem;
+  font-weight: 600;
+  color: #333;
+  background: var(--color-primary);
+  border: none;
+  border-radius: 23rem;
+}
+.rc-submit:disabled { opacity: .6; }
+.rc-tip { margin-top: 10rem; font-size: 12rem; color: #999; text-align: center; }
+
+/* 充值待确认中心弹层 */
+.rc-pending-card { width: 280rem; padding: 24rem 20rem 20rem; text-align: center; box-sizing: border-box; }
+.rc-pending-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56rem;
+  height: 56rem;
+  margin: 0 auto 12rem;
+  font-size: 30rem;
+  color: var(--color-primary);
+  background: rgba(255, 194, 0, .14);
+  border-radius: 50%;
+}
+.rc-pending-title { font-size: 16rem; font-weight: 600; color: #222; }
+.rc-pending-amount { margin-top: 8rem; font-size: 24rem; font-weight: 700; color: var(--color-price); }
+.rc-pending-desc { margin-top: 10rem; font-size: 13rem; line-height: 19rem; color: var(--color-text-secondary); }
+.rc-pending-no { margin-top: 10rem; font-size: 11rem; color: #aaa; word-break: break-all; }
+.rc-pending-close {
+  width: 100%;
+  height: 42rem;
+  margin-top: 16rem;
+  font-size: 15rem;
+  color: #333;
+  background: var(--color-primary);
+  border: none;
+  border-radius: 21rem;
+}

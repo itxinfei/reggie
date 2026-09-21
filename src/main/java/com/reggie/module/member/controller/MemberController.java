@@ -316,6 +316,23 @@ public class MemberController {
     }
 
     /**
+     * 门店确认 C 端充值到账
+     * <p>顾客在 C 端发起「待确认」充值单并线下付款后，门店收款确认，确认后余额入账。</p>
+     * @param rechargeNo 充值单号
+     * @return 操作结果
+     */
+    @PostMapping("/recharge/confirm")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "确认充值到账", description = "门店确认顾客C端发起的充值已收款，确认后余额入账")
+    public R<String> confirmRecharge(@RequestParam String rechargeNo) {
+        Long employeeId = BaseContext.getCurrentId();
+        rechargeRecordService.confirmRecharge(rechargeNo, employeeId);
+        log.info("门店确认充值到账: rechargeNo={}, employeeId={}", rechargeNo, employeeId);
+        return R.success("已确认到账");
+    }
+
+    /**
      * 扣减会员余额
      * <p>租户安全：先校验会员归属当前租户，防止越权扣减其他租户会员余额。</p>
      * @param dto 余额扣减请求

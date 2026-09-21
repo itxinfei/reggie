@@ -32,3 +32,18 @@ function claimCoupon(data) {
 function getAvailableCoupons() {
   return $axios({ url: '/api/member/coupon-template/page', method: 'get', params: { page: 1, pageSize: 100, status: 1 } })
 }
+
+// C端自助开通会员（使用账号真实手机号与姓名，无需参数）
+function openMemberApi() {
+  return $axios({ url: '/api/member/portal/open', method: 'post' })
+}
+
+// C端发起充值（门店确认到账模式；data: {amount, paymentMethod}）
+function createRechargeApi(data) {
+  return $axios({ url: '/api/member/portal/recharge/create', method: 'post', data: data })
+}
+
+// 查询本人充值单状态（门店确认到账后轮询）
+function getRechargeStatusApi(rechargeNo) {
+  return $axios({ url: '/api/member/portal/recharge/status/' + rechargeNo, method: 'get' })
+}

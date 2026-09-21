@@ -70,10 +70,14 @@ public class RechargeRecordController {
             "10") @Min(1) @Max(100) int pageSize, String phone,
                                        @Parameter(description =
                                                "支付方式（WECHAT/ALIPAY/CASH/BALANCE 等，可选）") @RequestParam(required =
-                                               false) String paymentMethod) {
+                                               false) String paymentMethod,
+                                       @Parameter(description =
+                                               "状态：PENDING=待确认，SUCCESS=已入账，CANCELLED=已取消（可选）")
+                                       @RequestParam(required = false) String status) {
         Page<RechargeRecord> pageInfo = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<RechargeRecord> qw = new LambdaQueryWrapper<>();
         qw.eq(paymentMethod != null && !paymentMethod.isEmpty(), RechargeRecord::getPaymentMethod, paymentMethod);
+        qw.eq(status != null && !status.isEmpty(), RechargeRecord::getStatus, status);
 
         if (phone != null && !phone.isEmpty()) {
             LambdaQueryWrapper<Member> memberQw = new LambdaQueryWrapper<>();
@@ -129,6 +133,8 @@ public class RechargeRecordController {
             Member m = memberMap.get(r.getMemberId());
             item.put("memberName", m != null ? m.getName() : "");
             item.put("phone", m != null ? m.getPhone() : "");
+            item.put("rechargeNo", r.getRechargeNo());
+            item.put("status", r.getStatus());
             item.put("amount", r.getAmount());
             item.put("giftAmount", r.getGiftAmount());
             item.put("paymentMethod", r.getPaymentMethod());

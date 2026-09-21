@@ -1250,7 +1250,6 @@ CREATE TABLE `flash_sale` (
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Update Time',
   `create_user` bigint DEFAULT NULL COMMENT 'Create User',
   `update_user` bigint DEFAULT NULL COMMENT '修改人',
-  `is_deleted` int NOT NULL DEFAULT '0' COMMENT '逻辑删除',
   PRIMARY KEY (`id`),
   KEY `idx_dish_id` (`dish_id`),
   KEY `idx_tenant_id` (`tenant_id`),
@@ -2029,18 +2028,26 @@ CREATE TABLE `recharge_record` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户id',
   `member_id` bigint NOT NULL COMMENT '会员ID',
-  `amount` decimal(10,2) NOT NULL COMMENT '充金',
+  `user_id` bigint DEFAULT NULL COMMENT '归属用户ID（C端自助充值冗余）',
+  `recharge_no` varchar(64) DEFAULT NULL COMMENT '充值单号（业务唯一）',
+  `status` varchar(20) DEFAULT 'SUCCESS' COMMENT '状态 PENDING/SUCCESS/CANCELLED',
+  `amount` decimal(10,2) NOT NULL COMMENT '充值金额',
   `gift_amount` decimal(10,2) DEFAULT '0.00' COMMENT '赠金',
-  `payment_method` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '攻方式',
+  `payment_method` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '渠道 WECHAT/ALIPAY/CASH（预留在线支付）',
+  `trade_no` varchar(64) DEFAULT NULL COMMENT '渠道交易号（预留在线支付回填）',
+  `confirm_employee_id` bigint DEFAULT NULL COMMENT '确认到账员工ID',
+  `confirm_time` datetime DEFAULT NULL COMMENT '确认到账时间',
   `created_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `is_deleted` int NOT NULL DEFAULT '0' COMMENT '逻辑删除',
   `create_user` bigint DEFAULT NULL COMMENT '创建人ID',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `update_user` bigint DEFAULT NULL COMMENT '修改人ID',
   PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `uk_recharge_no` (`recharge_no`) USING BTREE,
   KEY `idx_member` (`member_id`) USING BTREE,
+  KEY `idx_rr_member_status` (`member_id`,`status`) USING BTREE,
   KEY `idx_tenant` (`tenant_id`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin ROW_FORMAT=DYNAMIC COMMENT='租户id';
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin ROW_FORMAT=DYNAMIC COMMENT='充值记录';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -2162,6 +2169,44 @@ CREATE TABLE `refund_record` (
   KEY `idx_payment` (`payment_order_id`) USING BTREE,
   KEY `idx_tenant_id` (`tenant_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin ROW_FORMAT=DYNAMIC COMMENT='退款记录';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `payment_channel_config`
+--
+
+DROP TABLE IF EXISTS `payment_channel_config`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `payment_channel_config` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `config_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '配置名称',
+  `channel` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL COMMENT '渠道 WECHAT/ALIPAY',
+  `wx_app_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '微信appId',
+  `wx_mch_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '微信商户号',
+  `wx_api_v3_key` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '微信APIv3密钥(加密)',
+  `wx_mch_cert_serial_no` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '商户证书序列号',
+  `wx_mch_private_key` varchar(4096) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '商户私钥(加密)',
+  `wx_public_key_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '微信支付公钥ID',
+  `wx_public_key` varchar(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '微信支付公钥',
+  `ali_app_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '支付宝APPID',
+  `ali_private_key` varchar(4096) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '支付宝应用私钥(加密)',
+  `ali_public_key` varchar(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '支付宝公钥',
+  `pay_notify_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '支付回调地址',
+  `refund_notify_url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '退款回调地址',
+  `enabled` int NOT NULL DEFAULT '1' COMMENT '启用 0停 1启',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '备注',
+  `tenant_id` bigint NOT NULL COMMENT '租户ID',
+  `is_deleted` int NOT NULL DEFAULT '0' COMMENT '逻辑删除 0未删 1已删',
+  `version` int NOT NULL DEFAULT '0' COMMENT '乐观锁',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `create_user` bigint DEFAULT NULL COMMENT '创建人',
+  `update_user` bigint DEFAULT NULL COMMENT '修改人',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_tenant_channel` (`tenant_id`,`channel`,`is_deleted`) USING BTREE,
+  KEY `idx_pcc_tenant` (`tenant_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin ROW_FORMAT=DYNAMIC COMMENT='支付渠道配置';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

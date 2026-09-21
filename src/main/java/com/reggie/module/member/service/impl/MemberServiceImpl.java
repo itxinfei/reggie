@@ -95,6 +95,52 @@ public class MemberServiceImpl extends ServiceImpl<MemberMapper, Member> impleme
     }
 
     /**
+     * C端自助开通会员。
+     * @param userId 登录用户ID
+     * @param phone 用户真实手机号
+     * @param name 姓名
+     * @return 新建会员
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Member registerForUser(Long userId, String phone, String name) {
+        if (userId == null) {
+            throw new CustomException("请先登录");
+        }
+        if (phone == null || phone.trim().isEmpty()) {
+            throw new CustomException("当前账号缺少手机号，无法开通会员");
+        }
+        Long tenantId = BaseContext.getCurrentTenantId();
+        // 该用户已绑定会员 → 无需重复开通
+        if (getByUserId(userId) != null) {
+            throw new CustomException("您已开通会员，无需重复开通");
+        }
+        // 同租户手机号已注册 → 防止重复会员
+        Member existing = lambdaQuery()
+                .eq(Member::getPhone, phone)
+                .eq(Member::getTenantId, tenantId)
+                .one();
+        if (existing != null) {
+            throw new CustomException("该手机号已是会员");
+        }
+        Member member = new Member();
+        member.setTenantId(tenantId);
+        member.setUserId(userId);
+        member.setPhone(phone.trim());
+        member.setName((name == null || name.trim().isEmpty()) ? ("用户" + userId) : name);
+        member.setPoints(0L);
+        member.setBalance(BigDecimal.ZERO);
+        member.setTotalConsumption(BigDecimal.ZERO);
+        member.setStatus(1);
+        MemberLevel defaultLevel = memberLevelService.getDefaultLevel();
+        if (defaultLevel != null) {
+            member.setLevelId(defaultLevel.getId());
+        }
+        save(member);
+        return member;
+    }
+
+    /**
      * 处理 deduct balance。
      * @param memberId 参数 memberId
      * @param amount 参数 amount

@@ -107,9 +107,15 @@ CREATE TABLE recharge_record (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   member_id bigint NULL DEFAULT NULL COMMENT '会员ID',
+  user_id bigint NULL DEFAULT NULL COMMENT '归属用户ID（C端自助充值冗余）',
+  recharge_no varchar(64) NULL DEFAULT NULL COMMENT '充值单号（业务唯一）',
+  status varchar(20) NULL DEFAULT 'SUCCESS' COMMENT '状态 PENDING/SUCCESS/CANCELLED',
   amount decimal(10,2) NULL DEFAULT NULL COMMENT '充金',
   gift_amount decimal(10,2) NULL DEFAULT 0.00 COMMENT '赠金',
-  payment_method varchar(20) NULL DEFAULT NULL COMMENT '攻方式',
+  payment_method varchar(20) NULL DEFAULT NULL COMMENT '渠道 WECHAT/ALIPAY/CASH（预留在线支付）',
+  trade_no varchar(64) NULL DEFAULT NULL COMMENT '渠道交易号（预留在线支付回填）',
+  confirm_employee_id bigint NULL DEFAULT NULL COMMENT '确认到账员工ID',
+  confirm_time datetime NULL DEFAULT NULL COMMENT '确认到账时间',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
@@ -117,3 +123,6 @@ CREATE TABLE recharge_record (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
+-- 充值单号唯一索引（NULL 不冲突，兼容历史无单号数据）
+CREATE UNIQUE INDEX uk_recharge_no ON recharge_record(recharge_no);
+CREATE INDEX idx_rr_member_status ON recharge_record(member_id, status);

@@ -27,6 +27,16 @@ public interface MemberService extends IService<Member> {
     Member registerByPhone(String phone, String name);
 
     /**
+     * C端用户自助开通会员（绑定登录用户ID，手机号与姓名取用户真实信息）。
+     *
+     * @param userId 登录用户ID
+     * @param phone  用户真实手机号
+     * @param name   用户姓名（可为空）
+     * @return 新建会员
+     */
+    Member registerForUser(Long userId, String phone, String name);
+
+    /**
      * 扣减会员余额
      *
      * @param memberId 会员ID

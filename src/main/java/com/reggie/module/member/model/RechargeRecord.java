@@ -25,6 +25,13 @@ public class RechargeRecord implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    /** 状态：待门店确认到账（顾客已在线发起，等待门店收款确认） */
+    public static final String STATUS_PENDING = "PENDING";
+    /** 状态：已入账（余额已到账） */
+    public static final String STATUS_SUCCESS = "SUCCESS";
+    /** 状态：已取消（超时未支付/顾客或门店取消） */
+    public static final String STATUS_CANCELLED = "CANCELLED";
+
     @Schema(description = "充值记录ID", example = "1")
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
@@ -36,14 +43,32 @@ public class RechargeRecord implements Serializable {
     @Schema(description = "会员ID", example = "1")
     private Long memberId;
 
+    @Schema(description = "归属用户ID（C端自助充值场景冗余，便于按用户查询）", example = "1")
+    private Long userId;
+
+    @Schema(description = "充值单号（业务唯一，对账单号）", example = "RC20260921120000AB12CD34")
+    private String rechargeNo;
+
+    @Schema(description = "状态：PENDING=待门店确认到账，SUCCESS=已入账，CANCELLED=已取消", example = "PENDING")
+    private String status;
+
     @Schema(description = "充值金额（元）", example = "200.00")
     private BigDecimal amount;
 
     @Schema(description = "赠送金额（元）", example = "20.00")
     private BigDecimal giftAmount;
 
-    @Schema(description = "支付方式：WECHAT=微信，ALIPAY=支付宝，CASH=现金", example = "WECHAT")
+    @Schema(description = "支付/意向渠道：WECHAT=微信，ALIPAY=支付宝，CASH=现金（预留在线支付渠道）", example = "WECHAT")
     private String paymentMethod;
+
+    @Schema(description = "渠道交易号（预留：未来在线支付成功后回填第三方流水号）")
+    private String tradeNo;
+
+    @Schema(description = "确认到账操作员工ID（门店确认模式）", example = "1")
+    private Long confirmEmployeeId;
+
+    @Schema(description = "确认到账时间")
+    private LocalDateTime confirmTime;
 
     @Schema(description = "充值时间", example = "2026-07-09 10:00:00")
     @TableField(value = "created_time", fill = FieldFill.INSERT)
