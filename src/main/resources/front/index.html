@@ -300,7 +300,7 @@
         <div class="cart-empty-text" v-else>购物车空空如也</div>
         <div class="cart-spacer"></div>
         <div :class="['cart-submit', goodsPrice >= minOrderAmount ? 'cart-submit-active' : 'cart-submit-disabled']"
-             @click="goodsPrice >= minOrderAmount ? toAddOrderPage : null">
+             @click="goodsPrice >= minOrderAmount ? toAddOrderPage() : null">
           {{ goodsPrice >= minOrderAmount ? '去结算' : '¥' + minOrderAmount + '起送' }}
         </div>
       </div>
