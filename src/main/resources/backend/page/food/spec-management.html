@@ -445,7 +445,7 @@
                       <template slot-scope="scope">
                         <div class="spec-row-actions">
                           <el-button type="text" size="small" icon="ri-edit-line" @click.stop="openOptionDialog(scope.row)">编辑</el-button>
-                          <el-button type="text" size="small" class="btn-danger-text" icon="ri-delete-bin-line" @click.stop="handleDeleteOption(scope.row)">删除</el-button>
+                          <el-button type="text" size="small" class="btn-delete" icon="ri-delete-bin-line" @click.stop="handleDeleteOption(scope.row)">删除</el-button>
                         </div>
                       </template>
                     </el-table-column>
@@ -473,7 +473,7 @@
 
     <!-- 规格组弹窗 -->
     <crud-dialog :show-submit="true" :show-cancel="true" :title="groupDialogTitle" :visible.sync="groupDialogVisible" size="md" :submit-loading="submitting" @submit="submitGroupForm">
-      <el-form ref="groupForm" :model="groupForm" :rules="groupRules" label-width="92px">
+      <el-form ref="groupForm" :model="groupForm" :rules="groupRules" label-width="100px">
         <el-form-item label="规格组名称" prop="name">
           <el-input v-model="groupForm.name" placeholder="如：辣度 / 口味 / 杯型" maxlength="20" show-word-limit></el-input>
         </el-form-item>
@@ -512,7 +512,7 @@
 
     <!-- 规格选项弹窗 -->
     <crud-dialog :show-submit="true" :show-cancel="true" :title="optionDialogTitle" :visible.sync="optionDialogVisible" size="md" :submit-loading="submitting" @submit="submitOptionForm">
-      <el-form ref="optionForm" :model="optionForm" :rules="optionRules" label-width="92px">
+      <el-form ref="optionForm" :model="optionForm" :rules="optionRules" label-width="100px">
         <el-form-item label="选项名称" prop="name">
           <el-input v-model="optionForm.name" placeholder="如：微辣 / 中辣 / 大杯" maxlength="20" show-word-limit></el-input>
         </el-form-item>

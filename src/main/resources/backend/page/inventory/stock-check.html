@@ -91,7 +91,8 @@
   <!-- 功能：分步盘点流程（创建盘点单→选择食材→录入实盘→完成盘点），支持展开行查看明细差异 -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="stock-check-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">库存盘点</h1>
 
       <!-- 统计卡片 -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
@@ -122,7 +123,7 @@
         :expand="true"
         row-key="id"
         :show-actions="true" :viewable="true"
-        :actions-width="200"
+        :actions-width="180"
         @page-change="onPageChange"
         @size-change="onSizeChange"
         @expand-change="loadDetails">
@@ -207,24 +208,24 @@
         <template #actions="{ row }">
           <!-- 草稿：编辑盘点项 / 删除 -->
           <template v-if="row.status === 'DRAFT'">
-            <el-button type="text" size="small" @click="openItemsDialog(row)">
+            <el-button type="text" size="small" class="btn-view" @click="openItemsDialog(row)">
               <i class="ri-list-check-2" style="margin-right:4px;"></i>编辑盘点项
             </el-button>
             <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row)">删除</el-button>
           </template>
           <!-- 进行中：录入实盘 / 完成盘点 / 删除 -->
           <template v-else-if="row.status === 'IN_PROGRESS'">
-            <el-button type="text" size="small" @click="openRecordDialog(row)">
+            <el-button type="text" size="small" class="btn-view" @click="openRecordDialog(row)">
               <i class="ri-edit-line" style="margin-right:4px;"></i>录入实盘
             </el-button>
-            <el-button type="text" size="small" style="color:var(--color-success);" @click="confirmComplete(row)">
+            <el-button type="text" size="small" class="btn-success" @click="confirmComplete(row)">
               <i class="ri-checkbox-circle-line" style="margin-right:4px;"></i>完成盘点
             </el-button>
             <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row)">删除</el-button>
           </template>
           <!-- 已完成：冲正（回退到进行中，允许重新录入修正） -->
           <template v-else-if="row.status === 'DONE'">
-            <el-button type="text" size="small" style="color:var(--color-warning);" @click="rollbackHandle(row)" :aria-label="'冲正盘点单 ' + (row.checkNo || '')">
+            <el-button type="text" size="small" class="btn-warning" @click="rollbackHandle(row)" :aria-label="'冲正盘点单 ' + (row.checkNo || '')">
               <i class="ri-refresh-line" style="margin-right:4px;"></i>冲正
             </el-button>
           </template>
@@ -238,9 +239,9 @@
       title="新增盘点单" :visible.sync="createDialogVisible" size="md"
       :submit-loading="createSubmitting" :close-on-click-modal="false"
       @submit="submitCreate" @close="createDialogVisible = false">
-      <el-form ref="createForm" :model="createForm" :rules="createRules" label-width="80px" size="small">
+      <el-form ref="createForm" :model="createForm" :rules="createRules" label-width="100px" size="small">
         <el-form-item label="操作人：" prop="operator">
-          <el-input v-model="createForm.operator" placeholder="请输入操作人姓名" style="width:293px" />
+          <el-input v-model="createForm.operator" placeholder="请输入操作人姓名" />
         </el-form-item>
         <el-form-item label="备注：">
           <el-input v-model="createForm.remark" type="textarea" :rows="2" placeholder="盘点备注（可选）" />

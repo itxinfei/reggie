@@ -16,7 +16,8 @@
 <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="supplier-app">
-  <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+  <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">供应商管理</h1>
     <!-- ============================================================
      组件1：stat-cards — 统计卡片
      关联数据：statsCards（计算属性，从 stats 对象实时映射）
@@ -58,7 +59,7 @@
       :page-size="pageSize"
       :total="counts"
       :show-actions="true" :viewable="true"
-      :actions-width="210"
+      :actions-width="180"
       @page-change="onPageChange"
       @size-change="onSizeChange"
     >
@@ -98,7 +99,7 @@
     @submit="submitForm"
     @close="resetForm"
   >
-    <el-form ref="supplierForm" :model="formData" :rules="formRules" label-width="80px">
+    <el-form ref="supplierForm" :model="formData" :rules="formRules" label-width="100px">
       <el-form-item label="供应商名称：" prop="name">
         <el-input v-model="formData.name" placeholder="请输入供应商名称" maxlength="50" />
       </el-form-item>

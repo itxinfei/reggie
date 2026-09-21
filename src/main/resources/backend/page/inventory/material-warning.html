@@ -38,7 +38,8 @@
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="warn-app">
-    <main class="container" id="main-content" role="main" aria-label="库存预警看板">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">库存预警与智能补货</h1>
 
       <!-- 统计卡片（固定 4 个） -->
       <stat-cards :cards="statsCards" :loading="statsLoading"></stat-cards>
@@ -130,7 +131,7 @@
             </template>
             <template #col-estimatedCost="{ row }">¥{{ (row.estimatedCost || row.cost || 0) | toDecimal }}</template>
             <template #actions="{ row }">
-              <el-button type="text" size="small" @click="openSmartRestock([row])">补货</el-button>
+              <el-button type="text" size="small" class="btn-view" @click="openSmartRestock([row])">补货</el-button>
             </template>
           </crud-table>
         </el-tab-pane>
@@ -146,7 +147,7 @@
       @submit="submitRestock"
       @close="handleRestockClose"
     >
-      <el-form :model="restockForm" :rules="restockRules" ref="restockFormRef" label-width="90px">
+      <el-form :model="restockForm" :rules="restockRules" ref="restockFormRef" label-width="100px">
         <el-form-item label="已选食材">
           <el-input-number v-model="restockForm.selectedCount" :min="0" :max="9999" disabled></el-input-number>
           <span class="ds-form-hint">条预警食材</span>

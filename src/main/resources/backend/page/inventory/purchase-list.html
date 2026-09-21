@@ -143,7 +143,8 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="purchase-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">采购管理</h1>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML，支持点击过滤 -->
       <stat-cards :cards="statsCards" :active-key.sync="cardFilter" @card-click="onCardClick"></stat-cards>
 
@@ -190,7 +191,7 @@
         :total="counts"
         row-key="id"
         :show-actions="true"
-        :actions-width="320"
+        :actions-width="240"
         @page-change="onPageChange"
         @size-change="onSizeChange">
         <template #col-status="{ row }">
@@ -199,12 +200,22 @@
         <template #actions="{ row }">
           <!-- 查看：打开该单采购明细弹窗（所有状态均可查看） -->
           <el-button type="text" size="small" class="btn-view" @click="viewDetail(row)">查看</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="approveHandle(row)" v-if="row.status === 'DRAFT'">审核</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="viewDetail(row, 'receive')" v-if="row.status === 'ORDERED' || row.status === 'PARTIAL'">收货</el-button>
-          <!-- 修改点：补充编辑（草稿/已下单/部分收货可改）与删除（仅草稿/已取消可删，与后端约束一致） -->
+          <!-- 审核(草稿)/收货(已下单·部分收货)：按状态二选一的正向推进操作 -->
+          <el-button type="text" size="small" class="btn-success" @click="approveHandle(row)" v-if="row.status === 'DRAFT'">审核</el-button>
+          <el-button type="text" size="small" class="btn-success" @click="viewDetail(row, 'receive')" v-if="row.status === 'ORDERED' || row.status === 'PARTIAL'">收货</el-button>
+          <!-- 编辑：草稿/已下单/部分收货可改 -->
           <el-button type="text" size="small" class="btn-view" @click="editHandle(row)" v-if="row.status === 'DRAFT' || row.status === 'ORDERED' || row.status === 'PARTIAL'">编辑</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row)" v-if="row.status === 'DRAFT' || row.status === 'CANCELLED'">删除</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(row)" v-if="row.status === 'DRAFT' || row.status === 'ORDERED'">取消</el-button>
+          <!-- 更多：删除(草稿/已取消)、取消(草稿/已下单) 收进下拉，仅在有可操作项时显示 -->
+          <el-dropdown v-if="row.status === 'DRAFT' || row.status === 'ORDERED' || row.status === 'CANCELLED'"
+            trigger="click"
+            @command="function(cmd){ if(cmd==='delete'){ deleteHandle(row); } else if(cmd==='cancel'){ cancelHandle(row); } }"
+            @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item v-if="row.status === 'DRAFT' || row.status === 'CANCELLED'" command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+              <el-dropdown-item v-if="row.status === 'DRAFT' || row.status === 'ORDERED'" command="cancel" style="color:var(--color-danger);">取消</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </template>
       </crud-table>
     </main>
@@ -410,18 +421,18 @@
       <span slot="footer" class="detail-footer">
         <span>
           <template v-if="!receiveMode">
-            <el-button v-if="detailRow.status === 'DRAFT'" size="medium" @click="approveHandle(detailRow)">审核下单</el-button>
+            <el-button v-if="detailRow.status === 'DRAFT'" @click="approveHandle(detailRow)">审核下单</el-button>
             <template v-else-if="detailRow.status === 'ORDERED' || detailRow.status === 'PARTIAL'">
-              <el-button type="primary" size="medium" @click="startReceive">登记收货</el-button>
-              <el-button type="text" size="medium" @click="receiveAll">一键收齐</el-button>
+              <el-button type="primary" @click="startReceive">登记收货</el-button>
+              <el-button type="text" @click="receiveAll">一键收齐</el-button>
             </template>
           </template>
           <span v-else class="rx-sum">本次收货 <b>{{ rxCount }}</b> 项 · 合计金额 ¥{{ fmtMoney(rxAmount) }}</span>
         </span>
         <span>
-          <el-button v-if="receiveMode" size="medium" @click="cancelReceive">取 消</el-button>
-          <el-button v-if="receiveMode" type="primary" size="medium" :loading="receiveSubmitting" @click="submitReceive">确认收货</el-button>
-          <el-button v-else size="medium" @click="detailDialogVisible = false">关 闭</el-button>
+          <el-button v-if="receiveMode" @click="cancelReceive">取 消</el-button>
+          <el-button v-if="receiveMode" type="primary" :loading="receiveSubmitting" @click="submitReceive">确认收货</el-button>
+          <el-button v-else @click="detailDialogVisible = false">关 闭</el-button>
         </span>
       </span>
     </crud-dialog>

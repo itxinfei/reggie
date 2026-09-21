@@ -13,7 +13,8 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="category-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">库存分类管理</h1>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
       <stat-cards :cards="statsCards"></stat-cards>
 
@@ -41,7 +42,7 @@
         :page-sizes="[10,20,30,40]"
         :total="counts"
         :show-actions="true" :viewable="true"
-        :actions-width="240"
+        :actions-width="120"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -64,9 +65,8 @@
       @submit="submitForm"
       @close="handleClose"
     >
-      <!-- 修改点：移除误导性死 class demo-form-inline；label-width 120→80（"分类名称/排序"短标签） -->
-      <!-- 修改点：补全 ref/:model/:rules，启用 Element 校验；移除 240px 魔数宽度，统一弹窗内 100% 自适应 -->
-      <el-form ref="categoryForm" :model="formData" :rules="categoryRules" label-width="80px" size="small">
+      <!-- 修改点：补全 ref/:model/:rules，启用 Element 校验；弹窗内 100% 自适应 -->
+      <el-form ref="categoryForm" :model="formData" :rules="categoryRules" label-width="100px" size="small">
         <el-form-item label="分类名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入分类名称" maxlength="14" />
         </el-form-item>

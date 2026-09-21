@@ -53,7 +53,7 @@
         :total="counts"
         :loading="loading"
         :show-actions="true" :viewable="true"
-        :actions-width="160"
+        :actions-width="120"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -84,11 +84,10 @@
       :close-on-click-modal="false"
     >
       <!-- 修改点：1) demo-form-inline 移除（已是 no-op，误导性命名） -->
-      <!-- 修改点：2) el-input 加宽度约束 293px（匹配规范） -->
-      <!-- 修改点：3) 增加 :rules 表单校验，提交前调 validate() -->    
-      <!-- 修改点：label-width 从 120px 缩到 80px，"分类名称/排序"短标签不需要那么宽，减少左侧留白 -->
+      <!-- 修改点：增加 :rules 表单校验，提交前调 validate() -->
+      <!-- 输入框去掉行内 293px，改为撑满 form-item -->
       <el-form
-        label-width="80px"
+        label-width="100px"
         size="small"
         :model="classData"
         ref="categoryForm"
@@ -99,7 +98,6 @@
             v-model="classData.name"
             placeholder="请输入分类名称"
             maxlength="14"
-            style="width: 293px;"
           />
         </el-form-item>
         <el-form-item label="排序：" prop="sort">
@@ -108,18 +106,17 @@
             :min="1"
             :max="9999"
             placeholder="不填则自动分配"
-            style="width: 293px;"
+            style="width: 100%;"
           ></el-input-number>
           <span class="form-tip">不填则自动排列到最后</span>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button size="medium" @click="classData.dialogVisible = false">取 消</el-button>
-        <el-button type="primary" size="medium" :loading="submitting" @click="submitForm()">确 定</el-button>
+        <el-button @click="classData.dialogVisible = false">取 消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitForm()">确 定</el-button>
         <el-button
           v-if="action != 'edit'"
           type="primary"
-          size="medium"
           class="continue"
           :loading="submitting"
           @click="submitForm('go')"

@@ -15,7 +15,8 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="stock-record-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">库存流水</h1>
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
       <stat-cards :cards="statsCards"></stat-cards>
 
@@ -78,7 +79,7 @@
       :close-on-click-modal="false"
       @submit="submitFlow"
     >
-      <el-form ref="flowForm" :model="flowForm" :rules="flowRules" label-width="90px" size="small">
+      <el-form ref="flowForm" :model="flowForm" :rules="flowRules" label-width="100px" size="small">
         <el-form-item :label="flowDialog.mode === 'in' ? '入库食材' : '出库食材'" prop="materialId">
           <el-select v-model="flowForm.materialId" placeholder="请选择食材" filterable clearable style="width: 100%;" @change="onFlowMaterialChange">
             <el-option v-for="item in materialOptions" :key="item.id" :label="item.name + (item.unit ? (' / ' + item.unit) : '')" :value="item.id"></el-option>
