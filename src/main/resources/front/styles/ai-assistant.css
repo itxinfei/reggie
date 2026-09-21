@@ -330,7 +330,15 @@
 .chat-area {
     flex: 1; overflow-y: auto; padding: var(--spacing-lg);
     display: flex; flex-direction: column; gap: var(--spacing-md);
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
 }
+.chat-area::-webkit-scrollbar { width: 4px; }
+.chat-area::-webkit-scrollbar-thumb { background: var(--color-text-hint); border-radius: 2px; }
+.chat-area::-webkit-scrollbar-track { background: transparent; }
+
+/* 欢迎气泡里的灯泡提示图标：金色点睛 */
+.chat-bubble .tip-icon { color: var(--color-primary-dark); }
 .chat-msg {
     display: flex; gap: var(--spacing-sm); max-width: 85%;
     animation: slideUp 0.3s ease;
@@ -363,9 +371,11 @@
 }
 .chat-msg.assistant .chat-bubble {
     background: var(--bg-page); border-top-left-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 .chat-msg.user .chat-bubble {
     background: var(--color-primary); color: var(--color-text-primary); border-top-right-radius: 4px;
+    box-shadow: 0 2px 8px rgba(201, 146, 0, 0.25);
 }
 
 /* 消息操作按钮（复制） */
@@ -445,6 +455,8 @@
     background: var(--color-primary-tint); border-color: var(--color-primary); color: var(--color-primary-dark);
 }
 .ai-tool-item.is-running .ai-tool-icon { color: var(--color-primary-dark); }
+/* 完成态：弱化底色仅留绿勾，历史工具条不抢眼（暗色下 bg-hover 同样适配） */
+.ai-tool-item.is-done { background: var(--bg-hover); }
 .ai-tool-item.is-done .ai-tool-icon { color: var(--color-success); }
 .ai-tool-item.is-error { border-color: var(--color-danger); color: var(--color-danger); }
 .ai-tool-item.is-error .ai-tool-icon { color: var(--color-danger); }

@@ -96,8 +96,9 @@
 .conv-item {
   display: flex;
   align-items: center;
-  padding: 9px 10px;
+  padding: 8px 9px; /* 8px 内容 + 1px 透明边框，active 变色时不抖动 */
   margin-bottom: 2px;
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -105,7 +106,7 @@
   gap: 8px;
 }
 .conv-item:hover { background: var(--bg-subtle); }
-.conv-item.active { background: var(--bg-subtle); border: 1px solid var(--color-brand-400); }
+.conv-item.active { background: var(--color-brand-50); border-color: var(--color-brand-400); }
 
 .conv-icon {
   width: 30px; height: 30px; border-radius: var(--radius-sm);
@@ -260,6 +261,19 @@
   flex: 1; overflow-y: auto; padding: var(--space-4) var(--space-5);
   display: flex; flex-direction: column; gap: 14px;
   background: var(--bg-page);
+  scroll-behavior: smooth;
+}
+.chat-body::-webkit-scrollbar { width: 6px; }
+.chat-body::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; opacity: 0.6; }
+.chat-body::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+.chat-body::-webkit-scrollbar-track { background: transparent; }
+
+/* 聊天区居中空态/提示（加载历史、无消息记录，替代行内 style） */
+.chat-hint {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px;
+  font-size: var(--font-size-base);
 }
 .chat-msg {
   display: flex; gap: 10px; max-width: 80%;
@@ -288,10 +302,12 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
   border-top-left-radius: 4px;
+  box-shadow: var(--shadow-xs);
 }
 .chat-msg.user .chat-bubble {
   background: var(--color-brand-500);
   color: var(--text-on-brand); border-top-right-radius: 4px;
+  box-shadow: 0 2px 8px rgba(201, 146, 0, 0.22);
 }
 /* 用户多行输入：保留换行，长词断行 */
 .chat-bubble .user-text { white-space: pre-line; word-break: break-word; }
@@ -465,7 +481,10 @@
   border: 1px solid var(--border-default); border-radius: var(--radius-sm);
   padding: 8px 12px; background: var(--bg-surface);
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
 }
+.dish-card:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
 .dish-card .dish-name { font-weight: 500; color: var(--text-primary); font-size: 13px; }
 .dish-card .dish-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
 .dish-card .dish-price { color: var(--color-danger); font-weight: 600; font-size: 14px; white-space: nowrap; }
@@ -490,6 +509,8 @@
   background: var(--color-brand-50); border-color: var(--color-brand-200); color: var(--color-brand-700);
 }
 .ai-tool-item.is-running .ai-tool-icon { color: var(--color-brand-700); }
+/* 完成态：弱化底色，仅保留绿色图标，历史工具条不抢眼 */
+.ai-tool-item.is-done { background: var(--bg-subtle); }
 .ai-tool-item.is-done .ai-tool-icon { color: var(--color-success); }
 .ai-tool-item.is-error { border-color: var(--color-danger); color: var(--color-danger); }
 .ai-tool-item.is-error .ai-tool-icon { color: var(--color-danger); }
@@ -555,8 +576,10 @@
 
 /* 欢迎气泡（未开始对话时的开场白） */
 .welcome-bubble .chat-bubble .welcome-title {
-  font-weight: 600; margin-bottom: 6px; color: var(--text-primary);
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 600; margin-bottom: 8px; color: var(--text-primary);
 }
+.welcome-bubble .chat-bubble .welcome-title i { color: var(--color-brand-600); }
 
 /* ========== P2 图片附件 ========== */
 
