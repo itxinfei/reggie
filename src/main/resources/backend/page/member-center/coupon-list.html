@@ -309,10 +309,10 @@
             <el-option label="新客" value="NEW_MEMBER"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="条件金额：" prop="conditionAmount">
+        <el-form-item label="条件金额：" prop="conditionAmount" v-if="formData.type === 'FULL_REDUCTION'">
           <el-input v-model="formData.conditionAmount" type="number" placeholder="请输入条件金额"></el-input>
         </el-form-item>
-        <el-form-item label="优惠金额：" prop="discountAmount">
+        <el-form-item label="优惠金额：" prop="discountAmount" v-if="formData.type === 'FULL_REDUCTION'">
           <el-input v-model="formData.discountAmount" type="number" placeholder="请输入优惠金额"></el-input>
         </el-form-item>
         <el-form-item label="折扣率：" prop="discountRate" v-if="formData.type === 'DISCOUNT'">

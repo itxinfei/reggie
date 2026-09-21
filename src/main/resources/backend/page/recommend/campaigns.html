@@ -449,7 +449,9 @@
                 ],
                 campaignType: [{ required: true, message: '请选择活动类型', trigger: 'change' }],
                 targetType: [{ required: true, message: '请选择目标人群', trigger: 'change' }],
-                ruleJson: [{ validator: self.validateRuleJson, trigger: 'blur' }]
+                ruleJson: [{ validator: function (rule, value, callback) {
+                    return self.validateRuleJson(rule, value, callback);
+                }, trigger: 'blur' }]
             };
         },
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）

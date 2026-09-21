@@ -207,10 +207,10 @@
                                 <div class="msg-compose">
                                     <label class="field-label" for="inp-sms-content">消息内容（短信最多70字）</label>
                                     <el-input id="inp-sms-content" v-model="smsForm.content" type="textarea" :rows="4"
-                                              maxlength="200"
+                                              maxlength="70" show-word-limit
                                               placeholder="请输入短信内容...&#10;示例：尊敬的顾客，您的外卖订单已开始配送，预计30分钟内送达。"></el-input>
                                     <div style="text-align:right;color:var(--text-muted);font-size:var(--font-size-xs);">
-                                        {{ smsForm.content.length }}/200 字符
+                                        {{ smsForm.content.length }}/70 字符
                                     </div>
                                     <div>
                                         <el-button type="success" style="width:100%;"
@@ -456,11 +456,11 @@
                     <el-col :span="12" :xs="24">
                         <el-form-item label="业务类型" prop="bizType">
                             <el-select v-model="templateModal.form.bizType" style="width:100%;">
-                                <option value="ORDER_NOTICE">订单通知</option>
-                                <option value="PROMOTION">营销推送</option>
-                                <option value="VERIFY_CODE">验证码</option>
-                                <option value="SYSTEM">系统通知</option>
-                                <option value="JOB_NOTICE">工作通知</option>
+                                <el-option value="ORDER_NOTICE" label="订单通知"></el-option>
+                                <el-option value="PROMOTION" label="营销推送"></el-option>
+                                <el-option value="VERIFY_CODE" label="验证码"></el-option>
+                                <el-option value="SYSTEM" label="系统通知"></el-option>
+                                <el-option value="JOB_NOTICE" label="工作通知"></el-option>
                             </el-select>
                         </el-form-item>
                     </el-col>
@@ -759,30 +759,34 @@
                     if (phones.length === 0) { ReggieUI.warning('所选用户没有手机号，无法发送短信'); return; }
                     if (!self.smsForm.content.trim()) { ReggieUI.warning('请输入短信内容'); return; }
 
-                    self.smsForm.sending = true;
-                    self.smsForm.result = null;
+                    ReggieUI.confirm('确认向 ' + phones.length + ' 位用户发送短信？短信提交后不可撤回。', '发送确认', {
+                        confirmButtonText: '确定发送', cancelButtonText: '取消', type: 'warning'
+                    }).then(function () {
+                        self.smsForm.sending = true;
+                        self.smsForm.result = null;
 
-                    var sendData = {
-                        channel: 1,
-                        targets: phones,
-                        content: self.smsForm.content.trim()
-                    };
+                        var sendData = {
+                            channel: 1,
+                            targets: phones,
+                            content: self.smsForm.content.trim()
+                        };
 
-                    notificationApi.sendSimpleMessage(sendData).then(function (res) {
-                        if (res && res.code === 1 && res.data) {
-                            self.smsForm.result = res.data;
-                            self.loadStats();
-                        } else {
+                        notificationApi.sendSimpleMessage(sendData).then(function (res) {
+                            if (res && res.code === 1 && res.data) {
+                                self.smsForm.result = res.data;
+                                self.loadStats();
+                            } else {
+                                self.smsForm.result = { status: 3, successCount: 0, failCount: phones.length,
+                                    failReason: res ? res.msg : '发送失败' };
+                            }
+                        }).catch(function () {
+                            ReggieUI.error('短信发送异常');
                             self.smsForm.result = { status: 3, successCount: 0, failCount: phones.length,
-                                failReason: res ? res.msg : '发送失败' };
-                        }
-                    }).catch(function () {
-                        ReggieUI.error('短信发送异常');
-                        self.smsForm.result = { status: 3, successCount: 0, failCount: phones.length,
-                            failReason: '网络异常，请重试' };
-                    }).finally(function () {
-                        self.smsForm.sending = false;
-                    });
+                                failReason: '网络异常，请重试' };
+                        }).finally(function () {
+                            self.smsForm.sending = false;
+                        });
+                    }).catch(function () {});
                 },
 
                 // ==================== 发送APP推送 ====================
@@ -792,32 +796,36 @@
                     if (!self.pushForm.title.trim()) { ReggieUI.warning('请输入推送标题'); return; }
                     if (!self.pushForm.content.trim()) { ReggieUI.warning('请输入推送内容'); return; }
 
-                    self.pushForm.sending = true;
-                    self.pushForm.result = null;
+                    ReggieUI.confirm('确认向 ' + self.pushSelectedUsers.length + ' 位用户发送APP推送？推送提交后不可撤回。', '发送确认', {
+                        confirmButtonText: '确定发送', cancelButtonText: '取消', type: 'warning'
+                    }).then(function () {
+                        self.pushForm.sending = true;
+                        self.pushForm.result = null;
 
-                    var userIds = self.pushSelectedUsers.map(function (u) { return u.id; });
-                    var data = {
-                        channel: 2,
-                        targets: userIds.map(String),
-                        title: self.pushForm.title.trim(),
-                        content: self.pushForm.content.trim()
-                    };
+                        var userIds = self.pushSelectedUsers.map(function (u) { return u.id; });
+                        var data = {
+                            channel: 2,
+                            targets: userIds.map(String),
+                            title: self.pushForm.title.trim(),
+                            content: self.pushForm.content.trim()
+                        };
 
-                    notificationApi.sendSimpleMessage(data).then(function (res) {
-                        if (res && res.code === 1 && res.data) {
-                            self.pushForm.result = res.data;
-                            self.loadStats();
-                        } else {
+                        notificationApi.sendSimpleMessage(data).then(function (res) {
+                            if (res && res.code === 1 && res.data) {
+                                self.pushForm.result = res.data;
+                                self.loadStats();
+                            } else {
+                                self.pushForm.result = { status: 3, successCount: 0, failCount: userIds.length,
+                                    failReason: res ? res.msg : '推送失败' };
+                            }
+                        }).catch(function () {
+                            ReggieUI.error('推送异常');
                             self.pushForm.result = { status: 3, successCount: 0, failCount: userIds.length,
-                                failReason: res ? res.msg : '推送失败' };
-                        }
-                    }).catch(function () {
-                        ReggieUI.error('推送异常');
-                        self.pushForm.result = { status: 3, successCount: 0, failCount: userIds.length,
-                            failReason: '网络异常，请重试' };
-                    }).finally(function () {
-                        self.pushForm.sending = false;
-                    });
+                                failReason: '网络异常，请重试' };
+                        }).finally(function () {
+                            self.pushForm.sending = false;
+                        });
+                    }).catch(function () {});
                 },
 
                 // ==================== 发送记录 ====================

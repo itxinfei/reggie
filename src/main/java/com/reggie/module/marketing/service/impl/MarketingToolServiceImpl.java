@@ -280,15 +280,17 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
      * @return 分页结果
      */
     @Override
-    public Page<FlashSale> pageFlashSales(int page, int pageSize, Integer status) {
+    public Page<FlashSale> pageFlashSales(int page, int pageSize, Integer status, String name) {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文缺失");
         }
+        String kw = (name == null) ? null : name.trim();
         Page<FlashSale> p = PageUtils.of(page, pageSize);
         return flashSaleMapper.selectPage(p, new LambdaQueryWrapper<FlashSale>()
                 .eq(FlashSale::getTenantId, tenantId)
                 .eq(status != null, FlashSale::getStatus, status)
+                .like(kw != null && !kw.isEmpty(), FlashSale::getName, kw)
                 .orderByDesc(FlashSale::getCreateTime));
     }
 

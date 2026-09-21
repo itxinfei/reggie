@@ -170,7 +170,7 @@
             <template slot="prepend">¥</template>
           </el-input>
         </el-form-item>
-        <el-form-item label="赠送金额：">
+        <el-form-item label="赠送金额：" prop="giftAmount">
           <el-input v-model.number="rechargeForm.giftAmount" type="number" placeholder="请输入赠送金额" style="width:100%;">
             <template slot="prepend">¥</template>
           </el-input>
@@ -259,6 +259,11 @@
           rechargeRules: {
             amount: [{ required: true, message: '请输入充值金额', trigger: 'blur' }, { validator: function(rule, value, callback) {
               if (!value || Number(value) <= 0) { callback(new Error('请输入有效的充值金额')); return }
+              callback()
+            }, trigger: 'blur' }],
+            giftAmount: [{ validator: function(rule, value, callback) {
+              if (value == null || value === '') { callback(); return }
+              if (Number(value) < 0) { callback(new Error('赠送金额不能为负数')); return }
               callback()
             }, trigger: 'blur' }]
           },

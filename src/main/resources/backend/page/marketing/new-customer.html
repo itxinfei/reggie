@@ -230,11 +230,17 @@
               // 后端返回裸数组，前端负责过滤和分页
               var all = Array.isArray(d) ? d : (d.records || []);
               self.allData = all;
-              // 前端状态过滤
+              // 前端名称过滤 + 状态过滤（后端 list 返回全量、不支持 name 参数）
               var filtered = all;
+              if (self.lastSearch.name) {
+                var kw = String(self.lastSearch.name).toLowerCase();
+                filtered = filtered.filter(function(item) {
+                  return item.name && String(item.name).toLowerCase().indexOf(kw) !== -1;
+                });
+              }
               if (self.activeFilter && self.activeFilter !== '') {
                 var statusVal = parseInt(self.activeFilter);
-                filtered = all.filter(function(item) { return item.status === statusVal; });
+                filtered = filtered.filter(function(item) { return item.status === statusVal; });
               }
               self.filteredData = filtered;
               self.counts = filtered.length;

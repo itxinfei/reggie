@@ -106,9 +106,10 @@ public interface MarketingToolService extends IService<NewCustomerDiscount> {
      * @param page     页码
      * @param pageSize 每页条数
      * @param status   状态筛选（可选）
+     * @param name     活动名称模糊搜索（可选）
      * @return 分页结果
      */
-    Page<FlashSale> pageFlashSales(int page, int pageSize, Integer status);
+    Page<FlashSale> pageFlashSales(int page, int pageSize, Integer status, String name);
 
     /**
      * 限时抢购统计（各状态数量）

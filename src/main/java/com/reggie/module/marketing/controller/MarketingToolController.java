@@ -222,8 +222,9 @@ public class MarketingToolController {
     public R<Page<FlashSale>> pageFlashSales(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int pageSize,
-            @RequestParam(required = false) Integer status) {
-        return R.success(marketingToolService.pageFlashSales(page, pageSize, status));
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String name) {
+        return R.success(marketingToolService.pageFlashSales(page, pageSize, status, name));
     }
 
     /**
