@@ -58,6 +58,10 @@ public class DishEvaluationController {
             true) @Valid @RequestBody DishEvaluation evaluation) {
         log.info("用户新增菜品评价：userId={}, dishId={}, starRating={}",
                 BaseContext.getCurrentId(), evaluation.getDishId(), evaluation.getStarRating());
+        // 评价传图：携带图片时在日志明确标注，便于区分纯文字评价
+        if (evaluation.getImages() != null && !evaluation.getImages().isEmpty()) {
+            log.info("[评价-传图] 本次评价携带图片：dishId={}, images={}", evaluation.getDishId(), evaluation.getImages());
+        }
 
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {

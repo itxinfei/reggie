@@ -162,6 +162,19 @@
                                       :disabled="dish._submitted"
                                       placeholder="分享您的用餐体验（选填）" maxlength="200"></textarea>
                             <span class="eval-word-count" v-if="dish.content">{{ dish.content.length }}/200</span>
+                            <!-- 评价传图（每道菜最多3张）：上传到 /common/upload，提交时随评价写入 images -->
+                            <van-uploader
+                                v-if="!dish._submitted"
+                                class="eval-uploader"
+                                :file-list="dish._fileList"
+                                :max-count="3"
+                                :max-size="5 * 1024 * 1024"
+                                accept="image/*"
+                                multiple
+                                :after-read="function(file){ afterEvalRead(dish, file) }"
+                                :delete-image="function(file, detail){ afterEvalDelete(dish, file, detail) }"
+                                @oversize="onEvalOversize"
+                            ></van-uploader>
                         </div>
                     </div>
                 </div>
@@ -369,6 +382,48 @@
                     } catch (e) { /* 用户取消 */ }
                 },
                 // 工具方法
+                // ====== 评价图片上传（复用全站 /common/upload，最多3张、单张≤5MB） ======
+                afterEvalRead(dish, file) {
+                    // 多选时个别 Vant 版本以数组回调，逐个处理
+                    if (Array.isArray(file)) {
+                        for (let i = 0; i < file.length; i++) { this.afterEvalRead(dish, file[i]) }
+                        return
+                    }
+                    var item = { content: file.content || '', status: 'uploading', message: '上传中' }
+                    dish._fileList.push(item)
+                    var raw = file.file
+                    if (!raw) { item.status = 'failed'; item.message = '读取失败'; return }
+                    var fd = new FormData()
+                    fd.append('file', raw)
+                    $axios({ url: '/common/upload', method: 'post', data: fd }).then(function (up) {
+                        if (up && up.code === 1 && up.data) {
+                            dish.images.push(up.data)
+                            item.path = up.data
+                            item.status = 'done'
+                            item.message = ''
+                        } else {
+                            item.status = 'failed'
+                            item.message = (up && up.msg) || '上传失败'
+                        }
+                    }).catch(function () {
+                        item.status = 'failed'
+                        item.message = '网络异常'
+                    })
+                },
+                afterEvalDelete(dish, file, detail) {
+                    var item = file
+                    var fi = dish._fileList.indexOf(item)
+                    if (fi < 0 && detail && typeof detail.index === 'number') { fi = detail.index }
+                    if (fi >= 0) { dish._fileList.splice(fi, 1) }
+                    // 同步移除已提交路径，保证展示列表与 images 始终一致
+                    if (item.path) {
+                        var pi = dish.images.indexOf(item.path)
+                        if (pi >= 0) { dish.images.splice(pi, 1) }
+                    }
+                },
+                onEvalOversize() {
+                    vant.Toast.fail('图片大小不能超过5MB')
+                },
                 getImageList(images) {
                     if (!images) return []
                     if (Array.isArray(images)) return images
@@ -430,6 +485,8 @@
                                 dishName: d.name || '未知菜品',
                                 starRating: 0,
                                 content: '',
+                                images: [],       // 已上传成功的服务器图片路径
+                                _fileList: [],    // van-uploader 受控展示列表
                                 _submitted: evaluated
                             }
                         })
@@ -550,6 +607,16 @@
                             return
                         }
                     }
+                    // 图片仍在上传时不可提交，避免评价丢失图片
+                    for (let j = 0; j < dishes.length; j++) {
+                        var fl = dishes[j]._fileList || []
+                        for (let k = 0; k < fl.length; k++) {
+                            if (fl[k].status === 'uploading') {
+                                vant.Toast.fail('图片还在上传，请稍候')
+                                return
+                            }
+                        }
+                    }
                     this.submitLoading = true
                     // 修改点(2026-09-18)：原实现逐菜提交，任一失败即整体中断，已成功的菜与未提交的菜
                     // 混在一起，用户重试会把已成功的菜重复提交。现成功一道即响应式标记 _submitted 并跳过，
@@ -566,6 +633,8 @@
                                 content: (dish.content || '').trim()
                             }
                             if (dish.dishName) payload.dishName = dish.dishName
+                            // images 后端为 String（存 JSON 数组），有序图片路径
+                            if (dish.images && dish.images.length) payload.images = JSON.stringify(dish.images)
                             try {
                                 const res = await submitEvaluation(payload)
                                 if (res && res.code === 1) {

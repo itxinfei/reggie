@@ -400,6 +400,7 @@
   color: var(--color-text-hint);
   margin-top: 4rem;
 }
+.eval-uploader { margin-top: 10rem; }
 
 /* 写评价入口栏 */
 .write-eval-bar {
