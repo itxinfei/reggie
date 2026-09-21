@@ -15,7 +15,8 @@
 <!-- 功能：管理菜品与外卖平台的映射关系，支持上/下架同步、营业状态同步，按平台/状态筛选 -->
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="dish-mapping-app">
-  <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+  <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">商品平台映射管理</h1>
     <!-- 统一布局：统计卡片置顶（支持点击筛选：总数/已上架/已下架按状态过滤） -->
     <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -67,7 +68,7 @@
           <span class="ds-money">{{ formatPrice(row.price) }}</span>
         </template>
         <template #actions="{ row }">
-          <el-button v-if="row.status !== 1" type="text" size="small" class="btn-view" @click="syncDish(row, 'on_shelf')">上架</el-button>
+          <el-button v-if="row.status !== 1" type="text" size="small" class="btn-success" @click="syncDish(row, 'on_shelf')">上架</el-button>
           <el-button v-if="row.status === 1" type="text" size="small" class="btn-warning" @click="syncDish(row, 'off_shelf')">下架</el-button>
         </template>
       </crud-table>

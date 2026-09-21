@@ -13,7 +13,8 @@
 <!-- 功能：统一管理外卖平台接入，支持新增/编辑/启停用/删除平台配置，按状态统计卡片快速筛选 -->
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="platform-app">
-  <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+  <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">外卖平台对接管理</h1>
     <!-- 统计卡片：点击总数/已启用/已停用按状态过滤 -->
     <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
 
@@ -60,7 +61,12 @@
           <el-button type="text" size="small" :class="row.enabled === 1 ? 'btn-warning' : 'btn-success'" @click="toggle(row)">
             {{ row.enabled === 1 ? '停用' : '启用' }}
           </el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="remove(row)">删除</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && remove(row)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </template>
       </crud-table>
   </main>

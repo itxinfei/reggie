@@ -13,7 +13,8 @@
 <body>
 <a href="#main-content" class="skip-link">跳转到主内容</a>
 <div class="dashboard-container" id="platform-order-app">
-  <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+  <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">平台订单管理</h1>
     <!-- 统计卡片 -->
     <stat-cards :cards="statsCards"></stat-cards>
 
@@ -53,9 +54,9 @@
         <!-- 操作列契约：查看+主流转常显（≤3），拒单/取消等否定操作收「更多」 -->
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="openDetail(row)">查看</el-button>
-          <el-button v-if="row.status === 2" type="text" size="small" class="btn-view" @click="pushStatus(row, 'accept')">接单</el-button>
-          <el-button v-if="row.status === 3" type="text" size="small" class="btn-view" @click="pushStatus(row, 'prepare')">出餐</el-button>
-          <el-button v-if="row.status === 3" type="text" size="small" class="btn-view" @click="pushStatus(row, 'complete')">完成</el-button>
+          <el-button v-if="row.status === 2" type="text" size="small" class="btn-success" @click="pushStatus(row, 'accept')">接单</el-button>
+          <el-button v-if="row.status === 3" type="text" size="small" class="btn-success" @click="pushStatus(row, 'prepare')">出餐</el-button>
+          <el-button v-if="row.status === 3" type="text" size="small" class="btn-success" @click="pushStatus(row, 'complete')">完成</el-button>
           <el-dropdown v-if="row.status === 2 || row.status === 3" trigger="click"
             @command="(cmd) => pushStatus(row, cmd)" @click.native.stop>
             <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
@@ -79,7 +80,7 @@
     :close-on-click-modal="true"
   >
     <div v-if="detail" class="po-detail">
-      <el-form label-width="90px" size="small">
+      <el-form label-width="100px" size="small">
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="平台">{{ platformTypeText(detail.platformType) }}</el-form-item>
@@ -137,7 +138,7 @@
     submit-text="开始拉取"
     @submit="confirmPull"
   >
-    <el-form :model="pullForm" label-width="90px">
+    <el-form :model="pullForm" label-width="100px">
       <el-form-item label="平台">
         <el-select v-model="pullForm.platformType" placeholder="选择平台" style="width:100%;">
           <el-option label="美团" value="MEITUAN"></el-option>

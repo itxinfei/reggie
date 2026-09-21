@@ -47,7 +47,8 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="template-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">通知模板管理</h1>
       
       
       <!-- 数据统计卡片 -->
@@ -98,10 +99,15 @@
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="openDialog(row)">编辑</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="toggleStatus(row)">
+          <el-button type="text" size="small" :class="row.status === 1 ? 'btn-warning' : 'btn-success'" @click="toggleStatus(row)">
             {{ row.status === 1 ? '停用' : '启用' }}
           </el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && deleteHandle(row.id)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </template>
       </crud-table>
     </main>
@@ -116,7 +122,7 @@
       @close="formData.dialogVisible = false"
     >
       <!-- 修改点：补全 ref/:model/:rules 与 prop，启用 Element 校验（原 required 无 prop 不生效） -->
-      <el-form ref="templateForm" :model="formData" :rules="templateRules" label-width="90px" size="small">
+      <el-form ref="templateForm" :model="formData" :rules="templateRules" label-width="100px" size="small">
         <el-form-item label="模板名称" prop="templateName">
           <el-input v-model="formData.templateName" placeholder="如：订单确认通知"></el-input>
         </el-form-item>

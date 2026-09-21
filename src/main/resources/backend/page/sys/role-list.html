@@ -44,7 +44,8 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="role-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">角色管理</h1>
       
       
       <!-- 数据统计卡片 -->
@@ -74,7 +75,7 @@
         :page-size="pageSize"
         :total="counts"
         :show-actions="true"
-        :actions-width="280"
+        :actions-width="240"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -90,7 +91,12 @@
           <el-button type="text" size="small" class="btn-view" @click="openPermDialog(row)">权限分配</el-button>
           <el-button type="text" size="small" class="btn-view" @click="openUserDialog(row)">分配用户</el-button>
           <el-button type="text" size="small" class="btn-view" @click="openDialog(row)">编辑</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && deleteHandle(row.id)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </template>
       </crud-table>
     </main>
