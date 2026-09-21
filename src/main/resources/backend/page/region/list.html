@@ -14,7 +14,8 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="region-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">行政区划管理</h1>
       <!-- 修改点：统计卡片支持点击筛选（点击省份/城市/区县卡片按层级过滤数据，与层级下拉框互斥） -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
       <!-- 修改点：搜索栏使用 <table-bar> 统一组件 -->
@@ -47,7 +48,7 @@
         :total="counts"
         :loading="loading"
         :show-actions="true" :viewable="true"
-        :actions-width="240"
+        :actions-width="120"
         :page-sizes="[10, 20, 30, 50]"
         @page-change="onPageChange"
         @size-change="onSizeChange"
@@ -59,7 +60,12 @@
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="editHandle(row)">修改</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)">删除</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && deleteHandle(row.id)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </template>
       </crud-table>
     </main>
@@ -74,7 +80,7 @@
     >
       <!-- 修改点：移除误导性死 class demo-form-inline（label-width 80 合适，保持不变） -->
       <!-- 修改点：补全 ref/:model/:rules，启用 Element 校验（原仅手写 if 判断，属"假必填"不校验） -->
-      <el-form ref="regionForm" :model="formData" :rules="regionRules" label-width="80px" size="small">
+      <el-form ref="regionForm" :model="formData" :rules="regionRules" label-width="100px" size="small">
         <el-form-item label="地区名称：" prop="name">
           <el-input v-model="formData.name" placeholder="请输入地区名称" maxlength="50" />
         </el-form-item>

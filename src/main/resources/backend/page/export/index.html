@@ -9,16 +9,14 @@
     <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: var(--bg-page); color: var(--el-text-primary); font-family: var(--font-family-base); }
-
-        .dashboard-container { max-width: 1400px; margin: 0 auto; padding: 0 var(--space-5); }
+        body { background: var(--bg-page); color: var(--text-primary); font-family: var(--font-family-base); }
 
         /* 卡片网格 */
         .export-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 
         .export-card {
             background: var(--bg-surface); border-radius: var(--radius-md); padding: 24px;
-            box-shadow: var(--shadow-xs); border: 1px solid var(--el-border-light);
+            box-shadow: var(--shadow-xs); border: 1px solid var(--border-subtle);
             transition: box-shadow 0.2s;
         }
         .export-card:hover { box-shadow: var(--shadow-md); }
@@ -127,9 +125,10 @@
 <body>
     <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
     <a href="#main-content" class="skip-link">跳转到主内容</a>
-    <main class="container ds-page" id="main-content" role="main" aria-label="页面主要内容"
-          v-loading="anyExporting" element-loading-text="正在导出..." element-loading-background="rgba(0,0,0,0.5)">
-      <div class="dashboard-container">
+    <div class="dashboard-container" id="export-app">
+      <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title"
+            v-loading="anyExporting" element-loading-text="正在导出..." element-loading-background="rgba(0,0,0,0.5)">
+        <h1 class="sr-only" id="page-title">数据导出中心</h1>
 
         <div class="export-cards">
             <!-- 订单导出 -->
@@ -311,8 +310,8 @@
                 </div>
             </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
 
     <script src="../../plugins/vue/vue.js"></script>
     <!-- 修改点(2026-09-15)：补引 element-ui，与全站统一控件（此前页面用原生 input/select + 自写按钮/toast，风格割裂） -->

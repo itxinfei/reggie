@@ -26,7 +26,8 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="user-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">用户管理</h1>
       
       
       <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
@@ -63,7 +64,7 @@
         :selection="true"
         row-key="id"
         :show-actions="true"
-        :actions-width="240"
+        :actions-width="180"
         @selection-change="onSelectionChange"
         @page-change="onPageChange"
         @size-change="onSizeChange"
@@ -90,15 +91,15 @@
           <el-button
             type="text"
             size="small"
-            class="btn-view"
+            :class="row.status == 1 ? 'btn-warning' : 'btn-success'"
             @click="statusHandle(row)"
           >{{ row.status == 1 ? '禁用' : '启用' }}</el-button>
-          <el-button
-            type="text"
-            size="small"
-            class="btn-delete"
-            @click="deleteHandle(row.id)"
-          >删除</el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && deleteHandle(row.id)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </template>
       </crud-table>
     </main>

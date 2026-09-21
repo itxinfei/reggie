@@ -128,14 +128,14 @@
 
       <!-- 添加排班弹窗 -->
       <crud-dialog :show-submit="true" :show-cancel="true" title="添加排班" :visible.sync="dialog.visible" :submit-loading="submitting" size="md" @submit="submitForm">
-        <el-form ref="scheduleForm" :model="form" :rules="formRules" label-width="80px" size="small">
+        <el-form ref="scheduleForm" :model="form" :rules="formRules" label-width="100px" size="small">
           <el-form-item label="员工" prop="employeeId">
-            <el-select v-model="form.employeeId" placeholder="请选择员工" style="width:293px;" clearable>
+            <el-select v-model="form.employeeId" placeholder="请选择员工" clearable>
               <el-option v-for="emp in employeeOptions" :key="emp.id" :label="emp.name" :value="emp.id"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="日期" prop="date">
-            <el-date-picker v-model="form.date" type="date" value-format="yyyy-MM-dd" placeholder="选择日期" style="width:293px;"></el-date-picker>
+            <el-date-picker v-model="form.date" type="date" value-format="yyyy-MM-dd" placeholder="选择日期"></el-date-picker>
           </el-form-item>
           <el-form-item label="班次" prop="shift">
             <el-radio-group v-model="form.shift">
