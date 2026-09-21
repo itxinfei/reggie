@@ -15,7 +15,8 @@
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="app">
-    <main class="container ds-page" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">限时秒杀</h1>
       <!-- 统计卡片：全部/进行中/已暂停/已结束，点击可筛选 -->
       <stat-cards
         :cards="statsCards"
@@ -75,7 +76,7 @@
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="handleEdit(row)">编辑</el-button>
-          <el-button type="text" size="small" @click="handleToggleStatus(row)" :disabled="row.status === 0 || row.status === 3">
+          <el-button type="text" size="small" :class="row.status === 1 ? 'btn-warning' : 'btn-success'" @click="handleToggleStatus(row)" :disabled="row.status === 0 || row.status === 3">
             {{ row.status === 1 ? '暂停' : '启用' }}
           </el-button>
           <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
@@ -92,7 +93,7 @@
       :submit-loading="submitLoading"
       @submit="handleSubmit"
     >
-      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="120px" size="small">
+      <el-form :model="formData" :rules="formRules" ref="ruleForm" label-width="100px" size="small">
         <el-form-item label="活动名称" prop="name">
           <el-input v-model="formData.name" placeholder="请输入活动名称"></el-input>
         </el-form-item>

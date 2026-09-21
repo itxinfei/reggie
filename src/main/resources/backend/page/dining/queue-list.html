@@ -77,7 +77,8 @@
   <!-- 功能：堂食排队取号、叫号、入座全流程管理，支持按手机号/状态筛选、统计卡片快速过滤 -->
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="queue-app">
-    <main class="container" id="main-content" role="main" aria-label="排队叫号看板">
+    <main class="container" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">排队叫号</h1>
 
       <!-- 修改点：统计卡片支持点击筛选（点击按排队状态过滤数据，与状态下拉框联动） -->
       <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>

@@ -16,7 +16,8 @@
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
  <a href="#main-content" class="skip-link">跳转到主内容</a>
  <div class="dashboard-container" id="area-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">餐区管理</h1>
       <!-- ========== 数据统计卡片 ========== -->
       <!-- 修改点：使用 <stat-cards> 统一组件替代手写 HTML -->
       <stat-cards :cards="statsCards"></stat-cards>
@@ -48,7 +49,7 @@
         index-label="#"
         :index-width="45"
         :show-actions="true" :viewable="true"
-        :actions-width="240"
+        :actions-width="120"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >

@@ -21,7 +21,8 @@
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
   <div class="dashboard-container" id="reservation-app">
-    <main class="container" id="main-content" role="main" aria-label="页面主要内容">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">预订管理</h1>
       <!-- 统计卡片 -->
       <stat-cards
         :cards="statsCards"
@@ -64,14 +65,17 @@
           <el-button type="text" size="small" class="btn-view" @click="viewHandle(row)">详情</el-button>
           <el-button type="text" size="small" class="btn-view" @click="editHandle(row)"
             v-if="row.status === 'PENDING' || row.status === 'CONFIRMED'">编辑</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="confirmHandle(row.id)"
+          <el-button type="text" size="small" class="btn-success" @click="confirmHandle(row.id)"
             v-if="row.status === 'PENDING'">确认</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="arriveHandle(row.id)"
+          <el-button type="text" size="small" class="btn-success" @click="arriveHandle(row.id)"
             v-if="row.status === 'CONFIRMED'">到店</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="cancelHandle(row.id)"
-            v-if="row.status !== 'ARRIVED' && row.status !== 'CANCELLED'">取消</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row.id)"
-            v-if="row.status === 'CANCELLED'">删除</el-button>
+          <el-dropdown v-if="row.status !== 'ARRIVED'" trigger="click" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item v-if="row.status !== 'CANCELLED'" @click.native="cancelHandle(row.id)">取消</el-dropdown-item>
+              <el-dropdown-item v-if="row.status === 'CANCELLED'" @click.native="deleteHandle(row.id)" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
         </template>
       </crud-table>
     </main>
