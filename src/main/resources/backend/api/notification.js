@@ -70,6 +70,11 @@ const notificationApi = {
         return $axios({ url: '/notification/record/stats', method: 'get' });
     },
 
+    /** 重新发送一条全部失败的通知记录 */
+    resendRecord(id) {
+        return $axios({ url: '/notification/record/' + id + '/resend', method: 'post' });
+    },
+
     /** 获取业务类型枚举 */
     getBizTypes() {
         return $axios({ url: '/notification/biz-types', method: 'get' });

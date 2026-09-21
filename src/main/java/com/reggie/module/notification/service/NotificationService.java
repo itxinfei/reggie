@@ -66,6 +66,18 @@ public interface NotificationService {
     void sendScheduledRecord(NotificationRecord record);
 
     /**
+     * 重新发送一条「全部失败」的通知记录。
+     * <p>
+     * 仅 status=3（全部失败）可重发：整条重放，不会重复打扰已成功的目标；
+     * CAS 抢占 status 3->1 防并发/多实例重复重发。模板记录复用定时发送主流程，
+     * 简易记录（send-simple）按首次发送相同方式重放。
+     * </p>
+     *
+     * @param recordId 发送记录ID
+     */
+    void resendRecord(Long recordId);
+
+    /**
      * 发送单条短信
      *
      * @param phone    手机号

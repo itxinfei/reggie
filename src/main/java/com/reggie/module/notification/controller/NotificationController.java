@@ -324,6 +324,21 @@ public class NotificationController {
     }
 
     /**
+     * 重新发送一条「全部失败」的通知记录
+     * @param id 发送记录ID
+     * @return 操作结果
+     */
+    @PostMapping("/record/{id}/resend")
+    @Operation(summary = "重新发送", description = "重新发送一条全部失败的通知记录（短信/推送）")
+    @RequiresPermission("notification:send")
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
+    public R<String> resendRecord(
+            @Parameter(description = "发送记录ID", required = true) @PathVariable @Min(1) Long id) {
+        notificationService.resendRecord(id);
+        return R.success("已重新发送");
+    }
+
+    /**
      * 发送记录今日统计
      * <p>使用 SQL 聚合替代前端 pageSize:999 拉全量后 forEach 计算，避免全表扫描</p>
      *

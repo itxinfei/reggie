@@ -360,6 +360,8 @@
                             :total="recordTotal"
                             :loading="recordLoading"
                             empty-hint="暂无发送记录"
+                            :show-actions="true"
+                            :actions-width="90"
                             @page-change="onRecordPageChange"
                             @size-change="onRecordSizeChange"
                         >
@@ -377,6 +379,9 @@
                             </template>
                             <template #col-createTime="{ row }">
                                 {{ formatDate(row.createTime) }}
+                            </template>
+                            <template #actions="{ row }">
+                                <el-button v-if="row.status === 3" type="text" size="small" class="btn-view" @click="resendRecord(row)">重发</el-button>
                             </template>
                         </crud-table>
                     </div>
@@ -853,6 +858,21 @@
                 onRecordSizeChange: function (s) {
                     this.recordSize = s;
                     this.loadRecords(1);
+                },
+                resendRecord: function (row) {
+                    var self = this;
+                    ReggieUI.confirm('确定重新发送该记录？将向全部 ' + row.targetCount + ' 个目标重新发送。',
+                        '提示', { confirmButtonText: '重发', cancelButtonText: '取消', type: 'warning' })
+                        .then(function () {
+                            notificationApi.resendRecord(row.id).then(function (res) {
+                                if (res && String(res.code) === '1') {
+                                    ReggieUI.success('已重新发送');
+                                    self.loadRecords(self.recordPage);
+                                } else {
+                                    ReggieUI.error((res && res.msg) || '重发失败');
+                                }
+                            }).catch(function () {});
+                        }).catch(function () {});
                 },
 
                 // ==================== 统计 ====================

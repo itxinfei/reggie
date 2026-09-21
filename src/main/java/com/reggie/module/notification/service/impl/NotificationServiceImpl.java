@@ -730,6 +730,89 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     /**
+     * 重新发送一条「全部失败」的通知记录。
+     * 仅 status=3 可重发，CAS 3->1 抢占防并发重复；按是否有模板分流到对应重放逻辑。
+     */
+    @Override
+    public void resendRecord(Long recordId) {
+        if (recordId == null) {
+            throw new CustomException("记录ID不能为空");
+        }
+        NotificationRecord record = recordMapper.selectById(recordId);
+        if (record == null) {
+            throw new CustomException("发送记录不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(record.getTenantId())) {
+            throw new CustomException("无权操作该记录");
+        }
+        if (record.getStatus() == null || record.getStatus() != 3) {
+            throw new CustomException("仅发送失败的记录可重新发送");
+        }
+        // CAS 3(失败) -> 1(发送中)，仅抢占成功的请求执行重发
+        int claimed = recordMapper.update(null, new LambdaUpdateWrapper<NotificationRecord>()
+                .eq(NotificationRecord::getId, recordId)
+                .eq(NotificationRecord::getStatus, 3)
+                .set(NotificationRecord::getStatus, 1));
+        if (claimed == 0) {
+            throw new CustomException("记录状态已变更，请刷新后重试");
+        }
+        if (record.getTemplateId() != null) {
+            // 模板记录：复用定时发送主流程（加载模板/解析目标/逐目标发送/落结果）
+            doSendRecord(record, record.getTenantId());
+        } else {
+            // 简易记录（send-simple）：按首次简易发送相同方式重放
+            doResendSimpleRecord(record);
+        }
+    }
+
+    /**
+     * 重发「简易消息」记录（无模板），行为与 sendSimpleMessage 一致。
+     */
+    private void doResendSimpleRecord(NotificationRecord record) {
+        List<String> targets = parseRecordTargets(record);
+        if (targets.isEmpty()) {
+            markRecordFailed(record.getId(), 0, "目标列表为空");
+            return;
+        }
+        Integer channel = record.getChannel();
+        String content = record.getContent();
+        // 简易记录未存标题，推送统一用系统通知标题
+        String title = "系统通知";
+
+        Map<String, Long> userIdMap = resolveUserIds(targets, channel);
+
+        int successCount = 0;
+        int failCount = 0;
+        StringBuilder failReasons = new StringBuilder();
+        for (String target : targets) {
+            try {
+                boolean ok;
+                // 与 sendSimpleMessage 相同：channel==1 短信（简易模板），其余按推送
+                if (channel != null && channel == 1) {
+                    ok = sendSms(target, "瑞吉外卖", null, content);
+                } else {
+                    ok = sendPushToUser(target, title, content);
+                }
+                if (ok) {
+                    successCount++;
+                    syncToMarketingMessage(target, channel, title, content, userIdMap);
+                } else {
+                    failCount++;
+                    failReasons.append("[").append(target).append("]发送失败; ");
+                }
+            } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+                failCount++;
+                failReasons.append("[").append(target).append("]异常:").append(e.getMessage()).append("; ");
+                log.error("简易消息重发异常: target={}, channel={}", target, channel, e);
+            }
+        }
+        applySendResult(record.getId(), successCount, failCount, failReasons.toString());
+        log.info("[通知重发] 完成: recordId={}, 成功{}, 失败{}", record.getId(), successCount, failCount);
+    }
+
+    /**
      * 定时记录主发送流程：加载模板、解析目标、逐目标发送、更新结果。
      * 与立即发送(batchSend 非 scheduled 分支)行为一致，供 sendScheduledRecord 复用。
      */
