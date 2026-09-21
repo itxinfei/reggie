@@ -12,59 +12,59 @@
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js?v=20260917"></script>
         <style>
-            /* 收银台页样式（自包含，沿用 index.css 金色品牌令牌与卡片风格） */
-            .cashier-wrap { min-height: 100vh; background: #f5f6fa; padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+            /* 收银台页样式（2026-09-21：px→rem、硬编码色→index.css 令牌） */
+            .cashier-wrap { min-height: 100vh; background: var(--bg-page); padding-bottom: calc(88rem + env(safe-area-inset-bottom)); }
             .cashier-head {
-                height: 46px; display: flex; align-items: center; justify-content: center;
-                position: relative; background: #fff; border-bottom: 1px solid #e5e7eb;
+                height: 46rem; display: flex; align-items: center; justify-content: center;
                 position: sticky; top: 0; z-index: 10;
+                background: var(--bg-card); border-bottom: var(--separator);
             }
             .cashier-head .back, .cashier-head .home {
-                position: absolute; top: 0; height: 46px; min-width: 44px;
+                position: absolute; top: 0; height: 46rem; min-width: 44rem;
                 display: flex; align-items: center; justify-content: center;
-                font-size: 22px; color: #1f2937; text-decoration: none;
+                font-size: 22rem; color: var(--color-text-primary); text-decoration: none;
             }
-            .cashier-head .back { left: 4px; }
-            .cashier-head .home { right: 4px; font-size: 20px; }
-            .cashier-head .title { font-size: 17px; font-weight: 600; color: #1f2937; }
+            .cashier-head .back { left: 4rem; }
+            .cashier-head .home { right: 4rem; font-size: 20rem; }
+            .cashier-head .title { font-size: 17rem; font-weight: 600; color: var(--color-text-primary); }
             .amount-card {
-                background: #fff; margin: 12px; border-radius: 12px;
-                padding: 28px 20px 24px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+                background: var(--bg-card); margin: 12rem; border-radius: var(--radius-lg);
+                padding: 28rem 20rem 24rem; text-align: center; box-shadow: var(--shadow-sm);
             }
-            .amount-card .label { font-size: 13px; color: #9ca3af; margin-bottom: 8px; }
-            .amount-card .amount { font-size: 40px; font-weight: 700; color: #1f2937; line-height: 1.1; }
-            .amount-card .amount .sym { font-size: 20px; font-weight: 600; margin-right: 2px; }
-            .amount-card .order-no { margin-top: 12px; font-size: 12px; color: #9ca3af; word-break: break-all; }
-            .pay-card { background: #fff; margin: 12px; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-            .pay-item { display: flex; align-items: center; padding: 16px; min-height: 56px; box-sizing: border-box; }
-            .pay-item + .pay-item { border-top: 1px solid #f0f1f5; }
-            .pay-item .pay-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #fff; margin-right: 12px; }
-            .pay-icon.wechat { background: #07c160; }
-            .pay-icon.alipay { background: #1677ff; }
-            .pay-item .pay-name { flex: 1; font-size: 15px; color: #1f2937; }
-            .pay-item .pay-check { font-size: 20px; color: #ffc200; }
+            .amount-card .label { font-size: 13rem; color: var(--color-text-hint); margin-bottom: 8rem; }
+            .amount-card .amount { font-size: 40rem; font-weight: 700; color: var(--color-text-primary); line-height: 1.1; font-variant-numeric: tabular-nums; }
+            .amount-card .amount .sym { font-size: 20rem; font-weight: 600; margin-right: 2rem; }
+            .amount-card .order-no { margin-top: 12rem; font-size: 12rem; color: var(--color-text-hint); word-break: break-all; }
+            .pay-card { background: var(--bg-card); margin: 12rem; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+            .pay-item { display: flex; align-items: center; padding: 16rem; min-height: 56rem; box-sizing: border-box; }
+            .pay-item + .pay-item { border-top: var(--separator); }
+            .pay-item .pay-icon { width: 32rem; height: 32rem; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 22rem; color: var(--color-text-white); margin-right: 12rem; }
+            .pay-icon.wechat { background: var(--color-success); }
+            .pay-icon.alipay { background: #1677ff; } /* 支付宝品牌蓝，无品牌令牌，保留 */
+            .pay-item .pay-name { flex: 1; font-size: 15rem; color: var(--color-text-primary); }
+            .pay-item .pay-check { font-size: 20rem; color: var(--color-primary); }
             .mock-tip {
-                margin: 4px 12px 0; padding: 10px 12px; border-radius: 8px;
-                background: #fff8e1; color: #8a6d3b; font-size: 12px; line-height: 1.6;
-                display: flex; align-items: flex-start;
+                margin: 4rem 12rem 0; padding: 10rem 12rem; border-radius: var(--radius-md);
+                background: var(--color-primary-light); color: var(--color-primary-dark);
+                font-size: 12rem; line-height: 1.6; display: flex; align-items: flex-start;
             }
-            .mock-tip i { margin-right: 6px; font-size: 15px; line-height: 1.5; }
+            .mock-tip i { margin-right: 6rem; font-size: 15rem; line-height: 1.5; }
             .pay-bar {
                 position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-                padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-                background: #fff; border-top: 1px solid #e5e7eb;
-                display: flex; align-items: center; gap: 12px;
+                padding: 10rem 16rem calc(10rem + env(safe-area-inset-bottom));
+                background: var(--bg-card); border-top: var(--separator);
+                display: flex; align-items: center; gap: 12rem;
             }
-            .pay-bar .bar-amount { flex-shrink: 0; font-size: 13px; color: #4b5563; }
-            .pay-bar .bar-amount b { font-size: 20px; color: #f5222d; font-weight: 700; }
+            .pay-bar .bar-amount { flex-shrink: 0; font-size: 13rem; color: var(--color-text-secondary); }
+            .pay-bar .bar-amount b { font-size: 20rem; color: var(--color-price); font-weight: 700; }
             .pay-bar .confirm-btn {
-                flex: 1; height: 46px; border: none; border-radius: 23px;
-                background: #ffc200; color: #4a3500; font-size: 16px; font-weight: 600;
+                flex: 1; height: 46rem; border: none; border-radius: 23rem;
+                background: var(--color-primary); color: #4a3500; font-size: 16rem; font-weight: 600;
             }
             .pay-bar .confirm-btn:active { opacity: 0.85; }
-            .pay-bar .confirm-btn[disabled] { background: #e5e7eb; color: #9ca3af; }
-            .cashier-state { padding: 80px 24px; text-align: center; color: #9ca3af; }
-            .cashier-state i { font-size: 48px; display: block; margin-bottom: 12px; }
+            .pay-bar .confirm-btn[disabled] { background: var(--border-light); color: var(--color-text-hint); }
+            .cashier-state { padding: 80rem 24rem; text-align: center; color: var(--color-text-hint); }
+            .cashier-state i { font-size: 48rem; display: block; margin-bottom: 12rem; }
         </style>
     </head>
     <body>

@@ -46,11 +46,12 @@
 }
 
 #add_order .divContent .divAddress {
-  height: 120rem;
+  /* 修改点(2026-09-21)：固定 height 改 min-height，长地址/多行内容不再被裁切 */
+  min-height: 120rem;
   background: var(--bg-card);
   border-radius: var(--radius-lg);
   position: relative;
-  padding: 11rem var(--spacing-md) 0 var(--spacing-lg);
+  padding: 14rem var(--spacing-md) 12rem var(--spacing-lg);
   box-shadow: var(--shadow-card);
   cursor: pointer;
   transition: box-shadow var(--transition-fast);
@@ -159,11 +160,13 @@
 
 /* 修改点：el-image替换为原生img */
 #add_order .divContent .order .itemList .item .dish-image {
-  padding-top: 20rem;
-  padding-bottom: 20rem;
+  /* 修改点(2026-09-21)：删除异常 padding:20（content-box 下会把 64 高图压成仅 24 高） */
   width: 64rem;
   height: 64rem;
   object-fit: cover;
+  border-radius: var(--radius-md);
+  display: block;
+  flex-shrink: 0;
 }
 
 #add_order .divContent .order .itemList .item:first-child .desc {
@@ -171,9 +174,10 @@
 }
 
 #add_order .divContent .order .itemList .item .desc {
-  padding-top: 20rem;
-  padding-bottom: 20rem;
-  border-top: 2px solid var(--bg-hover);
+  /* 修改点(2026-09-21)：padding 20→12、分割线 2px→1px */
+  padding-top: 12rem;
+  padding-bottom: 12rem;
+  border-top: 1px solid var(--bg-hover);
   width: calc(100% - 64rem);
 }
 
@@ -269,7 +273,8 @@
 
 #add_order .divCart {
   width: 345rem;
-  height: 44rem;
+  /* 修改点(2026-09-21)：底栏 44→56，主操作触达区更舒展（对齐美团结算条） */
+  height: 56rem;
   opacity: 1;
   background: var(--bg-cart-bar);
   border-radius: var(--radius-xl);
@@ -309,12 +314,12 @@
   letter-spacing: 0rem;
   position: absolute;
   left: 92rem;
-  top: 10rem;
+  top: 11rem;
 }
 
 #add_order .divCart .divNum span:last-child {
-  /* 修改点(2026-09-17)：实付金额 20→24rem/600，底部栏视觉锚点更强 */
-  font-size: 24rem;
+  /* 修改点(2026-09-21)：实付金额 24→20rem，与美团结算条金额档对齐 */
+  font-size: 20rem;
   font-weight: 600;
 }
 
@@ -331,7 +336,7 @@
   line-height: 40rem;
   position: absolute;
   right: 5rem;
-  top: 2rem;
+  top: 8rem;
 }
 
 #add_order .divCart .btnSubmit {
@@ -397,7 +402,7 @@
   font-family: "PingFangSC", "PingFangSC-Semibold";
   font-weight: 600;
   color: var(--color-text-primary);
-  border-bottom: 2px solid var(--bg-hover);
+  border-bottom: 1px solid var(--bg-hover);
   margin-bottom: 8rem;
 }
 
@@ -414,7 +419,7 @@
   border-radius: var(--radius-md);
   padding: 0 12rem;
   cursor: pointer;
-  border: 2px solid var(--bg-hover);
+  border: 1px solid var(--bg-hover);
   transition: all 0.2s;
 }
 
@@ -436,18 +441,21 @@
   justify-content: center;
 }
 
-/* 微信绿 */
+/* 微信：浅绿底 + 品牌绿图标（美团式色块，纯色无背景偏单薄） */
 #add_order .pay-wechat-icon {
+  background: rgba(7, 193, 96, 0.12);
   color: #07c160;
 }
 
-/* 支付宝蓝 */
+/* 支付宝：浅蓝底 + 品牌蓝图标 */
 #add_order .pay-alipay-icon {
+  background: rgba(22, 119, 255, 0.10);
   color: #1677ff;
 }
 
-/* 货到付款 */
+/* 货到付款：中性灰底 */
 #add_order .pay-cod-icon {
+  background: var(--bg-page);
   color: var(--color-text-secondary);
 }
 
@@ -575,7 +583,7 @@
   font-family: "PingFangSC", "PingFangSC-Semibold";
   font-weight: 600;
   color: var(--color-text-primary);
-  border-bottom: 2px solid var(--bg-hover);
+  border-bottom: 1px solid var(--bg-hover);
   margin-bottom: 8rem;
 }
 
@@ -596,7 +604,7 @@
   align-items: center;
   height: 64rem;
   border-radius: var(--radius-md);
-  border: 2px solid var(--bg-hover);
+  border: 1px solid var(--bg-hover);
   padding: 0 12rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -736,7 +744,7 @@
   border-radius: var(--radius-md);
   padding: 0 14rem;
   cursor: pointer;
-  border: 2px solid var(--bg-hover);
+  border: 1px solid var(--bg-hover);
   margin-bottom: 8rem;
   transition: all 0.2s;
 }
@@ -871,7 +879,7 @@
   min-width: 30%;
   text-align: center;
   padding: 10rem 6rem;
-  border: 2px solid var(--bg-hover);
+  border: 1px solid var(--bg-hover);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s;

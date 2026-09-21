@@ -1,12 +1,5 @@
 /* 修改点：统一头部品牌色渐变，与全局设计系统对齐 */
 
-/* ---- 订单页专属令牌（收敛按钮状态色硬编码 hex） ---- */
-:root {
-  --order-cancel-border: #ffcccc;       /* 取消按钮浅红边框 */
-  --order-cancel-active-bg: #ffebeb;   /* 取消按钮激活背景 */
-  --order-eval-active-bg: #fff8e1;     /* 评价按钮激活背景（浅金） */
-}
-
 #order {
   height: 100%;
 }
@@ -248,8 +241,8 @@
 }
 
 #order .dish-img {
-  width: 52rem;
-  height: 52rem;
+  width: 56rem;
+  height: 56rem;
   border-radius: var(--radius-md);
   object-fit: cover;
   flex-shrink: 0;
@@ -328,7 +321,9 @@
 }
 
 #order .act-btn {
-  height: 32rem;
+  /* 修改点(2026-09-21)：高 32→36 视觉更稳；::after 透明扩命中区到 44 */
+  position: relative;
+  height: 36rem;
   padding: 0 16rem;
   border-radius: var(--radius-xl);
   font-size: var(--font-size-sm);
@@ -339,6 +334,16 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;
+}
+
+/* 透明命中区：视觉高 36，实际可点高度 44（移动端手指友好） */
+#order .act-btn::after {
+  content: '';
+  position: absolute;
+  top: -4rem;
+  bottom: -4rem;
+  left: -8rem;
+  right: -8rem;
 }
 
 #order .act-btn:active {
