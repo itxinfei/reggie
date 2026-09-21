@@ -82,9 +82,6 @@ public class EmployeeController {
     @Autowired
     private RoleService roleService;
 
-    @Autowired(required = false)
-    private com.reggie.utils.SMSUtils smsUtils;
-
     @Value("${reggie.sms.sign-name:瑞吉外卖}")
     private String smsSignName = "瑞吉外卖";
 
@@ -471,25 +468,19 @@ public class EmployeeController {
 
         employeeService.save(employee);
 
-        // 发送初始密码短信
+        // 发送初始密码短信（与 UserController 验证码同一静态链路）：
+        // 凭证+模板配置完整则真实发送（日志同时打印），否则 SMSUtils 自动进入控制台模式——
+        // 初始密码打印到服务端日志、不调用外部接口、流程继续。
+        // 员工记录已落库，短信链路异常仅记录日志，不影响本次新增结果。
         if (employee.getPhone() != null && !employee.getPhone().isEmpty()) {
-            if (smsUtils != null && smsTemplateCode != null && !smsTemplateCode.isEmpty() && !smsMockMode) {
-                try {
-                    String smsParam = "{\"name\":\"" + employee
-                            .getName() + "\",\"password\":\"" + initialPassword + "\"}";
-                    smsUtils.sendMessage(smsSignName, smsTemplateCode, employee.getPhone(), smsParam);
-                    log.info("初始密码短信发送成功 - empId: {}, phone: {}", employee.getId(), LogMaskUtils.maskPhone(employee
-                            .getPhone()));
-                } catch (Exception e) {
-                    // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                    log.error("初始密码短信发送失败 - empId: {}, phone: {}, error: {}", employee.getId(), LogMaskUtils
-                            .maskPhone(employee.getPhone()), e.getMessage(), e);
-                }
-            } else {
-                // 控制台模式（非 Mock）：未配置短信或处于 mock-mode，不调用短信接口，
-                // 初始密码打印到控制台，员工可据此登录
-                log.warn("[短信-控制台模式] 员工初始密码不实际发送 - 姓名：{}，手机号：{}，初始密码：{}",
-                        employee.getName(), LogMaskUtils.maskPhone(employee.getPhone()), initialPassword);
+            try {
+                com.reggie.utils.SMSUtils.sendMessage(smsSignName, smsTemplateCode, employee.getPhone(), initialPassword);
+                log.info("初始密码短信已处理 - empId: {}, 姓名: {}, phone: {}",
+                        employee.getId(), employee.getName(), LogMaskUtils.maskPhone(employee.getPhone()));
+            } catch (Exception e) {
+                // 宽异常兜底：仅真实发送链路会抛错，捕获后不影响员工新增主流程
+                log.error("初始密码短信发送失败 - empId: {}, phone: {}, error: {}",
+                        employee.getId(), LogMaskUtils.maskPhone(employee.getPhone()), e.getMessage(), e);
             }
         }
 
