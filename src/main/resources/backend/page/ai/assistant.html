@@ -6,7 +6,7 @@
     <title>AI 经营分析助手 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../styles/tokens.css?v=20260920a" />
     <link rel="stylesheet" href="../../styles/main.css?v=20260920a" />
-    <link rel="stylesheet" href="../../styles/ai-chat.css?v=20260923b" />
+    <link rel="stylesheet" href="../../styles/ai-chat.css?v=20260924" />
 </head>
 <body>
     <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -258,37 +258,47 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="composer-row">
-                            <!-- 图片按钮：供应商无 vision 能力时置灰，点击给明确提示 -->
-                            <button type="button" class="image-btn"
-                                    :class="{ 'is-off': !visionEnabled }"
-                                    :disabled="loading"
-                                    :title="imageButtonTitle"
-                                    @click="pickImage" aria-label="上传图片">
-                                <i class="ri-image-add-line" aria-hidden="true"></i>
-                            </button>
-                            <div class="input-wrap">
-                                <textarea
-                                    ref="inputEl"
-                                    v-model="inputText"
-                                    rows="1"
-                                    :placeholder="inputPlaceholder"
-                                    @keydown="onInputKeydown"
-                                    @paste="onPasteImage"
-                                    @input="autoGrow"
-                                    maxlength="4000"
-                                    aria-label="消息输入框"
-                                ></textarea>
-                                <span class="char-count" :class="{ over: inputText.length >= 4000 }">
+                        <!-- 多行输入：自适应增高（最高 180px 后滚动），Enter 发送 / Shift+Enter 换行 -->
+                        <textarea
+                            ref="inputEl"
+                            v-model="inputText"
+                            rows="1"
+                            class="composer-input"
+                            :placeholder="inputPlaceholder"
+                            @keydown="onInputKeydown"
+                            @paste="onPasteImage"
+                            @input="autoGrow"
+                            maxlength="4000"
+                            aria-label="消息输入框"
+                        ></textarea>
+
+                        <!-- 底部工具条：左侧常驻工具、右侧圆形发送/停止钮（豆包风格） -->
+                        <div class="composer-footer">
+                            <div class="composer-tools">
+                                <!-- 图片工具：常驻可见，供应商无 vision 时置灰但保留位置，点击给明确提示 -->
+                                <button type="button" class="tool-chip image-btn"
+                                        :class="{ 'is-off': !visionEnabled }"
+                                        :disabled="loading"
+                                        :title="imageButtonTitle"
+                                        @click="pickImage" aria-label="上传图片">
+                                    <i class="ri-image-line" aria-hidden="true"></i>
+                                    <span>图片</span>
+                                </button>
+                            </div>
+                            <div class="composer-send">
+                                <span class="char-count" v-show="inputText.length > 3600"
+                                      :class="{ over: inputText.length >= 4000 }">
                                     {{ inputText.length }}/4000
                                 </span>
+                                <button v-if="!loading" type="button" class="send-btn"
+                                        @click="sendMessage()" :disabled="!canSend" aria-label="发送消息">
+                                    <i class="ri-arrow-up-line" aria-hidden="true"></i>
+                                </button>
+                                <button v-else type="button" class="stop-btn"
+                                        @click="stopGenerate" aria-label="停止生成">
+                                    <i class="ri-stop-fill" aria-hidden="true"></i>
+                                </button>
                             </div>
-                            <button v-if="!loading" class="send-btn" @click="sendMessage()" :disabled="!canSend">
-                                发送
-                            </button>
-                            <button v-else class="stop-btn" @click="stopGenerate" aria-label="停止生成">
-                                <i class="ri-stop-fill" aria-hidden="true"></i> 停止
-                            </button>
                         </div>
                     </div>
                     <!-- 隐藏的文件选择框：JPG/PNG/WebP，最多 3 张 -->
@@ -1114,7 +1124,7 @@
                     var el = this.$refs.inputEl;
                     if (!el) return;
                     el.style.height = 'auto';
-                    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+                    el.style.height = Math.min(el.scrollHeight, 180) + 'px';
                 },
 
                 autoGrowReset: function() {

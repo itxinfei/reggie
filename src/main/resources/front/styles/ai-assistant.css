@@ -822,3 +822,104 @@
     .attach-thumb { width: 50px; height: 50px; }
 }
 
+/* ============================================================
+   豆包风格输入卡片 v2（2026-09-21）
+   统一大圆角输入卡片：自适应多行 + 底部工具条（左语音/图片圆钮，右圆形发送/停止）
+   取代上方旧的“按钮与输入框横向分离 / composer-row”样式
+   ============================================================ */
+.input-area {
+    display: block;
+    padding: 10px var(--spacing-md) calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: none;
+    background: var(--bg-card);
+}
+.composer {
+    border: 1px solid var(--ai-border-light);
+    border-radius: 18px;
+    background: var(--bg-card);
+    padding: 9px 12px 7px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.composer:focus-within {
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+.composer-input {
+    display: block; width: 100%;
+    border: none; outline: none; resize: none;
+    background: transparent;
+    -webkit-appearance: none; appearance: none;
+    padding: 6px 4px 4px;
+    font-size: var(--font-size-md); line-height: 1.5;
+    font-family: inherit; color: var(--color-text-primary);
+    max-height: 180px; overflow-y: auto;
+}
+.composer-input::placeholder { color: var(--color-text-hint); font-size: var(--font-size-md); }
+.composer-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--spacing-sm); margin-top: 6px;
+}
+.composer-tools { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.composer-send { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+
+/* 工具圆形图标钮（语音 / 图片） */
+.tool-icon {
+    width: 36px; height: 36px; padding: 0;
+    border: 1px solid var(--ai-border-light); border-radius: var(--radius-round);
+    background: var(--bg-card); color: var(--color-text-secondary);
+    font-size: 18px; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0; transition: all 0.2s;
+}
+.tool-icon:active { background: var(--bg-hover); transform: scale(0.94); }
+.tool-icon.image-btn.is-off {
+    color: var(--color-text-hint); background: var(--bg-card);
+    cursor: help; opacity: 0.6;
+}
+
+/* 圆形发送钮：有内容品牌金深字、禁用浅灰 */
+.send-btn {
+    width: 36px; height: 36px; padding: 0;
+    border: none; border-radius: var(--radius-round);
+    background: var(--color-primary); color: var(--color-text-primary);
+    font-size: 19px; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0; transition: all 0.2s;
+}
+.send-btn:disabled { background: var(--color-text-disabled); color: var(--color-text-white); cursor: not-allowed; }
+.send-btn:not(:disabled):active { transform: scale(0.92); opacity: 0.9; }
+/* 圆形停止钮：生成中取代发送钮，深克制色 */
+.stop-btn {
+    width: 36px; height: 36px; padding: 0;
+    border: none; border-radius: var(--radius-round);
+    background: var(--color-text-primary); color: var(--color-text-white);
+    font-size: 15px; line-height: 1;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0; transition: all 0.2s;
+}
+.stop-btn:active { transform: scale(0.92); opacity: 0.85; }
+
+/* 字数：接近上限才出现（v-show 控制），超长变红 */
+.char-count { position: static; font-size: 11px; color: var(--color-text-hint); line-height: 1; }
+.char-count.over { color: var(--color-danger); }
+
+/* 缩略图条在卡片内收紧 */
+.attach-bar { padding: 2px 2px 0; }
+
+/* 小屏：卡片与按钮收紧 */
+@media screen and (max-width: 360px) {
+    .input-area { padding-left: var(--spacing-sm); padding-right: var(--spacing-sm); }
+    .composer { border-radius: 16px; }
+    .tool-icon, .send-btn, .stop-btn { width: 34px; height: 34px; }
+}
+
+/* 暗色模式：输入卡片与工具钮走暗色输入底 */
+.ai-container.dark-mode .composer {
+    background: var(--ai-dark-bg-input); border-color: var(--ai-dark-border-input);
+}
+.ai-container.dark-mode .tool-icon {
+    background: var(--ai-dark-bg-input); border-color: var(--ai-dark-border-input);
+    color: var(--ai-dark-text-secondary);
+}
+.ai-container.dark-mode .tool-icon.image-btn.is-off { color: var(--ai-dark-text-muted); }
+

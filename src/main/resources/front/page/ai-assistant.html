@@ -11,7 +11,7 @@
     <!-- 修改点：补充加载完整 remixicon.css（此前仅加载 fallback，ri-moon-line/ri-menu-line/ri-close-line 等 header 图标不渲染） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css">
     <script src="../js/icon-fallback.js?v=20260917"></script>
-    <link rel="stylesheet" href="../styles/ai-assistant.css?v=20260923">
+    <link rel="stylesheet" href="../styles/ai-assistant.css?v=20260924">
 
 </head>
 <body>
@@ -197,49 +197,63 @@
             </template>
         </div>
 
-        <!-- 输入区：Enter 发送（仅物理键盘）/ Shift+Enter 换行，移动端回车正常换行不发送；支持图片（按供应商视觉能力开关） -->
+        <!-- 输入区：豆包风格统一输入卡片——自适应多行、左工具组（语音/图片）、右圆形发送/停止钮 -->
         <div class="input-area">
-            <!-- 待发送图片缩略图条 -->
-            <div class="attach-bar" v-if="pendingAttachments.length">
-                <div class="attach-thumb" v-for="(item, aIdx) in pendingAttachments" :key="item.uid">
-                    <img :src="item.localUrl" alt="待发送图片">
-                    <div class="attach-mask" v-if="item.uploading">
-                        <i class="ri-loader-4-line ai-attach-spin" aria-hidden="true"></i>
+            <div class="composer">
+                <!-- 待发送图片缩略图（卡片内顶部） -->
+                <div class="attach-bar" v-if="pendingAttachments.length">
+                    <div class="attach-thumb" v-for="(item, aIdx) in pendingAttachments" :key="item.uid">
+                        <img :src="item.localUrl" alt="待发送图片">
+                        <div class="attach-mask" v-if="item.uploading">
+                            <i class="ri-loader-4-line ai-attach-spin" aria-hidden="true"></i>
+                        </div>
+                        <button type="button" class="attach-remove" @click="removePendingImage(aIdx)" aria-label="移除图片">
+                            <i class="ri-close-line" aria-hidden="true"></i>
+                        </button>
                     </div>
-                    <button type="button" class="attach-remove" @click="removePendingImage(aIdx)" aria-label="移除图片">
-                        <i class="ri-close-line" aria-hidden="true"></i>
-                    </button>
                 </div>
-            </div>
-            <div class="composer-row">
-                <button class="voice-btn" :class="{'recording': isRecording}" @click="toggleVoice" title="语音输入" aria-label="语音输入">
-                    <i class="ri-mic-line" aria-hidden="true"></i>
-                </button>
-                <button type="button" class="image-btn" :class="{'is-off': !visionEnabled}"
-                        :disabled="loading" :title="imageButtonTitle"
-                        @click="pickImage" aria-label="发送图片">
-                    <i class="ri-image-add-line" aria-hidden="true"></i>
-                </button>
-                <div class="input-wrap">
-                    <textarea
-                        ref="inputArea"
-                        v-model="inputText"
-                        :placeholder="inputPlaceholder"
-                        @keydown="onInputKeydown"
-                        @input="autoResizeInput"
-                        @paste="onPasteImage"
-                        rows="1"
-                        maxlength="4000"
-                        class="input-textarea"
-                    ></textarea>
-                    <span class="char-count" :class="{ over: inputText.length >= 4000 }">{{ inputText.length }}/4000</span>
+
+                <!-- 多行输入：自适应增高（最高 180px 后滚动），物理键盘 Enter 发送 / 移动端回车换行 -->
+                <textarea
+                    ref="inputArea"
+                    v-model="inputText"
+                    :placeholder="inputPlaceholder"
+                    @keydown="onInputKeydown"
+                    @input="autoResizeInput"
+                    @paste="onPasteImage"
+                    rows="1"
+                    maxlength="4000"
+                    class="composer-input"
+                ></textarea>
+
+                <!-- 底部工具条：左工具组、右发送组 -->
+                <div class="composer-footer">
+                    <div class="composer-tools">
+                        <button type="button" class="tool-icon voice-btn"
+                                :class="{'recording': isRecording}"
+                                @click="toggleVoice" title="语音输入" aria-label="语音输入">
+                            <i class="ri-mic-line" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" class="tool-icon image-btn"
+                                :class="{'is-off': !visionEnabled}"
+                                :disabled="loading" :title="imageButtonTitle"
+                                @click="pickImage" aria-label="发送图片">
+                            <i class="ri-image-line" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="composer-send">
+                        <span class="char-count" v-show="inputText.length > 3600"
+                              :class="{ over: inputText.length >= 4000 }">{{ inputText.length }}/4000</span>
+                        <button v-if="!loading" type="button" class="send-btn"
+                                @click="sendMessage()" :disabled="!canSend" aria-label="发送">
+                            <i class="ri-arrow-up-line" aria-hidden="true"></i>
+                        </button>
+                        <button v-else type="button" class="stop-btn"
+                                @click="stopGenerate" aria-label="停止生成">
+                            <i class="ri-stop-fill" aria-hidden="true"></i>
+                        </button>
+                    </div>
                 </div>
-                <button v-if="!loading" class="send-btn" @click="sendMessage()" :disabled="!canSend" aria-label="发送">
-                    <i class="ri-send-plane-fill" aria-hidden="true"></i>
-                </button>
-                <button v-else class="stop-btn" @click="stopGenerate" aria-label="停止生成">
-                    <i class="ri-stop-fill" aria-hidden="true"></i>
-                </button>
             </div>
             <!-- 原生选文件（隐藏），accept 随上传器白名单走 -->
             <input ref="imageInput" type="file" class="native-file-input"
@@ -654,7 +668,7 @@
                     var el = this.$refs.inputArea;
                     if (!el) return;
                     el.style.height = 'auto';
-                    var newHeight = Math.min(el.scrollHeight, 120);
+                    var newHeight = Math.min(el.scrollHeight, 180);
                     el.style.height = newHeight + 'px';
                 },
                 resetInputHeight: function() {
