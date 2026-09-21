@@ -589,13 +589,13 @@
           var self = this;
           if (row.details && row.details.length) {
             self.recordItems = row.details.map(function(d) {
-              return { materialId: d.materialId, materialName: d.materialName || '食材#'+d.materialId, bookQty: d.bookQty || 0, actualStock: d.actualQty && d.actualQty !== 0 ? d.actualQty : '' };
+              return { materialId: d.materialId, materialName: d.materialName || '食材#'+d.materialId, bookQty: d.bookQty || 0, actualStock: (d.actualQty != null && d.actualQty !== '') ? d.actualQty : '' };
             });
           } else {
             stockCheckDetails(row.id).then(function(res) {
               if (String(res.code) === '1' && res.data) {
                 self.recordItems = res.data.map(function(d) {
-                  return { materialId: d.materialId, materialName: d.materialName || '食材#'+d.materialId, bookQty: d.bookQty || 0, actualStock: d.actualQty && d.actualQty !== 0 ? d.actualQty : '' };
+                  return { materialId: d.materialId, materialName: d.materialName || '食材#'+d.materialId, bookQty: d.bookQty || 0, actualStock: (d.actualQty != null && d.actualQty !== '') ? d.actualQty : '' };
                 });
               }
             });
@@ -633,7 +633,8 @@
           var self = this;
           // 先加载明细确认
           var doComplete = function(details) {
-            var items = details.filter(function(d) { return d.actualQty && d.actualQty !== 0; })
+            // 实盘为 0 表示售罄清零，是有效值，不能因 falsy 被排除，否则该项库存不会被调整、盈亏也出错
+            var items = details.filter(function(d) { return d.actualQty != null && d.actualQty !== ''; })
               .map(function(d) { return { materialId: d.materialId, actualStock: d.actualQty }; });
             if (items.length === 0) {
               ReggieUI.warning('请先录入实盘数量再完成盘点');

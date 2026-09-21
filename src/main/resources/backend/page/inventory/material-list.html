@@ -104,19 +104,19 @@
           </el-col>
           <el-col :xs="24" :sm="12">
             <el-form-item label="库存数量：" prop="stockQty">
-              <el-input v-model="formData.stockQty" type="number" placeholder="请输入库存数量" />
+              <el-input v-model.number="formData.stockQty" type="number" placeholder="请输入库存数量" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :xs="24" :sm="12">
             <el-form-item label="最低库存：" prop="minStock">
-              <el-input v-model="formData.minStock" type="number" placeholder="请输入最低库存预警值" />
+              <el-input v-model.number="formData.minStock" type="number" placeholder="请输入最低库存预警值" />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12">
             <el-form-item label="单价：" prop="unitPrice">
-              <el-input v-model="formData.unitPrice" type="number" placeholder="请输入单价" />
+              <el-input v-model.number="formData.unitPrice" type="number" placeholder="请输入单价" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -299,26 +299,32 @@
           },
           // 修改点：统一方法名 fetchData（供 crud-table 分页事件调用）；reloadStats=true 才重算全局统计
           async fetchData(reloadStats = true) {
-            const params = { page: this.page, pageSize: this.pageSize }
-            if (this.input.name) params.name = this.input.name
-            if (this.input.categoryId) params.categoryId = this.input.categoryId
-            // 修改点：传递状态筛选参数到后端
-            if (this.activeFilter && this.activeFilter !== 'low') params.status = this.activeFilter
+            const isLow = this.activeFilter === 'low'
+            // 库存预警必须走全量预警接口：只过滤分页当前页会漏掉其他页的低库存项，total 也会失真
+            const requests = []
+            if (isLow) {
+              requests.push(materialWarning())
+            } else {
+              const params = { page: this.page, pageSize: this.pageSize }
+              if (this.input.name) params.name = this.input.name
+              if (this.input.categoryId) params.categoryId = this.input.categoryId
+              // 修改点：传递状态筛选参数到后端
+              if (this.activeFilter) params.status = this.activeFilter
+              requests.push(materialPage(params))
+            }
 
             // 修改点：F9 性能 — 列表只查当前页，全局统计仅 reloadStats 时重算
-            const requests = [materialPage(params)]
             if (reloadStats) { requests.push(this.loadMaterialStats()) }
             const results = await Promise.all(requests)
             const materialRes = results[0]
-            // 修改点：库存预警在前端过滤
-            if (materialRes && materialRes.data && materialRes.data.records && this.activeFilter === 'low') {
-              const records = materialRes.data.records
-              materialRes.data.records = records.filter(function(r) { return r.stockQty <= r.minStock })
-              materialRes.data.total = materialRes.data.records.length
-            }
 
             // 处理食材列表数据
-            if (String(materialRes.code) === '1') {
+            if (isLow) {
+              const all = (String(materialRes.code) === '1' && Array.isArray(materialRes.data)) ? materialRes.data : []
+              const start = (this.page - 1) * this.pageSize
+              this.tableData = all.slice(start, start + this.pageSize)
+              this.counts = all.length
+            } else if (String(materialRes.code) === '1') {
               this.tableData = materialRes.data.records
               this.counts = Number(materialRes.data.total)
             } else {

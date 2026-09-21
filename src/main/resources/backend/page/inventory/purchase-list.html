@@ -1011,7 +1011,20 @@
           if (!valid) { ReggieUI.warning('请完善表单必填项'); return }
 
           const fd = self.formData
-          if (!fd.details.length || !fd.details[0].materialId) { ReggieUI.error('请添加至少一条采购明细'); return }
+          // 提交前逐行校验：任一行不合格即在创建采购单之前中断并定位到具体行，
+          // 避免静默丢行、提交 0/负数量或漏填单价
+          if (!fd.details.length) { ReggieUI.error('请添加至少一条采购明细'); return }
+          for (let i = 0; i < fd.details.length; i++) {
+            const d = fd.details[i]
+            const rowNo = i + 1
+            if (d.materialId === '' || d.materialId == null) { ReggieUI.error('第 ' + rowNo + ' 行请选择食材'); return }
+            const qty = Number(d.qty)
+            if (d.qty === '' || d.qty == null || isNaN(qty)) { ReggieUI.error('第 ' + rowNo + ' 行请输入采购数量'); return }
+            if (qty <= 0) { ReggieUI.error('第 ' + rowNo + ' 行采购数量必须大于 0'); return }
+            const price = Number(d.unitPrice)
+            if (d.unitPrice === '' || d.unitPrice == null || isNaN(price)) { ReggieUI.error('第 ' + rowNo + ' 行请输入单价'); return }
+            if (price < 0) { ReggieUI.error('第 ' + rowNo + ' 行单价不能为负数'); return }
+          }
 
           // 修改点：全流程包裹 submitting，保证按钮 loading 与最终复位
           self.submitting = true
@@ -1019,7 +1032,8 @@
             const res = await addPurchase({ supplierId: fd.supplierId, operator: fd.operator, remark: fd.remark })
             if (res.code !== 1) { ReggieUI.error(res.msg || '创建失败'); return }
             const orderId = res.data.id || res.data
-            const details = fd.details.filter(function(d) { return d.materialId && d.qty })
+            // 明细已在提交前逐行校验通过，全部合法，不再静默过滤丢行
+            const details = fd.details
             await Promise.all(details.map(function(d) {
               return addPurchaseDetail({ orderId: orderId, materialId: d.materialId, qty: Number(d.qty), unitPrice: Number(d.unitPrice) })
             }))
