@@ -15,6 +15,26 @@
     <!-- Remix Icon v4.6 — 2700+ 免费商用图标，替代原 iconfont（仅7个图标） -->
     <link href="plugins/remixicon/remixicon.css" rel="stylesheet" />
     <style>
+    /* ── 全局菜单检索命令面板（Ctrl+K）── */
+    .palette-trigger { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 11px; margin-right: 14px; background: var(--bg-surface, #fff); border: 1px solid var(--border-default, #e5e7eb); border-radius: 8px; color: var(--text-secondary, #4b5563); font-size: 13px; cursor: pointer; transition: border-color .2s, box-shadow .2s; }
+    .palette-trigger:hover { border-color: var(--color-brand-500, #ffc200); }
+    .palette-trigger-text { color: var(--text-muted, #9ca3af); }
+    .palette-trigger-kbd { font-family: inherit; font-size: 11px; color: var(--text-muted, #9ca3af); background: var(--bg-subtle, #f5f6fa); border: 1px solid var(--border-default, #e5e7eb); border-radius: 4px; padding: 1px 5px; }
+    .palette-overlay { position: fixed; inset: 0; z-index: 2200; background: rgba(17,24,39,.42); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }
+    .palette { width: 600px; max-width: calc(100vw - 32px); background: var(--bg-surface, #fff); border-radius: 12px; box-shadow: 0 16px 48px rgba(17,24,39,.22); overflow: hidden; }
+    .palette-search { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border-default, #e5e7eb); }
+    .palette-search-icon { color: var(--text-muted, #9ca3af); flex-shrink: 0; }
+    .palette-input { flex: 1; border: none; outline: none; font-size: 15px; color: var(--text-primary, #1f2937); background: transparent; }
+    .palette-list { list-style: none; margin: 0; padding: 8px; max-height: 340px; overflow-y: auto; }
+    .palette-item { display: flex; align-items: center; gap: 11px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--text-primary, #1f2937); }
+    .palette-item.active { background: var(--color-brand-50, #fff8e0); }
+    .palette-item-icon { color: var(--color-brand-500, #ffc200); font-size: 17px; width: 20px; text-align: center; }
+    .palette-item-name { flex: 1; }
+    .palette-item-group { font-size: 12px; color: var(--text-muted, #9ca3af); }
+    .palette-empty { padding: 28px; text-align: center; color: var(--text-muted, #9ca3af); font-size: 13px; }
+    .palette-footer { display: flex; gap: 16px; align-items: center; padding: 9px 16px; border-top: 1px solid var(--border-default, #e5e7eb); font-size: 12px; color: var(--text-muted, #9ca3af); }
+    .palette-footer kbd { font-family: inherit; font-size: 11px; padding: 1px 5px; margin: 0 2px; border: 1px solid var(--border-default, #e5e7eb); border-radius: 4px; background: var(--bg-subtle, #f5f6fa); }
+    @media (max-width: 768px) { .palette-trigger-text, .palette-trigger-kbd { display: none; } .palette-trigger { padding: 0 9px; } }
       .app-main{
         height: calc(100% - 56px);
       }
@@ -111,6 +131,11 @@
               </div>
             </div>
             <div class="topbar-right">
+              <button class="palette-trigger" @click="openPalette" title="搜索菜单（Ctrl+K）" aria-label="搜索菜单">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span class="palette-trigger-text">搜索菜单</span>
+                <kbd class="palette-trigger-kbd">Ctrl K</kbd>
+              </button>
               <div class="user-info">
                 <div class="user-avatar">{{ userInfo.name ? userInfo.name.charAt(0) : '管' }}</div>
                 <span class="user-name">{{ userInfo.name }}</span>
@@ -155,6 +180,29 @@
           </div>
         </div>
       </div>
+    <!-- 全局菜单检索命令面板（Ctrl+K） -->
+    <div v-if="paletteOpen" class="palette-overlay" @click.self="closePalette">
+      <div class="palette" role="dialog" aria-modal="true" aria-label="菜单快速跳转">
+        <div class="palette-search">
+          <svg class="palette-search-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input ref="paletteInput" v-model="paletteQuery" class="palette-input" type="text" placeholder="搜索页面名称，如 订单、会员、报表…" aria-label="搜索页面" @keydown="onPaletteKeydown">
+        </div>
+        <ul class="palette-list" role="listbox">
+          <li v-for="(it, i) in paletteResults" :key="it.id" class="palette-item" :class="{ active: i === paletteIndex }" role="option" :aria-selected="i === paletteIndex" @mouseenter="paletteIndex = i" @click="goPalette(it)">
+            <i :class="it.icon" class="palette-item-icon" aria-hidden="true"></i>
+            <span class="palette-item-name">{{ it.name }}</span>
+            <span class="palette-item-group">{{ it.group }}</span>
+          </li>
+        </ul>
+        <div v-if="!paletteResults.length" class="palette-empty">未找到匹配的页面</div>
+        <div class="palette-footer">
+          <span><kbd>↑</kbd><kbd>↓</kbd> 选择</span>
+          <span><kbd>Enter</kbd> 跳转</span>
+          <span><kbd>Esc</kbd> 关闭</span>
+          <span><kbd>Ctrl K</kbd> 唤起</span>
+        </div>
+      </div>
+    </div>
     </div>
     <!-- 开发环境版本，包含了有帮助的命令行警告 -->
     <script src="plugins/vue/vue.js"></script>
@@ -176,6 +224,10 @@
             userInfo: {},
             sidebarCollapsed: false,
             sidebarOpen: false,
+            // 全局菜单检索命令面板（Ctrl+K）
+            paletteOpen: false,
+            paletteQuery: '',
+            paletteIndex: 0,
             // 菜单颜色统一走 RgPalette（单一来源，不再硬编码）
             menuTextColor: RgPalette.textSecondary || '#9da3b5',
             menuActiveColor: RgPalette.brand || '#ffc200',
@@ -195,6 +247,7 @@
               { id: '3', name: '订单中心', icon: 'ri-file-list-3-line', children: [
                 { id: '3-1', name: '订单明细', url: 'page/order/list.html', icon: 'ri-file-list-3-line' },
                 { id: '3-2', name: '待处理订单', url: 'page/order/pending-monitor.html', icon: 'ri-radar-line' },
+                { id: '3-7', name: '出餐大屏', url: 'page/kds/board.html', icon: 'ri-tv-line' },
                 { id: '3-3', name: '紧急催菜', url: 'page/urgency/urgency.html', icon: 'ri-alarm-warning-line' },
                 { id: '3-4', name: '支付管理', url: 'page/payment/order-list.html', icon: 'ri-money-dollar-circle-line' },
                 { id: '3-5', name: '收银台', url: 'page/cashier/index.html', icon: 'ri-money-cny-circle-line' },
@@ -207,17 +260,21 @@
                 { id: '4-2', name: '区域管理', url: 'page/dining/area-list.html', icon: 'ri-map-pin-2-line' },
                 { id: '4-3', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'ri-ticket-line' },
                 { id: '4-4', name: '预订管理', url: 'page/dining/reservation-list.html', icon: 'ri-calendar-check-line' },
+                { id: '4-5', name: '打印终端', url: 'page/printer/terminal-list.html', icon: 'ri-printer-line' },
+                { id: '4-6', name: '打印任务', url: 'page/printer/task-list.html', icon: 'ri-file-history-line' },
               ]},
 
-              /* ──5. 配送平台（7 项，重新组织配送+平台+打印）── */
-              { id: '5', name: '配送平台', icon: 'ri-truck-line', children: [
+              /* ──5. 履约配送（2 项，原「配送平台」拆分）── */
+              { id: '5', name: '履约配送', icon: 'ri-truck-line', children: [
                 { id: '5-1', name: '配送订单', url: 'page/delivery/order-list.html', icon: 'ri-map-pin-line' },
                 { id: '5-2', name: '配送范围', url: 'page/delivery/range-management.html', icon: 'ri-road-map-line' },
-                { id: '5-3', name: '平台订单', url: 'page/platform/order-list.html', icon: 'ri-list-check-2' },
-                { id: '5-4', name: '商品映射', url: 'page/platform/dish-mapping.html', icon: 'ri-price-tag-3-line' },
-                { id: '5-5', name: '平台配置', url: 'page/platform/config.html', icon: 'ri-settings-3-line' },
-                { id: '5-6', name: '打印终端', url: 'page/printer/terminal-list.html', icon: 'ri-printer-line' },
-                { id: '5-7', name: '打印任务', url: 'page/printer/task-list.html', icon: 'ri-file-history-line' },
+              ]},
+
+              /* ──12. 外卖平台对接（3 项，原「配送平台」拆分）── */
+              { id: '12', name: '外卖平台对接', icon: 'ri-store-3-line', children: [
+                { id: '12-1', name: '平台订单', url: 'page/platform/order-list.html', icon: 'ri-list-check-2' },
+                { id: '12-2', name: '商品映射', url: 'page/platform/dish-mapping.html', icon: 'ri-price-tag-3-line' },
+                { id: '12-3', name: '平台配置', url: 'page/platform/config.html', icon: 'ri-settings-3-line' },
               ]},
 
               /* ──10. 库存管理（7 项，原库存模块页面此前漏挂菜单）── */
@@ -286,7 +343,6 @@
                 { id: '9-10', name: 'AI 助手', url: 'page/ai/assistant.html', icon: 'ri-robot-line' },
                 { id: '9-11', name: 'AI 配置', url: 'page/ai/provider-config.html', icon: 'ri-cpu-line' },
                 { id: '9-13', name: '提示词模板', url: 'page/ai/prompt-list.html', icon: 'ri-message-3-line' },
-                { id: '9-12', name: '出餐大屏', url: 'page/kds/board.html', icon: 'ri-tv-line' },
                 { id: '9-14', name: '知识库', url: 'page/ai/knowledge-list.html', icon: 'ri-database-2-line' },
               ]},
             ],
@@ -300,6 +356,34 @@
           }
         },
         computed: {
+          // 扁平化全部叶子菜单，供命令面板检索（兼容二级与三级菜单）
+          flatMenuList() {
+            const result = []
+            this.menuList.forEach(function (group) {
+              const kids = group.children || []
+              kids.forEach(function (leaf) {
+                if (leaf.url) {
+                  result.push({ id: leaf.id, name: leaf.name, url: leaf.url, icon: leaf.icon, group: group.name })
+                } else if (leaf.children) {
+                  leaf.children.forEach(function (sub) {
+                    if (sub.url) result.push({ id: sub.id, name: sub.name, url: sub.url, icon: sub.icon, group: group.name + ' / ' + leaf.name })
+                  })
+                }
+              })
+            })
+            return result
+          },
+          // 关键词模糊匹配：空格分词为 AND，匹配页面名与所属分组
+          paletteResults() {
+            const q = this.paletteQuery.trim().toLowerCase()
+            const all = this.flatMenuList
+            if (!q) return all.slice(0, 8)
+            const terms = q.split(/\s+/)
+            return all.filter(function (it) {
+              const hay = (it.name + ' ' + it.group).toLowerCase()
+              return terms.every(function (t) { return hay.indexOf(t) !== -1 })
+            }).slice(0, 8)
+          },
           breadcrumbs() {
             const crumbs = ['首页']
             // 修改点：递归遍历三级菜单树定位当前叶子（兼容订单中心 3-x-y 分组菜单），
@@ -350,10 +434,53 @@
           // 修改点(2026-08-12)：监听子页面发来的未登录信号，统一由顶层窗口跳转登录页，
           // 防止登录页被嵌套在 iframe（数据区）内
           window.addEventListener('message', this.handleChildNotLogin)
+          // Ctrl / Cmd + K 唤起全局菜单检索
+          window.addEventListener('keydown', this.handleGlobalKeydown)
           // 修改点：监听窗口尺寸变化与 iframe 内容加载完成事件，动态调整 iframe 高度避免内容被裁剪
           this.initIframeAutoHeight()
         },
         methods: {
+          /* ── 全局菜单检索命令面板 ── */
+          openPalette() {
+            this.paletteOpen = true
+            this.paletteQuery = ''
+            this.paletteIndex = 0
+            const self = this
+            this.$nextTick(function () {
+              const el = self.$refs.paletteInput
+              if (el) el.focus()
+            })
+          },
+          closePalette() {
+            this.paletteOpen = false
+          },
+          // 面板内键盘：↑↓ 选择、Enter 跳转、Esc 关闭
+          onPaletteKeydown(e) {
+            const list = this.paletteResults
+            if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              this.paletteIndex = list.length ? (this.paletteIndex + 1) % list.length : 0
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              this.paletteIndex = list.length ? (this.paletteIndex - 1 + list.length) % list.length : 0
+            } else if (e.key === 'Enter') {
+              e.preventDefault()
+              if (list[this.paletteIndex]) this.goPalette(list[this.paletteIndex])
+            } else if (e.key === 'Escape') {
+              this.closePalette()
+            }
+          },
+          goPalette(item) {
+            this.closePalette()
+            this.menuHandle(item, false)
+          },
+          // 全局快捷键：Ctrl / Cmd + K 唤起
+          handleGlobalKeydown(e) {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+              e.preventDefault()
+              this.openPalette()
+            }
+          },
           logout() {
             logoutApi().then((res)=>{
               if(res.code === 1){
@@ -530,6 +657,7 @@
         },
         beforeDestroy() {
           this.clearLoadingTimer()
+          window.removeEventListener('keydown', this.handleGlobalKeydown)
         }
       })
     </script>
