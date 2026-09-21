@@ -418,28 +418,66 @@
                 // 提取订单中可评价的纯菜品条目（后端按 dishId 校验，套餐不可评价）
                 extractEvaluableDishes(order) {
                     if (!order || !order.orderDetails) return []
+                    var self = this
                     return order.orderDetails
                         .filter(d => d && d.dishId)
-                        .map(d => ({
-                            dishId: d.dishId,
-                            dishName: d.name || '未知菜品',
-                            starRating: 0,
-                            content: ''
-                        }))
+                        .map(function(d){
+                            // 修改点(P1-2)：后端已存在的评价标记 _submitted，显示"已评价"且提交时自动跳过
+                            var evaluated = !!(self._evaluatedKeys &&
+                                self._evaluatedKeys.has(order.id + '_' + d.dishId))
+                            return {
+                                dishId: d.dishId,
+                                dishName: d.name || '未知菜品',
+                                starRating: 0,
+                                content: '',
+                                _submitted: evaluated
+                            }
+                        })
                 },
                 // 校验订单是否含可评价菜品
                 hasEvaluableDishes(order) {
-                    return order && order.orderDetails &&
-                        order.orderDetails.some(d => d && d.dishId)
+                    if (!order || !order.orderDetails) return false
+                    var keys = this._evaluatedKeys
+                    // 修改点(P1-2)：订单里至少一道"未评价"的菜才算待评价，已评菜不再触发提示
+                    return order.orderDetails.some(function(d){
+                        return d && d.dishId && !(keys && keys.has(order.id + '_' + d.dishId))
+                    })
                 },
                 // 解析 URL 参数（如 order.html 跳转 my-evaluations.html?orderId=xxx）
                 getUrlParam(name) {
                     var match = location.search.match(new RegExp('[?&]' + name + '=([^&]+)'))
                     return match ? decodeURIComponent(match[1]) : ''
                 },
+                // 修改点(P1-2)：拉取我的历史评价，构建 orderId_dishId 已评集合（in-flight 去重，并发调用复用同一 Promise）
+                ensureEvaluatedSet(force) {
+                    if (!force && this._evaluatedKeys) return Promise.resolve(this._evaluatedKeys)
+                    if (this._evaluatedPromise) return this._evaluatedPromise
+                    var self = this
+                    this._evaluatedPromise = (async function(){
+                        var set = new Set()
+                        try {
+                            // 一次拉取较多历史评价：待评价判定仅针对最近完成订单，200 条足以覆盖
+                            const res = await getMyEvaluations({ page: 1, pageSize: 200 })
+                            if (res.code === 1 && res.data && res.data.records) {
+                                res.data.records.forEach(function(r){
+                                    if (r.orderId && r.dishId) set.add(r.orderId + '_' + r.dishId)
+                                })
+                            }
+                        } catch (e) {
+                            // fail-open：拉取失败则集合为空，退化为"有菜即可评价"，不阻断用户评价
+                            console.warn('[my-evaluations] 加载已评集合失败，降级不滤除:', e)
+                        }
+                        self._evaluatedKeys = set
+                        self._evaluatedPromise = null
+                        return set
+                    })()
+                    return this._evaluatedPromise
+                },
                 // 检查是否有待评价订单（同时记录最近可评价订单，供"去评价"入口回填）
                 async checkPendingEvaluation() {
                     try {
+                        // 修改点(P1-2)：先构建已评集合，hasEvaluableDishes 才能过滤掉整单已评的订单
+                        await this.ensureEvaluatedSet()
                         const res = await orderPagingApi({ page: 1, pageSize: 5, status: 4 })
                         if (res.code === 1 && res.data && res.data.records) {
                             const orders = res.data.records || []
@@ -454,6 +492,8 @@
                 // 打开评价提交弹窗
                 // 优先使用 URL 携带的 orderId（order.html 评价入口），其次用最近可评价订单兜底
                 async openSubmitModal() {
+                    // 修改点(P1-2)：确保已评集合就绪，已评菜将被标记 _submitted 跳过
+                    await this.ensureEvaluatedSet()
                     const orderId = this.getUrlParam('orderId') || ''
                     let dishes = []
                     if (orderId) {
@@ -544,6 +584,8 @@
                             this.submitVisible = false
                             this.submitData = { orderId: null, dishes: [] }
                             this.loadData()
+                            // 修改点(P1-2)：强制刷新已评集合（含刚提交项），再重算待评价提示
+                            await this.ensureEvaluatedSet(true)
                             this.checkPendingEvaluation()
                         } else {
                             var shown = failNames.slice(0, 3).join('、') + (failNames.length > 3 ? ' 等' : '')

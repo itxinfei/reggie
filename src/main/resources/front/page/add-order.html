@@ -139,7 +139,7 @@
                             </div>
                     </div>
                 </div>
-                <div class="note">
+                <div class="note" v-if="!reorderId">
                     <div class="title">备注</div>
                     <van-field
                         v-model="note"
@@ -167,7 +167,7 @@
                             <span class="pay-text">支付宝</span>
                             <i class="pay-check" v-if="payMethod === 3">✓</i>
                         </div>
-                        <div class="pay-option" :class="{active: payMethod === 6}" @click="payMethod = 6">
+                        <div class="pay-option" v-if="!reorderId" :class="{active: payMethod === 6}" @click="payMethod = 6">
                             <span class="pay-icon pay-cod-icon"><i class="ri-wallet-line"></i></span>
                             <span class="pay-text">货到付款</span>
                             <i class="pay-check" v-if="payMethod === 6">✓</i>
@@ -176,7 +176,7 @@
                 </div>
 
                 <!-- 餐具选择（对齐美团环保提示） -->
-                <div class="utensils-section">
+                <div class="utensils-section" v-if="!reorderId">
                     <div class="title">餐具数量</div>
                     <div class="utensils-options">
                         <div class="utensils-btn" :class="{active: utensils === 0}" @click="utensils = 0">无需餐具</div>
@@ -210,7 +210,7 @@
                 </div>
 
                 <!-- 修改点：优惠券选择 -->
-                <div class="coupon-section">
+                <div class="coupon-section" v-if="!reorderId">
                     <div class="title">
                         优惠券
                         <span class="coupon-tip" v-if="selectedCoupon">（可减¥{{ Number(selectedCoupon.discountAmount || 0).toFixed(2) }}）</span>
@@ -252,7 +252,7 @@
                 </div>
                 <div class="divPrice"></div>
                 <!-- 修改点(2026-09-17 UX)：提交中按钮文案变为"支付中…"，配合 isLoading 样式给出明确提交反馈 -->
-                <div :class="{btnSubmitActive: cartData && cartData.length > 0, btnSubmit:!cartData || cartData.length<1, isLoading: loading}" @click="goToPaySuccess">{{ loading ? '支付中…' : '去支付' }}</div>
+                <div :class="{btnSubmitActive: reorderId || (cartData && cartData.length > 0), btnSubmit: !reorderId && (!cartData || cartData.length < 1), isLoading: loading}" @click="goToPaySuccess">{{ loading ? '支付中…' : (reorderId ? '继续支付' : '去支付') }}</div>
               </div>
         </div>
         <!-- 开发环境版本，包含了有帮助的命令行警告 -->
@@ -299,6 +299,8 @@
                         utensils: 1,
                         // 修改点（P2-11）：订单列表「去支付」跳转携带的待付款订单 ID（reorderId）
                         reorderId: null,
+                        // 修改点（P1-1）：续付订单的真实应付金额（取自订单，不前端重算）
+                        orderAmount: null,
                         // 优惠券列表及选中项
                         couponList:[],
                         selectedCoupon:null,
@@ -372,6 +374,10 @@
                     },
                     // 修改点：计算实付金额（菜品 + 配送费 - 优惠券），展示用；后端按距离实际计算配送费为准
                     finalPrice(){
+                        // 修改点（P1-1）：续付直接显示该待付款订单的真实应付（已含落库的配送费/优惠），不前端重算
+                        if(this.reorderId){
+                            return this.orderAmount == null ? 0 : Math.round(this.orderAmount * 100) / 100
+                        }
                         const raw = Math.max(0, this.goodsPrice + this.deliveryFee - this.discountAmount)
                         // 修改点：四舍五入到分，避免浮点数减法误差
                         return Math.round(raw * 100) / 100
@@ -409,19 +415,15 @@
                         window.location.href = '/front/page/login.html'
                         return
                     }
-                    // 修改点（P2-11）：解析订单列表「去支付」跳转携带的 reorderId（待付款订单 ID），
-                    // 提示用户直接重新发起支付；订单号透传 goToPaySuccess 供支付成功页回查结果
+                    // 修改点（P2-11）：解析订单列表「去支付」跳转携带的 reorderId（待付款订单 ID）
                     const reorderId = this.getUrlParam('reorderId')
                     if(reorderId){
-                        // 修改点：续付默认选微信支付（而非货到付款），
-                        // 避免用户不改直接点"去支付"走入货到付款分支、订单仍待付款却显示"下单成功"
-                        this.payMethod = 2
+                        // 修改点（P1-1）：续付回填该订单真实明细/金额（不再依赖已清空的购物车，
+                        // 避免明细空白、金额显 ¥0），支付方式由订单回填，地址仅作展示
                         this.reorderId = reorderId
-                        vant.Dialog.alert({
-                            title: '继续支付',
-                            message: '正在为订单#' + reorderId + '发起支付，请确认商品无误后点击"去支付"',
-                            confirmButtonText: '知道了'
-                        }).catch(()=>{})
+                        this.loadReorderDetail()
+                        this.defaultAddress()
+                        return
                     }
                     this.initData()
                     // 修改点：加载商家配送费，用于结算页展示（后端按距离实际计算为准）
@@ -449,6 +451,33 @@
                     getUrlParam(name){
                         var match = location.search.match(new RegExp('[?&]' + name + '=([^&]+)'))
                         return match ? decodeURIComponent(match[1]) : ''
+                    },
+                    // 修改点（P1-1）：续付拉取待付款订单，回填真实明细与金额（只读）
+                    async loadReorderDetail(){
+                        try {
+                            const res = await getOrderDetailApi(this.reorderId)
+                            if(res.code === 1 && res.data){
+                                const d = res.data
+                                // 订单明细与购物车 item 同构，直接回填渲染（续付页无加减入口，只读）
+                                this.cartData = (d.orderDetails || []).map(function(it){
+                                    return {
+                                        name: it.name,
+                                        image: it.image,
+                                        number: it.number || 1,
+                                        amount: it.amount
+                                    }
+                                })
+                                this.orderAmount = Number(d.amount != null ? d.amount : d.actualAmount) || 0
+                                // 沿用订单原在线支付方式（2微信/3支付宝），其余兜底微信
+                                const pm = Number(d.payMethod)
+                                this.payMethod = (pm === 2 || pm === 3) ? pm : 2
+                            }else{
+                                vant.Toast.fail(res.msg || '订单加载失败，请返回订单列表重试')
+                            }
+                        }catch(e){
+                            console.error('续付订单加载失败:', e)
+                            vant.Toast.fail('订单加载失败，请返回订单列表重试')
+                        }
                     },
                     goBack(){
                         window.requestAnimationFrame(()=>{
