@@ -42,6 +42,8 @@
         <div class="rec-row" v-if="record.amount">开票金额：￥{{ Number(record.amount || 0).toFixed(2) }}</div>
         <div class="rec-row" v-if="record.applyTime">申请时间：{{ fmtTime(record.applyTime) }}</div>
         <van-button v-if="record.status === 2 && record.invoiceUrl" class="view-btn" type="primary" plain block size="small" @click="viewPdf(record.invoiceUrl)">查看电子发票</van-button>
+        <!-- 已作废发票允许重新申请开票（后端仅拦截非作废记录） -->
+        <van-button v-if="record.status === 3" class="apply-btn" type="primary" block @click="reapply">重新申请开票</van-button>
       </div>
 
       <!-- 未申请：抬头选择 + 新增 + 申请 -->
@@ -368,6 +370,10 @@
           }).finally(function() {
             self.submitting = false
           })
+        },
+        // 已作废发票：置空 record 回到抬头选择/申请流程（后端允许作废后重新申请）
+        reapply: function() {
+          this.record = null
         }
       }
     })
