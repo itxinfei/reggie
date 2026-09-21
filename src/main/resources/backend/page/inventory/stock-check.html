@@ -463,7 +463,7 @@
         onTableAction: function(payload) { if (payload.key === 'add') this.openCreateDialog(); },
         handleQuery: function() { this.page = 1; this.init(false); },
         reset: function() { this.input.status = ''; this.input.dateRange = ''; this.page = 1; this.init(false); },
-        onPageChange: function(p) { this.page = p; this.init(false); },
+        onPageChange: function(p) { this.page = p.page; this.init(false); },
         onSizeChange: function(s) { this.pageSize = s; this.page = 1; this.init(false); },
 
         /* ── 状态显示 ── */
