@@ -472,7 +472,8 @@
               ReggieUI.error(res.msg || '加载时段数据失败')
             }
           } catch (e) {
-            console.warn('加载时段数据失败:', e)
+            if (e && e.message === 'NOTLOGIN') { /* 登录拦截已处理 */ }
+            else ReggieUI.error('加载时段数据失败：' + (e && e.message ? e.message : e))
           } finally {
             this.slotLoading = false
           }
@@ -564,7 +565,8 @@
               ReggieUI.error(res.msg || '加载排行失败')
             }
           } catch (e) {
-            console.warn('加载菜品排行失败:', e)
+            if (e && e.message === 'NOTLOGIN') { /* 登录拦截已处理 */ }
+            else ReggieUI.error('加载菜品排行失败：' + (e && e.message ? e.message : e))
           } finally {
             this.rankingLoading = false
           }

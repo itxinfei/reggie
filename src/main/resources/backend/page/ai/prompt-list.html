@@ -180,11 +180,6 @@
           ],
           // 搜索条件（table-bar 回调写入）
           searchParams: {},
-          searchConfig: [
-            { type: 'select', field: 'scene', placeholder: '全部场景', width: '130px', options: this.sceneOptions },
-            { type: 'select', field: 'type', placeholder: '全部类型', width: '130px', options: this.typeOptions },
-            { type: 'input', field: 'keyword', placeholder: '模板名称 / 编码', width: '200px' }
-          ],
           actionConfig: [
             { key: 'add', text: '+ 新增模板', type: 'primary' }
           ],
@@ -216,6 +211,15 @@
         }
       },
       computed: {
+        // 筛选配置改 computed：data 字面量内通过 this 引用选项会拿到 undefined，
+        // 且无法响应 loadMeta 对场景/类型字典的更新，导致筛选下拉永久为空
+        searchConfig() {
+          return [
+            { type: 'select', field: 'scene', placeholder: '全部场景', width: '130px', options: this.sceneOptions },
+            { type: 'select', field: 'type', placeholder: '全部类型', width: '130px', options: this.typeOptions },
+            { type: 'input', field: 'keyword', placeholder: '模板名称 / 编码', width: '200px' }
+          ]
+        },
         contentPlaceholder() {
           if (this.form.type === 'WELCOME') {
             return '用户进入该场景聊天页时看到的开场白，一句话即可';

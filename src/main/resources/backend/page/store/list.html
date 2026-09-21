@@ -853,30 +853,33 @@
         },
         doSync: function(type) {
             var self = this;
-            // 修改点：同步源固定为"直营总店"（storeType===1），而非 tableData[0]。
-            // 原实现取列表第一行做源，当前筛选条件下第一行不一定是总店，
-            // 会把错误门店当源复制到目标门店，造成数据错乱。
-            var sourceRow = (self.tableData || []).filter(function(r) { return r.storeType === 1; })[0];
-            var sourceTenantId = sourceRow ? sourceRow.tenantId : null;
-            if (!sourceTenantId) {
-                ReggieUI.error('未找到「直营总店」，无法作为同步源');
-                return;
-            }
-            var apiMap = {
-                dishes: syncDishes({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, dishIds: null, operatorId: 1 }),
-                categories: syncCategories({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, operatorId: 1 }),
-                setmeals: syncSetmeals({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, setmealIds: null, operatorId: 1 })
-            };
-            var apiCall = apiMap[type];
-            if (!apiCall) return;
+            // 同步源固定为「直营总店」（storeType===1）。必须单独分页查询、不能用当前页 tableData：
+            // 筛选/翻页后总店可能不在当前页导致找不到源；也避免把列表第一行误当总店造成数据错乱。
             self.syncing[type] = true;
-            apiCall.then(function(res) {
-                if (res && res.code === 1) {
-                    self.syncResult = res.data;
-                    ReggieUI.success('同步完成');
+            pageStores({ storeType: 1, status: 1, page: 1, pageSize: 1 }).then(function(pageRes) {
+                var records = (pageRes && pageRes.code === 1 && pageRes.data) ? (pageRes.data.records || []) : [];
+                var sourceRow = records[0];
+                var sourceTenantId = sourceRow ? sourceRow.tenantId : null;
+                if (!sourceTenantId) {
+                    ReggieUI.error('未找到「直营总店」，无法作为同步源');
+                    return;
                 }
-            }).catch(function() {
-                ReggieUI.error('同步失败');
+                var apiMap = {
+                    dishes: syncDishes({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, dishIds: null, operatorId: 1 }),
+                    categories: syncCategories({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, operatorId: 1 }),
+                    setmeals: syncSetmeals({ sourceTenantId: sourceTenantId, targetTenantId: self.syncTargetId, setmealIds: null, operatorId: 1 })
+                };
+                var apiCall = apiMap[type];
+                if (!apiCall) return;
+                return apiCall.then(function(res) {
+                    if (res && res.code === 1) {
+                        self.syncResult = res.data;
+                        ReggieUI.success('同步完成');
+                    }
+                });
+            }).catch(function(err) {
+                if (err && err.message === 'NOTLOGIN') return;
+                ReggieUI.error('同步失败：' + (err && err.message ? err.message : err));
             }).finally(function() { self.syncing[type] = false; });
         },
 

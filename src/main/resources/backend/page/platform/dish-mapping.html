@@ -131,7 +131,7 @@
           { key: '', icon: 'ri-shopping-cart-2-line', label: '映射总数', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
           { key: '1', icon: 'ri-checkbox-circle-line', label: '已上架', value: s.onlineCount || 0, color: 'success', clickable: true, active: this.activeFilter === '1' },
           { key: '0', icon: 'ri-close-circle-line', label: '已下架', value: s.offlineCount || 0, color: 'info', clickable: true, active: this.activeFilter === '0' },
-          { key: '', icon: 'ri-building-line', label: '覆盖平台', value: s.platformCount || 0, color: 'warning' }
+          { key: 'platforms', icon: 'ri-building-line', label: '覆盖平台', value: s.platformCount || 0, color: 'warning' }
         ]
       }
     },
@@ -241,24 +241,31 @@
         }).catch((err) => { console.warn('[菜品映射] 菜品同步操作取消或失败:', err) })
       },
       // 修改点：同步营业状态到平台
-      async syncBusiness(open) {
+      syncBusiness(open) {
         if (!this.businessPlatform) {
           ReggieUI.warning('请先选择平台')
           return
         }
-        this.bizLoading = true
-        try {
-          const res = await window.platformApi.syncBusiness(this.businessPlatform, open)
-          if (res && String(res.code) === '1') {
-            ReggieUI.success(open ? '已设为营业并同步平台' : '已设为休息并同步平台')
-          } else {
-            ReggieUI.error((res && res.msg) || '同步失败')
-          }
-        } catch (err) {
-          ReggieUI.error('营业状态同步失败')
-        } finally {
-          this.bizLoading = false
-        }
+        var self = this
+        var actionText = open ? '营业' : '休息'
+        // 一键全平台同步营业状态，误点「休息」会导致全平台停业，必须二次确认
+        ReggieUI.confirm(
+          '确认将所选平台设为「' + actionText + '」并立即同步？' + (open ? '' : '设为休息后，该平台门店将暂停接单。'),
+          '营业状态同步',
+          { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+        ).then(function() {
+          self.bizLoading = true
+          window.platformApi.syncBusiness(self.businessPlatform, open).then(function(res) {
+            if (res && String(res.code) === '1') {
+              ReggieUI.success(open ? '已设为营业并同步平台' : '已设为休息并同步平台')
+            } else {
+              ReggieUI.error((res && res.msg) || '同步失败')
+            }
+          }).catch(function(err) {
+            if (err && err.message === 'NOTLOGIN') return
+            ReggieUI.error('营业状态同步失败：' + (err && err.message ? err.message : err))
+          }).finally(function() { self.bizLoading = false })
+        }).catch(function() { /* 用户点取消，静默 */ })
       }
     }
   })

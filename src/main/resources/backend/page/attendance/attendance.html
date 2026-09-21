@@ -102,9 +102,10 @@
         <div class="calendar-legend">
           <span class="legend-item"><i class="dot dot-normal"></i>正常</span>
           <span class="legend-item"><i class="dot dot-late"></i>迟到</span>
+          <span class="legend-item"><i class="dot dot-early"></i>早退</span>
           <span class="legend-item"><i class="dot dot-absent"></i>缺勤</span>
-          <span class="legend-item"><i class="dot dot-rest"></i>休息</span>
-          <span class="legend-item"><i class="dot dot-scheduled"></i>已排班</span>
+          <span class="legend-item"><i class="dot dot-leave"></i>请假</span>
+          <span class="legend-item"><i class="dot dot-business"></i>出差</span>
         </div>
         <div v-if="calendarLoading" class="calendar-grid">
           <!-- 修改点：P2-1 骨架屏——日历加载态：6 行 7 列脉冲格模拟日历骨架 -->
@@ -367,9 +368,13 @@
               // 后端返回 {day, status(1=正常,2=迟到,0=缺勤,3=早退,4=请假), ...}
               // 转换为前端状态字符串：normal/late/absent/rest
               var s = d.status
+              // 状态域：0缺勤 1正常 2迟到 3早退 4请假 5出差，逐一映射为独立样式；
+              // 原实现把早退(3)/请假(4)都映射为休息(rest)，语义错误且与真正休息无法区分
               if (s === 1) dayStatuses[d.day] = 'normal'
               else if (s === 2) dayStatuses[d.day] = 'late'
-              else if (s === 3 || s === 4) dayStatuses[d.day] = 'rest'
+              else if (s === 3) dayStatuses[d.day] = 'early'
+              else if (s === 4) dayStatuses[d.day] = 'leave'
+              else if (s === 5) dayStatuses[d.day] = 'business'
               else if (s === 0) dayStatuses[d.day] = 'absent'
               else dayStatuses[d.day] = ''
             })
@@ -592,9 +597,10 @@
     }
     .dot-normal    { background: var(--color-success); }
     .dot-late      { background: var(--color-warning); }
+    .dot-early     { background: var(--color-warning-dark); }
     .dot-absent    { background: var(--color-danger); }
-    .dot-rest      { background: var(--color-info); }
-    .dot-scheduled { background: var(--color-brand-500); }
+    .dot-leave     { background: var(--color-info); }
+    .dot-business  { background: var(--color-brand-500); }
 
     /* 响应式 */
     @media (max-width: 768px) {

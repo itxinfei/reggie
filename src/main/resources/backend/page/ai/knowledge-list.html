@@ -152,11 +152,6 @@
             { value: 'READY', label: '已就绪' },
             { value: 'FAILED', label: '失败' }
           ],
-          searchConfig: [
-            { type: 'select', field: 'audience', placeholder: '全部受众', width: '130px', options: this.audienceOptions },
-            { type: 'select', field: 'status', placeholder: '全部状态', width: '130px', options: this.statusOptions },
-            { type: 'input', field: 'keyword', placeholder: '文档标题', width: '200px' }
-          ],
           actionConfig: [
             { key: 'add', text: '+ 新增文档', type: 'primary' }
           ],
@@ -189,6 +184,14 @@
         }
       },
       computed: {
+        // 筛选配置改 computed：data 字面量内 this.audienceOptions 在该阶段尚未挂载，恒为 undefined
+        searchConfig() {
+          return [
+            { type: 'select', field: 'audience', placeholder: '全部受众', width: '130px', options: this.audienceOptions },
+            { type: 'select', field: 'status', placeholder: '全部状态', width: '130px', options: this.statusOptions },
+            { type: 'input', field: 'keyword', placeholder: '文档标题', width: '200px' }
+          ]
+        },
         statsCards() {
           const stats = this.statsData
           return [
@@ -357,7 +360,7 @@
               }
             } catch (err) {
               if (err && err.message === 'NOTLOGIN') return
-              console.warn('保存知识文档失败:', err)
+              ReggieUI.error('保存知识文档失败：' + (err && err.message ? err.message : err))
             } finally {
               this.submitting = false
             }
@@ -375,7 +378,7 @@
             }
           }).catch(err => {
             if (err && err.message === 'NOTLOGIN') return
-            console.warn('重建索引失败:', err)
+            ReggieUI.error('重建索引失败：' + (err && err.message ? err.message : err))
           })
         },
 
@@ -396,7 +399,7 @@
                 }
               }).catch(err => {
                 if (err && err.message === 'NOTLOGIN') return
-                console.warn('删除知识文档失败:', err)
+                ReggieUI.error('删除知识文档失败：' + (err && err.message ? err.message : err))
               })
             }).catch(() => {})
         }

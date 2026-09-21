@@ -210,6 +210,8 @@
             if (err.message !== 'NOTLOGIN') {
               self.tableData = []
               self.counts = 0
+              // 不能只清空：否则接口故障显示为空表格，用户无法区分"无数据"与"加载失败"
+              ReggieUI.error('发票记录加载失败：' + (err.message || err))
             }
           }).finally(function() {
             self.loading = false

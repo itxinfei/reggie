@@ -630,9 +630,15 @@
               ReggieUI.error('导入未成功，请查看下方失败明细')
             }
           },
-          onImportError() {
+          onImportError(err) {
             this.importLoading = false
-            ReggieUI.error('导入失败：网络异常或登录已过期，请重试')
+            // 如实展示失败原因，不再统一误报为"网络异常或登录已过期"
+            if (err && err.status === 403) {
+              ReggieUI.error('导入被拒绝（403）：可能登录已过期或安全令牌失效，请刷新页面后重试')
+              return
+            }
+            var msg = (err && err.message) ? err.message : ''
+            ReggieUI.error(msg ? ('导入失败：' + msg) : '导入失败，请重试')
           },
           onImportDialogClose() {
             this.importResult = null

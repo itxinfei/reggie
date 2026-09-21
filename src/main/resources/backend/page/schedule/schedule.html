@@ -335,7 +335,11 @@
           const self = this
           const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
           const now = new Date()
-          const weekStart = now.getDate() - now.getDay() + 1
+          // 周一为一周起点：(getDay()+6)%7 即距本周一的天数；
+          // 原 getDate()-getDay()+1 在周日（getDay=0）会算成下周一，整周错位
+          const mondayOffset = (now.getDay() + 6) % 7
+          const baseDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - mondayOffset)
+          const curMonth = now.getMonth()
           // 修改点：colors / shiftNames 原为空对象，导致下方 colors.morning 等全为 undefined，
           // 班次色块渲染不出颜色；此处补全四种班次的配色与名称（取自设计令牌语义色）
           const colors = {
@@ -350,13 +354,17 @@
           let totalAll = 0
           const weekData = []
           for (let w = 0; w < 7; w++) {
-            const dayNum = weekStart + w
-            if (dayNum < 1 || dayNum > 28) break
+            // 用真实日期推算每天，替代纯数字加减，避免月初/月末跨月错乱
+            const d = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate() + w)
+            const dayNum = d.getDate()
             const counts = {}
-            self.employeeOptions.forEach(function (emp) {
-              const cell = self.scheduleData[emp.id] && self.scheduleData[emp.id][dayNum]
-              if (cell) counts[cell.shift] = (counts[cell.shift] || 0) + 1
-            })
+            // 仅统计当前自然月的排班；跨月当天无当月排班数据，各班次计数留空（末值全 0）
+            if (d.getMonth() === curMonth) {
+              self.employeeOptions.forEach(function (emp) {
+                const cell = self.scheduleData[emp.id] && self.scheduleData[emp.id][dayNum]
+                if (cell) counts[cell.shift] = (counts[cell.shift] || 0) + 1
+              })
+            }
             // 修改点：counts 是按需赋值的稀疏对象，未出现的班次为 undefined，
             // 直接相加会得到 NaN（统计与百分比全部显示 NaN）；统一取 0 兜底
             const cM = counts.morning || 0, cN = counts.noon || 0

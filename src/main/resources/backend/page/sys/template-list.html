@@ -97,6 +97,10 @@
             {{ row.status === 1 ? '启用' : '停用' }}
           </el-tag>
         </template>
+        <template #col-content="{ row }">
+          <!-- 套用文件头现成的两行截断样式，避免长模板全文把整行撑高 -->
+          <div class="content-preview">{{ row.content }}</div>
+        </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="openDialog(row)">编辑</el-button>
           <el-button type="text" size="small" :class="row.status === 1 ? 'btn-warning' : 'btn-success'" @click="toggleStatus(row)">
@@ -214,7 +218,7 @@
             { prop: 'bizType', label: '业务类型', width: 100, align: 'center', slot: true },
             { prop: 'channel', label: '渠道', width: 90, align: 'center', slot: true },
             { prop: 'title', label: '推送标题', width: 90, align: 'center' },
-            { prop: 'content', label: '内容预览', minWidth: 140, align: 'center' },
+            { prop: 'content', label: '内容预览', minWidth: 200, slot: true },
             { prop: 'signName', label: '短信签名', width: 90, align: 'center' },
             { prop: 'remark', label: '备注', minWidth: 90 },
             { prop: 'status', label: '状态', width: 75, align: 'center', slot: true },
@@ -447,7 +451,10 @@
                   self.init()
                 }
               })
-            }).catch(function(err) { console.warn('[模板管理] 删除操作取消或失败:', err) })
+            }).catch(function(err) {
+              // request.js 对业务失败 reject(new Error(msg))，需明确提示；用户点取消 reject('cancel')，静默
+              if (err instanceof Error) { ReggieUI.error(err.message || '删除失败') }
+            })
         }
       }
     })
