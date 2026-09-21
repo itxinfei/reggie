@@ -20,7 +20,6 @@ import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.cost.service.CostService;
 import com.reggie.module.cost.model.DishCost;
 import com.reggie.module.payment.service.PaymentOrderService;
-import com.reggie.module.printer.service.PrinterService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -104,12 +103,6 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
      */
     @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
-
-    /**
-     * 打印服务（可选依赖，未配置打印机时静默降级）
-     */
-    @Autowired(required = false)
-    private PrinterService printerService;
 
     /**
      * 收银支付幂等 key 前缀
@@ -295,9 +288,6 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         // 9. 创建支付记录（金额以服务端为准）
         saveSuccessPaymentOrder(orderId, channel, orderAmount);
 
-        // P0-5：收款成功后打印收银小票（打印失败不影响收银结果，静默降级）
-        printBillQuietly(orderId);
-
         // 6. 会员权益（积分+优惠券核销）统一在订单完成（status=4）时由 OrderCompletedEvent 触发，
         //    避免收银支付与订单完成事件重复发放。此处不再发放。
 
@@ -415,7 +405,6 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
                 log.error("[收银] 桌台{}释放失败，需人工核查: {}", tableId, e.getMessage(), e);
             }
         }
-        printBillQuietly(main.getId());
         return record;
     }
 
@@ -795,21 +784,6 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         paymentOrder.setCreatedTime(LocalDateTime.now());
         paymentOrder.setUpdateTime(LocalDateTime.now());
         paymentOrderService.save(paymentOrder);
-    }
-
-    /**
-     * 打印收银小票（失败静默降级）（等价抽取）。
-     */
-    private void printBillQuietly(Long orderId) {
-        if (printerService == null) {
-            return;
-        }
-        try {
-            printerService.printOrder(orderId, "BILL");
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.warn("收银小票打印失败，orderId={}", orderId);
-        }
     }
 
     /**

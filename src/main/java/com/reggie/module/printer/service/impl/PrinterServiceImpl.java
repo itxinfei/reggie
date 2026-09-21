@@ -1,6 +1,5 @@
 package com.reggie.module.printer.service.impl;
 
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.CustomException;
 import com.reggie.module.order.model.OrderDetail;
@@ -9,10 +8,9 @@ import com.reggie.module.order.service.OrderDetailService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.printer.core.PrinterTemplate;
 import com.reggie.module.printer.mapper.PrintTaskMapper;
-import com.reggie.module.printer.mapper.PrintTerminalMapper;
 import com.reggie.module.printer.model.PrintJob;
+import com.reggie.module.printer.model.PrintLine;
 import com.reggie.module.printer.model.PrintTask;
-import com.reggie.module.printer.model.PrintTerminal;
 import com.reggie.module.printer.service.PrinterService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,22 +20,22 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 订单打印服务实现（门店 PC 本地打印）
+ * 订单打印服务实现（浏览器本地打印）
  *
- * <p>将订单打印内容入队到门店 PC 打印代理终端（print_task），替代旧的服务器直连打印。
- * 代理端无登录会话，终端/任务数据访问走 {@code @InterceptorIgnore(tenantLine = "true")}
- * 的自定义 Mapper 方法并显式按订单租户匹配。</p>
+ * <p>渲染订单小票纯文本，在 print_task 落一条打印记录（SUCCESS），文本返回前端，
+ * 由浏览器调用本地系统打印机打印（window.print），门店无需安装打印代理。</p>
  *
- * <p>注意：本类<b>禁止</b>类级 @Transactional。历史实现曾用类级事务，导致下单流程中
- * printOrder 抛异常时外层订单事务被标记 rollback-only，整笔下单被打印故障拖垮。
- * 本类方法均为查询 + 单条任务插入，无需强事务。</p>
+ * <p>注意：本类<b>禁止</b>类级 @Transactional。本方法为查询 + 单条记录插入，无需强事务。</p>
  *
  * @author AI
- * @since 2026-08-30
+ * @since 2026-09-21
  */
 @Slf4j
 @Service
 public class PrinterServiceImpl implements PrinterService {
+
+    /** 小票纸宽（按 58mm 热敏纸约 32 个英文字符；80mm 亦可打印） */
+    private static final int PAPER_WIDTH = 32;
 
     @Autowired
     private OrderService orderService;
@@ -49,69 +47,115 @@ public class PrinterServiceImpl implements PrinterService {
     private PrinterTemplate printerTemplate;
 
     @Autowired
-    private PrintTerminalMapper printTerminalMapper;
-
-    @Autowired
     private PrintTaskMapper printTaskMapper;
 
     /**
-     * 打印 order。
-     * @param orderId 参数 orderId
-     * @param printType 参数 printType
+     * 渲染小票文本并保存打印记录。
+     * @param orderId 订单ID
+     * @param printType 打印类型 BILL/KITCHEN/DELIVERY
+     * @return 小票纯文本
      */
     @Override
-    public void printOrder(Long orderId, String printType) {
+    public String renderAndRecord(Long orderId, String printType) {
         Orders order = orderService.getById(orderId);
         if (order == null) {
             throw new CustomException("订单不存在");
         }
 
-        List<PrintTerminal> terminals = printTerminalMapper.listEnabledByTenant(order.getTenantId());
-        if (terminals.isEmpty()) {
-            log.warn("[打印代理] 订单 {} 租户 {} 无启用终端，打印任务未派发", orderId, order.getTenantId());
-            return;
-        }
-
         List<OrderDetail> details = orderDetailService.list(
                 new LambdaQueryWrapper<OrderDetail>().eq(OrderDetail::getOrderId, orderId));
         PrintJob job = printerTemplate.build(order, details, printType == null ? "BILL" : printType);
-        String content = JSONUtil.toJsonStr(job.getLines());
+        String text = linesToText(job.getLines());
 
-        int dispatched = 0;
-        for (PrintTerminal terminal : terminals) {
-            if (!matchPrintType(terminal.getPrintTypes(), job.getPrintType())) {
-                continue;
-            }
-            PrintTask task = new PrintTask();
-            task.setTenantId(order.getTenantId());
-            task.setStoreCode(terminal.getStoreCode());
-            task.setOrderId(orderId);
-            task.setTaskType(job.getPrintType());
-            task.setContent(content);
-            task.setStatus(PrintTask.STATUS_PENDING);
-            task.setTerminalId(terminal.getId());
-            task.setTerminalCode(terminal.getTerminalCode());
-            task.setRetryCount(0);
-            task.setCreatedTime(LocalDateTime.now());
-            printTaskMapper.insertIgnoreTenant(task);
-            dispatched++;
-        }
-        log.info("[打印代理] 订单 {} 派发打印任务 {} 条（type={}）", orderId, dispatched, job.getPrintType());
+        PrintTask task = new PrintTask();
+        task.setTenantId(order.getTenantId());
+        task.setOrderId(orderId);
+        task.setTaskType(job.getPrintType());
+        task.setContent(text);
+        task.setStatus(PrintTask.STATUS_SUCCESS);
+        task.setRetryCount(0);
+        LocalDateTime now = LocalDateTime.now();
+        task.setCreatedTime(now);
+        task.setPulledTime(now);
+        task.setDoneTime(now);
+        printTaskMapper.insertIgnoreTenant(task);
+
+        log.info("[浏览器打印] 订单 {} 已生成打印记录（type={}）", orderId, job.getPrintType());
+        return text;
     }
 
     /**
-     * 终端打印类型匹配：print_types 为空（未配置）视为接收全部类型；
-     * 否则逗号分隔精确匹配（如 BILL / KITCHEN / DELIVERY）。
+     * 将结构化打印行转为等宽纯文本小票。
+     * 分隔线输出整行 '-'；居中/右对齐按显示宽度（中文计 2）补空格；
+     * 二维码/条形码行在浏览器纸质小票中无意义，跳过。
      */
-    private boolean matchPrintType(String printTypes, String type) {
-        if (printTypes == null || printTypes.trim().isEmpty()) {
-            return true;
-        }
-        for (String s : printTypes.split(",")) {
-            if (s.trim().equalsIgnoreCase(type)) {
-                return true;
+    private String linesToText(List<PrintLine> lines) {
+        StringBuilder sb = new StringBuilder();
+        for (PrintLine line : lines) {
+            String text = line.getText() == null ? "" : line.getText();
+            if (line.getType() == PrintLine.LineType.QR || line.getType() == PrintLine.LineType.BARCODE) {
+                continue;
+            }
+            if (line.getType() == PrintLine.LineType.DIVIDER) {
+                appendLine(sb, repeat('-', PAPER_WIDTH));
+                continue;
+            }
+            int width = displayWidth(text);
+            if (line.getAlign() == PrintLine.Align.CENTER) {
+                int pad = (PAPER_WIDTH - width) / 2;
+                appendLine(sb, repeat(' ', Math.max(pad, 0)) + text);
+            } else if (line.getAlign() == PrintLine.Align.RIGHT) {
+                int pad = PAPER_WIDTH - width;
+                appendLine(sb, repeat(' ', Math.max(pad, 0)) + text);
+            } else {
+                appendLine(sb, text);
             }
         }
-        return false;
+        return sb.toString();
+    }
+
+    /** 追加一行（首行不加前置换行） */
+    private void appendLine(StringBuilder sb, String line) {
+        if (sb.length() > 0) {
+            sb.append('\n');
+        }
+        sb.append(line);
+    }
+
+    /** 重复字符（JDK1.8 无 String.repeat） */
+    private String repeat(char c, int n) {
+        if (n <= 0) {
+            return "";
+        }
+        char[] arr = new char[n];
+        for (int i = 0; i < n; i++) {
+            arr[i] = c;
+        }
+        return new String(arr);
+    }
+
+    /** 计算显示宽度：CJK 等宽字符计 2，其余计 1 */
+    private int displayWidth(String text) {
+        int w = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (isWide(ch)) {
+                w += 2;
+            } else {
+                w += 1;
+            }
+        }
+        return w;
+    }
+
+    /** 是否为全角宽字符（CJK 统一表意文字/全角标点/平假名/片假名等） */
+    private boolean isWide(char ch) {
+        Character.UnicodeBlock block = Character.UnicodeBlock.of(ch);
+        return block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS
+                || block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A
+                || block == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION
+                || block == Character.UnicodeBlock.HALFWIDTH_AND_FULLWIDTH_FORMS
+                || block == Character.UnicodeBlock.HIRAGANA
+                || block == Character.UnicodeBlock.KATAKANA;
     }
 }

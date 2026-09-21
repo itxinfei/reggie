@@ -15,18 +15,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 订单打印控制器（门店 PC 本地打印）
+ * 订单打印控制器（浏览器本地打印）
  *
- * <p>将订单打印任务入队（print_task），由门店 PC 打印代理领取后调用本地打印机。
- * 已移除旧的服务器直连打印（/test、/status、/system/list 等设备接口）。</p>
+ * <p>渲染订单小票纯文本并落一条打印记录（print_task），文本返回前端，
+ * 由浏览器调用本地系统打印机打印。门店无需安装打印代理。</p>
  *
  * @author AI
- * @since 2026-08-30
+ * @since 2026-09-21
  */
 @Slf4j
 @RestController
 @RequestMapping("/printer")
-@Tag(name = "订单打印（入队门店PC终端）")
+@Tag(name = "订单打印（浏览器调用本地打印机）")
 @RequireEmployee
 public class PrinterController {
 
@@ -34,19 +34,18 @@ public class PrinterController {
     private PrinterService printerService;
 
     /**
-     * 根据订单ID派发打印任务（收银小票 / 厨房单 / 配送单）。
+     * 渲染订单小票文本并保存打印记录（收银小票 / 厨房单 / 配送单）。
      *
      * @param orderId 订单ID
      * @param type    打印类型：BILL-小票（默认）、KITCHEN-厨房单、DELIVERY-配送单
-     * @return 操作结果
+     * @return 小票纯文本
      */
     @PostMapping("/print/{orderId}")
-    @Operation(summary = "派发订单打印任务", description = "按订单租户匹配门店PC打印代理终端并入队任务")
+    @Operation(summary = "渲染并保存打印记录", description = "返回小票文本，前端通过浏览器调用本地打印机打印")
     public R<String> print(@PathVariable("orderId") @Parameter(description = "订单ID") Long orderId,
                            @RequestParam(defaultValue = "BILL") @Parameter(description = "打印类型：BILL/KITCHEN/DELIVERY")
                                    String type) {
-        log.info("派发订单打印任务: orderId={}, type={}", orderId, type);
-        printerService.printOrder(orderId, type);
-        return R.success("打印任务已派发");
+        log.info("浏览器打印: orderId={}, type={}", orderId, type);
+        return R.success(printerService.renderAndRecord(orderId, type));
     }
 }

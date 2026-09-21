@@ -412,10 +412,6 @@ public class OpenApiConfig {
         responses.addApiResponse("429", refResponse("TooManyRequests"));
         responses.addApiResponse("500", refResponse("ServerError"));
 
-        // 门店打印代理接口为匿名访问，无登录态概念
-        if (path.startsWith("/printer/agent/")) {
-            return;
-        }
         responses.addApiResponse("409", refResponse("Conflict"));
         responses.addApiResponse("415", refResponse("UnsupportedMediaType"));
         responses.addApiResponse("404", refResponse("NotFound"));

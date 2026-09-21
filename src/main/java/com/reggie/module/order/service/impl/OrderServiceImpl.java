@@ -33,7 +33,6 @@ import com.reggie.module.store.model.StoreInfo;
 import com.reggie.module.store.service.BusinessHoursService;
 import com.reggie.module.store.service.StoreService;
 import com.reggie.module.user.service.UserService;
-import com.reggie.module.printer.service.PrinterService;
 import com.reggie.module.inventory.service.MaterialStockService;
 import com.reggie.module.dining.service.DiningTableService;
 import lombok.extern.slf4j.Slf4j;
@@ -97,12 +96,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     /** 状态流转服务（接单/拒单/完成/取消等） */
     @Autowired
     private OrderStatusFlowService statusFlowService;
-
-    /**
-     * 打印服务（可选注入，无打印机配置时降级跳过）
-     */
-    @Autowired(required = false)
-    private PrinterService printerService;
 
     /**
      * 堂食桌台服务
@@ -236,9 +229,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         // 落库订单与明细、扣库存、清空购物车（失败释放幂等锁）（等价抽取）
         saveOrderWithLockRelease(orders, orderDetails, shoppingCarts, wrapper, lockAcquired, lockKey);
-
-        // 自动触发打印（等价抽取）
-        printOrderQuietly(orderId);
     }
 
     /**
@@ -518,23 +508,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         throw new CustomException("订单正在处理中，请勿重复提交");
     }
 
-    /**
-     * 异步自动打印订单小票（失败不影响下单）（等价抽取）。
-     */
-    private void printOrderQuietly(long orderId) {
-        if (printerService == null) {
-            return;
-        }
-        final long finalOrderId = orderId;
-        try {
-            printerService.printOrder(finalOrderId, "BILL");
-            printerService.printOrder(finalOrderId, "KITCHEN");
-        } catch (Exception e) {
-            // 打印失败不影响下单结果
-            log.warn("[打印] 自动打印触发失败，订单ID={}, 原因={}", finalOrderId, e.getMessage(), e);
-        }
-    }
-
     // ==================== 优惠券折扣 ====================
 
     /**
@@ -806,18 +779,6 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[堂食] 更新桌台状态失败: tableId={}, error={}", tableId, e.getMessage(), e);
                 throw e;
-            }
-        }
-
-        // 自动触发打印（异步）
-        if (printerService != null) {
-            final long finalOrderId = orderId;
-            try {
-                printerService.printOrder(finalOrderId, "BILL");
-                printerService.printOrder(finalOrderId, "KITCHEN");
-            } catch (Exception e) {
-                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                log.warn("[打印] 堂食订单打印触发失败，订单ID={}, 原因={}", finalOrderId, e.getMessage(), e);
             }
         }
     }

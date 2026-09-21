@@ -40,8 +40,6 @@ public final class AuthConstants {
         "/user/login",
         "/user/loginout",
         "/tenant/register",
-        // 打印代理接口（门店 PC 本地打印，无 Cookie 会话，POST 匿名访问）
-        "/printer/agent/**",
         // 注意：/api/ai/** 已从 CSRF 排除列表中移除（2026-08-23 安全加固）
         // AI 模块的写操作接口（/api/ai/chat, /api/ai/session/* 等）需要 CSRF 防护，
         // 仅保留 /api/ai/health 在 LOGIN_EXCLUDE 中作为匿名健康检查
@@ -94,8 +92,6 @@ public final class AuthConstants {
         // 修复 P2(2026-09-17)：此前遗漏白名单，导致真实支付回调被 LoginCheckFilter 以 NOTLOGIN(401) 拦截，
         // 订单永远无法标记已支付。与 /api/delivery/callback 保持一致，必须匿名放行。
         "/api/payment/notify/**",
-        // 打印代理接口（门店 PC 本地打印，凭终端码+token 鉴权，无登录会话）
-        "/printer/agent/**",
         // 静态资源目录（图片、上传文件）
         "/images/**",
         "/uploads/**",
