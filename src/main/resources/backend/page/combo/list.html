@@ -299,6 +299,7 @@
         <el-upload
           class="avatar-uploader"
           action="/common/upload"
+          :headers="uploadHeaders"
           :show-file-list="false"
           :on-success="handleComboAvatarSuccess"
           :on-change="onChange"
@@ -879,6 +880,11 @@ new Vue({
     },
 
     // ========== 图片上传 ==========
+    // el-upload 绕过 axios，手动带 CSRF Token（生产环境 CsrfFilter 校验）
+    uploadHeaders() {
+      var token = (typeof window.getCsrfToken === 'function') ? window.getCsrfToken() : '';
+      return { 'X-CSRF-Token': token || '' };
+    },
     handleComboAvatarSuccess(response) {
       // 后端 /common/upload 未登录时返回 { code: 0, msg: 'NOTLOGIN' }（HTTP 401，走 el-upload 的 on-error 而非此处）
       // 此处兜底判断：业务失败也提示，避免静默拿到 data:null 仍拼接下载地址

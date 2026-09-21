@@ -139,6 +139,7 @@
       </ol>
       <el-upload
         action="/employee/import"
+        :headers="uploadHeaders"
         name="file"
         accept=".xlsx"
         :show-file-list="false"
@@ -587,6 +588,11 @@
           },
 
           /* ── 批量导入 ── */
+          // el-upload 绕过 axios，手动带 CSRF Token（生产环境 CsrfFilter 校验）
+          uploadHeaders() {
+            var token = (typeof window.getCsrfToken === 'function') ? window.getCsrfToken() : '';
+            return { 'X-CSRF-Token': token || '' };
+          },
           // el-upload 选完文件自动上传前的校验
           beforeImportUpload(file) {
             this.importResult = null

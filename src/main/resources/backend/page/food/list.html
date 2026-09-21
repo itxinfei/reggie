@@ -202,6 +202,7 @@
           <el-upload
             class="avatar-uploader"
             action="/common/upload"
+            :headers="uploadHeaders"
             name="file"
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
@@ -736,6 +737,11 @@
               }).catch(function(err) { self.submitting = false; ReggieUI.error('请求失败：' + err) })
             }
           })
+        },
+        // el-upload 绕过 axios，手动带 CSRF Token（生产环境 CsrfFilter 校验）
+        uploadHeaders: function() {
+          var token = (typeof window.getCsrfToken === 'function') ? window.getCsrfToken() : '';
+          return { 'X-CSRF-Token': token || '' };
         },
         handleAvatarSuccess: function(response) {
           // 后端 /common/upload 未登录时返回 { code: 0, msg: 'NOTLOGIN' }（HTTP 401，走 el-upload 的 on-error 而非此处）

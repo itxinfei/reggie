@@ -45,6 +45,9 @@
     }
   }
 
+  // 暴露给 el-upload 等绕过 axios 的上传场景复用同一 Token（如 /common/upload、/employee/import）
+  win.getCsrfToken = getCsrfToken;
+
   /**
    * 保存CSRF Token到Cookie和SessionStorage
    */
