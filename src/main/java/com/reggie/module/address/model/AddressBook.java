@@ -77,16 +77,35 @@ public class AddressBook implements Serializable {
     @NotBlank(message = "区级名称不能为空")
     private String districtName;
 
-    @Schema(description = "街道/乡镇级区划编号", example = "110105001")
-    @TableField(exist = false)
-    private String streetCode;
+    // ---- 结构化地址：街道/乡镇 + 小区/大厦 + 楼栋 + 单元 + 楼层 + 门牌号 ----
+    // 省/市/区由联动选择器保证规范；以下字段文本手填，用于骑手精确定位，均独立入库。
 
-    @Schema(description = "街道/乡镇级名称", example = "三里屯街道")
-    @TableField(exist = false)
+    @Schema(description = "街道/乡镇（文本，选填）", example = "三里屯街道")
+    @Size(max = 50, message = "街道/乡镇不能超过50个字符")
     private String streetName;
 
-    @Schema(description = "详细地址", example = "xxx路xxx号xxx小区", required = true)
-    @NotBlank(message = "详细地址不能为空")
+    @Schema(description = "小区/大厦/学校等", example = "幸福里小区")
+    @Size(max = 100, message = "小区/大厦名称不能超过100个字符")
+    private String community;
+
+    @Schema(description = "楼栋", example = "3栋")
+    @Size(max = 20, message = "楼栋不能超过20个字符")
+    private String building;
+
+    @Schema(description = "单元", example = "2单元")
+    @Size(max = 20, message = "单元不能超过20个字符")
+    private String unit;
+
+    @Schema(description = "楼层", example = "15层")
+    @Size(max = 20, message = "楼层不能超过20个字符")
+    private String floor;
+
+    @Schema(description = "门牌号", example = "1503室")
+    @Size(max = 20, message = "门牌号不能超过20个字符")
+    private String roomNo;
+
+    // detail 为冗余的完整拼接地址（后端按上述字段规范化生成），供订单快照/配送/打印等既有展示复用。
+    @Schema(description = "详细地址（后端按结构化字段规范化拼接）", example = "三里屯街道幸福里小区3栋2单元15层1503室")
     @Size(max = 200, message = "详细地址不能超过200个字符")
     private String detail;
 

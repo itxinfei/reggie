@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css?v=20260922"/>
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-    <link rel="stylesheet" href="./../styles/address-edit.css?v=20260922b"/>
+    <link rel="stylesheet" href="./../styles/address-edit.css?v=20260922c"/>
     <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="./../js/icon-fallback.js?v=20260917"></script>
@@ -98,20 +98,51 @@
                     </div>
                 </div>
 
-                <!-- ======== 门牌号 ======== -->
+                <!-- ======== 详细地址（结构化：街道/小区 + 楼栋/单元/层/门牌） ======== -->
                 <div class="formGroup">
                     <div class="formLabel">
-                        <i class="ri-home-4-line"></i>门牌号
+                        <i class="ri-home-4-line"></i>详细地址
                     </div>
                     <div class="formBody">
+                        <!-- 街道/乡镇（选填） -->
                         <div class="formRow" :class="{'formRowError': errors.detail}">
-                            <textarea class="nativeTextarea"
-                                      placeholder="街道、小区、楼栋、门牌号等详细信息"
-                                      v-model="form.detail"
-                                      maxlength="140"
-                                      rows="2"
-                                      @input="clearError('detail')"></textarea>
-                            <span class="charCount">{{form.detail.length}}/140</span>
+                            <input class="nativeInput" type="text"
+                                   placeholder="街道/乡镇（选填，如：三里屯街道）"
+                                   v-model="form.streetName" maxlength="50"
+                                   @input="clearError('detail')">
+                        </div>
+                        <!-- 小区/大厦/学校 -->
+                        <div class="formRow addrRowGap" :class="{'formRowError': errors.detail}">
+                            <input class="nativeInput" type="text"
+                                   placeholder="小区/大厦/学校（如：幸福里小区）"
+                                   v-model="form.community" maxlength="100"
+                                   @input="clearError('detail')">
+                        </div>
+                        <!-- 楼栋 + 单元 -->
+                        <div class="addrShortRow addrRowGap">
+                            <div class="formRow addrShort" :class="{'formRowError': errors.detail}">
+                                <input class="nativeInput" type="text" placeholder="楼栋 如3栋"
+                                       v-model="form.building" maxlength="20"
+                                       @input="clearError('detail')">
+                            </div>
+                            <div class="formRow addrShort" :class="{'formRowError': errors.detail}">
+                                <input class="nativeInput" type="text" placeholder="单元 如2单元"
+                                       v-model="form.unit" maxlength="20"
+                                       @input="clearError('detail')">
+                            </div>
+                        </div>
+                        <!-- 楼层 + 门牌号 -->
+                        <div class="addrShortRow addrRowGap">
+                            <div class="formRow addrShort" :class="{'formRowError': errors.detail}">
+                                <input class="nativeInput" type="text" placeholder="楼层 如15层"
+                                       v-model="form.floor" maxlength="20"
+                                       @input="clearError('detail')">
+                            </div>
+                            <div class="formRow addrShort" :class="{'formRowError': errors.detail}">
+                                <input class="nativeInput" type="text" placeholder="门牌 如1503室"
+                                       v-model="form.roomNo" maxlength="20"
+                                       @input="clearError('detail')">
+                            </div>
                         </div>
                         <div class="fieldError" v-if="errors.detail">{{errors.detail}}</div>
                     </div>
@@ -203,6 +234,8 @@
                     provinceCode: '', provinceName: '',
                     cityCode: '', cityName: '',
                     districtCode: '', districtName: '',
+                    // 结构化详细地址：街道/小区/栋/单元/层/门牌，独立入库；detail 由后端拼接
+                    streetName: '', community: '', building: '', unit: '', floor: '', roomNo: '',
                     detail: '',
                     label: '公司',
                 },
@@ -263,6 +296,9 @@
                             provinceCode: d.provinceCode || '', provinceName: d.provinceName || '',
                             cityCode: d.cityCode || '', cityName: d.cityName || '',
                             districtCode: d.districtCode || '', districtName: d.districtName || '',
+                            streetName: d.streetName || '', community: d.community || '',
+                            building: d.building || '', unit: d.unit || '',
+                            floor: d.floor || '', roomNo: d.roomNo || '',
                             detail: d.detail || '',
                             label: d.label || '公司',
                         }
@@ -439,10 +475,9 @@
                     this.errors.phone = '手机号格式不正确'
                     ok = false
                 }
-                // 地址只到区/县三级（街道不入库，由下方"详细地址"承载），只要求省/市/区完整。
-                // 弱网兼容：编辑回填逐级反查 region id 失败时 id 为 null，但 form 里省/市/区 code+name
-                // 完整（来自详情接口），后端按 code+name 保存、不依赖 id，此时应允许直接保存，
-                // 避免用户仅改门牌号却被强制重新逐级选择省/市/区。
+                // 省/市/区用选择器保证规范，必选。
+                // 弱网兼容：回填反查 region id 失败时 id 为 null，但 form 里省/市/区 code+name
+                // 完整（来自详情接口），后端按 code+name 保存、不依赖 id，此时允许直接保存。
                 var regionOk = (this.provinceId || (f.provinceCode && f.provinceName))
                     && (this.cityId || (f.cityCode && f.cityName))
                     && (this.districtId || (f.districtCode && f.districtName))
@@ -450,8 +485,16 @@
                     this.errors.region = '请选择完整的省/市/区'
                     ok = false
                 }
-                if (!f.detail || !f.detail.trim()) {
-                    this.errors.detail = '请输入门牌号及详细地址'
+                // 详细地址：街道/小区/栋/单元/层/门牌任一非空即可；兼容仅有旧 detail 的历史地址
+                var detailOk = (f.streetName && f.streetName.trim())
+                    || (f.community && f.community.trim())
+                    || (f.building && f.building.trim())
+                    || (f.unit && f.unit.trim())
+                    || (f.floor && f.floor.trim())
+                    || (f.roomNo && f.roomNo.trim())
+                    || (f.detail && f.detail.trim())
+                if (!detailOk) {
+                    this.errors.detail = '请填写小区/大厦或楼栋、门牌号等详细地址'
                     ok = false
                 }
                 return ok

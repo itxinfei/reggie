@@ -58,6 +58,62 @@ public class AddressBookController {
     }
 
     /**
+     * 按结构化字段规范化拼接完整地址，覆盖前端传入的 detail，保证全链路（订单快照/配送/打印）口径统一。
+     * 参考美团/淘宝：街道、小区直接相连（中文可读），楼栋+单元+楼层+门牌紧凑拼接；
+     * 用户只填数字时自动补标准后缀，已含后缀（如"5号楼/A座/1503室"）则不重复补。
+     */
+    private String buildStructuredDetail(AddressBook ab) {
+        StringBuilder sb = new StringBuilder();
+        appendPart(sb, ab.getStreetName());
+        appendPart(sb, ab.getCommunity());
+        appendPart(sb, ensureSuffix(ab.getBuilding(), "栋", "栋", "号楼", "幢", "座", "楼", "号"));
+        appendPart(sb, ensureSuffix(ab.getUnit(), "单元", "单元", "号"));
+        appendPart(sb, ensureSuffix(ab.getFloor(), "层", "层", "楼"));
+        appendPart(sb, ensureSuffix(ab.getRoomNo(), "室", "室", "号", "房"));
+        return sb.toString();
+    }
+
+    private void appendPart(StringBuilder sb, String part) {
+        if (part != null) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                sb.append(trimmed);
+            }
+        }
+    }
+
+    /**
+     * 值非空且不含任一已有后缀时补默认后缀，避免"3栋栋"这类重复。
+     */
+    private String ensureSuffix(String value, String defaultSuffix, String... suffixes) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        for (String suffix : suffixes) {
+            if (trimmed.contains(suffix)) {
+                return trimmed;
+            }
+        }
+        return trimmed + defaultSuffix;
+    }
+
+    /**
+     * 合并字段：入参非 null（含空串=清空）以入参为准，入参 null（部分更新未传）保持原值。
+     * 前端编辑保存时为全量提交，故正常路径下取入参值。
+     */
+    private String mergeValue(String input, String existing) {
+        if (input == null) {
+            return existing;
+        }
+        String trimmed = input.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    /**
      * 新增地址
      *
      * @param addressBook 地址信息
@@ -69,6 +125,12 @@ public class AddressBookController {
     public R<AddressBook> save(@Valid @RequestBody AddressBook addressBook) {
         addressBook.setUserId(BaseContext.getCurrentId());
         addressBook.setTenantId(BaseContext.getCurrentTenantId());
+        // 按结构化字段（街道/小区/栋/单元/层/门牌）规范化生成 detail；全链路统一读 detail
+        String structuredDetail = buildStructuredDetail(addressBook);
+        if (structuredDetail.isEmpty()) {
+            return R.error("请填写小区/大厦或楼栋、门牌号等详细地址");
+        }
+        addressBook.setDetail(structuredDetail);
         log.info("新增地址，手机号：{}，地址：{}",
             LogMaskUtils.maskPhone(addressBook.getPhone()),
             LogMaskUtils.maskAddress(addressBook.getDetail()));
@@ -109,30 +171,75 @@ public class AddressBookController {
         if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
             return R.error("没有查询到对应地址信息");
         }
-        // 使用租户过滤的更新条件，防止跨租户越权 + 白名单字段更新
+        // 合并结构化字段：前端全量提交；部分更新缺字段(null)时保持原值，空串=清空
+        String streetName = mergeValue(addressBook.getStreetName(), existing.getStreetName());
+        String community = mergeValue(addressBook.getCommunity(), existing.getCommunity());
+        String building = mergeValue(addressBook.getBuilding(), existing.getBuilding());
+        String unit = mergeValue(addressBook.getUnit(), existing.getUnit());
+        String floor = mergeValue(addressBook.getFloor(), existing.getFloor());
+        String roomNo = mergeValue(addressBook.getRoomNo(), existing.getRoomNo());
+        AddressBook structured = new AddressBook();
+        structured.setStreetName(streetName);
+        structured.setCommunity(community);
+        structured.setBuilding(building);
+        structured.setUnit(unit);
+        structured.setFloor(floor);
+        structured.setRoomNo(roomNo);
+        String structuredDetail = buildStructuredDetail(structured);
+        if (structuredDetail.isEmpty()) {
+            // 兜底：旧地址（结构化列为空）且本次未填结构化信息时保留原 detail，
+            // 避免用户仅修改联系人/电话却被强制重新结构化填写
+            String oldDetail = existing.getDetail() == null ? null : existing.getDetail().trim();
+            boolean noStructure = streetName == null && community == null && building == null
+                    && unit == null && floor == null && roomNo == null;
+            if (noStructure && oldDetail != null && !oldDetail.isEmpty()) {
+                structuredDetail = oldDetail;
+            } else {
+                return R.error("请填写小区/大厦或楼栋、门牌号等详细地址");
+            }
+        }
+        // 白名单更新：省/市/区 code+name + 结构化6字段 + detail，租户条件防跨租户越权
         LambdaUpdateWrapper<AddressBook> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(AddressBook::getId, addressBook.getId())
                 .eq(AddressBook::getTenantId, currentTenantId);
         if (addressBook.getConsignee() != null) wrapper.set(AddressBook::getConsignee, addressBook.getConsignee());
         if (addressBook.getPhone() != null) wrapper.set(AddressBook::getPhone, addressBook.getPhone());
-        if (addressBook.getProvinceName() != null) wrapper.set(AddressBook::getProvinceName, addressBook
-                .getProvinceName());
+        if (addressBook.getProvinceCode() != null) wrapper.set(AddressBook::getProvinceCode, addressBook.getProvinceCode());
+        if (addressBook.getProvinceName() != null) wrapper.set(AddressBook::getProvinceName, addressBook.getProvinceName());
+        if (addressBook.getCityCode() != null) wrapper.set(AddressBook::getCityCode, addressBook.getCityCode());
         if (addressBook.getCityName() != null) wrapper.set(AddressBook::getCityName, addressBook.getCityName());
-        if (addressBook.getDistrictName() != null) wrapper.set(AddressBook::getDistrictName, addressBook
-                .getDistrictName());
-        if (addressBook.getDetail() != null) wrapper.set(AddressBook::getDetail, addressBook.getDetail());
+        if (addressBook.getDistrictCode() != null) wrapper.set(AddressBook::getDistrictCode, addressBook.getDistrictCode());
+        if (addressBook.getDistrictName() != null) wrapper.set(AddressBook::getDistrictName, addressBook.getDistrictName());
+        // 结构化6字段与 detail 无条件 set（值为 null 即清空），保证编辑结果与落库一致
+        wrapper.set(AddressBook::getStreetName, streetName)
+                .set(AddressBook::getCommunity, community)
+                .set(AddressBook::getBuilding, building)
+                .set(AddressBook::getUnit, unit)
+                .set(AddressBook::getFloor, floor)
+                .set(AddressBook::getRoomNo, roomNo)
+                .set(AddressBook::getDetail, structuredDetail);
         if (addressBook.getLabel() != null) wrapper.set(AddressBook::getLabel, addressBook.getLabel());
         if (addressBook.getIsDefault() != null) wrapper.set(AddressBook::getIsDefault, addressBook.getIsDefault());
-        // 地址内容变化时重新地理编码回填经纬度
-        boolean addressChanged = addressBook.getDetail() != null || addressBook.getProvinceName() != null
-                || addressBook.getCityName() != null || addressBook.getDistrictName() != null;
+        // 地址内容变化时重新地理编码：用合并后的完整地址（省市区 + 规范化 detail）
+        boolean addressChanged = addressBook.getProvinceName() != null || addressBook.getCityName() != null
+                || addressBook.getDistrictName() != null || addressBook.getStreetName() != null
+                || addressBook.getCommunity() != null || addressBook.getBuilding() != null
+                || addressBook.getUnit() != null || addressBook.getFloor() != null
+                || addressBook.getRoomNo() != null;
         if (addressChanged) {
-            BigDecimal[] lngLat = geoUtils.geocode(buildFullAddress(addressBook));
+            AddressBook forGeo = new AddressBook();
+            forGeo.setProvinceName(mergeValue(addressBook.getProvinceName(), existing.getProvinceName()));
+            forGeo.setCityName(mergeValue(addressBook.getCityName(), existing.getCityName()));
+            forGeo.setDistrictName(mergeValue(addressBook.getDistrictName(), existing.getDistrictName()));
+            forGeo.setDetail(structuredDetail);
+            BigDecimal[] lngLat = geoUtils.geocode(buildFullAddress(forGeo));
             if (lngLat != null) {
                 wrapper.set(AddressBook::getLongitude, lngLat[0]).set(AddressBook::getLatitude, lngLat[1]);
             }
         }
         addressBookService.update(wrapper);
+        // 同步响应对象的 detail，保证回显与落库一致
+        addressBook.setDetail(structuredDetail);
         return R.success(addressBook);
     }
 

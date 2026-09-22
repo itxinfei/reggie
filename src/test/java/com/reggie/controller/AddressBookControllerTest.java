@@ -45,10 +45,38 @@ public class AddressBookControllerTest extends BaseControllerTest {
         mockMvc.perform(withCsrfToken(mockMvc, post("/address-book")
                 .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"userId\":1,\"consignee\":\"新地址联系人\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"detail\":\"科技园路1号\",\"label\":\"公司\"}")))
+                .content("{\"userId\":1,\"consignee\":\"新地址联系人\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"streetName\":\"粤海街道\",\"community\":\"科技园小区\",\"building\":\"3栋\",\"unit\":\"2单元\",\"floor\":\"15层\",\"roomNo\":\"1503室\",\"label\":\"公司\"}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data.consignee").value("新地址联系人"));
+                .andExpect(jsonPath("$.data.consignee").value("新地址联系人"))
+                // 结构化字段独立保存，detail 由后端按字段规范化拼接
+                .andExpect(jsonPath("$.data.community").value("科技园小区"))
+                .andExpect(jsonPath("$.data.roomNo").value("1503室"))
+                .andExpect(jsonPath("$.data.detail").value(org.hamcrest.Matchers.containsString("科技园小区")));
+    }
+
+    @Test
+    void testSaveWithoutDetailRejected() throws Exception {
+        // 只选省市区、不填任何结构化详细信息：应被拦截
+        mockMvc.perform(withCsrfToken(mockMvc, post("/address-book")
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"userId\":1,\"consignee\":\"张三\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"label\":\"家\"}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("详细地址")));
+    }
+
+    @Test
+    void testSaveNumericAutoSuffix() throws Exception {
+        // 楼栋/单元/层/门牌只填纯数字：后端补标准后缀，detail 规范化拼接
+        mockMvc.perform(withCsrfToken(mockMvc, post("/address-book")
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"userId\":1,\"consignee\":\"张三\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"community\":\"科技园小区\",\"building\":\"3\",\"unit\":\"2\",\"floor\":\"15\",\"roomNo\":\"1503\",\"label\":\"家\"}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.detail").value("科技园小区3栋2单元15层1503室"));
     }
 
     @Test
