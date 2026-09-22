@@ -53,6 +53,18 @@
   color: var(--color-success);
 }
 
+/* 取消/退款结果图标：复用成功图标尺寸，仅改色 */
+#pay_success .divContent .cancel-icon,
+#pay_success .divContent .refund-icon {
+  display: block;
+  margin-top: 0;
+  margin-bottom: 19rem;
+  font-size: 90rem;
+  line-height: 86rem;
+}
+#pay_success .divContent .cancel-icon { color: var(--color-text-hint); }
+#pay_success .divContent .refund-icon { color: var(--color-warning); }
+
 #pay_success .divContent .divSuccess {
   height: auto;
   font-size: 24rem;

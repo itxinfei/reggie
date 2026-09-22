@@ -96,11 +96,13 @@
                             </template>
                             <!-- 待接单 -->
                             <template v-if="order.status === 2">
-                                <div class="act-btn act-outline" @click="viewTracking(order)">查看详情</div>
+                                <div class="act-btn act-outline" @click="urgeOrder(order)">催单</div>
+                                <div class="act-btn act-outline" @click="viewTracking(order)">查看配送</div>
                             </template>
                             <!-- 配送中 -->
                             <template v-if="order.status === 3">
-                                <div class="act-btn act-outline" @click="viewTracking(order)">查看详情</div>
+                                <div class="act-btn act-outline" @click="urgeOrder(order)">催单</div>
+                                <div class="act-btn act-outline" @click="viewTracking(order)">查看配送</div>
                                 <div class="act-btn act-primary" @click="confirmReceipt(order)">确认收货</div>
                             </template>
                             <!-- 已完成 -->
@@ -395,6 +397,29 @@
                     } else {
                         vant.Toast.fail('该订单无配送追踪信息');
                     }
+                },
+                // 修改点：催单（待接单/配送中可用），按订单维度在飞防重，避免连点刷接口
+                urgeOrder(order){
+                    if(!order || !order.id) return
+                    if(!this._urgeMap) this._urgeMap = {}
+                    if(this._urgeMap[order.id]) return
+                    this._urgeMap[order.id] = true
+                    $axios({ url: '/api/urgency/customer/trigger/' + order.id, method: 'post' }).then((res) => {
+                        if(res && res.code === 1){
+                            var d = res.data || {}
+                            if(d.remainCount !== undefined && d.remainCount !== null){
+                                vant.Toast.success('已通知商家，今日还可催' + d.remainCount + '次')
+                            }else{
+                                vant.Toast.success('已通知商家，请耐心等待')
+                            }
+                        }else{
+                            vant.Toast.fail((res && res.msg) || '催单失败，请稍后重试')
+                        }
+                    }).catch(() => {
+                        vant.Toast.fail('网络异常，请稍后重试')
+                    }).finally(() => {
+                        this._urgeMap[order.id] = false
+                    })
                 },
                 // 修改点：待付款订单去支付——跳结算页重新发起支付流程
                 goToPay(order){

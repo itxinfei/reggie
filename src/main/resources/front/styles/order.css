@@ -523,3 +523,65 @@
 }
 
 #order .od-bar .act-btn { margin: 0; }
+
+/* ==================== 售后记录区（订单详情） ==================== */
+#order .od-refund-records {
+  margin: 12rem;
+  padding: 14rem 16rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+#order .od-rr-title {
+  font-size: 15rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 10rem;
+}
+#order .od-rr-item {
+  padding: 10rem 0;
+}
+#order .od-rr-item + .od-rr-item {
+  border-top: var(--separator);
+}
+#order .od-rr-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+#order .od-rr-status {
+  font-size: 12rem;
+  padding: 2rem 8rem;
+  border-radius: var(--radius-sm);
+  line-height: 1.6;
+}
+#order .od-rr-status.st-pending,
+#order .od-rr-status.st-processing {
+  color: var(--color-warning);
+  background: var(--color-warning-tint);
+}
+#order .od-rr-status.st-SUCCESS {
+  color: var(--color-success);
+  background: var(--color-success-tint);
+}
+#order .od-rr-status.st-fail,
+#order .od-rr-status.st-rejected {
+  color: var(--color-danger);
+  background: var(--color-danger-tint);
+}
+#order .od-rr-amount {
+  font-size: 14rem;
+  font-weight: 600;
+  color: var(--color-price);
+}
+#order .od-rr-reason {
+  font-size: 12rem;
+  color: var(--color-text-secondary);
+  margin-top: 6rem;
+  line-height: 1.5;
+}
+#order .od-rr-time {
+  font-size: 11rem;
+  color: var(--color-text-hint);
+  margin-top: 6rem;
+}

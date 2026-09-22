@@ -169,7 +169,12 @@
             },
             methods: {
                 goBack: function() {
-                    history.go(-1);
+                    // 兜底：直接从链接进入无历史时 history.back() 无效，改回首页避免卡死本页
+                    if (history.length > 1) {
+                        history.back();
+                    } else {
+                        window.location.replace('/front/index.html');
+                    }
                 },
                 // 修改点：下拉刷新
                 // 修改点：下拉刷新（refreshing 由 loadMessages.finally 复位，与网络实际完成同步）

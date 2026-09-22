@@ -144,6 +144,22 @@
                 <i class="ri-arrow-right-s-line"></i>
             </div>
 
+            <!-- 售后记录：申请后在此展示审核/退款进度，避免用户无反馈重复申请 -->
+            <div v-if="!loading && order.id && refundRecords.length" class="od-refund-records">
+                <div class="od-rr-title">售后记录</div>
+                <div v-for="r in refundRecords" :key="r.id" class="od-rr-item">
+                    <div class="od-rr-head">
+                        <span class="od-rr-status" :class="'st-' + r.status">{{ refundStatusText(r.status) }}</span>
+                        <span class="od-rr-amount">￥{{ Number(r.amount || 0).toFixed(2) }}</span>
+                    </div>
+                    <div class="od-rr-reason" v-if="r.reason">申请原因：{{ r.reason }}</div>
+                    <div class="od-rr-reason" v-if="r.status === 'rejected' && r.rejectReason">
+                        拒绝原因：{{ r.rejectReason }}
+                    </div>
+                    <div class="od-rr-time">{{ formatTime(r.createdTime) }}</div>
+                </div>
+            </div>
+
             <!-- 底部操作栏：按订单状态 -->
             <div v-if="!loading && order.id" class="od-bar">
                 <template v-if="order.status === 1">
@@ -185,7 +201,9 @@
                     orderId: null,
                     order: {},
                     loading: true,
-                    submitting: false
+                    submitting: false,
+                    // 本订单售后/退款记录（审核与退款进度）
+                    refundRecords: []
                 }
             },
             computed: {
@@ -232,6 +250,7 @@
             created: function() {
                 this.orderId = new URLSearchParams(window.location.search).get('id')
                 this.loadDetail()
+                this.loadRefundRecords()
             },
             methods: {
                 goBack: function() { goBack() },
@@ -248,6 +267,39 @@
                     } finally {
                         this.loading = false
                     }
+                },
+                // 加载本订单售后记录：展示审核/退款进度
+                loadRefundRecords: async function() {
+                    if (!this.orderId) return
+                    try {
+                        var res = await listRefundRecordsApi({ id: this.orderId })
+                        if (res && res.code === 1) {
+                            this.refundRecords = Array.isArray(res.data) ? res.data : []
+                        }
+                    } catch (e) {
+                        console.warn('[order-detail] 售后记录加载失败:', e)
+                    }
+                },
+                refundStatusText: function(status) {
+                    var map = {
+                        pending: '退款申请中',
+                        processing: '退款处理中',
+                        SUCCESS: '退款成功',
+                        fail: '退款失败',
+                        rejected: '审核拒绝'
+                    }
+                    return map[status] || status
+                },
+                formatTime: function(t) {
+                    if (!t) return ''
+                    // LocalDateTime 序列化可能为 ISO 字符串或 [yyyy,MM,dd,HH,mm,ss] 数组
+                    if (Array.isArray(t)) {
+                        var p = t
+                        var pad = function (n) { return n < 10 ? '0' + n : '' + n }
+                        return p[0] + '-' + pad(p[1]) + '-' + pad(p[2]) + ' '
+                            + pad(p[3] || 0) + ':' + pad(p[4] || 0)
+                    }
+                    return String(t).replace('T', ' ').substring(0, 16)
                 },
                 goToPay: function() {
                     window.requestAnimationFrame(function() {
@@ -372,6 +424,7 @@
                                 var data = res.data || {}
                                 vant.Toast.success('售后申请已提交：' + (data.refundNo || ''))
                                 self.loadDetail()
+                                self.loadRefundRecords()
                             } else {
                                 vant.Toast.fail((res && res.msg) || '申请失败')
                             }
