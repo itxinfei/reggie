@@ -638,7 +638,9 @@
             { prop: 'memberPhone', label: '会员手机', width: 130 },
             { prop: 'couponCode', label: '优惠券码', width: 140 },
             { prop: 'discountAmount', label: '优惠金额', width: 110,
-              formatter: function(row) {
+              formatter: function(value, row) {
+                // crud-table 契约 formatter(value, row, col)：首参为单元格值，次参才是行；
+                // 原 function(row) 把 value 当行，row.couponType 恒 undefined，该列恒显示 '-'
                 if (row.couponType === 'DISCOUNT') {
                   return row.discountRate ? (Number(row.discountRate) * 10).toFixed(1) + '折' : '-'
                 }

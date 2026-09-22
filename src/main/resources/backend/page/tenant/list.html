@@ -230,13 +230,15 @@
         this.loadList()
       },
       onPageChange(p) {
-        this.page = p
+        // page-change 下发 {page,pageSize} 对象，须取 .page，不能把整个对象赋给 this.page
+        this.page = (p && p.page !== undefined) ? p.page : p
         this.loadList()
       },
       onSizeChange(ps) {
-        this.pageSize = ps
+        // size-change 下发纯数字（此处兼容对象）；不在此 loadList：紧随其后的 page-change
+        // 会以 page=1 统一加载，避免改页大小时双请求
+        this.pageSize = (ps && ps.pageSize !== undefined) ? ps.pageSize : ps
         this.page = 1
-        this.loadList()
       },
       // page 接口已返回完整实体，直接回填，避免多余请求
       openEdit(row) {

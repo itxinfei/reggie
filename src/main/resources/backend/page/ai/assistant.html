@@ -186,12 +186,12 @@
 
                                 <!-- 推荐菜品卡片（点餐场景兜底） -->
                                 <div class="dish-cards" v-if="msg.dishes && msg.dishes.length">
-                                    <div class="dish-card" v-for="dish in msg.dishes" :key="d.id || d.name">
+                                    <div class="dish-card" v-for="dish in msg.dishes" :key="dish.id || dish.name">
                                         <div>
-                                            <div class="dish-name">{{ d.name }}</div>
-                                            <div class="dish-desc" v-if="d.description">{{ d.description }}</div>
+                                            <div class="dish-name">{{ dish.name }}</div>
+                                            <div class="dish-desc" v-if="dish.description">{{ dish.description }}</div>
                                         </div>
-                                        <div class="dish-price" v-if="d.price != null">¥{{ formatPrice(d.price) }}</div>
+                                        <div class="dish-price" v-if="dish.price != null">¥{{ formatPrice(dish.price) }}</div>
                                     </div>
                                 </div>
 
