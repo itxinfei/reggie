@@ -1370,7 +1370,9 @@ window.ReggieListMixin = {
       this.page = 1
       // 修改点：兼容 crud-table 传纯数字和 table-bar 传对象两种情况
       this.pageSize = (typeof payload === 'object' && payload != null) ? (payload.pageSize || payload) : payload
-      if (typeof this.fetchData === 'function') this.fetchData()
+      // 不在此调用 fetchData：crud-table 改页大小时会同步连续 emit size-change 再 emit
+      // page-change（components.js onSizeChange），紧随的 onPageChange 会以 page=1 统一加载。
+      // 若这里也 fetch，改页大小必然发出两次相同请求。
     }
   }
 }
