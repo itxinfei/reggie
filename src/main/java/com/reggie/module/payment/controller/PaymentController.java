@@ -1109,6 +1109,56 @@ public class PaymentController {
     }
 
     /**
+     * C 端用户查询支付状态（收银台轮询用）。
+     * <p>
+     * 与员工端点 {@code /query/{tradeNo}} 不同：不要求员工身份，但必须校验支付单
+     * 关联订单的 userId == 当前登录用户，防止用户凭 tradeNo 探测他人支付状态。
+     * 返回精简字段（状态 + 金额 + 场景标记），不暴露支付单实体。
+     * </p>
+     *
+     * @param tradeNo 商户支付单号
+     * @return status/orderId/channel/amount/mockMode
+     */
+    @GetMapping("/user/query/{tradeNo}")
+    @RateLimit(maxRequestsPerSecond = 5, type = RateLimitType.USER)
+    @Operation(summary = "用户查询支付状态", description = "C端收银台轮询支付结果，校验订单归属当前用户")
+    public R<Map<String, Object>> userQuery(
+            @Parameter(description = "商户支付单号", required = true) @PathVariable String tradeNo) {
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId == null) {
+            return R.error("登录状态异常，请重新登录");
+        }
+        PaymentOrder po = paymentOrderService.lambdaQuery()
+            .eq(PaymentOrder::getTradeNo, tradeNo).one();
+        if (po == null) {
+            return R.error("支付订单不存在");
+        }
+        Orders order = orderService.getById(po.getOrderId());
+        if (order == null) {
+            return R.error("支付订单不存在");
+        }
+        // 归属校验：支付单关联订单必须属于当前用户。失败时对外统一文案，避免支付单存在性探测
+        if (!currentUserId.equals(order.getUserId())) {
+            log.warn("用户查询支付单归属校验失败: userId={}, tradeNo={}, orderUserId={}",
+                    currentUserId, tradeNo, order.getUserId());
+            return R.error("支付订单不存在");
+        }
+        Long queryTenantId = BaseContext.getCurrentTenantId();
+        if (queryTenantId != null && !queryTenantId.equals(po.getTenantId())) {
+            log.warn("用户查询支付单租户校验失败: userId={}, tradeNo={}, payTenantId={}",
+                    currentUserId, tradeNo, po.getTenantId());
+            return R.error("支付订单不存在");
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", po.getStatus());
+        result.put("orderId", po.getOrderId());
+        result.put("channel", po.getChannel());
+        result.put("amount", po.getAmount());
+        result.put("mockMode", paymentConfigProperties.isMockMode());
+        return R.success(result);
+    }
+
+    /**
      * 分页查询。
      * @param page 参数 page
      * @param pageSize 参数 pageSize

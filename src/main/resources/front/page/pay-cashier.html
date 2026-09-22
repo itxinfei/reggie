@@ -73,6 +73,18 @@
                 color: var(--color-text-secondary); background: var(--bg-card); }
             .state-btn-primary { background: var(--color-primary); border-color: var(--color-primary);
                 color: #4a3500; font-weight: 600; }
+            /* 真实支付扫码弹窗（NATIVE） */
+            .qr-pay-popup { width: 280rem; border-radius: var(--radius-lg); overflow: hidden; }
+            .qr-pay-box { padding: 24rem 20rem 20rem; text-align: center; }
+            .qr-pay-title { font-size: 16rem; font-weight: 600; color: var(--color-text-primary); }
+            .qr-pay-img { width: 200rem; height: 200rem; margin: 16rem auto 0; display: block; }
+            .qr-pay-amount { font-size: 22rem; font-weight: 700; color: var(--color-price);
+                margin-top: 12rem; font-variant-numeric: tabular-nums; }
+            .qr-pay-tip { font-size: 12rem; color: var(--color-text-hint);
+                margin-top: 8rem; line-height: 1.6; }
+            .qr-pay-cancel { margin-top: 16rem; width: 100%; height: 42rem; border: none;
+                border-radius: 21rem; background: var(--color-primary-light);
+                color: var(--color-primary-dark); font-size: 15rem; }
         </style>
     </head>
     <body>
@@ -100,12 +112,25 @@
                     </div>
                 </div>
 
-                <!-- 沙箱提示：当前支付渠道为模拟实现，点击确认仅在演示环境完成支付，不会真实扣款 -->
-                <div class="mock-tip">
+                <!-- 沙箱提示：仅 mock 模式展示（真实支付不显示） -->
+                <div class="mock-tip" v-if="isMock">
                     <i class="ri-information-line"></i>
                     <span>演示环境：当前为模拟支付，点击「确认支付」即模拟完成付款，不会产生真实交易。</span>
                 </div>
             </div>
+
+            <!-- 真实支付扫码弹窗：NATIVE 场景展示渠道二维码，支付成功后轮询自动跳转 -->
+            <van-popup v-model="showQrPopup" position="center" round
+                       :close-on-click-overlay="false" @close="onQrPopupClose"
+                       class="qr-pay-popup">
+                <div class="qr-pay-box">
+                    <div class="qr-pay-title">请使用{{ channelName }}扫一扫</div>
+                    <img class="qr-pay-img" :src="qrCodeUrl" alt="支付二维码">
+                    <div class="qr-pay-amount">￥{{ amountText }}</div>
+                    <div class="qr-pay-tip">支付完成后页面自动跳转，无需手动操作</div>
+                    <button class="qr-pay-cancel" @click="showQrPopup = false">取消支付</button>
+                </div>
+            </van-popup>
 
             <!-- 参数缺失/订单加载失败态（2026-09-21：补可点出口，修死胡同） -->
             <div class="cashier-state" v-if="loadError">
@@ -145,7 +170,17 @@
                     amount: 0,
                     loaded: false,
                     loadError: '',
-                    paying: false
+                    paying: false,
+                    // 渠道模式：true=模拟支付（提示条可见、走 mock 回调），false=真实渠道
+                    isMock: false,
+                    // 扫码弹窗（NATIVE）
+                    showQrPopup: false,
+                    qrCodeUrl: '',
+                    // 支付结果轮询
+                    pollTimer: null,
+                    pollBeginTs: 0,
+                    // 页面跳渠道收银台前的隐藏时刻（用于扣除隐藏时长，暂停超时累计）
+                    hiddenTs: 0
                 }
             },
             computed: {
@@ -163,6 +198,14 @@
                     return;
                 }
                 this.loadOrder();
+                // H5 场景跳渠道收银台后返回时，页面重新可见立即查一次支付结果
+                document.addEventListener('visibilitychange', this.handleVisibility);
+                window.addEventListener('pageshow', this.onPageShow);
+            },
+            beforeDestroy: function () {
+                document.removeEventListener('visibilitychange', this.handleVisibility);
+                window.removeEventListener('pageshow', this.onPageShow);
+                this.stopPolling();
             },
             methods: {
                 parseQuery: function () {
@@ -183,6 +226,8 @@
                             self.amount = Number(d.amount || d.actualAmount || 0);
                             self.orderNo = d.number || d.orderNo || '';
                             self.loaded = true;
+                            // 校验支付单归属与模式（他人订单直接报错；已支付补跳成功页）
+                            self.checkPaymentState();
                         } else {
                             self.loadError = (res && res.msg) || '订单信息加载失败';
                         }
@@ -190,10 +235,53 @@
                         self.loadError = '网络异常，订单信息加载失败';
                     });
                 },
-                // 沙箱模拟支付：构造渠道回调参数，请求 /notify/{channel}（mock-mode 下跳过验签直接受理）
+                // 确认支付：重新调 /pay（幂等复用同一 PENDING 支付单、重新拿渠道支付链接），
+                // 按 mockMode 分支——演示环境走模拟回调；真实环境扫码弹二维码 / H5 跳渠道页 + 轮询
                 confirmPay: function () {
                     if (this.paying) return;
+                    var self = this;
                     this.paying = true;
+                    // C 端为移动端浏览器，显式 payType=H5（微信出 H5 链接，支付宝不识别走默认 WAP）
+                    paymentCreateApi({ orderId: this.orderId, channel: this.channel, payType: 'H5' })
+                        .then(function (res) {
+                            if (!res || res.code !== 1 || !res.data) {
+                                self.paying = false;
+                                vant.Toast.fail((res && res.msg) || '支付下单失败，请重试');
+                                return;
+                            }
+                            var d = res.data;
+                            if (!d.success) {
+                                self.paying = false;
+                                vant.Toast.fail(d.errorMsg || '支付下单失败，请重试');
+                                return;
+                            }
+                            // 以 /pay 回填的权威 tradeNo 为准（URL 上的可能被构造成本人另一订单的单号）
+                            if (d.tradeNo) {
+                                self.tradeNo = d.tradeNo;
+                            }
+                            if (d.mockMode) {
+                                self.mockNotifyPay();
+                                return;
+                            }
+                            // 真实渠道：先启动轮询，再按支付形态展示二维码或跳转
+                            self.startPolling();
+                            if (d.qrCodeUrl) {
+                                self.qrCodeUrl = d.qrCodeUrl;
+                                self.showQrPopup = true;
+                            } else if (d.payUrl) {
+                                window.location.href = d.payUrl;
+                            } else {
+                                self.stopPolling();
+                                self.paying = false;
+                                vant.Toast.fail('支付渠道响应异常，请重试');
+                            }
+                        }).catch(function () {
+                            self.paying = false;
+                            vant.Toast.fail('网络异常，支付下单失败，请重试');
+                        });
+                },
+                // 演示环境：构造渠道模拟回调参数，请求 /notify/{channel}（mock-mode 跳过验签直接受理）
+                mockNotifyPay: function () {
                     var amount = Number(this.amount || 0);
                     var params = {
                         out_trade_no: this.tradeNo,
@@ -223,6 +311,108 @@
                     }).catch(function () {
                         self.paying = false;
                         vant.Toast.fail('网络异常，支付失败，请重试');
+                    });
+                },
+                // ============ 真实支付轮询（2s/次，最长 5 分钟）============
+                startPolling: function () {
+                    this.stopPolling();
+                    this.pollBeginTs = Date.now();
+                    var self = this;
+                    this.pollTimer = setInterval(function () { self.pollOnce(); }, 2000);
+                },
+                stopPolling: function () {
+                    if (this.pollTimer) {
+                        clearInterval(this.pollTimer);
+                        this.pollTimer = null;
+                    }
+                },
+                pollOnce: function () {
+                    var self = this;
+                    paymentQueryApi(this.tradeNo).then(function (res) {
+                        if (res && res.code === 1 && res.data) {
+                            var st = res.data.status;
+                            if (st === 'SUCCESS') {
+                                self.gotoSuccess();
+                                return;
+                            }
+                            if (st === 'FAIL' || st === 'REFUND') {
+                                self.handlePollEnd(st === 'REFUND' ? '支付单状态异常，请重新发起支付'
+                                    : '支付失败，请重新发起支付');
+                                return;
+                            }
+                        }
+                        self.checkPollTimeout();
+                    }).catch(function () {
+                        // 单次网络异常静默；持续异常也要保证超时能到期（否则 paying 永久 true、按钮永久禁用）
+                        self.checkPollTimeout();
+                    });
+                },
+                // 轮询窗口（5 分钟，只累计页面可见时间）到期处理；返回 true 表示已超时
+                checkPollTimeout: function () {
+                    if (Date.now() - this.pollBeginTs > 5 * 60 * 1000) {
+                        this.handlePollTimeout();
+                        return true;
+                    }
+                    return false;
+                },
+                gotoSuccess: function () {
+                    this.stopPolling();
+                    window.location.replace('/front/page/pay-success.html?reorderId=' + this.orderId);
+                },
+                handlePollEnd: function (msg) {
+                    this.stopPolling();
+                    this.showQrPopup = false;
+                    this.paying = false;
+                    vant.Toast.fail(msg);
+                },
+                handlePollTimeout: function () {
+                    this.stopPolling();
+                    this.showQrPopup = false;
+                    this.paying = false;
+                    vant.Toast('支付结果等待超时，如已付款请稍后在订单中查看');
+                },
+                // 扫码弹窗关闭（用户点取消）：停止轮询与等待；H5 场景弹窗未开，不受影响
+                onQrPopupClose: function () {
+                    this.stopPolling();
+                    this.paying = false;
+                },
+                // 页面可见性变化：跳渠道收银台时记录隐藏时刻；返回时扣除隐藏时长（5 分钟窗口
+                // 只累计页面可见时间），并无视 paying 至少查一次——用户可能在超时后才完成付款
+                handleVisibility: function () {
+                    if (document.hidden) {
+                        this.hiddenTs = Date.now();
+                        return;
+                    }
+                    if (this.hiddenTs) {
+                        this.pollBeginTs += Date.now() - this.hiddenTs;
+                        this.hiddenTs = 0;
+                    }
+                    if (this.paying && !this.pollTimer) {
+                        this.startPolling();
+                    }
+                    this.pollOnce();
+                },
+                // iOS Safari 从 bfcache 恢复可能只触发 pageshow 而无 visibilitychange
+                onPageShow: function (e) {
+                    if (e.persisted) {
+                        this.handleVisibility();
+                    }
+                },
+                // 进入收银台时校验支付单：归属/模式/已支付补跳
+                checkPaymentState: function () {
+                    var self = this;
+                    paymentQueryApi(this.tradeNo).then(function (res) {
+                        if (res && res.code === 1 && res.data) {
+                            self.isMock = !!res.data.mockMode;
+                            if (res.data.status === 'SUCCESS') {
+                                window.location.replace('/front/page/pay-success.html?reorderId=' + self.orderId);
+                            }
+                        } else {
+                            self.loaded = false;
+                            self.loadError = (res && res.msg) || '支付单校验失败，请返回重新下单';
+                        }
+                    }).catch(function () {
+                        // 网络抖动不阻断收银台展示，确认支付时仍会重新校验
                     });
                 },
                 goBack: function () {

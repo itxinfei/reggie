@@ -22,3 +22,12 @@ function paymentNotifyMockApi(channel, params) {
     data: params
   })
 }
+
+// C 端用户查询支付状态（收银台轮询）：后端校验 tradeNo 关联订单属于当前用户。
+// 返回 data: status(PENDING/SUCCESS/FAIL/REFUND) / orderId / channel / amount / mockMode
+function paymentQueryApi(tradeNo) {
+  return $axios({
+    'url': '/api/payment/user/query/' + encodeURIComponent(tradeNo),
+    'method': 'get'
+  })
+}

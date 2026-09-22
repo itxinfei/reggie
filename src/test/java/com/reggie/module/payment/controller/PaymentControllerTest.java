@@ -446,6 +446,49 @@ public class PaymentControllerTest {
                 .andExpect(jsonPath("$.msg").value("支付订单不存在"));
     }
 
+    // ==================== C 端用户查询（/user/query/{tradeNo}）====================
+
+    @Test
+    @DisplayName("16a. 用户查询支付状态 - 本人订单成功返回精简字段")
+    void testUserQuery_owner_success() throws Exception {
+        PaymentOrder po = paymentOrderService.createPaymentOrder(200L, "WECHAT", new BigDecimal("99.99"));
+
+        mockMvc.perform(get("/api/payment/user/query/{tradeNo}", po.getTradeNo())
+                        .sessionAttr("user", 1L)
+                        .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andExpect(jsonPath("$.data.orderId").value(200))
+                .andExpect(jsonPath("$.data.channel").value("WECHAT"))
+                .andExpect(jsonPath("$.data.mockMode").value(true));
+    }
+
+    @Test
+    @DisplayName("16b. 用户查询支付状态 - 非本人订单拒绝")
+    void testUserQuery_not_owner_rejected() throws Exception {
+        PaymentOrder po = paymentOrderService.createPaymentOrder(200L, "WECHAT", new BigDecimal("99.99"));
+
+        // MockMvc 不执行 @WebFilter（非 Spring Bean），登录上下文按用户态显式设置：
+        // schema 中订单 200 的 user_id=1，以用户 2 的身份查询应被归属校验拒绝
+        BaseContext.setCurrentId(2L);
+        mockMvc.perform(get("/api/payment/user/query/{tradeNo}", po.getTradeNo()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("支付订单不存在"));
+    }
+
+    @Test
+    @DisplayName("16c. 用户查询支付状态 - tradeNo 不存在返回错误")
+    void testUserQuery_trade_no_not_found() throws Exception {
+        mockMvc.perform(get("/api/payment/user/query/{tradeNo}", "NON_EXISTENT")
+                        .sessionAttr("user", 1L)
+                        .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("支付订单不存在"));
+    }
+
     // ==================== 分页查询 ====================
 
     @Test
