@@ -4,9 +4,11 @@ server:
     session:
       timeout: 30m  # 会话30分钟无操作自动过期
       cookie:
-        secure: true        # 生产环境启用HTTPS后设为true，仅通过HTTPS传输Cookie
+        # 内网 HTTP 部署必须 secure=false：HTTP 下浏览器不回传 secure cookie，会导致登不进
+        secure: false
         http-only: true      # 防止 XSS 窃取 Session ID
-        same-site: strict    # 防止 CSRF 攻击
+        # lax 兼容内网入口跳转；strict 在部分内网入口易丢登录态
+        same-site: lax
   compression:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,image/svg+xml,font/ttf,font/woff,font/woff2
@@ -36,12 +38,11 @@ spring:
   # 说明：ENC() 内为占位示例，实际部署时替换为真实加密值
   datasource:
     druid:
-      url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:reggie}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=true&requireSSL=true&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+      # 内网 MySQL 未开 SSL：useSSL=false（原 useSSL=true&requireSSL=true 会连接失败）
+      url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:reggie}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
       username: ${DB_USERNAME:root}
-      # Jasypt 加密密码（首选，部署时替换为真实加密值）：
-      # password: ENC(通过 jasypt-cli 生成的真实密文)
-      # 环境变量降级（备选，二选一使用）：
-      password: ${DB_PASSWORD}
+      # 内网部署：密码直接写死（用户确认硬编码可接受），本地 MySQL root 密码 123456
+      password: 123456
       driver-class-name: com.mysql.cj.jdbc.Driver
       # 连接池基础配置
       initial-size: 10
@@ -81,10 +82,8 @@ spring:
   redis:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
-    # Jasypt 加密密码（首选，部署时替换为真实加密值）：
-    # password: ENC(通过 jasypt-cli 生成的真实密文)
-    # 环境变量降级（备选，二选一使用）：
-    password: ${REDIS_PASSWORD}
+    # 内网 Redis 裸连无密码：留空（原强制 ${REDIS_PASSWORD} 会导致启动失败）
+    password:
     database: 0
     timeout: 5000ms
     lettuce:
@@ -104,10 +103,11 @@ mybatis-plus:
 
 # 生产环境短信和推送配置
 reggie:
+  # 堂食二维码等链接用的服务器地址：本机内网IP；若部署到其他机器，改成对应IP即可
+  server-url: http://192.168.101.172:8080
   ai:
-    # 生产环境 fail-fast：必须配置 REGGIE_AI_KEY 环境变量才允许启动
-    # （防止使用代码内置兜底密钥解密数据库中的供应商 API Key）
-    require-env-key: true
+    # 内网暂不强制 AI 密钥环境变量，使用代码内置配置即可
+    require-env-key: false
   sms:
     sign-name: ${SMS_SIGN_NAME:瑞吉外卖}
     template-code: ${SMS_TEMPLATE_CODE:}
@@ -117,8 +117,8 @@ reggie:
   payment:
     # 生产必须关闭 mock：走真实微信/支付宝回调验签，防止伪造回调把订单标记已支付
     mock-mode: false
-    # 支付凭据主密钥 fail-fast：必须配置 REGGIE_PAYMENT_KEY 环境变量，缺失/非法即拒绝启动
-    require-env-key: true
+    # 本次暂不启用真实支付：不强制 REGGIE_PAYMENT_KEY，避免无密钥无法启动
+    require-env-key: false
 
 # 生产环境禁用 Swagger/OpenAPI 文档，防止暴露接口信息
 springdoc:

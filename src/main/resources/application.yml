@@ -11,8 +11,6 @@ server:
       charset: UTF-8
       enabled: true
       force: true
-  # 启用 HTTP 响应压缩：后台所有 iframe 子页面都要加载 vue.js(~350KB)+element-ui(~560KB)，
-  # 未开启压缩时每次切换菜单都重新下载约 1MB 未压缩资源，是页面"很卡"的主要根因。
   compression:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,image/svg+xml,font/ttf,font/woff,font/woff2
@@ -23,22 +21,16 @@ spring:
     name: reggie_take_out
   profiles:
     active: dev  # 默认开发环境
-  # 禁用 DevTools 自动重启（IDEA 可能自动加载 DevTools）
   devtools:
     restart:
       enabled: false
-  # P2 AI 视觉多模态图片上传：默认 1MB 会导致 413，放宽到单文件 10MB / 单请求 12MB
+  # P2 AI 视觉多模态图片上传：默认 1MB 会导致 413，放宽到 10MB/12MB
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 12MB
 
-# MyBatis Plus 配置
 mybatis-plus:
-  # 修改点：显式声明 mapper XML 扫描路径，覆盖默认 classpath*:/mapper/**/*.xml。
-  # 历史上有部分模块（attendance/dashboard/urgency）的 XML 直接放在 com/reggie/module/{模块}/
-  # 根目录下而非 mapper/ 子目录，导致默认扫描漏掉、运行时报 Invalid bound statement (not found)。
-  # 此处用两条 ant 匹配同时覆盖 mapper/ 子目录与模块根目录两种放置方式。
   mapper-locations:
     - classpath*:/mapper/**/*.xml
     - classpath*:/com/reggie/mapper/**/*.xml
@@ -49,15 +41,8 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: ASSIGN_ID
-
-# 项目配置（可选，留空则使用jar包所在目录下的uploads/）
-# reggie:
-#   path: ./uploads/
-
 # 测试图片生成配置
 reggie:
-  # 服务器地址（用于生成堂食二维码链接）
-  # 部署时修改为实际服务器IP，例如：http://192.168.1.100:8080
   server-url: http://localhost:8080
   image:
     # 是否在启动时下载真实网络图片（true=仅首次启动时下载，false=禁用）

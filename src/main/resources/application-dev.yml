@@ -6,30 +6,22 @@ spring:
     druid:
       url: jdbc:mysql://localhost:3306/reggie?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
       username: root
-      # 开发环境数据库密码：仅用于本地开发，禁止在生产使用；本地 MySQL root 密码为 123456
-      password: ${DB_PASSWORD:123456}
+      password: 123456
       driver-class-name: com.mysql.cj.jdbc.Driver
-      # 连接池基础配置
       initial-size: 5
       min-idle: 5
       max-active: 20
       max-wait: 60000
-      # 连接有效性检测
       validation-query: SELECT 1
       test-while-idle: true
       test-on-borrow: false
       test-on-return: false
-      # 空闲连接回收
       min-evictable-idle-time-millis: 1800000
       max-evictable-idle-time-millis: 3600000
       time-between-eviction-runs-millis: 300000
-      # keep-alive 检查间隔，必须大于 time-between-eviction-runs-millis（Druid 1.1.23 强制校验）
       keep-alive-between-time-millis: 600000
-      # 连接物理超时
       phyTimeoutMillis: 1800000
       keep-alive: true
-      # Druid 监控页面：仅开发环境启用，且仅允许 127.0.0.1 访问
-      # 安全说明：该页面可执行 SQL，默认禁用；如需启用务必使用强密码并限制来源 IP
       stat-view-servlet:
         enabled: false
         url-pattern: /druid/*
@@ -44,8 +36,6 @@ spring:
         wall:
           enabled: true
           config:
-            # 允许 DELETE：业务物理删除（分类/地址/推荐缓存清理等 removeById/deleteById）依赖；
-            # wall 核心防护仍是禁止 drop/truncate/alter 等 DDL 注入
             delete-allow: true
             drop-table-allow: false
             truncate-allow: false
@@ -55,7 +45,6 @@ spring:
     port: 6379
     password:
     database: 0
-    # 修改点：添加命令超时和连接超时，防止线程饥饿
     timeout: 5000ms
     lettuce:
       pool:
@@ -71,30 +60,13 @@ spring:
 
 mybatis-plus:
   configuration:
-    # ============================================================
-    # 修改点（2026-09-15）：SQL 日志改为走 SLF4J，仅报错时输出
-    #
-    # 原配置 StdOutImpl：把每条 SQL、参数、返回行数直接 System.out 打到控制台，
-    #   完全绕过 Logback 级别控制 → 控制台被 SQL 刷屏，且改 logback-spring.xml 无效。
-    # 现配置 Slf4jImpl：SQL 日志走 SLF4J/Logback 统一管理；
-    #   logback-spring.xml 的 root level=ERROR，因此平时不输出，
-    #   仅当 SQL 执行报错（ERROR 级别）时才会打印，同时写入 logs/reggie-error.log。
-    #
-    # 【调试技巧】需要临时看某条 SQL 时，不要改回 StdOutImpl，在 logback-spring.xml
-    #   或 application-dev.yml 的 logging.level 里按包开 DEBUG 即可，例如：
-    #   logging:
-    #     level:
-    #       com.reggie.module.member.mapper: debug   # 只看会员模块的 SQL
-    # ============================================================
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
 
 # 地图服务（高德地理编码/逆地理编码）
-# 开发环境 Key 留空时 GeoUtils 走降级逻辑（不阻断地址保存，下单时按门店坐标兜底校验）
-# 生产环境必须填写真实高德 Web 服务 Key（申请：https://lbs.amap.com/api/webservice/guide/create-project/get-key）
 reggie:
   geo:
     amap:
-      key: ${AMAP_KEY:}
+      key: 6b61d9cad654dd646073c4c580c90444
       # 地理编码接口（地址→经纬度）
       geocode-url: https://restapi.amap.com/v3/geocode/geo
       # 逆地理编码接口（经纬度→地址）
