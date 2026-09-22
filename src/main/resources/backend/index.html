@@ -137,7 +137,10 @@
                 <kbd class="palette-trigger-kbd">Ctrl K</kbd>
               </button>
               <div class="user-info">
-                <div class="user-avatar">{{ userInfo.name ? userInfo.name.charAt(0) : '管' }}</div>
+                <div class="user-avatar">
+                  <img v-if="userInfo.avatar" :src="imgUrl(userInfo.avatar)" alt="用户头像" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                  <template v-else>{{ userInfo.name ? userInfo.name.charAt(0) : '管' }}</template>
+                </div>
                 <span class="user-name">{{ userInfo.name }}</span>
               </div>
               <button class="logout-btn" @click="logout" title="退出登录">
@@ -213,6 +216,7 @@
     <script src="js/request.js?v=20260915c"></script>
     <script src="js/components.js?v=20260915c"></script>
     <script src="./api/login.js?v=20260915c"></script>
+    <script src="./api/employee.js?v=20260922"></script>
     <script>
 
       new Vue({
@@ -426,6 +430,7 @@
             return
           }
           this.userInfo = JSON.parse(userInfo)
+          this.loadCurrentEmployee()
           this.showLoading()
         },
         mounted() {
@@ -441,6 +446,26 @@
           this.initIframeAutoHeight()
         },
         methods: {
+          imgUrl(name) {
+            return '/common/download?name=' + name
+          },
+          // 拉取当前登录员工最新资料（头像/工号/岗位），失败时静默用 localStorage 兜底
+          loadCurrentEmployee() {
+            const self = this
+            getCurrentEmployee().then(function (res) {
+              if (res && res.code === 1 && res.data) {
+                self.userInfo = Object.assign({}, self.userInfo, {
+                  name: res.data.name,
+                  avatar: res.data.avatar,
+                  jobNumber: res.data.jobNumber,
+                  position: res.data.position
+                })
+                window.localStorage.setItem('userInfo', JSON.stringify(self.userInfo))
+              }
+            }).catch(function (err) {
+              console.warn('[index] 当前员工信息加载失败，使用本地缓存:', err)
+            })
+          },
           /* ── 全局菜单检索命令面板 ── */
           openPalette() {
             this.paletteOpen = true

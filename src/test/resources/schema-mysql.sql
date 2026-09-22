@@ -1211,6 +1211,9 @@ CREATE TABLE `employee` (
   `phone` varchar(11) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '手机号',
   `sex` varchar(2) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '性别',
   `id_number` varchar(18) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '身份证号',
+  `avatar` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '头像图片相对路径',
+  `job_number` varchar(32) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '工号（租户内唯一）',
+  `position` varchar(32) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '岗位',
   `status` int NOT NULL DEFAULT '1' COMMENT '状态 0:禁用 1:正常',
   `role` int NOT NULL DEFAULT '2' COMMENT '角色 1:超级管理员 2:普通员工',
   `tenant_id` bigint DEFAULT NULL COMMENT '租户id',
@@ -1220,7 +1223,8 @@ CREATE TABLE `employee` (
   `update_user` bigint NOT NULL COMMENT '修改人',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `idx_username` (`username`) USING BTREE,
-  KEY `idx_employee_tenant` (`tenant_id`) USING BTREE
+  KEY `idx_employee_tenant` (`tenant_id`) USING BTREE,
+  UNIQUE KEY `idx_employee_tenant_jobno` (`tenant_id`,`job_number`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin ROW_FORMAT=DYNAMIC COMMENT='员工信息';
 /*!40101 SET character_set_client = @saved_cs_client */;
 

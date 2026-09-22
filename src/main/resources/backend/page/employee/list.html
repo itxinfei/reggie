@@ -49,11 +49,24 @@
         :selection="true"
         row-key="id"
         :show-actions="true"
-        :actions-width="240"
+        :actions-width="290"
         @selection-change="onSelectionChange"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
+        <template #col-avatar="{ row }">
+          <el-image
+            v-if="row.avatar"
+            :src="imgUrl(row.avatar)"
+            :preview-src-list="[imgUrl(row.avatar)]"
+            style="width:36px;height:36px;object-fit:cover;border-radius:50%;border:1px solid var(--border-default);cursor:pointer;vertical-align:middle;">
+          </el-image>
+          <span
+            v-else
+            :style="{width:'36px',height:'36px',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'var(--bg-page)',borderRadius:'50%',color:'var(--text-muted)',fontSize:'13px'}">
+            {{ row.name ? row.name.charAt(0) : '员' }}
+          </span>
+        </template>
         <template #col-status="{ row }">
           <el-tag :type="String(row.status) === '0' ? 'danger' : 'success'" size="small">
             {{ String(row.status) === '0' ? '已禁用' : '正常' }}
@@ -66,6 +79,12 @@
             class="btn-view"
             @click="viewMemberHandle(row.id)"
           >查看</el-button>
+          <el-button
+            type="text"
+            size="small"
+            class="btn-view"
+            @click="openBadge(row)"
+          >工牌</el-button>
           <el-button
             type="text"
             size="small"
@@ -120,12 +139,63 @@
         <el-form-item label="身份证号:" prop="idNumber">
           <el-input v-model="memberForm.idNumber" placeholder="请输入身份证号" maxlength="20" :disabled="memberDialog.actionType === 'view'" />
         </el-form-item>
+        <el-form-item label="工号:">
+          <el-input v-model="memberForm.jobNumber" placeholder="请输入工号（可选，租户内唯一）" maxlength="32" :disabled="memberDialog.actionType === 'view'" />
+        </el-form-item>
+        <el-form-item label="岗位:">
+          <el-input v-model="memberForm.position" placeholder="请输入岗位（可选）" maxlength="32" :disabled="memberDialog.actionType === 'view'" />
+        </el-form-item>
+        <el-form-item label="头像:">
+          <rg-image-uploader v-model="memberForm.avatar" biz-type="avatar" :single="true" :round="true" :max="1" :disabled="memberDialog.actionType === 'view'"></rg-image-uploader>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="handleDialogClose">取 消</el-button>
         <el-button v-if="memberDialog.actionType !== 'view'" type="primary" :loading="submitting" @click="submitMemberForm()">确 定</el-button>
         <el-button v-if="memberDialog.actionType == 'add'" type="primary" class="continue" :loading="submitting" @click="submitMemberForm('continue')">保存并继续添加</el-button>
       </template>
+    </crud-dialog>
+
+    <!-- 电子工牌弹窗：身份信息 + 工号二维码（后端生成 base64） -->
+    <crud-dialog
+      title="电子工牌"
+      :visible.sync="badgeDialog.visible"
+      size="sm"
+      :show-submit="false"
+      :close-on-click-modal="false"
+      @close="badgeDialog.visible = false"
+    >
+      <div v-if="badgeRow" style="text-align:center;">
+        <img
+          v-if="badgeRow.avatar"
+          :src="imgUrl(badgeRow.avatar)"
+          alt="头像"
+          style="width:72px;height:72px;object-fit:cover;border-radius:50%;border:1px solid var(--border-default);margin-bottom:10px;">
+        <span
+          v-else
+          :style="{width:'72px',height:'72px',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'var(--bg-page)',borderRadius:'50%',color:'var(--text-muted)',fontSize:'24px',marginBottom:'10px'}">
+          {{ badgeRow.name ? badgeRow.name.charAt(0) : '员' }}
+        </span>
+        <div style="font-size:18px;font-weight:600;margin-bottom:12px;">{{ badgeRow.name }}</div>
+        <div style="margin-bottom:12px;font-size:13px;border:1px solid var(--border-default);border-radius:var(--radius-sm);overflow:hidden;text-align:left;">
+          <div style="display:flex;">
+            <div style="width:70px;padding:6px 10px;background:var(--bg-page);color:var(--text-muted);border-bottom:1px solid var(--border-default);">工号</div>
+            <div style="flex:1;padding:6px 10px;border-bottom:1px solid var(--border-default);">{{ badgeRow.jobNumber || '—' }}</div>
+          </div>
+          <div style="display:flex;">
+            <div style="width:70px;padding:6px 10px;background:var(--bg-page);color:var(--text-muted);border-bottom:1px solid var(--border-default);">岗位</div>
+            <div style="flex:1;padding:6px 10px;border-bottom:1px solid var(--border-default);">{{ badgeRow.position || '—' }}</div>
+          </div>
+          <div style="display:flex;">
+            <div style="width:70px;padding:6px 10px;background:var(--bg-page);color:var(--text-muted);">手机号</div>
+            <div style="flex:1;padding:6px 10px;">{{ badgeRow.phone || '—' }}</div>
+          </div>
+        </div>
+        <div v-loading="badgeDialog.loading">
+          <img v-if="badgeDialog.qrcode" :src="badgeDialog.qrcode" alt="工牌二维码" style="width:160px;height:160px;">
+          <div v-else-if="!badgeDialog.loading" style="color:var(--text-muted);font-size:12px;">二维码加载失败</div>
+        </div>
+      </div>
     </crud-dialog>
 
     <!-- 批量导入员工：下载模板 → 选文件自动上传 → 展示初始密码与失败明细 -->
@@ -186,10 +256,10 @@
     <script src="../../js/request.js?v=20260915c"></script>
   <script src="../../js/accessibility-utils.js?v=20260915c"></script>
   <script src="../../js/performance-utils.js?v=20260915c"></script>
-    <script src="../../api/employee.js?v=20260915c"></script>
+    <script src="../../api/employee.js?v=20260922"></script>
     <script src="../../api/export.js?v=20260915c"></script>
     <script src="../../js/validate.js?v=20260915c"></script>
-    <script src="../../js/components.js?v=20260915c"></script>
+    <script src="../../js/components.js?v=20260922"></script>
     <script>
       new Vue({
         el: '#employee-app',
@@ -216,7 +286,10 @@
           ],
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
+            { prop: 'avatar', label: '头像', width: 70, align: 'center', slot: true },
             { prop: 'name', label: '员工姓名', width: 100 },
+            { prop: 'jobNumber', label: '工号', width: 100, align: 'center' },
+            { prop: 'position', label: '岗位', minWidth: 90 },
             { prop: 'username', label: '账号', width: 100 },
             { prop: 'phone', label: '手机号', width: 120, align: 'center' },
             { prop: 'status', label: '状态', width: 80, align: 'center', slot: true }
@@ -250,8 +323,14 @@
                name: '',
                phone: '',
                sex: '男',
-               idNumber: ''
-             }
+               idNumber: '',
+               jobNumber: '',
+               position: '',
+               avatar: ''
+             },
+             // 电子工牌弹窗
+             badgeDialog: { visible: false, loading: false, qrcode: '' },
+             badgeRow: null
           }
         },
         computed: {
@@ -414,6 +493,28 @@
           },
           /* ── 员工弹窗（新增/编辑/提交） ── */
           // 查看员工（只读模式，复用新增/编辑弹窗）
+          imgUrl(name) {
+            return '/common/download?name=' + name
+          },
+          // 打开电子工牌：先弹窗再异步取二维码
+          openBadge(row) {
+            const self = this
+            self.badgeRow = row
+            self.badgeDialog.qrcode = ''
+            self.badgeDialog.loading = true
+            self.badgeDialog.visible = true
+            employeeBadgeQrcode(row.id).then(function (res) {
+              self.badgeDialog.loading = false
+              if (res.code === 1) {
+                self.badgeDialog.qrcode = res.data
+              } else {
+                ReggieUI.error(res.msg || '二维码加载失败')
+              }
+            }).catch(function (err) {
+              self.badgeDialog.loading = false
+              ReggieUI.error('请求失败：' + err)
+            })
+          },
           viewMemberHandle(id) {
             this.resetMemberForm()
             this.memberDialog.title = '查看员工'
@@ -446,7 +547,10 @@
                   name: data.name,
                   phone: data.phone,
                   sex: data.sex === '0' ? '女' : '男',
-                  idNumber: data.idNumber
+                  idNumber: data.idNumber,
+                  jobNumber: data.jobNumber || '',
+                  position: data.position || '',
+                  avatar: data.avatar || ''
                 }
               } else {
                 ReggieUI.error(res.msg || '获取员工信息失败')
@@ -462,7 +566,10 @@
               name: '',
               phone: '',
               sex: '男',
-              idNumber: ''
+              idNumber: '',
+              jobNumber: '',
+              position: '',
+              avatar: ''
             }
             if (this.$refs.memberForm) {
               this.$refs.memberForm.resetFields()

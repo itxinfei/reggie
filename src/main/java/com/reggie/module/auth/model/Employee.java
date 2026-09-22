@@ -60,6 +60,18 @@ public class Employee implements Serializable {
     @Schema(description = "身份证号码", example = "110101199001011234")
     private String idNumber = "";
 
+    @Schema(description = "头像图片相对路径", example = "images/avatar/xxx.png")
+    @Size(max = 255, message = "头像路径不能超过255个字符")
+    private String avatar;
+
+    @Schema(description = "工号（租户内唯一）", example = "EMP0001")
+    @Size(max = 32, message = "工号不能超过32个字符")
+    private String jobNumber;
+
+    @Schema(description = "岗位", example = "收银员")
+    @Size(max = 32, message = "岗位不能超过32个字符")
+    private String position;
+
     @Schema(description = "账号状态：0=禁用，1=正常", example = "1")
     private Integer status;
 

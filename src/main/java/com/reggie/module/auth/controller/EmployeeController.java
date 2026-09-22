@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.LogMaskUtils;
 import com.reggie.common.PasswordUtils;
 import com.reggie.common.R;
@@ -22,6 +23,7 @@ import com.reggie.enums.UserStatus;
 import com.reggie.module.auth.service.EmployeeService;
 import com.reggie.module.sys.model.Role;
 import com.reggie.module.sys.service.RoleService;
+import com.reggie.utils.QRCodeUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DataFormatter;
@@ -81,6 +83,9 @@ public class EmployeeController {
 
     @Autowired
     private RoleService roleService;
+
+    @Autowired
+    private QRCodeUtil qrCodeUtil;
 
     @Value("${reggie.sms.sign-name:瑞吉外卖}")
     private String smsSignName = "瑞吉外卖";
@@ -226,9 +231,110 @@ public class EmployeeController {
         result.put("status", emp.getStatus());
         result.put("role", emp.getRole());
         result.put("tenantId", emp.getTenantId());
+        result.put("avatar", emp.getAvatar());
+        result.put("jobNumber", emp.getJobNumber());
+        result.put("position", emp.getPosition());
         result.put("createTime", emp.getCreateTime());
         result.put("updateTime", emp.getUpdateTime());
         return result;
+    }
+
+    /**
+     * 当前登录员工信息（含头像/工号/岗位），供顶栏等场景获取最新资料。
+     *
+     * @param request HTTP 请求
+     * @return 当前员工信息（已清除密码相关字段）
+     */
+    @GetMapping("/me")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "当前登录员工信息", description = "返回当前登录员工完整信息，含头像、工号、岗位")
+    public R<Employee> me(HttpServletRequest request) {
+        Long empId = null;
+        Object empIdObj = request.getAttribute("employeeId");
+        if (empIdObj instanceof Long) {
+            empId = (Long) empIdObj;
+        }
+        // 兜底：MockMvc 下 LoginCheckFilter 不生效，从 session 取
+        if (empId == null) {
+            HttpSession session = request.getSession(false);
+            if (session != null && session.getAttribute("employee") instanceof Long) {
+                empId = (Long) session.getAttribute("employee");
+            }
+        }
+        if (empId == null) {
+            return R.error("未登录或登录已过期");
+        }
+        Employee employee = employeeService.getById(empId);
+        if (employee == null) {
+            return R.error("员工信息不存在");
+        }
+        employee.setPassword(null);
+        employee.setPasswordType(null);
+        return R.success(employee);
+    }
+
+    /**
+     * 电子工牌二维码：内容为工牌信息 JSON，扫码可核验身份。
+     *
+     * @param id 员工ID
+     * @return 二维码 Data URI（base64）
+     */
+    @GetMapping("/badge-qrcode/{id}")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 10)
+    @Operation(summary = "员工工牌二维码", description = "返回电子工牌二维码 Base64 图片")
+    @Parameter(name = "id", description = "员工ID", required = true)
+    public R<String> badgeQrCode(@PathVariable Long id) {
+        Employee employee = employeeService.getById(id);
+        if (employee == null) {
+            return R.error("员工不存在");
+        }
+        StringBuilder content = new StringBuilder();
+        content.append("{\"type\":\"employee_badge\"");
+        content.append(",\"id\":").append(employee.getId());
+        if (employee.getJobNumber() != null && !employee.getJobNumber().isEmpty()) {
+            content.append(",\"jobNumber\":\"").append(employee.getJobNumber()).append("\"");
+        }
+        content.append(",\"name\":\"").append(employee.getName()).append("\"");
+        if (employee.getPosition() != null && !employee.getPosition().isEmpty()) {
+            content.append(",\"position\":\"").append(employee.getPosition()).append("\"");
+        }
+        if (employee.getTenantId() != null) {
+            content.append(",\"tenantId\":").append(employee.getTenantId());
+        }
+        content.append("}");
+        String dataUri = qrCodeUtil.generateDataUri(content.toString());
+        if (dataUri == null) {
+            return R.error("二维码生成失败，请稍后重试");
+        }
+        return R.success(dataUri);
+    }
+
+    /**
+     * 校验工号在租户内唯一。employee 表在多租户拦截白名单内，需手动按 tenantId 过滤。
+     *
+     * @param tenantId 租户ID
+     * @param jobNumber 待校验工号（null 或空白视为未设置，归一为 null）
+     * @param excludeId 排除的员工ID（编辑时传自身，新增传 null）
+     * @return 归一后的工号（去空白）；未设置时返回 null
+     */
+    private String checkJobNumberUnique(Long tenantId, String jobNumber, Long excludeId) {
+        if (jobNumber == null) {
+            return null;
+        }
+        String normalized = jobNumber.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        long count = employeeService.count(new LambdaQueryWrapper<Employee>()
+                .eq(Employee::getTenantId, tenantId)
+                .eq(Employee::getJobNumber, normalized)
+                .ne(excludeId != null, Employee::getId, excludeId));
+        if (count > 0) {
+            throw new CustomException("工号【" + normalized + "】在当前租户已存在");
+        }
+        return normalized;
     }
 
     /**
@@ -465,6 +571,9 @@ public class EmployeeController {
         employee.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
 
         employee.setTenantId(BaseContext.getCurrentTenantId());
+
+        // 工号租户内唯一校验；空串归一为 null（表示未设置工号）
+        employee.setJobNumber(checkJobNumberUnique(employee.getTenantId(), employee.getJobNumber(), null));
 
         employeeService.save(employee);
 
@@ -876,6 +985,17 @@ public class EmployeeController {
         }
         if (employee.getStatus() != null) {
             uw.set(Employee::getStatus, employee.getStatus());
+        }
+        if (employee.getAvatar() != null) {
+            uw.set(Employee::getAvatar, employee.getAvatar());
+        }
+        if (employee.getPosition() != null) {
+            uw.set(Employee::getPosition, employee.getPosition());
+        }
+        if (employee.getJobNumber() != null) {
+            // 工号租户内唯一校验（排除自身）；空串归一为 null。冲突时抛异常，不会执行后续 update
+            String normalizedJobNumber = checkJobNumberUnique(existing.getTenantId(), employee.getJobNumber(), employee.getId());
+            uw.set(Employee::getJobNumber, normalizedJobNumber);
         }
 
         log.info("修改员工信息，手机号={}，身份证号={}",

@@ -276,6 +276,9 @@ CREATE TABLE employee (
   phone varchar(11) NULL DEFAULT NULL COMMENT '手机号',
   sex varchar(2) NULL DEFAULT NULL COMMENT '性别',
   id_number varchar(18) NULL DEFAULT NULL COMMENT '身份证号',
+  avatar varchar(255) NULL DEFAULT NULL COMMENT '头像图片相对路径',
+  job_number varchar(32) NULL DEFAULT NULL COMMENT '工号（租户内唯一）',
+  position varchar(32) NULL DEFAULT NULL COMMENT '岗位',
   status int NOT NULL DEFAULT 1 COMMENT '状态 0:禁用 1:正常',
   create_time datetime NOT NULL COMMENT '创建时间',
   update_time datetime NOT NULL COMMENT '更新时间',
@@ -289,6 +292,8 @@ CREATE TABLE employee (
 );
 CREATE UNIQUE INDEX idx_employee_username ON employee(username);
 CREATE INDEX idx_employee_tenant ON employee(tenant_id);
+-- 工号租户内唯一（job_number 为 NULL 时不参与约束，允许多个未设工号员工）
+CREATE UNIQUE INDEX idx_employee_tenant_jobno ON employee(tenant_id, job_number);
 
 -- ==================== 角色表 ====================
 CREATE TABLE role (

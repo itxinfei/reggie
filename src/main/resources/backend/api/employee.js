@@ -66,3 +66,13 @@ function deleteEmployee (ids) {
   if (Array.isArray(ids)) ids = ids.join(',')
   return $axios({ url: '/employee?ids=' + ids, method: 'delete' })
 }
+
+// 当前登录员工信息（含头像/工号/岗位）
+function getCurrentEmployee () {
+  return $axios({ url: '/employee/me', method: 'get' })
+}
+
+// 员工电子工牌二维码（返回 base64 Data URI）
+function employeeBadgeQrcode (id) {
+  return $axios({ url: `/employee/badge-qrcode/${id}`, method: 'get' })
+}
