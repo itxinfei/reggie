@@ -300,7 +300,8 @@
           <div v-for="item in recordItems" :key="item.materialId" class="record-row">
             <span class="mat-name">{{ item.materialName || '食材#'+item.materialId }}</span>
             <span class="book-qty">账面：{{ item.bookQty }}</span>
-            <el-input v-model="item.actualStock" placeholder="实际库存" type="number" size="small" />
+            <el-input-number v-model="item.actualStock" placeholder="实际库存"
+              :min="0" :controls="false" size="small" />
           </div>
         </div>
         <div class="record-footer">
@@ -613,6 +614,12 @@
           });
           if (items.length === 0) {
             ReggieUI.warning('请至少填写一项实际库存');
+            return;
+          }
+          // 兜底：负数会造成错误盘亏和负库存（el-input-number 失焦才纠正，防未失焦直接提交）
+          var hasNegative = items.some(function(it) { return Number(it.actualStock) < 0; });
+          if (hasNegative) {
+            ReggieUI.warning('实际库存不能为负数');
             return;
           }
           this.recordSubmitting = true;

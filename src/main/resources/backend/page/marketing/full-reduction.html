@@ -112,7 +112,7 @@
           <el-input v-model="formData.ruleName" placeholder="请输入规则名称"></el-input>
         </el-form-item>
         <el-form-item label="优惠类型" prop="discountType">
-          <el-radio-group v-model="formData.discountType">
+          <el-radio-group v-model="formData.discountType" @change="onDiscountTypeChange">
             <el-radio :label="1">减固定金额</el-radio>
             <el-radio :label="2">打折</el-radio>
             <el-radio :label="3">赠品</el-radio>
@@ -163,7 +163,7 @@
     new Vue({
       el: '#app',
       data: function() {
-        return {
+        var data = {
           counts: 0,
           page: 1,
           pageSize: 10,
@@ -216,9 +216,34 @@
             ruleName: [{ required: true, message: '请输入规则名称', trigger: 'blur' }],
             discountType: [{ required: true, message: '请选择优惠类型', trigger: 'change' }],
             minAmount: [{ required: true, message: '请输入满减门槛', trigger: 'blur' }],
-            discountValue: [{ required: true, message: '请输入优惠值', trigger: 'blur' }]
+            discountValue: [
+              { required: true, message: '请输入优惠值', trigger: 'blur' },
+              // 业务校验：减固定金额时优惠金额须为正且小于门槛（防「满10减100」亏本规则）；
+              // 打折时折扣率须在 0~1 之间
+              { validator: function (rule, value, callback) {
+                  var fd = data.formData
+                  if (Number(fd.discountType) === 1) {
+                    if (value == null || Number(value) <= 0) {
+                      callback(new Error('优惠金额必须大于 0'))
+                    } else if (Number(fd.minAmount) <= 0 || Number(value) >= Number(fd.minAmount)) {
+                      callback(new Error('优惠金额必须小于满减门槛'))
+                    } else {
+                      callback()
+                    }
+                  } else if (Number(fd.discountType) === 2) {
+                    if (value == null || Number(value) <= 0 || Number(value) >= 1) {
+                      callback(new Error('折扣率须在 0 到 1 之间'))
+                    } else {
+                      callback()
+                    }
+                  } else {
+                    callback()
+                  }
+                }, trigger: 'blur' }
+            ]
           }
         }
+        return data
       },
       computed: {
         statsCards: function() {
@@ -398,6 +423,10 @@
             console.warn('[full-reduction] 删除失败:', err)
             ReggieUI.error('删除失败')
           }
+        },
+        // 切换优惠类型：动态校验规则变化，清除优惠值旧错误
+        onDiscountTypeChange() {
+          this.$nextTick(() => { this.$refs.ruleForm && this.$refs.ruleForm.clearValidate('discountValue') })
         },
         async handleSubmit() {
           const self = this

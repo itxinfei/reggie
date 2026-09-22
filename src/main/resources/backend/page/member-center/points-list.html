@@ -114,7 +114,7 @@
             </div>
           </el-form-item>
           <el-form-item label="调整方式：" prop="adjustType">
-            <el-radio-group v-model="adjustForm.adjustType">
+            <el-radio-group v-model="adjustForm.adjustType" @change="onAdjustTypeChange">
               <el-radio-button label="IN">发放</el-radio-button>
               <el-radio-button label="OUT">扣减</el-radio-button>
             </el-radio-group>
@@ -150,6 +150,8 @@
       // 修改点：引入列表页通用 Mixin，自动提供分页(page/pageSize/counts/loading)与翻页处理
       mixins: [window.ReggieListMixin],
       data: function() {
+        // adjustForm 提为局部变量：remark 的动态必填规则需闭包读取 adjustType
+        var adjustForm = { dialogVisible: false, phone: '', adjustType: 'IN', points: 100, remark: '' };
         return {
           loading: false,
           input: { phone: '', type: '' },
@@ -168,11 +170,19 @@
             monthAcquired: 0, monthConsumed: 0, totalAcquired: 0, totalConsumed: 0, trend: [] },
           trendChart: null, pieChart: null,
           // 积分调整弹窗（8.4.3）
-          adjustForm: { dialogVisible: false, phone: '', adjustType: 'IN', points: 100, remark: '' },
+          adjustForm: adjustForm,
           adjustLoading: false, memberLoading: false, adjustMember: null, adjustSearched: false,
           adjustRules: {
             phone: [{ required: true, message: '请输入会员手机号', trigger: 'blur' }],
-            points: [{ required: true, message: '请输入积分数量', trigger: 'change' }]
+            points: [{ required: true, message: '请输入积分数量', trigger: 'change' }],
+            // 动态必填：扣减积分(OUT)必须写明原因，便于对账与会员申诉；赠送(IN)不强制
+            remark: [{ validator: function(rule, value, callback) {
+                if (adjustForm.adjustType === 'OUT' && (!value || !value.trim())) {
+                  callback(new Error('扣减积分时必须填写调整说明'));
+                } else {
+                  callback();
+                }
+              }, trigger: 'blur' }]
           },
         // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
         columns: [
@@ -340,6 +350,13 @@
           this.adjustForm.dialogVisible = true
           const self = this
           this.$nextTick(function() { if (self.$refs.adjustFormRef) self.$refs.adjustFormRef.clearValidate() })
+        },
+        // 切换调整方式：清除调整说明旧校验态（OUT 的必填错误在切回 IN 时应消失）
+        onAdjustTypeChange() {
+          const self = this
+          this.$nextTick(function() {
+            if (self.$refs.adjustFormRef) self.$refs.adjustFormRef.clearValidate('remark')
+          })
         },
         async queryAdjustMember() {
           if (!this.adjustForm.phone || !this.adjustForm.phone.trim()) {

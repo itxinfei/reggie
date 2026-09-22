@@ -205,15 +205,16 @@
           <el-button type="text" size="small" class="btn-success" @click="viewDetail(row, 'receive')" v-if="row.status === 'ORDERED' || row.status === 'PARTIAL'">收货</el-button>
           <!-- 编辑：草稿/已下单/部分收货可改 -->
           <el-button type="text" size="small" class="btn-view" @click="editHandle(row)" v-if="row.status === 'DRAFT' || row.status === 'ORDERED' || row.status === 'PARTIAL'">编辑</el-button>
-          <!-- 更多：删除(草稿/已取消)、取消(草稿/已下单) 收进下拉，仅在有可操作项时显示 -->
-          <el-dropdown v-if="row.status === 'DRAFT' || row.status === 'ORDERED' || row.status === 'CANCELLED'"
+          <!-- 更多：删除(草稿/已取消)、取消(草稿/已下单/部分收货) 收进下拉，仅在有可操作项时显示。
+               部分收货也允许取消：后端会冲销已入库库存，供应商少送且不再送时可终止订单 -->
+          <el-dropdown v-if="row.status === 'DRAFT' || row.status === 'ORDERED' || row.status === 'PARTIAL' || row.status === 'CANCELLED'"
             trigger="click"
             @command="function(cmd){ if(cmd==='delete'){ deleteHandle(row); } else if(cmd==='cancel'){ cancelHandle(row); } }"
             @click.native.stop>
             <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
             <el-dropdown-menu slot="dropdown">
               <el-dropdown-item v-if="row.status === 'DRAFT' || row.status === 'CANCELLED'" command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
-              <el-dropdown-item v-if="row.status === 'DRAFT' || row.status === 'ORDERED'" command="cancel" style="color:var(--color-danger);">取消</el-dropdown-item>
+              <el-dropdown-item v-if="row.status === 'DRAFT' || row.status === 'ORDERED' || row.status === 'PARTIAL'" command="cancel" style="color:var(--color-danger);">取消</el-dropdown-item>
             </el-dropdown-menu>
           </el-dropdown>
         </template>

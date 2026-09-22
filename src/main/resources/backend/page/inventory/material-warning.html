@@ -580,6 +580,8 @@
               this.loadTable()
               this.loadStats()
               this.loadSuggest()
+              // 同步刷新智能补货 Tab：否则已补食材仍留在建议列表，停留该 Tab 可重复补货
+              this.loadSmartTable()
             } else {
               ReggieUI.error(res.msg || '补货失败')
             }

@@ -146,7 +146,7 @@
           <span>&#165;{{ formatMoney(reviewForm.amount) }}</span>
         </el-form-item>
         <el-form-item label="审核结果" prop="status">
-          <el-radio-group v-model="reviewForm.status">
+          <el-radio-group v-model="reviewForm.status" @change="onReviewStatusChange">
             <el-radio :label="1">通过</el-radio>
             <el-radio :label="3">拒绝</el-radio>
           </el-radio-group>
@@ -238,16 +238,23 @@
             remark: ''
           },
           addRules: {
-            amount: [{ required: true, message: '请输入提现金额', trigger: 'blur' }],
+            // validator 兜底：el-input-number :min=1 失焦才纠正，防未失焦直接提交 0/负数
+            amount: [
+              { required: true, message: '请输入提现金额', trigger: 'blur' },
+              { validator: function (rule, value, callback) {
+                  if (value == null || Number(value) <= 0) {
+                    callback(new Error('提现金额必须大于 0'))
+                  } else {
+                    callback()
+                  }
+                }, trigger: 'blur' }
+            ],
             withdrawMethod: [{ required: true, message: '请选择提现方式', trigger: 'change' }],
             receiveAccount: [{ required: true, message: '请输入收款账户', trigger: 'blur' }],
             receiveName: [{ required: true, message: '请输入收款人姓名', trigger: 'blur' }]
           },
 
-          reviewRules: {
-            status: [{ required: true, message: '请选择审核结果', trigger: 'change' }],
-            remark: [{ required: false, message: '', trigger: 'blur' }]
-          },
+          // reviewRules 已移至 computed：审核结果为「拒绝」时备注动态必填
           paymentRules: {
             paymentNo: [{ required: true, message: '请输入打款流水号', trigger: 'blur' }]
           },
@@ -277,6 +284,16 @@
         }
       },
       computed: {
+        // 审核规则动态化：选「拒绝」(status=3) 时备注必填，让商户看到拒绝原因
+        reviewRules() {
+          var rejectRequired = this.reviewForm.status === 3
+          return {
+            status: [{ required: true, message: '请选择审核结果', trigger: 'change' }],
+            remark: rejectRequired
+              ? [{ required: true, message: '请填写拒绝原因', trigger: 'blur' }]
+              : []
+          }
+        },
         pagedData() {
           const start = (this.page - 1) * this.pageSize
           return this.filteredData.slice(start, start + this.pageSize)
@@ -422,6 +439,11 @@
             remark: ''
           }
           this.reviewDialogVisible = true
+          this.$nextTick(() => { this.$refs.reviewFormRef && this.$refs.reviewFormRef.clearValidate() })
+        },
+        // 切换审核结果：动态规则变化后清除备注旧错误（拒绝→通过时红字消失）
+        onReviewStatusChange() {
+          this.$nextTick(() => { this.$refs.reviewFormRef && this.$refs.reviewFormRef.clearValidate('remark') })
         },
         async handleReviewSubmit() {
           const self = this
