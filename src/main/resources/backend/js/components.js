@@ -44,6 +44,7 @@ Vue.component('stat-cards', {
      *   - clickable: 是否可点击筛选（boolean，默认 false）
      *   - active:    是否当前激活（boolean，用于筛选态高亮）
      *   - flex:      是否使用桌台变体（boolean，默认 false，图标左对齐flex布局）
+     *   - colorClass: 自定义 CSS 类名（如 'pending'/'cooking'/'alarm'，追加到卡片根元素，用于大屏等特殊场景）
      */
     cards: {
       type: Array,
@@ -115,6 +116,8 @@ Vue.component('stat-cards', {
             '<span>{{ card.subText }}</span>' +
           '</div>' +
         '</template>' +
+        // 卡片追加插槽：允许大屏等特殊场景在卡片内追加自定义内容（如进度条、实时指标）
+        '<slot name="card-append" :card="card"></slot>' +
       '</div>' +
     '</div>',
   methods: {
@@ -126,7 +129,7 @@ Vue.component('stat-cards', {
       return typeof icon === 'string' && /^(ri-|el-icon-)/.test(icon);
     },
     cardClasses: function (card) {
-      return {
+      var cls = {
         'stat-card': true,
         'stat-card--flex': !!card.flex,
         'clickable': !!card.clickable,
@@ -138,6 +141,12 @@ Vue.component('stat-cards', {
         'info': card.color === 'info',
         'purple': card.color === 'purple'
       }
+      // colorClass：追加自定义 CSS 类名（如大屏场景的 pending/cooking/alarm 等）
+      if (card.colorClass) {
+        var parts = String(card.colorClass).split(/\s+/)
+        parts.forEach(function (c) { if (c) cls[c] = true })
+      }
+      return cls
     },
     isActive: function (card) {
       return !!(card.clickable && (card.active || this.activeKey === card.key))
@@ -852,7 +861,7 @@ Vue.component('crud-dialog', {
       type: Boolean,
       default: false
     },
-    /** 弹窗宽度（支持 sm/md/lg/xl 别名，或直接写 600px 等值） */
+    /** 弹窗宽度（支持 sm/md/lg/xl/fullscreen 别名，或直接写 600px 等值） */
     size: {
       type: String,
       default: 'md'
@@ -931,15 +940,26 @@ Vue.component('crud-dialog', {
   computed: {
     /** 尺寸别名 → 标准像素宽度（当自定义 width 时优先使用 width） */
     resolvedWidth: function () {
-      var sizeMap = { sm: '420px', md: '560px', lg: '720px', xl: '840px' }
+      var sizeMap = { sm: '420px', md: '560px', lg: '720px', xl: '840px', fullscreen: '92%' }
       var s = (this.size || '').toLowerCase()
       return this.width || sizeMap[s] || '560px'
+    },
+    /** 是否全屏模式（fullscreen 时调整 top 和内边距） */
+    isFullscreen: function () {
+      return (this.size || '').toLowerCase() === 'fullscreen'
+    },
+    /** 是否使用了 header 插槽（用于条件渲染：有 header 插槽时不传 title 给 el-dialog） */
+    hasHeaderSlot: function () {
+      return !!this.$slots.header
     },
     /** 弹窗 class：unified-dialog + 尺寸别名（仅当未自定义 width 时）+ 自定义 class */
     dialogClass: function () {
       var cls = 'unified-dialog'
       if (!this.width) {
         cls += ' el-dialog--' + (this.size || 'md')
+      }
+      if (this.isFullscreen) {
+        cls += ' el-dialog--fullscreen'
       }
       if (this.customClass) {
         cls += ' ' + this.customClass
@@ -951,10 +971,11 @@ Vue.component('crud-dialog', {
     '<el-dialog' +
     '  show-close' +
     '  :custom-class="dialogClass"' +
-    '  :title="title"' +
+    '  :title="hasHeaderSlot ? undefined : title"' +
     '  :visible="currentVisible"' +
     '  @update:visible="onVisibleChange"' +
     '  :width="resolvedWidth"' +
+    '  :top="isFullscreen ? \'4vh\' : \'15vh\'' +
     '  :close-on-click-modal="closeOnClickModal"' +
     '  :before-close="onBeforeClose"' +
     '  :close-on-press-escape="true"' +
@@ -962,6 +983,8 @@ Vue.component('crud-dialog', {
     '  :append-to-body="true"' +
     '  :modal-append-to-body="true"' +
     '>' +
+      // 自定义头部插槽（覆盖默认 title，用于复杂头部如标签页切换）
+      '<slot v-if="hasHeaderSlot" name="header"></slot>' +
       // 主体内容插槽
       '<slot></slot>' +
       // 底部按钮区
@@ -1341,3 +1364,164 @@ window.ReggieListMixin = {
     }
   }
 }
+
+
+// ============================================================
+// 组件：rg-image-uploader — 图片/凭证上传（多图 或 单图头像）
+//   v-model 绑定逗号分隔的相对路径；上传走 /common/upload，回显走 /common/download
+//   props:
+//     bizType  业务目录(dish/purchase/stockcheck/stockrecord/supplier/tenant/avatar)
+//     max      多图最多张数(默认5)
+//     single   单图模式(头像/单凭证)
+//     round    圆形预览(配合 single，用于头像)
+//     disabled 只读
+// ============================================================
+Vue.component('rg-image-uploader', {
+  props: {
+    value: { type: String, default: '' },
+    bizType: { type: String, default: 'dish' },
+    max: { type: Number, default: 5 },
+    single: { type: Boolean, default: false },
+    round: { type: Boolean, default: false },
+    disabled: { type: Boolean, default: false }
+  },
+  data: function () {
+    return { fileList: [] }
+  },
+  computed: {
+    uploadHeaders: function () {
+      // el-upload 绕过 axios，需手动带 CSRF Token（生产 CsrfFilter 校验）
+      var token = (typeof window.getCsrfToken === 'function') ? window.getCsrfToken() : ''
+      return { 'X-CSRF-Token': token || '' }
+    },
+    // 单图模式当前图片的完整回显地址
+    singleUrl: function () {
+      var rel = this.relativeList()[0]
+      return rel ? ('/common/download?name=' + rel) : ''
+    },
+    // 是否已达上限（达上限隐藏上传入口）
+    reachLimit: function () {
+      var n = this.relativeList().length
+      return this.single ? n >= 1 : n >= this.max
+    }
+  },
+  created: function () {
+    this.fileList = this.buildFileList(this.value)
+  },
+  watch: {
+    value: function (val) {
+      // 仅当外部值与内部值不一致时重建（避免上传成功 emit 后重复重建）
+      if (this.normalize(val) !== this.normalize(this.currentValue())) {
+        this.fileList = this.buildFileList(val)
+      }
+    }
+  },
+  template:
+    '<div class="rg-image-uploader">' +
+      // 多图：picture-card 宫格
+      '<el-upload v-if="!single" list-type="picture-card" action="/common/upload" name="file"' +
+        ' :data="{ bizType: bizType }" :headers="uploadHeaders" :file-list="fileList"' +
+        ' :disabled="disabled"' +
+        ' :on-success="handleSuccess" :on-remove="handleRemove" :on-preview="handlePreview"' +
+        ' :on-error="handleError" :before-upload="beforeUpload"' +
+        ' :limit="max" :on-exceed="onExceed">' +
+        '<i class="el-icon-plus"></i>' +
+      '</el-upload>' +
+      // 单图：复用全局 avatar-uploader 样式（圆形用于头像）
+      '<el-upload v-else class="avatar-uploader" action="/common/upload" name="file"' +
+        ' :data="{ bizType: bizType }" :headers="uploadHeaders" :show-file-list="false"' +
+        ' :disabled="disabled || reachLimit"' +
+        ' :on-success="handleSuccess" :on-error="handleError" :before-upload="beforeUpload">' +
+        '<img v-if="singleUrl" :src="singleUrl" class="avatar"' +
+          ' :style="round ? { borderRadius: \'50%\' } : {}" alt="上传图片">' +
+        '<i v-else class="el-icon-plus avatar-uploader-icon"></i>' +
+      '</el-upload>' +
+    '</div>',
+  methods: {
+    /** 逗号分隔字符串 → el-upload 回显列表 */
+    buildFileList: function (val) {
+      var list = []
+      String(val || '').split(',').forEach(function (p) {
+        var rel = p.trim()
+        if (rel) {
+          var seg = rel.split('/')
+          list.push({ name: seg[seg.length - 1], url: '/common/download?name=' + rel, relative: rel, status: 'success' })
+        }
+      })
+      return list
+    },
+    /** 当前已成功上传的相对路径数组 */
+    relativeList: function () {
+      var out = []
+      this.fileList.forEach(function (f) { if (f.relative) out.push(f.relative) })
+      return out
+    },
+    currentValue: function () {
+      return this.relativeList().join(',')
+    },
+    /** 归一化仅用于"外部值 vs 内部值"比较 */
+    normalize: function (s) {
+      return String(s || '').split(',').map(function (x) { return x.trim() }).filter(Boolean).join('|')
+    },
+    syncValue: function (fileList) {
+      this.fileList = fileList
+      this.$emit('input', this.currentValue())
+    },
+    /** 上传前校验类型与大小（后端二次校验，这里提前拦截给即时反馈） */
+    beforeUpload: function (file) {
+      var suffix = file.name.split('.').pop().toLowerCase()
+      if (['jpg', 'jpeg', 'png', 'gif'].indexOf(suffix) < 0) {
+        this.$message.error('仅支持 jpg、jpeg、png、gif 格式')
+        return false
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        this.$message.error('文件大小不能超过 5MB')
+        return false
+      }
+      return true
+    },
+    handleSuccess: function (response, file, fileList) {
+      if (!response || String(response.code) !== '1' || !response.data) {
+        if (response && response.msg === 'NOTLOGIN') { this.notifyNotLogin(); return }
+        this.$message.error((response && response.msg) || '图片上传失败，请重试')
+        this.removeFailed(file, fileList)
+        return
+      }
+      file.relative = response.data
+      file.url = '/common/download?name=' + response.data
+      // 单图模式：只保留最新一张
+      this.syncValue(this.single ? [file] : fileList)
+    },
+    handleRemove: function (file, fileList) {
+      this.syncValue(fileList)
+    },
+    handlePreview: function (file) {
+      if (file.url) window.open(file.url, '_blank')
+    },
+    handleError: function (err) {
+      this.notifyNotLogin()
+      var msg = (err && err.message) || '图片上传失败，请重试'
+      if (msg === 'Request failed with status code 401') msg = '登录已过期，请重新登录'
+      this.$message.error(msg)
+    },
+    onExceed: function () {
+      this.$message.warning(this.single ? '只能上传 1 张图片' : ('最多上传 ' + this.max + ' 张图片'))
+    },
+    /** 业务失败时把该文件从列表剔除 */
+    removeFailed: function (file, fileList) {
+      var self = this
+      this.$nextTick(function () {
+        var idx = fileList.indexOf(file)
+        if (idx >= 0) fileList.splice(idx, 1)
+        self.syncValue(fileList)
+      })
+    },
+    notifyNotLogin: function () {
+      if (window.self !== window.top) {
+        try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*') } catch (e) {}
+      } else {
+        window.location.href = '/backend/page/login/login.html'
+      }
+    }
+  }
+})

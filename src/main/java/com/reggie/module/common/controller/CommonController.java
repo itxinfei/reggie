@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -45,6 +46,23 @@ public class CommonController {
     private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif");
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
     private static final int BUFFER_SIZE = 1024;
+
+    /**
+     * 业务类型 → 上传子目录白名单。
+     * 不传或传入未知 bizType 时回退到 dishes（菜品）目录，保证旧调用兼容。
+     */
+    private static final Map<String, String> BIZ_DIR_MAP = new HashMap<>();
+    static {
+        BIZ_DIR_MAP.put("dish", "images/dishes/");
+        BIZ_DIR_MAP.put("purchase", "images/purchase/");
+        BIZ_DIR_MAP.put("stockcheck", "images/stockcheck/");
+        BIZ_DIR_MAP.put("stockrecord", "images/stockrecord/");
+        BIZ_DIR_MAP.put("supplier", "images/supplier/");
+        BIZ_DIR_MAP.put("tenant", "images/tenant/");
+        BIZ_DIR_MAP.put("avatar", "images/avatar/");
+    }
+
+    private static final String DEFAULT_SUB_DIR = "images/dishes/";
 
     /** 图片魔数：扩展名 → 合法文件头集合 */
     private static final Map<String, byte[][]> MAGIC_BYTES = new HashMap<>();
@@ -110,9 +128,11 @@ public class CommonController {
      */
     @PostMapping("/upload")
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "文件上传", description = "上传图片文件（支持jpg、jpeg、png、gif，最大5MB），需要登录")
+    @Operation(summary = "文件上传", description = "上传图片文件（支持jpg、jpeg、png、gif，最大5MB），需要登录；可选 bizType 区分业务目录")
     @Parameter(name = "file", description = "上传的文件", required = true)
-    public R<String> upload(MultipartFile file, HttpServletRequest request) {
+    public R<String> upload(MultipartFile file,
+                            @RequestParam(value = "bizType", required = false) String bizType,
+                            HttpServletRequest request) {
         // 登录态校验
         R<String> loginCheck = checkLogin(request);
         if (loginCheck != null) {
@@ -152,8 +172,8 @@ public class CommonController {
         //使用UUID重新生成文件名，防止文件名称重复造成文件覆盖
         String fileName = UUID.randomUUID().toString() + suffix;
 
-        // 使用 UUID 生成文件名，保存到 images/dishes/ 子目录
-        String subDir = "images/dishes/";
+        // 使用 UUID 生成文件名，按 bizType 保存到对应业务子目录（未知类型回退菜品目录）
+        String subDir = BIZ_DIR_MAP.getOrDefault(bizType == null ? "" : bizType.toLowerCase(), DEFAULT_SUB_DIR);
         String relativePath = subDir + fileName;
 
         // 打印调试信息
