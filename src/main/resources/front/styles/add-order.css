@@ -5,44 +5,16 @@
   --add-order-coupon-active-end: #fff8e0;  /* 优惠券激活渐变结束色（浅金） */
 }
 
-#add_order .divHead {
-  width: 100%;
-  height: var(--header-height);
-  background: var(--color-primary-gradient);
-  position: relative;
-}
+/* 头部已由 cend-shell 的 .cend-navbar 统一接管（2026-09-22），不再定义金色 .divHead */
 
-#add_order .divHead .divTitle {
-  font-size: var(--header-title-font-size);
-  font-family: var(--font-family-title);
-  font-weight: 600;
-  text-align: center;
-  color: var(--color-text-primary);
-  line-height: 25rem;
-  position: absolute;
-  bottom: 13rem;
-  width: 100%;
-}
-
-#add_order .divHead .divTitle i {
-  position: absolute;
-  left: var(--spacing-lg);
-  top: 50%;
-  transform: translate(0, -50%);
-  cursor: pointer;
-  transition: transform var(--transition-fast);
-}
-
-#add_order .divHead .divTitle i:active {
-  transform: translate(0, -50%) scale(0.85);
-}
-
-/* 修改点：内容区高度链改为可解释计算 —— 100vh − 头部(var(--header-height)=88) − 顶部margin(10) − 底部购物车栏(44+bottom12)，
-   原硬编码 calc(100vh - 56rem - 110rem) 中 56rem 为旧头部残留、110rem 含义不明，改后改头部高度自动同步（2026-09-01 微调） */
+/* 满高 flex 列中的滚动区；外边距 10rem，底部给悬浮结算栏留位（栏高56+bottom12） */
 #add_order .divContent {
-  margin: 10rem 10rem 0 10rem;
-  height: calc(100vh - var(--header-height) - 66rem);
+  margin: 10rem 10rem 0;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 68rem;
 }
 
 #add_order .divContent .divAddress {
@@ -272,20 +244,18 @@
 }
 
 #add_order .divCart {
-  width: 345rem;
-  /* 修改点(2026-09-21)：底栏 44→56，主操作触达区更舒展（对齐美团结算条） */
+  /* 左右各 10rem 自适应宽度，替代固定 345rem（320 窄屏不再横向溢出/裁切按钮） */
   height: 56rem;
-  opacity: 1;
   background: var(--bg-cart-bar);
   border-radius: var(--radius-xl);
-  box-shadow: 0 4rem 14rem 0rem rgba(0, 0, 0, 0.3);
-  margin: 0 auto;
-  margin-top: 10rem;
+  box-shadow: var(--shadow-sheet);
   z-index: 3000;
   position: absolute;
   bottom: 12rem;
-  left: 50%;
-  transform: translate(-50%, 0);
+  left: 10rem;
+  right: 10rem;
+  display: flex;
+  align-items: center;
 }
 
 #add_order .divCart .imgCartActive {
@@ -297,46 +267,41 @@
 }
 
 #add_order .divCart > div:first-child {
+  position: relative;
   width: 60rem;
   height: 60rem;
-  position: absolute;
-  left: 11rem;
-  bottom: 0;
+  margin-left: 6rem;
+  margin-top: -4rem;              /* 图标略突出栏顶，对标美团 */
+  flex-shrink: 0;
   background-size: 60rem 60rem;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 #add_order .divCart .divNum {
-  font-size: 12rem;
+  flex: 1;
+  min-width: 0;
+  margin-left: 8rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   font-family: DIN, DIN-Medium;
-  font-weight: 500;
-  text-align: left;
   color: var(--color-text-white);
-  letter-spacing: 0rem;
-  position: absolute;
-  left: 92rem;
-  top: 11rem;
 }
-
-#add_order .divCart .divNum span:last-child {
-  /* 修改点(2026-09-21)：实付金额 24→20rem，与美团结算条金额档对齐 */
-  font-size: 20rem;
-  font-weight: 600;
-}
+#add_order .divCart .num-symbol { font-size: 13rem; font-weight: 600; }
+#add_order .divCart .num-main { font-size: 20rem; font-weight: 600; margin-left: 1rem; }
 
 #add_order .divCart > div:last-child {
-  /* 修改点(2026-09-17)：支付按钮 102×36 → 116×40，达到 44px 级触达区 */
-  width: 116rem;
+  flex-shrink: 0;
+  width: 108rem;
   height: 40rem;
-  opacity: 1;
   border-radius: var(--radius-xl);
   font-size: 15rem;
-  font-family: "PingFangSC", "PingFangSC-Regular";
+  font-family: var(--font-family-body);
   font-weight: 500;
   text-align: center;
   line-height: 40rem;
-  position: absolute;
-  right: 5rem;
-  top: 8rem;
+  margin-right: 8rem;
 }
 
 #add_order .divCart .btnSubmit {
@@ -375,15 +340,18 @@
   font-weight: 500;
   color: var(--color-text-white);
   line-height: 18rem;
+  /* 角标与图标是兄弟节点，相对 .divCart 定位到图标右上角（图标突出栏顶 4rem） */
   position: absolute;
   left: 57rem;
-  top: -5rem;
+  top: -8rem;
 }
 
 #add_order .divCart .moreGoods {
   width: 25rem;
   height: 25rem;
   line-height: 25rem;
+  left: 50rem;
+  top: -10rem;
 }
 
 /* 修改点：支付方式选择 */
@@ -444,13 +412,13 @@
 /* 微信：浅绿底 + 品牌绿图标（美团式色块，纯色无背景偏单薄） */
 #add_order .pay-wechat-icon {
   background: rgba(7, 193, 96, 0.12);
-  color: #07c160;
+  color: var(--color-success);
 }
 
 /* 支付宝：浅蓝底 + 品牌蓝图标 */
 #add_order .pay-alipay-icon {
   background: rgba(22, 119, 255, 0.10);
-  color: #1677ff;
+  color: var(--platform-alipay);
 }
 
 /* 货到付款：中性灰底 */
@@ -780,11 +748,12 @@
 
 /* 修改点：优惠标签样式 */
 #add_order .divCart .divNum .divDiscount {
-  display: block;
+  flex: 0 0 100%;             /* 换到金额下方独立一行 */
   font-size: 10rem;
-  color: var(--color-price);
-  line-height: 14rem;
-  margin-top: -2rem;
+  color: var(--color-text-white);
+  opacity: 0.7;
+  line-height: 16rem;
+  margin-top: 1rem;
 }
 
 /* 修改点：配送方式选择 */

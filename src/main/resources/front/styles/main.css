@@ -230,7 +230,7 @@
 .restaurant-card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: 16rem 14rem 10rem 14rem;
+  padding: 12rem 16rem;
   box-shadow: var(--shadow-card);
   position: relative;
   z-index: 2;
@@ -2098,7 +2098,7 @@
 .fr-bar {
   margin: 0 12rem 10rem;
   padding: 10rem 12rem;
-  background: rgba(255, 194, 0, .12);
+  background: var(--color-primary-tint-strong);
   border-radius: var(--radius-md);
 }
 .fr-bar-head {
@@ -2111,7 +2111,7 @@
   padding: 3rem 6rem;
   border-radius: 4rem;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-white);
   font-size: 10rem;
   font-weight: 600;
   line-height: 1;
@@ -2125,13 +2125,13 @@
   margin: 8rem 0 6rem;
   height: 4rem;
   border-radius: 2rem;
-  background: rgba(0, 0, 0, .08);
+  background: var(--mask-soft);
   overflow: hidden;
 }
 .fr-bar-fill {
   height: 100%;
   border-radius: 2rem;
-  background: linear-gradient(90deg, #ffd45e, var(--color-primary));
+  background: linear-gradient(90deg, var(--color-primary-light), var(--color-primary));
   transition: width .3s ease;
 }
 .fr-bar-sub {

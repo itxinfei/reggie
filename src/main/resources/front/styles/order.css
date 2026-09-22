@@ -1,58 +1,19 @@
-/* 修改点：统一头部品牌色渐变，与全局设计系统对齐 */
+/* 头部已由 cend-shell 的 .cend-navbar 统一接管（2026-09-22），本页不再定义金色 .divHead */
 
 #order {
   height: 100%;
 }
 
-#order .divHead {
-  width: 100%;
-  height: var(--header-height);
-  background: var(--color-primary-gradient);
-  position: relative;
-}
-
-#order .divHead .divTitle {
-  font-size: var(--header-title-font-size);
-  font-family: var(--font-family-title);
-  font-weight: 600;
-  text-align: center;
-  color: var(--color-text-primary);
-  line-height: 25rem;
-  position: absolute;
-  bottom: 13rem;
-  width: 100%;
-}
-
-#order .divHead .divTitle i {
-  position: absolute;
-  left: var(--spacing-lg);
-  top: 50%;
-  transform: translate(0, -50%);
-  cursor: pointer;
-  transition: transform var(--transition-fast);
-}
-
-#order .divHead .divTitle i:active {
-  transform: translate(0, -50%) scale(0.85);
-}
-
-#order .divHead .divTitle .home-icon {
-  left: auto;
-  right: var(--spacing-lg);
-  font-size: 18rem;
-  color: var(--color-text-primary);
-}
-
 #order .divBody {
   position: relative;
   margin: 0 var(--spacing-md) var(--spacing-md);
-  /* 修改点(2026-09-17)：卡片化改造 —— 容器透明化，每个订单独立成卡（一单一卡，长列表分组感更强） */
   background: transparent;
   border-radius: var(--radius-lg);
-  padding-left: 0;
-  padding-right: 0;
-  height: calc(100% - var(--header-height) - 44rem);
+  /* 满高 flex 列中占满 navbar + status-tabs 之外的剩余，替代 calc 高度链 */
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 修改点：首屏加载骨架屏覆盖层（覆盖在空列表上，不阻断 van-list 渲染） */
@@ -150,7 +111,7 @@
   justify-content: space-between;
   align-items: flex-start;
   padding: var(--spacing-md) 0 var(--spacing-sm);
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: var(--hairline);
 }
 
 #order .divBody .item .order-meta {
@@ -302,7 +263,7 @@
   /* 修改点(2026-09-17)：标签降级(sm/hint)，金额保持 lg/600，价格更聚焦 */
   font-size: var(--font-size-sm);
   color: var(--color-text-hint);
-  border-top: 1px solid var(--border-light);
+  border-top: var(--hairline);
 }
 
 #order .order-total .price {
@@ -387,6 +348,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  /* 满高 flex 列中的滚动区，替代无高度导致的裁切 */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   /* 给固定底部操作栏留位（栏高 + 安全区） */
   padding-bottom: calc(72rem + env(safe-area-inset-bottom, 0rem));
 }

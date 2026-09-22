@@ -404,6 +404,72 @@ select {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* cend-shell 根：满高纵向 flex，替代各页脆弱的 calc 高度链（2026-09-22） */
+.cend-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ================================================================
+   cend-shell 导航栏（跨页统一；组件不命中各页 .divHead 金色作用域）
+   ================================================================ */
+.cend-navbar {
+  position: relative;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 总高 = 导航内容 + 刘海安全区；内容区固定 navbar-height */
+  height: calc(var(--navbar-height) + constant(safe-area-inset-top));
+  height: calc(var(--navbar-height) + env(safe-area-inset-top));
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+  box-sizing: content-box;
+  flex-shrink: 0;
+}
+.cend-navbar__title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  line-height: 1;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cend-navbar__btn {
+  position: absolute;
+  height: var(--navbar-height);
+  top: constant(safe-area-inset-top);
+  top: env(safe-area-inset-top);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44rem;
+  font-size: 24rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.cend-navbar__btn:active { opacity: 0.6; }
+.cend-navbar__back { left: 4rem; }
+.cend-navbar__home { right: 4rem; }
+
+/* 白底轻导航（对标美团二级页） */
+.cend-navbar.is-light {
+  background: var(--navbar-bg);
+  border-bottom: var(--hairline);
+}
+.cend-navbar.is-light .cend-navbar__title,
+.cend-navbar.is-light .cend-navbar__btn { color: var(--color-text-primary); }
+
+/* 品牌金导航（首页/活动页） */
+.cend-navbar.is-brand {
+  background: var(--color-primary-gradient);
+}
+.cend-navbar.is-brand .cend-navbar__title,
+.cend-navbar.is-brand .cend-navbar__btn { color: var(--color-text-primary); }
+
 @font-face {
   font-family: "DIN-Medium";
   src: url("../fonts/DIN-Medium.otf");
