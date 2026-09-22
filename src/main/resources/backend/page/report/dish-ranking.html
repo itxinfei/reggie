@@ -13,9 +13,13 @@
   <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260915c" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
-    html, body { height: 100%; margin: 0; padding: 0; overflow-y: auto; overflow-x: hidden;
+    html, body { height: 100%; margin: 0; padding: 0;
       background: var(--bg-page);
       font-family: var(--font-family-base); }
+    /* 防抖动（2026-09-20）：滚动统一由 body 承担；若 html 也产生滚动条，append-to-body 的
+       下拉浮层超出视口底部时会撑高 html、闪现第二滚动条挤占宽度，表格随之左右横跳 */
+    html { overflow: hidden; }
+    body { overflow-x: hidden; overflow-y: auto; }
     .dish-ranking-page { min-height: 100%; display: flex; flex-direction: column; }
     .dish-ranking-page .container { flex: 1; background: transparent; padding: var(--space-2) var(--space-3);
       min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }

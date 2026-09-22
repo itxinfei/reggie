@@ -61,17 +61,6 @@ CREATE INDEX IF NOT EXISTS idx_printer_log_order ON printer_log(order_id);
 CREATE INDEX IF NOT EXISTS idx_printer_log_printer ON printer_log(printer_id);
 CREATE INDEX IF NOT EXISTS idx_printer_log_tenant ON printer_log(tenant_id);
 
--- ==================== 打印模板表 ====================
-CREATE TABLE IF NOT EXISTS printer_template (
-  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
-  name varchar(100) NOT NULL COMMENT '模板名称',
-  type varchar(50) NOT NULL COMMENT '模板类型',
-  content text NOT NULL COMMENT '模板内容',
-  created_time datetime DEFAULT NULL COMMENT '创建时间',
-  update_time datetime DEFAULT NULL COMMENT '更新时间',
-  PRIMARY KEY (id)
-);
-
 -- ==================== 打印机配置表 ====================
 CREATE TABLE IF NOT EXISTS printer_config (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -119,9 +108,6 @@ CREATE TABLE IF NOT EXISTS orders (
   dining_type varchar(20) NULL DEFAULT 'OUTSIDE' COMMENT '用餐类型',
   table_id bigint NULL DEFAULT NULL COMMENT '堂食桌台ID',
   table_name varchar(32) NULL DEFAULT NULL COMMENT '堂食桌台名称',
-  queue_id bigint NULL DEFAULT NULL COMMENT '排队记录ID',
-  reservation_id bigint NULL DEFAULT NULL COMMENT '预约记录ID',
-  customer_count int NULL DEFAULT NULL COMMENT '用餐人数',
   idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等键',
   stock_refunded int NULL DEFAULT 0 COMMENT '已退库存数量',
   used_coupon_id bigint NULL DEFAULT NULL COMMENT '优惠券ID',
@@ -172,5 +158,4 @@ CREATE INDEX IF NOT EXISTS idx_order_detail_order ON order_detail(order_id);
 DELETE FROM print_task WHERE tenant_id = 1;
 DELETE FROM print_terminal WHERE tenant_id = 1;
 DELETE FROM printer_log WHERE tenant_id = 1;
-DELETE FROM printer_template WHERE 1=1;
 DELETE FROM printer_config WHERE tenant_id = 1;

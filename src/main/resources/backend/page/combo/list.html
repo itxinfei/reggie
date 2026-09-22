@@ -167,6 +167,7 @@
         <el-select v-model="input" placeholder="请选择套餐名称" class="el-select--narrow-xs" clearable filterable size="small"
           :loading="optionsLoading"
           :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')"
+          @visible-change="loadFilterOptions"
           @change="handleQuery">
           <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
         </el-select>
@@ -595,7 +596,8 @@ new Vue({
     // ========== 数据加载 ==========
     async fetchData(reloadStats = true) {
       this.loading = true
-      const params = {}
+      // 修改点：补传分页参数（原漏传 page/pageSize，套餐翻页永远查第一页）
+      const params = { page: this.page, pageSize: this.pageSize }
       if (this.activeFilter) {
         params.status = this.activeFilter
       }
@@ -688,7 +690,8 @@ new Vue({
     // 修改点：删除确认文案含对象名（8.8 危险动作规范）
     deleteHandle(type, row) {
       const isBatch = type === '批量'
-      if (isBatch && row === null) {
+      // 修改点：批量入口 row 为 undefined（非 null），守卫用 !row 同时兼容 null/undefined
+      if (isBatch && !row) {
         if (this.checkList.length === 0) {
           ReggieUI.error('请选择删除对象')
           return
@@ -912,7 +915,8 @@ new Vue({
 
     onChange(file) {
       if (file) {
-        const suffix = file.name.split('.')[1]
+        // 修改点：取最后一个后缀并转小写，避免「a.v2.png」误判、.PNG 被拒
+        const suffix = file.name.split('.').pop().toLowerCase()
         const size = file.size / 1024 / 1024 < 2
         if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) {
           ReggieUI.error('上传图片只支持 png、jpeg、jpg 格式！')

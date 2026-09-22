@@ -652,6 +652,8 @@ CREATE INDEX idx_operation_log_module ON operation_log(module);
 CREATE INDEX idx_operation_log_time ON operation_log(create_time);
 
 -- ==================== 营销活动 / 满减规则 / 核销（满减引擎计费依赖） ====================
+-- 与本脚本其他表保持一致：建表前先 DROP，保证脚本在测试上下文里被重复执行时幂等
+DROP TABLE IF EXISTS marketing_campaign;
 CREATE TABLE marketing_campaign (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NOT NULL COMMENT '租户ID',
@@ -678,6 +680,7 @@ CREATE TABLE marketing_campaign (
 CREATE INDEX idx_mc_tenant_status ON marketing_campaign(tenant_id, status);
 CREATE INDEX idx_mc_time ON marketing_campaign(start_time, end_time);
 
+DROP TABLE IF EXISTS full_reduction_rule;
 CREATE TABLE full_reduction_rule (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   campaign_id bigint NOT NULL COMMENT '活动ID',
@@ -703,6 +706,7 @@ CREATE TABLE full_reduction_rule (
 CREATE INDEX idx_frr_campaign ON full_reduction_rule(campaign_id);
 CREATE INDEX idx_frr_tenant ON full_reduction_rule(tenant_id);
 
+DROP TABLE IF EXISTS campaign_usage_record;
 CREATE TABLE campaign_usage_record (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   campaign_id bigint NOT NULL COMMENT '活动ID',
@@ -726,6 +730,7 @@ CREATE INDEX idx_cur_time ON campaign_usage_record(use_time);
 CREATE INDEX idx_cur_tenant ON campaign_usage_record(tenant_id);
 
 -- ==================== 用户收藏 ====================
+DROP TABLE IF EXISTS user_favorite;
 CREATE TABLE user_favorite (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   user_id bigint NOT NULL COMMENT '用户ID',
@@ -740,6 +745,7 @@ CREATE INDEX idx_uf_user ON user_favorite(user_id);
 
 
 -- ==================== 在线客服 / 投诉 ====================
+DROP TABLE IF EXISTS cs_session;
 CREATE TABLE cs_session (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   session_no varchar(50) NULL DEFAULT NULL COMMENT '会话编号',
@@ -762,6 +768,7 @@ CREATE TABLE cs_session (
 CREATE INDEX idx_css_user ON cs_session(user_id);
 CREATE INDEX idx_css_tenant ON cs_session(tenant_id);
 
+DROP TABLE IF EXISTS cs_message;
 CREATE TABLE cs_message (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   session_id bigint NOT NULL COMMENT '会话ID',
@@ -779,6 +786,7 @@ CREATE TABLE cs_message (
 CREATE INDEX idx_csm_session ON cs_message(session_id);
 CREATE INDEX idx_csm_tenant ON cs_message(tenant_id);
 
+DROP TABLE IF EXISTS complaint;
 CREATE TABLE complaint (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   complaint_no varchar(50) NULL DEFAULT NULL COMMENT '投诉编号',

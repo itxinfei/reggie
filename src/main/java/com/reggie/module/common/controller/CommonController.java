@@ -267,7 +267,7 @@ public class CommonController {
 
             filePath = targetFile.getAbsolutePath();
 
-            log.info("文件下载请求: name={}, path={}, exists={}", name, filePath, targetFile.exists());
+//            log.info("文件下载请求: name={}, path={}, exists={}", name, filePath, targetFile.exists());
 
             // 如果文件不存在，返回 SVG 占位图（不依赖外部文件）
             if (!targetFile.exists()) {

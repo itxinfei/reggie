@@ -767,7 +767,8 @@
         },
         onChange: function(file) {
           if (file) {
-            var suffix = file.name.split('.')[1]; var size = file.size / 1024 / 1024 < 2
+            // 取最后一个后缀并转小写，避免「a.v2.png」误判、.PNG 被拒
+            var suffix = file.name.split('.').pop().toLowerCase(); var size = file.size / 1024 / 1024 < 2
             if (['png', 'jpeg', 'jpg'].indexOf(suffix) < 0) { ReggieUI.error('上传图片只支持 png、jpeg、jpg 格式！'); this.$refs.upload.clearFiles(); return false }
             if (!size) { ReggieUI.error('上传文件大小不能超过 2MB!'); this.$refs.upload.clearFiles(); return false }
             return file

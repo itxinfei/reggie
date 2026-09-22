@@ -14,8 +14,15 @@
       height: 100%;
       margin: 0;
       padding: 0;
-      overflow-y: auto;
       background: var(--el-bg-subtle);
+    }
+    /* 防抖动（2026-09-20）：滚动统一由 body 承担；若 html 也产生滚动条，append-to-body 的
+       下拉浮层超出视口底部时会撑高 html、闪现第二滚动条挤占宽度，表格随之左右横跳 */
+    html {
+      overflow: hidden;
+    }
+    body {
+      overflow-y: auto;
     }
     .container {
       padding: 24px 32px;

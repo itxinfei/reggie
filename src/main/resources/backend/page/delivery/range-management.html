@@ -9,12 +9,22 @@
     <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
 <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
   <style>
+    /* 修复（2026-09-20 抖动根因）：html 定高且不产生滚动条，滚动统一由 body 承担。
+       原写法 html/body 同为 height:100% + overflow-y:auto，el-select/el-dropdown 等
+       append-to-body 的绝对定位浮层超出视口底部时（页面底部分页的「每页条数」下拉必现），
+       会撑高 documentElement 瞬间产生第二根垂直滚动条、挤占 10~15px 宽度，
+       关闭浮层后滚动条消失宽度恢复——表格列与 fixed 操作列因此整体左右抖动。 */
     html, body {
       height: 100%;
       margin: 0;
       padding: 0;
-      overflow-y: auto;
       background: var(--el-bg-subtle);
+    }
+    html {
+      overflow: hidden;
+    }
+    body {
+      overflow-y: auto;
     }
     .container {
       padding: var(--space-3) var(--space-4);
@@ -54,7 +64,7 @@
       :page-size="pageSize"
       :total="filteredTotal"
       :show-actions="true" :viewable="true"
-      :actions-width="250"
+      :actions-width="180"
       :actions-fixed="true"
       @page-change="onPageChange"
       @size-change="onSizeChange"
@@ -104,14 +114,17 @@
           {{ row.status === 1 ? '启用' : '禁用' }}
         </el-tag>
       </template>
-      <!-- 操作按钮：对齐全站统一语义色（编辑=btn-view 金、启停=btn-warning 橙、删除=btn-delete 红） -->
+      <!-- 操作列契约：内置查看 + 编辑常显（3 元素档 180），阶梯规则/启停/删除收「更多」 -->
       <template #actions="{ row }">
         <el-button type="text" size="small" class="btn-view" @click="handleEdit(row)">编辑</el-button>
-        <el-button type="text" size="small" class="btn-view" @click="handleFeeStep(row)">阶梯规则</el-button>
-        <el-button type="text" size="small" class="btn-warning" @click="handleToggleStatus(row)">
-          {{ row.status === 1 ? '禁用' : '启用' }}
-        </el-button>
-        <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+        <el-dropdown trigger="click" @command="(cmd) => handleRowCommand(cmd, row)" @click.native.stop>
+          <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item command="step" icon="ri-road-map-line">阶梯规则</el-dropdown-item>
+            <el-dropdown-item command="toggle" :icon="row.status === 1 ? 'ri-lock-line' : 'ri-lock-unlock-line'">{{ row.status === 1 ? '禁用' : '启用' }}</el-dropdown-item>
+            <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
       </template>
     </crud-table>
 
@@ -572,6 +585,16 @@
           }).finally(function() {
             self.submitLoading = false
           })
+        },
+        // 操作列「更多」下拉命令分发：阶梯规则 / 启停 / 删除
+        handleRowCommand(cmd, row) {
+          if (cmd === 'step') {
+            this.handleFeeStep(row)
+          } else if (cmd === 'toggle') {
+            this.handleToggleStatus(row)
+          } else if (cmd === 'delete') {
+            this.handleDelete(row)
+          }
         },
         async handleFeeStep(row) {
           this.currentRuleId = row.id
