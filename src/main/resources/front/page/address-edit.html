@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css?v=20260922"/>
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-    <link rel="stylesheet" href="./../styles/address-edit.css?v=20260922"/>
+    <link rel="stylesheet" href="./../styles/address-edit.css?v=20260922b"/>
     <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="./../js/icon-fallback.js?v=20260917"></script>
@@ -65,7 +65,7 @@
                     </div>
                 </div>
 
-                <!-- ======== 所在地区（四级联动） ======== -->
+                <!-- ======== 所在地区（三级联动：省/市/区县，与后台 region 数据口径一致） ======== -->
                 <div class="formGroup">
                     <div class="formLabel">
                         <i class="ri-map-pin-line"></i>所在地区
@@ -92,13 +92,6 @@
                                  @click="cityId && openPicker(3)">
                                 {{ districtText || '区县' }}
                                 <i class="regionArrow" v-if="cityId">&#9660;</i>
-                            </div>
-                            <!-- 街道/乡镇 -->
-                            <div class="regionSlot"
-                                 :class="{regionFilled: streetText, regionDisabled: !districtId, regionActive: pickerLevel === 4 && pickerVisible}"
-                                 @click="districtId && openPicker(4)">
-                                {{ streetText || '街道' }}
-                                <i class="regionArrow" v-if="districtId">&#9660;</i>
                             </div>
                         </div>
                         <div class="fieldError" v-if="errors.region">{{errors.region}}</div>
@@ -162,7 +155,7 @@
                             <span class="pickerBack" v-if="pickerLevel > 1" @click="pickerGoBack">&lt; 返回</span>
                             <span v-else class="pickerBack"></span>
                             <span class="pickerTitle">
-                                {{ pickerLevel === 1 ? '选择省份' : pickerLevel === 2 ? '选择城市' : pickerLevel === 3 ? '选择区/县' : '选择街道/乡镇' }}
+                                {{ pickerLevel === 1 ? '选择省份' : pickerLevel === 2 ? '选择城市' : '选择区/县' }}
                             </span>
                             <span class="pickerClose" @click="closePicker">&#10005;</span>
                         </div>
@@ -210,7 +203,6 @@
                     provinceCode: '', provinceName: '',
                     cityCode: '', cityName: '',
                     districtCode: '', districtName: '',
-                    streetCode: '', streetName: '',
                     detail: '',
                     label: '公司',
                 },
@@ -220,9 +212,9 @@
                 activeIndex: 1,
                 saving: false,
                 deleting: false,
-                // 四级联动选择器
-                provinceId: null, cityId: null, districtId: null, streetId: null,
-                provinceText: '', cityText: '', districtText: '', streetText: '',
+                // 三级联动选择器
+                provinceId: null, cityId: null, districtId: null,
+                provinceText: '', cityText: '', districtText: '',
                 // 弹出层状态
                 pickerVisible: false,
                 pickerLevel: 1,
@@ -271,21 +263,18 @@
                             provinceCode: d.provinceCode || '', provinceName: d.provinceName || '',
                             cityCode: d.cityCode || '', cityName: d.cityName || '',
                             districtCode: d.districtCode || '', districtName: d.districtName || '',
-                            streetCode: d.streetCode || '', streetName: d.streetName || '',
                             detail: d.detail || '',
                             label: d.label || '公司',
                         }
                         this.provinceText = d.provinceName || ''
                         this.cityText = d.cityName || ''
                         this.districtText = d.districtName || ''
-                        this.streetText = d.streetName || ''
                         var idx = this.labelList.indexOf(d.label)
                         this.activeIndex = idx >= 0 ? idx : 1
                         this.provinceId = null
                         this.cityId = null
                         this.districtId = null
-                        this.streetId = null
-                        // 修改点：用区划 code 逐级反查 region id，恢复省/市/区 id（address_book 不持久化街道，无法反查，保持 null）
+                        // 用区划 code 逐级反查 region id，恢复省/市/区 id
                         await this.restoreRegionIds()
                     } else {
                         vant.Toast.fail && vant.Toast.fail(res.msg || '加载失败')
@@ -296,7 +285,7 @@
             },
 
             // ---- 编辑回填：按省/市/区 code 逐级反查 region id ----
-            // 修改点：validateForm 强校验 streetId，而地址详情接口不返回 region id，必须按 code 重新装载 id
+            // 地址详情接口不返回 region id，必须按 code 逐级重新装载
             async restoreRegionIds() {
                 var f = this.form
                 // 从省级开始逐级定位：用当前已选 id 作为下一级的 parentId，code 精确匹配
@@ -324,7 +313,6 @@
                         this.districtId = dist.id
                     }
                 }
-                // 街道/乡镇 id 无来源（address_book 未持久化 street 到数据库），保持 null；此时允许保存（后端只写省/市/区 code+name）
             },
 
             async loadRegionChildren(parentId) {
@@ -348,19 +336,16 @@
             async openPicker(level) {
                 if (level === 2 && !this.provinceId) return
                 if (level === 3 && !this.cityId) return
-                if (level === 4 && !this.districtId) return
 
                 this.pickerLevel = level
                 // 高亮已选
                 if (level === 1) this.selectedRegionId = this.provinceId
                 else if (level === 2) this.selectedRegionId = this.cityId
-                else if (level === 3) this.selectedRegionId = this.districtId
-                else this.selectedRegionId = this.streetId
+                else this.selectedRegionId = this.districtId
 
                 var parentId = 0
                 if (level === 2) parentId = this.provinceId
                 else if (level === 3) parentId = this.cityId
-                else if (level === 4) parentId = this.districtId
 
                 this.pickerLoading = true
                 this.pickerVisible = true
@@ -382,7 +367,6 @@
             async pickerGoBack() {
                 if (this.pickerLevel === 2) await this.switchLevel(1, 0)
                 else if (this.pickerLevel === 3) await this.switchLevel(2, this.provinceId)
-                else if (this.pickerLevel === 4) await this.switchLevel(3, this.cityId)
             },
 
             // ---- 切换层级 ----
@@ -390,8 +374,7 @@
                 this.pickerLevel = level
                 if (level === 1) this.selectedRegionId = this.provinceId
                 else if (level === 2) this.selectedRegionId = this.cityId
-                else if (level === 3) this.selectedRegionId = this.districtId
-                else this.selectedRegionId = this.streetId
+                else this.selectedRegionId = this.districtId
 
                 this.pickerLoading = true
                 try {
@@ -413,10 +396,8 @@
                     this.provinceId = region.id; this.provinceText = region.name
                     this.form.provinceCode = region.code || ''; this.form.provinceName = region.name
                     this.cityId = null; this.cityText = ''; this.districtId = null; this.districtText = ''
-                    this.streetId = null; this.streetText = ''
                     this.form.cityCode = ''; this.form.cityName = ''
                     this.form.districtCode = ''; this.form.districtName = ''
-                    this.form.streetCode = ''; this.form.streetName = ''
                     this.clearError('region')
                     await this.switchLevel(2, region.id)
 
@@ -425,23 +406,13 @@
                     this.cityId = region.id; this.cityText = region.name
                     this.form.cityCode = region.code || ''; this.form.cityName = region.name
                     this.districtId = null; this.districtText = ''
-                    this.streetId = null; this.streetText = ''
                     this.form.districtCode = ''; this.form.districtName = ''
-                    this.form.streetCode = ''; this.form.streetName = ''
                     await this.switchLevel(3, region.id)
 
-                } else if (this.pickerLevel === 3) {
-                    // 选区/县
+                } else {
+                    // 选区/县：三级联动到此为止，选中即收起弹层
                     this.districtId = region.id; this.districtText = region.name
                     this.form.districtCode = region.code || ''; this.form.districtName = region.name
-                    this.streetId = null; this.streetText = ''
-                    this.form.streetCode = ''; this.form.streetName = ''
-                    await this.switchLevel(4, region.id)
-
-                } else if (this.pickerLevel === 4) {
-                    // 选街道/乡镇
-                    this.streetId = region.id; this.streetText = region.name
-                    this.form.streetCode = region.code || ''; this.form.streetName = region.name
                     this.clearError('region')
                     this.pickerVisible = false
                 }
@@ -468,9 +439,7 @@
                     this.errors.phone = '手机号格式不正确'
                     ok = false
                 }
-                // 修改点：街道/乡镇不入库（AddressBook.streetCode/Name 为 @TableField(exist=false)），
-                // 编辑回填时无法反查 streetId，此前强校验导致编辑已有地址永远无法保存；
-                // 后端同样未对街道做必填校验，故只要求省/市/区完整。
+                // 地址只到区/县三级（街道不入库，由下方"详细地址"承载），只要求省/市/区完整。
                 // 弱网兼容：编辑回填逐级反查 region id 失败时 id 为 null，但 form 里省/市/区 code+name
                 // 完整（来自详情接口），后端按 code+name 保存、不依赖 id，此时应允许直接保存，
                 // 避免用户仅改门牌号却被强制重新逐级选择省/市/区。

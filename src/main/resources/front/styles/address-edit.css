@@ -1,7 +1,7 @@
 /* ============================================
    地址编辑页样式 — 瑞吉外卖 v4
    修改点：移除ElementUI依赖，全部使用原生HTML+CSS
-   支持四级联动（省/市/区/街道）
+   支持三级联动（省/市/区县，与后台 region 数据一致）
    ============================================ */
 
 /* ---- 地址编辑页专属令牌（收敛页面内硬编码 hex/rgba，便于整体换肤） ---- */
@@ -239,12 +239,12 @@ body.scrollable-page {
 }
 
 /* ============================================
-   省市区街道四级选择器
+   省市区县三级选择器
    ============================================ */
 #address_edit .divContent .formGroup .regionPicker {
   display: flex;
   align-items: center;
-  gap: 5rem;
+  gap: 3rem;
   margin-top: 2rem;
 }
 #address_edit .divContent .formGroup .regionPicker.formRowError .regionSlot {
