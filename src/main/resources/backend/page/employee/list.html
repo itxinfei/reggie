@@ -49,7 +49,7 @@
         :selection="true"
         row-key="id"
         :show-actions="true"
-        :actions-width="290"
+        :actions-width="240"
         @selection-change="onSelectionChange"
         @page-change="onPageChange"
         @size-change="onSizeChange"
@@ -83,12 +83,6 @@
             type="text"
             size="small"
             class="btn-view"
-            @click="openBadge(row)"
-          >工牌</el-button>
-          <el-button
-            type="text"
-            size="small"
-            class="btn-view"
             @click="addMemberHandle(row.id)"
           >编辑</el-button>
           <el-button
@@ -97,9 +91,10 @@
             :class="row.status == '1' ? 'btn-warning' : 'btn-success'"
             @click="statusHandle(row)"
           >{{ row.status == '1' ? '禁用' : '启用' }}</el-button>
-          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && deleteHandle(row)" @click.native.stop>
+          <el-dropdown trigger="click" @command="(cmd) => { if (cmd === 'badge') { openBadge(row); } else if (cmd === 'delete') { deleteHandle(row); } }" @click.native.stop>
             <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
             <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="badge" icon="ri-id-card-line">工牌</el-dropdown-item>
               <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
             </el-dropdown-menu>
           </el-dropdown>
