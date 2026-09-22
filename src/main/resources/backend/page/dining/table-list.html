@@ -114,9 +114,9 @@
       >
         <!-- 视图切换按钮（table-bar 默认插槽） -->
         <div class="table-grid-toggle" style="margin-left:auto;">
-          <div class="toggle-btn" role="button" tabindex="0" :aria-pressed="viewMode === 'table'" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'" @keydown.enter="viewMode = 'table'">列表</div>
-          <div class="toggle-btn" role="button" tabindex="0" :aria-pressed="viewMode === 'card'" :class="{ active: viewMode === 'card' }" @click="viewMode = 'card'" @keydown.enter="viewMode = 'card'">卡片</div>
-          <div class="toggle-btn" role="button" tabindex="0" :aria-pressed="viewMode === 'map'" :class="{ active: viewMode === 'map' }" @click="viewMode = 'map'" @keydown.enter="viewMode = 'map'">桌型图</div>
+          <div class="toggle-btn" role="button" tabindex="0" :aria-pressed="viewMode === 'table'" :class="{ active: viewMode === 'table' }" @click="switchView('table')" @keydown.enter="switchView('table')">列表</div>
+          <div class="toggle-btn" role="button" tabindex="0" :aria-pressed="viewMode === 'card'" :class="{ active: viewMode === 'card' }" @click="switchView('card')" @keydown.enter="switchView('card')">卡片</div>
+          <div class="toggle-btn" role="button" tabindex="0" :aria-pressed="viewMode === 'map'" :class="{ active: viewMode === 'map' }" @click="switchView('map')" @keydown.enter="switchView('map')">桌型图</div>
         </div>
       </table-bar>
 
@@ -667,7 +667,14 @@
             case 'delete': this.deleteHandle(row.id); break
           }
         },
-        handleSizeChange: function(val) { this.pageSize = val; this.init(false) },
+        // 切换视图：页码重置为 1；列表/卡片视图重新加载分页数据，桌型图由 watcher 拉全量
+        switchView: function(mode) {
+          if (this.viewMode === mode) return
+          this.viewMode = mode
+          this.page = 1
+          if (mode !== 'map') this.init(false)
+        },
+        handleSizeChange: function(val) { this.page = 1; this.pageSize = val; this.init(false) },
         handleCurrentChange: function(val) { this.page = val; this.init(false) },
         // 修改点：表格视图分页交由 crud-table 统一管理（@page-change 同时携带页码与每页条数）
         onCrudPageChange: function(p) {

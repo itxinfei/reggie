@@ -223,31 +223,40 @@
       methods: {
         /* ── 数据加载 ── */
         async fetchData(reloadStats = true) {
-          const range = this.query.timeRange && this.query.timeRange.length === 2 ? this.query.timeRange : []
-          const params = {
-            page: this.page,
-            pageSize: this.pageSize,
-            orderId: this.query.orderId || undefined,
-            taskType: this.query.taskType || undefined,
-            status: this.query.status || undefined,
-            beginTime: range[0] || undefined,
-            endTime: range[1] || undefined
-          }
-          const requests = [printerTaskPage(params)]
-          if (reloadStats) { requests.push(this.loadStats()) }
-          const results = await Promise.all(requests)
-          const res = results[0]
-          if (String(res.code) === '1') {
-            this.tableData = res.data.records || []
-            this.counts = res.data.total
-          } else {
-            ReggieUI.error(res.msg || '操作失败')
-          }
-          if (reloadStats) {
-            const statsRes = results[1]
-            if (statsRes && String(statsRes.code) === '1') {
-              this.stats = statsRes.data || this.stats
+          this.loading = true
+          try {
+            const range = this.query.timeRange && this.query.timeRange.length === 2 ? this.query.timeRange : []
+            const params = {
+              page: this.page,
+              pageSize: this.pageSize,
+              orderId: this.query.orderId || undefined,
+              taskType: this.query.taskType || undefined,
+              status: this.query.status || undefined,
+              beginTime: range[0] || undefined,
+              endTime: range[1] || undefined
             }
+            const requests = [printerTaskPage(params)]
+            if (reloadStats) { requests.push(this.loadStats()) }
+            const results = await Promise.all(requests)
+            const res = results[0]
+            if (String(res.code) === '1') {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+            if (reloadStats) {
+              const statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1') {
+                this.stats = statsRes.data || this.stats
+              }
+            }
+          } catch (err) {
+            // NOTLOGIN 已由全局拦截器跳转登录页，不重复提示
+            if (err && err.message === 'NOTLOGIN') return
+            ReggieUI.error('加载失败：' + (err.message || err))
+          } finally {
+            this.loading = false
           }
         },
         async loadStats() {

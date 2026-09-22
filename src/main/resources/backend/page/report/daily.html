@@ -213,7 +213,8 @@
   <a href="#main-content" class="skip-link">跳转到主内容</a>
 
   <div class="dashboard-container daily-container" id="report-daily-app">
-    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title"
+          v-loading="exporting" element-loading-text="正在导出..." element-loading-background="rgba(0,0,0,0.5)">
       <!-- 修改点：视觉隐藏的页面主标题，供屏幕阅读器播报（页头已移除，配合 main 的 aria-labelledby） -->
       <h1 class="sr-only" id="page-title">营业日报</h1>
       
@@ -352,9 +353,6 @@
       </template>
 
     </main>
-
-    <!-- ========== 全屏导出 Loading 遮罩 ========== -->
-    <div v-loading="exporting" element-loading-text="正在导出..." element-loading-background="rgba(0,0,0,0.5)"></div>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -772,6 +770,8 @@
 
         // 导出处理
         async handleExport(format) {
+          // 导出期间防重复点击
+          if (this.exporting) return
           if (!this.queryDate || this.queryDate.length < 2) {
             ReggieUI.warning('请先选择日期范围')
             return
@@ -782,6 +782,7 @@
           const fileName = '营业日报_' + startDate.replace(/-/g, '') + '_' + endDate.replace(/-/g, '') + '.' + format
 
           this.exporting = true
+          this.setExportDisabled(true)
           try {
             const apiCall = format === 'excel'
               ? exportApi.exportReportExcel({ startDate, endDate })
@@ -864,7 +865,13 @@
             })
           } finally {
             this.exporting = false
+            this.setExportDisabled(false)
           }
+        },
+
+        // 导出期间禁用/恢复导出按钮，防止重复触发
+        setExportDisabled(flag) {
+          this.tableActions.forEach(function(a) { a.disabled = flag })
         },
 
         // 重新下载

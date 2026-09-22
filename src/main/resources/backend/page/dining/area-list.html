@@ -32,7 +32,9 @@
         <template slot="search-extra">
           <el-select v-model="input" placeholder="请选择区域名称" class="el-select--narrow-xs" clearable filterable size="small"
             :loading="optionsLoading"
-            :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')">
+            :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')"
+            @change="handleQuery"
+            @visible-change="onFilterDropdownVisible">
             <el-option v-for="n in filterOptions.names" :key="n" :label="n" :value="n"></el-option>
           </el-select>
         </template>

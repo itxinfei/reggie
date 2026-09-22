@@ -403,14 +403,21 @@
             Promise.all([
                 getRankingDetail(7).then(function(res) {
                     if (res && res.code === 1) { self.rankDetail = res.data || []; }
+                    else { throw new Error((res && res.msg) || '门店排行详情加载失败'); }
                 }),
                 getMultiStoreTrend(7).then(function(res) {
                     if (res && res.code === 1) { self.trendData = res.data; }
+                    else { throw new Error((res && res.msg) || '多店趋势加载失败'); }
                 }),
                 getCategoryComparison().then(function(res) {
                     if (res && res.code === 1) { self.categoryData = res.data; }
+                    else { throw new Error((res && res.msg) || '品类对比加载失败'); }
                 })
-            ]).catch(function() { /* 静默 */ });
+            ]).catch(function(err) {
+                // NOTLOGIN 已由全局拦截器处理；其余失败明确提示，不伪装成空数据
+                if (err && err.message === 'NOTLOGIN') return;
+                ReggieUI.error('图表数据加载失败：' + ((err && err.message) || '网络异常'));
+            });
         },
         loadDashboard() {
             var self = this;
@@ -427,12 +434,15 @@
             Promise.all([
                 getRankingDetail(7).then(function(res) {
                     if (res && res.code === 1) { self.rankDetail = res.data || []; }
+                    else { throw new Error((res && res.msg) || '门店排行详情加载失败'); }
                 }),
                 getMultiStoreTrend(7).then(function(res) {
                     if (res && res.code === 1) { self.trendData = res.data; }
+                    else { throw new Error((res && res.msg) || '多店趋势加载失败'); }
                 }),
                 getCategoryComparison().then(function(res) {
                     if (res && res.code === 1) { self.categoryData = res.data; }
+                    else { throw new Error((res && res.msg) || '品类对比加载失败'); }
                 })
             ]).then(function() {
                 self.lastUpdated = new Date();
@@ -441,8 +451,11 @@
                     self.renderTrendChart();
                     self.renderCategoryChart();
                 });
-            }).catch(function() {
-                // 单接口失败不阻断其他图表渲染
+            }).catch(function(err) {
+                // 单接口失败不阻断其他图表渲染，但明确提示加载失败，不静默伪装空态
+                if (err && err.message !== 'NOTLOGIN') {
+                    ReggieUI.error('图表数据加载失败：' + (err.message || '网络异常'));
+                }
                 self.$nextTick(function() {
                     self.renderBarChart();
                     self.renderTrendChart();
