@@ -106,7 +106,7 @@ public class AddressBook implements Serializable {
 
     // detail 为冗余的完整拼接地址（后端按上述字段规范化生成），供订单快照/配送/打印等既有展示复用。
     @Schema(description = "详细地址（后端按结构化字段规范化拼接）", example = "三里屯街道幸福里小区3栋2单元15层1503室")
-    @Size(max = 200, message = "详细地址不能超过200个字符")
+    @Size(max = 255, message = "详细地址不能超过255个字符")
     private String detail;
 
     @Schema(description = "标签", example = "家")

@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * 地址簿管理
@@ -44,6 +45,13 @@ public class AddressBookController {
 
     @Autowired
     private GeoUtils geoUtils;
+
+    // 仅"纯数字（含全角）"或"数字+单个字母"才自动补后缀；文本类原值返回
+    private static final Pattern AUTO_SUFFIX_PATTERN =
+            Pattern.compile("[0-9０-９]+[A-Za-zＡ-Ｚａ-ｚ]?");
+
+    // detail 列长度，须与迁移脚本及测试 schema 保持一致
+    private static final int DETAIL_MAX_LENGTH = 255;
 
     /**
      * 拼接完整地址用于地理编码（省+市+区+详细）
@@ -66,11 +74,17 @@ public class AddressBookController {
         StringBuilder sb = new StringBuilder();
         appendPart(sb, ab.getStreetName());
         appendPart(sb, ab.getCommunity());
-        appendPart(sb, ensureSuffix(ab.getBuilding(), "栋", "栋", "号楼", "幢", "座", "楼", "号"));
-        appendPart(sb, ensureSuffix(ab.getUnit(), "单元", "单元", "号"));
-        appendPart(sb, ensureSuffix(ab.getFloor(), "层", "层", "楼"));
-        appendPart(sb, ensureSuffix(ab.getRoomNo(), "室", "室", "号", "房"));
-        return sb.toString();
+        appendPart(sb, ensureSuffix(ab.getBuilding(), "栋"));
+        appendPart(sb, ensureSuffix(ab.getUnit(), "单元"));
+        appendPart(sb, ensureSuffix(ab.getFloor(), "层"));
+        appendPart(sb, ensureSuffix(ab.getRoomNo(), "室"));
+        String result = sb.toString();
+        // 兜底：极端超长时截断，防止写入超过 detail 列长导致 500
+        if (result.length() > DETAIL_MAX_LENGTH) {
+            log.warn("结构化地址超过{}字符，已截断: {}", DETAIL_MAX_LENGTH, result);
+            result = result.substring(0, DETAIL_MAX_LENGTH);
+        }
+        return result;
     }
 
     private void appendPart(StringBuilder sb, String part) {
@@ -83,9 +97,11 @@ public class AddressBookController {
     }
 
     /**
-     * 值非空且不含任一已有后缀时补默认后缀，避免"3栋栋"这类重复。
+     * 仅当值为"纯数字（含全角）"或"数字+单个字母"时补标准后缀（3→3栋、1503→1503室）；
+     * 文本类（如"东门/A区/裙房"）及已自带后缀的值（"5号楼/1503室"）原样返回，
+     * 避免"东门栋""前台室"这类错误后缀。
      */
-    private String ensureSuffix(String value, String defaultSuffix, String... suffixes) {
+    private String ensureSuffix(String value, String defaultSuffix) {
         if (value == null) {
             return null;
         }
@@ -93,12 +109,39 @@ public class AddressBookController {
         if (trimmed.isEmpty()) {
             return null;
         }
-        for (String suffix : suffixes) {
-            if (trimmed.contains(suffix)) {
-                return trimmed;
-            }
+        if (AUTO_SUFFIX_PATTERN.matcher(trimmed).matches()) {
+            return trimmed + defaultSuffix;
         }
-        return trimmed + defaultSuffix;
+        return trimmed;
+    }
+
+    private boolean isFilled(String value) {
+        return value != null && !value.trim().isEmpty();
+    }
+
+    /**
+     * 是否填了任一结构化字段
+     */
+    private boolean hasAnyStructured(AddressBook ab) {
+        return isFilled(ab.getStreetName()) || isFilled(ab.getCommunity())
+                || isFilled(ab.getBuilding()) || isFilled(ab.getUnit())
+                || isFilled(ab.getFloor()) || isFilled(ab.getRoomNo());
+    }
+
+    /**
+     * 结构化地址是否达到"可定位"的最小要求：有小区/大厦，或 楼栋+门牌号 同时填写。
+     * 仅填孤立门牌（如"1503室"）不足以定位。
+     */
+    private boolean hasEnoughStructured(AddressBook ab) {
+        return isFilled(ab.getCommunity())
+                || (isFilled(ab.getBuilding()) && isFilled(ab.getRoomNo()));
+    }
+
+    /**
+     * 是否为旧格式地址：六个结构化列全空、仅有 detail 文本
+     */
+    private boolean isLegacyAddress(AddressBook existing) {
+        return !hasAnyStructured(existing) && isFilled(existing.getDetail());
     }
 
     /**
@@ -127,8 +170,8 @@ public class AddressBookController {
         addressBook.setTenantId(BaseContext.getCurrentTenantId());
         // 按结构化字段（街道/小区/栋/单元/层/门牌）规范化生成 detail；全链路统一读 detail
         String structuredDetail = buildStructuredDetail(addressBook);
-        if (structuredDetail.isEmpty()) {
-            return R.error("请填写小区/大厦或楼栋、门牌号等详细地址");
+        if (structuredDetail.isEmpty() || !hasEnoughStructured(addressBook)) {
+            return R.error("请填写小区/大厦，或同时填写楼栋和门牌号");
         }
         addressBook.setDetail(structuredDetail);
         log.info("新增地址，手机号：{}，地址：{}",
@@ -165,10 +208,12 @@ public class AddressBookController {
     @Operation(summary = "修改地址", description = "更新地址信息，自动校验租户权限")
     public R<AddressBook> update(@Parameter(description = "地址信息（含ID）", required =
             true) @Valid @RequestBody AddressBook addressBook) {
-        // 租户校验：确保只能修改本租户的地址
+        // 属主 + 租户校验：地址真正按 user_id 隔离（同租户顾客共享 tenantId），二者缺一即拒绝
         AddressBook existing = addressBookService.getById(addressBook.getId());
+        Long currentUserId = BaseContext.getCurrentId();
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
+        if (existing == null || currentUserId == null || !currentUserId.equals(existing.getUserId())
+                || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
             return R.error("没有查询到对应地址信息");
         }
         // 合并结构化字段：前端全量提交；部分更新缺字段(null)时保持原值，空串=清空
@@ -185,22 +230,27 @@ public class AddressBookController {
         structured.setUnit(unit);
         structured.setFloor(floor);
         structured.setRoomNo(roomNo);
-        String structuredDetail = buildStructuredDetail(structured);
-        if (structuredDetail.isEmpty()) {
-            // 兜底：旧地址（结构化列为空）且本次未填结构化信息时保留原 detail，
-            // 避免用户仅修改联系人/电话却被强制重新结构化填写
-            String oldDetail = existing.getDetail() == null ? null : existing.getDetail().trim();
-            boolean noStructure = streetName == null && community == null && building == null
-                    && unit == null && floor == null && roomNo == null;
-            if (noStructure && oldDetail != null && !oldDetail.isEmpty()) {
-                structuredDetail = oldDetail;
+        String structuredDetail;
+        if (!hasAnyStructured(structured)) {
+            // 本次未填任何结构化信息
+            if (isLegacyAddress(existing)) {
+                // 旧地址仅改联系人/电话：保留原 detail，六列维持 null（与现状一致）
+                structuredDetail = existing.getDetail().trim();
             } else {
-                return R.error("请填写小区/大厦或楼栋、门牌号等详细地址");
+                // 新格式地址被清空全部定位信息：阻断，避免产生"六列空+detail残留"的不一致
+                return R.error("详细地址不能为空");
             }
+        } else {
+            // 填了结构化信息：必须达到可定位要求，防止老地址只补零碎门牌导致地址退化
+            if (!hasEnoughStructured(structured)) {
+                return R.error("请补全小区/大厦，或同时填写楼栋和门牌号");
+            }
+            structuredDetail = buildStructuredDetail(structured);
         }
         // 白名单更新：省/市/区 code+name + 结构化6字段 + detail，租户条件防跨租户越权
         LambdaUpdateWrapper<AddressBook> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(AddressBook::getId, addressBook.getId())
+                .eq(AddressBook::getUserId, currentUserId)
                 .eq(AddressBook::getTenantId, currentTenantId);
         if (addressBook.getConsignee() != null) wrapper.set(AddressBook::getConsignee, addressBook.getConsignee());
         if (addressBook.getPhone() != null) wrapper.set(AddressBook::getPhone, addressBook.getPhone());
@@ -253,13 +303,15 @@ public class AddressBookController {
     @Operation(summary = "删除地址", description = "批量删除地址，自动校验租户权限")
     @Parameter(name = "ids", description = "地址ID列表", required = true)
     public R<String> delete(@RequestParam List<Long> ids) {
-        // 租户校验：确保只能删除本租户的地址
+        // 属主 + 租户校验，防止同租户跨用户删除他人地址
+        Long currentUserId = BaseContext.getCurrentId();
         Long currentTenantId = BaseContext.getCurrentTenantId();
         for (Long id : ids) {
             AddressBook addressBook = addressBookService.getById(id);
-            if (addressBook == null || (currentTenantId != null && !currentTenantId.equals(addressBook
-                    .getTenantId()))) {
-                return R.error("地址ID " + id + " 不属于当前租户");
+            if (addressBook == null || currentUserId == null
+                    || !currentUserId.equals(addressBook.getUserId())
+                    || (currentTenantId != null && !currentTenantId.equals(addressBook.getTenantId()))) {
+                return R.error("地址ID " + id + " 不属于当前用户");
             }
         }
         addressBookService.removeByIds(ids);
@@ -300,14 +352,16 @@ public class AddressBookController {
         log.info("设置默认地址，手机号：{}，地址：{}",
             LogMaskUtils.maskPhone(addressBook.getPhone()),
             LogMaskUtils.maskAddress(addressBook.getDetail()));
-        // 租户校验
+        // 属主 + 租户校验
         AddressBook existing = addressBookService.getById(addressBook.getId());
+        Long currentUserId = BaseContext.getCurrentId();
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (existing == null || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
+        if (existing == null || currentUserId == null || !currentUserId.equals(existing.getUserId())
+                || (currentTenantId != null && !currentTenantId.equals(existing.getTenantId()))) {
             return R.error("没有查询到对应地址信息");
         }
         LambdaUpdateWrapper<AddressBook> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(AddressBook::getUserId, BaseContext.getCurrentId());
+        wrapper.eq(AddressBook::getUserId, currentUserId);
         wrapper.eq(currentTenantId != null, AddressBook::getTenantId, currentTenantId);
         wrapper.set(AddressBook::getIsDefault, AddressBook.NOT_DEFAULT);
         //SQL:update address_book set is_default = 0 where user_id = ? and tenant_id = ?
@@ -316,6 +370,7 @@ public class AddressBookController {
         // 使用白名单字段更新，防止 updateById 全字段覆盖
         LambdaUpdateWrapper<AddressBook> wrapper2 = new LambdaUpdateWrapper<>();
         wrapper2.eq(AddressBook::getId, addressBook.getId())
+                .eq(AddressBook::getUserId, currentUserId)
                 .eq(currentTenantId != null, AddressBook::getTenantId, currentTenantId)
                 .set(AddressBook::getIsDefault, AddressBook.IS_DEFAULT);
         addressBookService.update(wrapper2);
@@ -334,9 +389,13 @@ public class AddressBookController {
     @Parameter(name = "id", description = "地址ID", required = true)
     public R<AddressBook> get(@PathVariable Long id) {
         AddressBook addressBook = addressBookService.getById(id);
-        // 租户校验：确保只能查询本租户的地址
+        // 属主 + 租户校验：防止同租户跨用户读取他人地址（收货人/手机号/地址等 PII）
+        Long currentUserId = BaseContext.getCurrentId();
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (addressBook != null && (currentTenantId == null || !currentTenantId.equals(addressBook.getTenantId()))) {
+        if (addressBook != null && (currentUserId == null
+                || !currentUserId.equals(addressBook.getUserId())
+                || currentTenantId == null
+                || !currentTenantId.equals(addressBook.getTenantId()))) {
             return R.error("没有查询到对应地址信息");
         }
         if (addressBook != null) {

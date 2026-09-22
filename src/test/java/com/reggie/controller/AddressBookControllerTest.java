@@ -64,7 +64,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
                 .content("{\"userId\":1,\"consignee\":\"张三\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"label\":\"家\"}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("详细地址")));
+                .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("小区")));
     }
 
     @Test
@@ -77,6 +77,141 @@ public class AddressBookControllerTest extends BaseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.detail").value("科技园小区3栋2单元15层1503室"));
+    }
+
+    @Test
+    void testGetCrossUserRejected() throws Exception {
+        // 用户1 的地址
+        AddressBook addr = buildUserAddress(1L, "幸福里小区");
+        long id = addr.getId();
+        // 切换为同租户的用户2：不得读取用户1 的地址（PII）
+        BaseContext.setCurrentId(2L);
+        mockMvc.perform(get("/address-book/" + id)
+                .sessionAttr("user", 2L).sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("没有查询到")));
+        BaseContext.setCurrentId(1L);
+    }
+
+    @Test
+    void testUpdateCrossUserRejected() throws Exception {
+        AddressBook addr = buildUserAddress(1L, "幸福里小区");
+        long id = addr.getId();
+        // 用户2 尝试篡改用户1 的地址：拒绝且数据不变
+        BaseContext.setCurrentId(2L);
+        mockMvc.perform(withCsrfToken(mockMvc, put("/address-book")
+                .sessionAttr("user", 2L).sessionAttr("tenantId", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":" + id + ",\"consignee\":\"李四\",\"phone\":\"13900139000\","
+                        + "\"provinceCode\":\"440000\",\"provinceName\":\"广东省\","
+                        + "\"cityCode\":\"440300\",\"cityName\":\"深圳市\","
+                        + "\"districtCode\":\"440305\",\"districtName\":\"南山区\","
+                        + "\"community\":\"被篡改小区\",\"building\":\"9\",\"roomNo\":\"9999\"}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+        BaseContext.setCurrentId(1L);
+        org.junit.jupiter.api.Assertions.assertEquals("幸福里小区",
+                addressBookService.getById(id).getCommunity());
+    }
+
+    @Test
+    void testTextBuildingNoAutoSuffix() throws Exception {
+        // 楼栋填文本"东门"：不应被补成"东门栋"
+        mockMvc.perform(withCsrfToken(mockMvc, post("/address-book")
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"consignee\":\"张三\",\"phone\":\"13800138000\",\"sex\":\"1\","
+                        + "\"provinceCode\":\"440000\",\"provinceName\":\"广东省\","
+                        + "\"cityCode\":\"440300\",\"cityName\":\"深圳市\","
+                        + "\"districtCode\":\"440305\",\"districtName\":\"南山区\","
+                        + "\"community\":\"科技园小区\",\"building\":\"东门\",\"label\":\"家\"}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.detail").value("科技园小区东门"));
+    }
+
+    @Test
+    void testLegacyPartialUpdateBlocked() throws Exception {
+        // 旧格式地址（六结构化列空、只有完整 detail）
+        AddressBook legacy = new AddressBook();
+        legacy.setUserId(1L);
+        legacy.setTenantId(1L);
+        legacy.setConsignee("张三");
+        legacy.setPhone("13800138000");
+        legacy.setProvinceCode("440000");
+        legacy.setProvinceName("广东省");
+        legacy.setCityCode("440300");
+        legacy.setCityName("深圳市");
+        legacy.setDistrictCode("440305");
+        legacy.setDistrictName("南山区");
+        legacy.setDetail("科技园路1号幸福里3栋2单元1503室");
+        addressBookService.save(legacy);
+        long id = legacy.getId();
+        // 仅补一个零碎门牌（无小区、无栋）：阻断，不得用"1503室"覆盖原完整地址
+        mockMvc.perform(withCsrfToken(mockMvc, put("/address-book")
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":" + id + ",\"consignee\":\"张三\",\"phone\":\"13800138000\","
+                        + "\"provinceCode\":\"440000\",\"provinceName\":\"广东省\","
+                        + "\"cityCode\":\"440300\",\"cityName\":\"深圳市\","
+                        + "\"districtCode\":\"440305\",\"districtName\":\"南山区\","
+                        + "\"streetName\":\"\",\"community\":\"\",\"building\":\"\","
+                        + "\"unit\":\"\",\"floor\":\"\",\"roomNo\":\"1503\"}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+        org.junit.jupiter.api.Assertions.assertTrue(
+                addressBookService.getById(id).getDetail().contains("科技园路"));
+    }
+
+    @Test
+    void testLongStructuredTruncatedNotFail() throws Exception {
+        // 各字段接近上限：detail 理论拼接超 255，后端截断兜底，不得抛 500
+        String community = repeatChars('幸', 100);
+        String street = repeatChars('街', 50);
+        mockMvc.perform(withCsrfToken(mockMvc, post("/address-book")
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"consignee\":\"张三\",\"phone\":\"13800138000\",\"sex\":\"1\","
+                        + "\"provinceCode\":\"440000\",\"provinceName\":\"广东省\","
+                        + "\"cityCode\":\"440300\",\"cityName\":\"深圳市\","
+                        + "\"districtCode\":\"440305\",\"districtName\":\"南山区\","
+                        + "\"streetName\":\"" + street + "\",\"community\":\"" + community + "\","
+                        + "\"building\":\"3\",\"unit\":\"2\",\"floor\":\"15\",\"roomNo\":\"1503\","
+                        + "\"label\":\"家\"}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+        AddressBook saved = addressBookService.lambdaQuery()
+                .eq(AddressBook::getUserId, 1L)
+                .orderByDesc(AddressBook::getId).last("LIMIT 1").one();
+        org.junit.jupiter.api.Assertions.assertNotNull(saved);
+        org.junit.jupiter.api.Assertions.assertTrue(saved.getDetail().length() <= 255);
+    }
+
+    private AddressBook buildUserAddress(long userId, String community) {
+        AddressBook addr = new AddressBook();
+        addr.setUserId(userId);
+        addr.setTenantId(1L);
+        addr.setConsignee("张三");
+        addr.setPhone("13800138000");
+        addr.setProvinceCode("440000");
+        addr.setProvinceName("广东省");
+        addr.setCityCode("440300");
+        addr.setCityName("深圳市");
+        addr.setDistrictCode("440305");
+        addr.setDistrictName("南山区");
+        addr.setCommunity(community);
+        addr.setDetail(community);
+        addressBookService.save(addr);
+        return addr;
+    }
+
+    private static String repeatChars(char c, int times) {
+        StringBuilder sb = new StringBuilder(times);
+        for (int i = 0; i < times; i++) {
+            sb.append(c);
+        }
+        return sb.toString();
     }
 
     @Test

@@ -485,16 +485,17 @@
                     this.errors.region = '请选择完整的省/市/区'
                     ok = false
                 }
-                // 详细地址：街道/小区/栋/单元/层/门牌任一非空即可；兼容仅有旧 detail 的历史地址
-                var detailOk = (f.streetName && f.streetName.trim())
-                    || (f.community && f.community.trim())
-                    || (f.building && f.building.trim())
-                    || (f.unit && f.unit.trim())
-                    || (f.floor && f.floor.trim())
-                    || (f.roomNo && f.roomNo.trim())
-                    || (f.detail && f.detail.trim())
+                // 详细地址须达到"可定位"：有小区/大厦，或 楼栋+门牌号 同时填写；
+                // 六框全空但有旧 detail（老地址仅改联系人/电话）时放行，与后端 isLegacyAddress 口径一致
+                var hasCommunity = f.community && f.community.trim()
+                var hasBuildRoom = (f.building && f.building.trim()) && (f.roomNo && f.roomNo.trim())
+                var sixFilled = (f.streetName && f.streetName.trim()) || hasCommunity
+                    || (f.building && f.building.trim()) || (f.unit && f.unit.trim())
+                    || (f.floor && f.floor.trim()) || (f.roomNo && f.roomNo.trim())
+                var legacyDetail = !sixFilled && (f.detail && f.detail.trim())
+                var detailOk = hasCommunity || hasBuildRoom || legacyDetail
                 if (!detailOk) {
-                    this.errors.detail = '请填写小区/大厦或楼栋、门牌号等详细地址'
+                    this.errors.detail = '请填写小区/大厦，或同时填写楼栋和门牌号'
                     ok = false
                 }
                 return ok

@@ -11,10 +11,11 @@
 -- 新增列（位于 district_name 之后）：
 --   street_name 街道/乡镇(文本,选填) varchar(50)
 --   community   小区/大厦/学校       varchar(100)
---   building    楼栋                 varchar(20)
---   unit        单元                 varchar(20)
---   floor       楼层                 varchar(20)   —— 反引号包裹，规避函数名
---   room_no     门牌号               varchar(20)
+--   building    楼栋                 varchar(25)  —— 20字输入+补后缀仍不超长
+--   unit        单元                 varchar(25)
+--   floor       楼层                 varchar(25)  —— 反引号包裹，规避函数名
+--   room_no     门牌号               varchar(25)
+-- 另将既有 detail 列由 varchar(200) 扩为 varchar(255)。
 --
 -- 注意：
 --   - 本项目未引入 Flyway，db/migration 下脚本需手动执行
@@ -57,19 +58,24 @@ CALL sp_add_col_if_missing('address_book', 'community',
     'ALTER TABLE `address_book` ADD COLUMN `community` varchar(100) DEFAULT NULL COMMENT ''小区/大厦/学校'' AFTER `street_name`');
 
 CALL sp_add_col_if_missing('address_book', 'building',
-    'ALTER TABLE `address_book` ADD COLUMN `building` varchar(20) DEFAULT NULL COMMENT ''楼栋'' AFTER `community`');
+    'ALTER TABLE `address_book` ADD COLUMN `building` varchar(25) DEFAULT NULL COMMENT ''楼栋'' AFTER `community`');
 
 CALL sp_add_col_if_missing('address_book', 'unit',
-    'ALTER TABLE `address_book` ADD COLUMN `unit` varchar(20) DEFAULT NULL COMMENT ''单元'' AFTER `building`');
+    'ALTER TABLE `address_book` ADD COLUMN `unit` varchar(25) DEFAULT NULL COMMENT ''单元'' AFTER `building`');
 
 CALL sp_add_col_if_missing('address_book', 'floor',
-    'ALTER TABLE `address_book` ADD COLUMN `floor` varchar(20) DEFAULT NULL COMMENT ''楼层'' AFTER `unit`');
+    'ALTER TABLE `address_book` ADD COLUMN `floor` varchar(25) DEFAULT NULL COMMENT ''楼层'' AFTER `unit`');
 
 CALL sp_add_col_if_missing('address_book', 'room_no',
-    'ALTER TABLE `address_book` ADD COLUMN `room_no` varchar(20) DEFAULT NULL COMMENT ''门牌号'' AFTER `floor`');
+    'ALTER TABLE `address_book` ADD COLUMN `room_no` varchar(25) DEFAULT NULL COMMENT ''门牌号'' AFTER `floor`');
 
 -- ---------- 清理临时存储过程 ----------
 DROP PROCEDURE IF EXISTS `sp_add_col_if_missing`;
+
+-- ---------- 扩展既有 detail 列至 255（幂等，重复执行无副作用）----------
+ALTER TABLE `address_book`
+    MODIFY COLUMN `detail` varchar(255) CHARACTER SET utf8mb4
+    DEFAULT NULL COMMENT '详细地址';
 
 -- ---------- 结果校验 ----------
 SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE
