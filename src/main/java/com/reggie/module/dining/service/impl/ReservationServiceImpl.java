@@ -112,8 +112,14 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         if (currentTenantId != null && !currentTenantId.equals(r.getTenantId())) {
             throw new CustomException("无权操作其他租户的预订");
         }
+        // 释放桌台：仅 CONFIRMED 预订在确认时把桌台置为 RESERVED，取消须还原 FREE，
+        // 否则桌台永久卡在预留态无法接客（PENDING 未占桌台，无需释放）
+        boolean wasConfirmed = ReservationStatus.CONFIRMED.getValue().equals(r.getStatus());
         r.setStatus(ReservationStatus.CANCELLED.getValue());
         updateById(r);
+        if (wasConfirmed && r.getTableId() != null) {
+            diningTableService.changeStatus(r.getTableId(), DiningTableStatus.FREE.getValue());
+        }
     }
 
     /**

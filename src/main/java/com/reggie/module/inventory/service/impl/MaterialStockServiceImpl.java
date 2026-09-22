@@ -52,6 +52,7 @@ public class MaterialStockServiceImpl implements MaterialStockService {
             log.debug("[原料扣减] 菜品ID={} 无BOM配方，跳过原料扣减", dishId);
             return;
         }
+        boolean shortage = false;
         for (DishMaterial bom : bomList) {
             BigDecimal totalQty = bom.getUsageQty().multiply(dishQty);
             if (totalQty.compareTo(BigDecimal.ZERO) <= 0) {
@@ -60,7 +61,10 @@ public class MaterialStockServiceImpl implements MaterialStockService {
             try {
                 int affected = materialMapper.deductStock(bom.getMaterialId(), totalQty);
                 if (affected == 0) {
-                    log.warn("[原料扣减] 原料ID={} 库存不足或不存在，扣减{}失败（菜品ID={}）",
+                    // 库存不足未扣：升级 error 明确告警账实不符（不阻断营业——餐厅不应因库存录入滞后停卖），
+                    // 便于运维/店长及时盘点补录；原仅 warn 容易被淹没
+                    shortage = true;
+                    log.error("[原料扣减] 原料ID={} 库存不足，应扣{}未扣（菜品ID={}），账实不符请盘点补录",
                             bom.getMaterialId(), totalQty, dishId);
                 } else {
                     log.info("[原料扣减] 原料ID={} 扣减{}（菜品ID={} x {}）",
@@ -70,6 +74,9 @@ public class MaterialStockServiceImpl implements MaterialStockService {
                 log.error("[原料扣减失败] 原料ID={} 扣减{}失败（菜品ID={}）: {}",
                         bom.getMaterialId(), totalQty, dishId, e.getMessage(), e);
             }
+        }
+        if (shortage) {
+            log.error("[原料扣减] 菜品ID={} 有原料缺货未扣全，订单照常但需尽快盘点补录", dishId);
         }
     }
 

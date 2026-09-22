@@ -196,23 +196,25 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
         List<PurchaseOrderDetail> details = detailService.list(
             new LambdaQueryWrapper<PurchaseOrderDetail>().eq(PurchaseOrderDetail::getPurchaseOrderId, orderId));
 
-        // 修改点：明细收货用原子 CAS（received_qty<qty 才更新），据返回行数判断是否真正入库，
-        // 消除并发重复收货导致库存翻倍
+        // 明细收货：FOR UPDATE 行锁当前读拿最新已提交已收量，与并发部分/全量收货串行。
+        // 入库量按 (qty - 行锁已收量) 实时计算，原实现用进入方法时的内存快照，
+        // 在"部分收货已入3 + 全量按旧快照received=0"并发下会多入库（13>采购10）
         for (PurchaseOrderDetail detail : details) {
-            int rows = purchaseOrderDetailMapper.receiveFully(detail.getId(), detail.getQty());
-            if (rows > 0) {
-                // 首次收货成功——按未收数量入库（已收数量从内存快照取，CAS 保证仅一个线程入库）
-                // 防御性 null 检查：qty/receivedQty 可能在数据库中为 null（历史数据）
-                BigDecimal qty = detail.getQty() != null ? detail.getQty() : BigDecimal.ZERO;
-                BigDecimal alreadyReceived = detail.getReceivedQty() != null ? detail.getReceivedQty() : BigDecimal
-                        .ZERO;
-                BigDecimal toReceive = qty.subtract(alreadyReceived);
-                if (toReceive.compareTo(BigDecimal.ZERO) > 0) {
-                    stockRecordService.stockIn(detail.getMaterialId(), toReceive,
-                        detail.getUnitPrice(), orderId, "采购入库", po.getOperator());
-                }
+            BigDecimal qty = detail.getQty() != null ? detail.getQty() : BigDecimal.ZERO;
+            BigDecimal alreadyReceived = purchaseOrderDetailMapper.selectReceivedForUpdate(detail.getId());
+            if (alreadyReceived == null) {
+                alreadyReceived = BigDecimal.ZERO;
             }
-            // rows == 0 表示该明细已被他人收货，跳过入库
+            BigDecimal toReceive = qty.subtract(alreadyReceived);
+            if (toReceive.compareTo(BigDecimal.ZERO) <= 0) {
+                continue; // 已满收，跳过入库
+            }
+            // CAS 置为全收（FOR UPDATE 已锁行，返回 0 仅在已被他人收满时）
+            int rows = purchaseOrderDetailMapper.receiveFully(detail.getId(), qty);
+            if (rows > 0) {
+                stockRecordService.stockIn(detail.getMaterialId(), toReceive,
+                        detail.getUnitPrice(), orderId, "采购入库", po.getOperator());
+            }
         }
 
         BigDecimal totalAmount = details.stream()

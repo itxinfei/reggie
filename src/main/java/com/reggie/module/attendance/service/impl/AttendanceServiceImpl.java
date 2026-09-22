@@ -324,6 +324,16 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .last("LIMIT 1");
         Attendance existing = attendanceMapper.selectOne(wrapper);
 
+        // 已签到拒绝重复打卡：原实现覆盖原签到时间与状态（正常→迟到），抹掉考勤证据。
+        // 返回原签到时间，保留原始记录
+        if (existing != null && existing.getCheckInTime() != null) {
+            log.warn("重复签到被拒绝 - employeeId={}, 原签到时间={}",
+                    employeeId, existing.getCheckInTime());
+            R<Void> dup = R.error("今日已签到，请勿重复打卡");
+            dup.add("checkInTime", existing.getCheckInTime().format(DT_FMT));
+            return dup;
+        }
+
         int status;
         String statusMsg;
         if (now.toLocalTime().isAfter(CHECK_IN_LATE_THRESHOLD)) {

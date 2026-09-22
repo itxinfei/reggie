@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.reggie.module.inventory.model.PurchaseOrderDetail;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.math.BigDecimal;
@@ -43,4 +44,15 @@ public interface PurchaseOrderDetailMapper extends BaseMapper<PurchaseOrderDetai
             "SET received_qty = IFNULL(received_qty, 0) + #{receiveQty} " +
             "WHERE id = #{id} AND IFNULL(received_qty, 0) + #{receiveQty} <= qty")
     int receivePartial(@Param("id") Long id, @Param("receiveQty") BigDecimal receiveQty);
+
+    /**
+     * 行锁当前读：查询明细已收数量并加 FOR UPDATE 行锁。
+     * 全量收货据此拿最新已提交的 received_qty（而非进入方法时的内存快照），并与并发的部分/全量
+     * 收货串行，消除"部分已收 + 全量按旧快照多入库"。租户条件由 TenantLineInnerInterceptor 自动注入。
+     *
+     * @param id 明细ID
+     * @return 当前已收数量（null 已由 SQL IFNULL 兜底为 0）
+     */
+    @Select("SELECT IFNULL(received_qty, 0) FROM purchase_order_detail WHERE id = #{id} FOR UPDATE")
+    BigDecimal selectReceivedForUpdate(@Param("id") Long id);
 }
