@@ -108,7 +108,12 @@ Vue.component('stat-cards', {
             '<span v-else v-text="card.icon"></span>' +
           '</div>' +
           '<div class="stat-label">{{ card.label }}</div>' +
-          '<div class="stat-value">' +
+          // error 态：统计接口失败（如数据库未连接），提示点击重试，而非静默显示 0
+          '<div v-if="card.error" class="stat-value stat-value--error" aria-label="统计加载失败，点击重试">' +
+            '<i class="ri-error-warning-line"></i> 加载失败' +
+            '<div style="font-size:12px;font-weight:400;">点击重试</div>' +
+          '</div>' +
+          '<div v-else class="stat-value">' +
             '{{ card.value != null ? card.value : 0 }}' +
             '<small v-if="card.unit" style="font-size:14px;font-weight:400;margin-left:2px;">{{ card.unit }}</small>' +
           '</div>' +
@@ -152,6 +157,11 @@ Vue.component('stat-cards', {
       return !!(card.clickable && (card.active || this.activeKey === card.key))
     },
     onCardClick: function (card) {
+      // 加载失败态：点击触发重试，不参与筛选切换
+      if (card.error) {
+        this.$emit('retry', { key: card.key, card: card })
+        return
+      }
       if (card.clickable) {
         var newKey = this.activeKey === card.key ? '' : card.key
         this.$emit('update:activeKey', newKey)

@@ -239,7 +239,10 @@
           </el-select>
         </el-form-item>
         <el-form-item label="操作员：" prop="operator">
-          <el-input v-model="formData.operator" placeholder="请输入操作员姓名" class="rg-w-220" />
+          <el-autocomplete v-model="formData.operator" value-key="value"
+            :fetch-suggestions="queryOperatorSuggestions"
+            placeholder="输入或选择操作员姓名" class="rg-w-220">
+          </el-autocomplete>
         </el-form-item>
         <el-form-item label="备注：">
           <el-input v-model="formData.remark" placeholder="采购备注（可选）" />
@@ -278,7 +281,10 @@
           </el-select>
         </el-form-item>
         <el-form-item label="操作员：" prop="operator">
-          <el-input v-model="editForm.operator" placeholder="请输入操作员姓名" class="rg-w-full" />
+          <el-autocomplete v-model="editForm.operator" value-key="value"
+            :fetch-suggestions="queryOperatorSuggestions"
+            placeholder="输入或选择操作员姓名" class="rg-w-full">
+          </el-autocomplete>
         </el-form-item>
         <el-form-item label="备注：">
           <el-input v-model="editForm.remark" placeholder="采购备注（可选）" />
@@ -447,6 +453,7 @@
   <script src="../../js/performance-utils.js?v=20260915c"></script>
   <script src="../../api/inventory.js?v=20260915c"></script>
   <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../js/inventory-helper.js?v=20260922"></script>
   <script>
     new Vue({
       el: '#purchase-app',
@@ -917,6 +924,9 @@
           this.loadSupplierOptions(); this.loadMaterialOptions()
         },
         handleClose() { this.formData.dialogVisible = false },
+        queryOperatorSuggestions(queryString, cb) {
+          window.RgInventoryHelper.queryEmployees(queryString).then(function (list) { cb(list) })
+        },
         addDetail() {
             this.formData.details.push({ materialId: '', qty: '', unitPrice: '' })
           },

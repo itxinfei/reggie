@@ -85,7 +85,14 @@
         <el-row :gutter="20">
           <el-col :xs="24" :sm="12">
             <el-form-item label="食材名称：" prop="name">
-              <el-input v-model="formData.name" placeholder="请输入食材名称" />
+              <el-autocomplete
+                v-model="formData.name"
+                value-key="value"
+                :fetch-suggestions="queryNameSuggestions"
+                placeholder="输入名称自动搜索已有食材，避免重复建档"
+                style="width: 100%"
+                @select="handleNameSelect">
+              </el-autocomplete>
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12">
@@ -99,7 +106,13 @@
         <el-row :gutter="20">
           <el-col :xs="24" :sm="12">
             <el-form-item label="单位：" prop="unit">
-              <el-input v-model="formData.unit" placeholder="如：斤、个、箱" />
+              <el-autocomplete
+                v-model="formData.unit"
+                value-key="value"
+                :fetch-suggestions="queryUnitSuggestions"
+                placeholder="输入或选择单位，如：斤、个、箱"
+                style="width: 100%">
+              </el-autocomplete>
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12">
@@ -171,6 +184,7 @@
   <script src="../../js/performance-utils.js?v=20260915c"></script>
     <script src="../../api/inventory.js?v=20260915c"></script>
     <script src="../../js/components.js?v=20260915c"></script>
+    <script src="../../js/inventory-helper.js?v=20260922"></script>
     <script>
       new Vue({
         el: '#material-app',
@@ -417,6 +431,27 @@
           // 修改点：stats-card 点击切换筛选状态 — 已迁移至 onCardClick，保留兼容
           // filterBy 已由 onCardClick 替代
           /* ========== 食材操作（新增/编辑/删除/预警） ========== */
+          // ── 输入辅助（el-autocomplete）──
+          queryNameSuggestions(queryString, cb) {
+            if (!queryString || !String(queryString).trim()) { cb([]); return }
+            window.RgInventoryHelper.queryMaterials(queryString).then(function (list) { cb(list) })
+          },
+          // 新增时选中已存在食材：提示直接打开编辑，从源头防止重复建档
+          handleNameSelect(item) {
+            if (this.action !== 'add' || !item.raw || item.raw.id === this.formData.id) return
+            var self = this
+            ReggieUI.confirm('已存在食材【' + item.raw.name + '】，是否直接打开编辑该食材？', '发现同名食材', {
+              confirmButtonText: '去编辑',
+              cancelButtonText: '继续新建',
+              type: 'warning'
+            }).then(function () {
+              self.formData.dialogVisible = false
+              self.editHandle(item.raw)
+            }).catch(function () {})
+          },
+          queryUnitSuggestions(queryString, cb) {
+            cb(window.RgInventoryHelper.queryUnits(queryString))
+          },
           addHandle() {
             this.action = 'add'
             this.formData.title = '新增食材'

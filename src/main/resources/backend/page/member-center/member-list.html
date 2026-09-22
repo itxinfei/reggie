@@ -48,7 +48,7 @@
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
       <h1 class="sr-only" id="page-title">会员管理</h1>
       <!-- 修改点：使用 <stat-cards> 统一组件，支持点击过滤 -->
-      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+      <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick" @retry="retryStats"></stat-cards>
 
       <!-- ===== 搜索栏 ===== -->
       <table-bar
@@ -234,6 +234,7 @@
             { type: 'select', field: 'levelId', placeholder: '会员等级', width: '180px', options: [] }
           ],
           stats: { totalMembers: 0, highLevelCount: 0, midLevelCount: 0, lowLevelCount: 0 },
+          statsError: false,
           activeFilter: '', levelOptions: [],
           columns: [
             { prop: 'name', label: '会员名称', minWidth: 100 },
@@ -290,10 +291,10 @@
         statsCards: function() {
           const self = this;
           return [
-            { key: '', icon: 'ri-group-line', label: '会员总数', value: self.stats.totalMembers, color: 'primary', clickable: true, active: self.activeFilter === '' },
-            { key: 'gold', icon: 'ri-star-line', label: '高级会员', value: self.stats.highLevelCount, color: 'warning', clickable: true, active: self.activeFilter === 'gold' },
-            { key: 'silver', icon: 'ri-medal-2-line', label: '中级会员', value: self.stats.midLevelCount, color: 'info', clickable: true, active: self.activeFilter === 'silver' },
-            { key: 'bronze', icon: 'ri-vip-crown-line', label: '初级会员', value: self.stats.lowLevelCount, color: 'danger', clickable: true, active: self.activeFilter === 'bronze' }
+            { key: '', icon: 'ri-group-line', label: '会员总数', value: self.stats.totalMembers, color: 'primary', clickable: true, active: self.activeFilter === '', error: self.statsError },
+            { key: 'gold', icon: 'ri-star-line', label: '高级会员', value: self.stats.highLevelCount, color: 'warning', clickable: true, active: self.activeFilter === 'gold', error: self.statsError },
+            { key: 'silver', icon: 'ri-medal-2-line', label: '中级会员', value: self.stats.midLevelCount, color: 'info', clickable: true, active: self.activeFilter === 'silver', error: self.statsError },
+            { key: 'bronze', icon: 'ri-vip-crown-line', label: '初级会员', value: self.stats.lowLevelCount, color: 'danger', clickable: true, active: self.activeFilter === 'bronze', error: self.statsError }
           ]
         }
       },
@@ -415,7 +416,14 @@
             }
             if (reloadStats) {
               const statsRes = results[1]
-              if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
+              if (statsRes && String(statsRes.code) === '1') {
+                self.stats = statsRes.data || self.stats
+                self.statsError = false
+              } else {
+                // 接口失败（常见为数据库未连接）：标记失败态，仅在新出现失败时提示一次
+                if (!self.statsError) self.$message.warning('统计数据加载失败，请检查数据库连接后点击卡片重试')
+                self.statsError = true
+              }
             }
           } catch(e) {
             // 修改点：加载三态修复（2026-08-31）——列表加载失败仅记录日志、不弹全局遮屏 toast；
@@ -450,6 +458,8 @@
             return { code: 1, data: { totalMembers: total, highLevelCount: highCount, midLevelCount: midCount, lowLevelCount: lowCount } }
           } catch(e) { return { code: 0 } }
         },
+        // 统计卡片"加载失败"点击重试
+        retryStats: function() { this.init(true) },
         loadLevels: function() {
           const self = this
           levelPage({ page: 1, pageSize: 100 }).then(function(res) {
