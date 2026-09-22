@@ -67,6 +67,15 @@
           </span>
           <span v-else style="color:var(--text-muted);">-</span>
         </template>
+        <template #col-voucher="{ row }">
+          <el-image
+            v-if="firstVoucher(row.voucherImages)"
+            :src="firstVoucher(row.voucherImages)"
+            :preview-src-list="imageList(row.voucherImages)"
+            style="width:44px;height:44px;object-fit:cover;border:1px solid var(--border-default);border-radius:var(--radius-sm);cursor:pointer;">
+          </el-image>
+          <span v-else style="color:var(--text-muted);">-</span>
+        </template>
       </crud-table>
     </main>
 
@@ -98,6 +107,9 @@
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="flowForm.remark" type="textarea" :rows="2" maxlength="200" placeholder="备注（可选）"></el-input>
+        </el-form-item>
+        <el-form-item label="凭证图片：">
+          <rg-image-uploader v-model="flowForm.voucherImages" biz-type="stockrecord" :max="5"></rg-image-uploader>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -133,6 +145,7 @@
             { prop: 'sourceDoc', label: '来源单据', width: 130, align: 'center', slot: true },
             { prop: 'operator', label: '操作员', width: 80, align: 'center' },
             { prop: 'remark', label: '备注', minWidth: 100 },
+            { prop: 'voucher', label: '凭证', width: 80, align: 'center', slot: true },
             { prop: 'createdTime', label: '操作时间', width: 160, align: 'center' }
           ],
           // 统计
@@ -148,7 +161,7 @@
           // C.4：类型 Tab + 流水新增
           activeTab: 'ALL',
           flowDialog: { visible: false, mode: 'in', title: '入库' },
-          flowForm: { materialId: '', qty: 1, unitPrice: undefined, unit: '', bizId: '', remark: '' },
+          flowForm: { materialId: '', qty: 1, unitPrice: undefined, unit: '', bizId: '', remark: '', voucherImages: '' },
           flowSubmitting: false,
           flowRules: {
             materialId: [{ required: true, message: '请选择食材', trigger: 'change' }],
@@ -233,6 +246,15 @@
           })
         },
         // 修改点：8.3.2 来源单据文案（按 remark/type 推断单据类型）
+        // 凭证图片逗号串 → 可访问下载 URL 列表
+        imageList(images) {
+          if (!images) return []
+          return images.split(',').filter(function(x) { return !!x }).map(function(x) { return '/common/download?name=' + x })
+        },
+        firstVoucher(images) {
+          const list = this.imageList(images)
+          return list.length ? list[0] : ''
+        },
         sourceDocText(row) {
           const biz = row.bizId
           if (biz == null || String(biz) === '' || String(biz) === '0') return '-'
@@ -278,7 +300,7 @@
         openFlow(mode) {
           this.flowDialog.mode = mode
           this.flowDialog.title = mode === 'in' ? '入库登记' : '出库登记'
-          this.flowForm = { materialId: '', qty: 1, unitPrice: undefined, unit: '', bizId: '', remark: mode === 'in' ? '采购入库' : '生产领用' }
+          this.flowForm = { materialId: '', qty: 1, unitPrice: undefined, unit: '', bizId: '', remark: mode === 'in' ? '采购入库' : '生产领用', voucherImages: '' }
           this.flowDialog.visible = true
           if (this.$refs.flowForm) { this.$nextTick(() => this.$refs.flowForm.clearValidate()) }
         },
@@ -299,6 +321,7 @@
                 unitPrice: self.flowForm.unitPrice === undefined || self.flowForm.unitPrice === '' ? null : Number(self.flowForm.unitPrice),
                 bizId: self.flowForm.bizId || '',
                 remark: self.flowForm.remark || '',
+                voucherImages: self.flowForm.voucherImages || '',
                 operator: self.flowForm.operator
               }
               const res = self.flowDialog.mode === 'in' ? await stockIn(params) : await stockOut(params)

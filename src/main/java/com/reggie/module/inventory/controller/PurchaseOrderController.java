@@ -84,7 +84,8 @@ public class PurchaseOrderController {
     @Operation(summary = "创建采购单", description = "创建新的采购单并关联供应商")
     public R<PurchaseOrder> create(@Parameter(description = "采购单创建信息（含供应商ID）", required =
             true) @Validated @RequestBody CreatePurchaseOrderDTO dto) {
-        PurchaseOrder po = purchaseOrderService.createOrder(dto.getSupplierId(), dto.getOperator(), dto.getRemark());
+        PurchaseOrder po = purchaseOrderService.createOrder(dto.getSupplierId(), dto.getOperator(),
+                dto.getRemark(), dto.getVoucherImages());
         return R.success(po);
     }
 
@@ -224,6 +225,10 @@ public class PurchaseOrderController {
         }
         if (order.getRemark() != null) {
             toUpdate.setRemark(order.getRemark());
+        }
+        // 修改点：凭证图片纳入编辑白名单，允许事后补传/调整纸质单据影像
+        if (order.getVoucherImages() != null) {
+            toUpdate.setVoucherImages(order.getVoucherImages());
         }
         boolean ok = purchaseOrderService.updateById(toUpdate);
         if (!ok) {

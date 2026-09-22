@@ -20,4 +20,7 @@ public class CreateStockCheckDTO {
 
     @Schema(description = "备注", example = "月度盘点")
     private String remark;
+
+    @Schema(description = "凭证图片（逗号分隔相对路径，最多5张）")
+    private String voucherImages;
 }

@@ -44,6 +44,9 @@ public class Supplier implements Serializable {
     @Schema(description = "地址", example = "北京市朝阳区xxx")
     private String address;
 
+    @Schema(description = "资质图片（营业执照等，逗号分隔相对路径，最多5张）")
+    private String licenseImages;
+
     @Schema(description = "状态：0=禁用，1=正常", example = "1")
     private Integer status;
 

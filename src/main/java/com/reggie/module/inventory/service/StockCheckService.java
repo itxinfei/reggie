@@ -28,6 +28,21 @@ public interface StockCheckService extends IService<StockCheck> {
     StockCheck createCheck(String operator, String remark);
 
     /**
+     * 创建盘点单并附带凭证图片。
+     * JDK8 接口默认方法：复用旧创建逻辑后回填图片，避免破坏既有内部调用点。
+     *
+     * @param voucherImages 凭证图片（逗号分隔，可为 null）
+     */
+    default StockCheck createCheck(String operator, String remark, String voucherImages) {
+        StockCheck sc = createCheck(operator, remark);
+        if (voucherImages != null && !voucherImages.trim().isEmpty()) {
+            sc.setVoucherImages(voucherImages);
+            updateById(sc);
+        }
+        return sc;
+    }
+
+    /**
      * 完成盘点（提交盘点结果并调整库存）
      *
      * @param checkId 盘点单ID

@@ -247,6 +247,9 @@
         <el-form-item label="备注：">
           <el-input v-model="formData.remark" placeholder="采购备注（可选）" />
         </el-form-item>
+        <el-form-item label="凭证图片：">
+          <rg-image-uploader v-model="formData.voucherImages" biz-type="purchase" :max="5"></rg-image-uploader>
+        </el-form-item>
         <el-form-item label="采购明细：">
           <div v-for="(item, index) in formData.details" :key="index" class="detail-row">
             <el-select v-model="item.materialId" placeholder="食材" class="rg-w-160" filterable>
@@ -288,6 +291,9 @@
         </el-form-item>
         <el-form-item label="备注：">
           <el-input v-model="editForm.remark" placeholder="采购备注（可选）" />
+        </el-form-item>
+        <el-form-item label="凭证图片：">
+          <rg-image-uploader v-model="editForm.voucherImages" biz-type="purchase" :max="5"></rg-image-uploader>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -334,6 +340,18 @@
           <span class="detail-head__label">备注</span>
           <span class="detail-head__value detail-head__value--clamp" :title="detailRow.remark || ''">{{ detailRow.remark || '—' }}</span>
         </div>
+      </div>
+
+      <!-- 凭证图片：只读缩略图，点击任意张可放大浏览（el-image 自带 viewer） -->
+      <div v-if="detailVoucherList.length" style="margin-top: var(--space-4);">
+        <div class="detail-sub">凭证图片<span class="detail-sub__count">（{{ detailVoucherList.length }}）</span></div>
+        <el-image
+          v-for="(url, i) in detailVoucherList"
+          :key="i"
+          :src="url"
+          :preview-src-list="detailVoucherList"
+          style="width:80px;height:80px;object-fit:cover;margin-right:8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);cursor:pointer;">
+        </el-image>
       </div>
 
       <!-- ===== 详情态：明细 + 合计 + 收货批次 ===== -->
@@ -489,12 +507,12 @@
           trendEmpty: false,
           formData: {
             title: '新增采购单', dialogVisible: false,
-            supplierId: '', operator: '', remark: '',
+            supplierId: '', operator: '', remark: '', voucherImages: '',
             details: [{ materialId: '', qty: '', unitPrice: '' }]
           },
           // 修改点：编辑采购单表单（仅供应商/操作员/备注，明细与金额不在此修改）
           editDialogVisible: false,
-          editForm: { id: null, orderNo: '', supplierId: '', operator: '', remark: '' },
+          editForm: { id: null, orderNo: '', supplierId: '', operator: '', remark: '', voucherImages: '' },
           // 修改点：编辑表单必填校验（supplierId/operator 为必填）
           editRules: {
             supplierId: [{ required: true, message: '请选择供应商', trigger: 'change' }],
@@ -516,6 +534,12 @@
       },
       created() { this.init() },
       computed: {
+        // 详情弹窗凭证图片：逗号串转可访问的下载 URL 列表
+        detailVoucherList: function() {
+          const raw = this.detailRow && this.detailRow.voucherImages
+          if (!raw) return []
+          return raw.split(',').filter(function(x) { return !!x }).map(function(x) { return '/common/download?name=' + x })
+        },
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
           const self = this;
@@ -918,7 +942,7 @@
         addHandle() {
           this.formData = {
             title: '新增采购单', dialogVisible: true,
-            supplierId: '', operator: '', remark: '',
+            supplierId: '', operator: '', remark: '', voucherImages: '',
             details: [{ materialId: '', qty: '', unitPrice: '' }]
           }
           this.loadSupplierOptions(); this.loadMaterialOptions()
@@ -964,7 +988,8 @@
             orderNo: row.orderNo || '',
             supplierId: row.supplierId || '',
             operator: row.operator || '',
-            remark: row.remark || ''
+            remark: row.remark || '',
+            voucherImages: row.voucherImages || ''
           }
           this.loadSupplierOptions()
           this.editDialogVisible = true
@@ -983,7 +1008,8 @@
               id: self.editForm.id,
               supplierId: self.editForm.supplierId,
               operator: self.editForm.operator,
-              remark: self.editForm.remark
+              remark: self.editForm.remark,
+              voucherImages: self.editForm.voucherImages || ''
             }).then(function(res) {
               self.submitting = false
               if (res.code === 1) {
@@ -1040,7 +1066,7 @@
           // 修改点：全流程包裹 submitting，保证按钮 loading 与最终复位
           self.submitting = true
           try {
-            const res = await addPurchase({ supplierId: fd.supplierId, operator: fd.operator, remark: fd.remark })
+            const res = await addPurchase({ supplierId: fd.supplierId, operator: fd.operator, remark: fd.remark, voucherImages: fd.voucherImages || '' })
             if (res.code !== 1) { ReggieUI.error(res.msg || '创建失败'); return }
             const orderId = res.data.id || res.data
             // 明细已在提交前逐行校验通过，全部合法，不再静默过滤丢行

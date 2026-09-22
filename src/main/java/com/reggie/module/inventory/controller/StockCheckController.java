@@ -108,7 +108,7 @@ public class StockCheckController {
     @Operation(summary = "创建盘点单", description = "创建新的库存盘点单")
     public R<StockCheck> create(@Parameter(description = "盘点单创建信息", required =
             true) @Validated @RequestBody CreateStockCheckDTO dto) {
-        StockCheck sc = stockCheckService.createCheck(dto.getOperator(), dto.getRemark());
+        StockCheck sc = stockCheckService.createCheck(dto.getOperator(), dto.getRemark(), dto.getVoucherImages());
         return R.success(sc);
     }
 

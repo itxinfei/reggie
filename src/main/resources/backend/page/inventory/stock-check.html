@@ -157,6 +157,17 @@
                 <span class="expand-summary__value">{{ row.remark }}</span>
               </div>
             </div>
+            <!-- 凭证图片：逗号串转缩略图，点击放大 -->
+            <div v-if="imageList(row.voucherImages).length" style="margin:10px 0;">
+              <span class="expand-summary__label" style="margin-right:8px;">凭证图片：</span>
+              <el-image
+                v-for="(url, i) in imageList(row.voucherImages)"
+                :key="i"
+                :src="url"
+                :preview-src-list="imageList(row.voucherImages)"
+                style="width:64px;height:64px;object-fit:cover;margin-right:8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);cursor:pointer;vertical-align:middle;">
+              </el-image>
+            </div>
             <el-table :data="row.details" stripe class="tableBox sub-table"
               :row-class-name="detailRowClass" aria-label="盘点明细">
               <el-table-column label="食材名称" min-width="160">
@@ -248,6 +259,9 @@
         </el-form-item>
         <el-form-item label="备注：">
           <el-input v-model="createForm.remark" type="textarea" :rows="2" placeholder="盘点备注（可选）" />
+        </el-form-item>
+        <el-form-item label="凭证图片：">
+          <rg-image-uploader v-model="createForm.voucherImages" biz-type="stockcheck" :max="5"></rg-image-uploader>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -360,7 +374,7 @@
           /* ── 新增盘点单弹窗 ── */
           createDialogVisible: false,
           createSubmitting: false,
-          createForm: { operator: '', remark: '' },
+          createForm: { operator: '', remark: '', voucherImages: '' },
           createRules: { operator: [{ required: true, whitespace: true, message: '请输入操作人', trigger: 'blur' }] },
 
           /* ── 编辑盘点项弹窗 ── */
@@ -498,11 +512,16 @@
         getDiffIcon: function(row) { var v = this.getDiffValue(row); return v < 0 ? 'ri-arrow-down-s-fill' : v > 0 ? 'ri-arrow-up-s-fill' : 'ri-subtract-line'; },
         getDiffStatusLabel: function(row) { var v = this.getDiffValue(row); return v < 0 ? '盘亏' : v > 0 ? '盘盈' : '一致'; },
         getDiffStatusClass: function(row) { var v = this.getDiffValue(row); return v < 0 ? 'diff-status-tag--loss' : v > 0 ? 'diff-status-tag--profit' : 'diff-status-tag--even'; },
+        // 凭证图片逗号串 → 可访问下载 URL 列表
+        imageList: function(images) {
+          if (!images) return []
+          return images.split(',').filter(function(x) { return !!x }).map(function(x) { return '/common/download?name=' + x })
+        },
         detailRowClass: function(obj) { return this.getDiffValue(obj.row) !== 0 ? 'has-diff' : ''; },
 
         /* ── 新增盘点单 ── */
         openCreateDialog: function() {
-          this.createForm = { operator: '', remark: '' };
+          this.createForm = { operator: '', remark: '', voucherImages: '' };
           this.createDialogVisible = true;
         },
         queryOperatorSuggestions: function(queryString, cb) {

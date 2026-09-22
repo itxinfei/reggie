@@ -55,7 +55,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void stockIn(Long materialId, BigDecimal qty, BigDecimal unitPrice, Long bizId, String remark,
-            String operator) {
+            String operator, String voucherImages) {
         if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             throw new CustomException("入库数量必须大于0");
         }
@@ -76,6 +76,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         record.setBizId(bizId);
         record.setRemark(remark);
         record.setOperator(operator);
+        record.setVoucherImages(voucherImages);
         save(record);
     }
 
@@ -89,7 +90,8 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void stockOut(Long materialId, BigDecimal qty, Long bizId, String remark, String operator) {
+    public void stockOut(Long materialId, BigDecimal qty, Long bizId, String remark, String operator,
+            String voucherImages) {
         if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             throw new CustomException("出库数量必须大于0");
         }
@@ -109,6 +111,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         record.setBizId(bizId);
         record.setRemark(remark);
         record.setOperator(operator);
+        record.setVoucherImages(voucherImages);
         save(record);
     }
 

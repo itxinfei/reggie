@@ -26,7 +26,17 @@ public interface StockRecordService extends IService<StockRecord> {
      * @param remark     备注
      * @param operator   操作人
      */
-    void stockIn(Long materialId, BigDecimal qty, BigDecimal unitPrice, Long bizId, String remark, String operator);
+    default void stockIn(Long materialId, BigDecimal qty, BigDecimal unitPrice, Long bizId, String remark, String operator) {
+        stockIn(materialId, qty, unitPrice, bizId, remark, operator, null);
+    }
+
+    /**
+     * 入库操作并附带凭证图片。
+     *
+     * @param voucherImages 凭证图片（逗号分隔，可为 null）
+     */
+    void stockIn(Long materialId, BigDecimal qty, BigDecimal unitPrice, Long bizId,
+                  String remark, String operator, String voucherImages);
 
     /**
      * 出库操作（减少库存）
@@ -37,7 +47,17 @@ public interface StockRecordService extends IService<StockRecord> {
      * @param remark     备注
      * @param operator   操作人
      */
-    void stockOut(Long materialId, BigDecimal qty, Long bizId, String remark, String operator);
+    default void stockOut(Long materialId, BigDecimal qty, Long bizId, String remark, String operator) {
+        stockOut(materialId, qty, bizId, remark, operator, null);
+    }
+
+    /**
+     * 出库操作并附带凭证图片。
+     *
+     * @param voucherImages 凭证图片（逗号分隔，可为 null）
+     */
+    void stockOut(Long materialId, BigDecimal qty, Long bizId,
+                   String remark, String operator, String voucherImages);
 
     /**
      * 分页查询指定原料的库存流水

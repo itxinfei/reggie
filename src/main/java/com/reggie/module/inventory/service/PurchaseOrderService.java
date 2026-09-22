@@ -28,6 +28,21 @@ public interface PurchaseOrderService extends IService<PurchaseOrder> {
     PurchaseOrder createOrder(Long supplierId, String operator, String remark);
 
     /**
+     * 创建采购订单并附带凭证图片。
+     * JDK8 接口默认方法：复用旧创建逻辑后回填图片，避免破坏既有内部调用点。
+     *
+     * @param voucherImages 凭证图片（逗号分隔，可为 null）
+     */
+    default PurchaseOrder createOrder(Long supplierId, String operator, String remark, String voucherImages) {
+        PurchaseOrder po = createOrder(supplierId, operator, remark);
+        if (voucherImages != null && !voucherImages.trim().isEmpty()) {
+            po.setVoucherImages(voucherImages);
+            updateById(po);
+        }
+        return po;
+    }
+
+    /**
      * 向采购订单添加明细行
      *
      * @param orderId    订单ID

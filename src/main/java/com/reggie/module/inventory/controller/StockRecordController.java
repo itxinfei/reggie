@@ -106,7 +106,7 @@ public class StockRecordController {
     public R<String> stockIn(@Parameter(description = "入库信息（含食材ID、数量、单价）", required =
             true) @Validated @RequestBody StockInDTO dto) {
         stockRecordService.stockIn(dto.getMaterialId(), dto.getQty(), dto.getUnitPrice(),
-            dto.getBizId(), dto.getRemark(), dto.getOperator());
+            dto.getBizId(), dto.getRemark(), dto.getOperator(), dto.getVoucherImages());
         return R.success("入库成功");
     }
 
@@ -121,7 +121,7 @@ public class StockRecordController {
     public R<String> stockOut(@Parameter(description = "出库信息（含食材ID、数量）", required =
             true) @Validated @RequestBody StockOutDTO dto) {
         stockRecordService.stockOut(dto.getMaterialId(), dto.getQty(), dto.getBizId(),
-            dto.getRemark(), dto.getOperator());
+            dto.getRemark(), dto.getOperator(), dto.getVoucherImages());
         return R.success("出库成功");
     }
 }

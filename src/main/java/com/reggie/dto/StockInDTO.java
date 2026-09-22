@@ -37,4 +37,7 @@ public class StockInDTO {
     @Schema(description = "操作人", required = true, example = "张三")
     @NotNull(message = "操作人不能为空")
     private String operator;
+
+    @Schema(description = "凭证图片（逗号分隔相对路径，最多5张）")
+    private String voucherImages;
 }

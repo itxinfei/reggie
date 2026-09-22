@@ -24,4 +24,7 @@ public class CreatePurchaseOrderDTO {
 
     @Schema(description = "备注", example = "紧急采购")
     private String remark;
+
+    @Schema(description = "凭证图片（逗号分隔相对路径，最多5张）")
+    private String voucherImages;
 }

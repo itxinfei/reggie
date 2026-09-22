@@ -71,6 +71,16 @@
         </span>
         <span v-else style="color:var(--text-muted);">-</span>
       </template>
+      <!-- 资质图片列：有图显示缩略图，点击放大 -->
+      <template #col-license="{ row }">
+        <el-image
+          v-if="firstImage(row.licenseImages)"
+          :src="firstImage(row.licenseImages)"
+          :preview-src-list="imageList(row.licenseImages)"
+          style="width:44px;height:44px;object-fit:cover;border:1px solid var(--border-default);border-radius:var(--radius-sm);cursor:pointer;">
+        </el-image>
+        <span v-else style="color:var(--text-muted);">-</span>
+      </template>
       <!-- 状态列自定义渲染 -->
       <template #col-status="{ row }">
         <el-tag :type="String(row.status) === '1' ? 'success' : 'info'" size="small">
@@ -111,6 +121,9 @@
       </el-form-item>
       <el-form-item label="地址：">
         <el-input v-model="formData.address" placeholder="请输入地址" maxlength="100" />
+      </el-form-item>
+      <el-form-item label="资质图片：">
+        <rg-image-uploader v-model="formData.licenseImages" biz-type="supplier" :max="5"></rg-image-uploader>
       </el-form-item>
       <el-form-item label="状态：">
         <el-radio-group v-model="formData.status">
@@ -198,6 +211,7 @@
             contact: '',
             phone: '',
             address: '',
+            licenseImages: '',
             status: '1'
           },
           // 名称必填；电话选填，填写则校验手机/座机格式（错误内联显示）
@@ -233,6 +247,7 @@
             { prop: 'contact', label: '联系人', width: 80, align: 'center' },
             { prop: 'phone', label: '联系电话', width: 120, align: 'center' },
             { prop: 'address', label: '地址', minWidth: 120 },
+            { prop: 'license', label: '资质', width: 80, align: 'center', slot: true },
             // 修改点：8.3.3 采购汇总列（后端按供应商聚合回填 totalPurchaseAmount / purchaseCount）
             { prop: 'totalPurchaseAmount', label: '累计采购额', width: 110, align: 'center', slot: true, type: 'money' },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
@@ -369,6 +384,15 @@
 
         // ==================== 采购记录弹窗（8.3.3） ====================
 
+        // 资质图片逗号串 → 可访问下载 URL 列表
+        imageList(images) {
+          if (!images) return []
+          return images.split(',').filter(function(x) { return !!x }).map(function(x) { return '/common/download?name=' + x })
+        },
+        firstImage(images) {
+          const list = this.imageList(images)
+          return list.length ? list[0] : ''
+        },
         openPurchases(row) {
           const self = this
           self.purchaseDialog.title = '采购记录 - ' + (row.name || '供应商')
@@ -408,7 +432,7 @@
           this.editMode = false
           this.editId = null
           this.dialogTitle = '新增供应商'
-          this.formData = { name: '', contact: '', phone: '', address: '', status: '1' }
+          this.formData = { name: '', contact: '', phone: '', address: '', licenseImages: '', status: '1' }
           this.dialogVisible = true
         },
 
@@ -421,6 +445,7 @@
             contact: row.contact || '',
             phone: row.phone || '',
             address: row.address || '',
+            licenseImages: row.licenseImages || '',
             status: String(row.status || '1')
           }
           this.dialogVisible = true
@@ -444,8 +469,8 @@
         doSave() {
           const fd = this.formData
           const apiCall = this.editMode
-            ? updateSupplier({ id: this.editId, name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status })
-            : addSupplier({ name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, status: fd.status })
+            ? updateSupplier({ id: this.editId, name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, licenseImages: fd.licenseImages, status: fd.status })
+            : addSupplier({ name: fd.name, contact: fd.contact, phone: fd.phone, address: fd.address, licenseImages: fd.licenseImages, status: fd.status })
 
           const self = this
           self.submitting = true

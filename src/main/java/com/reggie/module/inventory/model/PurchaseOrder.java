@@ -52,6 +52,9 @@ public class PurchaseOrder implements Serializable {
     @Schema(description = "备注", example = "紧急采购")
     private String remark;
 
+    @Schema(description = "凭证图片（逗号分隔相对路径，最多5张）")
+    private String voucherImages;
+
     @Schema(description = "创建时间", example = "2026-07-09 10:00:00")
     @TableField(value = "created_time", fill = FieldFill.INSERT)
     private LocalDateTime createdTime;

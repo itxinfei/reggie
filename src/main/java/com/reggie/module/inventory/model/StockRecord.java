@@ -54,6 +54,9 @@ public class StockRecord implements Serializable {
     @Schema(description = "备注", example = "采购入库")
     private String remark;
 
+    @Schema(description = "凭证图片（逗号分隔相对路径，最多5张）")
+    private String voucherImages;
+
     @Schema(description = "操作员", example = "张三")
     private String operator;
 
