@@ -15,6 +15,8 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -57,7 +59,27 @@ public class RedisConfig {
     };
 
     /**
-     * 统一配置 ObjectMapper Bean
+     * 主 ObjectMapper（@Primary），沿用 Spring Boot 标准 Jackson 配置。
+     * <p>
+     * 必须显式声明：Actuator 的 JmxEndpointAutoConfiguration 通过
+     * {@code ObjectProvider<ObjectMapper>.getIfAvailable()} 取 mapper，
+     * 若容器中唯一的 ObjectMapper 是 {@link #redisObjectMapper()}（启用了 NON_FINAL
+     * DefaultTyping），JMX 调用 /actuator/health 时 convertValue 到 Map&lt;String,Object&gt;
+     * 会因 details 中的 String/Long 等 final 值缺少 '@class' 抛 InvalidTypeIdException，
+     * IDEA Endpoints 面板即报“无法检索 health 端点数据”。
+     * 设为 @Primary 后 JMX 取到标准 mapper，Redis 侧仍走专用 mapper 互不影响。
+     *
+     * @param builder Spring Boot 的 Jackson 构建器（含全部标准定制）
+     * @return 标准 ObjectMapper
+     */
+    @Bean
+    @Primary
+    public ObjectMapper objectMapper(Jackson2ObjectMapperBuilder builder) {
+        return builder.createXmlMapper(false).build();
+    }
+
+    /**
+     * Redis 专用 ObjectMapper Bean
      * 避免重复创建，集中管理序列化策略
      * <p>
      * 安全注意：启用 DefaultTyping 用于 Redis 反序列化时保留类型信息，
