@@ -364,8 +364,6 @@
             loading: false, submitting: false, pushing: false,
             tableData: [], total: 0, currentPage: 1, pageSize: 10,
             searchName: '', searchStatus: null, searchType: null,
-            // 修改点：<stat-cards> 组件的 activeKey，与 searchStatus 映射
-            activeKey: '',
             // 修改点：<table-bar> 统一组件配置
             tableSearchItems: [],
             // 修改点：搜索下拉框动态选项
@@ -457,10 +455,14 @@
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {
             const self = this;
+            // 高亮统一由 searchStatus 映射：原先读恒为 '' 的 activeKey，导致「活动总数」永久高亮、
+            // 点其他卡片高亮不动（searchStatus 在 onCardClick 中被置为数字，故用 String 归一比较）
+            const ss = self.searchStatus;
+            const noFilter = ss === null || ss === '' || ss === undefined;
             return [
-                { key: '', icon: 'ri-file-list-3-line', label: '活动总数', value: self.summary.total, color: 'primary', clickable: true, active: self.activeKey === '' },
-                { key: '1', icon: '▶', label: '进行中', value: self.summary.active, color: 'success', clickable: true, active: self.activeKey === '1' },
-                { key: '0', icon: 'ri-edit-2-line', label: '草稿', value: self.summary.draft, color: 'warning', clickable: true, active: self.activeKey === '0' },
+                { key: '', icon: 'ri-file-list-3-line', label: '活动总数', value: self.summary.total, color: 'primary', clickable: true, active: noFilter },
+                { key: '1', icon: '▶', label: '进行中', value: self.summary.active, color: 'success', clickable: true, active: String(ss) === '1' },
+                { key: '0', icon: 'ri-edit-2-line', label: '草稿', value: self.summary.draft, color: 'warning', clickable: true, active: String(ss) === '0' },
                 { key: 'pushed', icon: 'ri-mail-send-line', label: '推送消息数', value: self.summary.totalPushed, color: 'info' }
             ]
         }

@@ -285,6 +285,9 @@
             }).catch(err => {
               ReggieUI.error('请求失败：' + err)
             })
+          }).catch(e => {
+            if (e === 'cancel' || e === 'close') return
+            ReggieUI.error('删除失败：' + e)
           })
         },
         /* ========== 分页处理 ========== */

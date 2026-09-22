@@ -390,6 +390,15 @@
               ReggieUI.warning('请先查询并选择会员')
               return
             }
+            // 扣积分(OUT)不能超过当前余额，超额直接拦截
+            var ptsNum = Number(self.adjustForm.points)
+            if (self.adjustForm.adjustType === 'OUT') {
+              var cur = Number(self.adjustMember.points) || 0
+              if (ptsNum > cur) {
+                ReggieUI.warning('扣减积分不能超过当前余额（当前 ' + cur + ' 分）')
+                return
+              }
+            }
             self.adjustLoading = true
             const delta = self.adjustForm.adjustType === 'IN' ? self.adjustForm.points : -self.adjustForm.points
             adjustPoints({

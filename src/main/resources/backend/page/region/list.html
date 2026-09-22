@@ -373,14 +373,23 @@
 
         deleteHandle(id) {
           ReggieUI.confirm('确认删除该地区吗？如有子级则无法删除。', '提示', { type: 'warning' }).then(async () => {
-            const res = await deleteRegion(id)
-            if (res.code === 1) {
-              ReggieUI.success('删除成功')
-              this.fetchData()
-            } else {
-              ReggieUI.error(res.msg || '删除失败')
+            try {
+              const res = await deleteRegion(id)
+              if (res.code === 1) {
+                ReggieUI.success('删除成功')
+                this.fetchData()
+              } else {
+                ReggieUI.error(res.msg || '删除失败')
+              }
+            } catch (err) {
+              // code!=1 时 request 拦截器会 reject，需在此单独提示，否则落入外层仅 console.warn
+              ReggieUI.error((err && err.message) || '删除失败')
             }
-          }).catch((err) => { console.warn('[region] 删除地区操作取消或失败:', err) })
+          }).catch((e) => {
+            // 外层仅处理用户取消/关闭，其余异常兜底提示
+            if (e === 'cancel' || e === 'close') return
+            ReggieUI.error('删除失败')
+          })
         }
       }
     })

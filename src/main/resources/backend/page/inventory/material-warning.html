@@ -594,7 +594,9 @@
         },
         // ========== C.4：智能补货 Tab ==========
         onTabChange() {
-          if (this.activeTab === 'replenish') { this.loadSmartTable() }
+          // 切换 Tab 重置到第 1 页，避免停在超界页码显示空表
+          this.page = 1
+          if (this.activeTab === 'replenish') { this.loadSmartTable() } else { this.loadTable() }
         },
         async loadSmartTable() {
           this.smartLoading = true

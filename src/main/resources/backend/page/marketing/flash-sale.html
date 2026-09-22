@@ -465,6 +465,12 @@
             valid = false
           }
           if (!valid) return
+          // 编辑时总数量不能改到小于已售数量，否则已下单部分将无库存对应
+          var sold = Number(self.formData.soldQuantity) || 0
+          if (Number(self.formData.totalQuantity) < sold) {
+            ReggieUI.error('总数量不能小于已售数量（已售 ' + sold + ' 件）')
+            return
+          }
           if (self.formData.flashPrice && self.formData.originalPrice && self.formData.flashPrice >= self.formData.originalPrice) {
             ReggieUI.error('秒杀价必须低于原价')
             return

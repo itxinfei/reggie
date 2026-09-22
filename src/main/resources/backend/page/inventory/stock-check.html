@@ -212,7 +212,7 @@
         </template>
         <!-- 盈亏金额列 -->
         <template #col-profitLoss="{ row }">
-          <span v-if="row.status === 'DONE'" :style="profitLossStyle(row.profitLoss)">{{ row.profitLoss }}</span>
+          <span v-if="row.status === 'DONE'" :style="profitLossStyle(row.profitLoss)">¥{{ formatMoney(row.profitLoss) }}</span>
           <span v-else style="color:var(--text-muted);">-</span>
         </template>
         <!-- 操作列 -->
@@ -397,10 +397,10 @@
           var s = this.stats;
           var f = this.activeFilter;
           return [
-            { key: '', icon: 'ri-file-list-3-line', label: '盘点总数', value: s.total || 0, color: 'primary', active: f === '' },
-            { key: 'DRAFT', icon: 'ri-draft-line', label: '草稿', value: s.draft || 0, color: 'info', active: f === 'DRAFT' },
-            { key: 'IN_PROGRESS', icon: 'ri-time-line', label: '进行中', value: s.inProgress || 0, color: 'warning', active: f === 'IN_PROGRESS' },
-            { key: 'DONE', icon: 'ri-checkbox-circle-line', label: '已完成', value: s.done || 0, color: 'success', active: f === 'DONE' },
+            { key: '', icon: 'ri-file-list-3-line', label: '盘点总数', value: s.total || 0, color: 'primary', active: f === '', clickable: true },
+            { key: 'DRAFT', icon: 'ri-draft-line', label: '草稿', value: s.draft || 0, color: 'info', active: f === 'DRAFT', clickable: true },
+            { key: 'IN_PROGRESS', icon: 'ri-time-line', label: '进行中', value: s.inProgress || 0, color: 'warning', active: f === 'IN_PROGRESS', clickable: true },
+            { key: 'DONE', icon: 'ri-checkbox-circle-line', label: '已完成', value: s.done || 0, color: 'success', active: f === 'DONE', clickable: true },
             { key: 'diff', icon: 'ri-error-warning-line', label: '差异项', value: s.diffCount || 0, color: 'danger', active: false }
           ]
         },
@@ -412,25 +412,26 @@
         recordedCount: function() {
           return this.recordItems.filter(function(item) { return item.actualStock != null && item.actualStock !== ''; }).length;
         },
+        // 单位不同（如 kg/瓶）的差异数量不能直接相加，按单位分别汇总
         estimateDiffText: function() {
-          var total = 0;
-          this.recordItems.forEach(function(item) {
-            if (item.actualStock != null && item.actualStock !== '' && item.bookQty != null) {
-              total += (Number(item.actualStock) - Number(item.bookQty));
-            }
-          });
-          if (total === 0) return '无差异';
-          return (total > 0 ? '+' : '') + total.toFixed(2);
+          var g = this.diffGroups();
+          var units = g.units;
+          if (units.length === 0) return '无差异';
+          if (units.length > 1) return '混合单位，不合计';
+          var u = units[0];
+          if (!u) return '—'; // 单位尚未取到，先不给单一合计
+          var t = g.map[u];
+          if (t === 0) return '无差异';
+          return (t > 0 ? '+' : '') + t.toFixed(2) + ' ' + u;
         },
         estimateDiffStyle: function() {
-          var total = 0;
-          this.recordItems.forEach(function(item) {
-            if (item.actualStock != null && item.actualStock !== '' && item.bookQty != null) {
-              total += (Number(item.actualStock) - Number(item.bookQty));
-            }
-          });
-          if (total < 0) return 'color:var(--color-danger)';
-          if (total > 0) return 'color:var(--color-success)';
+          var g = this.diffGroups();
+          var units = g.units;
+          if (units.length === 1 && units[0]) {
+            var t = g.map[units[0]];
+            if (t < 0) return 'color:var(--color-danger)';
+            if (t > 0) return 'color:var(--color-success)';
+          }
           return 'color:var(--text-muted)';
         }
       },
@@ -482,7 +483,7 @@
         onCardClick: function(payload) { this.activeFilter = payload.activeKey; this.page = 1; this.init(false); },
         onTableAction: function(payload) { if (payload.key === 'add') this.openCreateDialog(); },
         handleQuery: function() { this.page = 1; this.init(false); },
-        reset: function() { this.input.status = ''; this.input.dateRange = ''; this.page = 1; this.init(false); },
+        reset: function() { this.input.status = ''; this.input.dateRange = ''; this.activeFilter = ''; this.page = 1; this.init(false); },
         onPageChange: function(p) { this.page = p.page; this.init(false); },
         onSizeChange: function(s) { this.pageSize = s; this.page = 1; this.init(false); },
 
@@ -616,17 +617,45 @@
           var self = this;
           if (row.details && row.details.length) {
             self.recordItems = row.details.map(function(d) {
-              return { materialId: d.materialId, materialName: d.materialName || '食材#'+d.materialId, bookQty: d.bookQty || 0, actualStock: (d.actualQty != null && d.actualQty !== '') ? d.actualQty : '' };
+              return { materialId: d.materialId, materialName: d.materialName || '食材#'+d.materialId, bookQty: d.bookQty || 0, unit: '', actualStock: (d.actualQty != null && d.actualQty !== '') ? d.actualQty : '' };
             });
+            self.fillRecordUnits();
           } else {
             stockCheckDetails(row.id).then(function(res) {
               if (String(res.code) === '1' && res.data) {
                 self.recordItems = res.data.map(function(d) {
-                  return { materialId: d.materialId, materialName: d.materialName || '食材#'+d.materialId, bookQty: d.bookQty || 0, actualStock: (d.actualQty != null && d.actualQty !== '') ? d.actualQty : '' };
+                  return { materialId: d.materialId, materialName: d.materialName || '食材#'+d.materialId, bookQty: d.bookQty || 0, unit: '', actualStock: (d.actualQty != null && d.actualQty !== '') ? d.actualQty : '' };
                 });
+                self.fillRecordUnits();
               }
-            });
+            }).catch(function() {});
           }
+        },
+        // 明细接口不返回单位，补拉物料单位，供差异按单位汇总（避免 kg/瓶 跨单位相加）
+        fillRecordUnits: function() {
+          var self = this;
+          materialList().then(function(res) {
+            if (res.code === 1 && res.data) {
+              var unitMap = {};
+              res.data.forEach(function(m) { unitMap[m.id] = m.unit || ''; });
+              self.recordItems.forEach(function(it) {
+                if (!it.unit) self.$set(it, 'unit', unitMap[it.materialId] || '');
+              });
+            }
+          });
+        },
+        // 按单位汇总差异，返回 { map:{unit:合计}, units:[出现过的单位] }
+        diffGroups: function() {
+          var map = {};
+          var units = [];
+          this.recordItems.forEach(function(item) {
+            if (item.actualStock != null && item.actualStock !== '' && item.bookQty != null) {
+              var u = item.unit || '';
+              if (!Object.prototype.hasOwnProperty.call(map, u)) { map[u] = 0; units.push(u); }
+              map[u] += (Number(item.actualStock) - Number(item.bookQty));
+            }
+          });
+          return { map: map, units: units };
         },
         fillAllMatch: function() {
           this.recordItems.forEach(function(item) { item.actualStock = item.bookQty; });
@@ -686,7 +715,7 @@
                   ReggieUI.error(res.msg || '完成失败');
                 }
               }).catch(function(err) { ReggieUI.error('完成失败：' + err); });
-            }).catch(function() {});
+            }).catch(function(e) { if (e === 'cancel' || e === 'close') return; ReggieUI.error('完成失败：' + e); });
           };
           if (row.details && row.details.length) {
             doComplete(row.details);
@@ -694,7 +723,7 @@
             stockCheckDetails(row.id).then(function(res) {
               if (String(res.code) === '1' && res.data) doComplete(res.data);
               else ReggieUI.error('加载明细失败');
-            });
+            }).catch(function(err) { ReggieUI.error('加载明细失败：' + err); });
           }
         },
 
@@ -714,7 +743,7 @@
                 ReggieUI.error(res.msg || '删除失败');
               }
             }).catch(function(err) { ReggieUI.error('删除失败：' + err); });
-          }).catch(function() {});
+          }).catch(function(e) { if (e === 'cancel' || e === 'close') return; ReggieUI.error('删除失败：' + e); });
         },
         /* 修改点：盘点冲正 — 已完成的盘点单回退到进行中，允许重新录入修正 */
         rollbackHandle: function(row) {

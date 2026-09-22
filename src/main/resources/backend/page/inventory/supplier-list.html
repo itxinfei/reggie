@@ -145,7 +145,7 @@
     :show-cancel="true"
     cancel-text="关 闭"
   >
-    <div v-if="purchaseList.length === 0" class="ds-table-empty">
+    <div v-if="!purchaseLoading && purchaseList.length === 0" class="ds-table-empty">
       <i class="ri-file-text-line"></i>
       <p>该供应商暂无采购记录</p>
     </div>
@@ -164,6 +164,14 @@
       </el-table-column>
       <el-table-column prop="remark" label="备注" min-width="120" align="center"></el-table-column>
     </el-table>
+    <el-pagination
+      v-if="purchaseTotal > 0"
+      layout="total, prev, pager"
+      :total="purchaseTotal"
+      :page-size="purchasePageSize"
+      :current-page.sync="purchasePageNum"
+      @current-change="onPurchasePageChange">
+    </el-pagination>
   </crud-dialog>
 
 </div>
@@ -204,6 +212,10 @@
           purchaseDialog: { title: '采购记录', visible: false },
           purchaseList: [],
           purchaseLoading: false,
+          purchaseSupplierId: null,
+          purchasePageNum: 1,
+          purchasePageSize: 10,
+          purchaseTotal: 0,
 
           // ===== 表单 =====
           formData: {
@@ -356,11 +368,15 @@
 
         /** 卡片点击筛选 */
         onStatCardClick({ activeKey }) {
-          // 修改点：设置 activeStatus（原未赋值，导致 loadData 不携带 status 参数，卡片筛选无效）
+          // 设置卡片状态作为本次筛选条件
           this.activeStatus = activeKey || ''
-          // 清空搜索条件
-          if (this.$refs.tableBar) {
-            this.$refs.tableBar.clearSearch()
+          // 仅重置搜索栏输入显示（不走 clearSearch：其 doReset 会 emit reset→onReset，
+          // 既会清空 activeStatus 又会额外 loadData，造成同参数并发两次且有竞态）
+          const tb = this.$refs.tableBar
+          if (tb) {
+            tb.searchItems.forEach(item => {
+              this.$set(tb.searchValues, item.field, item.type === 'date' || item.type === 'daterange' ? [] : '')
+            })
           }
           this.searchParams = {}
           this.page = 1
@@ -397,11 +413,22 @@
           const self = this
           self.purchaseDialog.title = '采购记录 - ' + (row.name || '供应商')
           self.purchaseDialog.visible = true
-          self.purchaseList = []
+          self.purchaseSupplierId = row.id
+          self.purchasePageNum = 1
+          self.loadPurchases()
+        },
+        // 分页拉取供应商采购记录，避免固定只拉一页造成数据被静默截断
+        loadPurchases() {
+          const self = this
           self.purchaseLoading = true
-          purchasePage({ supplierId: row.id, page: 1, pageSize: 20 }).then(function(res) {
+          purchasePage({
+            supplierId: self.purchaseSupplierId,
+            page: self.purchasePageNum,
+            pageSize: self.purchasePageSize
+          }).then(function(res) {
             if (String(res.code) === '1') {
               self.purchaseList = res.data.records || []
+              self.purchaseTotal = Number(res.data.total) || 0
             } else {
               ReggieUI.error(res.msg || '加载采购记录失败')
             }
@@ -410,6 +437,10 @@
           }).finally(function() {
             self.purchaseLoading = false
           })
+        },
+        onPurchasePageChange(p) {
+          this.purchasePageNum = p
+          this.loadPurchases()
         },
 
         purchaseStatusText(status) {

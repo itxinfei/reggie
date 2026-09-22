@@ -148,9 +148,18 @@
           formData: { title: '新增会员等级', dialogVisible: false, id: '', name: '', minPoints: '', discount: '', sort: '' },
           formRules: {
             name: [{ required: true, message: '请输入等级名称', trigger: 'blur' }],
-            minPoints: [{ required: true, message: '请输入所需积分', trigger: 'blur' }],
-            discount: [{ required: true, message: '请输入折扣率', trigger: 'blur' }],
-            sort: [{ required: true, message: '请输入排序', trigger: 'blur' }]
+            minPoints: [
+              { required: true, message: '请输入所需积分', trigger: 'blur' },
+              { type: 'number', min: 0, message: '所需积分必须是不小于 0 的数字', trigger: 'blur' }
+            ],
+            discount: [
+              { required: true, message: '请输入折扣率', trigger: 'blur' },
+              { type: 'number', min: 0, max: 1, message: '折扣率必须在 0~1 之间（如 0.85 表示8.5折）', trigger: 'blur' }
+            ],
+            sort: [
+              { required: true, message: '请输入排序', trigger: 'blur' },
+              { type: 'number', min: 0, message: '排序必须是不小于 0 的数字', trigger: 'blur' }
+            ]
           }
         }
       },
@@ -256,6 +265,12 @@
           const self = this
           this.$refs.levelForm.validate(function(valid) {
             if (!valid) { ReggieUI.warning('请完善表单信息'); return false }
+            // 等级门槛不重叠：minPoints 不能与其他等级相同（排序后才能严格递增）
+            var pts = Number(self.formData.minPoints)
+            var overlap = self.sortedLevels.some(function(lv) {
+              return String(lv.id) !== String(self.formData.id) && Number(lv.minPoints) === pts
+            })
+            if (overlap) { ReggieUI.warning('该所需积分与已有等级相同，等级门槛不可重叠'); return false }
             self.submitting = true
             const data = Object.assign({}, self.formData)
             if (self.action === 'add') {
