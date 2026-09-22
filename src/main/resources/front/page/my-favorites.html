@@ -10,20 +10,13 @@
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css?v=20260922" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-    <link rel="stylesheet" href="../styles/frequent-orders.css?v=20260921" />
+    <link rel="stylesheet" href="../styles/frequent-orders.css?v=20260922" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
 </head>
 <body>
     <div id="favorites" class="app">
-        <div class="divHead">
-            <div class="divTitle">
-                <i class="ri-arrow-left-s-line" @click="goBack"></i>我的收藏
-            </div>
-            <i class="ri-home-5-line head-home-btn" @click="window.location.href='/front/index.html'"
-               aria-label="回到首页" title="回到首页"></i>
-        </div>
-
+        <cend-shell title="我的收藏" light :show-back="true" :show-home="true">
         <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
         <div class="frequent-container">
             <div class="quick-header">
@@ -85,14 +78,17 @@
                 <i class="ri-star-line"></i>
                 <p class="empty-text">暂无收藏</p>
                 <p class="empty-sub">看到喜欢的菜品，点星标收藏起来吧</p>
-                <button class="empty-action" @click="window.location.href='/front/index.html'">去点餐</button>
+                <button class="empty-action" @click="goHome">去点餐</button>
             </div>
         </div>
         </van-pull-refresh>
+        </cend-shell>
     </div>
 
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
+    <!-- C 端跨页面复用组件（必须在 vant 之后、new Vue 之前加载） -->
+    <script src="./../js/components-cend.js?v=20260922"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js?v=20260917"></script>
     <script src="./../js/common.js?v=20260917"></script>
@@ -114,9 +110,8 @@
                 this.initData();
             },
             methods: {
-                goBack() {
-                    goBack();
-                },
+                // 修改点(2026-09-22)：goBack 已统一由 cend-shell 接管（组件调 window.goBack 兜底），页面不再定义
+                goHome() { window.location.href = '/front/index.html' },
                 imgPath(path) {
                     if (!path) return './../images/noImg.png';
                     if (path.indexOf('http://') === 0 || path.indexOf('https://') === 0) return path;

@@ -10,22 +10,34 @@
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css?v=20260922" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-    <link rel="stylesheet" href="../styles/frequent-orders.css?v=20260921" />
+    <link rel="stylesheet" href="../styles/frequent-orders.css?v=20260922" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
 </head>
 <body>
     <div id="frequent" class="app">
-        <!-- 修改点：骨架屏替代 loading 遮罩 -->
+        <cend-shell title="常购清单" light :show-back="true" :show-home="true">
+        <!-- 骨架屏（2026-09-22：改用 skeleton.css 通用类，v-if/v-for 不变） -->
         <div v-if="pageLoading" class="skeleton-container">
-            <div class="skeleton-freq-header"></div>
-            <div class="skeleton-freq-tabs">
-                <div class="skeleton-tab" v-for="i in 4" :key="'st'+i"></div>
+            <!-- 快捷头部：白卡壳 + 圆形图标 + 两行文本 -->
+            <div class="skeleton-card">
+                <div class="flex items-center gap-12">
+                    <div class="skeleton-circle"></div>
+                    <div class="flex-col gap-8 flex-1">
+                        <div class="skeleton-line skeleton-w50"></div>
+                        <div class="skeleton-line skeleton-w30"></div>
+                    </div>
+                </div>
             </div>
-            <div class="skeleton-freq-card" v-for="i in 3" :key="'sf'+i">
-                <div class="skeleton-freq-row">
+            <!-- 分类标签占位 -->
+            <div class="flex gap-8" style="margin-bottom:12rem;">
+                <div class="skeleton-btn" v-for="i in 4" :key="'st'+i"></div>
+            </div>
+            <!-- 菜品卡占位 -->
+            <div class="skeleton-card" v-for="i in 3" :key="'sf'+i">
+                <div class="flex items-center gap-12">
                     <div class="skeleton-img"></div>
-                    <div class="skeleton-freq-info">
+                    <div class="flex-col gap-8 flex-1">
                         <div class="skeleton-line skeleton-w50"></div>
                         <div class="skeleton-line skeleton-w30"></div>
                     </div>
@@ -34,16 +46,7 @@
             </div>
         </div>
 
-        <!-- 修改点(2026-09-17)：二级页补「回首页」入口（底部 Tab 仅覆盖一级页，深层路径易迷路） -->
-        <div class="divHead">
-            <div class="divTitle">
-                <i class="ri-arrow-left-s-line" @click="goBack"></i>常购清单
-            </div>
-            <i class="ri-home-5-line head-home-btn" @click="window.location.href='/front/index.html'"
-               aria-label="回到首页" title="回到首页"></i>
-        </div>
-
-        <!-- 修改点：van-pull-refresh 包裹内容实现下拉刷新 -->
+        <!-- van-pull-refresh 包裹内容实现下拉刷新 -->
         <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
         <div class="frequent-container">
             <!-- 快捷说明 -->
@@ -118,10 +121,13 @@
             </div>
         </div>
         </van-pull-refresh>
+        </cend-shell>
     </div>
 
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
+    <!-- C 端跨页面复用组件（必须在 vant 之后、new Vue 之前加载） -->
+    <script src="./../js/components-cend.js?v=20260922"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js?v=20260917"></script>
     <script src="./../js/common.js?v=20260917"></script>
@@ -153,10 +159,7 @@
                 this.initData();
             },
             methods: {
-                goBack() {
-                    // 修改点：统一走 common.js 的全局兜底
-                    goBack();
-                },
+                // 修改点(2026-09-22)：goBack 已统一由 cend-shell 接管（组件调 window.goBack 兜底），页面不再定义
                 // 修改点：下拉刷新（refreshing 由 initData.finally 复位）
                 async onRefresh() {
                     try { await this.initData() } finally { this.refreshing = false }

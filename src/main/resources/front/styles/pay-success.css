@@ -1,35 +1,7 @@
-/* 修改点：统一品牌色头部 + 移除ElementUI依赖 */
-#pay_success .divHead {
-  width: 100%;
-  height: var(--header-height);
-  background: var(--color-primary-gradient);
-  position: relative;
-}
-
-#pay_success .divHead .divTitle {
-  font-size: var(--header-title-font-size);
-  font-family: var(--font-family-title);
-  font-weight: 600;
-  text-align: center;
-  color: var(--color-text-primary);
-  line-height: var(--header-height);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 var(--spacing-lg);
-}
-
-#pay_success .divHead .divTitle i {
-  color: var(--color-text-primary);
-}
-
-#pay_success .divHead .divTitle img {
-  width: 18rem;
-  height: 18rem;
-}
+/* 2026-09-22：金色 .divHead 规则已删除，头部由 cend-shell 的 .cend-navbar 统一接管 */
 
 #pay_success .divContent {
-  height: calc(100vh - var(--header-height));
+  height: calc(100vh - var(--navbar-height) - env(safe-area-inset-top, 0px));
   width: 100%;
   background: var(--bg-card);
   display: flex;
@@ -86,7 +58,7 @@
 }
 
 #pay_success .divContent .divAmount {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-md);
   color: var(--color-text-secondary);
   margin-bottom: 8rem;
 }
@@ -187,7 +159,7 @@
   line-height: 38rem;
   cursor: pointer;
   transition: all var(--transition-fast);
-  box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
+  box-shadow: var(--shadow-cta);
 }
 
 #pay_success .divContent .btnView:active {

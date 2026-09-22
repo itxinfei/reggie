@@ -1,7 +1,8 @@
 /* ========== 配送追踪页面 ========== */
 
 #tracking .tracking-container {
-  height: calc(100vh - var(--header-height));
+  /* 2026-09-22：金头退场，滚动区按 44rem 白底导航（含刘海安全区）重算 */
+  height: calc(100vh - var(--navbar-height) - env(safe-area-inset-top, 0px));
   overflow-y: auto;
   background: var(--bg-page);
 }
@@ -30,7 +31,7 @@
 #tracking .order-info-card .dish-summary {
   margin-top: 10rem;
   padding-top: 10rem;
-  border-top: 1px solid var(--bg-hover);
+  border-top: var(--hairline);
   font-size: var(--font-size-md);
   color: var(--color-text-secondary);
   line-height: 22rem;
@@ -259,7 +260,7 @@
   margin: 0 12rem 12rem;
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: 14rem var(--spacing-md);
+  padding: 16rem var(--spacing-md);
   box-shadow: var(--shadow-card);
   display: flex;
   align-items: center;

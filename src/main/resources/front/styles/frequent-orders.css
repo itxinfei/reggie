@@ -1,7 +1,8 @@
 /* ========== 常购清单页面 ========== */
 
 #frequent .frequent-container {
-  height: calc(100vh - var(--header-height));
+  /* 2026-09-22：金头退场，滚动区按 44rem 白底导航（含刘海安全区）重算 */
+  height: calc(100vh - var(--navbar-height) - env(safe-area-inset-top, 0px));
   overflow-y: auto;
   background: var(--bg-page);
 }
@@ -21,7 +22,7 @@
   width: 44rem;
   height: 44rem;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--surface-white-50);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -214,35 +215,8 @@
   color: var(--color-text-hint);
 }
 
-/* 骨架屏 */
-#frequent .skeleton-container { padding: 12rem 16rem; }
-#frequent .skeleton-freq-header { height: 80rem; border-radius: 8rem; margin-bottom: 16rem; }
-#frequent .skeleton-freq-tabs { display: flex; gap: 8rem; margin-bottom: 16rem; }
-#frequent .skeleton-tab { width: 60rem; height: 28rem; border-radius: 14rem; }
-#frequent .skeleton-freq-card {
-  background: var(--bg-card); border-radius: 8rem; padding: 14rem 16rem; margin-bottom: 12rem;
-}
-#frequent .skeleton-freq-row { display: flex; align-items: center; gap: 12rem; }
-#frequent .skeleton-img { width: 60rem; height: 60rem; border-radius: 8rem; flex-shrink: 0; }
-#frequent .skeleton-freq-info { flex: 1; }
-#frequent .skeleton-btn { width: 60rem; height: 28rem; border-radius: 14rem; }
-#frequent .skeleton-line { height: 14rem; border-radius: 4rem; margin-bottom: 8rem; }
-#frequent .skeleton-line:last-child { margin-bottom: 0; }
-#frequent .skeleton-w30 { width: 30%; }
-#frequent .skeleton-w50 { width: 50%; }
-#frequent .skeleton-container .skeleton-freq-header,
-#frequent .skeleton-container .skeleton-freq-tabs,
-#frequent .skeleton-container .skeleton-freq-card,
-#frequent .skeleton-container .skeleton-freq-row,
-#frequent .skeleton-container .skeleton-img,
-#frequent .skeleton-container .skeleton-btn,
-#frequent .skeleton-container .skeleton-line,
-#frequent .skeleton-container .skeleton-tab {
-  background: var(--skeleton-gradient);
-  background-size: 200% 100%;
-  animation: rg-skeleton-shine 1.5s ease-in-out infinite;
-}
-/* 修改点(2026-09-17)：复用全局 @keyframes rg-skeleton-shine */
+/* 2026-09-22：本页全部骨架规则已删除，DOM 改用 skeleton.css 通用类
+   （.skeleton-container/.skeleton-card/.skeleton-circle/.skeleton-img/.skeleton-btn/.skeleton-line） */
 /* ===== 我的收藏页（my-favorites.html）复用本文件，以下为收藏专属 ===== */
 .dish-card.is-invalid {
   opacity: .6;
@@ -256,11 +230,11 @@
 }
 .fav-state-tag.invalid {
   color: var(--color-text-secondary);
-  background: rgba(0, 0, 0, .06);
+  background: var(--mask-light);
 }
 .fav-state-tag.soldout {
   color: var(--color-text-secondary);
-  background: rgba(0, 0, 0, .06);
+  background: var(--mask-light);
 }
 .fav-remove-btn {
   font-size: 13rem;

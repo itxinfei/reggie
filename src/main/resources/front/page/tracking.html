@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css?v=20260922" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-    <link rel="stylesheet" href="../styles/tracking.css?v=20260917c" />
+    <link rel="stylesheet" href="../styles/tracking.css?v=20260922" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
     <!-- 修改点(2026-09-17)：配送地图配置——申请到「高德 Web 端(JS API)」Key 后填入 amapKey 并将 enabled 改为 true 即可生效。
@@ -31,15 +31,7 @@
             <div class="loading-spinner"></div>
         </div>
 
-        <!-- 修改点(2026-09-17)：二级页补「回首页」入口（底部 Tab 仅覆盖一级页，深层路径易迷路） -->
-        <div class="divHead">
-            <div class="divTitle">
-                <i class="ri-arrow-left-s-line" @click="goBack"></i>配送追踪
-            </div>
-            <i class="ri-home-5-line head-home-btn" @click="window.location.href='/front/index.html'"
-               aria-label="回到首页" title="回到首页"></i>
-        </div>
-
+        <cend-shell title="配送追踪" light :show-back="true" :show-home="true">
         <div class="tracking-container" v-if="trackingData">
             <!-- 订单信息 -->
             <div class="order-info-card" v-if="trackingData">
@@ -148,10 +140,13 @@
             <p class="empty-text">暂无配送信息</p>
             <van-button size="small" round style="margin-top: 12rem;" @click="loadTracking">重新加载</van-button>
         </div>
+        </cend-shell>
     </div>
 
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
+    <!-- C 端跨页面复用组件（必须在 vant 之后、new Vue 之前加载） -->
+    <script src="./../js/components-cend.js?v=20260922"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js?v=20260917"></script>
     <script src="./../js/common.js?v=20260917"></script>
@@ -299,10 +294,7 @@
                 if(this._onVisibility) document.removeEventListener('visibilitychange', this._onVisibility);
             },
             methods: {
-                goBack() {
-                    // 修改点：统一走 common.js 的全局兜底
-                    goBack();
-                },
+                // 修改点(2026-09-22)：goBack 已统一由 cend-shell 接管（组件调 window.goBack 兜底），页面不再定义
                 // 下拉刷新
                 async onRefresh(){
                     await this.loadTracking(true);
