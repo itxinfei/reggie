@@ -114,6 +114,11 @@ reggie:
     mock-mode: false
   push:
     mock-mode: false
+  payment:
+    # 生产必须关闭 mock：走真实微信/支付宝回调验签，防止伪造回调把订单标记已支付
+    mock-mode: false
+    # 支付凭据主密钥 fail-fast：必须配置 REGGIE_PAYMENT_KEY 环境变量，缺失/非法即拒绝启动
+    require-env-key: true
 
 # 生产环境禁用 Swagger/OpenAPI 文档，防止暴露接口信息
 springdoc:
