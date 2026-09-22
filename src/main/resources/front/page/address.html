@@ -17,57 +17,27 @@
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js?v=20260917"></script>
         <!--本页面内容的样式-->
-        <link rel="stylesheet" href="./../styles/address.css?v=20260921" />
-        <style>
-            /* 修改点：骨架屏样式 */
-            .skeleton-container { padding: 12rem 16rem; }
-            .skeleton-addr-card {
-                background: #fff; border-radius: 8rem; padding: 14rem 16rem; margin-bottom: 12rem;
-            }
-            .skeleton-addr-top { display: flex; align-items: center; gap: 8rem; margin-bottom: 12rem; }
-            .skeleton-addr-contact { display: flex; gap: 12rem; margin-bottom: 12rem; }
-            .skeleton-addr-action { display: flex; }
-            .skeleton-tag { width: 40rem; height: 20rem; border-radius: 4rem; }
-            .skeleton-line { height: 14rem; border-radius: 4rem; }
-            .skeleton-w20 { width: 20%; }
-            .skeleton-w30 { width: 30%; }
-            .skeleton-w40 { width: 40%; }
-            .skeleton-w60 { width: 60%; }
-            .skeleton-container .skeleton-addr-card,
-            .skeleton-container .skeleton-addr-top,
-            .skeleton-container .skeleton-addr-contact,
-            .skeleton-container .skeleton-addr-action,
-            .skeleton-container .skeleton-line,
-            .skeleton-container .skeleton-tag {
-                background: var(--skeleton-gradient);
-                background-size: 200% 100%;
-                animation: rg-skeleton-shine 1.5s ease-in-out infinite;
-            }
-            /* 修改点(2026-09-17)：复用全局 @keyframes rg-skeleton-shine */
-        </style>
+        <link rel="stylesheet" href="./../styles/address.css?v=20260922" />
     </head>
     <body class="scrollable-page">
         <!-- 修改点：移除ElementUI v-loading，改用CSS加载遮罩 -->
         <div id="address" class="app" style="position:relative;">
-            <!-- 修改点：骨架屏替代 loading 遮罩 -->
+         <cend-shell title="地址管理" :show-back="true">
+            <!-- 修改点：骨架屏替代 loading 遮罩（skeleton.css 无行布局工具类，
+                 行级 flex/gap 以内联样式保留，视觉等价） -->
             <div v-if="loading" class="skeleton-container">
-                <div class="skeleton-addr-card" v-for="i in 3" :key="'sa'+i">
-                    <div class="skeleton-addr-top">
+                <div class="skeleton-card" v-for="i in 3" :key="'sa'+i">
+                    <div style="display:flex;align-items:center;gap:8rem;margin-bottom:12rem;">
                         <div class="skeleton-tag"></div>
                         <div class="skeleton-line skeleton-w60"></div>
                     </div>
-                    <div class="skeleton-addr-contact">
+                    <div style="display:flex;gap:12rem;margin-bottom:12rem;">
                         <div class="skeleton-line skeleton-w30"></div>
                         <div class="skeleton-line skeleton-w40"></div>
                     </div>
-                    <div class="skeleton-addr-action">
+                    <div style="display:flex;">
                         <div class="skeleton-line skeleton-w20"></div>
                     </div>
-                </div>
-            </div>
-            <div class="divHead">
-                <div class="divTitle">
-                    <i class="ri-arrow-left-s-line" @click="goBack"></i>地址管理
                 </div>
             </div>
             <!-- 修改点：van-pull-refresh 包裹内容实现下拉刷新 -->
@@ -114,11 +84,14 @@
             </div>
             </van-pull-refresh>
             <div class="divBottom" @click="toAddressCreatePage">+ 添加收货地址</div>
+         </cend-shell>
         </div>
             <!-- 开发环境版本,包含了有帮助的命令行警告 -->
             <script src="../../backend/plugins/vue/vue.js"></script>
             <!-- 引入vant -->
             <script src="./../js/vant.min.js"></script>
+            <!-- 跨页复用组件（cend-shell/cend-empty），须在 vant 之后、new Vue 之前 -->
+            <script src="../js/components-cend.js?v=20260922"></script>
             <script src="./../api/address.js?v=20260917"></script>
             <!-- 引入axios -->
             <script src="../../backend/plugins/axios/axios.min.js"></script>
@@ -154,10 +127,7 @@
                         if(item.detail) parts.push(item.detail)
                         return parts.join(' ')
                     },
-                    goBack(){
-                        // 修改点：统一走 common.js 的全局兜底
-                        goBack()
-                    },
+                    // 修改点(2026-09-22)：goBack 已统一由 cend-shell 组件处理，页面不再重复定义
                     toAddressEditPage(item){
                         window.requestAnimationFrame(()=>{
                             window.location.href= `/front/page/address-edit.html?id=${item.id}`

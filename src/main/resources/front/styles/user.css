@@ -109,7 +109,7 @@
 }
 
 #user .divLinks .item:active {
-  background: rgba(0, 0, 0, 0.02);
+  background: var(--mask-light);
 }
 
 #user .divLinks .divSplit {
@@ -166,7 +166,8 @@
   border-radius: var(--radius-lg);
   padding-left: var(--spacing-md);
   padding-right: var(--spacing-md);
-  padding-bottom: 17rem;
+  /* 2026-09-22：padding-bottom 17rem → 16rem，收入 4 倍数 */
+  padding-bottom: 16rem;
   box-shadow: var(--shadow-card);
 }
 
@@ -352,12 +353,12 @@
   padding: 2rem 8rem;
   border-radius: var(--radius-sm);
   /* 修改点(2026-09-17)：0.5 白透叠金底对比不足 → 0.9 近实底 + 微投影 */
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--surface-white-95);
   color: var(--color-text-primary);
   letter-spacing: 0.5rem;
   white-space: nowrap;
   flex-shrink: 0;
-  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1rem 3rem var(--mask-soft);
 }
 
 #user .divHead .divUser .desc .divName .member-tag i {
@@ -582,7 +583,8 @@
   margin: 12rem;
   background: var(--color-primary-gradient-card);
   border-radius: var(--radius-xl);
-  padding: 16rem 18rem;
+  /* 2026-09-22：水平 padding 18rem → 16rem */
+  padding: 16rem 16rem;
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-md);
@@ -597,7 +599,7 @@
   position: relative; z-index: 1;
 }
 #user .member-card .card-level-badge {
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--surface-white-50);
   color: var(--color-text-primary); font-size: 11rem; font-weight: 700;
   padding: 3rem 10rem; border-radius: var(--radius-round); letter-spacing: 0.5rem;
 }
@@ -623,7 +625,7 @@
   display: flex; align-items: center; gap: 6rem; position: relative; z-index: 1;
 }
 #user .member-card .card-coupon-tag .coupon-count {
-  background: rgba(255, 255, 255, 0.45); border-radius: var(--radius-md);
+  background: var(--surface-white-50); border-radius: var(--radius-md);
   padding: 3rem 8rem; color: var(--color-text-primary); font-weight: 600;
 }
 #user .member-card .non-member-tip {
@@ -659,8 +661,8 @@
   flex-shrink: 0;
   margin-right: var(--spacing-lg);
   cursor: pointer;
-  border: 2rem solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2rem 6rem rgba(0, 0, 0, 0.12);
+  border: 2rem solid var(--surface-white-95);
+  box-shadow: 0 2rem 6rem var(--mask-light-active);
   transition: transform 0.15s ease;
   background: var(--bg-hover);
   -webkit-tap-highlight-color: transparent;
@@ -676,13 +678,13 @@
   position: absolute; right: 0; bottom: 0;
   width: 20rem; height: 20rem;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--mask-strong);
   color: var(--color-text-white); font-size: 12rem;
   display: flex; align-items: center; justify-content: center;
 }
 #user .avatar-mask {
   position: absolute; inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--mask-strong);
   color: var(--color-text-white); font-size: 24rem;
   display: flex; align-items: center; justify-content: center;
 }

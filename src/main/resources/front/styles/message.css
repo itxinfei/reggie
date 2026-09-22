@@ -72,7 +72,8 @@
 #messageApp .msg-card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: 14rem var(--spacing-lg);
+  /* 2026-09-22：纵向 padding 14rem → 12rem，收入 4 倍数节奏 */
+  padding: 12rem var(--spacing-lg);
   margin-bottom: var(--spacing-sm);
   box-shadow: var(--shadow-card);
   position: relative;
@@ -81,7 +82,7 @@
 }
 
 #messageApp .msg-card:active {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--surface-white-85);
   box-shadow: var(--shadow-card-hover);
 }
 
@@ -128,7 +129,7 @@
 /* ---- 消息标签 ---- */
 #messageApp .msg-tag {
   display: inline-block;
-  padding: 2px 6px;
+  padding: 2rem 6rem;
   border-radius: var(--radius-md);
   font-size: 11rem;
   margin-left: var(--spacing-sm);
@@ -143,7 +144,8 @@
 }
 #messageApp .tag-popup { background: var(--color-primary-dark-tint); color: var(--color-warning); }
 #messageApp .tag-sms { background: var(--color-success-tint); color: var(--color-success); }
-#messageApp .tag-coupon { background: rgba(243, 69, 70, 0.1); color: var(--color-price); }
+/* 2026-09-22：红包标签红底收敛到价格红 tint 令牌（色值由 rgba(243,69,70,.1) 微调到令牌值） */
+#messageApp .tag-coupon { background: var(--color-price-tint); color: var(--color-price); }
 
 /* ---- 消息内容 ---- */
 #messageApp .msg-content {
@@ -188,7 +190,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--mask-strong);
   z-index: 1000;
   justify-content: center;
   align-items: center;
@@ -206,7 +208,7 @@
   max-height: 75vh;
   overflow-y: auto;
   padding: var(--spacing-xl);
-  box-shadow: 0 4px 20px var(--mask-medium);
+  box-shadow: 0 4rem 20rem var(--mask-medium);
 }
 
 #messageApp .detail-title {

@@ -60,46 +60,8 @@ body.scrollable-page {
 #address_edit[v-cloak] { display: none; }
 
 /* ============================================
-   顶部标题栏
+   顶部标题栏（2026-09-22 起由 cend-shell light 导航接管，头部规则已删除）
    ============================================ */
-#address_edit .divHead {
-  width: 100%;
-  height: var(--header-height);
-  background: var(--color-primary-gradient);
-  position: relative;
-  flex-shrink: 0;
-  box-shadow: var(--shadow-sm);
-  z-index: 10;
-}
-#address_edit .divHead .divTitle {
-  font-size: 18rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
-  font-weight: 600;
-  text-align: center;
-  color: var(--color-text-primary);
-  line-height: 25rem;
-  position: absolute;
-  bottom: 14rem;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-#address_edit .divHead .divTitle .ri-arrow-left-s-line {
-  position: absolute;
-  left: 16rem;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  font-size: 22rem;
-  color: var(--color-text-primary);
-  font-style: normal;
-  font-weight: 700;
-  padding: 4rem 8rem;
-  transition: transform 0.2s;
-  user-select: none;
-}
-#address_edit .divHead .divTitle .ri-arrow-left-s-line:active { transform: translateY(-50%) scale(1.15); }
 
 /* ============================================
    可滚动区域
@@ -118,7 +80,8 @@ body.scrollable-page {
   background: var(--bg-card);
   border-radius: var(--radius-xl);
   padding: 4rem 0 12rem;
-  box-shadow: 0 2rem 16rem var(--mask-light), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  /* 2026-09-22：极细描边 rgba(0,0,0,0.03) → var(--border-hair) */
+  box-shadow: 0 2rem 16rem var(--mask-light), 0 0 0 1px var(--border-hair);
 }
 
 /* ============================================
@@ -154,7 +117,7 @@ body.scrollable-page {
 #address_edit .divContent .formGroup .formRow {
   background: var(--bg-input);
   border-radius: var(--radius-lg);
-  border: 1.5px solid transparent;
+  border: 1.5rem solid transparent;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   position: relative;
@@ -162,7 +125,7 @@ body.scrollable-page {
 #address_edit .divContent .formGroup .formRow:focus-within {
   background: var(--bg-card);
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-tint-md);
+  box-shadow: 0 0 0 3rem var(--color-primary-tint-md);
 }
 #address_edit .divContent .formGroup .formRow.formRowError {
   border-color: var(--color-danger);
@@ -171,7 +134,7 @@ body.scrollable-page {
 }
 #address_edit .divContent .formGroup .formRow.formRowError:focus-within {
   border-color: var(--color-danger);
-  box-shadow: 0 0 0 3px var(--addr-error-shadow);
+  box-shadow: 0 0 0 3rem var(--addr-error-shadow);
 }
 @keyframes errorShake {
   0%, 100% { transform: translateX(0); }
@@ -188,10 +151,10 @@ body.scrollable-page {
   outline: none;
   background: transparent;
   padding: 13rem 14rem;
-  font-size: 15px;
+  font-size: 15rem;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
   color: var(--color-text-primary);
-  line-height: 22px;
+  line-height: 22rem;
   box-sizing: border-box;
 }
 #address_edit .divContent .formGroup .nativeInput::placeholder { color: var(--color-text-disabled); }
@@ -205,10 +168,10 @@ body.scrollable-page {
   background: transparent;
   padding: 13rem 14rem 28rem 14rem;
   resize: none;
-  font-size: 15px;
+  font-size: 15rem;
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
   color: var(--color-text-primary);
-  line-height: 22px;
+  line-height: 22rem;
   box-sizing: border-box;
 }
 #address_edit .divContent .formGroup .nativeTextarea::placeholder { color: var(--color-text-disabled); }
@@ -254,7 +217,7 @@ body.scrollable-page {
   color: var(--color-text-secondary);
   background: var(--bg-input);
   border-radius: var(--radius-xl);
-  border: 1.5px solid var(--bg-input);
+  border: 1.5rem solid var(--bg-input);
   cursor: pointer;
   user-select: none;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -298,7 +261,7 @@ body.scrollable-page {
   color: var(--color-text-disabled);
   background: var(--bg-input);
   border-radius: var(--radius-md);
-  border: 1.5px solid transparent;
+  border: 1.5rem solid transparent;
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -337,7 +300,7 @@ body.scrollable-page {
 /* 选中态 */
 #address_edit .divContent .formGroup .regionSlot.regionActive {
   border-color: var(--color-primary-dark);
-  box-shadow: 0 0 0 3px var(--color-primary-dark-tint);
+  box-shadow: 0 0 0 3rem var(--color-primary-dark-tint);
 }
 
 /* ============================================
@@ -358,7 +321,7 @@ body.scrollable-page {
   font-weight: 400;
   color: var(--color-text-secondary);
   background: var(--bg-input);
-  border: 1.5px solid var(--bg-input);
+  border: 1.5rem solid var(--bg-input);
   cursor: pointer;
   user-select: none;
   padding: 0 16rem;
@@ -433,7 +396,7 @@ body.scrollable-page {
 #address_edit .divFooter .btnSpinner {
   width: 16rem;
   height: 16rem;
-  border: 2px solid var(--addr-spinner-border);
+  border: 2rem solid var(--addr-spinner-border);
   border-top-color: var(--color-text-primary);
   border-radius: 50%;
   animation: btnSpin 0.6s linear infinite;
@@ -557,7 +520,7 @@ body.scrollable-page {
   color: var(--color-text-primary);
   cursor: pointer;
   transition: background 0.15s ease;
-  border-left: 3px solid transparent;
+  border-left: 3rem solid transparent;
   user-select: none;
 }
 #address_edit .pickerItem:active { background: var(--bg-hover); }
@@ -590,8 +553,8 @@ body.scrollable-page {
   #address_edit .divContent { border-radius: var(--radius-lg); }
   #address_edit .divContent .formGroup { padding: 6rem 14rem; }
   #address_edit .divContent .formGroup .formLabel { font-size: 12rem; }
-  #address_edit .divContent .formGroup .nativeInput { padding: 11rem 12rem; font-size: 14px; }
-  #address_edit .divContent .formGroup .nativeTextarea { padding: 11rem 12rem 26rem 12rem; font-size: 14px; }
+  #address_edit .divContent .formGroup .nativeInput { padding: 11rem 12rem; font-size: 14rem; }
+  #address_edit .divContent .formGroup .nativeTextarea { padding: 11rem 12rem 26rem 12rem; font-size: 14rem; }
   #address_edit .divContent .formGroup .regionSlot { height: 36rem; line-height: 36rem; font-size: 11rem; }
   #address_edit .divContent .formGroup .sexBtn { height: 36rem; line-height: 36rem; font-size: 13rem; }
   #address_edit .divContent .formGroup .tagBtn { min-width: 48rem; height: 32rem; line-height: 32rem; font-size: 12rem; padding: 0 12rem; }
@@ -604,8 +567,10 @@ body.scrollable-page {
    响应式 — 桌面大屏
    ============================================ */
 @media screen and (min-width: 752px) {
-  #address_edit { align-items: center; background: var(--bg-card); }
-  #address_edit .divHead { max-width: 520rem; }
+  /* 2026-09-22：头部换 cend-shell 后，居中对象由各块改为 .cend-page（原 align-items:center
+     会使唯一 flex 子项 cend-page 收缩为内容宽，故移除） */
+  #address_edit { background: var(--bg-card); }
+  .cend-page { max-width: 520rem; margin: 0 auto; }
   #address_edit .divScroll { max-width: 520rem; width: 100%; padding: 20rem 0 24rem; }
   #address_edit .divContent { border-radius: var(--radius-xl); }
   #address_edit .divFooter { max-width: 520rem; width: 100%; margin: 0 auto; border-radius: 0 0 20rem 20rem; }
@@ -615,4 +580,5 @@ body.scrollable-page {
 /* ============================================
    Vant Notify 顶部通知位移
    ============================================ */
-#address_edit .van-notify { top: 88rem !important; }
+/* 2026-09-22：头部 88rem 金色头已退场，Notify 下移量对齐 44rem 白底导航+安全区 */
+#address_edit .van-notify { top: calc(var(--navbar-height) + env(safe-area-inset-top)) !important; }

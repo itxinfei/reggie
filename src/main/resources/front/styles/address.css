@@ -32,46 +32,17 @@ body.scrollable-page {
   --addr-tag-none-gradient-end: var(--border-light);
 }
 
-/* ========== 顶部标题栏 ========== */
-#address .divHead {
-  width: 100%;
-  height: var(--header-height);
-  background: var(--color-primary-gradient);
-  position: relative;
-  box-shadow: var(--shadow-sm);
-}
-
-#address .divHead .divTitle {
-  font-size: var(--header-title-font-size);
-  font-family: var(--font-family-title);
-  font-weight: 600;
-  text-align: center;
-  color: var(--color-text-primary);
-  line-height: 25rem;
-  position: absolute;
-  bottom: 14rem;
-  width: 100%;
-}
-
-#address .divHead .divTitle i {
-  position: absolute;
-  left: var(--spacing-lg);
-  top: 50%;
-  transform: translate(0, -50%);
-  cursor: pointer;
-  font-size: 20rem;
-  transition: transform var(--transition-fast);
-}
-#address .divHead .divTitle i:active { transform: translate(0, -50%) scale(1.2); }
+/* ========== 顶部标题栏（2026-09-22 起由 cend-shell light 导航接管，本页头部规则已删除） ========== */
 
 /* ========== 内容区域 ========== */
 /* 修改点（2026-09-01 二轮）：min-height → height 固定滚动容器 ——
    index.css 全局 html,body{overflow:hidden}，页面仅靠 body.scrollable-page 无法让列表滚动，
    原 min-height + overflow-y:auto 形同虚设，地址多于一屏时内容被视口裁剪不可见。
-   改为固定高度（100vh − 头部 var(--header-height) − 底部按钮区 65rem）内部滚动，
-   与 address-edit 的 .divScroll 模式一致；padding-bottom 保留 96rem 防最后一条被按钮遮挡。 */
+   改为固定高度（100vh − 白底导航 var(--navbar-height)+安全区 − 底部按钮区 65rem）内部滚动，
+   与 address-edit 的 .divScroll 模式一致；padding-bottom 保留 96rem 防最后一条被按钮遮挡。
+   2026-09-22：头部换 cend-shell，88rem 金色头 → 44rem 白底导航（含 env 安全区）。 */
 #address .divContent {
-  height: calc(100vh - var(--header-height) - 65rem);
+  height: calc(100vh - var(--navbar-height) - env(safe-area-inset-top) - 65rem);
   padding: 4rem 0 96rem;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -86,7 +57,8 @@ body.scrollable-page {
   margin-top: 12rem;
   margin-left: 12rem;
   margin-right: 12rem;
-  padding: 16rem 18rem;
+  /* 2026-09-22：水平 padding 18rem → 16rem，收入 4 倍数节奏 */
+  padding: 16rem 16rem;
   position: relative;
   box-shadow: 0 2rem 10rem var(--mask-light);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
