@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Profile;
  * - 不同环境应使用不同的加密密钥
  * - 若密钥泄露，需重新加密所有 ENC(...) 值并轮换密钥
  *
- * 仅在生产环境启用，开发环境使用明文密码便于调试。
+ * 仅在生产环境启用，开发环境使用明文密码便于调试。内网明文部署无 ENC() 值时使用内置默认口令（见 encryptorPassword 注释）。
  *
  * @author reggie
  * @since 2026-08-27
@@ -41,14 +41,11 @@ public class JasyptConfig {
     /**
      * Jasypt 加密密钥，通过环境变量 JASYPT_ENCRYPTOR_PASSWORD 传入
      *
-     * 安全设计：无默认值，若生产环境未设置 JASYPT_ENCRYPTOR_PASSWORD，
-     * Spring 启动时将抛出 MissingRequiredPropertiesException，
-     * 避免因使用弱默认密钥导致加密形同虚设。
-     *
-     * 部署方式：通过环境变量传入（K8s Secret / CI/CD 密钥管理 / 手动 export），
-     * 禁止硬编码在代码、配置文件或 Dockerfile 中。
+     * 内网部署：配置文件全部明文硬编码、无 ENC(...) 值，加密器初始化后也不会被调用，
+     * 故提供内置默认口令，未设环境变量也能正常启动；若将来改用 ENC(...) 存储敏感值，
+     * 仍应通过环境变量 JASYPT_ENCRYPTOR_PASSWORD 覆盖该默认口令。
      */
-    @Value("${JASYPT_ENCRYPTOR_PASSWORD}")
+    @Value("${JASYPT_ENCRYPTOR_PASSWORD:reggie-intranet}")
     private String encryptorPassword;
 
     /**

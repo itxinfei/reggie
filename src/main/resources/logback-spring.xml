@@ -87,6 +87,9 @@
     <!-- 生产环境：文件（异步） -->
     <springProfile name="prod">
         <root level="ERROR">
+            <!-- 同步控制台：root=ERROR 故平时不刷屏；启动失败时错误即时可见，
+                 避免只靠异步文件在 JVM 退出前来不及落盘 -->
+            <appender-ref ref="CONSOLE"/>
             <appender-ref ref="ASYNC_FILE"/>
             <appender-ref ref="ASYNC_ERROR_FILE"/>
         </root>
