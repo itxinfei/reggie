@@ -11,7 +11,8 @@
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css?v=20260921" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+        <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <!--订单域样式（含本详情页 .od-* 与复用的 .dish-*/.act-btn 等）-->
         <link rel="stylesheet" href="./../styles/order.css?v=20260921" />
         <!-- 加载 remixicon 图标库 -->
@@ -20,12 +21,7 @@
     </head>
     <body>
         <div id="order" class="app">
-            <div class="divHead">
-                <div class="divTitle">
-                    <i class="ri-arrow-left-s-line" @click="goBack"></i>订单详情
-                </div>
-            </div>
-
+            <cend-shell title="订单详情" :show-back="true" :show-home="true">
             <div class="od-body">
                 <div v-if="loading" class="od-loading">
                     <van-skeleton :row="6" title :avatar="true"></van-skeleton>
@@ -184,6 +180,7 @@
                     <div class="act-btn act-primary" @click="addOrderAgain">再来一单</div>
                 </template>
             </div>
+            </cend-shell>
         </div>
 
         <script src="../../backend/plugins/vue/vue.js"></script>
@@ -193,6 +190,8 @@
         <script src="./../api/main.js?v=20260921"></script>
         <script src="./../js/common.js?v=20260917"></script>
         <script src="./../api/order.js?v=20260917"></script>
+        <!-- C 端跨页面复用组件（必须在 new Vue 之前加载） -->
+        <script src="./../js/components-cend.js?v=20260922"></script>
         <script>
         new Vue({
             el: '#order',
@@ -253,7 +252,7 @@
                 this.loadRefundRecords()
             },
             methods: {
-                goBack: function() { goBack() },
+                // 修改点(2026-09-22)：goBack 已统一由 cend-shell 组件处理
                 imgPath: function(p) { return imgPath(p) },
                 getStatus: function(status) { return getStatus(status) },
                 loadDetail: async function() {

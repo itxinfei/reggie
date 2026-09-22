@@ -1,0 +1,91 @@
+/* ============================================================
+ * 瑞吉外卖 C 端 — 骨架屏通用样式（2026-09-22 收敛各页内联骨架）
+ *
+ * 用法：
+ *   <div class="skeleton-container">
+ *     <div class="skeleton-card">
+ *       <div class="skeleton-line skeleton-w40"></div>
+ *       <div class="skeleton-line skeleton-w80"></div>
+ *     </div>
+ *   </div>
+ *
+ * 动画统一用 index.css 的 @keyframes rg-skeleton-shine 与 --skeleton-gradient。
+ * 卡片壳为白底不闪，仅内部占位元素流光，对标美团骨架质感。
+ * ============================================================ */
+
+/* 占位元素：渐变 + 流光（仅作用于 skeleton-container 内部） */
+.skeleton-container .skeleton-line,
+.skeleton-container .skeleton-tag,
+.skeleton-container .skeleton-block,
+.skeleton-container .skeleton-circle,
+.skeleton-container .skeleton-img,
+.skeleton-container .skeleton-btn {
+  background: var(--skeleton-gradient);
+  background-size: 200% 100%;
+  animation: rg-skeleton-shine 1.5s ease-in-out infinite;
+}
+
+.skeleton-container {
+  padding: 12rem 16rem;
+}
+
+/* 卡片壳：白底，内部放占位元素 */
+.skeleton-card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  padding: 16rem;
+  margin-bottom: 12rem;
+}
+
+/* 文本行 */
+.skeleton-line {
+  height: 14rem;
+  border-radius: 4rem;
+}
+
+/* 小标签（如"家/公司"标签占位） */
+.skeleton-tag {
+  width: 40rem;
+  height: 20rem;
+  border-radius: 4rem;
+  flex-shrink: 0;
+}
+
+/* 通用块（比文本行略高） */
+.skeleton-block {
+  height: 16rem;
+  border-radius: 4rem;
+}
+
+/* 圆形（头像） */
+.skeleton-circle {
+  width: 44rem;
+  height: 44rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 方形缩略图（菜品/商家图） */
+.skeleton-img {
+  width: 80rem;
+  height: 80rem;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+/* 胶囊按钮 */
+.skeleton-btn {
+  width: 72rem;
+  height: 28rem;
+  border-radius: 999rem;
+  flex-shrink: 0;
+}
+
+/* 宽度阶（百分比，配合父容器自适应） */
+.skeleton-w20 { width: 20%; }
+.skeleton-w30 { width: 30%; }
+.skeleton-w40 { width: 40%; }
+.skeleton-w50 { width: 50%; }
+.skeleton-w60 { width: 60%; }
+.skeleton-w70 { width: 70%; }
+.skeleton-w80 { width: 80%; }

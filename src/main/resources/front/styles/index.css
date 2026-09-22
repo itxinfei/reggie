@@ -46,7 +46,7 @@
   /* info：历史遗留语义——为防全站蓝主色回退，覆盖为品牌金。
      若需第三方平台真实蓝，请使用 --platform-xxx 令牌而非 --color-info */
   --color-info: #ffc200;
-  --color-price: #F34346;
+  --color-price: #FF4A26;
 
   /* ================================================================
      订单状态色（语义化，2026-09-14 全站统一）
@@ -104,10 +104,15 @@
   --spacing-md: 12rem;
   --spacing-lg: 16rem;
   --spacing-xl: 20rem;
+  --spacing-2xl: 24rem;
+  --spacing-3xl: 32rem;
 
   /* ---- 头部 ---- */
-  --header-height: 88rem;
+  --header-height: 88rem;              /* 旧金色重头部（存量页，逐步退场） */
   --header-title-font-size: 18rem;
+  /* 白底轻导航（对标美团二级页：低高度、纯白底、品牌色仅作点缀） */
+  --navbar-height: 44rem;
+  --navbar-bg: #ffffff;
 
   /* ---- 字体 ---- */
   --font-family-base: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft Yahei", sans-serif;
@@ -121,12 +126,15 @@
   --font-size-md: 14rem;
   --font-size-lg: 16rem;
   --font-size-xl: 18rem;
+  --font-size-2xl: 20rem;
+  --font-size-3xl: 24rem;
+  --font-size-display: 28rem;
 
   /* ---- 语义叠加层（2026-09-07 收敛 main.css 等处的硬编码 rgba，禁止再散写） ---- */
   /* 价格红 / 危险色 / 品牌金的低透明底与投影 */
-  --color-price-tint:        rgba(243, 67, 70, 0.06);
-  --color-price-tint-strong: rgba(243, 67, 70, 0.2);
-  --color-price-shadow:      rgba(243, 67, 70, 0.45);
+  --color-price-tint:        rgba(255, 74, 38, 0.06);
+  --color-price-tint-strong: rgba(255, 74, 38, 0.2);
+  --color-price-shadow:      rgba(255, 74, 38, 0.45);
   --color-danger-shadow:     rgba(233, 78, 60, 0.4);
   --color-primary-shadow:    rgba(255, 209, 0, 0.35);
   /* 白色表面（金底 / 深底上的白卡、搜索框） */
@@ -162,10 +170,10 @@
   --surface-white-25: rgba(255, 255, 255, 0.25);
 
   /* ---- 阴影 ---- */
-  --shadow-sm: 0 1rem 4rem rgba(0, 0, 0, 0.10);
-  --shadow-md: 0 2rem 12rem rgba(0, 0, 0, 0.06);
-  --shadow-cart-bar: 0 -2rem 10rem rgba(0, 0, 0, 0.3);
-  --shadow-card: 0 2rem 10rem rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1rem 4rem rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2rem 8rem rgba(0, 0, 0, 0.06);
+  --shadow-cart-bar: 0 -2rem 10rem rgba(0, 0, 0, 0.18);
+  --shadow-card: 0 2rem 8rem rgba(0, 0, 0, 0.06);
   --shadow-card-hover: 0 4rem 16rem rgba(0, 0, 0, 0.08);
 
   /* ---- 骨架屏（全站统一）---- */
@@ -182,8 +190,8 @@
   /* 功能图标多色体系（图标色 + 10% 底色，低饱和） */
   --icon-order: #4a7dff;
   --icon-order-bg: rgba(74, 125, 255, 0.10);     /* 订单蓝 */
-  --icon-coupon: #f34346;
-  --icon-coupon-bg: rgba(243, 67, 70, 0.10);     /* 红包红 */
+  --icon-coupon: #ff4a26;
+  --icon-coupon-bg: rgba(255, 74, 38, 0.10);     /* 红包红 */
   --icon-address: #2ba471;
   --icon-address-bg: rgba(43, 164, 113, 0.10);   /* 地址绿 */
   --icon-favorite: #ff8800;
@@ -198,11 +206,16 @@
   /* 线条（全站禁用 2px/2rem/3px 分隔线，进度线/时间线除外） */
   --separator: 1px solid var(--border-light);
   --separator-dashed: 1px dashed var(--border-light);
+  /* 发丝边：卡片内部行分隔，比 --separator 更淡，对标美团卡内细线 */
+  --hairline: 1px solid var(--border-hair);
 
   /* 按钮 / CTA 规范 */
   --btn-h: 44rem;
   --btn-md-h: 36rem;
   --btn-sm-h: 28rem;
+  /* 大控件：搜索栏 / 主结算条 / 吸底行动点 */
+  --control-h-lg: 48rem;
+  --control-h-xl: 50rem;
   --btn-radius: 999rem;
   --btn-font: 16rem;
   --btn-px: 28rem;
@@ -278,6 +291,8 @@ body {
   font-family: var(--font-family-base);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+  /* 去除移动端点击灰块/黑块，贴近原生 App 手感 */
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -333,6 +348,62 @@ i {
   font-style: normal;
 }
 
+/* ================================================================
+   全局工具类（2026-09-22 新增，对标美团地基；新代码优先用这些）
+   ================================================================ */
+
+/* 输入控件字号统一 16rem(=16px@375)：小于 16px 会触发 iOS Safari 聚焦自动放大页面 */
+input,
+textarea,
+select {
+  font-size: 16rem;
+}
+
+/* flex 基础工具 */
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.flex-1 { flex: 1; min-width: 0; }
+
+/* 间距工具：基线 iOS14.5 原生支持 gap；@supports not 给更早 WebView 留 margin 兜底 */
+.gap-8,
+.gap-12,
+.gap-16 { display: flex; }
+@supports (gap: 1rem) {
+  .gap-8 { gap: 8rem; }
+  .gap-12 { gap: 12rem; }
+  .gap-16 { gap: 16rem; }
+}
+@supports not (gap: 1rem) {
+  /* 横向：作用于相邻子元素；与 .flex-col 组合时改为纵向间距 */
+  .gap-8 > * + * { margin-left: 8rem; }
+  .flex-col.gap-8 > * + * { margin-left: 0; margin-top: 8rem; }
+  .gap-12 > * + * { margin-left: 12rem; }
+  .flex-col.gap-12 > * + * { margin-left: 0; margin-top: 12rem; }
+  .gap-16 > * + * { margin-left: 16rem; }
+  .flex-col.gap-16 > * + * { margin-left: 0; margin-top: 16rem; }
+}
+
+/* sticky：补 iOS 旧前缀 */
+.sticky-top {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* 安全区：刘海顶 / Home 指示条底。老 iOS 用 constant()，新 iOS 用 env()，顺序覆盖 */
+.safe-top {
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 @font-face {
   font-family: "DIN-Medium";
   src: url("../fonts/DIN-Medium.otf");
@@ -355,6 +426,27 @@ i {
 
 .app {
   height: 100%;
+}
+
+/* ---- cend-shell 头部右侧操作区（首页图标等） ---- */
+.divHead {
+  position: relative;
+}
+.divHead-right {
+  position: absolute;
+  right: var(--spacing-lg, 16rem);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md, 12rem);
+  font-size: var(--font-size-xl, 22rem);
+  color: var(--text-primary, #1a1a1a);
+  cursor: pointer;
+}
+.divHead-right i:active {
+  opacity: 0.6;
+  transform: scale(0.9);
 }
 
 /* ---- 通用返回箭头 (纯CSS，无需ElementUI依赖) ---- */

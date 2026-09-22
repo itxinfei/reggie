@@ -11,7 +11,8 @@
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css?v=20260921" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+        <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <!--本页面内容的样式-->
         <link rel="stylesheet" href="./../styles/order.css?v=20260921" />
         <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
@@ -22,11 +23,7 @@
     </head>
     <body>
         <div id="order" class="app">
-            <div class="divHead">
-                <div class="divTitle">
-                    <i class="ri-arrow-left-s-line" @click="goBack"></i>历史订单
-                </div>
-            </div>
+            <cend-shell title="历史订单" :show-back="true" :show-tabbar="true" :tab-active="activeTab">
             <!-- 修改点：美团风格状态Tab筛选栏 -->
             <div class="status-tabs">
                 <div
@@ -120,29 +117,15 @@
                 </van-list>
                 </van-pull-refresh>
             </div>
-            <!-- 修改点(2026-09-17)：空态统一为全站标准 .empty-state -->
-            <!-- 修改点(2026-09-17 UX)：空态需排除首屏加载中，避免骨架屏与"暂无订单"同时出现 -->
-            <div class="empty-state has-tabbar" v-else-if="!firstLoading">
-                <img src="./../images/no_order.png" alt="暂无订单"/>
-                <p class="empty-text">暂无订单</p>
-                <div class="empty-action" @click="goHome">去逛逛</div>
-            </div>
-
-            <!-- ====== 底部 Tab 导航（点餐 / 订单 / 我的） ====== -->
-            <van-tabbar v-model="activeTab" class="app-tabbar" @change="onTabChange">
-                <van-tabbar-item>
-                    <span>点餐</span>
-                    <i slot="icon" class="ri-restaurant-line"></i>
-                </van-tabbar-item>
-                <van-tabbar-item>
-                    <span>订单</span>
-                    <i slot="icon" class="ri-file-list-line"></i>
-                </van-tabbar-item>
-                <van-tabbar-item>
-                    <span>我的</span>
-                    <i slot="icon" class="ri-user-3-line"></i>
-                </van-tabbar-item>
-            </van-tabbar>
+            <!-- 修改点(2026-09-22)：空态改用 cend-empty 组件，统一文字+图标风格 -->
+            <cend-empty
+                v-else-if="!firstLoading"
+                icon="ri-file-list-3-line"
+                text="暂无订单"
+                action-text="去逛逛"
+                @action="goHome">
+            </cend-empty>
+            </cend-shell>
         </div>
         <!-- 开发环境版本，包含了有帮助的命令行警告 -->
         <script src="../../backend/plugins/vue/vue.js"></script>
@@ -154,6 +137,8 @@
         <script src="./../api/main.js?v=20260917"></script>
         <script src="./../js/common.js?v=20260917"></script>
         <script src="./../api/order.js?v=20260917"></script>
+        <!-- C 端跨页面复用组件（必须在 new Vue 之前加载） -->
+        <script src="./../js/components-cend.js?v=20260922"></script>
         <script>
         new Vue({
             el:"#order",
@@ -216,10 +201,7 @@
                 })
             },
             methods:{
-                goBack(){
-                    // 修改点：统一走 common.js 的全局兜底
-                    goBack()
-                },
+                // 修改点(2026-09-22)：goBack 已统一由 cend-shell 组件处理，页面不再重复定义
                 goHome(){
                     window.requestAnimationFrame(()=>{
                         window.location.href = '/front/index.html'
@@ -232,17 +214,7 @@
                     if(path.indexOf('/common/download') === 0) return path
                     return '/common/download?name=' + path
                 },
-                // 修改点：底部 Tab 切换（0=点餐 1=订单 2=我的）
-                onTabChange(active){
-                    if(active === 1){
-                        // 已在订单页：仅保持选中态，不重复跳转
-                        return
-                    }
-                    const urlMap = { 0: '/front/index.html', 2: '/front/page/user.html' }
-                    const url = urlMap[active]
-                    if(!url) return
-                    window.requestAnimationFrame(()=>{ window.location.href = url })
-                },
+                // 修改点(2026-09-22)：底部 Tab 切换已统一由 cend-shell 组件处理，页面不再重复定义
                 initData(){
                     this.getList()
                 },
