@@ -363,7 +363,8 @@
           <div class="call-section">
             <div class="call-section__left">
               <span class="call-section__label">当前呼叫</span>
-              <span class="call-section__number">{{ currentCallTable }}号</span>
+              <span class="call-section__number" v-if="currentCallTable">{{ currentCallTable }}号</span>
+              <span class="call-section__number" v-else>暂无呼叫</span>
             </div>
             <div class="call-section__waiting">
               前面等待
@@ -459,8 +460,9 @@
           tableLoading: false,
           orders: [],
           // 呼叫队列
-          currentCallTable: '08',
-          waitingAheadCount: 3,
+          // 不硬编码假数据：初始为空，由 loadQueue 接口填充（接口异常/无呼叫时保持空态）
+          currentCallTable: '',
+          waitingAheadCount: 0,
           queueList: [],
           // 催菜汇总
           summary: { todayTotal: 0, completeRate: 0, avgResponseMin: 0 },
@@ -596,20 +598,21 @@
                     self.queueList = payload
                   } else if (payload.queueList && Array.isArray(payload.queueList)) {
                     self.queueList = payload.queueList
-                    if (payload.currentTableNo) {
-                      self.currentCallTable = String(payload.currentTableNo)
-                    }
-                    if (typeof payload.waitCount === 'number') {
-                      self.waitingAheadCount = payload.waitCount
-                    }
+                    // 始终同步呼叫号/等待数：无值即清空，避免残留上一次的呼叫号（原仅在有值时更新）
+                    self.currentCallTable = payload.currentTableNo ? String(payload.currentTableNo) : ''
+                    self.waitingAheadCount = typeof payload.waitCount === 'number' ? payload.waitCount : 0
                   } else {
                     self.queueList = []
+                    self.currentCallTable = ''
+                    self.waitingAheadCount = 0
                   }
                 } else {
                   self.queueList = []
+                  self.currentCallTable = ''
+                  self.waitingAheadCount = 0
                 }
               })
-              .catch(function () { self.queueList = [] })
+              .catch(function () { self.queueList = []; self.currentCallTable = ''; self.waitingAheadCount = 0 })
           } catch (e) {
             self.queueList = []
           }

@@ -69,10 +69,10 @@
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" @click="showDetail(row)">详情</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="acceptOrder(row)" v-if="row.status === 'PENDING'">接单</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="statusChange(row, 'PICKING')" v-if="row.status === 'ACCEPTED'">取餐</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="statusChange(row, 'DELIVERING')" v-if="row.status === 'PICKING'">配送</el-button>
-          <el-button type="text" size="small" class="btn-view" @click="statusChange(row, 'DELIVERED')" v-if="row.status === 'DELIVERING'">送达</el-button>
+          <el-button type="text" size="small" class="btn-success" :disabled="row._acting" @click="acceptOrder(row)" v-if="row.status === 'PENDING'">接单</el-button>
+          <el-button type="text" size="small" class="btn-success" :disabled="row._acting" @click="statusChange(row, 'PICKING')" v-if="row.status === 'ACCEPTED'">取餐</el-button>
+          <el-button type="text" size="small" class="btn-success" :disabled="row._acting" @click="statusChange(row, 'DELIVERING')" v-if="row.status === 'PICKING'">配送</el-button>
+          <el-button type="text" size="small" class="btn-success" :disabled="row._acting" @click="statusChange(row, 'DELIVERED')" v-if="row.status === 'DELIVERING'">送达</el-button>
           <el-button type="text" size="small" class="btn-delete" @click="cancelOrder(row)" v-if="row.status !== 'DELIVERED' && row.status !== 'CANCELLED'">取消</el-button>
         </template>
       </crud-table>
@@ -400,36 +400,42 @@
         // ==================== 订单操作 ====================
         acceptOrder: function(row) {
           const self = this
+          // 行级防重：confirm + 请求期间锁定该行，避免重复接单
+          if (row._acting) return
+          self.$set(row, '_acting', true)
+          var clear = function () { self.$set(row, '_acting', false) }
           ReggieUI.confirm(
             '确认接单【' + row.platformOrderId + '】？接单后将通知平台。',
             '确认接单',
             { confirmButtonText: '确定', cancelButtonText: '取消', type: 'success' }
           ).then(function() {
-            deliveryAccept({ platform: row.platform, platformOrderId: row.platformOrderId })
+            return deliveryAccept({ platform: row.platform, platformOrderId: row.platformOrderId })
               .then(function(res) {
                 if (String(res.code) === '1') { ReggieUI.success('接单成功'); self.search() }
                 else { ReggieUI.error(res.msg || '操作失败') }
               })
               .catch(function(err) { ReggieUI.error('请求失败：' + err) })
-          }).catch(function(err) { console.warn('[delivery-order] 派单操作取消或失败:', err) })
+          }).then(clear, function (err) { console.warn('[delivery-order] 派单操作取消或失败:', err); clear() })
         },
         // 修改点：完整的状态流转操作
         statusChange: function(row, targetStatus) {
           const self = this
+          // 行级防重：confirm + 请求期间锁定该行
+          if (row._acting) return
+          self.$set(row, '_acting', true)
+          var clear = function () { self.$set(row, '_acting', false) }
           const label = this.statusLabelMap[targetStatus] || targetStatus
           const confirmText = '确认将【' + row.platformOrderId + '】状态更新为"' + label + '"？'
-          const typeMap = {}
-          const confirmType = typeMap[targetStatus] || 'info'
           ReggieUI.confirm(confirmText, '状态更新', {
-            confirmButtonText: '确定', cancelButtonText: '取消', type: confirmType
+            confirmButtonText: '确定', cancelButtonText: '取消', type: 'info'
           }).then(function() {
-            deliveryUpdateStatus({ id: row.id, status: targetStatus })
+            return deliveryUpdateStatus({ id: row.id, status: targetStatus })
               .then(function(res) {
                 if (String(res.code) === '1') { ReggieUI.success('状态更新成功'); self.search() }
                 else { ReggieUI.error(res.msg || '操作失败') }
               })
               .catch(function(err) { ReggieUI.error('请求失败：' + err) })
-          }).catch(function(err) { console.warn('[delivery-order] 状态流转操作取消或失败:', err) })
+          }).then(clear, function (err) { console.warn('[delivery-order] 状态流转操作取消或失败:', err); clear() })
         },
         cancelOrder: function(row) {
           this.cancelForm = {

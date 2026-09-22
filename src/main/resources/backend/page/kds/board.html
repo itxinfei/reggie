@@ -100,6 +100,18 @@
       </div>
     </div>
 
+    <!-- 看板加载失败提示：出品屏不能静默停留旧数据；10秒轮询自动重试，也可手动重试 -->
+    <el-alert
+      v-if="loadError"
+      title="看板数据加载失败，将自动重试…"
+      type="error"
+      show-icon
+      :closable="false"
+      style="margin-bottom:10px"
+    >
+      <el-button type="primary" size="small" @click="loadData(false)">立即重试</el-button>
+    </el-alert>
+
     <!-- 统计概览：待制作/制作中/待取餐/今日完成/加急/平均出餐时间 -->
     <div class="stat-row">
       <div class="stat-card pending"><div class="stat-card__label">待制作</div><div class="stat-card__value">{{ board.pendingCount }}</div></div>
@@ -128,9 +140,9 @@
             <ul class="dish-list"><li v-for="(d,i) in dishesOf(t)" :key="i"><span>{{ d.name }}<span class="flavor" v-if="d.dishFlavor">（{{ d.dishFlavor }}）</span></span><span class="qty">×{{ d.number }}</span></li></ul>
             <div class="ticket__remark" v-if="t.remark"><i class="ri-chat-1-line"></i> {{ t.remark }}</div>
             <div class="ticket__ops">
-              <el-button type="primary" size="small" @click="act('start',t)">开始制作</el-button>
-              <el-button size="small" @click="act('urgent',t)">{{ t.urgent===1 ? '取消加急' : '加急' }}</el-button>
-              <el-button type="danger" plain size="small" @click="act('cancel',t)">取消</el-button>
+              <el-button type="primary" size="small" :disabled="t._acting" @click="act('start',t)">开始制作</el-button>
+              <el-button size="small" :disabled="t._acting" @click="act('urgent',t)">{{ t.urgent===1 ? '取消加急' : '加急' }}</el-button>
+              <el-button type="danger" plain size="small" :disabled="t._acting" @click="act('cancel',t)">取消</el-button>
             </div>
           </div>
           <div class="col-empty" v-if="!board.pending.length">暂无待制作工单</div>
@@ -153,9 +165,9 @@
             <ul class="dish-list"><li v-for="(d,i) in dishesOf(t)" :key="i"><span>{{ d.name }}<span class="flavor" v-if="d.dishFlavor">（{{ d.dishFlavor }}）</span></span><span class="qty">×{{ d.number }}</span></li></ul>
             <div class="ticket__remark" v-if="t.remark"><i class="ri-chat-1-line"></i> {{ t.remark }}</div>
             <div class="ticket__ops">
-              <el-button type="success" size="small" @click="act('ready',t)">制作完成 · 叫号</el-button>
-              <el-button size="small" @click="act('urgent',t)">{{ t.urgent===1 ? '取消加急' : '加急' }}</el-button>
-              <el-button type="danger" plain size="small" @click="act('cancel',t)">取消</el-button>
+              <el-button type="success" size="small" :disabled="t._acting" @click="act('ready',t)">制作完成 · 叫号</el-button>
+              <el-button size="small" :disabled="t._acting" @click="act('urgent',t)">{{ t.urgent===1 ? '取消加急' : '加急' }}</el-button>
+              <el-button type="danger" plain size="small" :disabled="t._acting" @click="act('cancel',t)">取消</el-button>
             </div>
           </div>
           <div class="col-empty" v-if="!board.cooking.length">暂无制作中工单</div>
@@ -176,7 +188,7 @@
             <div class="ticket__time">{{ fmtMMSS(t.waitSeconds) }}<small> 出餐用时</small></div>
             <ul class="dish-list"><li v-for="(d,i) in dishesOf(t)" :key="i"><span>{{ d.name }}<span class="flavor" v-if="d.dishFlavor">（{{ d.dishFlavor }}）</span></span><span class="qty">×{{ d.number }}</span></li></ul>
             <div class="ticket__ops">
-              <el-button type="success" size="small" @click="act('finish',t)">确认出餐完成</el-button>
+              <el-button type="success" size="small" :disabled="t._acting" @click="act('finish',t)">确认出餐完成</el-button>
             </div>
           </div>
           <div class="col-empty" v-if="!board.ready.length">暂无待取餐工单</div>
@@ -201,6 +213,7 @@
         clock: '',
         nowTick: Date.now(),
         lastUpdate: '',
+        loadError: false,
         autoRefresh: true,
         soundOn: true,
         stationFilter: '',
@@ -233,13 +246,17 @@
       loadData: function (autoPull) {
         var self = this
         window.kdsApi.board(autoPull !== false, self.stationFilter || undefined).then(function (res) {
+          self.loadError = false
           if (res && String(res.code) === '1' && res.data) {
             self.board = res.data
             self.lastUpdate = new Date().toLocaleTimeString('zh-CN', { hour12: false })
             self.announceReady(res.data.ready || [])
           }
         }).catch(function (err) {
-          if (err && err.message !== 'NOTLOGIN') { console.warn('[KDS] 看板加载失败', err) }
+          if (err && err.message !== 'NOTLOGIN') {
+            console.warn('[KDS] 看板加载失败', err)
+            self.loadError = true
+          }
         })
       },
       // ========== 档口筛选 ==========
@@ -273,13 +290,17 @@
         var self = this
         var confirmMap = { cancel: '确认取消该工单？' }
         var run = function () {
+          // 行级防重守卫：同一工单在请求未返回前禁止再次提交，避免快速双击并发 start/ready/finish/cancel
+          if (t._acting) return
+          self.$set(t, '_acting', true)
           var p
           if (action === 'start') p = window.kdsApi.start(t.id)
           else if (action === 'ready') p = window.kdsApi.ready(t.id)
           else if (action === 'finish') p = window.kdsApi.finish(t.id)
           else if (action === 'cancel') p = window.kdsApi.cancel(t.id)
           else if (action === 'urgent') p = window.kdsApi.toggleUrgent(t.id)
-          if (!p) return
+          if (!p) { self.$set(t, '_acting', false); return }
+          var clear = function () { self.$set(t, '_acting', false) }
           p.then(function (res) {
             if (res && String(res.code) === '1') {
               if (action === 'ready') { ReggieUI.success('已叫号：' + self.tail(t.orderNo)); self.speak('请' + self.tail(t.orderNo) + '号取餐') }
@@ -288,7 +309,8 @@
             } else {
               ReggieUI.error((res && res.msg) || '操作失败')
             }
-          }).catch(function () { ReggieUI.error('操作失败，请重试') })
+            clear()
+          }).catch(function () { ReggieUI.error('操作失败，请重试'); clear() })
         }
         if (confirmMap[action]) {
           ReggieUI.confirm(confirmMap[action], '提示', { type: 'warning' }).then(run).catch(function () {})

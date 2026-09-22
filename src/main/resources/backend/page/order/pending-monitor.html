@@ -79,6 +79,18 @@
         </div>
       </div>
 
+      <!-- 加载失败提示：监控大屏不能静默停留陈旧数据；5秒轮询自动重试，也可手动立即重试 -->
+      <el-alert
+        v-if="loadError"
+        title="监控数据加载失败，将自动重试…"
+        type="error"
+        show-icon
+        :closable="false"
+        style="margin-bottom:10px"
+      >
+        <el-button type="primary" size="small" @click="loadData">立即重试</el-button>
+      </el-alert>
+
       <!-- ========== 统计卡片：待接单/正常/预警/告警/漏单/平均等待/最长等待 ========== -->
       <div class="stat-row">
         <div class="stat-card"><div class="stat-card__label">待接单总数</div><div class="stat-card__value">{{ stats.total || 0 }}</div></div>
@@ -142,6 +154,7 @@
           thresholds: {},
           soundOn: true,
           lastUpdate: '',
+          loadError: false,
           pollTimer: null,
           spokenIds: {}
         }
@@ -160,6 +173,7 @@
           var self = this
           getUnacceptedMonitor()
             .then(function (res) {
+              self.loadError = false
               var d = (res && res.data) || {}
               self.stats = d.stats || {}
               self.list = d.list || []
@@ -167,7 +181,10 @@
               self.lastUpdate = new Date().toLocaleTimeString('zh-CN', { hour12: false })
               self.speakAlarms()
             })
-            .catch(function (err) { console.warn('[order-monitor] 加载监控数据失败:', err) })
+            .catch(function (err) {
+              console.warn('[order-monitor] 加载监控数据失败:', err)
+              self.loadError = true
+            })
         },
         /* ========== 语音播报 ========== */
         speakAlarms: function () {

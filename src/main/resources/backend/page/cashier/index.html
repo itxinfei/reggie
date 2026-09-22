@@ -1166,6 +1166,10 @@
                 this.actualAmount = 0
                 this.remark = ''
                 this.fetchData()
+                // 修改点(2026-09-22)：桌台已释放，重新拉取桌台列表/金额并清空当前选中桌台，
+                // 避免已支付订单残留、「结账」按钮仍可点击而重复结账
+                this.selectedTable = null
+                this.loadTables()
               } else {
                 ReggieUI.error(tableRes.msg || '结账失败')
               }

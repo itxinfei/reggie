@@ -303,25 +303,31 @@
         async init(reloadStats) {
           if (reloadStats === undefined) { reloadStats = true }
           this.loading = true
-          var ls = this.lastSearch || {}
-          var params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
-          var requests = [reservationPage(params)]
-          if (reloadStats) { requests.push(this.loadReservationStats()) }
-          var results = await Promise.all(requests)
-          var resvRes = results[0]
-          if (String(resvRes.code) === '1') {
-            this.tableData = resvRes.data.records || []
-            this.counts = resvRes.data.total
-          } else {
-            ReggieUI.error(resvRes.msg || '操作失败')
-          }
-          if (reloadStats && results[1]) {
-            var statsRes = results[1]
-            if (statsRes && String(statsRes.code) === '1') {
-              this.stats = statsRes.data || this.stats
+          try {
+            var ls = this.lastSearch || {}
+            var params = Object.assign({}, ls, { page: this.page, pageSize: this.pageSize })
+            var requests = [reservationPage(params)]
+            if (reloadStats) { requests.push(this.loadReservationStats()) }
+            var results = await Promise.all(requests)
+            var resvRes = results[0]
+            if (String(resvRes.code) === '1') {
+              this.tableData = resvRes.data.records || []
+              this.counts = resvRes.data.total
+            } else {
+              ReggieUI.error(resvRes.msg || '操作失败')
             }
+            if (reloadStats && results[1]) {
+              var statsRes = results[1]
+              if (statsRes && String(statsRes.code) === '1') {
+                this.stats = statsRes.data || this.stats
+              }
+            }
+          } catch (err) {
+            // 修改点(2026-09-22)：任一接口 reject 时给出提示，避免 loading 永久 true 卡死骨架屏
+            ReggieUI.error('加载预约数据失败，请稍后重试')
+          } finally {
+            this.loading = false
           }
-          this.loading = false
         },
         async loadReservationStats() {
           try {
