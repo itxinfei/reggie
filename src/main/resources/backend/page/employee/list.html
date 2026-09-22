@@ -209,7 +209,7 @@
       </ol>
       <el-upload
         action="/employee/import"
-        :headers="uploadHeaders"
+        :headers="uploadHeaders()"
         name="file"
         accept=".xlsx"
         :show-file-list="false"
@@ -636,7 +636,7 @@
               'cancelButtonText': '取消',
               'type': 'warning'
               }).then(() => {
-              enableOrDisableEmployee({ 'id': this.id, 'status': this.status === '1' ? 0 : 1 }).then(res => {
+              enableOrDisableEmployee({ 'id': this.id, 'status': String(this.status) === '1' ? 0 : 1 }).then(res => {
                 if (String(res.code) === '1') {
                   ReggieUI.success('账号状态更改成功！')
                   this.handleQuery()

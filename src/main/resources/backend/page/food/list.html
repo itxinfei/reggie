@@ -202,7 +202,7 @@
           <el-upload
             class="avatar-uploader"
             action="/common/upload"
-            :headers="uploadHeaders"
+            :headers="uploadHeaders()"
             name="file"
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
@@ -757,12 +757,16 @@
           }
           this.dishForm.imageUrl = '/common/download?name=' + response.data; this.dishForm.image = response.data
         },
-        // 修改点：el-upload 的 :on-error 回调 —— 上传 HTTP 非 2xx（含 401 未登录）统一由这里兜底
+        // el-upload 的 :on-error 回调 —— 仅 401/未登录才跳登录，500/403 等服务端异常只提示，避免误踢管理员
         handleAvatarError: function(err, file, fileList) {
-          if (window.self !== window.top) { try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch(e) {} }
-          else { window.location.href = '/backend/page/login/login.html' }
+          var status = err && err.status
           var msg = (err && err.message) || '图片上传失败，请重试'
-          if (msg === 'Request failed with status code 401') { msg = '登录已过期，请重新登录' }
+          if (status === 401 || msg.indexOf('status code 401') >= 0) {
+            if (window.self !== window.top) { try { window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*'); } catch(e) {} }
+            else { window.location.href = '/backend/page/login/login.html' }
+            ReggieUI.error('登录已过期，请重新登录')
+            return
+          }
           ReggieUI.error(msg)
         },
         onChange: function(file) {

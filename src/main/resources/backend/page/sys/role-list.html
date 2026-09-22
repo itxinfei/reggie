@@ -195,6 +195,10 @@
         </div>
         <div class="perm-footer__tip">点击页面/按钮权限名称可直接勾选，点击模块名称展开/收起；勾选模块 = 授予其下所有权限，父级部分勾选时以子项为准。</div>
       </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button size="medium" @click="closePermDialog">取 消</el-button>
+        <el-button type="primary" size="medium" :loading="permSubmitting" :disabled="!permsReady" @click="submitPerms">确 定</el-button>
+      </div>
     </crud-dialog>
 
     <!-- 分配用户弹窗（独立：专注 员工↔角色 穿梭框） -->
@@ -221,6 +225,10 @@
         :button-texts="['移除', '添加']"
         target-order="push">
       </el-transfer>
+      <div slot="footer" class="dialog-footer">
+        <el-button size="medium" @click="closeUserDialog">取 消</el-button>
+        <el-button type="primary" size="medium" :loading="userSubmitting" :disabled="!usersLoaded" @click="submitUsers">确 定</el-button>
+      </div>
     </crud-dialog>
   </div>
 
@@ -291,11 +299,15 @@
           permFilterText: '',
           permTypeFilter: '',
           expanded: true,
+          // 数据加载成功标志：未加载成功前禁用「确定」，防止用空权限/空成员覆盖
+          permTreeLoaded: false,
+          rolePermsLoaded: false,
           // 分配用户（独立弹窗：el-transfer 用户↔角色）
           userDialogVisible: false,
           userSubmitting: false,
           userTransferData: [],
-          checkedUserIds: []
+          checkedUserIds: [],
+          usersLoaded: false
         }
       },
       created() {
@@ -318,6 +330,10 @@
         },
         userDialogTitle: function() {
           return '分配用户' + (this.currentRole ? ' · ' + this.currentRole.roleName : '')
+        },
+        // 权限树与角色已有权限均加载成功，才允许提交权限分配
+        permsReady: function() {
+          return this.permTreeLoaded && this.rolePermsLoaded
         }
       },
       watch: {
@@ -499,6 +515,10 @@
           this.checkedMenuCount = 0
           this.checkedBtnCount = 0
           this.halfCheckedCount = 0
+          this.permTreeLoaded = false
+          this.rolePermsLoaded = false
+          this.permTreeData = []
+          this.checkedPerms = []
           this.loadPermTree()
           this.loadRolePerms(row.id)
           const self = this
@@ -514,6 +534,9 @@
         openUserDialog(row) {
           this.currentRole = row
           this.userDialogVisible = true
+          this.usersLoaded = false
+          this.userTransferData = []
+          this.checkedUserIds = []
           this.loadRoleUsers(row.id)
         },
         closeUserDialog() {
@@ -524,7 +547,12 @@
           sysApi.permissionTree().then(function(res) {
             if (res && res.code === 1) {
               self.permTreeData = self.buildTree(res.data || [])
+              self.permTreeLoaded = true
+            } else {
+              ReggieUI.error((res && res.msg) || '加载权限树失败')
             }
+          }).catch(function() {
+            ReggieUI.error('加载权限树失败')
           })
         },
         buildTree(flatList) {
@@ -550,6 +578,7 @@
           sysApi.rolePermissions(roleId).then(function(res) {
             if (res && res.code === 1) {
               self.checkedPerms = res.data || []
+              self.rolePermsLoaded = true
               self.$nextTick(function() {
                 if (self.$refs.permTree) {
                   self.$refs.permTree.setCheckedKeys(self.checkedPerms)
@@ -557,7 +586,11 @@
                   self.handleCheck()
                 }
               })
+            } else {
+              ReggieUI.error((res && res.msg) || '加载角色权限失败')
             }
+          }).catch(function() {
+            ReggieUI.error('加载角色权限失败')
           })
         },
         loadRoleUsers(roleId) {
@@ -572,7 +605,12 @@
               })
               // 右栏初始值：已分配员工ID
               self.checkedUserIds = (data.assignedUserIds || []).slice()
+              self.usersLoaded = true
+            } else {
+              ReggieUI.error((res && res.msg) || '加载角色成员失败')
             }
+          }).catch(function() {
+            ReggieUI.error('加载角色成员失败')
           })
         },
         filterEmployee(query, item) {
@@ -684,6 +722,7 @@
           this.checkedBtnCount = btn
         },
         submitPerms() {
+          if (!this.permsReady) { ReggieUI.error('权限数据尚未加载完成，请稍后重试') ; return }
           const keys = this.$refs.permTree ? this.$refs.permTree.getCheckedKeys() : this.checkedPerms
           this.permSubmitting = true
           const self = this
@@ -701,6 +740,7 @@
         // 用户分配提交
         submitUsers() {
           if (!this.currentRole) { return }
+          if (!this.usersLoaded) { ReggieUI.error('成员数据尚未加载完成，请稍后重试') ; return }
           this.userSubmitting = true
           const self = this
           sysApi.assignRoleUsers(this.currentRole.id, this.checkedUserIds.slice()).then(function(res) {

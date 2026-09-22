@@ -542,6 +542,8 @@
                 userTotal: 0,
                 userSearch: { name: '', phone: '' },
                 selectedIds: new Set(),
+                // 跨页保留的 id→user 映射，统计/发送目标均基于它（selectedIds 仅用于当前页勾选态）
+                selectedUserMap: new Map(),
                 smsForm: { content: '', sending: false, result: null },
 
                 // ---- APP推送 ----
@@ -551,6 +553,8 @@
                 pushUserTotal: 0,
                 pushUserSearch: { name: '', phone: '' },
                 pushSelectedIds: new Set(),
+                // 跨页保留的 id→user 映射，统计/发送目标均基于它
+                pushSelectedUserMap: new Map(),
                 pushForm: { title: '', content: '', sending: false, result: null },
 
                 // ---- 发送记录 ----
@@ -571,6 +575,13 @@
                 templateModal: {
                     show: false, isEdit: false, saving: false,
                     form: { channel: 1, bizType: 'ORDER_NOTICE', status: 1 }
+                },
+                // 模板新增/编辑校验规则（原模板引用了 templateRules 但从未定义）
+                templateRules: {
+                    templateName: [{ required: true, message: '请输入模板名称', trigger: 'blur' }],
+                    bizType: [{ required: true, message: '请选择业务类型', trigger: 'change' }],
+                    channel: [{ required: true, message: '请选择发送渠道', trigger: 'change' }],
+                    content: [{ required: true, message: '请输入模板内容', trigger: 'blur' }]
                 }
             },
 
@@ -585,8 +596,8 @@
                     ];
                 },
                 selectedUsers: function () {
-                    var self = this;
-                    return self.users.filter(function (u) { return self.selectedIds.has(u.id); });
+                    // 跨页勾选：取 Map 中全部用户，不再只过滤当前页 users
+                    return Array.from(this.selectedUserMap.values());
                 },
                 isAllPageSelected: function () {
                     if (this.users.length === 0) return false;
@@ -594,8 +605,8 @@
                     return this.users.every(function (u) { return self.selectedIds.has(u.id); });
                 },
                 pushSelectedUsers: function () {
-                    var self = this;
-                    return self.pushUsers.filter(function (u) { return self.pushSelectedIds.has(u.id); });
+                    // 跨页勾选：取 Map 中全部用户，不再只过滤当前页 pushUsers
+                    return Array.from(this.pushSelectedUserMap.values());
                 },
                 isAllPushPageSelected: function () {
                     if (this.pushUsers.length === 0) return false;
@@ -693,23 +704,39 @@
                 searchUsers: function () { this.loadUsers(1); },
 
                 toggleUser: function (user) {
-                    if (this.selectedIds.has(user.id)) this.selectedIds.delete(user.id);
-                    else this.selectedIds.add(user.id);
+                    if (this.selectedIds.has(user.id)) {
+                        this.selectedIds.delete(user.id);
+                        this.selectedUserMap.delete(user.id);
+                    } else {
+                        this.selectedIds.add(user.id);
+                        this.selectedUserMap.set(user.id, user);
+                    }
+                    // 重新赋值以触发 Vue2 对 Set/Map 的响应式更新
                     this.selectedIds = new Set(this.selectedIds);
+                    this.selectedUserMap = new Map(this.selectedUserMap);
                 },
                 selectAllPage: function () {
                     var self = this;
-                    self.users.forEach(function (u) { self.selectedIds.add(u.id); });
+                    self.users.forEach(function (u) {
+                        self.selectedIds.add(u.id);
+                        self.selectedUserMap.set(u.id, u);
+                    });
                     self.selectedIds = new Set(self.selectedIds);
+                    self.selectedUserMap = new Map(self.selectedUserMap);
                 },
-                deselectAll: function () { this.selectedIds = new Set(); },
+                deselectAll: function () {
+                    this.selectedIds = new Set();
+                    this.selectedUserMap = new Map();
+                },
                 toggleAllPage: function (ev) {
                     if (ev.target.checked) this.selectAllPage();
                     else this.deselectAll();
                 },
                 removeSelected: function (id) {
                     this.selectedIds.delete(id);
+                    this.selectedUserMap.delete(id);
                     this.selectedIds = new Set(this.selectedIds);
+                    this.selectedUserMap = new Map(this.selectedUserMap);
                 },
 
                 // ==================== 推送用户查询 ====================
@@ -732,23 +759,38 @@
                 searchPushUsers: function () { this.loadPushUsers(1); },
 
                 togglePushUser: function (user) {
-                    if (this.pushSelectedIds.has(user.id)) this.pushSelectedIds.delete(user.id);
-                    else this.pushSelectedIds.add(user.id);
+                    if (this.pushSelectedIds.has(user.id)) {
+                        this.pushSelectedIds.delete(user.id);
+                        this.pushSelectedUserMap.delete(user.id);
+                    } else {
+                        this.pushSelectedIds.add(user.id);
+                        this.pushSelectedUserMap.set(user.id, user);
+                    }
                     this.pushSelectedIds = new Set(this.pushSelectedIds);
+                    this.pushSelectedUserMap = new Map(this.pushSelectedUserMap);
                 },
                 selectAllPushPage: function () {
                     var self = this;
-                    self.pushUsers.forEach(function (u) { self.pushSelectedIds.add(u.id); });
+                    self.pushUsers.forEach(function (u) {
+                        self.pushSelectedIds.add(u.id);
+                        self.pushSelectedUserMap.set(u.id, u);
+                    });
                     self.pushSelectedIds = new Set(self.pushSelectedIds);
+                    self.pushSelectedUserMap = new Map(self.pushSelectedUserMap);
                 },
-                deselectAllPush: function () { this.pushSelectedIds = new Set(); },
+                deselectAllPush: function () {
+                    this.pushSelectedIds = new Set();
+                    this.pushSelectedUserMap = new Map();
+                },
                 toggleAllPushPage: function (ev) {
                     if (ev.target.checked) this.selectAllPushPage();
                     else this.deselectAllPush();
                 },
                 removePushSelected: function (id) {
                     this.pushSelectedIds.delete(id);
+                    this.pushSelectedUserMap.delete(id);
                     this.pushSelectedIds = new Set(this.pushSelectedIds);
+                    this.pushSelectedUserMap = new Map(this.pushSelectedUserMap);
                 },
 
                 // ==================== 发送短信 ====================
@@ -949,6 +991,7 @@
                 },
 
                 openTemplateModal: function (template) {
+                    var self = this;
                     this.templateModal.isEdit = !!template;
                     if (template) {
                         this.templateModal.form = JSON.parse(JSON.stringify(template));
@@ -956,6 +999,9 @@
                         this.templateModal.form = { channel: 1, bizType: 'ORDER_NOTICE', status: 1 };
                     }
                     this.templateModal.show = true;
+                    this.$nextTick(function () {
+                        if (self.$refs.templateForm) self.$refs.templateForm.clearValidate();
+                    });
                 },
                 closeTemplateModal: function () { this.templateModal.show = false; },
 
