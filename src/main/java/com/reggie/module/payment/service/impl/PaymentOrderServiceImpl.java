@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.module.dish.service.DishService;
+import com.reggie.module.inventory.service.MaterialStockService;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.service.OrderDetailService;
@@ -75,6 +76,10 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     /** 套餐菜品关联服务（支付失败回退套餐内菜品库存） */
     @Autowired
     private SetmealDishService setmealDishService;
+
+    /** 原料库存联动（支付失败按 BOM 恢复原料），可选注入避免循环依赖 */
+    @Autowired(required = false)
+    private MaterialStockService materialStockService;
 
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
@@ -246,11 +251,11 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
             Orders order = orderService.getById(po.getOrderId());
             if (order != null && order.getStatus() != null) {
                 if (Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
-                    // 外卖场景：商家接单=开始配送，支付成功直接流转到派送中（跳过待接单中间态）；
-                    // 货到付款(payMethod=6)不走支付回调，此处不会出现，但防御性保留 ORDERED 状态
-                    int nextStatus = Objects.equals(order.getPayMethod(), 6)
-                            ? Orders.STATUS_ORDERED
-                            : Orders.STATUS_DELIVERING;
+                    // 支付成功统一进入待接单/待制作(2)，由商家 confirmOrder 接单(2→3)或 KDS 拉单制作：
+                    // ① KDS pullPendingOrders 只拉 STATUS_ORDERED(2)，跳3会导致后厨永远拉不到单；
+                    // ② 堂食已付款单标"配送中"语义错误；③ rejectOrder 的自动退款也假设支付成功停在2。
+                    // 货到付款(payMethod=6)不走在线支付回调，无影响。
+                    int nextStatus = Orders.STATUS_ORDERED;
                     boolean updated = orderService.lambdaUpdate()
                             .eq(Orders::getId, order.getId())
                             .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
@@ -258,9 +263,8 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
                             .set(Orders::getCheckoutTime, LocalDateTime.now())
                             .update();
                     if (updated) {
-                        log.info("支付成功联动更新订单: orderId={}, orderStatus={}",
-                                po.getOrderId(),
-                                nextStatus == Orders.STATUS_DELIVERING ? "派送中" : "待接单");
+                        log.info("支付成功联动更新订单: orderId={}, orderStatus=待接单",
+                                po.getOrderId());
                         // 拼团订单支付成功：标记参与已支付（独立事务+幂等，非拼团单自动跳过；
                         // try-catch 保护支付主流程，拼团标记异常不影响支付状态）
                         try {
@@ -464,6 +468,16 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
             dishService.addStock(dishId, qty);
             dishService.autoToggleSoldOut(dishId);
             log.info("[库存回退] 菜品ID={} 回退{}份", dishId, qty);
+            // 同步按 BOM 恢复原料（与 OrderStockRefundServiceImpl 口径一致）；
+            // 原料恢复失败仅告警、不改变菜品回退结果，避免两套实现导致原料库存持续泄漏
+            if (materialStockService != null) {
+                try {
+                    materialStockService.restoreMaterialStock(dishId, qty);
+                } catch (Exception me) {
+                    log.error("[库存回退] 菜品ID={} 原料恢复失败，需人工核查: {}",
+                            dishId, me.getMessage(), me);
+                }
+            }
             return true;
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程

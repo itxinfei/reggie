@@ -23,8 +23,12 @@ import com.reggie.module.payment.service.PaymentOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import com.reggie.common.event.OrderCompletedEvent;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -76,6 +80,9 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
 
     @Autowired
     private PaymentOrderService paymentOrderService;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Autowired
     private MemberRewardService memberRewardService;
@@ -282,14 +289,20 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
                 actualAmount, changeAmount, cashierId, cashierName, remark);
         cashierRecordMapper.insert(cashierRecord);
 
-        // 8. 更新订单状态为已支付（待接单），支付方式按真实选择记录
-        markOrderPaid(orderId, order, payType, usedCouponId, memberUserId);
+        // 8. 更新订单状态为已支付（待接单），支付方式按真实选择记录；amount 回写为折后实收
+        boolean eatIn = order.getTableId() != null
+                && OrderSource.EAT_IN.getValue().equals(order.getSource());
+        markOrderPaid(orderId, order, payType, usedCouponId, memberUserId, payable);
 
-        // 9. 创建支付记录（金额以服务端为准）
-        saveSuccessPaymentOrder(orderId, channel, orderAmount);
+        // 9. 创建支付记录（金额按折后实收，退款/日结以此为据）
+        saveSuccessPaymentOrder(orderId, channel, payable);
 
-        // 6. 会员权益（积分+优惠券核销）统一在订单完成（status=4）时由 OrderCompletedEvent 触发，
-        //    避免收银支付与订单完成事件重复发放。此处不再发放。
+        // 10. 堂食单直接置「已完成(4)」，无后续自动流转，需在事务提交后补发完成事件，
+        //     否则积分不发、usedCouponId 对应券不核销（可被重复使用）。afterCommit 保证
+        //     异步监听器能读到已提交的实收金额与券ID。非堂食单流转到完成时由状态流服务发事件。
+        if (eatIn) {
+            publishCompletedAfterCommit(orderId, order.getTenantId());
+        }
 
         return cashierRecord;
     }
@@ -336,16 +349,19 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
                 throw new CustomException("该桌台存在已结账订单，请勿重复结账");
             }
         }
-        // 3. 合并金额：逐单以服务端金额为准（占位单用订单明细汇总兜底）
+        // 3. 合并金额：逐单以服务端金额为准（占位单用订单明细汇总兜底），同时收集各单折前金额
         BigDecimal orderAmount = BigDecimal.ZERO;
+        List<BigDecimal> detailAmounts = new ArrayList<>();
         for (Orders o : orders) {
             BigDecimal amt = o.getAmount();
             if (amt == null || amt.compareTo(BigDecimal.ZERO) <= 0) {
                 amt = computeOrderDetailTotal(o.getId());
             }
-            if (amt != null && amt.compareTo(BigDecimal.ZERO) > 0) {
-                orderAmount = orderAmount.add(amt);
+            if (amt == null || amt.compareTo(BigDecimal.ZERO) <= 0) {
+                amt = BigDecimal.ZERO;
             }
+            detailAmounts.add(amt);
+            orderAmount = orderAmount.add(amt);
         }
         if (orderAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new CustomException("该桌台尚未点单，请先加菜后再结账");
@@ -358,6 +374,8 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         if (payable.compareTo(BigDecimal.ZERO) < 0) {
             payable = BigDecimal.ZERO;
         }
+        // 合并实收按各单折前占比分摊，末单兜底差额，保证各单 amount 之和恰等于总实收
+        List<BigDecimal> paidAmounts = allocatePaidAmounts(detailAmounts, payable);
         // 5. 实收校验 + 储值扣减
         validateActualAmount(payType, actualAmount, payable);
         deductStoredBalanceIfNeeded(payType, memberUserId, payable);
@@ -375,9 +393,12 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
                 actualAmount, changeAmount, cashierId, cashierName, mergedRemark);
         cashierRecordMapper.insert(record);
 
-        // 8. 所有订单统一置「已完成(4)」并写支付记录（堂食无 2→3→4 流转，直接完成）
+        // 8. 所有订单统一置「已完成(4)」，amount 回写为各单分摊实收，并写支付记录
+        //    （堂食无 2→3→4 流转，直接完成）
         String channel = resolvePayChannel(payType);
-        for (Orders o : orders) {
+        for (int idx = 0; idx < orders.size(); idx++) {
+            Orders o = orders.get(idx);
+            BigDecimal alloc = paidAmounts.get(idx);
             boolean updated = orderService.lambdaUpdate()
                     .eq(Orders::getId, o.getId())
                     .eq(Orders::getTenantId, o.getTenantId())
@@ -385,15 +406,16 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
                     .set(Orders::getStatus, Orders.STATUS_COMPLETED)
                     .set(Orders::getPayMethod, payType)
                     .set(Orders::getCheckoutTime, LocalDateTime.now())
+                    .set(Orders::getAmount, alloc)
                     .set(usedCouponId != null, Orders::getUsedCouponId, usedCouponId)
                     .set(memberUserId != null, Orders::getUserId, memberUserId)
                     .update();
             if (!updated) {
                 throw new CustomException("订单状态已变更，请刷新后重试");
             }
-            BigDecimal paidAmount = o.getAmount() != null && o.getAmount().compareTo(BigDecimal.ZERO) > 0
-                    ? o.getAmount() : computeOrderDetailTotal(o.getId());
-            saveSuccessPaymentOrder(o.getId(), channel, paidAmount);
+            saveSuccessPaymentOrder(o.getId(), channel, alloc);
+            // 堂食单直接完成，事务提交后补发完成事件：积分按实收发放、券核销
+            publishCompletedAfterCommit(o.getId(), o.getTenantId());
         }
         // 9. 释放桌台（与订单更新同一事务，fail-closed 依赖租户上下文，不能异步）
         if (diningTableService != null) {
@@ -721,7 +743,8 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
     /**
      * CAS 更新订单为已支付（待接单）（等价抽取）。
      */
-    private void markOrderPaid(Long orderId, Orders order, Integer payType, Long usedCouponId, Long memberUserId) {
+    private void markOrderPaid(Long orderId, Orders order, Integer payType, Long usedCouponId,
+                               Long memberUserId, BigDecimal paidAmount) {
         // 修改点(2026-09-18)：堂食订单收银完成即视为「已完成(4)」并在同一事务内释放桌台。
         // 原实现一律置为「待接单(2)」，而堂食订单没有 2→3→4 的自动流转路径，
         // 导致 OrderStatusFlowServiceImpl.releaseTableIfEatIn 永不触发——
@@ -738,6 +761,8 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
                 .set(Orders::getStatus, targetStatus)
                 .set(Orders::getPayMethod, payType)
                 .set(Orders::getCheckoutTime, LocalDateTime.now())
+                // 券/会员折扣后实收才是真实成交额：回写 amount，供积分、退款、营收报表统一口径
+                .set(paidAmount != null, Orders::getAmount, paidAmount)
                 .set(usedCouponId != null, Orders::getUsedCouponId, usedCouponId)
                 .set(memberUserId != null, Orders::getUserId, memberUserId)
                 .update();
@@ -784,6 +809,59 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         paymentOrder.setCreatedTime(LocalDateTime.now());
         paymentOrder.setUpdateTime(LocalDateTime.now());
         paymentOrderService.save(paymentOrder);
+    }
+
+    /**
+     * 按各单折前金额占比分摊合并实收，末单兜底取差额，保证分摊之和恰等于总实收。
+     *
+     * @param detailAmounts 各单折前金额（与订单列表同序）
+     * @param totalPaid     合并结账总实收
+     * @return 各单分摊实收
+     */
+    private List<BigDecimal> allocatePaidAmounts(List<BigDecimal> detailAmounts, BigDecimal totalPaid) {
+        int n = detailAmounts.size();
+        List<BigDecimal> result = new ArrayList<>();
+        BigDecimal grossTotal = BigDecimal.ZERO;
+        for (int i = 0; i < n; i++) {
+            grossTotal = grossTotal.add(detailAmounts.get(i));
+        }
+        BigDecimal allocated = BigDecimal.ZERO;
+        for (int i = 0; i < n; i++) {
+            if (i == n - 1) {
+                // 末单兜底，吸收前面四舍五入的累计误差
+                result.add(totalPaid.subtract(allocated));
+            } else {
+                BigDecimal share = BigDecimal.ZERO;
+                if (grossTotal.compareTo(BigDecimal.ZERO) > 0) {
+                    share = detailAmounts.get(i).multiply(totalPaid)
+                            .divide(grossTotal, 2, RoundingMode.HALF_UP);
+                }
+                result.add(share);
+                allocated = allocated.add(share);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 在当前事务提交后发布订单完成事件；无事务上下文时直接发布（兜底）。
+     * afterCommit 保证 @Async 权益监听器能读到已提交的实收金额与券ID。
+     *
+     * @param orderId  订单ID
+     * @param tenantId 租户ID
+     */
+    private void publishCompletedAfterCommit(final Long orderId, final Long tenantId) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    eventPublisher.publishEvent(
+                            new OrderCompletedEvent(CashierServiceImpl.this, orderId, tenantId));
+                }
+            });
+        } else {
+            eventPublisher.publishEvent(new OrderCompletedEvent(this, orderId, tenantId));
+        }
     }
 
     /**

@@ -230,16 +230,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
         orders.setFullReductionAmount(fullReductionAmount);
 
-        // 优惠券折扣（等价抽取）
-        Map<String, Object> couponHolder = resolveCouponDiscount(orders, userId, orderId, totalAmount);
+        // 优惠券折扣：此处仅【试算】用于核价，不核销；实际 useCoupon 移到幂等锁抢占成功之后，
+        // 防止并发提交时券被绑定到从未落库的 orderId（修复券既不生效又无法再用的资金/权益缺陷）
+        Map<String, Object> couponHolder = previewCouponDiscount(orders, userId, totalAmount);
         BigDecimal couponDiscount = (BigDecimal) couponHolder.get("couponDiscount");
-        boolean couponOk = (Boolean) couponHolder.get("couponOk");
         Long usedCouponId = (Long) couponHolder.get("usedCouponId");
         finalAmount = finalAmount.subtract(couponDiscount);
         if (finalAmount.compareTo(BigDecimal.ZERO) < 0) {
             finalAmount = BigDecimal.ZERO;
         }
-        orders.setUsedCouponId(couponOk ? usedCouponId : null);
+        orders.setUsedCouponId(usedCouponId);
 
         // 设置订单字段（等价抽取）
         applySubmitOrderFields(orders, orderId, userId, user, addressBook, finalAmount, deliveryFee);
@@ -273,6 +273,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         AddressBook addressBook = addressBookService.getById(addressBookId);
         if (addressBook == null) {
             throw new CustomException("用户地址信息有误，不能下单");
+        }
+        // 归属校验：禁止用他人地址下单（previewDeliveryFee 已有此校验，submit 此前缺失，口径对齐）
+        if (addressBook.getUserId() == null || !userId.equals(addressBook.getUserId())) {
+            throw new CustomException("收货地址不属于当前用户");
         }
         Map<String, Object> holder = new HashMap<>();
         holder.put("user", user);
@@ -502,44 +506,62 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     /**
-     * 校验并核销优惠券，返回 {couponDiscount, couponOk, usedCouponId}（等价抽取，降低方法长度）。
+     * 【试算】优惠券可抵扣金额（不核销），返回 {couponDiscount, usedCouponId}。
+     * 仅校验归属 / 未使用 / 未过期 / 门槛，用于下单核价；实际 useCoupon 核销在幂等锁确认本单落库后进行。
      */
-    private Map<String, Object> resolveCouponDiscount(Orders orders, Long userId, long orderId,
-            BigDecimal totalAmount) {
-        BigDecimal couponDiscount = BigDecimal.ZERO;
+    private Map<String, Object> previewCouponDiscount(Orders orders, Long userId, BigDecimal totalAmount) {
         Long usedCouponId = orders.getUsedCouponId();
-        boolean couponOk = false;
+        BigDecimal couponDiscount = BigDecimal.ZERO;
+        boolean previewOk = false;
         if (usedCouponId != null && couponUserService != null) {
-            try {
-                // 归属 + 未使用 + 未过期校验，并在同一事务内 CAS 核销（并发重复下单时第二个请求核销失败）
-                // coupon_user.member_id 为会员ID，先经 user→member 映射（与选券列表 availableCoupons 语义一致）
-                com.reggie.module.member.model.Member member = memberService != null
-                        ? memberService.getByUserId(userId) : null;
-                Long memberId = member != null ? member.getId() : userId;
-                couponOk = couponUserService.useCoupon(memberId, usedCouponId, orderId);
-                if (couponOk) {
-                    // 按订单菜品金额计算实际折扣（规则与选券列表 availableCoupons 一致）
-                    couponDiscount = computeCouponDiscount(memberId, usedCouponId, totalAmount);
-                    if (couponDiscount.compareTo(BigDecimal.ZERO) <= 0) {
-                        // 门槛不满足/折扣为0 → 撤销核销，视为未用券
-                        couponUserService.restoreCoupon(usedCouponId, orderId);
-                        couponOk = false;
-                    }
+            // coupon_user.member_id 为会员ID，先经 user→member 映射（与选券列表 availableCoupons 语义一致）
+            com.reggie.module.member.model.Member member = memberService != null
+                    ? memberService.getByUserId(userId) : null;
+            Long memberId = member != null ? member.getId() : userId;
+            // 提前校验券归属 / 未使用 / 未过期：已被别的订单核销则不再试算
+            com.reggie.module.member.model.CouponUser cu = couponUserService.getById(usedCouponId);
+            previewOk = cu != null
+                    && Objects.equals(cu.getMemberId(), memberId)
+                    && "unused".equals(cu.getStatus())
+                    && (cu.getExpireTime() == null || !cu.getExpireTime().isBefore(LocalDateTime.now()));
+            if (previewOk) {
+                // 按券规则与订单菜品金额试算（含门槛校验，不依赖核销状态）
+                BigDecimal d = computeCouponDiscount(memberId, usedCouponId, totalAmount);
+                if (d != null && d.compareTo(BigDecimal.ZERO) > 0) {
+                    couponDiscount = d;
+                } else {
+                    previewOk = false;
                 }
-            } catch (Exception e) {
-                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                log.warn("[优惠券] 订单{}核销失败，按未用券处理: {}", orderId, e.getMessage());
             }
-            if (!couponOk) {
-                log.warn("[优惠券] 订单{}所选优惠券不可用（不属于该用户/已用/已过期/未达门槛），按未用券处理", orderId);
+            if (!previewOk) {
+                log.warn("[优惠券] 所选券不可用（不属于该用户/已用/已过期/未达门槛），按未用券处理");
                 usedCouponId = null;
             }
         }
         Map<String, Object> holder = new HashMap<>();
         holder.put("couponDiscount", couponDiscount);
-        holder.put("couponOk", couponOk);
         holder.put("usedCouponId", usedCouponId);
         return holder;
+    }
+
+    /**
+     * 幂等锁确认本单将落库后才核销优惠券（修复核销早于锁抢占：并发下券绑定到未落库 orderId）。
+     * 核销失败（券已被别的订单使用等）抛业务异常，随事务回滚整个订单，避免"享券价但券未绑本单"。
+     */
+    private void redeemCouponAfterLock(Orders orders, Long userId) {
+        Long usedCouponId = orders.getUsedCouponId();
+        if (usedCouponId == null || couponUserService == null) {
+            return;
+        }
+        com.reggie.module.member.model.Member member = memberService != null
+                ? memberService.getByUserId(userId) : null;
+        Long memberId = member != null ? member.getId() : userId;
+        boolean ok = couponUserService.useCoupon(memberId, usedCouponId, orders.getId());
+        if (!ok) {
+            // 明确失败，不静默：订单回滚、幂等锁释放后用户可重新选券下单
+            throw new CustomException("优惠券已不可用，请重新选择后下单");
+        }
+        log.info("[优惠券] 订单{}核销券{}成功（锁后核销）", orders.getId(), usedCouponId);
     }
 
     /**
@@ -585,6 +607,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             List<ShoppingCart> shoppingCarts, LambdaQueryWrapper<ShoppingCart> wrapper, boolean lockAcquired,
             String lockKey, Map<String, Object> frHit) {
         try {
+            // 幂等锁确认本单落库后才核销券（核销失败抛异常 → catch 释放锁并回滚整个订单）
+            redeemCouponAfterLock(orders, orders.getUserId());
             this.save(orders);
             //向订单明细表插入数据，多条数据
             orderDetailService.saveBatch(orderDetails);
@@ -1771,24 +1795,26 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 detail.setDishId(dish.getId());
                 detail.setName(dish.getName());
                 detail.setImage(dish.getImage());
-                // 服务端价格，防篡改
-                detail.setAmount(dish.getPrice());
-                // 扣库存
-                dishService.deductStock(dish.getId(), BigDecimal.valueOf(qty));
+                // 明细金额=行小计（单价×数量），与下单/堂食口径一致（原误存单价导致重算重复乘数量）
+                BigDecimal unitPrice = dish.getPrice() != null ? dish.getPrice() : BigDecimal.ZERO;
+                detail.setAmount(unitPrice.multiply(BigDecimal.valueOf(qty)));
+                // 扣库存（复用含 BOM 原料联动的原子扣减，原直接 deductStock 漏扣原料）
+                deductStockAtomic(dish.getId(), BigDecimal.valueOf(qty));
             } else {
                 Setmeal setmeal = setmealMap.get(item.getSetmealId());
                 if (setmeal == null) { throw new CustomException("套餐不存在: " + item.getSetmealId()); }
                 detail.setSetmealId(setmeal.getId());
                 detail.setName(setmeal.getName());
                 detail.setImage(setmeal.getImage());
-                detail.setAmount(setmeal.getPrice());
-                // 套餐扣减每个子菜品库存
+                BigDecimal setmealUnitPrice = setmeal.getPrice() != null ? setmeal.getPrice() : BigDecimal.ZERO;
+                detail.setAmount(setmealUnitPrice.multiply(BigDecimal.valueOf(qty)));
+                // 套餐扣减每个子菜品库存（走原子扣减，含原料联动）
                 LambdaQueryWrapper<SetmealDish> sdWrapper = new LambdaQueryWrapper<>();
                 sdWrapper.eq(SetmealDish::getSetmealId, setmeal.getId());
                 List<SetmealDish> sdList = setmealDishService.list(sdWrapper);
                 for (SetmealDish sd : sdList) {
                     int copies = sd.getCopies() != null ? sd.getCopies() : 1;
-                    dishService.deductStock(sd.getDishId(),
+                    deductStockAtomic(sd.getDishId(),
                             BigDecimal.valueOf((long) copies * qty));
                 }
             }
@@ -1796,15 +1822,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
         orderDetailService.saveBatch(newDetails);
 
-        // 4. 重算订单总额：SELECT SUM(amount * number) FROM order_detail WHERE order_id = ?
+        // 4. 重算订单总额：order_detail.amount 已是行小计（单价×数量），直接 SUM 即可。
+        //    原实现 SUM(amount*number) 对下单构建的旧行（amount 已含数量）二次相乘，导致总额虚高
         BigDecimal newTotal = BigDecimal.ZERO;
         LambdaQueryWrapper<OrderDetail> sumQw = new LambdaQueryWrapper<>();
         sumQw.eq(OrderDetail::getOrderId, orderId)
-             .select(OrderDetail::getAmount, OrderDetail::getNumber);
+             .select(OrderDetail::getAmount);
         List<OrderDetail> allDetails = orderDetailService.list(sumQw);
         for (OrderDetail d : allDetails) {
-            BigDecimal lineTotal = d.getAmount().multiply(BigDecimal.valueOf(d.getNumber()));
-            newTotal = newTotal.add(lineTotal);
+            if (d.getAmount() != null) {
+                newTotal = newTotal.add(d.getAmount());
+            }
         }
         Orders update = new Orders();
         update.setId(orderId);
