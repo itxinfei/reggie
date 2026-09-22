@@ -266,7 +266,7 @@
           <div class="price-calc__item">
             <span class="price-calc__label">顾客优惠</span>
             <span class="price-calc__value" :class="pricingSummary.discount >= 0 ? 'price-calc__value--success' : 'price-calc__value--danger'">¥{{ formatMoney(pricingSummary.discount) }}</span>
-            <span class="price-calc__tip">{{ pricingSummary.marginRate > 0 ? '约 ' + Math.round(pricingSummary.marginRate * 100) + ' 折' : '填写套餐售价后计算' }}</span>
+            <span class="price-calc__tip">{{ pricingSummary.marginRate > 0 ? '约 ' + (Math.round(pricingSummary.marginRate * 100) / 10) + ' 折' : '填写套餐售价后计算' }}</span>
           </div>
         </div>
       </el-form-item>
