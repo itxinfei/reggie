@@ -421,7 +421,7 @@
                 self.statsError = false
               } else {
                 // 接口失败（常见为数据库未连接）：标记失败态，仅在新出现失败时提示一次
-                if (!self.statsError) self.$message.warning('统计数据加载失败，请检查数据库连接后点击卡片重试')
+                if (!self.statsError) ReggieUI.warning('统计数据加载失败，请检查数据库连接后点击卡片重试')
                 self.statsError = true
               }
             }

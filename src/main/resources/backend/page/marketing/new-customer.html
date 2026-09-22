@@ -329,6 +329,11 @@
         async handleToggleStatus(row) {
           try {
             const newStatus = row.status === 1 ? 0 : 1
+            // 启停直接影响线上活动可见性，二次确认防误触
+            await ReggieUI.confirm(
+              '确认' + (newStatus === 1 ? '启用' : '禁用') + '该新客优惠？' + (newStatus === 0 ? '禁用后新客将无法领取该优惠。' : ''),
+              '提示', { type: 'warning' }
+            )
             var res = await updateNewCustomerDiscount(Object.assign({}, row, { status: newStatus }))
             if (res.code === 1) {
               ReggieUI.success(newStatus === 1 ? '已启用' : '已禁用')
@@ -338,7 +343,8 @@
               ReggieUI.error(res.msg || '操作失败')
             }
           } catch (err) {
-            ReggieUI.error('操作失败')
+            // 用户在确认框点取消/关闭时静默，不提示错误
+            if (err !== 'cancel' && err !== 'close') ReggieUI.error('操作失败')
           }
         },
         async handleDelete(row) {
