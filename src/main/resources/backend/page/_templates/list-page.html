@@ -17,9 +17,16 @@
 
   【组件契约（禁止手写重复实现）】
     1. 统计卡片 → <stat-cards>
+       - cards 配置项：key/icon/label/value/color/unit/clickable/active/flex/colorClass
+       - colorClass：自定义 CSS 类名（如 'pending'/'cooking'/'alarm'），大屏等特殊场景用
+       - #card-append 插槽：卡片内追加自定义内容（如进度条、实时指标）
     2. 搜索+操作栏 → <table-bar>（searchItems/actions 配置化）
+       - #search-extra 插槽：搜索区追加自定义控件
     3. 数据表格+分页 → <crud-table>（columns 配置 + 插槽）
     4. 增删改弹窗 → <crud-dialog>
+       - size 支持 sm/md/lg/xl/fullscreen（fullscreen 宽度 92%，适合 iframe 嵌入）
+       - #header 插槽：自定义弹窗头部（如标签页切换）
+       - #footer 插槽：自定义底部按钮
     5. 分页逻辑 → mixins:[window.ReggieListMixin]，实现 fetchData()
     6. 通用方法 → formatMoney/formatDate/rgStatusText/rgStatusTag/rgPreview
     7. 状态枚举 → window.ReggieStatus.register('模块', textMap, tagMap)
@@ -27,6 +34,11 @@
        宽度档 2 元素 120 / 3 元素 180 / 4 元素 240（更多触发器算 1 个元素）；
        语义类 查看/编辑 btn-view、启用 btn-success、停用/暂停 btn-warning、删除/取消 btn-delete
        （完整契约注释见 js/components.js crud-table 操作列处；落地范本 dining/table-list、platform/order-list）
+
+  【规范检测】
+    提交前运行：node scripts/lint-ui-conventions.js
+    可选参数：--fix（输出修复建议）--quiet（只看 ERROR）
+    规则覆盖：E001 按钮语义/E002 交互反馈/E003 弹窗组件/W001-W006 样式规范
   ============================================================
 -->
 <html lang="zh-CN">

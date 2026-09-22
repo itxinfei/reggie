@@ -672,6 +672,10 @@
 /* 超大弹窗：复杂表单（订单详情、菜品编辑） */
 .container .el-dialog--xl,
 .el-dialog--xl { width: 840px !important; }
+/* 全屏弹窗：iframe 嵌入、大屏看板等（宽度 92%，top 由 crud-dialog 组件控制为 4vh） */
+.container .el-dialog--fullscreen,
+.el-dialog--fullscreen { width: 92% !important; }
+.el-dialog--fullscreen .el-dialog__body { max-height: 78vh; overflow-y: auto; }
 
 /* ========== 弹窗垂直居中（全局生效，revised 2026-07-17） ==========
  * 所有 el-dialog 自动水平+垂直居中。
