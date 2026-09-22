@@ -115,6 +115,15 @@ public class StockCheckServiceImpl extends ServiceImpl<StockCheckMapper, StockCh
     }
 
     /**
+     * 带凭证创建盘点单：重写接口默认方法并加事务，保证"建单 + 回填凭证"两次写在同一事务内完成。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public StockCheck createCheck(String operator, String remark, String voucherImages) {
+        return StockCheckService.super.createCheck(operator, remark, voucherImages);
+    }
+
+    /**
      * 完成 check。
      * @param checkId 参数 checkId
      * @param items 参数 items

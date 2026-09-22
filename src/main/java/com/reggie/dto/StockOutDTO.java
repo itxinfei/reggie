@@ -5,6 +5,7 @@ import lombok.Data;
 
 import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.math.BigDecimal;
 
 /**
@@ -36,5 +37,6 @@ public class StockOutDTO {
     private String operator;
 
     @Schema(description = "凭证图片（逗号分隔相对路径，最多5张）")
+    @Size(max = 1000, message = "凭证图片信息过长")
     private String voucherImages;
 }

@@ -1408,11 +1408,6 @@ Vue.component('rg-image-uploader', {
     singleUrl: function () {
       var rel = this.relativeList()[0]
       return rel ? ('/common/download?name=' + rel) : ''
-    },
-    // 是否已达上限（达上限隐藏上传入口）
-    reachLimit: function () {
-      var n = this.relativeList().length
-      return this.single ? n >= 1 : n >= this.max
     }
   },
   created: function () {
@@ -1437,15 +1432,21 @@ Vue.component('rg-image-uploader', {
         ' :limit="max" :on-exceed="onExceed">' +
         '<i class="el-icon-plus"></i>' +
       '</el-upload>' +
-      // 单图：复用全局 avatar-uploader 样式（圆形用于头像）
-      '<el-upload v-else class="avatar-uploader" action="/common/upload" name="file"' +
-        ' :data="{ bizType: bizType }" :headers="uploadHeaders" :show-file-list="false"' +
-        ' :disabled="disabled || reachLimit"' +
-        ' :on-success="handleSuccess" :on-error="handleError" :before-upload="beforeUpload">' +
-        '<img v-if="singleUrl" :src="singleUrl" class="avatar"' +
-          ' :style="round ? { borderRadius: \'50%\' } : {}" alt="上传图片">' +
-        '<i v-else class="el-icon-plus avatar-uploader-icon"></i>' +
-      '</el-upload>' +
+      // 单图：复用全局 avatar-uploader 样式（圆形用于头像）；点击图片可重新选择覆盖，右上角可清除
+      '<div v-else class="avatar-uploader" style="position:relative;display:inline-block;width:120px;">' +
+        '<el-upload action="/common/upload" name="file"' +
+          ' :data="{ bizType: bizType }" :headers="uploadHeaders" :show-file-list="false"' +
+          ' :disabled="disabled"' +
+          ' :on-success="handleSuccess" :on-error="handleError" :before-upload="beforeUpload">' +
+          '<img v-if="singleUrl" :src="singleUrl" class="avatar"' +
+            ' :style="round ? { borderRadius: \'50%\' } : {}" alt="上传图片">' +
+          '<i v-else class="el-icon-plus avatar-uploader-icon"></i>' +
+        '</el-upload>' +
+        '<span v-if="singleUrl && !disabled" @click="clearSingle" title="移除图片"' +
+          ' style="position:absolute;top:-4px;right:-4px;width:18px;height:18px;line-height:14px;text-align:center;' +
+          'background:var(--text-muted);color:var(--bg-surface);border:2px solid var(--bg-surface);' +
+          'border-radius:50%;font-size:12px;cursor:pointer;">×</span>' +
+      '</div>' +
     '</div>',
   methods: {
     /** 逗号分隔字符串 → el-upload 回显列表 */
@@ -1505,13 +1506,21 @@ Vue.component('rg-image-uploader', {
     handleRemove: function (file, fileList) {
       this.syncValue(fileList)
     },
+    /** 单图清除 */
+    clearSingle: function () {
+      this.syncValue([])
+    },
     handlePreview: function (file) {
       if (file.url) window.open(file.url, '_blank')
     },
     handleError: function (err) {
-      this.notifyNotLogin()
       var msg = (err && err.message) || '图片上传失败，请重试'
-      if (msg === 'Request failed with status code 401') msg = '登录已过期，请重新登录'
+      // 仅 401（未登录/登录过期）才通知父窗口跳登录，避免服务端 500、网络抖动误踢用户
+      if (msg === 'Request failed with status code 401') {
+        this.notifyNotLogin()
+        this.$message.error('登录已过期，请重新登录')
+        return
+      }
       this.$message.error(msg)
     },
     onExceed: function () {

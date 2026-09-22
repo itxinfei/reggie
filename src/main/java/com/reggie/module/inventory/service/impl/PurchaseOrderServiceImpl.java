@@ -116,6 +116,15 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<PurchaseOrderMapper, P
     }
 
     /**
+     * 带凭证创建采购单：重写接口默认方法并加事务，保证"建单 + 回填凭证"两次写在同一事务内完成。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PurchaseOrder createOrder(Long supplierId, String operator, String remark, String voucherImages) {
+        return PurchaseOrderService.super.createOrder(supplierId, operator, remark, voucherImages);
+    }
+
+    /**
      * 新增 detail。
      * @param orderId 参数 orderId
      * @param materialId 参数 materialId

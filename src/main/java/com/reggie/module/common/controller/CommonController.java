@@ -278,8 +278,9 @@ public class CommonController {
             File baseDir = new File(basePath).getCanonicalFile();
             File targetFile = new File(baseDir, normalizedPath).getCanonicalFile();
 
-            // 校验目标路径是否在允许的基础路径内
-            if (!targetFile.getPath().startsWith(baseDir.getPath())) {
+            // 校验目标路径是否在允许的基础路径内（须带上分隔符，避免 uploads-xxx 等同级目录被误判为子路径）
+            if (!targetFile.equals(baseDir)
+                    && !targetFile.getPath().startsWith(baseDir.getPath() + File.separator)) {
                 log.warn("路径穿越攻击被拦截: name={}, resolved={}", name, targetFile.getPath());
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "非法路径访问");
                 return;

@@ -4,6 +4,8 @@ import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.LogMaskUtils;
@@ -61,6 +63,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -287,24 +290,35 @@ public class EmployeeController {
     @Parameter(name = "id", description = "员工ID", required = true)
     public R<String> badgeQrCode(@PathVariable Long id) {
         Employee employee = employeeService.getById(id);
-        if (employee == null) {
+        // 租户隔离：仅允许访问当前租户员工。不存在与跨租户返回相同措辞，避免形成枚举 oracle
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (employee == null
+                || employee.getTenantId() == null
+                || currentTenantId == null
+                || !employee.getTenantId().equals(currentTenantId)) {
             return R.error("员工不存在");
         }
-        StringBuilder content = new StringBuilder();
-        content.append("{\"type\":\"employee_badge\"");
-        content.append(",\"id\":").append(employee.getId());
+        // 用 Jackson 序列化工牌内容，避免手工拼接 JSON 时字段未转义被注入/伪造
+        Map<String, Object> badge = new LinkedHashMap<String, Object>();
+        badge.put("type", "employee_badge");
+        badge.put("id", employee.getId());
         if (employee.getJobNumber() != null && !employee.getJobNumber().isEmpty()) {
-            content.append(",\"jobNumber\":\"").append(employee.getJobNumber()).append("\"");
+            badge.put("jobNumber", employee.getJobNumber());
         }
-        content.append(",\"name\":\"").append(employee.getName()).append("\"");
+        badge.put("name", employee.getName());
         if (employee.getPosition() != null && !employee.getPosition().isEmpty()) {
-            content.append(",\"position\":\"").append(employee.getPosition()).append("\"");
+            badge.put("position", employee.getPosition());
         }
-        if (employee.getTenantId() != null) {
-            content.append(",\"tenantId\":").append(employee.getTenantId());
+        badge.put("tenantId", employee.getTenantId());
+
+        String content;
+        try {
+            content = new ObjectMapper().writeValueAsString(badge);
+        } catch (JsonProcessingException e) {
+            log.error("工牌内容序列化失败: employeeId={}", id, e);
+            return R.error("二维码生成失败，请稍后重试");
         }
-        content.append("}");
-        String dataUri = qrCodeUtil.generateDataUri(content.toString());
+        String dataUri = qrCodeUtil.generateDataUri(content);
         if (dataUri == null) {
             return R.error("二维码生成失败，请稍后重试");
         }

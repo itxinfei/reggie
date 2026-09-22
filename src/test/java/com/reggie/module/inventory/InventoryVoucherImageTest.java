@@ -6,6 +6,7 @@ import com.reggie.module.inventory.model.PurchaseOrder;
 import com.reggie.module.inventory.model.StockCheck;
 import com.reggie.module.inventory.model.StockRecord;
 import com.reggie.module.inventory.model.Supplier;
+import com.reggie.enums.StockRecordType;
 import com.reggie.module.inventory.service.MaterialService;
 import com.reggie.module.inventory.service.PurchaseOrderService;
 import com.reggie.module.inventory.service.StockCheckService;
@@ -118,6 +119,21 @@ public class InventoryVoucherImageTest {
 
         PurchaseOrder found = purchaseOrderService.getById(order.getId());
         assertEquals(MULTI, found.getVoucherImages());
-        assertTrue(found.getVoucherImages().split(",").length == 2);
+        assertEquals(2, found.getVoucherImages().split(",").length);
+    }
+
+    @Test
+    void testStockOutVoucherImages() {
+        Material material = prepareMaterial("食用油");
+        // 先足量入库（不带凭证），再出库并携带凭证
+        stockRecordService.stockIn(material.getId(), new BigDecimal("50"),
+                new BigDecimal("10.00"), null, "采购入库", "admin", null);
+        stockRecordService.stockOut(material.getId(), new BigDecimal("10"),
+                null, "领用出库", "admin", MULTI);
+
+        List<StockRecord> outs = stockRecordService.lambdaQuery()
+                .eq(StockRecord::getType, StockRecordType.OUT.getValue()).list();
+        assertEquals(1, outs.size());
+        assertEquals(MULTI, outs.get(0).getVoucherImages());
     }
 }

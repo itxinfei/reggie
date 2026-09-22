@@ -429,6 +429,10 @@
             // 修改点：加载三态修复（2026-08-31）——列表加载失败仅记录日志、不弹全局遮屏 toast；
             // loading 由 finally 复位，保证骨架屏正常退出、异常态与空态区分
             console.warn('加载会员列表失败:', e)
+            // 整站请求 reject（断网/服务不可用）且本次本应加载统计时，也置失败态，与"真实为0"区分
+            if (reloadStats) {
+              self.statsError = true
+            }
           } finally {
             this.loading = false
           }

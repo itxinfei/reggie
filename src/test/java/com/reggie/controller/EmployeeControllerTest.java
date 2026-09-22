@@ -296,6 +296,120 @@ public class EmployeeControllerTest extends BaseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
+
+    /** 直接落库一个他租户（tenantId=2）员工，用于跨租户访问测试 */
+    private Employee prepareOtherTenantEmployee() {
+        Employee other = new Employee();
+        other.setId(50L);
+        other.setUsername("othertenant");
+        other.setName("他租户员工");
+        other.setPassword(PasswordUtils.encodePassword("123456"));
+        other.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
+        other.setPhone("13500135111");
+        other.setStatus(1);
+        other.setSex("1");
+        other.setRole(0);
+        other.setTenantId(2L);
+        other.setJobNumber("X001");
+        employeeService.save(other);
+        return other;
+    }
+
+    @Test
+    void testBadgeQrcodeCrossTenantRejected() throws Exception {
+        prepareOtherTenantEmployee();
+        // 当前租户为 1，访问租户 2 员工工牌应被拒绝，且措辞与"不存在"一致（无枚举 oracle）
+        mockMvc.perform(get("/employee/badge-qrcode/50")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("员工不存在"));
+    }
+
+    @Test
+    void testBadgeQrcodeSameTenantAllowed() throws Exception {
+        prepareEmployeeWithJobNumber(2L, "emp1", "EMP001");
+        mockMvc.perform(get("/employee/badge-qrcode/2")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value(
+                        org.hamcrest.Matchers.startsWith("data:image")));
+    }
+
+    @Test
+    void testSaveBlankJobNumberNormalizedToNull() throws Exception {
+        MockHttpServletRequestBuilder builder = post("/employee")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L)
+                .with(request -> {
+                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("roleKey", "SUPER_ADMIN");
+                    return request;
+                })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"blankjob\",\"name\":\"空工号\",\"phone\":\"13700137005\",\"sex\":\"1\",\"jobNumber\":\"   \"}");
+        mockMvc.perform(withCsrfToken(mockMvc, builder))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        Employee saved = employeeService.lambdaQuery().eq(Employee::getUsername, "blankjob").one();
+        org.junit.jupiter.api.Assertions.assertNull(saved.getJobNumber());
+    }
+
+    @Test
+    void testUpdateWithOwnJobNumberAllowed() throws Exception {
+        // 先给 admin 设工号 EMP010
+        mockMvc.perform(withCsrfToken(mockMvc, put("/employee")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L)
+                .with(request -> {
+                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("roleKey", "SUPER_ADMIN");
+                    return request;
+                })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":1,\"name\":\"管理员\",\"jobNumber\":\"EMP010\"}")))
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 再次提交自己原工号，excludeId 排除自身不应误报冲突
+        mockMvc.perform(withCsrfToken(mockMvc, put("/employee")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L)
+                .with(request -> {
+                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("roleKey", "SUPER_ADMIN");
+                    return request;
+                })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":1,\"name\":\"管理员\",\"jobNumber\":\"EMP010\"}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+    }
+
+    @Test
+    void testSameJobNumberAllowedAcrossTenants() throws Exception {
+        // 直接落库：租户1与租户2各有一个工号 EMP020，复合唯一域为租户内，应共存不冲突
+        prepareEmployeeWithJobNumber(2L, "empA", "EMP020");
+        Employee other = new Employee();
+        other.setId(60L);
+        other.setUsername("empB");
+        other.setName("他租户");
+        other.setPassword(PasswordUtils.encodePassword("123456"));
+        other.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
+        other.setPhone("13500135060");
+        other.setStatus(1);
+        other.setSex("1");
+        other.setRole(0);
+        other.setTenantId(2L);
+        other.setJobNumber("EMP020");
+        employeeService.save(other);
+
+        org.junit.jupiter.api.Assertions.assertEquals(
+                "EMP020", employeeService.getById(60L).getJobNumber());
+    }
 }
 
 

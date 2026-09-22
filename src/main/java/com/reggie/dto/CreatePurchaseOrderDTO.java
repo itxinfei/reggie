@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 
 /**
  * 创建采购单请求DTO
@@ -26,5 +27,6 @@ public class CreatePurchaseOrderDTO {
     private String remark;
 
     @Schema(description = "凭证图片（逗号分隔相对路径，最多5张）")
+    @Size(max = 1000, message = "凭证图片信息过长")
     private String voucherImages;
 }

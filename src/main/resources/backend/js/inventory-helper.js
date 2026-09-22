@@ -45,11 +45,15 @@ window.RgInventoryHelper = {
     var promise = this.employeeNameCache
       ? Promise.resolve(this.employeeNameCache)
       : $axios({ url: '/employee/options', method: 'get' }).then(function (res) {
-          if (res && String(res.code) === '1' && res.data) return res.data.names || []
+          if (res && String(res.code) === '1' && res.data) {
+            // 仅成功才缓存，避免首次请求失败后把空数组长期缓存导致候选一直为空
+            var names = res.data.names || []
+            self.employeeNameCache = names
+            return names
+          }
           return []
         }).catch(function () { return [] })
     return promise.then(function (names) {
-      self.employeeNameCache = names
       var q = String(query || '').trim()
       var arr = names
       if (q) arr = arr.filter(function (n) { return n.indexOf(q) >= 0 })

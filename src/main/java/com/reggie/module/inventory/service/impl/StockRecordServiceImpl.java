@@ -56,6 +56,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     @Transactional(rollbackFor = Exception.class)
     public void stockIn(Long materialId, BigDecimal qty, BigDecimal unitPrice, Long bizId, String remark,
             String operator, String voucherImages) {
+        voucherImages = normalizeVoucher(voucherImages);
         if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             throw new CustomException("入库数量必须大于0");
         }
@@ -92,6 +93,7 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
     @Transactional(rollbackFor = Exception.class)
     public void stockOut(Long materialId, BigDecimal qty, Long bizId, String remark, String operator,
             String voucherImages) {
+        voucherImages = normalizeVoucher(voucherImages);
         if (qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             throw new CustomException("出库数量必须大于0");
         }
@@ -113,6 +115,17 @@ public class StockRecordServiceImpl extends ServiceImpl<StockRecordMapper, Stock
         record.setOperator(operator);
         record.setVoucherImages(voucherImages);
         save(record);
+    }
+
+    /**
+     * 凭证图片归一：null/纯空白 → null，否则去除首尾空白。避免空路径被前端拼成坏图。
+     */
+    private String normalizeVoucher(String voucherImages) {
+        if (voucherImages == null) {
+            return null;
+        }
+        String trimmed = voucherImages.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     /**

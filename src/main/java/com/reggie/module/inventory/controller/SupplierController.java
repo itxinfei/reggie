@@ -118,6 +118,8 @@ public class SupplierController {
         exist.setPhone(supplier.getPhone());
         exist.setAddress(supplier.getAddress());
         exist.setStatus(supplier.getStatus());
+        // 资质图片：前端编辑弹窗始终回传（空串表示清除），须纳入白名单否则改动被静默丢弃
+        exist.setLicenseImages(supplier.getLicenseImages());
         supplierService.updateById(exist);
         return R.success("修改供应商成功");
     }
