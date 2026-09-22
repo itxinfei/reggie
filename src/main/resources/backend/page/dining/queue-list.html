@@ -124,10 +124,13 @@
             <el-option :value="12" label="12人"></el-option>
           </el-select>
         </div>
-        <el-button type="text" size="small" @click="showTakeDialog" aria-label="新增取号">+ 取号</el-button>
         <el-button type="text" size="small" class="call-bar__reset" @click="callSeatCount = null">重置筛选</el-button>
         <span class="call-bar__tip" v-if="callSeatCount">按 {{ callSeatCount }} 人桌筛选下一位</span>
         <span class="call-bar__tip" v-else>呼叫等待队列中的下一位顾客</span>
+      </div>
+      <!-- 取号入口常驻：空队列（含首屏/统计加载失败）时也必须可取号，否则首条排队记录无法创建 -->
+      <div class="call-bar">
+        <el-button type="primary" size="small" @click="showTakeDialog" aria-label="新增取号">+ 取号</el-button>
       </div>
       </div><!-- /bar-row -->
 

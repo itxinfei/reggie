@@ -376,7 +376,11 @@
         },
         // 修改点：table-bar 组件回调桥接
         handleSearch(params) {
-          if (params && params.dateRange) this.dateRange = params.dateRange
+          // table-bar 的 daterange 实际下发 dateRangeBegin/dateRangeEnd（yyyy-MM-dd HH:mm:ss），
+          // 本页 dateRange 口径为纯日期，截取前 10 位回填，否则日期筛选永不生效
+          if (params && params.dateRangeBegin && params.dateRangeEnd) {
+            this.dateRange = [String(params.dateRangeBegin).substring(0, 10), String(params.dateRangeEnd).substring(0, 10)]
+          }
           this.fetchData()
         },
         handleReset() {

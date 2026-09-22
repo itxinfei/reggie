@@ -478,6 +478,9 @@
       data() {
         return {
           loading: false, counts: 0, page: 1, pageSize: 10, tableData: [],
+          // 统计卡数据：必须在 data 声明才是响应式（此前仅在 init 中 this.stats 赋值，
+          // statsCards computed 首次计算后缓存，统计恒显 0 直到其他响应式依赖变化才刷新）
+          stats: { totalOrders: 0, pendingReceive: 0, pendingApprove: 0, monthAmount: 0 },
           // 修改点：补声明 submitting —— 模板 :submit-loading="submitting" 引用了它但从未定义，
           // 导致 Vue 渲染告警且提交按钮无 loading 态（可重复点击造成重复下单）
           submitting: false,

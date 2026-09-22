@@ -387,7 +387,10 @@
           },
           // 修改点：table-bar 组件回调桥接
           handleSearch: function(params) {
-            if (params && params.dateRange) this.dateRange = params.dateRange;
+            // table-bar daterange 下发 dateRangeBegin/End（yyyy-MM-dd HH:mm:ss），本页口径纯日期，截取前10位
+            if (params && params.dateRangeBegin && params.dateRangeEnd) {
+              this.dateRange = [String(params.dateRangeBegin).substring(0, 10), String(params.dateRangeEnd).substring(0, 10)];
+            }
             this.loadData();
           },
           handleReset: function() {
