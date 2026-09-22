@@ -1,10 +1,12 @@
 package com.reggie.module.payment.channel;
 
-import java.util.Map;
-
 /**
  * <p>
- * 支付渠道接口（策略模式），定义与第三方支付平台的交互规范。
+ * 支付渠道接口（策略模式），定义与第三方支付平台收款/退款主流程的交互规范。
+ * </p>
+ * <p>
+ * 异步通知的解析与验签已拆分到 {@link MapNotifyCapable}（存量表单/mock 渠道）
+ * 或独立通知解析器（真实 APIv3 渠道），本接口只聚焦下单、查询、退款。
  * </p>
  *
  * @author 心飞为你飞
@@ -32,24 +34,4 @@ public interface PaymentChannel {
      * @return 退款响应
      */
     RefundResponse refund(RefundRequest request);
-    /**
-     * 处理支付回调通知
-     *
-     * @param params 回调参数
-     * @return 支付响应
-     */
-    PayResponse handleNotify(Map<String, String> params);
-
-    /**
-     * 校验支付回调通知签名（防回调伪造）。
-     * <p>
-     * 回调接口为外部无登录态请求，必须先校验签名再处理业务，禁止直接信任回调参数。
-     * 生产环境必须使用渠道官方 SDK 的签名校验（如支付宝 {@code AlipaySignature.rsaCheckV1}、
-     * 微信 {@code WxPayUtil.verifyNotifySign}）配合平台公钥/密钥，严禁返回恒真。
-     * </p>
-     *
-     * @param params 回调参数
-     * @return true=签名校验通过；false=校验失败，调用方应拒绝处理
-     */
-    boolean verifyNotifySign(Map<String, String> params);
 }

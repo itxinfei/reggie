@@ -52,11 +52,43 @@ public interface RefundRecordService extends IService<RefundRecord> {
     RefundRecord createRefund(Long paymentOrderId, BigDecimal amount, String reason, String refundNo);
 
     /**
-     * 更新退款记录状态为成功（渠道退款成功后调用，修复原先记录永远停留在 PENDING 的问题）。
+     * 更新退款记录状态为成功（渠道退款同步成功后调用，修复原先记录永远停留在 PENDING 的问题）。
      *
      * @param refundNo 退款流水号
      */
     void markRefundSuccess(String refundNo);
+
+    /**
+     * 标记退款为处理中：PENDING → PROCESSING（渠道已受理但未定终态，如微信退款同步返回 PROCESSING）。
+     * <p>CAS 更新，仅当当前状态为 PENDING 时生效；终态以退款异步回调为准。</p>
+     *
+     * @param refundNo 退款流水号
+     * @return 是否迁移成功（记录不存在或状态非 PENDING 时返回 false）
+     */
+    boolean markRefundProcessing(String refundNo);
+
+    /**
+     * 处理中退款确认成功：PROCESSING → SUCCESS，并回填退款时间（退款异步回调 SUCCESS 时调用）。
+     * <p>
+     * CAS 更新，仅当当前状态为 PROCESSING 时生效。返回 true 表示<b>首次</b>确认成功，
+     * 调用方据此执行一次性的全额联动（支付单/订单/库存/积分）；返回 false 表示该单此前
+     * 已是终态（重复回调），必须幂等跳过联动。
+     * </p>
+     *
+     * @param refundNo 退款流水号
+     * @return 是否首次成功（PROCESSING→SUCCESS）；false 表示非首次或记录不存在
+     */
+    boolean markProcessingToSuccess(String refundNo);
+
+    /**
+     * 处理中退款确认失败：PROCESSING → FAIL（退款异步回调 CLOSED/ABNORMAL 等异常终态时调用），
+     * 供人工核对渠道后台后处理。CAS 更新，仅 PROCESSING 可迁移。
+     *
+     * @param refundNo 退款流水号
+     * @param reason   失败原因（渠道终态/错误描述）
+     * @return 是否迁移成功
+     */
+    boolean markProcessingToFail(String refundNo, String reason);
 
     /**
      * 查询某支付单已成功退款的总金额（用于退款累计超额校验）。

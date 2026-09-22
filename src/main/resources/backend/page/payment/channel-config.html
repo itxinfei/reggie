@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>支付渠道配置 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
+</head>
+<body>
+<!-- ====== 支付渠道配置页 ====== -->
+<!-- 功能：按租户管理微信支付(APIv3)/支付宝接入参数，支持新增/编辑/启停/删除/测连通；密钥加密落库、留空不改 -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+<div class="dashboard-container" id="payment-channel-app">
+  <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">支付渠道配置</h1>
+    <!-- 统计卡片：点击 全部/微信/支付宝/已启用 快速筛选 -->
+    <stat-cards :cards="statsCards" :active-key.sync="activeFilter" @card-click="onCardClick"></stat-cards>
+
+    <!-- 工具栏：添加渠道 -->
+    <table-bar
+      :show-search-btns="false"
+      :actions="barActions"
+      @action="onBarAction"
+    ></table-bar>
+
+    <!-- 数据表格（空态走 crud-table 内置 empty-hint） -->
+    <crud-table
+      :data="tableData"
+      :columns="columns"
+      :page="page"
+      :page-size="pageSize"
+      :total="counts"
+      :loading="loading"
+      :show-actions="true"
+      :actions-width="240"
+      :actions-fixed="true"
+      empty-hint="暂无支付渠道，点击上方「添加渠道」开始接入微信支付 / 支付宝"
+      @page-change="handlePageChange"
+      @size-change="handleSizeChange"
+    >
+        <!-- 渠道：标签展示 -->
+        <template #col-channel="{ row }">
+          <el-tag size="small" :type="row.channel === 'WECHAT' ? 'success' : 'primary'">
+            {{ channelText(row.channel) }}
+          </el-tag>
+        </template>
+        <!-- 商户标识：微信展示商户号，支付宝展示 APPID -->
+        <template #col-merchant="{ row }">
+          <span>{{ row.channel === 'WECHAT' ? row.wxMchId : row.aliAppId }}</span>
+        </template>
+        <!-- 状态：启用/停用 -->
+        <template #col-enabled="{ row }">
+          <el-tag :type="row.enabled === 1 ? 'success' : 'info'" size="small">
+            {{ row.enabled === 1 ? '启用' : '停用' }}
+          </el-tag>
+        </template>
+        <!-- 操作列：编辑 / 测连通 / 启停 / 更多-删除 -->
+        <template #actions="{ row }">
+          <el-button type="text" size="small" class="btn-view" @click="openEdit(row)">编辑</el-button>
+          <el-button type="text" size="small" class="text-info" :loading="testingId === row.id" @click="testConnection(row)">测连通</el-button>
+          <el-button type="text" size="small" :class="row.enabled === 1 ? 'btn-warning' : 'btn-success'" @click="toggle(row)">
+            {{ row.enabled === 1 ? '停用' : '启用' }}
+          </el-button>
+          <el-dropdown trigger="click" @command="(cmd) => cmd === 'delete' && remove(row)" @click.native.stop>
+            <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item command="delete" icon="ri-delete-bin-line" style="color:var(--color-danger);">删除</el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+        </template>
+      </crud-table>
+  </main>
+
+  <!-- 新增/编辑对话框 -->
+  <crud-dialog :show-submit="true" :show-cancel="true"
+    :title="dialogTitle"
+    :visible.sync="dialogVisible"
+    size="xl"
+    :close-on-click-modal="false"
+    :submit-loading="submitting"
+    @submit="submit"
+  >
+    <el-form :model="form" :rules="formRules" ref="formRef" label-width="110px">
+      <el-row :gutter="16">
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="支付渠道" prop="channel">
+            <el-select v-model="form.channel" placeholder="请选择支付渠道" style="width:100%;" :disabled="action === 'edit'">
+              <el-option label="微信支付（APIv3）" value="WECHAT"></el-option>
+              <el-option label="支付宝" value="ALIPAY"></el-option>
+            </el-select>
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="配置名称" prop="configName">
+            <el-input v-model="form.configName" placeholder="如：微信支付-总店" maxlength="128"></el-input>
+          </el-form-item>
+        </el-col>
+      </el-row>
+
+      <!-- ══ 微信参数 ══ -->
+      <template v-if="form.channel === 'WECHAT'">
+        <el-row :gutter="16">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="AppID" prop="wxAppId">
+              <el-input v-model="form.wxAppId" placeholder="公众号/小程序/应用 AppID" maxlength="64"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="商户号" prop="wxMchId">
+              <el-input v-model="form.wxMchId" placeholder="微信支付商户号 mchid" maxlength="64"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16">
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="证书序列号">
+              <el-input v-model="form.wxMchCertSerialNo" placeholder="商户证书序列号（证书模式）" maxlength="128"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :xs="24" :sm="12">
+            <el-form-item label="公钥ID">
+              <el-input v-model="form.wxPublicKeyId" placeholder="支付公钥 ID（公钥模式，可选）" maxlength="128"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="APIv3密钥" prop="wxApiV3Key">
+          <el-input v-model="form.wxApiV3Key" type="password" show-password placeholder="留空则不修改原值" maxlength="128"></el-input>
+        </el-form-item>
+        <el-form-item label="商户私钥" prop="wxMchPrivateKey">
+          <el-input v-model="form.wxMchPrivateKey" type="textarea" :rows="4" placeholder="留空则不修改原值；粘贴 apiclient_key.pem 完整内容（含 BEGIN/END）"></el-input>
+        </el-form-item>
+        <el-form-item label="支付公钥">
+          <el-input v-model="form.wxPublicKey" type="textarea" :rows="3" placeholder="公钥模式粘贴微信支付公钥 PEM（可选）"></el-input>
+        </el-form-item>
+      </template>
+
+      <!-- ══ 支付宝参数 ══ -->
+      <template v-if="form.channel === 'ALIPAY'">
+        <el-form-item label="AppID" prop="aliAppId">
+          <el-input v-model="form.aliAppId" placeholder="支付宝开放平台应用 APPID" maxlength="64"></el-input>
+        </el-form-item>
+        <el-form-item label="应用私钥" prop="aliPrivateKey">
+          <el-input v-model="form.aliPrivateKey" type="textarea" :rows="4" placeholder="留空则不修改原值；粘贴应用私钥完整内容（含 BEGIN/END）"></el-input>
+        </el-form-item>
+        <el-form-item label="支付宝公钥">
+          <el-input v-model="form.aliPublicKey" type="textarea" :rows="4" placeholder="粘贴支付宝公钥完整内容（含 BEGIN/END）"></el-input>
+        </el-form-item>
+      </template>
+
+      <!-- ══ 回调与状态 ══ -->
+      <el-row :gutter="16">
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="支付回调地址" prop="payNotifyUrl">
+            <el-input v-model="form.payNotifyUrl" placeholder="https://域名/api/payment/notify/渠道" maxlength="256"></el-input>
+          </el-form-item>
+        </el-col>
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="退款回调地址">
+            <el-input v-model="form.refundNotifyUrl" placeholder="微信退款回调；支付宝可不填" maxlength="256"></el-input>
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-form-item label="启用">
+        <el-switch v-model="form.enabled" :active-value="1" :inactive-value="0"></el-switch>
+      </el-form-item>
+      <el-form-item label="备注">
+        <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="500"></el-input>
+      </el-form-item>
+    </el-form>
+  </crud-dialog>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js?v=20260915"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js?v=20260915c"></script>
+<script src="../../js/components.js?v=20260915c"></script>
+<script src="../../api/payment.js?v=20260921"></script>
+<script>
+  new Vue({
+    el: '#payment-channel-app',
+    // 列表通用 Mixin：提供 page/pageSize/counts/loading 与翻页处理
+    mixins: [window.ReggieListMixin],
+    data() {
+      return {
+        tableData: [],
+        // 当前激活卡片（'' 全部 / WECHAT / ALIPAY / '1' 已启用）
+        activeFilter: '',
+        stats: { total: 0, enabledCount: 0, disabledCount: 0, wechatCount: 0, alipayCount: 0 },
+        columns: [
+          { prop: 'configName', label: '配置名称', minWidth: 160, align: 'center' },
+          { prop: 'channel', label: '渠道', width: 130, align: 'center', slot: true },
+          { prop: 'merchant', label: '商户号 / AppID', minWidth: 180, align: 'center', slot: true },
+          { prop: 'enabled', label: '状态', width: 90, align: 'center', slot: true }
+        ],
+        action: '',
+        barActions: [
+          { key: 'add', text: '添加渠道', type: 'primary', icon: 'ri-add-line' }
+        ],
+        submitting: false,
+        dialogVisible: false,
+        // 正在测连通的行 ID（按钮 loading）
+        testingId: null,
+        form: this.emptyForm()
+      }
+    },
+    computed: {
+      dialogTitle() {
+        return this.action === 'edit' ? '编辑支付渠道' : '添加支付渠道'
+      },
+      // 4 张可点击卡片：全部 / 微信 / 支付宝 / 已启用
+      statsCards() {
+        var s = this.stats || {}
+        return [
+          { key: '', icon: 'ri-bank-card-line', label: '全部渠道', value: s.total || 0, color: 'primary', clickable: true, active: this.activeFilter === '' },
+          { key: 'WECHAT', icon: 'ri-wechat-line', label: '微信支付', value: s.wechatCount || 0, color: 'success', clickable: true, active: this.activeFilter === 'WECHAT' },
+          { key: 'ALIPAY', icon: 'ri-money-cny-circle-line', label: '支付宝', value: s.alipayCount || 0, color: 'primary', clickable: true, active: this.activeFilter === 'ALIPAY' },
+          { key: '1', icon: 'ri-checkbox-circle-line', label: '已启用', value: s.enabledCount || 0, color: 'info', clickable: true, active: this.activeFilter === '1' }
+        ]
+      },
+      // 校验规则：三项密钥在新增时必填、编辑时留空即不修改
+      formRules() {
+        var isAdd = this.action !== 'edit'
+        var rules = {
+          channel: [{ required: true, message: '请选择支付渠道', trigger: 'change' }],
+          configName: [
+            { required: true, message: '请输入配置名称', trigger: 'blur' },
+            { max: 128, message: '配置名称最多128个字符', trigger: 'blur' }
+          ],
+          payNotifyUrl: [{ required: true, message: '请输入支付回调地址', trigger: 'blur' }]
+        }
+        if (this.form.channel === 'WECHAT') {
+          rules.wxAppId = [{ required: true, message: '请输入 AppID', trigger: 'blur' }]
+          rules.wxMchId = [{ required: true, message: '请输入商户号', trigger: 'blur' }]
+          if (isAdd) {
+            rules.wxApiV3Key = [{ required: true, message: '请输入 APIv3 密钥', trigger: 'blur' }]
+            rules.wxMchPrivateKey = [{ required: true, message: '请输入商户私钥', trigger: 'blur' }]
+          }
+        } else {
+          rules.aliAppId = [{ required: true, message: '请输入支付宝 AppID', trigger: 'blur' }]
+          if (isAdd) {
+            rules.aliPrivateKey = [{ required: true, message: '请输入应用私钥', trigger: 'blur' }]
+          }
+        }
+        return rules
+      }
+    },
+    created() {
+      this.fetchData()
+    },
+    methods: {
+      /* ── 表单工具 ── */
+      emptyForm() {
+        return {
+          id: null, configName: '', channel: 'WECHAT',
+          wxAppId: '', wxMchId: '', wxApiV3Key: '', wxMchCertSerialNo: '',
+          wxMchPrivateKey: '', wxPublicKeyId: '', wxPublicKey: '',
+          aliAppId: '', aliPrivateKey: '', aliPublicKey: '',
+          payNotifyUrl: '', refundNotifyUrl: '', enabled: 1, remark: ''
+        }
+      },
+      channelText(ch) {
+        return ch === 'WECHAT' ? '微信支付' : (ch === 'ALIPAY' ? '支付宝' : ch)
+      },
+      /* ── 数据加载 ── */
+      // reloadStats=true（初始/增删改/启停后）并行重载卡片；卡片筛选/翻页传 false
+      async fetchData(reloadStats) {
+        if (reloadStats === undefined) { reloadStats = true }
+        this.loading = true
+        var params = { page: this.page, pageSize: this.pageSize }
+        // 卡片筛选：渠道（WECHAT/ALIPAY）或启用状态（'1'）
+        if (this.activeFilter === 'WECHAT' || this.activeFilter === 'ALIPAY') {
+          params.channel = this.activeFilter
+        } else if (this.activeFilter === '1' || this.activeFilter === '0') {
+          params.enabled = Number(this.activeFilter)
+        }
+        try {
+          var requests = [window.paymentChannelApi.list(params)]
+          if (reloadStats) { requests.push(this.loadStats()) }
+          var results = await Promise.all(requests)
+          var res = results[0]
+          if (String(res.code) === '1' && res.data) {
+            this.tableData = res.data.records || []
+            this.counts = Number(res.data.total) || 0
+          } else {
+            ReggieUI.error((res && res.msg) || '加载支付渠道失败')
+          }
+          if (reloadStats) {
+            var statsRes = results[1]
+            if (statsRes && statsRes.code === 1 && statsRes.data) {
+              this.stats = statsRes.data
+            }
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') {
+            ReggieUI.error('加载支付渠道失败，请刷新重试')
+          }
+        } finally {
+          this.loading = false
+        }
+      },
+      async loadStats() {
+        try {
+          var res = await window.paymentChannelApi.stats()
+          if (res && String(res.code) === '1' && res.data) {
+            return { code: 1, data: res.data }
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') {
+            console.warn('加载支付渠道统计失败:', err)
+          }
+        }
+        return { code: 0 }
+      },
+      /* ── 筛选与分页 ── */
+      onBarAction(payload) {
+        if (payload.key === 'add') { this.openAdd() }
+      },
+      onCardClick(payload) {
+        this.activeFilter = payload.activeKey
+        this.page = 1
+        this.fetchData(false)
+      },
+      handlePageChange(p) {
+        this.page = p.page
+        this.fetchData(false)
+      },
+      handleSizeChange(s) {
+        this.pageSize = s
+        this.page = 1
+        this.fetchData(false)
+      },
+      /* ── 弹窗表单 ── */
+      openAdd() {
+        this.action = 'add'
+        this.form = this.emptyForm()
+        this.dialogVisible = true
+        this.$nextTick(() => {
+          this.$refs.formRef && this.$refs.formRef.clearValidate()
+        })
+      },
+      // 编辑：明文/标识回填，三项密钥恒置空（提交留空即不修改原密文）
+      openEdit(row) {
+        this.action = 'edit'
+        this.form = {
+          id: row.id, configName: row.configName, channel: row.channel,
+          wxAppId: row.wxAppId, wxMchId: row.wxMchId, wxApiV3Key: '',
+          wxMchCertSerialNo: row.wxMchCertSerialNo, wxMchPrivateKey: '',
+          wxPublicKeyId: row.wxPublicKeyId, wxPublicKey: row.wxPublicKey,
+          aliAppId: row.aliAppId, aliPrivateKey: '', aliPublicKey: row.aliPublicKey,
+          payNotifyUrl: row.payNotifyUrl, refundNotifyUrl: row.refundNotifyUrl,
+          enabled: row.enabled, remark: row.remark
+        }
+        this.dialogVisible = true
+        this.$nextTick(() => {
+          this.$refs.formRef && this.$refs.formRef.clearValidate()
+        })
+      },
+      submit() {
+        this.$refs.formRef.validate(async (valid) => {
+          if (!valid) return
+          this.submitting = true
+          try {
+            var api = this.action === 'edit' ? window.paymentChannelApi.update : window.paymentChannelApi.add
+            var res = await api(this.form)
+            if (res && String(res.code) === '1') {
+              ReggieUI.success('保存成功')
+              this.dialogVisible = false
+              this.fetchData()
+            } else {
+              ReggieUI.error((res && res.msg) || '保存失败')
+            }
+          } catch (err) {
+            ReggieUI.error('保存失败，请重试')
+          } finally {
+            this.submitting = false
+          }
+        })
+      },
+      /* ── 测连通（不写库/缓存；仅传 ID+渠道，后端按库内密文补齐） ── */
+      async testConnection(row) {
+        this.testingId = row.id
+        try {
+          var res = await window.paymentChannelApi.testConnection({ id: row.id, channel: row.channel })
+          if (res && String(res.code) === '1') {
+            ReggieUI.success(res.data || res.msg || '连通正常')
+          } else {
+            ReggieUI.error((res && res.msg) || '连通测试失败')
+          }
+        } catch (err) {
+          if (err.message !== 'NOTLOGIN') {
+            ReggieUI.error('连通测试失败，请重试')
+          }
+        } finally {
+          this.testingId = null
+        }
+      },
+      /* ── 启停 / 删除 ── */
+      toggle(row) {
+        var enabled = row.enabled === 1 ? 0 : 1
+        var tip = enabled === 1 ? '确认启用该支付渠道？' : '确认停用该支付渠道？'
+        ReggieUI.confirm(tip, '提示', { type: 'warning' }).then(async () => {
+          var res = await window.paymentChannelApi.toggle(row.id, enabled)
+          if (res && String(res.code) === '1') {
+            ReggieUI.success(enabled === 1 ? '已启用' : '已停用')
+            this.fetchData()
+          } else {
+            ReggieUI.error('操作失败')
+          }
+        }).catch((err) => {
+          if (err instanceof Error) { ReggieUI.error(err.message || '操作失败') }
+        })
+      },
+      remove(row) {
+        ReggieUI.confirm('确认删除该支付渠道？删除后历史支付单仍可追溯，但该渠道不可再用于收款。', '提示', { type: 'warning' }).then(async () => {
+          var res = await window.paymentChannelApi.remove(row.id)
+          if (res && String(res.code) === '1') {
+            ReggieUI.success('已删除')
+            this.fetchData()
+          } else {
+            ReggieUI.error('删除失败')
+          }
+        }).catch((err) => {
+          if (err instanceof Error) { ReggieUI.error(err.message || '删除失败') }
+        })
+      }
+    }
+  })
+</script>
+</body>
+</html>

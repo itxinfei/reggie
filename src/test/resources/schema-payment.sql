@@ -24,9 +24,6 @@ CREATE TABLE IF NOT EXISTS orders (
   dining_type varchar(20) NULL DEFAULT 'OUTSIDE' COMMENT '用餐类型',
   table_id bigint NULL DEFAULT NULL COMMENT '堂食桌台ID',
   table_name varchar(32) NULL DEFAULT NULL COMMENT '堂食桌台名称',
-  queue_id bigint NULL DEFAULT NULL COMMENT '排队记录ID',
-  reservation_id bigint NULL DEFAULT NULL COMMENT '预约记录ID',
-  customer_count int NULL DEFAULT NULL COMMENT '用餐人数',
   idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等键',
   stock_refunded int NULL DEFAULT 0 COMMENT '已退库存数量',
   used_coupon_id bigint NULL DEFAULT NULL COMMENT '优惠券ID',
@@ -125,6 +122,37 @@ CREATE TABLE IF NOT EXISTS refund_record (
 CREATE UNIQUE INDEX IF NOT EXISTS uk_refund_no ON refund_record(refund_no);
 CREATE INDEX IF NOT EXISTS idx_payment_refund ON refund_record(payment_order_id);
 CREATE INDEX IF NOT EXISTS idx_refund_tenant ON refund_record(tenant_id);
+
+-- ==================== 支付渠道配置表 ====================
+CREATE TABLE IF NOT EXISTS payment_channel_config (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  config_name varchar(128) NOT NULL COMMENT '配置名称',
+  channel varchar(20) NOT NULL COMMENT '渠道 WECHAT/ALIPAY',
+  wx_app_id varchar(64) DEFAULT NULL COMMENT '微信appId',
+  wx_mch_id varchar(32) DEFAULT NULL COMMENT '微信商户号',
+  wx_api_v3_key varchar(512) DEFAULT NULL COMMENT '微信APIv3密钥(加密)',
+  wx_mch_cert_serial_no varchar(128) DEFAULT NULL COMMENT '商户证书序列号',
+  wx_mch_private_key varchar(4096) DEFAULT NULL COMMENT '商户私钥(加密)',
+  wx_public_key_id varchar(64) DEFAULT NULL COMMENT '微信支付公钥ID',
+  wx_public_key varchar(2048) DEFAULT NULL COMMENT '微信支付公钥',
+  ali_app_id varchar(64) DEFAULT NULL COMMENT '支付宝APPID',
+  ali_private_key varchar(4096) DEFAULT NULL COMMENT '支付宝应用私钥(加密)',
+  ali_public_key varchar(2048) DEFAULT NULL COMMENT '支付宝公钥',
+  pay_notify_url varchar(500) DEFAULT NULL COMMENT '支付回调地址',
+  refund_notify_url varchar(500) DEFAULT NULL COMMENT '退款回调地址',
+  enabled int NOT NULL DEFAULT 1 COMMENT '启用 0停 1启',
+  remark varchar(500) DEFAULT NULL COMMENT '备注',
+  tenant_id bigint NOT NULL DEFAULT 0 COMMENT '租户ID',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  version int NOT NULL DEFAULT 0 COMMENT '乐观锁',
+  create_time datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  update_time datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  create_user bigint DEFAULT NULL COMMENT '创建人',
+  update_user bigint DEFAULT NULL COMMENT '修改人',
+  PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_pcc_tenant_channel ON payment_channel_config(tenant_id, channel, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_pcc_tenant ON payment_channel_config(tenant_id);
 
 -- 清理测试残留数据
 DELETE FROM refund_record WHERE tenant_id = 1;

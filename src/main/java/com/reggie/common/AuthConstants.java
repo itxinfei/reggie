@@ -92,6 +92,8 @@ public final class AuthConstants {
         // 修复 P2(2026-09-17)：此前遗漏白名单，导致真实支付回调被 LoginCheckFilter 以 NOTLOGIN(401) 拦截，
         // 订单永远无法标记已支付。与 /api/delivery/callback 保持一致，必须匿名放行。
         "/api/payment/notify/**",
+        // 支付渠道退款异步回调（同支付回调，渠道服务端无会话天然匿名；验签/解密在控制器内独立完成）
+        "/api/payment/refund-notify/**",
         // 静态资源目录（图片、上传文件）
         "/images/**",
         "/uploads/**",

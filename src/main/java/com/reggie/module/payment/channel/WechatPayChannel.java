@@ -22,7 +22,7 @@ import java.util.UUID;
  */
 @Slf4j
 @Component
-public class WechatPayChannel implements PaymentChannel {
+public class WechatPayChannel implements PaymentChannel, MapNotifyCapable {
 
     /** 支付配置（回调验签所需 API 密钥、签名类型、mock-mode 开关） */
     @Autowired

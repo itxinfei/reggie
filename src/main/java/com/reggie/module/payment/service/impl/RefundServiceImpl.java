@@ -156,8 +156,16 @@ public class RefundServiceImpl implements RefundService {
             String refundNo = generateRefundNo();
 
             // === 2.3 调用渠道退款（等价抽取，事务外，外部 HTTP 不被事务包裹） ===
-            if (!invokeChannelRefund(latestCheck, refundAmount, reason, refundNo, orderId, paymentOrderId)) {
+            int refundState = invokeChannelRefund(latestCheck, refundAmount, reason, refundNo, orderId,
+                    paymentOrderId);
+            if (refundState == 0) {
                 return false;
+            }
+            if (refundState == 1) {
+                // 渠道处理中（PROCESSING 已登记）：退款已发起、终态以退款异步回调为准，
+                // 此处不做支付单/订单/库存/积分联动，取消流程可继续。
+                log.info("订单取消退款已受理处理中，等待渠道回调: orderId={}, refundNo={}", orderId, refundNo);
+                return true;
             }
 
             // === 3. 事务内本地落库（等价抽取，行锁二次校验 + CAS 防覆盖） ===
@@ -264,9 +272,10 @@ public class RefundServiceImpl implements RefundService {
     }
 
     /**
-     * 调用渠道退款，返回是否成功（失败时已留对账待办痕迹）（等价抽取，降低方法长度）。
+     * 调用渠道退款，返回状态：0=失败、1=渠道处理中（已登记 PROCESSING 记录，终态以退款回调为准）、
+     * 2=同步成功（可继续本地落库）。失败/受理时已分别留对账待办痕迹/PROCESSING 记录。
      */
-    private boolean invokeChannelRefund(PaymentOrder latestCheck, BigDecimal refundAmount, String reason,
+    private int invokeChannelRefund(PaymentOrder latestCheck, BigDecimal refundAmount, String reason,
             String refundNo, Long orderId, Long paymentOrderId) {
         PaymentChannel paymentChannel = paymentChannelFactory.getChannel(latestCheck.getChannel());
         RefundRequest refundRequest = new RefundRequest();
@@ -284,7 +293,22 @@ public class RefundServiceImpl implements RefundService {
             // 渠道调用异常（钱未出）——留对账待办痕迹，供 RefundReconcileTask 扫描告警人工退款，
             // 避免 campaign ENDED 后 scan 不再扫 OPEN 导致永久漏退（M1）
             recordReconcileTraceSafely(latestCheck, refundAmount, "[对账待办]渠道退款调用异常待人工");
-            return false;
+            return 0;
+        }
+        if (refundResponse != null && refundResponse.isProcessing()) {
+            // 微信同步 PROCESSING：仅登记 PROCESSING 记录、不做支付单/订单/库存/积分联动，终态以退款回调为准
+            log.info("订单取消自动退款已受理处理中，登记 PROCESSING：orderId={}, refundNo={}", orderId, refundNo);
+            try {
+                refundRecordService.createRefund(paymentOrderId, refundAmount, reason, refundNo);
+                refundRecordService.markRefundProcessing(refundNo);
+            } catch (Exception ex) {
+                log.error("【严重】退款处理中本地登记失败，需人工核对：orderId={}, refundNo={}",
+                        orderId, refundNo, ex);
+                recordReconcileTraceSafely(latestCheck, refundAmount,
+                        "[对账待办]退款处理中本地登记失败：" + ex.getMessage());
+                return 0;
+            }
+            return 1;
         }
         if (refundResponse == null || !refundResponse.isSuccess()) {
             String errMsg = refundResponse != null ? refundResponse.getErrorMsg() : "无响应";
@@ -292,9 +316,9 @@ public class RefundServiceImpl implements RefundService {
                     orderId, paymentOrderId, errMsg);
             // 渠道拒绝（钱未出）——留对账待办痕迹，供 RefundReconcileTask 扫描告警人工退款（M1）
             recordReconcileTraceSafely(latestCheck, refundAmount, "[对账待办]渠道退款被拒绝待人工：" + errMsg);
-            return false;
+            return 0;
         }
-        return true;
+        return 2;
     }
 
     /**

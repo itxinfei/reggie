@@ -52,4 +52,16 @@ private boolean mockMode = false;
      * 对应微信支付 APIv2 的 sign_type 参数。
      */
     private String wechatSignType = "MD5";
+
+    /**
+     * 生产强制使用环境变量主密钥开关：true 时 REGGIE_PAYMENT_KEY 缺失/非法将拒绝启动，
+     * 防止用代码内置兜底密钥解密数据库中的支付凭据。默认 false，仅在 prod 置 true。
+     */
+    private boolean requireEnvKey = false;
+
+    /**
+     * 支付宝开放平台网关地址。默认正式环境；沙箱联调时在 application.yml 覆盖为沙箱网关。
+     * 网关对所有租户统一，故放全局配置而非按租户存库。
+     */
+    private String alipayGateway = "https://openapi.alipay.com/gateway.do";
 }

@@ -24,7 +24,7 @@ import java.util.UUID;
  */
 @Slf4j
 @Component
-public class AlipayChannel implements PaymentChannel {
+public class AlipayChannel implements PaymentChannel, MapNotifyCapable {
 
     /** 交易号前缀 */
     private static final String TRADE_NO_PREFIX = "ALIPAY_";

@@ -13,7 +13,14 @@ import com.reggie.common.RateLimitType;
 import com.reggie.dto.PayRequestDTO;
 import com.reggie.dto.RefundRequestDTO;
 import com.reggie.module.order.model.Orders;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.reggie.common.ObjectMapperHolder;
+import com.reggie.module.payment.channel.MapNotifyCapable;
 import com.reggie.module.payment.channel.PaymentChannel;
+import com.reggie.module.payment.channel.notify.NotifyRequest;
+import com.reggie.module.payment.channel.notify.NotifyResult;
+import com.reggie.module.payment.channel.notify.NotifyUrlRouter;
+import com.reggie.module.payment.channel.notify.RealNotifyCapable;
 import com.reggie.module.payment.channel.PaymentChannelFactory;
 import com.reggie.module.payment.channel.PayRequest;
 import com.reggie.module.payment.channel.PayResponse;
@@ -36,6 +43,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.annotation.Validated;
@@ -46,6 +55,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import javax.servlet.http.HttpServletRequest;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -83,6 +95,9 @@ public class PaymentController {
     private PaymentChannelFactory paymentChannelFactory;
 
     @Autowired
+    private com.reggie.module.payment.config.PaymentConfigProperties paymentConfigProperties;
+
+    @Autowired
     private RefundService refundService;
 
     @Autowired
@@ -104,6 +119,10 @@ public class PaymentController {
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    /** 退款异步回调处理（微信退款终态通知） */
+    @Autowired
+    private com.reggie.module.payment.service.impl.RefundCallbackService refundCallbackService;
+
     /** 退款分布式锁过期时间（毫秒）：覆盖一次渠道退款 HTTP 调用耗时 */
     private static final long REFUND_LOCK_TTL_MS = 30 * 1000L; // 30秒
 
@@ -116,7 +135,8 @@ public class PaymentController {
     @RateLimit(maxRequestsPerSecond = 3, type = RateLimitType.USER)
     @Operation(summary = "创建支付订单", description = "创建支付订单并调用支付渠道生成支付链接或二维码")
     public R<PayResponse> pay(
-            @Parameter(description = "支付请求参数", required = true) @Validated @RequestBody PayRequestDTO dto) {
+            @Parameter(description = "支付请求参数", required = true) @Validated @RequestBody PayRequestDTO dto,
+            javax.servlet.http.HttpServletRequest httpRequest) {
         // 金额从数据库订单读取，禁止使用客户端传入金额（防篡改）
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (currentTenantId == null) {
@@ -165,35 +185,177 @@ public class PaymentController {
         request.setTradeNo(paymentOrder.getTradeNo());
         request.setAmount(payAmount);
         request.setSubject("瑞吉外卖-订单" + dto.getOrderId());
+        // payType 由前端按场景选择（不传渠道自行默认）；clientIp 只从 HTTP 请求解析，不采信前端
+        request.setPayType(dto.getPayType());
+        request.setClientIp(resolveClientIp(httpRequest));
         PayResponse response = paymentChannel.createOrder(request);
         // 回填商户支付单号：沙箱(mock-mode)收银台需用它作为 out_trade_no 发起模拟支付回调
         response.setTradeNo(paymentOrder.getTradeNo());
+        // 标明当前是否 mock 渠道，C 端据此区分真实扫码轮询与沙箱模拟回调
+        response.setMockMode(paymentConfigProperties.isMockMode());
 
         return R.success(response);
     }
 
     /**
-     * 接收支付渠道的异步通知
-     * @param channel 支付渠道：WECHAT-微信、ALIPAY-支付宝
-     * @param params 回调参数
-     * @return 处理结果
+     * 解析客户端真实 IP：依次取 X-Forwarded-For 首个非空、X-Real-IP、远端地址。
+     * 仅用于支付风控上报；多级代理时 X-Forwarded-For 首个为最初客户端。
+     */
+    private String resolveClientIp(javax.servlet.http.HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.trim().isEmpty()) {
+            // 逗号分隔，第一个为最初客户端
+            String first = forwarded.split(",")[0].trim();
+            if (!first.isEmpty()) {
+                return first;
+            }
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.trim().isEmpty()) {
+            return realIp.trim();
+        }
+        return request.getRemoteAddr();
+    }
+
+    /**
+     * 接收支付渠道的异步通知。
+     * <p>
+     * mock 模式：回调为 JSON Map，走存量表单渠道链路，返回 {@code R}（开发/演示/测试）；
+     * 真实模式：按 notify_url 上的 tenantId 路由租户，用官方 SDK 验签/解密，
+     * 返回渠道原生 ACK（微信 {"code":"SUCCESS"}、支付宝纯文本 success）。
+     * </p>
+     *
+     * @param httpRequest HTTP 请求（原始 body + 头 + 路由参数）
+     * @param channel     支付渠道：WECHAT / ALIPAY
+     * @return mock 返回 R；真实返回 ResponseEntity 原生 ACK
      */
     @PostMapping("/notify/{channel}")
     @RateLimit(maxRequestsPerSecond = 10, type = RateLimitType.IP)
     @Operation(summary = "支付回调通知", description = "接收支付渠道的异步通知，更新订单支付状态")
-    public R<String> notify(
-                        @Parameter(description = "支付渠道：WECHAT-微信、ALIPAY-支付宝", required =
-                                true) @PathVariable String channel,
-            @Parameter(description = "回调参数") @RequestBody Map<String, String> params) {
-        // 回调场景用 getChannelNullable：未知/空渠道返回 200 + 业务错误码（而非抛异常触发 500），
-        // 主动停止支付平台重试（平台对 5xx 会重试，对 2xx 业务失败码通常不重试）
+    public Object notify(HttpServletRequest httpRequest,
+                         @Parameter(description = "支付渠道：WECHAT-微信、ALIPAY-支付宝", required = true)
+                         @PathVariable String channel) {
+        String body = readRequestBody(httpRequest);
+
+        if (paymentConfigProperties.isMockMode()) {
+            // mock：JSON body → Map，沿用存量表单回调链路
+            Map<String, String> params = parseJsonBody(body);
+            return notifyMock(channel, params);
+        }
+
+        // 真实：先按 notify_url 的 tenantId 路由租户（微信密文无法在选对密钥前提取单号）
+        Long routeTenant = NotifyUrlRouter.readTenant(httpRequest);
+        if (routeTenant == null) {
+            log.warn("真实回调缺少租户路由参数：channel={}", channel);
+            return realAck(channel, false, "缺少租户路由参数");
+        }
+        PaymentChannel paymentChannel =
+                paymentChannelFactory.getChannelForTenantNullable(routeTenant, channel);
+        if (!(paymentChannel instanceof RealNotifyCapable)) {
+            log.warn("真实回调渠道未配置或不可用：tenant={}, channel={}", routeTenant, channel);
+            return realAck(channel, false, "渠道未配置");
+        }
+        RealNotifyCapable capable = (RealNotifyCapable) paymentChannel;
+        NotifyRequest notifyRequest = NotifyRequest.from(httpRequest, body);
+        NotifyResult result = capable.parsePayment(notifyRequest);
+        if (!result.isSuccess()) {
+            log.warn("真实回调验签/业务失败：tenant={}, channel={}, err={}",
+                    routeTenant, channel, result.getErrorMsg());
+            return realAck(channel, false, result.getErrorMsg());
+        }
+        String tradeNo = result.getTradeNo();
+        if (tradeNo == null || tradeNo.trim().isEmpty()) {
+            return realAck(channel, false, "缺少 out_trade_no");
+        }
+        PaymentOrder exist = paymentOrderService.selectByTradeNoIgnoreTenant(tradeNo);
+        if (exist == null) {
+            return realAck(channel, false, "交易号不存在");
+        }
+        if (!channel.equalsIgnoreCase(exist.getChannel())) {
+            return realAck(channel, false, "渠道不匹配");
+        }
+        // 金额 fail-closed 比对：回调金额必须与支付单一致，缺失/不一致一律拒绝
+        if (result.getAmount() != null) {
+            BigDecimal existAmount = exist.getAmount();
+            if (existAmount == null) {
+                return realAck(channel, false, "支付金额非法");
+            }
+            if (result.getAmount().compareTo(existAmount) != 0) {
+                log.warn("真实回调金额不一致：notify={}, order={}, tradeNo={}",
+                        result.getAmount(), existAmount, tradeNo);
+                return realAck(channel, false, "金额不一致");
+            }
+        }
+        paymentOrderService.handlePaymentSuccess(tradeNo, result.getChannelTradeNo());
+        log.info("真实支付回调处理成功 channel={}, tradeNo={}", channel, tradeNo);
+        return realAck(channel, true, null);
+    }
+
+    /**
+     * 退款异步回调：微信 APIv3 退款终态通知（支付宝退款同步即确定终态，不推送此通知）。
+     * <p>
+     * 流程与支付回调一致：按 notify_url 的 tenantId 路由租户 → 渠道验签/解密（parseRefund）
+     * → 交 {@code RefundCallbackService} 做终态化与全额联动，返回渠道原生 ACK。
+     * </p>
+     *
+     * @param httpRequest 原始请求（微信回调头 + 加密 body）
+     * @param channel     渠道（当前仅 WECHAT）
+     * @return 渠道原生 ACK（微信 {@code {"code":"SUCCESS"/"FAIL"}}）
+     */
+    @PostMapping("/refund-notify/{channel}")
+    @RateLimit(maxRequestsPerSecond = 10, type = RateLimitType.IP)
+    @Operation(summary = "退款回调通知", description = "接收支付渠道的退款异步通知，定退款终态并联动订单/库存/积分")
+    public ResponseEntity<String> refundNotify(HttpServletRequest httpRequest,
+            @Parameter(description = "支付渠道：WECHAT-微信", required = true)
+            @PathVariable String channel) {
+        String body = readRequestBody(httpRequest);
+        if (paymentConfigProperties.isMockMode()) {
+            // mock 模式不存在真实退款回调，回成功 ACK 且不产生任何副作用
+            return realAck(channel, true, null);
+        }
+        Long routeTenant = NotifyUrlRouter.readTenant(httpRequest);
+        if (routeTenant == null) {
+            return realAck(channel, false, "缺少租户路由参数");
+        }
+        PaymentChannel paymentChannel =
+                paymentChannelFactory.getChannelForTenantNullable(routeTenant, channel);
+        if (!(paymentChannel instanceof RealNotifyCapable)) {
+            return realAck(channel, false, "渠道未配置");
+        }
+        NotifyRequest notifyRequest = NotifyRequest.from(httpRequest, body);
+        com.reggie.module.payment.channel.notify.RefundNotifyResult result =
+                ((RealNotifyCapable) paymentChannel).parseRefund(notifyRequest);
+        if (result == null || !result.isSuccess()) {
+            String errMsg = result != null ? result.getErrorMsg() : "退款回调解析失败";
+            log.warn("[退款回调] 验签/解析失败：tenant={}, channel={}, err={}",
+                    routeTenant, channel, errMsg);
+            return realAck(channel, false, errMsg);
+        }
+        boolean handled = refundCallbackService.handleRefundNotify(result);
+        if (!handled) {
+            // 本地缺记录/状态未确定：回失败 ACK 让微信按策略重试
+            return realAck(channel, false, "本地暂未处理，等待重试");
+        }
+        return realAck(channel, true, null);
+    }
+
+    /**
+     * mock 模式回调处理：存量表单渠道链路，完整保留原有全部安全校验。
+     */
+    private R<String> notifyMock(String channel, Map<String, String> params) {
+        // 回调场景用 getChannelNullable：未知/空渠道返回 200 + 业务错误码（而非抛异常触发 500）
         PaymentChannel paymentChannel = paymentChannelFactory.getChannelNullable(channel);
         if (paymentChannel == null) {
             log.warn("支付回调渠道不支持，拒绝处理：channel={}", channel);
             return R.error("不支持的支付通道");
         }
+        if (!(paymentChannel instanceof MapNotifyCapable)) {
+            log.warn("支付渠道不支持表单回调，拒绝处理：channel={}", channel);
+            return R.error("不支持的回调类型");
+        }
+        MapNotifyCapable notifyChannel = (MapNotifyCapable) paymentChannel;
         // 签名校验：禁止直接信任未验签的回调参数（防回调伪造）
-        if (!paymentChannel.verifyNotifySign(params)) {
+        if (!notifyChannel.verifyNotifySign(params)) {
             log.warn("支付回调签名校验失败：channel={}, params={}", channel, params);
             return R.error("回调签名校验失败");
         }
@@ -202,26 +364,23 @@ public class PaymentController {
             log.warn("支付回调缺少 out_trade_no 参数，channel={}", channel);
             return R.error("回调缺少 out_trade_no 参数");
         }
-        // 防御性校验：tradeNo 必须对应真实存在的支付单，避免伪造不存在的交易号
+        // 防御性校验：tradeNo 必须对应真实存在的支付单
         PaymentOrder exist = paymentOrderService.selectByTradeNoIgnoreTenant(tradeNo);
         if (exist == null) {
             log.warn("支付回调 tradeNo 不存在，拒绝处理：channel={}, tradeNo={}", channel, tradeNo);
             return R.error("回调交易号不存在");
         }
-        // 修复 P1：渠道一致性校验 — 防止用 WECHAT 回调参数（含有效签名）伪造 ALIPAY 支付单
+        // 渠道一致性校验：防止用 WECHAT 回调参数（含有效签名）伪造 ALIPAY 支付单
         if (!channel.equals(exist.getChannel())) {
             log.warn("支付回调渠道不一致，拒绝处理：pathChannel={}, orderChannel={}, tradeNo={}",
                     channel, exist.getChannel(), tradeNo);
             return R.error("支付渠道不匹配");
         }
-        // 修复 P2：金额一致性校验 — 回调金额与支付单金额比对，防回调金额篡改
-        // P1 修复：按渠道读取金额字段，微信回调为 total_fee（分），支付宝回调为 total_amount（元）。
-        // 此前只读 total_fee，支付宝回调（无 total_fee 字段）金额校验被静默跳过，等于金额防线失效。
+        // 金额一致性校验：微信回调 total_fee（分），支付宝 total_amount（元）
         String channelFeeField = "WECHAT".equalsIgnoreCase(channel) ? "total_fee" : "total_amount";
         String notifyAmountStr = params.get(channelFeeField);
         if (notifyAmountStr != null && !notifyAmountStr.trim().isEmpty()) {
             try {
-                // total_fee 单位为分（微信），total_amount 单位为元（支付宝），统一换算为元比对
                 BigDecimal notifyAmount;
                 if ("WECHAT".equalsIgnoreCase(channel)) {
                     notifyAmount = new BigDecimal(notifyAmountStr).divide(new BigDecimal("100"), 2,
@@ -230,8 +389,7 @@ public class PaymentController {
                     notifyAmount = new BigDecimal(notifyAmountStr);
                 }
                 BigDecimal existAmount = exist.getAmount();
-                // 金额校验必须 fail-closed：支付单金额缺失属数据异常，拒绝而非放行
-                // （若在此短路跳过，攻击者可用任意回调金额通过校验篡改支付结果）
+                // fail-closed：支付单金额缺失属数据异常，拒绝而非放行
                 if (existAmount == null) {
                     log.warn("支付单金额缺失，拒绝处理：tradeNo={}", tradeNo);
                     return R.error("支付金额非法");
@@ -247,13 +405,70 @@ public class PaymentController {
                 return R.error("支付金额格式非法");
             }
         }
-        PayResponse response = paymentChannel.handleNotify(params);
+        PayResponse response = notifyChannel.handleNotify(params);
         if (response.isSuccess()) {
             paymentOrderService.handlePaymentSuccess(tradeNo, response.getChannelTradeNo());
             return R.success("回调处理成功");
         }
         log.warn("支付回调处理失败：channel={}, errorMsg={}", channel, response.getErrorMsg());
         return R.error("回调处理失败");
+    }
+
+    /**
+     * 构造真实渠道原生 ACK。
+     * 微信返回 {"code":"SUCCESS"/"FAIL"}；支付宝返回纯文本 success / failure。
+     */
+    private ResponseEntity<String> realAck(String channel, boolean success, String message) {
+        if ("WECHAT".equalsIgnoreCase(channel)) {
+            StringBuilder json = new StringBuilder();
+            json.append("{\"code\":\"").append(success ? "SUCCESS" : "FAIL").append("\"");
+            if (!success && message != null && !message.trim().isEmpty()) {
+                json.append(",\"message\":\"").append(jsonEscape(message)).append("\"");
+            }
+            json.append("}");
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(json.toString());
+        }
+        return ResponseEntity.ok().contentType(MediaType.TEXT_PLAIN)
+                .body(success ? "success" : "failure");
+    }
+
+    /** 读取回调原始 body（保持换行，供微信验签 body 一致性）。 */
+    private String readRequestBody(HttpServletRequest request) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            BufferedReader reader = request.getReader();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (sb.length() > 0) {
+                    sb.append("\n");
+                }
+                sb.append(line);
+            }
+            return sb.toString();
+        } catch (IOException e) {
+            log.error("读取回调请求体失败", e);
+            return "";
+        }
+    }
+
+    /** 把 mock 回调的 JSON body 解析为 Map；失败返回空 Map。 */
+    private Map<String, String> parseJsonBody(String body) {
+        try {
+            if (body == null || body.trim().isEmpty()) {
+                return new HashMap<>();
+            }
+            return ObjectMapperHolder.getDefault().readValue(body,
+                    new TypeReference<Map<String, String>>() {
+                    });
+        } catch (Exception e) {
+            log.warn("解析回调 JSON body 失败 err={}", e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    /** JSON 字符串转义（错误 ACK 的 message，防引号/反斜杠破坏 JSON）。 */
+    private String jsonEscape(String text) {
+        return text.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     /**
@@ -429,6 +644,12 @@ public class PaymentController {
             recordReconcileTraceSafely(paymentOrder.getId(), refundAmount,
                     "[对账待办]售后退款渠道调用异常：" + e.getMessage());
             return R.error("退款渠道调用失败，请稍后重试");
+        }
+        if (refundResponse != null && refundResponse.isProcessing()) {
+            // 售后单审核通过后本地已是 processing，无需新建记录；不落支付单/订单/库存/积分，终态以退款回调为准
+            log.info("[售后退款] 渠道处理中，等待退款回调定终态: refundId={}, refundNo={}",
+                    refundId, record.getRefundNo());
+            return R.success("退款申请已提交，渠道处理中，最终结果以微信退款通知为准");
         }
         if (refundResponse == null || !refundResponse.isSuccess()) {
             String errMsg = refundResponse != null ? refundResponse.getErrorMsg() : "无响应";
@@ -640,6 +861,23 @@ public class PaymentController {
                     paymentOrderId, refundAmount, e.getMessage(), e);
             recordReconcileTraceSafely(paymentOrderId, refundAmount, "[对账待办]渠道退款调用异常待人工");
             return R.error("退款渠道调用失败，请稍后重试");
+        }
+        if (refundResponse != null && refundResponse.isProcessing()) {
+            // 微信同步返回 PROCESSING：仅登记 PROCESSING 记录、不联动，终态以退款异步回调为准
+            log.info("退款已受理处理中，登记 PROCESSING 记录：paymentOrderId={}, refundNo={}",
+                    paymentOrderId, refundNo);
+            try {
+                refundRecordService.createRefund(paymentOrderId, refundAmount, reason, refundNo);
+                refundRecordService.markRefundProcessing(refundNo);
+            } catch (Exception ex) {
+                // 渠道已受理（钱在路上）但本地登记失败：留对账待办，禁止重复发起以免重复退款
+                log.error("【严重】退款处理中本地登记失败，需人工核对：paymentOrderId={}, refundNo={}",
+                        paymentOrderId, refundNo, ex);
+                recordReconcileTraceSafely(paymentOrderId, refundAmount,
+                        "[对账待办]退款处理中本地登记失败：" + ex.getMessage());
+                return R.error("退款已受理但本地登记异常，请人工核对退款记录");
+            }
+            return R.success("退款申请已提交，渠道处理中，最终结果以微信退款通知为准");
         }
         if (refundResponse == null || !refundResponse.isSuccess()) {
             String errMsg = refundResponse != null ? refundResponse.getErrorMsg() : "无响应";

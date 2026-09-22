@@ -171,6 +171,54 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
     }
 
     /**
+     * 处理 mark refund processing。
+     * @param refundNo 退款单号
+     * @return 是否 PENDING→PROCESSING
+     */
+    @Override
+    public boolean markRefundProcessing(String refundNo) {
+        // CAS：仅 PENDING 可转 PROCESSING；回调场景调用前已按记录 tenantId 设置 BaseContext
+        return this.update(new LambdaUpdateWrapper<RefundRecord>()
+                .eq(RefundRecord::getRefundNo, refundNo)
+                .eq(RefundRecord::getStatus, RefundStatus.PENDING.getCode())
+                .set(RefundRecord::getStatus, RefundStatus.PROCESSING.getCode()));
+    }
+
+    /**
+     * 处理 processing to success。
+     * @param refundNo 退款单号
+     * @return 是否首次 PROCESSING→SUCCESS
+     */
+    @Override
+    public boolean markProcessingToSuccess(String refundNo) {
+        // CAS：仅 PROCESSING 可转 SUCCESS，返回 false 即重复回调/非首次，调用方据此跳过联动
+        return this.update(new LambdaUpdateWrapper<RefundRecord>()
+                .eq(RefundRecord::getRefundNo, refundNo)
+                .eq(RefundRecord::getStatus, RefundStatus.PROCESSING.getCode())
+                .set(RefundRecord::getStatus, RefundStatus.SUCCESS.getCode())
+                .set(RefundRecord::getRefundTime, LocalDateTime.now()));
+    }
+
+    /**
+     * 处理 processing to fail。
+     * @param refundNo 退款单号
+     * @param reason   失败原因
+     * @return 是否 PROCESSING→FAIL
+     */
+    @Override
+    public boolean markProcessingToFail(String refundNo, String reason) {
+        // CAS：仅 PROCESSING 可转 FAIL；终态异常需人工核对渠道后台，故仅记录状态并告警
+        boolean ok = this.update(new LambdaUpdateWrapper<RefundRecord>()
+                .eq(RefundRecord::getRefundNo, refundNo)
+                .eq(RefundRecord::getStatus, RefundStatus.PROCESSING.getCode())
+                .set(RefundRecord::getStatus, RefundStatus.FAIL.getCode()));
+        if (ok) {
+            log.warn("[退款] 处理中退款被渠道置为失败 refundNo={}, reason={}", refundNo, reason);
+        }
+        return ok;
+    }
+
+    /**
      * 处理 sum refunded amount。
      * @param paymentOrderId 参数 paymentOrderId
      * @return 返回结果

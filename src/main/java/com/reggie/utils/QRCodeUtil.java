@@ -129,6 +129,25 @@ public class QRCodeUtil {
     }
 
     /**
+     * 将任意文本（如微信 NATIVE 的 code_url、支付宝扫码的 qr_code）渲染为 PNG 二维码 Data URI。
+     *
+     * @param content 二维码内容
+     * @return data:image/png;base64,xxx；内容为空或渲染失败时返回 null（调用方可降级展示原始链接）
+     */
+    public String generateDataUri(String content) {
+        if (content == null || content.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            BufferedImage image = generateQRCode(content);
+            return "data:image/png;base64," + bufferedImageToBase64(image, "png");
+        } catch (Exception e) {
+            log.warn("渲染二维码 Data URI 失败 content={}, err={}", content, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * 构建二维码内容
      * 格式：http://IP:端口/front/page/qrcode-order.html?tableId={桌台ID}
      */

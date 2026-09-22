@@ -195,6 +195,27 @@
             <version>1.10.0</version>
         </dependency>
 
+        <!-- 微信支付官方 SDK（APIv3，支持 JDK 1.8+）：下单/查询/退款/回调验签与 AEAD 解密 -->
+        <dependency>
+            <groupId>com.github.wechatpay-apiv3</groupId>
+            <artifactId>wechatpay-java</artifactId>
+            <version>0.2.14</version>
+        </dependency>
+
+        <!-- 支付宝官方 SDK（RSA2，支持 JDK 1.6+）：电脑/手机网站/当面付/查询/退款/回调验签 -->
+        <dependency>
+            <groupId>com.alipay.sdk</groupId>
+            <artifactId>alipay-sdk-java</artifactId>
+            <version>4.39.79.ALL</version>
+            <!-- commons-logging 与 spring-core 内置 spring-jcl 重复，排除后走 spring-jcl -->
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
 </dependencies>
     <build>
         <plugins>

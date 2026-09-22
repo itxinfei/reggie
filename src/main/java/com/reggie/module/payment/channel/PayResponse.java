@@ -24,6 +24,10 @@ public class PayResponse {
     private String qrCodeUrl;
     /** 原始响应 */
     private String rawResponse;
+    /** 实际支付方式：NATIVE / H5 / PC */
+    private String payType;
+    /** 是否 mock 渠道：C 端据此区分真实扫码轮询与沙箱模拟回调 */
+    private boolean mockMode;
     /** 错误信息 */
     private String errorMsg;
 }

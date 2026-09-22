@@ -27,3 +27,8 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: ASSIGN_ID
+reggie:
+  payment:
+    # 测试环境一律走 mock 渠道（工厂首行直接返回 mock Bean，不触数据库/网络），
+    # 不依赖 application.yml 的默认值，保证支付相关测试零回归
+    mock-mode: true

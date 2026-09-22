@@ -196,6 +196,17 @@ public class PaymentControllerTest {
     }
 
     @Test
+    @DisplayName("4b. 退款回调 - mock 模式直接回渠道成功 ACK，不产生副作用")
+    void testRefundNotify_mockMode_ackSuccess() throws Exception {
+        // mock 模式不存在真实退款回调：端点应直接回微信原生成功 ACK，且不触渠道/不联动
+        mockMvc.perform(withCsrfToken(post("/api/payment/refund-notify/WECHAT")
+                        .contentType("application/json")
+                        .content("{}")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("SUCCESS"));
+    }
+
+    @Test
     @DisplayName("5. 支付回调 - ALIPAY 渠道成功")
     void testNotify_alipay_success() throws Exception {
         PaymentOrder po = paymentOrderService.createPaymentOrder(201L, "ALIPAY", new BigDecimal("50.00"));
