@@ -260,7 +260,7 @@
       <el-card class="list-card" shadow="never">
         <div class="section-header">
           <span class="section-header__title">催菜订单</span>
-          <span class="section-header__hint">已等待 &gt; 10 分钟订单高亮提醒</span>
+          <span class="section-header__hint">已等待 &gt; 15 分钟订单标红提醒</span>
         </div>
 
         <div class="filter-row">
@@ -657,7 +657,8 @@
         // ============ 倒计时 ============
         startCountdown: function () {
           const self = this
-          var threshold = (this.thresholds && this.thresholds.waitMinutes) || 15
+          // 本地倒计时超时阈值，与后端 UrgencyServiceImpl.OVERDUE_THRESHOLD_MINUTES(15) 一致
+          var threshold = 15
           if (this.timerId) clearInterval(this.timerId)
           this.timerId = setInterval(function () {
             self.orders.forEach(function (o) {

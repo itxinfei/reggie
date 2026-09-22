@@ -466,7 +466,7 @@
           </div>
 
           <div v-if="detailLoading" style="text-align:center;padding:var(--space-10);">
-            <i class="ri-loader-4-line" style="font-size:24px;color:var(--el-color-primary);animation:spin 1s linear infinite;"></i>
+            <i class="el-icon-loading" style="font-size:24px;color:var(--el-color-primary);"></i>
           </div>
           <div v-else-if="!selectedTable.orders||selectedTable.orders.length===0" class="table-detail" style="text-align:center;padding:var(--space-10);color:var(--el-text-secondary);">
             暂无订单
@@ -716,7 +716,7 @@
     <!-- 加菜弹窗 -->
     <el-dialog title="加菜" :visible.sync="addItemsVisible" width="720px" custom-class="el-dialog--lg" :close-on-click-modal="false">
       <div v-if="addItemsLoading" style="text-align:center;padding:var(--space-10);">
-        <i class="ri-loader-4-line" style="font-size:24px;color:var(--el-color-primary);animation:spin 1s linear infinite;"></i>
+        <i class="el-icon-loading" style="font-size:24px;color:var(--el-color-primary);"></i>
       </div>
       <div v-else>
         <el-input v-model="dishSearch" placeholder="搜索菜品名称" size="small" style="margin-bottom:12px;" clearable>
