@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>租户管理 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+</head>
+<body>
+<!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
+<a href="#main-content" class="skip-link">跳转到主内容</a>
+<div class="dashboard-container" id="tenant-app">
+  <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">租户管理</h1>
+
+    <!-- 筛选栏：租户名称 + 状态；租户通过注册流程创建，此处不提供新增 -->
+    <table-bar
+      ref="tableBar"
+      :search-items="searchConfig"
+      @search="onSearch"
+      @reset="onReset"
+    ></table-bar>
+
+    <!-- 租户表格：Logo/名称/联系人/电话/套餐/到期/状态 + 编辑、启停用 -->
+    <crud-table
+      empty-hint="暂无租户，试试调整筛选条件"
+      :data="tableData"
+      :columns="columns"
+      :loading="loading"
+      :page="page"
+      :page-size="pageSize"
+      :page-sizes="[10,20,30,40]"
+      :total="counts"
+      :show-actions="true"
+      :actions-width="120"
+      @page-change="onPageChange"
+      @size-change="onSizeChange"
+    >
+      <template #col-logo="{ row }">
+        <el-image
+          v-if="row.logo"
+          :src="imgUrl(row.logo)"
+          :preview-src-list="[imgUrl(row.logo)]"
+          style="width:40px;height:40px;object-fit:cover;border-radius:50%;border:1px solid var(--border-default);cursor:pointer;">
+        </el-image>
+        <span
+          v-else
+          :style="{width:'40px',height:'40px',display:'inline-flex',alignItems:'center',justifyContent:'center',background:'var(--bg-page)',borderRadius:'50%',color:'var(--text-muted)'}">
+          <i class="ri-store-2-line"></i>
+        </span>
+      </template>
+      <template #col-packageName="{ row }">
+        <el-tag v-if="row.packageName" size="mini">{{ row.packageName }}</el-tag>
+        <span v-else style="color:var(--text-muted);">-</span>
+      </template>
+      <template #col-expireTime="{ row }">
+        <template v-if="row.expireTime">
+          <span>{{ row.expireTime }}</span>
+          <el-tag v-if="isExpired(row.expireTime)" type="danger" size="mini" style="margin-left:4px;">已过期</el-tag>
+        </template>
+        <span v-else style="color:var(--text-muted);">-</span>
+      </template>
+      <template #col-status="{ row }">
+        <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+          {{ row.status === 1 ? '正常' : '禁用' }}
+        </el-tag>
+      </template>
+      <template #actions="{ row }">
+        <el-button type="text" size="small" @click="openEdit(row)">编辑</el-button>
+        <el-button
+          v-if="row.status === 1"
+          type="text"
+          size="small"
+          class="btn-delete"
+          @click="toggleStatus(row, 0)">禁用</el-button>
+        <el-button v-else type="text" size="small" @click="toggleStatus(row, 1)">启用</el-button>
+      </template>
+    </crud-table>
+  </main>
+
+  <!-- 编辑租户弹窗：基本信息 + 套餐到期 + Logo/营业执照单图 -->
+  <crud-dialog
+    title="编辑租户"
+    :visible.sync="dialogVisible"
+    size="md"
+    :submit-loading="submitting"
+    :close-on-click-modal="false"
+    @submit="submitForm"
+    @close="dialogVisible = false"
+  >
+    <el-form ref="tenantForm" :model="formData" :rules="formRules" label-width="100px" size="small">
+      <el-form-item label="租户名称" prop="name">
+        <el-input v-model="formData.name" maxlength="64" show-word-limit></el-input>
+      </el-form-item>
+      <el-form-item label="联系人">
+        <el-input v-model="formData.contact" maxlength="32" placeholder="联系人姓名（可选）"></el-input>
+      </el-form-item>
+      <el-form-item label="手机号" prop="phone">
+        <el-input v-model="formData.phone" maxlength="11" placeholder="联系手机（可选）"></el-input>
+      </el-form-item>
+      <el-form-item label="地址">
+        <el-input v-model="formData.address" maxlength="255" placeholder="详细地址（可选）"></el-input>
+      </el-form-item>
+      <el-form-item label="套餐名称">
+        <el-input v-model="formData.packageName" maxlength="32" placeholder="如 基础版 / 标准版（可选）"></el-input>
+      </el-form-item>
+      <el-form-item label="到期时间">
+        <el-date-picker
+          v-model="formData.expireTime"
+          type="datetime"
+          value-format="yyyy-MM-dd HH:mm:ss"
+          placeholder="选择套餐到期时间（可选）"
+          style="width:100%;">
+        </el-date-picker>
+      </el-form-item>
+      <el-form-item label="Logo：">
+        <rg-image-uploader v-model="formData.logo" biz-type="tenant" :single="true" :max="1"></rg-image-uploader>
+      </el-form-item>
+      <el-form-item label="营业执照：">
+        <rg-image-uploader v-model="formData.licenseImage" biz-type="tenant" :single="true" :max="1"></rg-image-uploader>
+      </el-form-item>
+    </el-form>
+  </crud-dialog>
+</div>
+
+<script src="../../plugins/vue/vue.js"></script>
+<script src="../../plugins/element-ui/index.js?v=20260915"></script>
+<script src="../../plugins/axios/axios.min.js"></script>
+<script src="../../js/request.js?v=20260915c"></script>
+<script src="../../js/accessibility-utils.js?v=20260915c"></script>
+<script src="../../js/performance-utils.js?v=20260915c"></script>
+<script src="../../js/components.js?v=20260922"></script>
+<script src="../../api/tenant.js?v=20260922"></script>
+<script>
+  new Vue({
+    el: '#tenant-app',
+    data() {
+      return {
+        loading: false,
+        submitting: false,
+        tableData: [],
+        page: 1,
+        pageSize: 10,
+        counts: 0,
+        searchParams: {},
+        dialogVisible: false,
+        formData: {
+          id: null,
+          name: '',
+          contact: '',
+          phone: '',
+          address: '',
+          packageName: '',
+          expireTime: '',
+          logo: '',
+          licenseImage: ''
+        },
+        formRules: {
+          name: [{ required: true, message: '请输入租户名称', trigger: 'blur' }],
+          phone: [{ pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }]
+        },
+        searchConfig: [
+          { type: 'input', field: 'name', placeholder: '租户名称' },
+          {
+            type: 'select',
+            field: 'status',
+            placeholder: '全部状态',
+            width: '120px',
+            options: [
+              { label: '正常', value: 1 },
+              { label: '禁用', value: 0 }
+            ]
+          }
+        ],
+        columns: [
+          { prop: 'logo', label: 'Logo', width: 70, align: 'center', slot: true },
+          { prop: 'name', label: '租户名称', minWidth: 150 },
+          { prop: 'contact', label: '联系人', width: 90, align: 'center' },
+          { prop: 'phone', label: '手机号', width: 120, align: 'center' },
+          { prop: 'packageName', label: '套餐', width: 90, align: 'center', slot: true },
+          { prop: 'expireTime', label: '到期时间', width: 170, align: 'center', slot: true },
+          { prop: 'status', label: '状态', width: 80, align: 'center', slot: true }
+        ]
+      }
+    },
+    mounted() {
+      this.loadList()
+    },
+    methods: {
+      imgUrl(name) {
+        return '/common/download?name=' + name
+      },
+      isExpired(str) {
+        if (!str) return false
+        // 用斜杠格式保证各浏览器可解析，与当前时间比较
+        return new Date(str.replace(/-/g, '/')).getTime() < Date.now()
+      },
+      loadList() {
+        const self = this
+        self.loading = true
+        const params = Object.assign(
+          { page: self.page, pageSize: self.pageSize },
+          self.searchParams
+        )
+        tenantPage(params).then(function (res) {
+          self.loading = false
+          if (res.code === 1 && res.data) {
+            self.tableData = res.data.records || []
+            self.counts = res.data.total || 0
+          } else {
+            ReggieUI.error(res.msg || '租户列表加载失败')
+          }
+        }).catch(function (err) {
+          self.loading = false
+          ReggieUI.error('请求失败：' + err)
+        })
+      },
+      onSearch(params) {
+        this.searchParams = params || {}
+        this.page = 1
+        this.loadList()
+      },
+      onReset() {
+        this.searchParams = {}
+        this.page = 1
+        this.loadList()
+      },
+      onPageChange(p) {
+        this.page = p
+        this.loadList()
+      },
+      onSizeChange(ps) {
+        this.pageSize = ps
+        this.page = 1
+        this.loadList()
+      },
+      // page 接口已返回完整实体，直接回填，避免多余请求
+      openEdit(row) {
+        this.formData = {
+          id: row.id,
+          name: row.name || '',
+          contact: row.contact || '',
+          phone: row.phone || '',
+          address: row.address || '',
+          packageName: row.packageName || '',
+          expireTime: row.expireTime || '',
+          logo: row.logo || '',
+          licenseImage: row.licenseImage || ''
+        }
+        this.dialogVisible = true
+        this.$nextTick(() => {
+          if (this.$refs.tenantForm) this.$refs.tenantForm.clearValidate()
+        })
+      },
+      submitForm() {
+        const self = this
+        if (self.submitting) return
+        self.$refs.tenantForm.validate(function (valid) {
+          if (!valid) {
+            ReggieUI.warning('请完善表单必填项')
+            return
+          }
+          self.submitting = true
+          updateTenant(self.formData).then(function (res) {
+            self.submitting = false
+            if (res.code === 1) {
+              ReggieUI.success('保存成功')
+              self.dialogVisible = false
+              self.loadList()
+            } else {
+              ReggieUI.error(res.msg || '保存失败')
+            }
+          }).catch(function (err) {
+            self.submitting = false
+            ReggieUI.error('请求失败：' + err)
+          })
+        })
+      },
+      toggleStatus(row, target) {
+        const self = this
+        const action = target === 1 ? '启用' : '禁用'
+        ReggieUI.confirm('确认' + action + '租户【' + row.name + '】？', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: target === 1 ? 'info' : 'warning'
+        }).then(function () {
+          updateTenantStatus(row.id, target).then(function (res) {
+            if (res.code === 1) {
+              ReggieUI.success(action + '成功')
+              self.loadList()
+            } else {
+              ReggieUI.error(res.msg || '操作失败')
+            }
+          }).catch(function (err) {
+            ReggieUI.error('请求失败：' + err)
+          })
+        }).catch(function (err) {
+          console.warn('[tenant-list] 状态切换取消或失败:', err)
+        })
+      }
+    }
+  })
+</script>
+</body>
+</html>

@@ -43,6 +43,25 @@ public class Tenant implements Serializable {
     @Size(max = 255, message = "地址不能超过255个字符")
     private String address;
 
+    @Schema(description = "联系人", example = "张经理")
+    @Size(max = 32, message = "联系人不能超过32个字符")
+    private String contact;
+
+    @Schema(description = "Logo图片相对路径")
+    @Size(max = 255, message = "Logo路径不能超过255个字符")
+    private String logo;
+
+    @Schema(description = "营业执照图片相对路径")
+    @Size(max = 255, message = "营业执照路径不能超过255个字符")
+    private String licenseImage;
+
+    @Schema(description = "套餐名称", example = "标准版")
+    @Size(max = 32, message = "套餐名称不能超过32个字符")
+    private String packageName;
+
+    @Schema(description = "套餐到期时间")
+    private LocalDateTime expireTime;
+
     @Schema(description = "租户状态：0=禁用，1=正常", example = "1", required = true)
     @NotNull(message = "租户状态不能为空")
     private Integer status;
