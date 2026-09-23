@@ -125,14 +125,29 @@ public class DiningTableControllerTest {
 
     @Test
     void testChangeStatus() throws Exception {
+        // FREE → RESERVED 为合法流转，且不触发「禁止裸占用」拦截（仅 OCCUPIED 受限）
+        mockMvc.perform(put("/api/dining/table/status")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":1,\"status\":\"RESERVED\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value("修改状态成功"));
+    }
+
+    @Test
+    void testOccupyWithoutOrderRejected() throws Exception {
+        // 源头收敛（d49d19ab）：无订单的 FREE 桌台禁止直接改 OCCUPIED（裸占用会导致占用却无法结账），
+        // 必须走「开台」自动建单；本测试锁定该保护不被回退
         mockMvc.perform(put("/api/dining/table/status")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":1,\"status\":\"OCCUPIED\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data").value("修改状态成功"));
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("开台")));
     }
 
     @Test
