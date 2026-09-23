@@ -101,8 +101,10 @@
         <!-- 修改点：使用 <table-bar> 统一组件 -->
         <table-bar
           :search-items="tableSearchItems"
+          :actions="tableActions"
           @search="loadData"
-          @reset="resetSearch">
+          @reset="resetSearch"
+          @action="onTableAction">
           <template slot="search-extra">
             <el-select v-model="searchName" placeholder="选择活动名称" size="small" clearable filterable
               style="width:200px;"
@@ -366,6 +368,10 @@
             searchName: '', searchStatus: null, searchType: null,
             // 修改点：<table-bar> 统一组件配置
             tableSearchItems: [],
+            // 修复(2026-09-23)：原页面支持新建活动却无入口，补“新建活动”操作按钮（沿用全站 table-bar 模式）
+            tableActions: [
+                { key: 'add', text: '+ 新建活动', type: 'primary' }
+            ],
             // 修改点：搜索下拉框动态选项
             filterOptions: { names: [] },
             optionsLoading: false,
@@ -737,6 +743,12 @@
         },
 
         /* ====== 对话框 ====== */
+        // table-bar 操作按钮：新建活动
+        onTableAction: function(payload) {
+            if (payload && payload.key === 'add') {
+                this.openDialog('create');
+            }
+        },
         openDialog: function(mode, row) {
             this.dialogMode = mode;
             this.dialogTitle = mode === 'create' ? '新建营销活动' : ('编辑活动 - ' + (row ? row.name : ''));
