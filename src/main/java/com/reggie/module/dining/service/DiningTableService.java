@@ -135,6 +135,14 @@ public interface DiningTableService extends IService<DiningTable> {
     DiningTablePublicVO getPublicById(Long tableId);
 
     /**
+     * 扫码点餐公开菜单：按桌台返回所属门店的分类 + 在售菜品，匿名可访问。
+     *
+     * @param tableId 桌台ID
+     * @return 公开菜单，桌台不存在返回 null
+     */
+    com.reggie.module.dining.vo.DiningMenuVO getPublicMenu(Long tableId);
+
+    /**
      * 桌台明细查询（收银台用）：返回桌台信息 + 关联订单 + 订单菜品明细
      *
      * @param tableId 桌台ID

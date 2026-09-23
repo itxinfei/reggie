@@ -49,4 +49,22 @@ public class DiningTablePublicController {
         }
         return R.success(table);
     }
+
+    /**
+     * 根据桌台查询公开菜单（扫码点餐用，匿名可访问）
+     * <p>租户由桌台反查确定，一次返回所属门店的菜品分类与在售菜品。</p>
+     *
+     * @param id 桌台ID
+     * @return 公开菜单（分类 + 菜品）
+     */
+    @GetMapping("/{id}/menu")
+    @Operation(summary = "扫码点餐-公开菜单", description = "按桌台返回所属门店的分类与在售菜品，供匿名顾客浏览，无需登录")
+    @Parameter(name = "id", description = "桌台ID", required = true)
+    public R<com.reggie.module.dining.vo.DiningMenuVO> getPublicMenu(@PathVariable Long id) {
+        com.reggie.module.dining.vo.DiningMenuVO menu = diningTableService.getPublicMenu(id);
+        if (menu == null) {
+            return R.error("没有查询到对应桌台");
+        }
+        return R.success(menu);
+    }
 }

@@ -69,7 +69,7 @@
 
 /* 修改点：补充副文案，明确引导下一步操作（此前仅有主文案 + 按钮，信息密度低） */
 #no_wifi .divContent .divSub {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-md);
   font-family: var(--font-family-body);
   text-align: center;
   color: var(--color-text-hint);

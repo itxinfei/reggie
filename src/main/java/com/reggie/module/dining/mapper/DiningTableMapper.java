@@ -46,4 +46,14 @@ public interface DiningTableMapper extends BaseMapper<DiningTable> {
             + "ta.name AS areaName FROM dining_table dt LEFT JOIN dining_area ta ON ta.id = dt.area_id "
             + "WHERE dt.id = #{id} AND dt.is_deleted = 0")
     DiningTablePublicVO selectPublicById(@Param("id") Long id);
+
+    /**
+     * 扫码点餐公开菜单：按桌台 id 反查所属租户 id，绕过租户拦截器（匿名请求无租户上下文）。
+     *
+     * @param id 桌台ID
+     * @return 桌台所属租户ID，桌台不存在返回 null
+     */
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT tenant_id FROM dining_table WHERE id = #{id} AND is_deleted = 0")
+    Long selectTenantIdByIdIgnore(@Param("id") Long id);
 }

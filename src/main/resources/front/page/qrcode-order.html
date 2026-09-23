@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="../styles/vant.min.css" />
   <link rel="stylesheet" href="../styles/index.css?v=20260922" />
   <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-  <link rel="stylesheet" href="../styles/qrcode-order.css?v=20260923" />
+  <link rel="stylesheet" href="../styles/qrcode-order.css?v=20260923b" />
 </head>
 <body>
   <div id="dine-app">
@@ -238,6 +238,7 @@
         var urlParams = new URLSearchParams(window.location.search)
         this.tableId = urlParams.get('tableId')
         if (this.tableId) {
+          this.resumeCart()
           this.loadData()
           this.loadTableInfo()
         } else {
@@ -250,17 +251,13 @@
         loadData: function() {
           var self = this
           self.loading = true
-          Promise.all([
-            getDishPage({ page: 1, pageSize: 100, status: 1 }),
-            getCategoryList({ type: 1 })
-          ]).then(function(results) {
-            var dishRes = results[0]
-            var catRes = results[1]
-            if (dishRes && dishRes.code === 1) {
-              self.dishes = (dishRes.data.records || []).map(function(d) { return Object.assign({}, d, { qty: 0 }) })
-            }
-            if (catRes && catRes.code === 1) {
-              self.categories = catRes.data || []
+          // 公开菜单端点：由桌台反查门店，一次返回该门店分类 + 在售菜品，匿名可访问
+          getTableMenu(this.tableId).then(function(res) {
+            if (res && res.code === 1 && res.data) {
+              self.categories = res.data.categories || []
+              self.dishes = (res.data.dishes || []).map(function(d) { return Object.assign({}, d, { qty: 0 }) })
+            } else {
+              vant.Toast.fail((res && res.msg) || '加载数据失败')
             }
           }).catch(function() {
             vant.Toast.fail('加载数据失败')
@@ -338,6 +335,13 @@
             vant.Toast.fail('请先选择菜品')
             return
           }
+          // 结算需登录：未登录先暂存购物车再跳登录（redirect 回本桌页），登录后恢复，不丢整单
+          if (!sessionStorage.getItem('userId')) {
+            this.saveCartForResume()
+            goLogin()
+            return
+          }
+          this.prefillContact()
           this.cartDialogVisible = false
           this.submitDialogVisible = true
         },
@@ -371,6 +375,8 @@
           }
 
           this.submitting = true
+          // 提交前暂存购物车兜底：万一会话已过期被 401 踢去登录，跳回后仍能恢复本桌已选菜
+          this.saveCartForResume()
           var orderDetails = this.cart.map(function(item) {
             return {
               dishId: item.dishId,
@@ -404,6 +410,7 @@
                 var payRes = await paymentCreateApi({ orderId: created.id, channel: channel })
                 if (payRes && payRes.code === 1 && payRes.data && payRes.data.tradeNo) {
                   self.cart = []
+                  self.clearCartForResume()
                   window.location.replace('/front/page/pay-cashier.html?orderId=' + created.id
                     + '&channel=' + channel + '&tradeNo=' + encodeURIComponent(payRes.data.tradeNo))
                   return
@@ -414,6 +421,7 @@
               }
               // 到店支付(payMethod=6)：订单已提交为待接单，等待到店收银
               self.cart = []
+              self.clearCartForResume()
               self.successOrderId = created.id
               self.submitDialogVisible = false
               self.successDialogVisible = true
@@ -439,6 +447,44 @@
         // 继续点餐：仅关闭成功弹窗留在本页
         continueOrder: function() {
           this.successOrderId = null
+        },
+        // 登录跳回本页后恢复购物车的 sessionStorage 键（按桌台隔离）
+        resumeCartKey: function() {
+          return 'qrResumeCart:' + this.tableId
+        },
+        // 跳登录/提交前暂存购物车，避免强制登录或会话过期时整单丢失
+        saveCartForResume: function() {
+          if (!this.cart.length) return
+          try {
+            sessionStorage.setItem(this.resumeCartKey(), JSON.stringify(this.cart))
+          } catch (e) {}
+        },
+        clearCartForResume: function() {
+          try {
+            sessionStorage.removeItem(this.resumeCartKey())
+          } catch (e) {}
+        },
+        // 恢复暂存的购物车（一次性，恢复后即清除键）
+        resumeCart: function() {
+          try {
+            var raw = sessionStorage.getItem(this.resumeCartKey())
+            if (raw) {
+              var arr = JSON.parse(raw)
+              if (Array.isArray(arr) && arr.length) this.cart = arr
+            }
+            sessionStorage.removeItem(this.resumeCartKey())
+          } catch (e) {}
+        },
+        // 已登录用户预填联系人/手机，免重复手填
+        prefillContact: function() {
+          if (!this.submitForm.contactName) {
+            var n = sessionStorage.getItem('userName') || ''
+            if (n) this.submitForm.contactName = n
+          }
+          if (!this.submitForm.contactPhone) {
+            var p = sessionStorage.getItem('userPhone') || ''
+            if (/^1\d{10}$/.test(p)) this.submitForm.contactPhone = p
+          }
         }
       }
     })

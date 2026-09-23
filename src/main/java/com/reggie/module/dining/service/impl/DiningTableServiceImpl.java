@@ -63,6 +63,14 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
     @Autowired
     private com.reggie.module.order.service.OrderDetailService orderDetailService;
 
+    /** 菜品服务（扫码公开菜单） */
+    @Autowired
+    private com.reggie.module.dish.service.DishService dishService;
+
+    /** 分类服务（扫码公开菜单） */
+    @Autowired
+    private com.reggie.module.category.service.CategoryService categoryService;
+
     /** 桌台状态流转白名单：每个状态允许的合法目标状态 */
     private static final Map<String, Set<String>> ALLOWED_TABLE_TRANSITIONS = new LinkedHashMap<>();
 
@@ -806,6 +814,41 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
     @Override
     public DiningTablePublicVO getPublicById(Long tableId) {
         return diningTableMapper.selectPublicById(tableId);
+    }
+
+    @Override
+    public com.reggie.module.dining.vo.DiningMenuVO getPublicMenu(Long tableId) {
+        // 桌台→门店：忽略租户插件反查 tenant_id（匿名请求无登录租户上下文）
+        Long menuTenantId = diningTableMapper.selectTenantIdByIdIgnore(tableId);
+        if (menuTenantId == null) {
+            return null;
+        }
+        // 以桌台所属门店身份查询，租户插件据此追加正确的 tenant_id
+        BaseContext.setCurrentTenantId(menuTenantId);
+        try {
+            LambdaQueryWrapper<com.reggie.module.category.model.Category> catWrapper =
+                    new LambdaQueryWrapper<>();
+            catWrapper.eq(com.reggie.module.category.model.Category::getType, 1)
+                    .orderByAsc(com.reggie.module.category.model.Category::getSort);
+            List<com.reggie.module.category.model.Category> categories = categoryService.list(catWrapper);
+
+            LambdaQueryWrapper<com.reggie.module.dish.model.Dish> dishWrapper =
+                    new LambdaQueryWrapper<>();
+            dishWrapper.eq(com.reggie.module.dish.model.Dish::getStatus,
+                            com.reggie.enums.DishStatus.ENABLED.getValue())
+                    .orderByAsc(com.reggie.module.dish.model.Dish::getSort)
+                    .orderByDesc(com.reggie.module.dish.model.Dish::getUpdateTime);
+            List<com.reggie.module.dish.model.Dish> dishes = dishService.list(dishWrapper);
+
+            com.reggie.module.dining.vo.DiningMenuVO vo =
+                    new com.reggie.module.dining.vo.DiningMenuVO();
+            vo.setCategories(categories);
+            vo.setDishes(dishes);
+            return vo;
+        } finally {
+            // 清理 ThreadLocal，避免污染同线程后续请求
+            BaseContext.remove();
+        }
     }
 
     /**

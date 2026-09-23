@@ -29,10 +29,15 @@
                 <div class="divSuccess">{{ resultTitle }}</div>
                 <div class="divOrderNo" v-if="orderNo">订单号：{{orderNo}}</div>
                 <div class="divAmount" v-if="amount > 0">实付金额：<span class="price">￥{{amount.toFixed(2)}}</span></div>
-                <!-- 预计送达时间（仅支付成功显示） -->
-                <div class="divEta" v-if="!resultState">
+                <!-- 预计送达时间（仅外卖、支付成功显示） -->
+                <div class="divEta" v-if="!resultState && !isEatIn">
                     <i class="ri-time-line"></i>
                     <span>预计 <strong>{{finishTime}}</strong> 送达</span>
+                </div>
+                <!-- 堂食：不适用配送，提示留意叫号 -->
+                <div class="divEta" v-if="!resultState && isEatIn">
+                    <i class="ri-notification-1-line"></i>
+                    <span>请留意商家叫号，凭桌台就餐</span>
                 </div>
                 <!-- 订单进度迷你条（取消/退款时不显示） -->
                 <div class="order-mini-progress" v-if="!resultState">
@@ -53,10 +58,10 @@
                     <div class="mp-line"></div>
                     <div class="mp-step">
                         <i class="ri-radio-button-line"></i>
-                        <span>配送中</span>
+                        <span>{{ isEatIn ? '叫号上菜' : '配送中' }}</span>
                     </div>
                 </div>
-                <div class="divDesc1" v-if="!resultState">后厨正在加紧制作中，请耐心等待~</div>
+                <div class="divDesc1" v-if="!resultState">{{ isEatIn ? '后厨正在加紧制作，请留意叫号~' : '后厨正在加紧制作中，请耐心等待~' }}</div>
                 <div class="divDesc1" v-else-if="resultState === 'CANCELLED'">订单已取消，欢迎再次点餐</div>
                 <div class="divDesc1" v-else>退款将原路返回，请注意查收</div>
                 <div class="divActions">
@@ -92,7 +97,11 @@
                     orderNo: '',
                     amount: 0,
                     // 结果状态：''=支付成功，CANCELLED=已取消，REFUNDED=已退款
-                    resultState: ''
+                    resultState: '',
+                    // 是否堂食单（订单带 tableId 即为堂食）：结果页按此分流为叫号语义而非配送
+                    isEatIn: false,
+                    // 堂食桌台ID：「继续点餐」回到同一桌扫码页
+                    tableId: ''
                 }
             },
             computed:{
@@ -134,6 +143,9 @@
                                 var d = res.data
                                 this.orderNo = d.number || d.orderNo || ''
                                 this.amount = Number(d.amount || d.actualAmount || 0)
+                                // 堂食单带 tableId：据此为结果页分流（叫号语义，而非配送）
+                                this.isEatIn = !!d.tableId
+                                this.tableId = d.tableId ? String(d.tableId) : ''
                                 var orderStatus = d.status || d.orderStatus
                                 // 2待接单/3派送中/4已完成/7已分账 均视为支付成功；
                                 // 5已取消、6已退款不得误报成功，否则用户放弃支付后不再下单
@@ -165,8 +177,13 @@
                 },
                 goBack(){
                     window.requestAnimationFrame(()=>{
-                        window.location.replace('/front/index.html')
-                    })   
+                        // 堂食回到同一桌扫码页继续加菜；外卖回外卖首页
+                        if(this.isEatIn && this.tableId){
+                            window.location.replace('/front/page/qrcode-order.html?tableId=' + this.tableId)
+                        }else{
+                            window.location.replace('/front/index.html')
+                        }
+                    })
                 },
                 toOrderPage(){
                     // 修改点(2026-09-17)：移除 orderFromPaySuccess 标志——order.html 从未读取，属死标志
