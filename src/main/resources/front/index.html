@@ -1326,20 +1326,8 @@
               tasks.push(fetchRestaurantInfo().catch(() => null))
               // 修改点(2026-09-18)：return Promise，供下拉刷新真实等待加载完成
               return Promise.all(tasks).then(res=>{
-                //获取分类数据
-                if(res[0].code === 1){
-                  this.categoryList = res[0].data
-                  if(Array.isArray(res[0].data) && res[0].data.length > 0){
-                    this.categoryId = res[0].data[0].id
-                    this.activeType = 0
-                    // 修改点(2026-09-16)：改为一次性加载所有分类，支持右侧滚动联动左侧高亮
-                    // 修改点(2026-09-18)：return 菜品加载 Promise，使下拉刷新等待菜单就绪
-                    return this.loadAllDishes()
-                  }
-                }else{
-                  this.loadFailed = true
-                  vant.Toast.fail(res[0].msg || '加载分类失败');
-                }
+                // 修复(2026-09-23 P0)：购物车/地址/门店与分类相互独立，必须先恢复，
+                // 否则分类有数据时下方 return loadAllDishes() 会提前退出，三者永不执行。
                 //获取购物车数据（仅登录后，索引1）
                 if(isLogin && res[1] && res[1].code === 1){
                   this.cartData = res[1].data
@@ -1354,6 +1342,20 @@
                 const restaurantRes = isLogin ? res[3] : res[1]
                 if(restaurantRes && restaurantRes.code === 1){
                   this.restaurantInfo = restaurantRes.data || {}
+                }
+                //获取分类数据
+                if(res[0].code === 1){
+                  this.categoryList = res[0].data
+                  if(Array.isArray(res[0].data) && res[0].data.length > 0){
+                    this.categoryId = res[0].data[0].id
+                    this.activeType = 0
+                    // 修改点(2026-09-16)：改为一次性加载所有分类，支持右侧滚动联动左侧高亮
+                    // 修改点(2026-09-18)：return 菜品加载 Promise，使下拉刷新等待菜单就绪
+                    return this.loadAllDishes()
+                  }
+                }else{
+                  this.loadFailed = true
+                  vant.Toast.fail(res[0].msg || '加载分类失败');
                 }
               }).catch(() => {
                 // 修改点：捕获Promise异常，避免控制台报错，未登录时会自动跳转登录页

@@ -255,8 +255,8 @@
             <el-select v-model="item.materialId" placeholder="食材" class="rg-w-160" filterable>
               <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id"></el-option>
             </el-select>
-            <el-input v-model="item.qty" placeholder="数量" type="number" class="rg-w-100" />
-            <el-input v-model="item.unitPrice" placeholder="单价" type="number" class="rg-w-100" />
+            <el-input v-model="item.qty" placeholder="数量" type="number" class="rg-w-100"></el-input>
+            <el-input v-model="item.unitPrice" placeholder="单价" type="number" class="rg-w-100"></el-input>
             <el-button type="danger" size="small" @click="removeDetail(index)">删除</el-button>
           </div>
           <el-button type="primary" size="small" @click="addDetail">+ 添加明细</el-button>

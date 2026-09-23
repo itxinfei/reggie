@@ -274,7 +274,7 @@
       <div class="item-picker">
         <!-- 左侧：食材库 -->
         <div class="item-picker__left">
-          <el-input v-model="itemSearch" placeholder="搜索食材名称..." size="small" prefix-icon="ri-search-line" clearable style="border-bottom:1px solid var(--border-default);" />
+          <el-input v-model="itemSearch" placeholder="搜索食材名称..." size="small" prefix-icon="ri-search-line" clearable style="border-bottom:1px solid var(--border-default);"></el-input>
           <div class="item-picker__list">
             <div v-for="mat in filteredMaterials" :key="mat.id"
               class="item-picker__item" :class="{ selected: isPicked(mat.id) }"
