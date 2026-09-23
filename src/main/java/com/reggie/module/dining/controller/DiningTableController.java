@@ -157,6 +157,12 @@ public class DiningTableController {
         if (table.getAreaId() == null) {
             table.setAreaId(existing.getAreaId());
         }
+        // 源头收敛：禁止借修改接口把无订单桌台直接改成占用（占用请走开台，自动建单）
+        if (com.reggie.enums.DiningTableStatus.OCCUPIED.getValue().equals(table.getStatus())
+                && existing.getCurrentOrderId() == null
+                && !com.reggie.enums.DiningTableStatus.OCCUPIED.getValue().equals(existing.getStatus())) {
+            return R.error("请使用「开台」功能占用桌台，系统将自动创建订单");
+        }
         // 防止通过请求体篡改租户ID
         table.setTenantId(tenantId);
         diningTableService.updateById(table);
@@ -227,6 +233,18 @@ public class DiningTableController {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             return R.error("无操作权限");
+        }
+        // 源头收敛：禁止「裸占用」（只改状态不建单 → 桌台占用却无订单无法结账）。
+        // 占用必须走「开台」(openWithOrder 自动建单)；扫码下单在订单事务内直接占用，不经此接口。
+        if (com.reggie.enums.DiningTableStatus.OCCUPIED.getValue().equals(dto.getStatus())) {
+            DiningTable currentTable = diningTableService.getOne(new LambdaQueryWrapper<DiningTable>()
+                    .eq(DiningTable::getId, dto.getId())
+                    .eq(DiningTable::getTenantId, tenantId));
+            if (currentTable != null
+                    && currentTable.getCurrentOrderId() == null
+                    && !com.reggie.enums.DiningTableStatus.OCCUPIED.getValue().equals(currentTable.getStatus())) {
+                return R.error("请使用「开台」功能占用桌台，系统将自动创建订单");
+            }
         }
         diningTableService.changeStatus(dto.getId(), dto.getStatus());
         return R.success("修改状态成功");

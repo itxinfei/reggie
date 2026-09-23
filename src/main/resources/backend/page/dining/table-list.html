@@ -141,7 +141,7 @@
             <span style="font-weight:500;">{{ row.name }}</span>
           </template>
           <template #col-status="{ row }">
-            <el-select v-model="row.status" size="small" style="width:72px;" @change="(val) => quickChangeStatus(row, val)">
+            <el-select :value="row.status" size="small" style="width:72px;" @change="(val) => quickChangeStatus(row, val)">
               <el-option label="空闲" value="FREE" :disabled="!canTransition(row.status, 'FREE')"></el-option>
               <el-option label="占用" value="OCCUPIED" :disabled="!canTransition(row.status, 'OCCUPIED')"></el-option>
               <el-option label="预留" value="RESERVED" :disabled="!canTransition(row.status, 'RESERVED')"></el-option>
@@ -584,13 +584,14 @@
         onAction: function(payload) { if (payload.key === 'add') this.addHandle() },
         addHandle: function() {
           this.action = 'add'; this.dialog.title = '新增桌台'
-          this.form = { id: '', name: '', areaId: '', seatCount: 1, minAmount: 0, status: 'FREE', sort: 0 }
+          // _originStatus：标记开弹窗时是否已占用，提交时据此拦截「裸占用」
+          this.form = { id: '', name: '', areaId: '', seatCount: 1, minAmount: 0, status: 'FREE', sort: 0, _originStatus: 'FREE' }
           this.dialog.visible = true
           this.$nextTick(function() { if (this.$refs.tableForm) this.$refs.tableForm.clearValidate() }.bind(this))
         },
         editHandle: function(row) {
           this.action = 'edit'; this.dialog.title = '修改桌台 - ' + row.name
-          this.form = { id: row.id, name: row.name, areaId: row.areaId, seatCount: row.seatCount || 1, minAmount: row.minAmount || 0, status: row.status || 'FREE', sort: row.sort || 0 }
+          this.form = { id: row.id, name: row.name, areaId: row.areaId, seatCount: row.seatCount || 1, minAmount: row.minAmount || 0, status: row.status || 'FREE', sort: row.sort || 0, _originStatus: row.status || 'FREE' }
           this.dialog.visible = true
           this.$nextTick(function() { if (this.$refs.tableForm) this.$refs.tableForm.clearValidate() }.bind(this))
         },
@@ -599,6 +600,11 @@
           const self = this
           this.$refs.tableForm.validate(function(valid) {
             if (!valid) return
+            // 源头收敛：弹窗里把无订单桌台改成占用会制造「占用无单」，拒绝并引导开台
+            if (self.form.status === 'OCCUPIED' && self.form._originStatus !== 'OCCUPIED') {
+              ReggieUI.warning('请使用「开台」功能占用桌台，系统将自动创建订单')
+              return
+            }
             self.submitting = true
             const data = {
               name: self.form.name,
@@ -627,6 +633,15 @@
         quickChangeStatus: function(row, newStatus) {
           const self = this
           if (row.status === newStatus) return
+          // 源头收敛：不允许「裸占用」（只改状态不建单 → 占用无单无法结账），统一引导走开台（自动建订单）。
+          // 能走到这选 OCCUPIED 的当前必非占用（同状态已被上面 return 拦掉），故直接引导即可。
+          if (newStatus === 'OCCUPIED') {
+            ReggieUI.info('请使用「开台」占用桌台，系统将自动创建订单')
+            // 延迟到 el-select/el-dropdown 弹层关闭后再开弹窗：
+            // crud-dialog 的 el-dialog 为 append-to-body，同一事件循环内立即打开会无法正常挂载
+            setTimeout(function() { self.openTableHandle(row) }, 60)
+            return
+          }
           ReggieUI.confirm('确认将「' + row.name + '」状态改为「' + self.statusLabels[newStatus] + '」?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
               updateTableStatus({ id: row.id, status: newStatus }).then(function(res) {
@@ -766,7 +781,7 @@
             if (res.code === 1 && res.data && res.data.currentOrderId) {
               window.open('/front/page/qrcode-order.html?tableId=' + row.id, '_blank')
             } else {
-              ReggieUI.warning('该桌台未绑定订单，无法加菜')
+              self.askNoOrder(row)
             }
           }).catch(function(err) { console.warn('[table-list] 加载桌台加菜信息失败:', err) })
         },
@@ -779,9 +794,25 @@
               self.cashierFrameUrl = '/backend/page/cashier/index.html?orderId=' + res.data.currentOrderId
               self.checkoutDialogVisible = true
             } else {
-              ReggieUI.warning('该桌台未绑定订单，无法结账')
+              self.askNoOrder(row)
             }
           }).catch(function() { ReggieUI.error('获取桌台信息失败') })
+        },
+        // 兜底：桌台占用却没有订单时，给店员两条出路，不再「死路一句提示」。
+        // · 代客点餐补单：打开该桌扫码点餐页，店员代客选菜下单（订单自动绑定桌台），再回来结账；
+        // · 释放为空闲：客人没消费/误占用时清台（走 quickChangeStatus 的二次确认）。
+        askNoOrder: function(row) {
+          const self = this
+          ReggieUI.confirm(
+            '该桌台没有订单，无法直接结账。客人已消费请「代客点餐补单」后再结账；误占用可「释放为空闲」。',
+            '该桌台未绑定订单',
+            { confirmButtonText: '代客点餐补单', cancelButtonText: '释放为空闲', distinguishCancelAndClose: true, type: 'warning' }
+          ).then(function() {
+            window.open('/front/page/qrcode-order.html?tableId=' + row.id, '_blank')
+          }).catch(function(action) {
+            // action=cancel：点了「释放为空闲」；close：点 X/遮罩，不做处理
+            if (action === 'cancel') { self.quickChangeStatus(row, 'FREE') }
+          })
         },
         // 修改点(2026-09-16)：收银台 iframe 收款成功后回调，关闭弹窗并刷新桌台列表
         onCashierMessage: function(e) {
