@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS invoice_record;
 DROP TABLE IF EXISTS invoice_title;
 
 -- InvoiceTitle entity (@TableName("invoice_title"))
--- Columns: id, title, taxNumber, companyName, type, tenantId, createTime, updateTime
+-- Columns: id, title, taxNumber, companyName, type, tenantId, userId, createTime, updateTime
 CREATE TABLE invoice_title (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   title varchar(200) NOT NULL COMMENT '发票抬头',
@@ -13,6 +13,7 @@ CREATE TABLE invoice_title (
   company_name varchar(200) NULL DEFAULT NULL COMMENT '公司名称（企业用）',
   type int NOT NULL DEFAULT 1 COMMENT '类型：1=个人，2=企业',
   tenant_id bigint NOT NULL COMMENT '租户ID',
+  user_id bigint NULL DEFAULT NULL COMMENT '归属用户ID（用户端隔离）',
   create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (id)

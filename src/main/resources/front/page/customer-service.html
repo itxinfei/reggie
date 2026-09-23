@@ -129,7 +129,7 @@
                         :max-count="3"
                         :max-size="5*1024*1024"
                         :after-read="afterRead"
-                        :delete-image="afterDelete"
+                        @delete="afterDelete"
                         @oversize="onOversize"
                     ></van-uploader>
                 </div>

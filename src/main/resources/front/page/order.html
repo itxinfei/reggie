@@ -216,6 +216,13 @@
                 },
                 // 修改点(2026-09-22)：底部 Tab 切换已统一由 cend-shell 组件处理，页面不再重复定义
                 initData(){
+                    // 修复(2026-09-23 P1-4)：解析个人中心订单快捷入口携带的 ?status=N，
+                    // 否则 activeStatus 恒为 null，所有入口都落到"全部"
+                    var m = location.search.match(/[?&]status=(\d+)/)
+                    if (m){
+                        var s = parseInt(m[1], 10)
+                        if (s >= 1 && s <= 6){ this.activeStatus = s }
+                    }
                     this.getList()
                 },
                 // 修改点：下拉刷新处理（await getList 后复位，避免固定延时与实际加载不同步）

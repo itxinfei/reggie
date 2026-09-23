@@ -63,6 +63,8 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
     @Override
     public void saveTitle(InvoiceTitle title) {
         title.setTenantId(BaseContext.getCurrentTenantId());
+        // 修复(2026-09-23 P1-6)：归属用户以后端会话为准，防止前端伪造及抬头无主
+        title.setUserId(BaseContext.getCurrentId());
         title.setType(title.getType() == null ? 1 : title.getType());
         invoiceTitleMapper.insert(title);
     }
@@ -75,9 +77,10 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
      */
     @Override
     public List<InvoiceTitle> listTitles(Long tenantId, Long userId) {
-        // 发票抬头按租户隔离，userId 用于前端筛选（可选）
+        // 修复(2026-09-23 P1-6)：抬头按归属用户隔离，原仅按租户过滤致全店企业名/税号互相可见
         LambdaQueryWrapper<InvoiceTitle> qw = new LambdaQueryWrapper<>();
         qw.eq(InvoiceTitle::getTenantId, tenantId);
+        qw.eq(InvoiceTitle::getUserId, userId);
         qw.orderByDesc(InvoiceTitle::getCreateTime);
         return invoiceTitleMapper.selectList(qw);
     }
@@ -92,7 +95,9 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
     @Override
     public boolean deleteTitle(Long id, Long tenantId, Long userId) {
         InvoiceTitle title = invoiceTitleMapper.selectById(id);
-        if (title == null || !tenantId.equals(title.getTenantId())) {
+        // 修复(2026-09-23 P1-6)：除租户外还须归属当前用户，否则可删除他人抬头
+        if (title == null || !tenantId.equals(title.getTenantId())
+                || userId == null || !userId.equals(title.getUserId())) {
             throw new CustomException("发票抬头不存在");
         }
         return invoiceTitleMapper.deleteById(id) > 0;
@@ -222,10 +227,12 @@ public class InvoiceServiceImpl extends ServiceImpl<InvoiceRecordMapper, Invoice
      * @return 返回结果
      */
     @Override
-    public boolean updateTitle(Long id, Long tenantId, String title, String taxNumber, String companyName,
-            Integer type) {
+    public boolean updateTitle(Long id, Long tenantId, Long userId, String title, String taxNumber,
+            String companyName, Integer type) {
         InvoiceTitle titleEntity = invoiceTitleMapper.selectById(id);
-        if (titleEntity == null || !tenantId.equals(titleEntity.getTenantId())) {
+        // 修复(2026-09-23 P1-6)：须归属当前用户，否则可编辑他人抬头
+        if (titleEntity == null || !tenantId.equals(titleEntity.getTenantId())
+                || userId == null || !userId.equals(titleEntity.getUserId())) {
             throw new CustomException("发票抬头不存在");
         }
         String trimmedTitle = title == null ? null : title.trim();

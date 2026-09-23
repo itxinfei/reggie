@@ -40,6 +40,9 @@ public class InvoiceTitle implements Serializable {
     @Schema(description = "租户ID")
     private Long tenantId;
 
+    @Schema(description = "归属用户ID（用户端按此隔离，空为历史/公共数据不对外返回）")
+    private Long userId;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

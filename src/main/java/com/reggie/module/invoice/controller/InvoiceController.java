@@ -83,7 +83,7 @@ public class InvoiceController {
     @Operation(summary = "编辑发票抬头")
     public R<Void> updateTitle(@Parameter(description = "发票抬头ID", required = true) @PathVariable Long id,
                                @Parameter(description = "发票抬头信息", required = true) @RequestBody InvoiceTitle title) {
-        invoiceService.updateTitle(id, currentTenantId(),
+        invoiceService.updateTitle(id, currentTenantId(), currentUserId(),
                 title.getTitle(), title.getTaxNumber(), title.getCompanyName(), title.getType());
         return R.success(null);
     }

@@ -50,7 +50,7 @@ public interface InvoiceService extends IService<InvoiceRecord> {
      * @param type        类型：1=个人，2=企业
      * @return 是否更新成功
      */
-    boolean updateTitle(Long id, Long tenantId, String title, String taxNumber, String companyName, Integer type);
+    boolean updateTitle(Long id, Long tenantId, Long userId, String title, String taxNumber, String companyName, Integer type);
 
     /**
      * 获取发票列表（后台，分页）
