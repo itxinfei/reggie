@@ -173,7 +173,7 @@
                         <!-- 推荐菜品卡片 -->
                         <div class="dish-recommendations" v-if="msg.dishes && msg.dishes.length > 0">
                             <div class="dish-card" v-for="dish in msg.dishes" :key="dish.dishId || dish.name" @click="addToCart(dish)">
-                                <img :src="dish.image || '/front/images/noImg.png'" loading="lazy" width="56" height="56" :alt="dish.name" @error="imgError">
+                                <img :src="dish.image ? imgPath(dish.image) : '/front/images/noImg.png'" loading="lazy" width="56" height="56" :alt="dish.name" @error="imgError">
                                 <div class="dish-info">
                                     <div class="dish-name">{{ dish.name }}</div>
                                     <div class="dish-reason" v-if="dish.reason">{{ dish.reason }}</div>
@@ -289,6 +289,9 @@
     <!-- 公共聊天内核：POST+SSE 客户端 / 安全 Markdown / 消息工厂（与管理后台同一份） -->
     <script src="../../backend/js/ai/ai-chat-core.js?v=20260922"></script>
     <script src="../api/ai.js?v=20260921"></script>
+    <!-- 修复(2026-09-23 P2-3/P2-4)：引入 common.js 提供 goLogin()/imgPath()；
+         须在 vue.js 之后、new Vue 之前，installReggieVueHelpers 才能把 imgPath 注入实例 -->
+    <script src="../js/common.js?v=20260923"></script>
     <script>
     (function() {
         'use strict';

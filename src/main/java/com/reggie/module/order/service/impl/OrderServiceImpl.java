@@ -594,10 +594,35 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         orders.setUserName(user.getName());
         orders.setConsignee(addressBook.getConsignee());
         orders.setPhone(addressBook.getPhone());
-        orders.setAddress((addressBook.getProvinceName() == null ? "" : addressBook.getProvinceName())
-                + (addressBook.getCityName() == null ? "" : addressBook.getCityName())
-                + (addressBook.getDistrictName() == null ? "" : addressBook.getDistrictName())
-                + (addressBook.getDetail() == null ? "" : addressBook.getDetail()));
+        orders.setAddress(joinAddressParts(addressBook.getProvinceName(), addressBook.getCityName(),
+                addressBook.getDistrictName(), addressBook.getDetail()));
+    }
+
+    /**
+     * 拼接收货地址各段：跳过空段及与上一已拼段重复的段。
+     * 修复(2026-09-23 P2-1)：直辖市 provinceName 与 cityName 相同（如“北京市”+“北京市”），
+     * 直接拼接会产生“北京市北京市…”；相邻重复段只保留一个。
+     *
+     * @param parts 地址各段（省/市/区/明细）
+     * @return 去重拼接后的地址
+     */
+    private static String joinAddressParts(String... parts) {
+        StringBuilder sb = new StringBuilder();
+        String prev = null;
+        if (parts != null) {
+            for (String part : parts) {
+                if (part == null) {
+                    continue;
+                }
+                String s = part.trim();
+                if (s.isEmpty() || s.equals(prev)) {
+                    continue;
+                }
+                sb.append(s);
+                prev = s;
+            }
+        }
+        return sb.toString();
     }
 
     /**
@@ -1631,10 +1656,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         if (!StringUtils.isBlank(order.getAddress())) {
             return;
         }
-        String address = (addr.getProvinceName() == null ? "" : addr.getProvinceName())
-                + (addr.getCityName() == null ? "" : addr.getCityName())
-                + (addr.getDistrictName() == null ? "" : addr.getDistrictName())
-                + (addr.getDetail() == null ? "" : addr.getDetail());
+        String address = joinAddressParts(addr.getProvinceName(), addr.getCityName(),
+                addr.getDistrictName(), addr.getDetail());
         if (StringUtils.isNotBlank(address)) {
             order.setAddress(address);
         }

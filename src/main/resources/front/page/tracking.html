@@ -450,7 +450,7 @@
                     if (this.trackingData && this.trackingData.riderPhone) {
                         window.location.href = 'tel:' + this.trackingData.riderPhone;
                     } else {
-                        vant.Toast.info('暂无骑手联系方式');
+                        vant.Toast.fail('暂无骑手联系方式');
                     }
                 },
                 goToOrders() {

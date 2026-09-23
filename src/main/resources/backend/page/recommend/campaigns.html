@@ -235,7 +235,7 @@
                     <el-radio-button label="秒杀">秒杀</el-radio-button>
                 </el-radio-group>
                 <el-input v-model="form.ruleJson" type="textarea" :rows="3"
-                    :placeholder="rulePreset ? '' : 'JSON格式，如：{"minAmount":50,"discountRate":0.8}'" />
+                    :placeholder="rulePreset ? '' : 'JSON格式，如：{"minAmount":50,"discountRate":0.8}'"></el-input>
                 <div v-if="ruleError" style="font-size:var(--font-size-xs);color:var(--color-danger);margin-top:4px;">{{ ruleError }}</div>
                 <span v-else style="font-size:var(--font-size-xs);color:var(--color-info);">格式: {"minAmount":80,"reduceAmount":10} | {"discountRate":0.85} | {"flashPrice":9.9,"flashStock":100}</span>
             </el-form-item>

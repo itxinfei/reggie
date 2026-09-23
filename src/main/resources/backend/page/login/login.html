@@ -46,7 +46,7 @@
                 <el-input v-model="form.username" placeholder="用户名" maxlength="50"
                           autocomplete="username" aria-label="用户名"
                           @focus="focus='u'" @blur="focus=''"
-                          @keyup.enter.native="focusPass" />
+                          @keyup.enter.native="focusPass"></el-input>
                 <span class="inp-ok" v-show="form.username && !err('username')"><i class="ri-check-line"></i></span>
               </div>
             </el-form-item>
@@ -59,7 +59,7 @@
                           placeholder="密码" maxlength="20"
                           autocomplete="current-password" aria-label="密码"
                           @focus="focus='p'" @blur="focus=''"
-                          @keyup.enter.native="doLogin" />
+                          @keyup.enter.native="doLogin"></el-input>
                 <button type="button" class="inp-eye" :aria-label="seePass?'隐藏密码':'显示密码'"
                         @click="seePass=!seePass">
                   <i :class="seePass ? 'ri-eye-off-line' : 'ri-eye-line'"></i>

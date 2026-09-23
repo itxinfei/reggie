@@ -273,19 +273,34 @@
             },
             created: function () {
                 this.userAvatar = sessionStorage.getItem('userAvatar') || '';
+                document.addEventListener('visibilitychange', this.onVisibility);
                 if (!sessionStorage.getItem('userPhone')) {
-                    window.location.href = '/front/page/login.html?redirect='
-                        + encodeURIComponent('/front/page/customer-service.html');
+                    this.toLogin();
                     return;
                 }
-                this.initChat();
-                document.addEventListener('visibilitychange', this.onVisibility);
+                // 修复(2026-09-23 P2-7)：sessionStorage 与服务端会话可能不一致（会话过期/换浏览器），
+                // 以轻量 /user/info 确认真实登录态，避免页面放行但后续接口全部 NOTLOGIN
+                var self = this;
+                $axios({ url: '/user/info', method: 'get' }).then(function (r) {
+                    if (r && r.code === 1) {
+                        self.initChat();
+                    } else {
+                        self.toLogin();
+                    }
+                }).catch(function () {
+                    self.toLogin();
+                });
             },
             beforeDestroy: function () {
                 this.stopPolling();
                 document.removeEventListener('visibilitychange', this.onVisibility);
             },
             methods: {
+                // 统一跳登录并带回跳地址（P2-7 真实会话校验失败时使用）
+                toLogin: function () {
+                    window.location.href = '/front/page/login.html?redirect='
+                        + encodeURIComponent('/front/page/customer-service.html');
+                },
                 goBack: function () { goBack(); },
                 previewImage: function (url) {
                     if (url) { vant.ImagePreview([imgPath(url)]); }
