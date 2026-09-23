@@ -189,7 +189,7 @@
                     <div class="title">价格明细</div>
                     <div class="price-row">
                         <span>商品小计</span>
-                        <span>￥{{Number(cartTotalPrice || 0).toFixed(2)}}</span>
+                        <span>￥{{Number(goodsPrice || 0).toFixed(2)}}</span>
                     </div>
                     <div class="price-row">
                         <span>配送费</span>
@@ -422,7 +422,7 @@
                 created(){
                     // 修改点：未登录重定向到登录页
                     if(!sessionStorage.getItem("userPhone")){
-                        window.location.href = '/front/page/login.html'
+                        goLogin()
                         return
                     }
                     // 修改点（P2-11）：解析订单列表「去支付」跳转携带的 reorderId（待付款订单 ID）
@@ -727,7 +727,9 @@
                                         orderId: this.reorderId,
                                         channel: this.payMethod === 2 ? 'WECHAT' : 'ALIPAY'
                                     })
-                                    this.redirectAfterPayCreate(payRes, this.reorderId)
+                                    if(!this.redirectAfterPayCreate(payRes, this.reorderId)){
+                                        vant.Toast.fail('支付发起失败，请重试')
+                                    }
                                 }else{
                                     // 货到付款的待付款订单不应走到这里，兜底跳转
                                     window.location.replace('/front/page/pay-success.html?reorderId=' + this.reorderId)
@@ -752,6 +754,11 @@
                             vant.Toast.fail(this.feeMessage || '当前地址暂不可下单');
                             return
                         }
+                        // 预约配送必须先选预约时段；否则 expectDeliveryTime 会静默退化为"尽快送达"
+                        if(this.deliveryMode === 1 && !this.scheduleDate){
+                            vant.Toast.fail('请选择预约配送时间');
+                            return
+                        }
                         if(this.loading) return;
                         this.loading = true
                         // 修改点(2026-09-18)：餐具选择原先仅 UI 绑定、从未提交。并入备注随订单落库，
@@ -771,33 +778,45 @@
                             idempotencyKey: this.ensureIdempotencyKey()
                         }
                         try {
-                            const res = await addOrderApi(params)
-                            if(res.code !== 1){
-                                vant.Toast.fail(res.msg || '提交订单失败');
+                            // —— 阶段1：提交订单。此阶段失败 = 订单未生成，可安全重试 ——
+                            var orderId = null
+                            try {
+                                const res = await addOrderApi(params)
+                                if(res.code !== 1){
+                                    vant.Toast.fail(res.msg || '提交订单失败');
+                                    return
+                                }
+                                orderId = res.data && res.data.id
+                            } catch (err) {
+                                console.error('提交订单失败:', err)
+                                vant.Toast.fail('提交订单失败，请稍后重试');
                                 return
                             }
-                            // 修改点：微信/支付宝线上支付 → 下单后立即拉起支付（payMethod=2 微信/3 支付宝）
-                            // 支付成功页收订单号后由 pay-success.html 解析 reorderId 主动查询支付结果；
-                            // 货到付款(6) 保持原流程直接跳下单成功页。
-                            const orderId = res.data && res.data.id
-                            if(this.payMethod === 2 || this.payMethod === 3){
-                                if(!orderId){
-                                    throw new Error('下单成功但缺少订单ID')
-                                }
+                            // 货到付款(6)：下单即完成，直接跳下单成功页
+                            if(this.payMethod !== 2 && this.payMethod !== 3){
+                                window.requestAnimationFrame(()=>{
+                                    window.location.replace('/front/page/pay-success.html')
+                                })
+                                return
+                            }
+                            // —— 阶段2：拉起线上支付。订单已创建，任何失败都不能误报"下单失败"，
+                            //    否则用户以为没下成会重复下单 ——
+                            if(!orderId){
+                                this.payCreateFailed();
+                                return
+                            }
+                            try {
                                 const payRes = await paymentCreateApi({
                                     orderId: orderId,
                                     channel: this.payMethod === 2 ? 'WECHAT' : 'ALIPAY'
                                 })
-                                this.redirectAfterPayCreate(payRes, orderId)
-                            }else{
-                                window.requestAnimationFrame(()=>{
-                                    window.location.replace('/front/page/pay-success.html')
-                                })
+                                if(!this.redirectAfterPayCreate(payRes, orderId)){
+                                    this.payCreateFailed();
+                                }
+                            } catch (err) {
+                                console.error('支付发起失败:', err)
+                                this.payCreateFailed();
                             }
-                        } catch (err) {
-                            // 异常兜底：网络错误/接口 500 时给出提示，按钮不再永卡「提交中」
-                            console.error('提交订单失败:', err)
-                            vant.Toast.fail('提交订单失败，请稍后重试');
                         } finally {
                             this.loading = false
                         }
@@ -805,6 +824,7 @@
                     // /pay 创建成功后分流：0元订单后端已自动完成支付（无 tradeNo）→ 直接进结果页；
                     // 正常待支付订单（返回商户单号 tradeNo）→ 进沙箱收银台完成模拟付款。
                     // loading 由调用方 finally 复位，此处只负责跳转/提示。
+                    // 返回 true=已跳转收银台/结果页；false=支付未拉起，由调用方决定提示方式
                     redirectAfterPayCreate(payRes, orderId){
                         if(payRes && payRes.code === 1 && payRes.data){
                             var d = payRes.data
@@ -812,13 +832,24 @@
                                 var channel = this.payMethod === 2 ? 'WECHAT' : 'ALIPAY'
                                 window.location.replace('/front/page/pay-cashier.html?orderId=' + orderId
                                     + '&channel=' + channel + '&tradeNo=' + encodeURIComponent(d.tradeNo))
+                                return true
                             }else{
                                 window.location.replace('/front/page/pay-success.html?reorderId=' + orderId)
+                                return true
                             }
-                        }else{
-                            vant.Toast.fail((payRes && payRes.data && payRes.data.errorMsg)
-                                || (payRes && payRes.msg) || '支付发起失败')
                         }
+                        return false
+                    },
+                    // 订单已创建但支付未拉起：明确告知"订单已提交"，引导去订单列表续付，杜绝误重复下单
+                    payCreateFailed(){
+                        vant.Dialog.alert({
+                            title: '支付未完成',
+                            message: '订单已提交成功，您可稍后在订单列表中找到该订单继续支付。'
+                        }).then(()=>{
+                            window.location.replace('/front/page/order.html')
+                        }).catch(()=>{
+                            window.location.replace('/front/page/order.html')
+                        })
                     },
                 }
             })

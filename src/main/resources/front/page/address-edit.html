@@ -77,21 +77,21 @@
                                  :class="{regionFilled: provinceText, regionActive: pickerLevel === 1 && pickerVisible}"
                                  @click="openPicker(1)">
                                 {{ provinceText || '省份' }}
-                                <i class="regionArrow">&#9660;</i>
+                                <i class="regionArrow ri-arrow-down-s-line"></i>
                             </div>
                             <!-- 城市 -->
                             <div class="regionSlot"
                                  :class="{regionFilled: cityText, regionDisabled: !provinceId, regionActive: pickerLevel === 2 && pickerVisible}"
                                  @click="provinceId && openPicker(2)">
                                 {{ cityText || '城市' }}
-                                <i class="regionArrow" v-if="provinceId">&#9660;</i>
+                                <i class="regionArrow ri-arrow-down-s-line" v-if="provinceId"></i>
                             </div>
                             <!-- 区县 -->
                             <div class="regionSlot"
                                  :class="{regionFilled: districtText, regionDisabled: !cityId, regionActive: pickerLevel === 3 && pickerVisible}"
                                  @click="cityId && openPicker(3)">
                                 {{ districtText || '区县' }}
-                                <i class="regionArrow" v-if="cityId">&#9660;</i>
+                                <i class="regionArrow ri-arrow-down-s-line" v-if="cityId"></i>
                             </div>
                         </div>
                         <div class="fieldError" v-if="errors.region">{{errors.region}}</div>
@@ -188,7 +188,7 @@
                             <span class="pickerTitle">
                                 {{ pickerLevel === 1 ? '选择省份' : pickerLevel === 2 ? '选择城市' : '选择区/县' }}
                             </span>
-                            <span class="pickerClose" @click="closePicker">&#10005;</span>
+                            <i class="pickerClose ri-close-line" @click="closePicker"></i>
                         </div>
                         <div class="pickerBody">
                             <div class="pickerLoading" v-if="pickerLoading">加载中...</div>
@@ -197,7 +197,7 @@
                                  v-for="region in pickerList" :key="region.id"
                                  @click="onRegionPicked(region)">
                                 <span>{{region.name}}</span>
-                                <span class="pickerCheck" v-if="region.id === selectedRegionId">&#10003;</span>
+                                <i class="pickerCheck ri-check-line" v-if="region.id === selectedRegionId"></i>
                             </div>
                             <div class="pickerEmpty" v-if="!pickerLoading && pickerList.length === 0">
                                 暂无数据
@@ -257,6 +257,12 @@
             }
         },
         created() {
+            // 未登录前置拦截：重定向登录页并携带回跳地址（含编辑 id）
+            if (!sessionStorage.getItem('userPhone')) {
+                window.location.href = '/front/page/login.html?redirect='
+                    + encodeURIComponent(window.location.pathname + window.location.search);
+                return;
+            }
             this.initData()
         },
         methods: {

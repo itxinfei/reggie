@@ -2,7 +2,12 @@
 #no_wifi .divHead {
   width: 100%;
   height: var(--header-height);
+  height: calc(var(--header-height) + constant(safe-area-inset-top));
+  height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
   background: var(--color-primary-gradient);
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
   position: relative;
 }
 

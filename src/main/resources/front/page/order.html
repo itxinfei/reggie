@@ -94,12 +94,12 @@
                             <!-- 待接单 -->
                             <template v-if="order.status === 2">
                                 <div class="act-btn act-outline" @click="urgeOrder(order)">催单</div>
-                                <div class="act-btn act-outline" @click="viewTracking(order)">查看配送</div>
+                                <div class="act-btn act-outline" v-if="order.platformOrderId" @click="viewTracking(order)">查看配送</div>
                             </template>
                             <!-- 配送中 -->
                             <template v-if="order.status === 3">
                                 <div class="act-btn act-outline" @click="urgeOrder(order)">催单</div>
-                                <div class="act-btn act-outline" @click="viewTracking(order)">查看配送</div>
+                                <div class="act-btn act-outline" v-if="order.platformOrderId" @click="viewTracking(order)">查看配送</div>
                                 <div class="act-btn act-primary" @click="confirmReceipt(order)">确认收货</div>
                             </template>
                             <!-- 已完成 -->
@@ -295,7 +295,8 @@
                 },
                 getStatusClass(status){
                     // 修改点(2026-09-14)：6 类状态各归各位（原 1/2 同为 pending、6 误归 cancel）
-                    var map = {1:'status-pending',2:'status-accepted',3:'status-shipped',4:'status-completed',5:'status-cancelled',6:'status-refunding'};
+                    // 7已分账与4已完成同为成功终态，共用 completed 样式
+                    var map = {1:'status-pending',2:'status-accepted',3:'status-shipped',4:'status-completed',5:'status-cancelled',6:'status-refunding',7:'status-completed'};
                     return map[status] || '';
                 },
                 async addOrderAgain(order){
@@ -312,6 +313,9 @@
                         }else{
                             vant.Toast.fail(res.msg || '再来一单失败');
                         }
+                    } catch (e) {
+                        console.error('再来一单失败:', e);
+                        vant.Toast.fail('网络异常，请稍后重试');
                     } finally {
                         this.submitting = false
                     }
@@ -360,14 +364,14 @@
                 // （delivery_order 表主键是 platformOrderId，getByPlatformOrderId 查询）。
                 // 本系统 Orders.number 是自增主键字符串，与平台订单号不同，直接传会导致"配送订单不存在"。
                 viewTracking(order){
-                    // 修改点：platformOrderId 为 null 时 fallback 到 order.number
-                    var platformOrderId = order && (order.platformOrderId || order.number);
+                    // 仅平台配送订单才有 platformOrderId；自配送/堂食无追踪，按钮已隐藏，此处兜底
+                    var platformOrderId = order && order.platformOrderId;
                     if(platformOrderId){
                         window.requestAnimationFrame(()=>{
                             window.location.href = '/front/page/tracking.html?orderId=' + encodeURIComponent(platformOrderId)
                         })
                     } else {
-                        vant.Toast.fail('该订单无配送追踪信息');
+                        vant.Toast.fail('该订单暂无配送追踪信息');
                     }
                 },
                 // 修改点：催单（待接单/配送中可用），按订单维度在飞防重，避免连点刷接口

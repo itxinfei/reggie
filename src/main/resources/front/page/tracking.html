@@ -136,9 +136,10 @@
         <!-- 空状态 / 加载失败 -->
         <!-- 修改点(2026-09-17 UX)：加载失败/无数据空态补充"重新加载"入口（原失败后只能干等 30s 轮询） -->
         <div class="empty-state" v-else-if="!pageLoading && !trackingData">
-            <i class="ri-map-pin-time-line"></i>
-            <p class="empty-text">暂无配送信息</p>
-            <van-button size="small" round style="margin-top: 12rem;" @click="loadTracking">重新加载</van-button>
+            <i :class="missingOrder ? 'ri-error-warning-line' : 'ri-map-pin-time-line'"></i>
+            <p class="empty-text">{{ missingOrder ? '订单信息缺失，请返回订单列表' : '暂无配送信息' }}</p>
+            <van-button v-if="missingOrder" size="small" round style="margin-top: 12rem;" @click="goToOrders">去订单列表</van-button>
+            <van-button v-else size="small" round style="margin-top: 12rem;" @click="loadTracking">重新加载</van-button>
         </div>
         </cend-shell>
     </div>
@@ -160,6 +161,8 @@
                     refreshing: false,
                     trackingData: null,
                     orderId: null,
+                    // URL 未带 orderId：空态据此引导回订单列表，而非提供无效的"重新加载"
+                    missingOrder: false,
                     // 修改点(2026-09-17)：配送地图相关状态（未配置 Key 时 mapEnabled 恒为 false）
                     mapEnabled: false,
                     mapReady: false,
@@ -286,6 +289,7 @@
                     }.bind(this);
                     document.addEventListener('visibilitychange', this._onVisibility);
                 } else {
+                    this.missingOrder = true;
                     vant.Toast.fail('缺少订单信息');
                 }
             },
@@ -297,8 +301,9 @@
                 // 修改点(2026-09-22)：goBack 已统一由 cend-shell 接管（组件调 window.goBack 兜底），页面不再定义
                 // 下拉刷新
                 async onRefresh(){
-                    await this.loadTracking(true);
-                    this.refreshing = false;
+                    // finally 保证 refreshing 一定复位（loadTracking 抛错也不会卡在下拉态）
+                    try { await this.loadTracking(true); }
+                    finally { this.refreshing = false; }
                 },
                 getUrlParam(name) {
                     const reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)');
@@ -334,6 +339,8 @@
                     return '位置更新较慢';
                 },
                 async loadTracking(silent) {
+                    // 缺订单号不发请求（空态区已引导去订单列表），避免无意义接口调用
+                    if (!this.orderId) { return; }
                     // 修改点：记录刷新前状态，用于状态变更时主动提示
                     const prevStatus = this.trackingData ? this.trackingData.status : null;
                     // silent=true（15s 轮询/可见性刷新/下拉刷新）走静默更新，不弹全屏遮罩、不打断阅读；

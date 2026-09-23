@@ -157,6 +157,12 @@
         }
       },
       created: function() {
+        // 未登录前置拦截：发票信息敏感，重定向登录页并携带回跳地址
+        if (!sessionStorage.getItem('userPhone')) {
+          window.location.href = '/front/page/login.html?redirect='
+            + encodeURIComponent(window.location.pathname + window.location.search);
+          return
+        }
         var self = this
         var q = this.parseQuery()
         this.orderId = q.orderId || ''

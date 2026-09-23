@@ -160,6 +160,9 @@
   align-items: center;
   gap: 8rem;
   padding: 8rem 12rem;
+  /* 贴底输入栏叠加 Home Indicator 安全区，避免被横条压住 */
+  padding-bottom: calc(8rem + constant(safe-area-inset-bottom));
+  padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0px));
   background: var(--bg-card);
   border-top: 1px solid var(--mask-light);
 }
@@ -361,5 +364,113 @@
   padding: 30rem 0;
   font-size: 13rem;
   color: var(--color-text-hint);
+  text-align: center;
+}
+
+/* ============================================================
+   我的投诉记录 / 满意度评价
+   ============================================================ */
+.complaint-record {
+  /* .block 已提供白卡/圆角/内边距，这里仅收紧在弹层内的外边距 */
+  margin: 10rem;
+}
+.cr-top {
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  margin-bottom: 8rem;
+}
+.mini-tag {
+  padding: 2rem 10rem;
+  font-size: 12rem;
+  border-radius: 6rem;
+}
+/* 状态色属状态识别功能：待处理橙 / 处理中蓝 / 已处理绿 / 已关闭灰 */
+.mini-tag.st-0 { color: #ff976a; background: rgba(255, 151, 106, .12); }
+.mini-tag.st-1 { color: #1989fa; background: rgba(25, 137, 250, .12); }
+.mini-tag.st-2 { color: #07c160; background: rgba(7, 193, 96, .12); }
+.mini-tag.st-3 { color: var(--color-text-hint); background: var(--mask-light); }
+.cr-type {
+  font-size: 12rem;
+  color: var(--color-text-secondary);
+}
+.cr-title {
+  margin-bottom: 6rem;
+}
+.cr-content {
+  font-size: 14rem;
+  line-height: 20rem;
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+.cr-time {
+  margin-top: 8rem;
+  font-size: 12rem;
+  color: var(--color-text-hint);
+}
+.cr-result {
+  margin-top: 10rem;
+  padding: 10rem;
+  font-size: 13rem;
+  line-height: 19rem;
+  color: var(--color-text-primary);
+  background: var(--bg-page);
+  border-radius: var(--radius-md);
+}
+.cr-result-label {
+  margin-bottom: 4rem;
+  font-size: 12rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+.cr-comp {
+  margin-top: 6rem;
+  font-weight: 600;
+  color: var(--color-price);
+}
+.cr-rated {
+  margin-top: 10rem;
+  font-size: 13rem;
+  color: var(--color-text-secondary);
+}
+.cr-stars {
+  color: var(--color-primary);
+  letter-spacing: 1rem;
+}
+.cr-fb {
+  display: block;
+  margin-top: 4rem;
+  color: var(--color-text-secondary);
+}
+.cr-rate-btn {
+  width: 100%;
+  height: 38rem;
+  margin-top: 10rem;
+  font-size: 14rem;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-light);
+  border: none;
+  border-radius: 19rem;
+}
+.cr-rate-btn:active { opacity: .85; }
+
+/* ---------- 满意度评价弹层 ---------- */
+.rate-sheet {
+  padding: 0 16rem 20rem;
+}
+.rate-stars {
+  display: flex;
+  justify-content: center;
+  gap: 14rem;
+  padding: 16rem 0 8rem;
+  font-size: 38rem;
+}
+.rate-stars i {
+  color: var(--color-primary);
+}
+.rate-hint {
+  margin-bottom: 12rem;
+  font-size: 14rem;
+  color: var(--color-text-secondary);
   text-align: center;
 }

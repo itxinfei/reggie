@@ -15,7 +15,7 @@
     <script src="../js/icon-fallback.js?v=20260917"></script>
 </head>
 <body>
-    <div id="frequent" class="app">
+    <div id="frequent" class="app dish-card-page">
         <cend-shell title="常购清单" light :show-back="true" :show-home="true">
         <!-- 骨架屏（2026-09-22：改用 skeleton.css 通用类，v-if/v-for 不变） -->
         <div v-if="pageLoading" class="skeleton-container">
@@ -75,7 +75,7 @@
             <template v-if="filteredItems.length > 0">
                 <div class="group-title">按点餐频率排序</div>
                 <div class="dish-card" v-for="item in filteredItems" :key="item.key">
-                    <img v-if="item.image" :src="item.image" loading="lazy" class="dish-img" :alt="item.name || '菜品图片'" @error="$event.target.src='./../images/noImg.png'"/>
+                    <img v-if="item.image" :src="imgPath(item.image)" loading="lazy" class="dish-img" :alt="item.name || '菜品图片'" @error="$event.target.src='./../images/noImg.png'"/>
                     <div v-else class="dish-img-placeholder">
                         <i class="ri-restaurant-line"></i>
                     </div>
@@ -84,7 +84,7 @@
                             <div class="dish-name">{{ item.name }}</div>
                             <div class="dish-meta">
                                 <span class="freq-badge">点过{{ item.count }}次</span>
-                                <span>{{ item.lastOrderTime }}</span>
+                                <span v-if="formatLastTime(item.lastOrderTime)">{{ formatLastTime(item.lastOrderTime) }}</span>
                             </div>
                         </div>
                         <div class="dish-price-row">
@@ -159,6 +159,17 @@
                 this.initData();
             },
             methods: {
+                // 最近下单时间格式化为"M月d日"；兼容时间戳/ISO/yyyy-MM-dd HH:mm:ss
+                // （Safari 对短横线+空格串解析不稳，统一替换为斜杠），无法解析返回空串
+                formatLastTime(t){
+                    if(!t) return '';
+                    var d = new Date(t);
+                    if(isNaN(d.getTime())){
+                        d = new Date(String(t).replace(/-/g,'/').replace('T',' '));
+                    }
+                    if(isNaN(d.getTime())) return '';
+                    return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+                },
                 // 修改点(2026-09-22)：goBack 已统一由 cend-shell 接管（组件调 window.goBack 兜底），页面不再定义
                 // 修改点：下拉刷新（refreshing 由 initData.finally 复位）
                 async onRefresh() {

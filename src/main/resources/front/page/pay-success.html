@@ -135,9 +135,9 @@
                                 this.orderNo = d.number || d.orderNo || ''
                                 this.amount = Number(d.amount || d.actualAmount || 0)
                                 var orderStatus = d.status || d.orderStatus
-                                // 仅 2待接单/3派送中/4已完成 视为支付成功；
+                                // 2待接单/3派送中/4已完成/7已分账 均视为支付成功；
                                 // 5已取消、6已退款不得误报成功，否则用户放弃支付后不再下单
-                                if (orderStatus === 2 || orderStatus === 3 || orderStatus === 4) {
+                                if (orderStatus === 2 || orderStatus === 3 || orderStatus === 4 || orderStatus === 7) {
                                     vant.Toast.success('支付成功')
                                     return
                                 }

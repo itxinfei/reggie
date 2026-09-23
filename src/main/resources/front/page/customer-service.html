@@ -81,6 +81,13 @@
             <!-- ================= 投诉视图 ================= -->
             <div class="complaint-wrap" v-show="view==='complaint'">
                 <div class="block">
+                    <div class="order-pick" @click="openMyComplaints">
+                        <span>我的投诉记录</span>
+                        <i class="ri-arrow-right-s-line"></i>
+                    </div>
+                </div>
+
+                <div class="block">
                     <div class="block-label">投诉类型</div>
                     <div class="type-grid">
                         <div class="type-cell" :class="{ on: form.complaintType===t.v }"
@@ -150,6 +157,64 @@
                 </div>
             </div>
         </van-popup>
+
+        <!-- 我的投诉记录 -->
+        <van-popup v-model="complaintListShow" position="bottom" round>
+            <div class="order-pick-popup">
+                <div class="pop-title">我的投诉记录</div>
+                <div class="pop-scroll">
+                    <div v-if="complaintListLoading" class="pop-empty">加载中…</div>
+                    <template v-else>
+                        <div v-if="myComplaints.length===0" class="pop-empty">暂无投诉记录</div>
+                        <div class="block complaint-record" v-for="c in myComplaints" :key="c.id">
+                            <div class="cr-top">
+                                <span class="mini-tag" :class="'st-' + c.status">{{ complaintStatusText(c.status) }}</span>
+                                <span class="cr-type">{{ complaintTypeText(c.complaintType) }}</span>
+                            </div>
+                            <div class="block-label cr-title">{{ c.title }}</div>
+                            <div class="cr-content">{{ c.content }}</div>
+                            <div class="cr-time">
+                                <span v-if="c.complaintNo">{{ c.complaintNo }} · </span>{{ fmtCtime(c.createTime) }}
+                            </div>
+                            <!-- 处理结果 -->
+                            <div class="cr-result" v-if="c.status >= 2 && c.handleResult">
+                                <div class="cr-result-label">处理结果</div>
+                                <div>{{ c.handleResult }}</div>
+                                <div class="cr-comp" v-if="c.compensationAmount > 0">
+                                    赔偿 ￥{{ Number(c.compensationAmount).toFixed(2) }}
+                                </div>
+                            </div>
+                            <!-- 已评价 -->
+                            <div class="cr-rated" v-if="c.satisfaction">
+                                我的评价 <span class="cr-stars">{{ starText(c.satisfaction) }}</span>
+                                <span v-if="c.userFeedback" class="cr-fb">{{ c.userFeedback }}</span>
+                            </div>
+                            <!-- 去评价：已处理/已关闭且尚未评价 -->
+                            <button v-else-if="c.status === 2 || c.status === 3"
+                                    class="cr-rate-btn" @click="openRate(c)">评价处理结果</button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </van-popup>
+
+        <!-- 满意度评价 -->
+        <van-popup v-model="rateShow" position="bottom" round>
+            <div class="rate-sheet">
+                <div class="pop-title">评价处理结果</div>
+                <div class="rate-stars">
+                    <i v-for="n in 5" :key="n"
+                       :class="n <= rateScore ? 'ri-star-fill' : 'ri-star-line'"
+                       @click="rateScore = n"></i>
+                </div>
+                <div class="rate-hint">{{ rateHint(rateScore) }}</div>
+                <textarea class="cs-textarea" v-model="rateFeedback" maxlength="200"
+                          placeholder="补充您的看法（选填）"></textarea>
+                <div class="char-count">{{ (rateFeedback || '').length }}/200</div>
+                <button class="submit-complaint" :disabled="rating || rateScore === 0"
+                        @click="submitRate">{{ rating ? '提交中…' : '提交评价' }}</button>
+            </div>
+        </van-popup>
     </div>
 
     <script src="../../backend/plugins/vue/vue.js"></script>
@@ -185,7 +250,17 @@
                         { v: 3, label: '服务态度', icon: 'ri-emotion-unhappy-line' },
                         { v: 4, label: '价格问题', icon: 'ri-money-cny-box-line' },
                         { v: 5, label: '其他', icon: 'ri-more-2-line' }
-                    ]
+                    ],
+                    // 我的投诉记录
+                    complaintListShow: false,
+                    myComplaints: [],
+                    complaintListLoading: false,
+                    // 满意度评价
+                    rateShow: false,
+                    ratingComplaint: null,
+                    rateScore: 0,
+                    rateFeedback: '',
+                    rating: false
                 };
             },
             computed: {
@@ -212,13 +287,8 @@
             },
             methods: {
                 goBack: function () { goBack(); },
-                imgPath: function (path) {
-                    if (!path) return './../images/noImg.png';
-                    if (path.indexOf('http://') === 0 || path.indexOf('https://') === 0) return path;
-                    return '/common/download?name=' + path;
-                },
                 previewImage: function (url) {
-                    if (url) { vant.ImagePreview([this.imgPath(url)]); }
+                    if (url) { vant.ImagePreview([imgPath(url)]); }
                 },
                 onVisibility: function () {
                     if (document.hidden) {
@@ -477,6 +547,99 @@
                         vant.Toast.fail('网络异常，请稍后重试');
                     } finally {
                         this.submitting = false;
+                    }
+                },
+
+                // ---------- 我的投诉记录 ----------
+                openMyComplaints: async function () {
+                    this.complaintListShow = true;
+                    await this.loadMyComplaints();
+                },
+                loadMyComplaints: async function () {
+                    this.complaintListLoading = true;
+                    try {
+                        var res = await csMyComplaints();
+                        if (res && res.code === 1) {
+                            this.myComplaints = res.data || [];
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '加载失败');
+                        }
+                    } catch (e) {
+                        console.error('[投诉记录] 加载失败:', e);
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    } finally {
+                        this.complaintListLoading = false;
+                    }
+                },
+                complaintStatusText: function (s) {
+                    var map = { 0: '待处理', 1: '处理中', 2: '已处理', 3: '已关闭' };
+                    return map[s] || '未知';
+                },
+                complaintTypeText: function (t) {
+                    for (var i = 0; i < this.complaintTypes.length; i++) {
+                        if (this.complaintTypes[i].v === t) return this.complaintTypes[i].label;
+                    }
+                    return '其他';
+                },
+                // 时间格式化：兼容 LocalDateTime 字符串 / 时间戳 / Jackson 默认数组 [y,m,d,h,m,s]
+                fmtCtime: function (t) {
+                    if (t == null || t === '') return '';
+                    var d = null;
+                    if (Array.isArray(t) && t.length >= 3) {
+                        d = new Date(t[0], t[1] - 1, t[2], t[3] || 0, t[4] || 0, t[5] || 0);
+                    } else if (typeof t === 'number') {
+                        d = new Date(t);
+                    } else {
+                        d = new Date(String(t).replace(/-/g, '/').replace('T', ' '));
+                    }
+                    if (isNaN(d.getTime())) return String(t);
+                    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+                    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate())
+                        + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+                },
+                starText: function (s) {
+                    var n = Number(s) || 0;
+                    var out = '';
+                    for (var i = 0; i < n; i++) { out += '★'; }
+                    return out;
+                },
+
+                // ---------- 满意度评价 ----------
+                openRate: function (c) {
+                    this.ratingComplaint = c;
+                    this.rateScore = 0;
+                    this.rateFeedback = '';
+                    this.rateShow = true;
+                },
+                rateHint: function (s) {
+                    var map = { 1: '很不满意', 2: '不满意', 3: '一般', 4: '满意', 5: '很满意' };
+                    return map[s] || '请选择星级';
+                },
+                submitRate: async function () {
+                    if (this.rating || this.rateScore === 0 || !this.ratingComplaint) return;
+                    this.rating = true;
+                    try {
+                        var res = await csRateComplaint(
+                            this.ratingComplaint.id, this.rateScore, (this.rateFeedback || '').trim());
+                        if (res && res.code === 1) {
+                            // $set 更新本地记录，列表项立即从"去评价"切换为"我的评价"
+                            var target = this.myComplaints.find(function (x) {
+                                return x.id === this.ratingComplaint.id;
+                            }.bind(this));
+                            if (target) {
+                                this.$set(target, 'satisfaction', this.rateScore);
+                                this.$set(target, 'userFeedback', (this.rateFeedback || '').trim());
+                            }
+                            this.rateShow = false;
+                            vant.Toast.success('评价已提交');
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '评价失败');
+                        }
+                    } catch (e) {
+                        console.error('[投诉评价] 失败:', e);
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    } finally {
+                        this.rating = false;
                     }
                 }
             }

@@ -53,7 +53,7 @@ body.scrollable-page {
 #address .divContent .divItem {
   min-height: 128rem;
   background: var(--bg-card);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   margin-top: 12rem;
   margin-left: 12rem;
   margin-right: 12rem;

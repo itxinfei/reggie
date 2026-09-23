@@ -269,8 +269,8 @@ body.scrollable-page {
 #address_edit .divContent .formGroup .regionSlot {
   flex: 1;
   min-width: 0;
-  height: 42rem;
-  line-height: 42rem;
+  height: 48rem;
+  line-height: 48rem;
   text-align: center;
   font-size: 12rem;
   font-weight: 400;

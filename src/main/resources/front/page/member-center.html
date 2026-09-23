@@ -197,6 +197,10 @@
             <div class="c-expire" v-if="c.expireTime">有效期至 {{ fmtCouponDate(c.expireTime) }}</div>
             <div class="c-cond" v-else-if="c.status==='used'">已使用</div>
             <div class="c-cond" v-else-if="c.status==='expired'">已过期</div>
+            <!-- 未使用券提供"去使用"出口，跳首页点餐（券在结算页选择） -->
+            <div class="mc-coupon-actions" v-if="c.status==='unused'">
+              <button class="mc-claim-btn" @click="goUseCoupon">去使用</button>
+            </div>
           </div>
         </div>
       </div>
@@ -301,10 +305,14 @@
           }
           return ''
         },
+        // 等级按升级积分升序，computed 缓存供 nextLevel/progressPct 复用，避免每次重排
+        sortedLevels: function() {
+          return this.allLevels.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
+        },
         nextLevel: function() {
           if (!this.memberInfo || !this.memberInfo.isMember || !this.allLevels.length) return null
           var curPts = this.memberInfo.member ? (this.memberInfo.member.points || 0) : 0
-          var sorted = this.allLevels.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
+          var sorted = this.sortedLevels
           for (var i = 0; i < sorted.length; i++) {
             if ((sorted[i].minPoints||0) > curPts) return sorted[i]
           }
@@ -317,7 +325,7 @@
         progressPct: function() {
           if (!this.nextLevel || !this.memberInfo || !this.memberInfo.member) return 0
           var cur = this.memberInfo.member.points || 0
-          var sorted = this.allLevels.slice().sort(function(a,b) { return (a.minPoints||0) - (b.minPoints||0) })
+          var sorted = this.sortedLevels
           var curLevelIdx = -1
           for (var i = sorted.length - 1; i >= 0; i--) { if ((sorted[i].minPoints||0) <= cur) { curLevelIdx = i; break } }
           if (curLevelIdx < 0) return Math.min(100, cur / (sorted[0].minPoints||1) * 100)
@@ -393,6 +401,12 @@
           } catch(e) { console.warn('[member-center] loadRecharge 失败:', e) }
         },
         switchTab: function(t) { this.activeTab = t },
+        // 去使用券：回首页点餐，结算时可选用券
+        goUseCoupon: function() {
+            window.requestAnimationFrame(function() {
+                window.location.href = '/front/index.html';
+            });
+        },
         // 修改点(2026-09-17 UX)：领取 loading 按券 ID 隔离（原 claimLoading 全局共用，点任意一张禁用所有按钮）
         async doClaim(templateId) {
           if (!this.memberInfo || !this.memberInfo.member) { vant.Toast.fail('请先成为会员'); return }

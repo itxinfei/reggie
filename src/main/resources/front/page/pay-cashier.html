@@ -17,11 +17,17 @@
             .cashier-wrap { min-height: 100vh; background: var(--bg-page); padding-bottom: calc(88rem + env(safe-area-inset-bottom)); }
             .cashier-head {
                 height: 46rem; display: flex; align-items: center; justify-content: center;
+                /* 默认 content-box：内容区 46，padding-top 叠加刘海安全区，总高 = 46 + safe */
+                padding-top: constant(safe-area-inset-top);
+                padding-top: env(safe-area-inset-top, 0px);
                 position: sticky; top: 0; z-index: 10;
                 background: var(--bg-card); border-bottom: var(--separator);
             }
             .cashier-head .back, .cashier-head .home {
                 position: absolute; top: 0; height: 46rem; min-width: 44rem;
+                /* 图标对齐安全区下方的 46rem 内容区 */
+                top: constant(safe-area-inset-top);
+                top: env(safe-area-inset-top, 0px);
                 display: flex; align-items: center; justify-content: center;
                 font-size: 22rem; color: var(--color-text-primary); text-decoration: none;
             }
@@ -60,7 +66,7 @@
             .pay-bar .bar-amount b { font-size: 20rem; color: var(--color-price); font-weight: 700; }
             .pay-bar .confirm-btn {
                 flex: 1; height: var(--btn-h); border: none; border-radius: var(--btn-radius);
-                background: var(--color-primary); color: #4a3500; font-size: var(--btn-font); font-weight: 600;
+                background: var(--color-primary); color: var(--color-primary-text); font-size: var(--btn-font); font-weight: 600;
                 box-shadow: var(--shadow-cta);
             }
             .pay-bar .confirm-btn:active { opacity: 0.85; }
@@ -74,7 +80,7 @@
                 box-sizing: border-box; border: 1px solid var(--border-light);
                 color: var(--color-text-secondary); background: var(--bg-card); }
             .state-btn-primary { background: var(--color-primary); border-color: var(--color-primary);
-                color: #4a3500; font-weight: 600; }
+                color: var(--color-primary-text); font-weight: 600; }
             /* 真实支付扫码弹窗（NATIVE） */
             .qr-pay-popup { width: 280rem; border-radius: var(--radius-lg); overflow: hidden; }
             .qr-pay-box { padding: 24rem 20rem 20rem; text-align: center; }

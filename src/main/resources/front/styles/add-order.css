@@ -9,7 +9,7 @@
 
 /* 满高 flex 列中的滚动区；外边距 10rem，底部给悬浮结算栏留位（栏高56+bottom12） */
 #add_order .divContent {
-  margin: 10rem 10rem 0;
+  margin: 12rem 12rem 0;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -252,6 +252,8 @@
   z-index: 3000;
   position: absolute;
   bottom: 12rem;
+  bottom: calc(12rem + constant(safe-area-inset-bottom));
+  bottom: calc(12rem + env(safe-area-inset-bottom, 0px));
   left: 10rem;
   right: 10rem;
   display: flex;

@@ -141,7 +141,7 @@
                                 <div class="msg-images" v-if="msg.attachments && msg.attachments.length">
                                     <a v-for="(att, aIdx) in msg.attachments" :key="att.attachmentId || aIdx"
                                        :href="att.url" target="_blank" @click="openImagePreview($event, att.url)">
-                                        <img :src="att.url" class="msg-image" loading="lazy" alt="聊天图片">
+                                        <img :src="att.url" class="msg-image" loading="lazy" width="150" height="120" alt="聊天图片">
                                     </a>
                                 </div>
                                 <span class="user-text" v-if="msg.content">{{ msg.content }}</span>
@@ -173,7 +173,7 @@
                         <!-- 推荐菜品卡片 -->
                         <div class="dish-recommendations" v-if="msg.dishes && msg.dishes.length > 0">
                             <div class="dish-card" v-for="dish in msg.dishes" :key="dish.dishId || dish.name" @click="addToCart(dish)">
-                                <img :src="dish.image || '/front/images/noImg.png'" loading="lazy" :alt="dish.name" @error="imgError">
+                                <img :src="dish.image || '/front/images/noImg.png'" loading="lazy" width="56" height="56" :alt="dish.name" @error="imgError">
                                 <div class="dish-info">
                                     <div class="dish-name">{{ dish.name }}</div>
                                     <div class="dish-reason" v-if="dish.reason">{{ dish.reason }}</div>
@@ -1452,7 +1452,7 @@
                             message: '请先登录后再添加购物车',
                             confirmButtonText: '去登录'
                         }).then(function() {
-                            window.location.href = '/front/page/login.html';
+                            goLogin();
                         }).catch(function(e) { console.warn('[ai-assistant.html] 用户取消登录跳转:', e); });
                         return;
                     }

@@ -7,6 +7,8 @@
   --color-primary: #ffc200;
   --color-primary-dark: #ff9a00;
   --color-primary-light: #ffd54f;
+  /* 金底按钮上的深色文字（收银台/失效按钮，替代硬编码 #4a3500） */
+  --color-primary-text: #4a3500;
   --color-primary-gradient: linear-gradient(135deg, #ffc200 0%, #ff9a00 100%);
   /* 会员中心专属深金渐变（头图 / 会员卡），收敛硬编码为令牌，视觉与 v5 一致 */
   --color-primary-gradient-deep: linear-gradient(160deg, #e0a800 0%, #d89b00 40%, #b87d00 100%);
@@ -109,7 +111,7 @@
 
   /* ---- 头部 ---- */
   --header-height: 88rem;              /* 旧金色重头部（存量页，逐步退场） */
-  --header-title-font-size: 18rem;
+  --header-title-font-size: 17rem;
   /* 白底轻导航（对标美团二级页：低高度、纯白底、品牌色仅作点缀） */
   --navbar-height: 44rem;
   --navbar-bg: #ffffff;
@@ -170,9 +172,10 @@
   --surface-white-25: rgba(255, 255, 255, 0.25);
 
   /* ---- 阴影 ---- */
-  --shadow-sm: 0 1rem 4rem rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 1rem 3rem rgba(0, 0, 0, 0.04);
   --shadow-md: 0 2rem 8rem rgba(0, 0, 0, 0.06);
-  --shadow-cart-bar: 0 -2rem 10rem rgba(0, 0, 0, 0.18);
+  --shadow-cart-bar: 0 -2rem 8rem rgba(0, 0, 0, 0.12);
+  --shadow-cart-icon: 0 2rem 6rem rgba(0, 0, 0, 0.25);
   --shadow-card: 0 2rem 8rem rgba(0, 0, 0, 0.06);
   --shadow-card-hover: 0 4rem 16rem rgba(0, 0, 0, 0.08);
 
@@ -694,9 +697,16 @@ select {
    ================================================================ */
 .divHead {
   width: 100%;
+  /* 总高 = 头部内容 + 刘海安全区；border-box 下 height 含 padding，内容区仍为 header-height */
   height: var(--header-height);
+  height: calc(var(--header-height) + constant(safe-area-inset-top));
+  height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
   background: var(--color-primary-gradient);
   padding: 0 var(--spacing-lg);
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top, 0px);
+  /* width:100% 内含左右 padding，content-box 会使头部右侧溢出（客服/发票/消息等页受影响） */
+  box-sizing: border-box;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -876,8 +886,10 @@ select:focus-visible,
 .head-home-btn {
   position: absolute;
   right: 12rem;
+  /* 头部含顶部安全区，按钮居中于其下的 header-height 内容区（非整个头部），避免被安全区顶偏 */
   top: 50%;
-  transform: translateY(-50%);
+  top: calc(constant(safe-area-inset-top) + (var(--header-height) - 32rem) / 2);
+  top: calc(env(safe-area-inset-top, 0px) + (var(--header-height) - 32rem) / 2);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -590,7 +590,7 @@
             <div class="di-info" @click="dishDetails(item)">
               <div class="di-name">{{ item.name }}</div>
               <div class="di-desc" v-if="item.description">{{ item.description }}</div>
-              <div class="di-sales">月售{{ item.saleNum || 0 }}</div>
+              <div class="di-sales" v-if="item.saleNum">月售{{ item.saleNum }}</div>
               <div class="di-price-row">
                 <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
               </div>
@@ -616,7 +616,7 @@
             <div class="di-info" @click="dishDetails(item)">
               <div class="di-name">{{ item.name }}</div>
               <div class="di-desc" v-if="item.description">{{ item.description }}</div>
-              <div class="di-sales">月售{{ item.saleNum || 0 }}</div>
+              <div class="di-sales" v-if="item.saleNum">月售{{ item.saleNum }}</div>
               <div class="di-price-row">
                 <span class="di-price"><span class="di-symbol">¥</span>{{ Number(item.price || 0).toFixed(2) }}</span>
               </div>
@@ -1292,10 +1292,6 @@
                 confirmButtonText: '知道了'
               })
             },
-            // 修改点：返回上一页（顶部导航使用）
-            goBack(){
-              history.go(-1)
-            },
             // 修改点：ESC 键全局监听，按优先级依次关闭打开的弹窗/浮层
             _handleEscKey(e){
               if(e.key !== 'Escape' && e.key !== 'Esc') return
@@ -1616,7 +1612,7 @@
                 this.$set(this.cartLoadingMap, cartKey, false)
                 vant.Toast.fail('请先登录');
                 window.requestAnimationFrame(()=>{
-                  window.location.href = '/front/page/login.html'
+                  goLogin()
                 })
                 return
               }
@@ -1868,7 +1864,7 @@
               if(!this.userPhone){
                 vant.Toast.fail('请先登录');
                 window.requestAnimationFrame(()=>{
-                  window.location.href = '/front/page/login.html'
+                  goLogin()
                 })
                 return
               }
@@ -1895,7 +1891,8 @@
                             : (item.type === 'dish') ? false
                             : !Array.isArray(item.flavors)
               if(!isSetmeal){
-                this.detailsDialog.item = item
+                // 用浅拷贝副本：评价字段经 $set 挂到副本，不污染菜单列表中的原 item
+                this.detailsDialog.item = Object.assign({}, item)
                 this.detailsDialog.show = true
                 // 加载菜品评价数据
                 this.loadDishEvaluations(item.id)
@@ -1922,11 +1919,12 @@
                   getDishRatingStats(dishId),
                   getDishEvaluations(dishId, 1, 3)
                 ])
+                // Vue2 无法侦测对对象"新增属性"，必须用 $set 声明响应式字段，否则评价区永不渲染
                 if (statsRes.code === 1) {
-                  this.detailsDialog.item.evalStats = statsRes.data || {}
+                  this.$set(this.detailsDialog.item, 'evalStats', statsRes.data || {})
                 }
                 if (listRes.code === 1) {
-                  this.detailsDialog.item.evalList = listRes.data.records || []
+                  this.$set(this.detailsDialog.item, 'evalList', listRes.data.records || [])
                 }
               } catch (e) {
                 // 静默失败，不影响菜品详情展示

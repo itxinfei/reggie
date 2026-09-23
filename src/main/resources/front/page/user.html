@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>个人中心 - 瑞吉外卖</title>
     <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css?v=20260922" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
@@ -308,7 +309,6 @@
     </div>
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
-    <script src="./../js/base.js?v=20260917"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js?v=20260917"></script>
     <script src="./../api/main.js?v=20260917"></script>
@@ -530,7 +530,7 @@
                     var self = this
                     vant.Dialog.confirm({
                         title: '确认退出', message: '退出登录后需要重新登录，确认退出吗？',
-                        confirmButtonText: '确认退出', confirmButtonColor: '#e94e3c', cancelButtonText: '取消'
+                        confirmButtonText: '确认退出', confirmButtonColor: cssVar('--color-danger'), cancelButtonText: '取消'
                     }).then(function(){ self.doLogout() }).catch(function(e){ console.warn('[user.html] 用户取消退出登录:', e) })
                 },
                 async doLogout(){
@@ -543,7 +543,7 @@
                             sessionStorage.removeItem("userName")
                             sessionStorage.removeItem("userAvatar")
                             sessionStorage.removeItem("memberId")
-                            window.requestAnimationFrame(function(){ window.location.href = '/front/page/login.html' })
+                            window.requestAnimationFrame(function(){ goLogin() })
                         }else{
                             vant.Toast.fail(res.msg || '退出失败');
                             this.logoutLoading = false

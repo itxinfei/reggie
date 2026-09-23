@@ -5,6 +5,30 @@ function imgPath(path){
     return '/common/download?name=' + path
 }
 
+// 读取 :root 上的 CSS 自定义属性值。JS 配置无法直接消费 CSS 变量的场景
+// （如 Vant Dialog 的 confirmButtonColor）用它取令牌，保持单一事实来源
+function cssVar(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+// 跳登录页并携带回跳地址（当前路径含查询串），登录成功后由 login.html 跳回原页面，保留操作意图
+function goLogin(){
+    window.location.href = '/front/page/login.html?redirect='
+        + encodeURIComponent(window.location.pathname + window.location.search);
+}
+
+// 全站加载的是开发版 vue.js：模板编译为 with(_renderProxy){…}，而 vm 的 has 拦截器对
+// 未在实例上声明的标识符返回 true 且不再回退 window，导致模板裸调 window.imgPath/cssVar
+// 时拿到 undefined（imgPath is not a function，整段 render 中断）。
+// 通过全局 mixin 把这两个工具注入为所有实例的方法，模板即可直接调用；幂等防重复安装。
+function installReggieVueHelpers(){
+    if (!window.Vue || window.Vue.__reggieHelpersInstalled) return;
+    window.Vue.mixin({ methods: { imgPath: imgPath, cssVar: cssVar } });
+    window.Vue.__reggieHelpersInstalled = true;
+}
+// common.js 在 vue.js 之后加载的页面：到此 Vue 已就绪，立即安装
+installReggieVueHelpers();
+
 // 将url传参转换为对象（支持中文参数自动解码）
 function parseUrl(url) {
     // 修改点：防御性处理，URL中无?时返回空对象

@@ -849,9 +849,10 @@
 /* 修改点：height/padding-bottom 使用 safe-area-inset-bottom 适配 iPhone Home Indicator */
 .cart-bar {
   position: fixed;
-  /* 修改点：上移至底部 Tab 之上（Tab 高 50rem），避免二者重叠遮挡；
-     安全区改由 Tab 统一承担，此处不再叠加 env(safe-area-inset-bottom) */
-  bottom: 50rem;
+  /* 上移至底部 Tab 之上：Tab 总高 = 50rem + 底部安全区，故 bottom 同步叠加
+     env(safe-area-inset-bottom)，否则在 iPhone 上购物车栏会盖住 Tab 栏顶部 */
+  bottom: calc(50rem + constant(safe-area-inset-bottom));
+  bottom: calc(50rem + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
@@ -883,7 +884,7 @@
   /* 修改点(2026-09-17)：深色描边环让圆形图标从深色栏中「切割」凸起（外卖 App 标志性造型） */
   border: 5rem solid var(--bg-cart-bar);
   box-sizing: border-box;
-  box-shadow: 0 2rem 6rem rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-cart-icon);
 }
 
 .cart-bar .cart-icon-img:active {

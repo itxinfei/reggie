@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>消息中心 - 瑞吉外卖</title>
     <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css?v=20260922" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
@@ -96,7 +97,6 @@
 
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
-    <script src="./../js/base.js?v=20260917"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js?v=20260917"></script>
     <script src="./../api/recommend.js?v=20260917"></script>
@@ -275,6 +275,8 @@
                         }
                     }).catch(function(e) {
                         vant.Toast.clear();
+                        // 用户点取消/遮罩关闭时 vant reject 'cancel'/'close'，属主动放弃，静默不报错
+                        if (e === 'cancel' || e === 'close') return;
                         console.error('[message] 批量已读失败:', e);
                         vant.Toast.fail('操作失败，请稍后重试');
                     });

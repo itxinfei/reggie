@@ -15,7 +15,7 @@
     <script src="../js/icon-fallback.js?v=20260917"></script>
 </head>
 <body>
-    <div id="favorites" class="app">
+    <div id="favorites" class="app dish-card-page">
         <cend-shell title="我的收藏" light :show-back="true" :show-home="true">
         <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
         <div class="frequent-container">
@@ -112,11 +112,6 @@
             methods: {
                 // 修改点(2026-09-22)：goBack 已统一由 cend-shell 接管（组件调 window.goBack 兜底），页面不再定义
                 goHome() { window.location.href = '/front/index.html' },
-                imgPath(path) {
-                    if (!path) return './../images/noImg.png';
-                    if (path.indexOf('http://') === 0 || path.indexOf('https://') === 0) return path;
-                    return '/common/download?name=' + path;
-                },
                 async onRefresh() {
                     try { await this.initData() } finally { this.refreshing = false }
                 },
@@ -159,6 +154,15 @@
                     }
                 },
                 async removeFav(item) {
+                    // 危险操作二次确认，防误触丢失收藏
+                    try {
+                        await vant.Dialog.confirm({
+                            title: '取消收藏',
+                            message: '确定将「' + item.name + '」从收藏中移除？'
+                        });
+                    } catch (e) {
+                        return; // 用户点取消，放弃操作
+                    }
                     try {
                         const res = await toggleFavorite(1, item.targetId);
                         if (res && res.code === 1) {

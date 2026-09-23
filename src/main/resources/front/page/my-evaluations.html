@@ -14,39 +14,22 @@
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="./../js/icon-fallback.js?v=20260917"></script>
     <link rel="stylesheet" href="./../styles/evaluation.css?v=20260921" />
-    <!-- 骨架屏样式 -->
-    <style>
-        .skeleton-container { padding: 12rem; }
-        .skeleton-eval-card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 16rem; margin-bottom: 12rem; }
-        .skeleton-eval-header { display: flex; align-items: center; margin-bottom: 12rem; }
-        .skeleton-dish-img { width: 60rem; height: 60rem; border-radius: var(--radius-md); background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
-        .skeleton-dish-info { flex: 1; margin-left: 12rem; }
-        .skeleton-eval-content { padding-top: 8rem; }
-        .skeleton-line { height: 14rem; border-radius: 4rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; margin-bottom: 8rem; }
-        .skeleton-line:last-child { margin-bottom: 0; }
-        .skeleton-w40 { width: 40%; }
-        .skeleton-w60 { width: 60%; }
-        .skeleton-w80 { width: 80%; }
-        /* 修改点(2026-09-17)：复用全局 @keyframes rg-skeleton-shine */
-    </style>
 </head>
 <body>
     <div id="eval-app" class="app">
         <!-- 修改点：骨架屏替代 loading 遮罩 -->
         <div v-if="loading" class="skeleton-container">
             <!-- 评价卡片骨架 -->
-            <div class="skeleton-eval-card" v-for="i in 3" :key="'se'+i">
-                <div class="skeleton-eval-header">
-                    <div class="skeleton-dish-img"></div>
-                    <div class="skeleton-dish-info">
+            <div class="skeleton-card" v-for="i in 3" :key="'se'+i">
+                <div class="skeleton-row">
+                    <div class="skeleton-img"></div>
+                    <div class="skeleton-col">
                         <div class="skeleton-line skeleton-w60"></div>
                         <div class="skeleton-line skeleton-w40"></div>
                     </div>
                 </div>
-                <div class="skeleton-eval-content">
-                    <div class="skeleton-line skeleton-w80"></div>
-                    <div class="skeleton-line skeleton-w60"></div>
-                </div>
+                <div class="skeleton-line skeleton-w80"></div>
+                <div class="skeleton-line skeleton-w60"></div>
             </div>
         </div>
         <!-- 修改点(2026-09-17)：二级页补「回首页」入口（底部 Tab 仅覆盖一级页，深层路径易迷路） -->
@@ -54,7 +37,7 @@
             <div class="divTitle">
                 <i class="ri-arrow-left-s-line" @click="goBack"></i>我的评价
             </div>
-            <i class="ri-home-5-line head-home-btn" @click="window.location.href='/front/index.html'"
+            <i class="ri-home-5-line head-home-btn" @click="goHome"
                aria-label="回到首页" title="回到首页"></i>
         </div>
 
@@ -76,7 +59,7 @@
             <div v-for="item in evalList" :key="item.id" class="eval-card">
                 <div class="eval-header">
                     <div class="dish-info">
-                        <img v-if="item.dishImage" :src="getImageUrl(item.dishImage)" class="dish-img" :alt="item.dishName || '菜品'" loading="lazy" @error="$event.target.src='./../images/noImg.png'" />
+                        <img v-if="item.dishImage" :src="imgPath(item.dishImage)" class="dish-img" :alt="item.dishName || '菜品'" loading="lazy" @error="$event.target.src='./../images/noImg.png'" />
                         <div class="dish-text">
                             <div class="dish-name">{{ item.dishName || '未知菜品' }}</div>
                             <div class="eval-meta">
@@ -96,7 +79,7 @@
                 <!-- 评价图片 -->
                 <div class="eval-imgs" v-if="item.images && item.images.length > 0">
                     <img v-for="(img, idx) in getImageList(item.images)" :key="idx"
-                         :src="getImageUrl(img)" :alt="'评价图片' + (idx + 1)" @click="previewImage(getImageUrl(img))" loading="lazy" @error="$event.target.src='./../images/noImg.png'" />
+                         :src="imgPath(img)" :alt="'评价图片' + (idx + 1)" @click="previewImage(imgPath(img))" loading="lazy" @error="$event.target.src='./../images/noImg.png'" />
                 </div>
 
                 <!-- 商家回复 -->
@@ -117,7 +100,7 @@
 
         <!-- 空状态 -->
         <div class="empty-state" v-else-if="!loading">
-            <img src="./../images/no_order.png" class="empty-img" alt="暂无评价记录"/>
+            <i class="ri-star-line"></i>
             <p class="empty-text">暂无评价记录</p>
             <!-- 修改点：el-button 替换为原生button -->
             <button class="btn-primary" @click="goToOrder">去下单</button>
@@ -207,6 +190,7 @@
     <script src="./../js/vant.min.js"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js?v=20260917"></script>
+    <script src="./../js/common.js?v=20260923"></script>
     <script src="../api/evaluation.js?v=20260917"></script>
     <script src="./../api/order.js?v=20260917"></script>
     <script>
@@ -339,7 +323,7 @@
                         message: '修改评价需要先删除当前评价，确认继续吗？',
                         confirmButtonText: '继续修改',
                         cancelButtonText: '取消',
-                        confirmButtonColor: '#ffc200'
+                        confirmButtonColor: cssVar('--color-primary')
                     }).then(function() {
                         return deleteMyEvaluation({ id: item.id });
                     }).then(function(res) {
@@ -372,7 +356,7 @@
                             title: '删除评价',
                             message: '确认删除该评价吗？删除后不可恢复。',
                             confirmButtonText: '确认删除',
-                            confirmButtonColor: '#e94e3c',
+                            confirmButtonColor: cssVar('--color-danger'),
                             cancelButtonText: '取消'
                         })
                         try {
@@ -438,11 +422,6 @@
                     if (Array.isArray(images)) return images
                     try { return JSON.parse(images) } catch (e) { return images ? [images] : [] }
                 },
-                getImageUrl(name) {
-                    if (!name) return ''
-                    if (name.startsWith('http')) return name
-                    return '/common/download?name=' + name
-                },
                 statusClass(status) {
                     if (status === 0) return 'pending'
                     if (status === 1) return 'approved'
@@ -475,6 +454,9 @@
                 },
                 goBack() {
                     window.history.back()
+                },
+                goHome() {
+                    window.location.href = '/front/index.html'
                 },
                 goToOrder() {
                     window.location.href = '/front/page/order.html'

@@ -81,6 +81,18 @@
   flex-shrink: 0;
 }
 
+/* 横向行：缩略图 + 文本列组合（菜品/评价类卡片） */
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rem;
+}
+.skeleton-col {
+  flex: 1;
+  margin-left: 12rem;
+  min-width: 0;
+}
+
 /* 宽度阶（百分比，配合父容器自适应） */
 .skeleton-w20 { width: 20%; }
 .skeleton-w30 { width: 30%; }

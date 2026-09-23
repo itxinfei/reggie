@@ -13,6 +13,9 @@
     .mc-header-bg {
       background: var(--color-primary-gradient-deep);
       padding: 30rem 16rem 50rem; position: relative; z-index: 1;
+      /* 顶部叠加刘海安全区，返回钮不被状态栏压住 */
+      padding-top: calc(30rem + constant(safe-area-inset-top));
+      padding-top: calc(30rem + env(safe-area-inset-top, 0px));
     }
     .mc-header-bg::after {
       content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 28rem;
@@ -67,7 +70,7 @@
       color: var(--gold-text-muted); font-size: 13rem; }
 
     /* ---- 版块 ---- */
-    .mc-section { margin: 0 16rem 14rem; background: var(--bg-card); border-radius: var(--radius-lg);
+    .mc-section { margin: 0 16rem 16rem; background: var(--bg-card); border-radius: var(--radius-lg);
       overflow: hidden; box-shadow: var(--shadow-card); }
     .mc-section-title { font-size: 15rem; font-weight: 600; color: var(--color-text-primary);
       padding: 16rem 18rem 12rem; border-bottom: 1px solid var(--bg-hover);
@@ -76,9 +79,9 @@
 
     /* ---- 权益 ---- */
     /* 修改点(2026-09-15)：4 个权益改为一行 4 列网格，避免原先 flex 三列换行导致第 4 个「生日礼遇」单独成行、视觉失衡 */
-    .mc-benefits { display: grid; grid-template-columns: repeat(4, 1fr); padding: 14rem 12rem; gap: 10rem; }
+    .mc-benefits { display: grid; grid-template-columns: repeat(4, 1fr); padding: 16rem 14rem; gap: 10rem; }
     .mc-benefit { min-width: 0; text-align: center; padding: 10rem 4rem; }
-    .mc-benefit-icon { width: 48rem; height: 48rem; margin: 0 auto 8rem; border-radius: var(--radius-lg);
+    .mc-benefit-icon { width: 56rem; height: 56rem; margin: 0 auto 8rem; border-radius: var(--radius-xl);
       display: flex; align-items: center; justify-content: center; font-size: 24rem; }
     .mc-benefit-icon.locked { opacity: 0.4; filter: grayscale(0.8); }
     /* 修改点(2026-09-15)：权益图标统一为品牌金（原 gold/green/purple 混色，且 green(#52a33e)/purple(#7b5ce6) 不在令牌体系），
