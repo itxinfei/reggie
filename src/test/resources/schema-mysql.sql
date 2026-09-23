@@ -1993,6 +1993,7 @@ CREATE TABLE `purchase_order` (
   `update_user` bigint DEFAULT NULL COMMENT '更新人ID',
   `created_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT NULL,
+  `voucher_images` varchar(1000) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '凭证图片（逗号分隔相对路径，最多5张）',
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_tenant` (`tenant_id`) USING BTREE,
   KEY `idx_supplier` (`supplier_id`) USING BTREE
@@ -2443,6 +2444,7 @@ CREATE TABLE `stock_check` (
   `update_user` bigint DEFAULT NULL COMMENT '更新人ID',
   `created_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT NULL,
+  `voucher_images` varchar(1000) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '凭证图片（逗号分隔相对路径，最多5张）',
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_tenant` (`tenant_id`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_bin ROW_FORMAT=DYNAMIC COMMENT='租户ID';
@@ -2491,6 +2493,7 @@ CREATE TABLE `stock_record` (
   `total_amount` decimal(10,2) DEFAULT NULL COMMENT '总金',
   `biz_id` bigint DEFAULT NULL COMMENT '业务ID',
   `remark` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '备注',
+  `voucher_images` varchar(1000) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '凭证图片（逗号分隔相对路径，最多5张）',
   `is_deleted` int NOT NULL DEFAULT '0' COMMENT '逻辑删除',
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `create_user` bigint DEFAULT NULL COMMENT '创建人ID',
@@ -2662,6 +2665,7 @@ CREATE TABLE `supplier` (
   `contact` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '联系',
   `phone` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT 'ϵ绰',
   `address` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '地址',
+  `license_images` varchar(1000) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '资质图片（营业执照等，逗号分隔相对路径，最多5张）',
   `status` int DEFAULT '1' COMMENT '状态',
   `created_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT NULL,
