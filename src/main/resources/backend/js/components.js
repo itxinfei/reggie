@@ -985,7 +985,7 @@ Vue.component('crud-dialog', {
     '  :visible="currentVisible"' +
     '  @update:visible="onVisibleChange"' +
     '  :width="resolvedWidth"' +
-    '  :top="isFullscreen ? \'4vh\' : \'15vh\'' +
+    '  :top="isFullscreen ? \'4vh\' : \'15vh\'"' +
     '  :close-on-click-modal="closeOnClickModal"' +
     '  :before-close="onBeforeClose"' +
     '  :close-on-press-escape="true"' +
