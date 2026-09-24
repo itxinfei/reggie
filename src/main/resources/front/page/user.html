@@ -312,7 +312,7 @@
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js?v=20260917"></script>
     <script src="./../api/main.js?v=20260917"></script>
-    <script src="./../js/common.js?v=20260917"></script>
+    <script src="./../js/common.js?v=20260924"></script>
     <script src="./../api/order.js?v=20260917"></script>
     <script src="./../api/login.js?v=20260917"></script>
     <script src="./../api/member-center.js?v=20260917"></script>
@@ -589,6 +589,7 @@
                     } catch(e) { /* 个别环境无 FileReader 时走上传后回显 */ }
                     var fd = new FormData();
                     fd.append('file', file);
+                    fd.append('bizType', 'avatar');
                     $axios({ url: '/common/upload', method: 'post', data: fd })
                         .then(function(up){
                             if(up && up.code === 1 && up.data){

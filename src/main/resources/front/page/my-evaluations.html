@@ -190,7 +190,7 @@
     <script src="./../js/vant.min.js"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js?v=20260917"></script>
-    <script src="./../js/common.js?v=20260923"></script>
+    <script src="./../js/common.js?v=20260924"></script>
     <script src="../api/evaluation.js?v=20260917"></script>
     <script src="./../api/order.js?v=20260917"></script>
     <script>
@@ -388,6 +388,7 @@
                     if (!raw) { item.status = 'failed'; item.message = '读取失败'; return }
                     var fd = new FormData()
                     fd.append('file', raw)
+                    fd.append('bizType', 'evaluation')
                     $axios({ url: '/common/upload', method: 'post', data: fd }).then(function (up) {
                         if (up && up.code === 1 && up.data) {
                             dish.images.push(up.data)
@@ -462,18 +463,25 @@
                     window.location.href = '/front/page/order.html'
                 },
                 // 提取订单中可评价的纯菜品条目（后端按 dishId 校验，套餐不可评价）
+                // 评价去重 key：菜品保持 orderId_dishId 旧格式（兼容历史评价），
+                // 套餐用 orderId_s_setmealId 前缀避免与菜品ID冲突
+                evalKey: function(orderId, d) {
+                    return d.dishId ? (orderId + '_' + d.dishId) : (orderId + '_s_' + d.setmealId)
+                },
                 extractEvaluableDishes(order) {
                     if (!order || !order.orderDetails) return []
                     var self = this
                     return order.orderDetails
-                        .filter(d => d && d.dishId)
+                        // 套餐明细只有 setmealId，dish/setmeal 任一即可评价
+                        .filter(d => d && (d.dishId || d.setmealId))
                         .map(function(d){
                             // 修改点(P1-2)：后端已存在的评价标记 _submitted，显示"已评价"且提交时自动跳过
                             var evaluated = !!(self._evaluatedKeys &&
-                                self._evaluatedKeys.has(order.id + '_' + d.dishId))
+                                self._evaluatedKeys.has(self.evalKey(order.id, d)))
                             return {
-                                dishId: d.dishId,
-                                dishName: d.name || '未知菜品',
+                                dishId: d.dishId || null,
+                                setmealId: d.setmealId || null,
+                                dishName: d.name || '未知商品',
                                 starRating: 0,
                                 content: '',
                                 images: [],       // 已上传成功的服务器图片路径
@@ -482,13 +490,15 @@
                             }
                         })
                 },
-                // 校验订单是否含可评价菜品
+                // 校验订单是否含可评价商品（菜品/套餐）
                 hasEvaluableDishes(order) {
                     if (!order || !order.orderDetails) return false
                     var keys = this._evaluatedKeys
-                    // 修改点(P1-2)：订单里至少一道"未评价"的菜才算待评价，已评菜不再触发提示
+                    var self = this
+                    // 修改点(P1-2)：订单里至少一件"未评价"的商品才算待评价，已评项不再触发提示
                     return order.orderDetails.some(function(d){
-                        return d && d.dishId && !(keys && keys.has(order.id + '_' + d.dishId))
+                        return d && (d.dishId || d.setmealId) &&
+                            !(keys && keys.has(self.evalKey(order.id, d)))
                     })
                 },
                 // 解析 URL 参数（如 order.html 跳转 my-evaluations.html?orderId=xxx）
@@ -508,7 +518,11 @@
                             const res = await getMyEvaluations({ page: 1, pageSize: 200 })
                             if (res.code === 1 && res.data && res.data.records) {
                                 res.data.records.forEach(function(r){
-                                    if (r.orderId && r.dishId) set.add(r.orderId + '_' + r.dishId)
+                                    if (r.orderId && r.dishId) {
+                                        set.add(r.orderId + '_' + r.dishId)
+                                    } else if (r.orderId && r.setmealId) {
+                                        set.add(r.orderId + '_s_' + r.setmealId)
+                                    }
                                 })
                             }
                         } catch (e) {
@@ -620,6 +634,7 @@
                             const payload = {
                                 orderId: orderId,
                                 dishId: dish.dishId,
+                                setmealId: dish.setmealId,
                                 starRating: dish.starRating,
                                 content: (dish.content || '').trim(),
                                 anonymous: this.submitData.anonymous ? 1 : 0

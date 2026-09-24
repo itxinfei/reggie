@@ -193,11 +193,11 @@ function placeholder() {
 
 一次性 Java 迁移工具（`utils/` 下独立 main 或 CommandLineRunner）：
 
-1. **dry-run（默认）**：扫描 DB + 磁盘，输出旧→新映射清单与统计，不落盘。
-2. **`--apply`**：先拷贝（不删旧文件）→ 校验字节数 → 再批量 UPDATE DB。
+1. **dry-run**（`reggie.image.migration=dry-run`；默认 `off` 不执行）：扫描 DB + 磁盘，输出旧→新映射清单与统计，不落盘。
+2. **`reggie.image.migration=apply`**：先拷贝（不删旧文件）→ 校验字节数 → 再 UPDATE DB。
 3. 幂等：已有 `public/`/`private/` 前缀的行跳过。
 4. 失败处理：单文件失败记日志跳过，结束输出失败清单；文件拷贝成功才更新对应行。
-5. DB 更新按表分批提交（JDBC batch，每批 500 行）。
+5. DB 更新为逐行 UPDATE（行级原子，非 JDBC batch）。
 
 ### 6.3 回滚窗口
 

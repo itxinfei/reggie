@@ -70,6 +70,7 @@
         <template #actions="{ row }">
           <el-button type="text" size="small" @click="goDetail(row)" class="btn-view">查看</el-button>
           <el-button type="text" size="small" @click="printReceipt(row)" class="btn-view">打印</el-button>
+          <el-button v-if="row.status === 2 && !row.riderId" type="text" size="small" @click="openDispatch(row)" class="btn-success">派单</el-button>
           <el-button v-if="row.status === 2" type="text" size="small" @click="cancelOrDeliveryOrComplete(3, row.id)" class="btn-success">派送</el-button>
           <el-button v-if="row.status === 3" type="text" size="small" @click="cancelOrDeliveryOrComplete(4, row.id)" class="btn-success">完成</el-button>
           <el-button v-if="row.status === 4" type="text" size="small" class="btn-delete" @click="openRefund(row)">退款</el-button>
@@ -222,6 +223,37 @@
         </div>
       </div>
     </crud-dialog>
+
+    <!-- 店长派单弹窗：选择骑手 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      title="订单派单"
+      :visible.sync="dispatchVisible"
+      size="sm"
+      :submit-loading="dispatchLoading"
+      submit-text="确认派单"
+      @submit="submitDispatch"
+      @close="dispatchVisible = false"
+    >
+      <el-form label-width="80px" size="small">
+        <el-form-item label="订单号">
+          <span>{{ dispatchForm.number }}</span>
+        </el-form-item>
+        <el-form-item label="收货地址">
+          <span>{{ dispatchForm.address }}</span>
+        </el-form-item>
+        <el-form-item label="选择骑手">
+          <el-select v-model="dispatchForm.riderId" placeholder="请选择骑手" style="width:100%;">
+            <el-option
+              v-for="r in riderOptions"
+              :key="r.id"
+              :label="r.name + '（' + riderStatusText(r.status) + '）'"
+              :value="r.id"
+              :disabled="r.status === 0"
+            ></el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -230,9 +262,10 @@
   <script src="../../js/request.js?v=20260915c"></script>
   <script src="../../js/accessibility-utils.js?v=20260915c"></script>
   <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../js/components.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260924"></script>
   <script src="../../js/print-util.js?v=20260921"></script>
   <script src="../../api/order.js?v=20260915c"></script>
+  <script src="../../api/delivery.js?v=20260924"></script>
   <script src="../../api/printer.js?v=20260921"></script>
   <script src="../../api/payment.js?v=20260915c"></script>
   <script src="../../api/export.js?v=20260915c"></script>
@@ -293,6 +326,11 @@
           refundVisible: false,
           refundLoading: false,
           refundForm: { id: null, number: '', amount: 0, maxAmount: 0, reasonType: '', reasonDetail: '' },
+          // 店长派单
+          dispatchVisible: false,
+          dispatchLoading: false,
+          dispatchForm: { orderId: null, number: '', address: '', riderId: null },
+          riderOptions: [],
           // 修改点：内部备注（仅后台可见，用于店员记录运营信息）
           internalNote: '',
           noteSaving: false
@@ -535,6 +573,40 @@
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
+        },
+        // ---- 店长派单 ----
+        riderStatusText: function(status) {
+          // 0离线 1空闲 2配送中（与 Rider 常量一致）
+          if (status === 1) return '空闲'
+          if (status === 2) return '配送中'
+          return '离线'
+        },
+        openDispatch: async function(row) {
+          this.dispatchForm = { orderId: row.id, number: row.number, address: row.address, riderId: null }
+          this.riderOptions = []
+          this.dispatchVisible = true
+          try {
+            const res = await getRiderListApi()
+            if (res.code === 1) this.riderOptions = res.data || []
+          } catch (e) {
+            console.warn('[order] 加载骑手列表失败:', e)
+          }
+        },
+        submitDispatch: async function() {
+          const self = this
+          if (self.dispatchLoading) return
+          if (!self.dispatchForm.riderId) { ReggieUI.warning('请选择骑手'); return }
+          self.dispatchLoading = true
+          try {
+            const res = await dispatchOrderApi({ orderId: self.dispatchForm.orderId, riderId: self.dispatchForm.riderId })
+            if (res.code === 1) {
+              ReggieUI.success('派单成功')
+              self.dispatchVisible = false
+              self.init(false)
+            }
+          } finally {
+            self.dispatchLoading = false
+          }
         },
         openRefund: function(row) {
           this.refundForm = { id: row.id, number: row.number, orderAmount: row.amount, amount: row.amount, maxAmount: row.amount, reasonType: '', reasonDetail: '' }

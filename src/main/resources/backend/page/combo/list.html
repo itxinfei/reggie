@@ -301,6 +301,7 @@
           class="avatar-uploader"
           action="/common/upload"
           :headers="uploadHeaders()"
+          :data="{ bizType: 'setmeal' }"
           :show-file-list="false"
           :on-success="handleComboAvatarSuccess"
           :on-change="onChange"
@@ -412,7 +413,7 @@
 <script src="../../js/performance-utils.js?v=20260915c"></script>
 <script src="../../api/combo.js?v=20260915c"></script>
 <script src="../../api/food.js?v=20260915c"></script>
-<script src="../../js/components.js?v=20260915c"></script>
+<script src="../../js/components.js?v=20260924"></script>
 
 <script>
 new Vue({

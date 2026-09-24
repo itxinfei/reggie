@@ -221,7 +221,7 @@
     <script src="./../js/vant.min.js"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js?v=20260917"></script>
-    <script src="./../js/common.js?v=20260917"></script>
+    <script src="./../js/common.js?v=20260924"></script>
     <script src="./../api/order.js?v=20260917"></script>
     <script src="./../api/cs.js?v=20260921"></script>
     <script>
@@ -432,6 +432,7 @@
                     }
                     var fd = new FormData();
                     fd.append('file', file);
+                    fd.append('bizType', 'chat');
                     vant.Toast.loading({ message: '发送中', forbidClick: true, duration: 0 });
                     try {
                         var up = await $axios({ url: '/common/upload', method: 'post', data: fd });
@@ -467,6 +468,7 @@
                     if (!raw) { item.status = 'failed'; item.message = '读取失败'; return; }
                     var fd = new FormData();
                     fd.append('file', raw);
+                    fd.append('bizType', 'chat');
                     var self = this;
                     $axios({ url: '/common/upload', method: 'post', data: fd }).then(function (up) {
                         if (up && up.code === 1 && up.data) {
