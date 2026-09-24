@@ -11,44 +11,96 @@
   <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
   <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
   <style>
-    /* 功能需要的最小样式：海报预览网格 + 浏览器打印分页。
-       仅用于本页打印能力，不做视觉美化。 */
-    .poster-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 14px;
+    /* 功能样式（非美化）：把多张竖版海报按 A4 拼版，屏幕预览与打印同版式。 */
+
+    /* —— 站点地址本机提醒 —— */
+    .site-warn {
+      color: var(--el-color-warning, #e6a23c);
+      font-size: 13px;
+      margin: 0 0 10px;
     }
-    .poster-sheet {
+
+    /* —— 勾选计数行 —— */
+    .sel-bar { display: flex; align-items: center; gap: 8px; }
+    .sel-count { color: #909399; font-size: 13px; }
+
+    .action-bar { display: flex; align-items: center; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
+    .action-bar__tip { color: #909399; font-size: 13px; }
+
+    /* —— 拼版预览：每张 .print-page 对应一张 A4 —— */
+    .print-pages-wrap { display: flex; flex-direction: column; gap: 16px; }
+    .print-page {
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
       background: #fff;
       border: 1px solid var(--el-border-lighter, #ebeef5);
       border-radius: var(--radius-md, 8px);
-      padding: 8px;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      /* A4 可打印区比例，保证屏幕所见与打印一致 */
+      aspect-ratio: 194 / 281;
     }
-    .poster-sheet img { width: 100%; display: block; }
-    .poster-cap { font-size: 13px; color: #606266; text-align: center; margin-top: 6px; }
+    .print-cell { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+    .cell-imgwrap { flex: 1; min-height: 0; display: flex; }
+    .print-cell img {
+      max-width: 100%;
+      max-height: 100%;
+      margin: auto;
+      display: block;
+      object-fit: contain;
+    }
+    /* 虚线=裁切位置提示，仅屏幕显示 */
+    .print-cell { border: 1px dashed #d4d7de; border-radius: 4px; padding: 6px; }
+    .print-cell .cap {
+      flex-shrink: 0;
+      text-align: center;
+      font-size: 12px;
+      color: #606266;
+      margin-top: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .page-index { text-align: center; color: #909399; font-size: 12px; margin-top: 4px; }
     .poster-empty { text-align: center; color: #909399; font-size: 13px; padding: 60px 0; }
 
-    @page { size: A4; margin: 10mm; }
+    @page { size: A4; margin: 8mm; }
     @media print {
-      /* 打印时隐藏全部配置/操作区，只输出海报 */
+      /* 清零浏览器默认 body 边距，避免累积把内容顶过页边界产生空白尾页 */
+      html, body { margin: 0 !important; padding: 0 !important; }
+      /* 打印只输出拼好版的 A4，配置/操作区全部隐藏 */
       .no-print { display: none !important; }
-      .poster-grid { display: block; }
-      .poster-sheet {
+      .print-pages-wrap { display: block; }
+      .print-page {
+        width: 194mm;
+        max-width: none;
+        aspect-ratio: auto;
+        /* 必须固定高度（非 min-height）：grid 1fr 才会严格三等分，
+           图片以高度为准 contain，避免被按宽度撑高而溢出到第二页。
+           277mm 比可打印区 281mm 留 4mm 安全余量。 */
+        height: 277mm;
         border: none;
+        border-radius: 0;
         padding: 0;
         margin: 0;
+        gap: 3mm;
+        overflow: hidden;
         page-break-after: always;
       }
-      .poster-sheet:last-child { page-break-after: auto; }
-      .poster-sheet img { width: 100%; max-width: 180mm; height: auto; }
+      .print-page:last-child { page-break-after: auto; }
+      .print-cell { border: none; padding: 0; }
+      /* 海报图内已含桌号，外部小字打印时隐藏，把空间留给二维码 */
+      .print-cell .cap, .page-index { display: none; }
     }
   </style>
 </head>
 <body>
   <div id="app" style="padding:10px;">
-    <h3 v-if="!isEmbedded" style="margin:0 0 10px;">二维码打印中心</h3>
+    <h3 v-if="!isEmbedded" class="no-print" style="margin:0 0 10px;">二维码打印中心</h3>
 
-    <!-- 配置区 -->
+    <!-- 配置区（打印时隐藏） -->
     <div class="no-print">
       <el-form :inline="true" size="small" @submit.native.prevent>
         <el-form-item label="站点地址">
@@ -59,7 +111,21 @@
             <el-option v-for="a in areas" :key="a.id" :label="a.name" :value="a.id"></el-option>
           </el-select>
         </el-form-item>
+        <el-form-item label="每张纸">
+          <el-radio-group v-model="layout">
+            <el-radio-button :label="1">1</el-radio-button>
+            <el-radio-button :label="2">2</el-radio-button>
+            <el-radio-button :label="4">4</el-radio-button>
+            <el-radio-button :label="6">6</el-radio-button>
+            <el-radio-button :label="9">9</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
       </el-form>
+
+      <div v-if="siteWarn" class="site-warn">
+        <i class="el-icon-warning-outline"></i>
+        站点地址像是本机地址，手机扫码可能打不开；请填电脑的局域网地址（如 http://192.168.x.x:8080）
+      </div>
 
       <el-table :data="filteredTables" ref="table" border stripe max-height="380"
                 @selection-change="onSelectionChange" style="margin-bottom:10px;">
@@ -69,31 +135,43 @@
         <el-table-column prop="sort" label="排序" width="100"></el-table-column>
       </el-table>
 
-      <div>
+      <div class="sel-bar">
         <el-button type="text" @click="selectFiltered">勾选当前筛选</el-button>
         <el-button type="text" @click="clearSel">清空勾选</el-button>
+        <span class="sel-count">已选 {{ selected.length }} / 当前 {{ filteredTables.length }} 桌</span>
       </div>
 
-      <div style="margin:10px 0;">
+      <div class="action-bar">
         <el-button type="primary" :loading="generating" @click="generate">
           {{ generating ? '生成中…' : '生成海报' }}
         </el-button>
         <el-button @click="doPrint" :disabled="!posters.length">打印</el-button>
         <el-button type="text" @click="posters = []" :disabled="!posters.length">清空预览</el-button>
-        <span v-if="posters.length" style="color:#909399;font-size:13px;margin-left:8px;">
-          已生成 {{ posters.length }} 张，手机扫码前请确认站点地址手机可访问
+        <span class="action-bar__tip">
+          <template v-if="generating">正在生成 {{ progressDone }}/{{ progressTotal }}</template>
+          <template v-else-if="posters.length">
+            共 {{ posters.length }} 张桌贴 · 每页 {{ layout }} 张 · 排成 {{ posterPages.length }} 张 A4
+          </template>
+          <template v-else>勾选桌台并生成后，在此预览并打印</template>
         </span>
       </div>
+      <el-progress v-if="generating" :percentage="progressPct" :stroke-width="10" style="margin-bottom:10px;"></el-progress>
     </div>
 
-    <!-- 海报预览 / 打印区 -->
-    <div class="poster-grid" v-if="posters.length">
-      <div class="poster-sheet" v-for="p in posters" :key="p.id">
-        <img :src="p.img" :alt="p.name">
-        <div class="poster-cap">{{ p.areaName ? p.areaName + ' · ' : '' }}{{ p.name }}</div>
+    <!-- 拼版预览 / 打印区 -->
+    <div id="printWrap">
+      <div v-if="posters.length" class="print-pages-wrap">
+        <div class="print-page" v-for="(page, pi) in posterPages" :key="pi"
+             :style="pageGridStyle">
+          <div class="print-cell" v-for="p in page" :key="p.id">
+            <div class="cell-imgwrap"><img :src="p.img" :alt="p.name"></div>
+            <div class="cap">{{ p.areaName ? p.areaName + ' · ' : '' }}{{ p.name }}</div>
+          </div>
+        </div>
+        <div class="page-index no-print">以上共 {{ posterPages.length }} 张 A4 · 虚线为裁切位置</div>
       </div>
+      <div v-else-if="!generating" class="poster-empty">勾选桌台并生成海报后，在此按 A4 拼版预览并打印</div>
     </div>
-    <div v-else class="poster-empty">勾选桌台并生成海报后，在此预览并打印</div>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -101,17 +179,24 @@
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js?v=20260915c"></script>
   <script>
+    // 每页数 → 网格列×行（按竖版海报 800×1040 比例，保证不溢出 A4）
+    var LAYOUT_GRID = { 1: [1, 1], 2: [1, 2], 4: [2, 2], 6: [2, 3], 9: [3, 3] };
+    var SITE_STORE_KEY = 'reggie_qrcode_site';
+
     new Vue({
       data: function () {
         return {
           isEmbedded: /[?&]embedded=1/.test(window.location.search), // 弹窗内嵌时隐藏页内标题
-          siteUrl: window.location.origin,
+          siteUrl: '',
           areas: [],
           tables: [],
           filterAreaId: null,
           selected: [],
+          layout: 6,
           posters: [],
-          generating: false
+          generating: false,
+          progressDone: 0,
+          progressTotal: 0
         };
       },
       computed: {
@@ -119,10 +204,39 @@
           var vm = this;
           if (vm.filterAreaId == null) { return vm.tables; }
           return vm.tables.filter(function (t) { return t.areaId === vm.filterAreaId; });
+        },
+        // 站点地址是否本机地址（手机扫码大概率访问不了）
+        siteWarn: function () {
+          return /^https?:\/\/(localhost|127\.|0\.0\.0\.0)/i.test(this.siteUrl || '');
+        },
+        // 当前拼版网格的列数/行数
+        pageGridStyle: function () {
+          var grid = LAYOUT_GRID[this.layout] || [2, 3];
+          return {
+            gridTemplateColumns: 'repeat(' + grid[0] + ', 1fr)',
+            gridTemplateRows: 'repeat(' + grid[1] + ', 1fr)'
+          };
+        },
+        // 一维海报 → 按每页数切成二维“页”
+        posterPages: function () {
+          var pages = [];
+          for (var i = 0; i < this.posters.length; i += this.layout) {
+            pages.push(this.posters.slice(i, i + this.layout));
+          }
+          return pages;
+        },
+        progressPct: function () {
+          if (!this.progressTotal) { return 0; }
+          return Math.round(this.progressDone / this.progressTotal * 100);
         }
       },
       mounted: function () {
         var vm = this;
+        // 记住上次站点地址，避免重复手填
+        var saved = '';
+        try { saved = window.localStorage.getItem(SITE_STORE_KEY) || ''; } catch (e) { saved = ''; }
+        vm.siteUrl = saved || window.location.origin;
+
         $axios.get('/api/dining/area/list').then(function (res) {
           vm.areas = res.data || [];
         }).catch(function () { /* 提示已统一 */ });
@@ -145,25 +259,57 @@
             return;
           }
           var url = (vm.siteUrl || '').replace(/\/+$/, '');
-          vm.generating = true;
+          // 本机地址给一次二次确认，确认后仍可生成（如临时本机调试）
+          var run = function () { vm.runGenerate(url); };
+          if (/^https?:\/\/(localhost|127\.|0\.0\.0\.0)/i.test(url)) {
+            vm.$confirm('当前站点地址像是本机地址（' + url + '），手机扫码可能无法访问。是否仍要生成？',
+                        '地址提醒', { confirmButtonText: '仍要生成', cancelButtonText: '取消', type: 'warning' })
+              .then(run).catch(function () { });
+          } else {
+            run();
+          }
+        },
+        runGenerate: function (url) {
+          var vm = this;
+          try { window.localStorage.setItem(SITE_STORE_KEY, url); } catch (e) { /* 隐私模式等忽略 */ }
+
+          var list = vm.selected.slice();
+          var ordered = new Array(list.length); // 按勾选顺序落位，避免并发乱序
           vm.posters = [];
-          // 串行生成，避免一次性并发大量图片
-          var i = 0;
-          function next() {
-            if (i >= vm.selected.length) {
-              vm.generating = false;
-              vm.$message.success('已生成 ' + vm.posters.length + ' 张海报');
+          vm.generating = true;
+          vm.progressTotal = list.length;
+          vm.progressDone = 0;
+
+          // 小并发（3）：比纯串行快，又不会一次性打爆图片生成
+          var cursor = 0;
+          function buildOne(t, pos) {
+            return $axios.get('/api/dining/table/qrcode/poster', { params: { tableId: t.id, siteUrl: url } })
+              .then(function (res) {
+                ordered[pos] = { id: t.id, name: t.name, areaName: t.areaName, img: res.data };
+              })
+              .catch(function () { ordered[pos] = null; }) // 单个失败跳过，继续其余
+              .then(function () { vm.progressDone++; });
+          }
+          function worker() {
+            if (cursor >= list.length) { return Promise.resolve(); }
+            var pos = cursor;
+            var t = list[cursor++];
+            return buildOne(t, pos).then(worker);
+          }
+
+          Promise.all([worker(), worker(), worker()]).then(function () {
+            vm.posters = ordered.filter(function (x) { return !!x; });
+            vm.generating = false;
+            if (!vm.posters.length) {
+              vm.$message.error('海报全部生成失败，请稍后重试');
               return;
             }
-            var t = vm.selected[i++];
-            $axios.get('/api/dining/table/qrcode/poster', { params: { tableId: t.id, siteUrl: url } })
-              .then(function (res) {
-                vm.posters.push({ id: t.id, name: t.name, areaName: t.areaName, img: res.data });
-              })
-              .catch(function () { /* 单个失败跳过，继续处理其余 */ })
-              .then(next);
-          }
-          next();
+            vm.$message.success('已生成 ' + vm.posters.length + ' 张，排成 ' + vm.posterPages.length + ' 张 A4');
+            vm.$nextTick(function () {
+              var el = document.getElementById('printWrap');
+              if (el) { el.scrollIntoView({ behavior: 'smooth' }); }
+            });
+          });
         },
         doPrint: function () {
           if (!this.posters.length) {
