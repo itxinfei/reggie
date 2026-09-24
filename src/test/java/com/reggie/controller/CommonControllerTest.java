@@ -29,6 +29,9 @@ public class CommonControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @org.springframework.beans.factory.annotation.Value("${reggie.path:}")
+    private String configPath;
+
     @BeforeEach
     void setUp() {
         BaseContext.setCurrentId(1L);
@@ -244,6 +247,37 @@ public class CommonControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
                         .content().contentTypeCompatibleWith("image/svg+xml"));
+    }
+
+    @Test
+    void testDownloadPublicTraversalCannotBypassPrivateAdminAuth() throws Exception {
+        // 探测文件种在 private/admin 下，验证 name=public/../private/... 规范化后仍按 private/admin 鉴权
+        String root = com.reggie.utils.ImageStoragePathResolver.resolveRoot(configPath);
+        java.io.File probe = new java.io.File(root,
+                "private/admin/purchase/202609/traversal-probe.jpg");
+        probe.getParentFile().mkdirs();
+        java.nio.file.Files.write(probe.toPath(), new byte[]{
+                (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0});
+
+        mockMvc.perform(get("/common/download")
+                .param("name", "public/../private/admin/purchase/202609/traversal-probe.jpg"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.msg").value("NOTLOGIN"));
+    }
+
+    @Test
+    void testDownloadPrivateTraversalResolvesToPublicAnonymousAllowed() throws Exception {
+        // name=private/../public/... canonical 后是 public，匿名应 200（修复 raw 串 legacy 判定的过度限制）
+        String root = com.reggie.utils.ImageStoragePathResolver.resolveRoot(configPath);
+        java.io.File probe = new java.io.File(root,
+                "public/admin/dishes/202609/traversal-public-probe.jpg");
+        probe.getParentFile().mkdirs();
+        java.nio.file.Files.write(probe.toPath(), new byte[]{
+                (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0});
+
+        mockMvc.perform(get("/common/download")
+                .param("name", "private/../public/admin/dishes/202609/traversal-public-probe.jpg"))
+                .andExpect(status().isOk());
     }
 
     @Test
