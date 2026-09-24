@@ -101,6 +101,8 @@
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
+        :show-refresh="true"
+        @refresh="handleQuery()"
         @search="handleQuery"
         @reset="reset"
         @action="onTableAction">
@@ -400,8 +402,8 @@
             { key: '', icon: 'ri-file-list-3-line', label: '盘点总数', value: s.total || 0, color: 'primary', active: f === '', clickable: true },
             { key: 'DRAFT', icon: 'ri-draft-line', label: '草稿', value: s.draft || 0, color: 'info', active: f === 'DRAFT', clickable: true },
             { key: 'IN_PROGRESS', icon: 'ri-time-line', label: '进行中', value: s.inProgress || 0, color: 'warning', active: f === 'IN_PROGRESS', clickable: true },
-            { key: 'DONE', icon: 'ri-checkbox-circle-line', label: '已完成', value: s.done || 0, color: 'success', active: f === 'DONE', clickable: true },
-            { key: 'diff', icon: 'ri-error-warning-line', label: '差异项', value: s.diffCount || 0, color: 'danger', active: false }
+            { key: 'DONE', icon: 'ri-checkbox-circle-line', label: '已完成', value: s.done || 0, color: 'success', active: f === 'DONE', clickable: true }
+            // 原第 5 张「差异项」已移除（全站统计卡 ≤4 张）；差异明细由下方差异分组区呈现
           ]
         },
         filteredMaterials: function() {

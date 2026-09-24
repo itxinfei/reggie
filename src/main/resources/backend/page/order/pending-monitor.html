@@ -91,16 +91,8 @@
         <el-button type="primary" size="small" @click="loadData">立即重试</el-button>
       </el-alert>
 
-      <!-- ========== 统计卡片：待接单/正常/预警/告警/漏单/平均等待/最长等待 ========== -->
-      <div class="stat-row">
-        <div class="stat-card"><div class="stat-card__label">待接单总数</div><div class="stat-card__value">{{ stats.total || 0 }}</div></div>
-        <div class="stat-card"><div class="stat-card__label">正常</div><div class="stat-card__value">{{ stats.normal || 0 }}</div></div>
-        <div class="stat-card warning"><div class="stat-card__label">预警</div><div class="stat-card__value">{{ stats.warning || 0 }}</div></div>
-        <div class="stat-card alarm"><div class="stat-card__label">告警</div><div class="stat-card__value">{{ stats.alarm || 0 }}</div></div>
-        <div class="stat-card missed"><div class="stat-card__label">漏单</div><div class="stat-card__value">{{ stats.missed || 0 }}</div></div>
-        <div class="stat-card"><div class="stat-card__label">平均等待</div><div class="stat-card__value">{{ stats.avgWaitMin || 0 }}<small> 分</small></div></div>
-        <div class="stat-card"><div class="stat-card__label">最长等待</div><div class="stat-card__value">{{ stats.maxWaitMin || 0 }}<small> 分</small></div></div>
-      </div>
+      <!-- ========== 统计卡片：统一 stat-cards 组件，≤4 张 ========== -->
+      <stat-cards :cards="statsCards"></stat-cards>
 
       <!-- ========== 订单卡片网格：按等待时长分级展示 ========== -->
       <div class="order-grid" v-if="list.length">
@@ -166,6 +158,18 @@
       },
       beforeDestroy: function () {
         if (this.pollTimer) clearInterval(this.pollTimer)
+      },
+      computed: {
+        // 顶部统计卡（全站 ≤4 张，统一 stat-cards 组件；正常/平均等待由订单卡 waitMinutes 承载）
+        statsCards: function () {
+          var s = this.stats
+          return [
+            { key: 'total', icon: 'ri-file-list-3-line', label: '待接单总数', value: s.total || 0, color: 'primary' },
+            { key: 'warning', icon: 'ri-time-line', label: '预警', value: s.warning || 0, color: 'warning' },
+            { key: 'alarm', icon: 'ri-alarm-warning-line', label: '告警', value: s.alarm || 0, color: 'danger' },
+            { key: 'missed', icon: 'ri-error-warning-line', label: '漏单', value: s.missed || 0, color: 'info' }
+          ]
+        }
       },
       methods: {
         /* ========== 数据加载与轮询 ========== */

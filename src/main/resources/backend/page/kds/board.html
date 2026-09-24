@@ -112,15 +112,8 @@
       <el-button type="primary" size="small" @click="loadData(false)">立即重试</el-button>
     </el-alert>
 
-    <!-- 统计概览：待制作/制作中/待取餐/今日完成/加急/平均出餐时间 -->
-    <div class="stat-row">
-      <div class="stat-card pending"><div class="stat-card__label">待制作</div><div class="stat-card__value">{{ board.pendingCount }}</div></div>
-      <div class="stat-card cooking"><div class="stat-card__label">制作中</div><div class="stat-card__value">{{ board.cookingCount }}</div></div>
-      <div class="stat-card ready"><div class="stat-card__label">待取餐</div><div class="stat-card__value">{{ board.readyCount }}</div></div>
-      <div class="stat-card"><div class="stat-card__label">今日完成</div><div class="stat-card__value">{{ board.finishedCount }}</div></div>
-      <div class="stat-card urgent"><div class="stat-card__label">加急</div><div class="stat-card__value">{{ board.urgentCount }}</div></div>
-      <div class="stat-card"><div class="stat-card__label">平均出餐</div><div class="stat-card__value">{{ fmtMMSS(board.avgCookSeconds) }}<small> </small></div></div>
-    </div>
+    <!-- 统计概览：统一 stat-cards 组件，≤4 张 -->
+    <stat-cards :cards="statsCards"></stat-cards>
 
     <!-- 三栏看板：待制作→制作中→待取餐（出餐完成） -->
     <div class="board-columns">
@@ -235,6 +228,18 @@
       if (this.pollTimer) clearInterval(this.pollTimer)
       if (this.clockTimer) clearInterval(this.clockTimer)
       try { speechSynthesis.cancel() } catch (e) {}
+    },
+    computed: {
+      // 顶部统计卡（全站 ≤4 张，统一 stat-cards 组件；加急/平均出餐由工单标记与详情承载）
+      statsCards: function () {
+        var b = this.board
+        return [
+          { key: 'pending', icon: 'ri-hourglass-2-line', label: '待制作', value: b.pendingCount || 0, color: 'warning' },
+          { key: 'cooking', icon: 'ri-fire-line', label: '制作中', value: b.cookingCount || 0, color: 'primary' },
+          { key: 'ready', icon: 'ri-checkbox-circle-line', label: '待取餐', value: b.readyCount || 0, color: 'success' },
+          { key: 'finished', icon: 'ri-today-line', label: '今日完成', value: b.finishedCount || 0, color: 'info' }
+        ]
+      }
     },
     methods: {
       // ========== 定时器与时钟 ==========
