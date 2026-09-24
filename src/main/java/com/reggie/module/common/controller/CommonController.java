@@ -47,23 +47,6 @@ public class CommonController {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
     private static final int BUFFER_SIZE = 1024;
 
-    /**
-     * 业务类型 → 上传子目录白名单。
-     * 不传或传入未知 bizType 时回退到 dishes（菜品）目录，保证旧调用兼容。
-     */
-    private static final Map<String, String> BIZ_DIR_MAP = new HashMap<>();
-    static {
-        BIZ_DIR_MAP.put("dish", "images/dishes/");
-        BIZ_DIR_MAP.put("purchase", "images/purchase/");
-        BIZ_DIR_MAP.put("stockcheck", "images/stockcheck/");
-        BIZ_DIR_MAP.put("stockrecord", "images/stockrecord/");
-        BIZ_DIR_MAP.put("supplier", "images/supplier/");
-        BIZ_DIR_MAP.put("tenant", "images/tenant/");
-        BIZ_DIR_MAP.put("avatar", "images/avatar/");
-    }
-
-    private static final String DEFAULT_SUB_DIR = "images/dishes/";
-
     /** 图片魔数：扩展名 → 合法文件头集合 */
     private static final Map<String, byte[][]> MAGIC_BYTES = new HashMap<>();
     static {
@@ -88,25 +71,15 @@ public class CommonController {
     private String basePath;
 
     /**
-     * 初始化上传目录：jar包所在目录下的 uploads 文件夹
+     * 初始化上传根目录：委托 ImageStoragePathResolver（reggie.path 优先，否则工作目录 uploads）
      */
     @PostConstruct
     public void init() {
-        if (configPath != null && !configPath.isEmpty()) {
-            basePath = configPath;
-        } else {
-            String userDir = System.getProperty("user.dir");
-            if (userDir.contains("target") && userDir.endsWith("classes")) {
-                userDir = new File(userDir).getParentFile().getParent();
-            }
-            basePath = new File(userDir, "uploads").getAbsolutePath() + File.separator;
-        }
-
+        basePath = com.reggie.utils.ImageStoragePathResolver.resolveRoot(configPath);
         File dir = new File(basePath);
         if (!dir.exists()) {
             dir.mkdirs();
         }
-
         log.info("文件上传目录初始化完成: {}", basePath);
     }
 
@@ -172,15 +145,22 @@ public class CommonController {
         //使用UUID重新生成文件名，防止文件名称重复造成文件覆盖
         String fileName = UUID.randomUUID().toString() + suffix;
 
-        // 使用 UUID 生成文件名，按 bizType 保存到对应业务子目录（未知类型回退菜品目录）
-        String subDir = BIZ_DIR_MAP.getOrDefault(bizType == null ? "" : bizType.toLowerCase(), DEFAULT_SUB_DIR);
-        String relativePath = subDir + fileName;
+        // 来源段只信 session（employee→admin，user→user），防前端伪造 bizType 越权落 public/admin
+        String sessionRole;
+        if (request.getSession().getAttribute("employee") != null) {
+            sessionRole = "admin";
+        } else if (request.getSession().getAttribute("user") != null) {
+            sessionRole = "user";
+        } else {
+            return R.error("NOTLOGIN");
+        }
+        String relativePath = com.reggie.utils.ImageStoragePathResolver
+                .resolveUploadPath(bizType, sessionRole, fileName);
 
-        // 打印调试信息
-        log.info("文件上传: originalFilename={}, size={} bytes, path={}", originalFilename, file.getSize(),
-                basePath + relativePath);
-        File dir = new File(basePath + subDir);
-        if (!dir.exists()) {
+        log.info("文件上传: originalFilename={}, size={} bytes, path={}",
+                originalFilename, file.getSize(), basePath + relativePath);
+        File dir = new File(basePath + relativePath).getParentFile();
+        if (dir != null && !dir.exists()) {
             dir.mkdirs();
         }
 

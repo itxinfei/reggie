@@ -56,7 +56,7 @@ public class CommonControllerTest {
                 .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.containsString("images")));
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.startsWith("public/admin/dishes/")));
     }
 
     @Test
@@ -115,7 +115,7 @@ public class CommonControllerTest {
                 .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.containsString("images")));
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.startsWith("public/admin/dishes/")));
     }
 
     @Test
@@ -145,12 +145,53 @@ public class CommonControllerTest {
 
         // 验证上传成功
         org.junit.jupiter.api.Assertions.assertTrue(
-                responseContent.contains("images"),
-                "上传响应应包含images路径"
+                responseContent.contains("public/admin/dishes/"),
+                "上传响应应包含 public/admin/dishes/ 路径"
         );
 
         // 由于路径解析复杂，此处简化测试逻辑
         // 实际场景需要解析JSON获取文件名并验证下载
+    }
+
+    @Test
+    void testUploadAvatarFollowsSessionRole() throws Exception {
+        byte[] jpgBytes = new byte[]{
+                (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0,
+                0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
+                0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00
+        };
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "avatar.jpg", MediaType.IMAGE_JPEG_VALUE, jpgBytes);
+
+        // 顾客会话 + bizType=avatar → private/user/avatar/
+        mockMvc.perform(multipart("/common/upload")
+                .file(file)
+                .param("bizType", "avatar")
+                .sessionAttr("user", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.startsWith("private/user/avatar/")));
+    }
+
+    @Test
+    void testUploadPurchaseGoesPrivateAdmin() throws Exception {
+        byte[] jpgBytes = new byte[]{
+                (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0,
+                0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
+                0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00
+        };
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "voucher.jpg", MediaType.IMAGE_JPEG_VALUE, jpgBytes);
+
+        mockMvc.perform(multipart("/common/upload")
+                .file(file)
+                .param("bizType", "purchase")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.startsWith("private/admin/purchase/")));
     }
 
     @Test
