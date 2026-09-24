@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>二维码打印中心 - 瑞吉外卖管理端</title>
+
+  <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <style>
+    /* 功能需要的最小样式：海报预览网格 + 浏览器打印分页。
+       仅用于本页打印能力，不做视觉美化。 */
+    .poster-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .poster-sheet {
+      background: #fff;
+      border: 1px solid var(--el-border-lighter, #ebeef5);
+      border-radius: var(--radius-md, 8px);
+      padding: 8px;
+    }
+    .poster-sheet img { width: 100%; display: block; }
+    .poster-cap { font-size: 13px; color: #606266; text-align: center; margin-top: 6px; }
+
+    @page { size: A4; margin: 10mm; }
+    @media print {
+      /* 打印时隐藏全部配置/操作区，只输出海报 */
+      .no-print { display: none !important; }
+      .poster-grid { display: block; }
+      .poster-sheet {
+        border: none;
+        padding: 0;
+        margin: 0;
+        page-break-after: always;
+      }
+      .poster-sheet:last-child { page-break-after: auto; }
+      .poster-sheet img { width: 100%; max-width: 180mm; height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="padding:10px;">
+    <h3 style="margin:0 0 10px;">二维码打印中心</h3>
+
+    <!-- 配置区 -->
+    <div class="no-print">
+      <el-form :inline="true" size="small" @submit.native.prevent>
+        <el-form-item label="站点地址">
+          <el-input v-model="siteUrl" style="width:293px;" placeholder="http://IP:端口，手机需能访问"></el-input>
+        </el-form-item>
+        <el-form-item label="区域">
+          <el-select v-model="filterAreaId" clearable placeholder="全部区域" style="width:160px;">
+            <el-option v-for="a in areas" :key="a.id" :label="a.name" :value="a.id"></el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+
+      <el-table :data="filteredTables" ref="table" border stripe max-height="380"
+                @selection-change="onSelectionChange" style="margin-bottom:10px;">
+        <el-table-column type="selection" width="48" align="center"></el-table-column>
+        <el-table-column prop="name" label="桌台名" width="160"></el-table-column>
+        <el-table-column prop="areaName" label="区域"></el-table-column>
+        <el-table-column prop="sort" label="排序" width="100"></el-table-column>
+      </el-table>
+
+      <div>
+        <el-button type="text" @click="selectFiltered">勾选当前筛选</el-button>
+        <el-button type="text" @click="clearSel">清空勾选</el-button>
+      </div>
+
+      <div style="margin:10px 0;">
+        <el-button type="primary" :loading="generating" @click="generate">
+          {{ generating ? '生成中…' : '生成海报' }}
+        </el-button>
+        <el-button @click="doPrint" :disabled="!posters.length">打印</el-button>
+        <el-button type="text" @click="posters = []" :disabled="!posters.length">清空预览</el-button>
+        <span v-if="posters.length" style="color:#909399;font-size:13px;margin-left:8px;">
+          已生成 {{ posters.length }} 张，手机扫码前请确认站点地址手机可访问
+        </span>
+      </div>
+    </div>
+
+    <!-- 海报预览 / 打印区 -->
+    <div class="poster-grid" v-if="posters.length">
+      <div class="poster-sheet" v-for="p in posters" :key="p.id">
+        <img :src="p.img" :alt="p.name">
+        <div class="poster-cap">{{ p.areaName ? p.areaName + ' · ' : '' }}{{ p.name }}</div>
+      </div>
+    </div>
+    <el-empty v-else description="勾选桌台并生成海报后，在此预览并打印" :image-size="80"></el-empty>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260915c"></script>
+  <script>
+    new Vue({
+      data: function () {
+        return {
+          siteUrl: window.location.origin,
+          areas: [],
+          tables: [],
+          filterAreaId: null,
+          selected: [],
+          posters: [],
+          generating: false
+        };
+      },
+      computed: {
+        filteredTables: function () {
+          var vm = this;
+          if (vm.filterAreaId == null) { return vm.tables; }
+          return vm.tables.filter(function (t) { return t.areaId === vm.filterAreaId; });
+        }
+      },
+      mounted: function () {
+        var vm = this;
+        $axios.get('/api/dining/area/list').then(function (res) {
+          vm.areas = res.data || [];
+        }).catch(function () { /* 提示已统一 */ });
+        $axios.get('/api/dining/table/list').then(function (res) {
+          vm.tables = res.data || [];
+        }).catch(function () { /* 提示已统一 */ });
+      },
+      methods: {
+        onSelectionChange: function (sel) { this.selected = sel; },
+        selectFiltered: function () {
+          var vm = this;
+          vm.$refs.table.clearSelection();
+          vm.filteredTables.forEach(function (t) { vm.$refs.table.toggleRowSelection(t, true); });
+        },
+        clearSel: function () { this.$refs.table.clearSelection(); },
+        generate: function () {
+          var vm = this;
+          if (!vm.selected.length) {
+            vm.$message.warning('请先勾选要生成海报的桌台');
+            return;
+          }
+          var url = (vm.siteUrl || '').replace(/\/+$/, '');
+          vm.generating = true;
+          vm.posters = [];
+          // 串行生成，避免一次性并发大量图片
+          var i = 0;
+          function next() {
+            if (i >= vm.selected.length) {
+              vm.generating = false;
+              vm.$message.success('已生成 ' + vm.posters.length + ' 张海报');
+              return;
+            }
+            var t = vm.selected[i++];
+            $axios.get('/api/dining/table/qrcode/poster', { params: { tableId: t.id, siteUrl: url } })
+              .then(function (res) {
+                vm.posters.push({ id: t.id, name: t.name, areaName: t.areaName, img: res.data });
+              })
+              .catch(function () { /* 单个失败跳过，继续处理其余 */ })
+              .then(next);
+          }
+          next();
+        },
+        doPrint: function () {
+          if (!this.posters.length) {
+            this.$message.warning('请先生成海报');
+            return;
+          }
+          window.print();
+        }
+      }
+    }).$mount('#app');
+  </script>
+</body>
+</html>

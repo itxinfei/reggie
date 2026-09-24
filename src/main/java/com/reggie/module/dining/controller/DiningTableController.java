@@ -66,6 +66,9 @@ public class DiningTableController {
     @Autowired
     private com.reggie.module.order.service.OrderService orderService;
 
+    @Autowired
+    private com.reggie.module.tenant.service.TenantService tenantService;
+
     /**
      * 分页查询桌台列表
      * @param page 页码
@@ -394,6 +397,40 @@ public class DiningTableController {
             log.error("生成二维码失败: tableId={}", id, e);
             return R.error("生成二维码失败，请稍后重试");
         }
+    }
+
+    /**
+     * 生成高清桌贴海报（供二维码打印中心批量打印）。
+     * <p>海报含品牌金顶条、高清二维码、门店名、大号桌号与扫码引导语。
+     * 站点地址由前端传入，避免写死导致手机扫码无法访问。</p>
+     *
+     * @param tableId 桌台ID
+     * @param siteUrl 站点地址（如 http://192.168.1.10:8080），可空
+     * @return Base64 PNG Data URI
+     */
+    @GetMapping("/qrcode/poster")
+    @Operation(summary = "生成桌贴海报", description = "生成高清打印海报（品牌条+二维码+门店名+桌号+引导语），Base64格式")
+    public R<String> poster(@Parameter(name = "tableId", description = "桌台ID", required = true)
+                            @RequestParam("tableId") Long tableId,
+                            @Parameter(name = "siteUrl", description = "站点地址（前端传入）")
+                            @RequestParam(value = "siteUrl", required = false) String siteUrl) {
+        DiningTable table = diningTableService.getById(tableId);
+        if (table == null) {
+            return R.error("桌台不存在");
+        }
+
+        // 门店名取当前租户（tenant 表在多租户白名单内，按 ID 显式查询）
+        String storeName = "";
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId != null) {
+            com.reggie.module.tenant.model.Tenant tenant = tenantService.getById(tenantId);
+            if (tenant != null && tenant.getName() != null) {
+                storeName = tenant.getName();
+            }
+        }
+
+        String posterBase64 = qrCodeUtil.generateTablePoster(tableId, table.getName(), storeName, siteUrl);
+        return R.success("data:image/png;base64," + posterBase64);
     }
 
     /**

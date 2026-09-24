@@ -169,6 +169,31 @@ public class DiningTableControllerTest {
                 .andExpect(jsonPath("$.code").value(0));
     }
 
+    @Test
+    void testQrcodePoster() throws Exception {
+        // 海报端点：返回 base64 PNG（schema-dining 无 tenant，storeName 走空串兜底）
+        mockMvc.perform(get("/api/dining/table/qrcode/poster")
+                .param("tableId", "1")
+                .param("siteUrl", "http://localhost:8080")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value(
+                        org.hamcrest.Matchers.startsWith("data:image/png;base64,")));
+    }
+
+    @Test
+    void testQrcodePosterTableNotFound() throws Exception {
+        mockMvc.perform(get("/api/dining/table/qrcode/poster")
+                .param("tableId", "999")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("桌台不存在"));
+    }
+
     /** 分账：parts 超过 20 份应拒绝（CustomException → 422） */
     @Test
     void testSplitBill_partsExceedsLimit() throws Exception {
