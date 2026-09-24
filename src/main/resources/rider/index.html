@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>骑手工作台</title>
+  <link rel="stylesheet" href="/front/styles/vant.min.css">
+  <link rel="stylesheet" href="/rider/css/rider.css">
+</head>
+<body>
+  <div id="app">
+    <van-nav-bar title="骑手工作台">
+      <template #right>
+        <span @click="onLogout" style="font-size:15px;">退出</span>
+      </template>
+    </van-nav-bar>
+
+    <div class="rider-statusbar">
+      <span class="who">{{ me.name || '骑手' }}<small>{{ riderStatusText }}</small></span>
+      <div>
+        <span style="margin-right:8px;font-size:14px;">接单中</span>
+        <van-switch v-model="online" :loading="statusLoading" @change="onToggleOnline"></van-switch>
+      </div>
+    </div>
+
+    <van-tabs v-model="active" @change="onTabChange" sticky offset-top="0">
+      <van-tab title="待接单" name="todo"></van-tab>
+      <van-tab title="配送中" name="delivering"></van-tab>
+      <van-tab title="历史" name="history"></van-tab>
+    </van-tabs>
+
+    <div class="rider-page has-bar">
+      <van-pull-refresh v-model="refreshing" @refresh="loadList" success-text="刷新成功">
+        <div v-if="list.length">
+          <div class="task-card" v-for="t in list" :key="t.id" @click="openDetail(t)">
+            <div class="task-head">
+              <span class="task-number">{{ t.number }}</span>
+              <span class="task-amount">¥{{ RiderUtil.money(t.amount) }}</span>
+            </div>
+            <div class="task-line">{{ t.storeName }}</div>
+            <div class="task-line">送至 <span class="addr">{{ t.address }}</span></div>
+            <div class="task-foot">
+              <span class="task-time">{{ RiderUtil.formatTime(t.orderTime) }}</span>
+              <button v-if="active === 'todo'" class="mini-btn primary" :disabled="acceptingId === t.id"
+                      @click.stop="onAccept(t)">确认接单</button>
+              <button v-else-if="active === 'delivering'" class="mini-btn" @click.stop="openDetail(t)">继续配送</button>
+              <span v-else style="font-size:13px;color:#6b7280;">{{ RiderUtil.statusText(t.status) }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="rider-empty" v-else>{{ refreshing ? '加载中…' : '暂无任务' }}</div>
+      </van-pull-refresh>
+    </div>
+
+    <div class="hall-entry">
+      <button class="rider-btn primary" @click="goHall">进入抢单大厅</button>
+    </div>
+  </div>
+
+  <script src="/backend/plugins/vue/vue.js"></script>
+  <script src="/backend/plugins/axios/axios.min.js"></script>
+  <script src="/front/js/vant.min.js"></script>
+  <script src="/rider/js/request.js"></script>
+  <script src="/rider/js/api.js"></script>
+  <script src="/rider/js/util.js"></script>
+  <script src="/rider/js/location.js"></script>
+  <script>RiderLocation.start();</script>
+  <script>
+    Vue.use(vant);
+    new Vue({
+      data: function () {
+        return {
+          me: {},
+          online: false,
+          statusLoading: false,
+          active: 'todo',
+          list: [],
+          refreshing: false,
+          loaded: {},
+          acceptingId: null
+        };
+      },
+      computed: {
+        riderStatusText: function () {
+          switch (this.me.status) {
+            case 0: return '离线';
+            case 2: return '配送中';
+            case 1: return '在线';
+            default: return '';
+          }
+        }
+      },
+      mounted: function () {
+        var vm = this;
+        try { vm.me.name = sessionStorage.getItem('riderName') || ''; } catch (e) { /* 忽略 */ }
+        RiderApi.me().then(function (res) {
+          vm.me = res.data || {};
+          // status: 0离线 1在线 2忙碌（忙碌也视作接单状态）
+          vm.online = vm.me.status === 1 || vm.me.status === 2;
+        }).catch(function () { /* 未登录已跳转 */ });
+        vm.loadList();
+      },
+      created: function () {
+        // RiderUtil 是工具对象而非方法，挂在实例上供模板调用（不能放进 methods）
+        this.RiderUtil = window.RiderUtil;
+      },
+      methods: {
+        loadList: function () {
+          var vm = this;
+          vm.refreshing = true;
+          RiderApi.myTasks(vm.active).then(function (res) {
+            vm.list = res.data || [];
+            vm.loaded[vm.active] = true;
+          }).catch(function () { /* 提示已统一 */ }).then(function () {
+            vm.refreshing = false;
+          });
+        },
+        onTabChange: function () {
+          this.loadList();
+        },
+        openDetail: function (t) {
+          window.location.href = '/rider/detail.html?id=' + t.id;
+        },
+        onAccept: function (t) {
+          var vm = this;
+          if (vm.acceptingId !== null) return;  // 请求在飞，防重复点击
+          vm.acceptingId = t.id;
+          RiderApi.accept(t.id).then(function () {
+            vant.Toast.success('已接单');
+            vm.loadList();
+          }).catch(function () { /* 提示已统一 */ }).then(function () {
+            vm.acceptingId = null;
+          });
+        },
+        onToggleOnline: function (v) {
+          var vm = this;
+          vm.statusLoading = true;
+          RiderApi.setOnline(v).then(function () {
+            vant.Toast(v ? '已上线，可接单' : '已下线，暂停接单');
+          }).catch(function () {
+            // 失败回滚开关
+            vm.online = !v;
+          }).then(function () {
+            vm.statusLoading = false;
+          });
+        },
+        onLogout: function () {
+          vant.Dialog.confirm({ title: '提示', message: '确定退出登录吗？' }).then(function () {
+            RiderApi.logout().catch(function () { /* 忽略 */ }).then(function () {
+              try { sessionStorage.clear(); } catch (e) { /* 忽略 */ }
+              window.location.href = '/rider/login.html';
+            });
+          }).catch(function () { /* 取消 */ });
+        },
+        goHall: function () {
+          window.location.href = '/rider/hall.html';
+        }
+      }
+    }).$mount('#app');
+  </script>
+</body>
+</html>

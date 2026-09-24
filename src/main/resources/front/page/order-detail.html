@@ -164,16 +164,17 @@
                 </template>
                 <template v-if="order.status === 2">
                     <div class="act-btn act-outline" @click="urgeOrder">催单</div>
-                    <div class="act-btn act-outline" v-if="order.platformOrderId" @click="viewTracking">查看配送</div>
+                    <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking">查看配送</div>
                 </template>
                 <template v-if="order.status === 3">
                     <div class="act-btn act-outline" @click="urgeOrder">催单</div>
-                    <div class="act-btn act-outline" v-if="order.platformOrderId" @click="viewTracking">查看配送</div>
+                    <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking">查看配送</div>
                     <div class="act-btn act-primary" @click="confirmReceipt">确认收货</div>
                 </template>
                 <template v-if="order.status === 4">
                     <div class="act-btn act-outline" @click="applyRefund">申请售后</div>
-                    <div class="act-btn act-outline" @click="evaluate">去评价</div>
+                    <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking">查看配送</div>
+                    <div class="act-btn act-outline" v-if="canEvaluateOrder(order)" @click="evaluate">去评价</div>
                     <div class="act-btn act-primary" @click="addOrderAgain">再来一单</div>
                 </template>
                 <template v-if="order.status === 5 || order.status === 6">
@@ -188,7 +189,7 @@
         <script src="../../backend/plugins/axios/axios.min.js"></script>
         <script src="./../js/request.js?v=20260917"></script>
         <script src="./../api/main.js?v=20260921"></script>
-        <script src="./../js/common.js?v=20260917"></script>
+        <script src="./../js/common.js?v=20260924"></script>
         <script src="./../api/order.js?v=20260917"></script>
         <!-- C 端跨页面复用组件（必须在 new Vue 之前加载） -->
         <script src="./../js/components-cend.js?v=20260922"></script>
@@ -202,7 +203,9 @@
                     loading: true,
                     submitting: false,
                     // 本订单售后/退款记录（审核与退款进度）
-                    refundRecords: []
+                    refundRecords: [],
+                    // 我的已评价商品集合（loadEvalKeys 装配），控制「去评价」入口
+                    evalKeys: new Set()
                 }
             },
             computed: {
@@ -250,6 +253,8 @@
                 this.orderId = new URLSearchParams(window.location.search).get('id')
                 this.loadDetail()
                 this.loadRefundRecords()
+                var self = this
+                loadEvalKeys().then(function(keys) { self.evalKeys = keys })
             },
             methods: {
                 // 修改点(2026-09-22)：goBack 已统一由 cend-shell 组件处理
@@ -305,16 +310,19 @@
                         window.location.href = '/front/page/add-order.html?reorderId=' + this.orderId
                     }.bind(this))
                 },
+                // 是否可看配送追踪：平台配送单 或 自有骑手配送单（有收货地址、非堂食，待接单/配送中/已完成）
+                canViewTracking: function(order) {
+                    if (!order) { return false; }
+                    if (order.platformOrderId) { return true; }
+                    return order.addressBookId != null && order.tableId == null
+                        && (order.status === 2 || order.status === 3 || order.status === 4);
+                },
                 viewTracking: function() {
-                    // 仅平台配送订单有 platformOrderId；无追踪的订单按钮已隐藏
-                    var pId = this.order.platformOrderId
-                    if (pId) {
-                        window.requestAnimationFrame(function() {
-                            window.location.href = '/front/page/tracking.html?orderId=' + encodeURIComponent(pId)
-                        })
-                    } else {
-                        vant.Toast.fail('该订单暂无配送追踪信息')
-                    }
+                    // 平台单传平台单号，自有骑手单传本地订单ID；后端按两种入参兼容查询
+                    var trackingId = this.order.platformOrderId || this.order.id;
+                    window.requestAnimationFrame(function() {
+                        window.location.href = '/front/page/tracking.html?orderId=' + encodeURIComponent(trackingId)
+                    });
                 },
                 contactService: function() {
                     var oid = this.order.id

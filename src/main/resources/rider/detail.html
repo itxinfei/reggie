@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>任务详情</title>
+  <link rel="stylesheet" href="/front/styles/vant.min.css">
+  <link rel="stylesheet" href="/rider/css/rider.css">
+</head>
+<body>
+  <div id="app">
+    <van-nav-bar title="任务详情" left-arrow @click-left="goBack"></van-nav-bar>
+
+    <div class="rider-page" v-if="t">
+
+      <!-- 订单概览 -->
+      <div class="rider-card">
+        <div class="task-head" style="margin-bottom:4px;">
+          <span class="task-number">{{ t.number }}</span>
+          <van-tag plain type="warning">{{ RiderUtil.statusText(t.status) }}</van-tag>
+        </div>
+        <div class="info-row"><span class="label">订单金额</span>
+          <span class="val" style="text-align:right;font-weight:700;">¥{{ RiderUtil.money(t.amount) }}
+            <small style="color:#6b7280;font-weight:400;">（含配送费 ¥{{ RiderUtil.money(t.deliveryFee) }}）</small>
+          </span>
+        </div>
+        <div class="info-row"><span class="label">下单时间</span><span class="val">{{ RiderUtil.formatTime(t.orderTime) }}</span></div>
+        <div class="info-row" v-if="t.remark"><span class="label">用户备注</span><span class="val">{{ t.remark }}</span></div>
+      </div>
+
+      <!-- 取餐卡 -->
+      <div class="rider-card">
+        <div class="card-title"><span class="bar"></span>到店取餐</div>
+        <div class="info-row"><span class="label">门店</span><span class="val strong">{{ t.storeName }}</span></div>
+        <div class="info-row"><span class="label">地址</span><span class="val">{{ t.storeAddress }}</span></div>
+        <div class="row-tools">
+          <a v-if="t.storePhone" class="tool-btn" :href="'tel:' + t.storePhone">📞 联系门店</a>
+          <a v-if="storeNav" class="tool-btn primary" :href="storeNav" target="_blank" rel="noopener">取餐导航</a>
+        </div>
+        <div class="rider-actions" style="margin:12px 0 0;" v-if="showPickup">
+          <button class="rider-btn primary" :disabled="busy !== ''" @click="onPickup">确认取餐</button>
+        </div>
+      </div>
+
+      <!-- 送餐卡 -->
+      <div class="rider-card">
+        <div class="card-title deliver"><span class="bar"></span>配送给顾客</div>
+        <div class="info-row"><span class="label">收货人</span><span class="val strong">{{ t.consignee }}</span></div>
+        <div class="info-row"><span class="label">电话</span><span class="val">{{ t.phone }}</span></div>
+        <div class="info-row"><span class="label">地址</span><span class="val">{{ t.address }}</span></div>
+        <div class="row-tools">
+          <a v-if="t.phone" class="tool-btn" :href="'tel:' + t.phone">📞 联系顾客</a>
+          <a v-if="destNav" class="tool-btn primary" :href="destNav" target="_blank" rel="noopener">送餐导航</a>
+        </div>
+        <div class="rider-actions" style="margin:12px 0 0;" v-if="showDeliver">
+          <button class="rider-btn primary" :disabled="busy !== ''" @click="onDeliver">确认送达</button>
+        </div>
+        <div v-if="t.status === 4 && t.deliverTime" style="margin-top:12px;color:#6b7280;text-align:center;">
+          已于 {{ RiderUtil.formatTime(t.deliverTime) }} 送达完成
+        </div>
+      </div>
+
+      <!-- 大厅单：抢单 -->
+      <div class="rider-actions" v-if="showGrab">
+        <button class="rider-btn primary" :disabled="busy !== ''" @click="onGrab">立即抢单</button>
+      </div>
+
+      <!-- 派给我：确认接单 -->
+      <div class="rider-actions" v-if="showAccept">
+        <button class="rider-btn primary" :disabled="busy !== ''" @click="onAccept">确认接单</button>
+      </div>
+
+    </div>
+
+    <div class="rider-empty" v-else>加载中…</div>
+  </div>
+
+  <script src="/backend/plugins/vue/vue.js"></script>
+  <script src="/backend/plugins/axios/axios.min.js"></script>
+  <script src="/front/js/vant.min.js"></script>
+  <script src="/rider/js/request.js"></script>
+  <script src="/rider/js/api.js"></script>
+  <script src="/rider/js/util.js"></script>
+  <script src="/rider/js/location.js"></script>
+  <script>RiderLocation.start();</script>
+  <script>
+    Vue.use(vant);
+    new Vue({
+      data: function () {
+        return { t: null, busy: '' };
+      },
+      computed: {
+        showGrab: function () { return this.t && this.t.status === 2 && this.t.riderId == null; },
+        showAccept: function () { return this.t && this.t.status === 2 && this.t.riderId != null; },
+        showPickup: function () { return this.t && this.t.status === 3 && this.t.pickupTime == null; },
+        showDeliver: function () { return this.t && this.t.status === 3 && this.t.pickupTime != null; },
+        storeNav: function () {
+          return this.t ? RiderUtil.navUrl(this.t.storeLongitude, this.t.storeLatitude, this.t.storeName) : '';
+        },
+        destNav: function () {
+          return this.t ? RiderUtil.navUrl(this.t.destLongitude, this.t.destLatitude, this.t.address) : '';
+        }
+      },
+      mounted: function () {
+        var vm = this;
+        var id = new URLSearchParams(window.location.search).get('id');
+        if (!id) { vant.Toast('缺少订单ID'); return; }
+        RiderApi.detail(id).then(function (res) { vm.t = res.data; })
+          .catch(function () { /* 提示已统一 */ });
+      },
+      created: function () {
+        // RiderUtil 是工具对象而非方法，挂在实例上供模板调用（不能放进 methods）
+        this.RiderUtil = window.RiderUtil;
+      },
+      methods: {
+        reload: function () {
+          var vm = this;
+          RiderApi.detail(vm.t.id).then(function (res) { vm.t = res.data; });
+        },
+        onGrab: function () {
+          var vm = this;
+          if (vm.busy !== '') return;  // 请求在飞，防重复点击
+          vm.busy = 'grab';
+          RiderApi.grab(vm.t.id).then(function () {
+            vant.Toast.success('抢单成功');
+            vm.reload();
+          }).catch(function () { vm.reload(); }).then(function () { vm.busy = ''; });
+        },
+        onAccept: function () {
+          var vm = this;
+          if (vm.busy !== '') return;
+          vm.busy = 'accept';
+          RiderApi.accept(vm.t.id).then(function () {
+            vant.Toast.success('已接单');
+            vm.reload();
+          }).catch(function () { /* 提示已统一 */ }).then(function () { vm.busy = ''; });
+        },
+        onPickup: function () {
+          var vm = this;
+          if (vm.busy !== '') return;
+          vm.busy = 'pickup';
+          RiderApi.pickup(vm.t.id).then(function () {
+            vant.Toast.success('已取餐，请尽快送达');
+            vm.reload();
+          }).catch(function () { /* 提示已统一 */ }).then(function () { vm.busy = ''; });
+        },
+        onDeliver: function () {
+          var vm = this;
+          if (vm.busy !== '') return;
+          vant.Dialog.confirm({ title: '确认送达', message: '确认已将订单送达顾客手中？' }).then(function () {
+            vm.busy = 'deliver';
+            return RiderApi.deliver(vm.t.id);
+          }).then(function () {
+            vant.Toast.success('送达完成');
+            vm.reload();
+          }).catch(function () { /* 取消或失败 */ }).then(function () { vm.busy = ''; });
+        },
+        goBack: function () {
+          window.history.length > 1 ? window.history.back()
+            : (window.location.href = '/rider/index.html');
+        }
+      }
+    }).$mount('#app');
+  </script>
+</body>
+</html>

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -41,6 +42,12 @@ public class Rider implements Serializable {
 
     @Schema(description = "Phone Number")
     private String phone;
+
+    // 骑手登录密码（BCrypt）。@JsonIgnore 保证任何接口响应都不回传密码；
+    // 仅骑手登录校验时在服务端使用，不做 MD5 历史兼容（骑手为全新账号体系）。
+    @JsonIgnore
+    @Schema(hidden = true)
+    private String password;
 
     @Schema(description = "Avatar URL")
     private String avatar;

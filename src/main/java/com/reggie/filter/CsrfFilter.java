@@ -175,8 +175,10 @@ public class CsrfFilter implements Filter {
             return;
         }
 
-        // 只有已登录用户才生成CSRF Token
-        if (session.getAttribute("employee") == null && session.getAttribute("user") == null) {
+        // 只有已登录用户（员工 / C端顾客 / 骑手）才生成CSRF Token
+        if (session.getAttribute("employee") == null
+                && session.getAttribute("user") == null
+                && session.getAttribute("rider") == null) {
             return;
         }
 

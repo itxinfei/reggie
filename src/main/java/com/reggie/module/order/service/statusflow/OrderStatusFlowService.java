@@ -44,4 +44,39 @@ public interface OrderStatusFlowService {
      * @param reason 取消原因（可选）
      */
     void cancelOrder(Long id, String reason);
+
+    /**
+     * 店长派单：待接单(2) 且未指派 → 绑定骑手（status 仍为 2，待骑手接单）
+     * @param orderId 订单ID
+     * @param riderId 骑手ID
+     */
+    void dispatchOrder(Long orderId, Long riderId);
+
+    /**
+     * 骑手抢单：原子地绑定骑手并接单（2 → 3），以影响行数防并发双抢
+     * @param orderId 订单ID
+     * @param riderId 骑手ID
+     */
+    void grabOrder(Long orderId, Long riderId);
+
+    /**
+     * 骑手确认派单（2 → 3），校验订单确实指派给当前骑手
+     * @param orderId 订单ID
+     * @param riderId 骑手ID
+     */
+    void acceptRiderTask(Long orderId, Long riderId);
+
+    /**
+     * 骑手确认取餐（status 仍为 3），记录取餐时间
+     * @param orderId 订单ID
+     * @param riderId 骑手ID
+     */
+    void pickupRiderTask(Long orderId, Long riderId);
+
+    /**
+     * 骑手确认送达（3 → 4），校验归属后复用完成逻辑
+     * @param orderId 订单ID
+     * @param riderId 骑手ID
+     */
+    void deliverRiderOrder(Long orderId, Long riderId);
 }

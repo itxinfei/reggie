@@ -357,6 +357,49 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
     }
 
     /**
+     * 记录骑手动作（接单/取餐/送达），按 orderId upsert。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean recordRiderAction(Long orderId, String orderNumber, LocalDateTime orderTime,
+                                     Long riderId, String riderName, String action) {
+        LocalDateTime now = LocalDateTime.now();
+        DeliveryTimeRecord rec = getDeliveryTimeByOrderId(orderId);
+        boolean isNew = false;
+        if (rec == null) {
+            rec = new DeliveryTimeRecord();
+            rec.setOrderId(orderId);
+            rec.setOrderNumber(orderNumber);
+            rec.setOrderTime(orderTime);
+            rec.setCreateTime(now);
+            isNew = true;
+        }
+        // 无论新建还是已存在，都把骑手绑定关系补齐（兜底派单时未建记录的情况）
+        rec.setRiderId(riderId);
+        rec.setRiderName(riderName);
+
+        if (ACTION_ACCEPT.equals(action)) {
+            rec.setAcceptTime(now);
+            rec.setStatus(1);
+        } else if (ACTION_PICKUP.equals(action)) {
+            rec.setPickupTime(now);
+            rec.setStatus(2);
+        } else if (ACTION_DELIVER.equals(action)) {
+            rec.setDeliverTime(now);
+            rec.setStatus(4);
+            if (rec.getOrderTime() != null) {
+                long mins = java.time.Duration.between(rec.getOrderTime(), now).toMinutes();
+                rec.setActualMinutes((int) Math.max(0L, mins));
+            }
+        } else {
+            throw new CustomException("未知骑手动作：" + action);
+        }
+
+        rec.setUpdateTime(now);
+        return isNew ? timeRecordMapper.insert(rec) > 0 : timeRecordMapper.updateById(rec) > 0;
+    }
+
+    /**
      * 处理 estimate delivery time。
      * @param distance 参数 distance
      * @param riderId 参数 riderId

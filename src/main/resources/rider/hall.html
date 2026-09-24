@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>抢单大厅</title>
+  <link rel="stylesheet" href="/front/styles/vant.min.css">
+  <link rel="stylesheet" href="/rider/css/rider.css">
+</head>
+<body>
+  <div id="app">
+    <van-nav-bar title="抢单大厅" left-arrow @click-left="goBack"></van-nav-bar>
+
+    <div class="rider-page">
+      <van-pull-refresh v-model="refreshing" @refresh="loadList(false)" success-text="刷新成功">
+        <div v-if="list.length">
+          <div class="task-card" v-for="t in list" :key="t.id">
+            <div class="task-head">
+              <span class="task-number">{{ t.number }}</span>
+              <span class="task-amount">¥{{ RiderUtil.money(t.amount) }}</span>
+            </div>
+            <div class="task-line">取餐：{{ t.storeName }}（{{ t.storeAddress }}）</div>
+            <div class="task-line">送至 <span class="addr">{{ t.address }}</span></div>
+            <div v-if="t.expectDeliveryTime" class="task-line">期望送达：{{ t.expectDeliveryTime }}</div>
+            <div class="task-foot">
+              <span class="task-time">{{ RiderUtil.formatTime(t.orderTime) }} 下单</span>
+            </div>
+            <div class="rider-actions" style="margin:10px 0 0;">
+              <button class="rider-btn primary" :disabled="grabbingId === t.id" @click="onGrab(t)">立即抢单</button>
+            </div>
+          </div>
+        </div>
+        <div class="rider-empty" v-else>
+          <template v-if="refreshing"><div>加载中…</div></template>
+          <template v-else>
+            <div>暂无可抢订单</div>
+            <div style="font-size:13px;margin-top:8px;">下拉刷新，或等待新订单进入大厅</div>
+          </template>
+        </div>
+      </van-pull-refresh>
+    </div>
+  </div>
+
+  <script src="/backend/plugins/vue/vue.js"></script>
+  <script src="/backend/plugins/axios/axios.min.js"></script>
+  <script src="/front/js/vant.min.js"></script>
+  <script src="/rider/js/request.js"></script>
+  <script src="/rider/js/api.js"></script>
+  <script src="/rider/js/util.js"></script>
+  <script src="/rider/js/location.js"></script>
+  <script>RiderLocation.start();</script>
+  <script>
+    Vue.use(vant);
+    new Vue({
+      data: function () {
+        return { list: [], refreshing: false, timer: null, grabbingId: null };
+      },
+      mounted: function () {
+        var vm = this;
+        vm.loadList(false);
+        // 每 12 秒静默刷新，保证大厅订单实时
+        vm.timer = setInterval(function () {
+          // 页面在后台、或骑手正在抢单时跳过，避免无效请求/移走正在操作的卡片
+          if (document.hidden || vm.grabbingId !== null) return;
+          vm.loadList(true);
+        }, 12000);
+      },
+      beforeDestroy: function () {
+        if (this.timer) { clearInterval(this.timer); this.timer = null; }
+      },
+      created: function () {
+        // RiderUtil 是工具对象而非方法，挂在实例上供模板调用（不能放进 methods）
+        this.RiderUtil = window.RiderUtil;
+      },
+      methods: {
+        loadList: function (silent) {
+          var vm = this;
+          if (!silent) { vm.refreshing = true; }
+          RiderApi.hall().then(function (res) {
+            vm.list = res.data || [];
+          }).catch(function () { /* 提示已统一 */ }).then(function () {
+            vm.refreshing = false;
+          });
+        },
+        onGrab: function (t) {
+          var vm = this;
+          if (vm.grabbingId !== null) return;  // 请求在飞，防重复点击
+          vm.grabbingId = t.id;
+          RiderApi.grab(t.id).then(function () {
+            vant.Toast.success('抢单成功');
+            // 抢到后进入任务详情继续取餐/送达
+            setTimeout(function () {
+              window.location.href = '/rider/detail.html?id=' + t.id;
+            }, 600);
+          }).catch(function () {
+            // 抢单失败（多为被他人抢走），刷新列表
+            vm.grabbingId = null;
+            vm.loadList(true);
+          });
+        },
+        goBack: function () {
+          window.location.href = '/rider/index.html';
+        }
+      }
+    }).$mount('#app');
+  </script>
+</body>
+</html>

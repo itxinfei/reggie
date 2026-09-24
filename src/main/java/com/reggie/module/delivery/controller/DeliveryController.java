@@ -3,17 +3,24 @@ import com.reggie.common.utils.PageUtils;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.dto.AcceptOrderDTO;
 import com.reggie.dto.SyncMenuDTO;
 import com.reggie.dto.SyncStockDTO;
+import com.reggie.module.address.model.AddressBook;
+import com.reggie.module.address.service.AddressBookService;
 import com.reggie.module.delivery.model.DeliveryOrder;
 import com.reggie.module.delivery.model.DeliveryTimeRecord;
 import com.reggie.module.delivery.model.Rider;
 import com.reggie.module.delivery.service.DeliveryService;
 import com.reggie.module.delivery.service.DeliveryTrackingService;
+import com.reggie.module.order.model.OrderDetail;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.OrderDetailService;
+import com.reggie.module.order.service.OrderService;
 import com.reggie.module.user.model.User;
 import com.reggie.module.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,8 +42,12 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Max;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 外卖平台对接控制器
@@ -59,6 +70,15 @@ public class DeliveryController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private OrderService orderService;
+
+    @Autowired
+    private OrderDetailService orderDetailService;
+
+    @Autowired
+    private AddressBookService addressBookService;
 
     // ==================== 订单查询 ====================
 
@@ -210,25 +230,49 @@ public class DeliveryController {
     // ==================== 配送追踪 ====================
 
     /**
-     * 根据平台订单号查询配送状态（供前端配送追踪页面使用）
-     * <p>仅返回展示所需字段（不含顾客姓名/电话裸数据），并校验当前登录用户是否归属该订单</p>
+     * 查询配送状态（供前端配送追踪页面使用）。
+     * <p>支持两种入参：平台单号（第三方平台配送单）或本地订单ID（自有骑手配送单），
+     * 平台单查不到时自动回退本地订单查询。</p>
      *
-     * @param orderId 平台订单号
-     * @return 配送订单展示信息（含尽力而为的骑手字段）
+     * @param orderId 平台订单号或本地订单ID
+     * @return 配送订单展示信息（含骑手字段）
      */
     @GetMapping("/tracking/{orderId}")
-    @Operation(summary = "查询配送追踪", description = "根据平台订单号查询配送订单详情，供前端追踪页面使用")
-    public R<Map<String, Object>> tracking(@Parameter(description = "平台订单号", required =
+    @Operation(summary = "查询配送追踪", description = "根据平台订单号或本地订单ID查询配送详情，供前端追踪页面使用")
+    public R<Map<String, Object>> tracking(@Parameter(description = "平台订单号或本地订单ID", required =
             true) @PathVariable String orderId) {
-        DeliveryOrder order = deliveryService.getByPlatformOrderId(orderId);
-        if (order == null) {
+        DeliveryOrder platformOrder = deliveryService.getByPlatformOrderId(orderId);
+        if (platformOrder != null) {
+            return R.success(buildPlatformTracking(platformOrder));
+        }
+        // 平台单查不到：按本地自有骑手订单 ID 查询
+        Long localId = parseLongId(orderId);
+        if (localId == null) {
             return R.error("配送订单不存在");
         }
+        Orders localOrder = orderService.getById(localId);
+        // 堂食单（tableId != null）或无收货地址的订单不属于配送追踪范围
+        if (localOrder == null || localOrder.getTableId() != null
+                || localOrder.getAddressBookId() == null) {
+            return R.error("配送订单不存在");
+        }
+        // IDOR 归属校验：仅下单用户本人可查自己的配送单
+        if (!Objects.equals(localOrder.getUserId(), BaseContext.getCurrentId())) {
+            return R.error("无权查看该订单");
+        }
+        return R.success(buildLocalTracking(localOrder));
+    }
+
+    /**
+     * 组装第三方平台配送单的追踪数据。
+     * <p>仅返回展示所需字段，并校验当前登录用户是否归属该订单（防止枚举 platformOrderId 获取他人 PII）。</p>
+     */
+    private Map<String, Object> buildPlatformTracking(DeliveryOrder order) {
         // 归属校验：防止同租户下任意登录用户通过枚举 platformOrderId 获取他人顾客 PII（IDOR）
         if (order.getPhone() != null) {
             User user = userService.getById(BaseContext.getCurrentId());
             if (user != null && user.getPhone() != null && !user.getPhone().equals(order.getPhone())) {
-                return R.error("无权查看该订单");
+                throw new CustomException("无权查看该订单");
             }
         }
         Map<String, Object> data = new HashMap<>();
@@ -252,7 +296,159 @@ public class DeliveryController {
                 }
             }
         }
-        return R.success(data);
+        return data;
+    }
+
+    /**
+     * 组装自有骑手配送单的追踪数据（结构与平台单同构，tracking.html 无需区分来源）。
+     * <p>状态映射：本地 2待接单→PENDING；3配送中按是否已取餐→ACCEPTED/DELIVERING；
+     * 4已完成→DELIVERED；5已取消/6已退款→CANCELLED。</p>
+     */
+    private Map<String, Object> buildLocalTracking(Orders order) {
+        DeliveryTimeRecord record = deliveryTrackingService.getDeliveryTimeByOrderId(order.getId());
+        String trackingStatus = mapLocalTrackingStatus(order.getStatus(), record);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("dishSummary", buildDishSummary(order.getId()));
+        data.put("amount", order.getAmount());
+        data.put("status", trackingStatus);
+        data.put("orderTime", order.getOrderTime());
+        data.put("updateTime", resolveCurrentStepTime(trackingStatus, order, record));
+        data.put("address", order.getAddress());
+
+        // 骑手信息与实时位置
+        Long riderId = order.getRiderId();
+        Rider rider = riderId == null ? null : deliveryTrackingService.getRiderById(riderId);
+        if (rider != null) {
+            data.put("riderName", rider.getName());
+            data.put("riderPhone", rider.getPhone());
+            Map<String, Object> riderLocation = new HashMap<>();
+            riderLocation.put("longitude", rider.getCurrentLongitude());
+            riderLocation.put("latitude", rider.getCurrentLatitude());
+            riderLocation.put("lastUpdate", rider.getLastLocationTime());
+            data.put("riderLocation", riderLocation);
+
+            // 骑手与收货点的实时距离（km）
+            AddressBook addressBook = addressBookService.getById(order.getAddressBookId());
+            BigDecimal distanceKm = haversineKm(rider.getCurrentLongitude(), rider.getCurrentLatitude(),
+                    addressBook == null ? null : addressBook.getLongitude(),
+                    addressBook == null ? null : addressBook.getLatitude());
+            if (distanceKm != null) {
+                data.put("distance", distanceKm);
+            }
+        }
+
+        // 预计送达分钟：时效记录已有则直接用，否则按距离估算
+        Integer estimatedMinutes = record == null ? null : record.getEstimatedMinutes();
+        if (estimatedMinutes == null && data.get("distance") != null) {
+            BigDecimal distanceMeters = ((BigDecimal) data.get("distance"))
+                    .multiply(new BigDecimal("1000"));
+            estimatedMinutes = deliveryTrackingService.estimateDeliveryTime(distanceMeters, riderId);
+        }
+        if (estimatedMinutes != null) {
+            data.put("estimatedMinutes", estimatedMinutes);
+        }
+        return data;
+    }
+
+    /**
+     * 本地订单状态 → tracking.html 状态字符串。
+     */
+    private String mapLocalTrackingStatus(Integer status, DeliveryTimeRecord record) {
+        if (status == null) {
+            return "PENDING";
+        }
+        switch (status) {
+            case Orders.STATUS_ORDERED:
+                return "PENDING";
+            case Orders.STATUS_DELIVERING:
+                // 骑手已确认接单但未取餐→ACCEPTED；已取餐→DELIVERING
+                return record != null && record.getPickupTime() != null ? "DELIVERING" : "ACCEPTED";
+            case Orders.STATUS_COMPLETED:
+                return "DELIVERED";
+            case Orders.STATUS_CANCELLED:
+            case Orders.STATUS_REFUNDED:
+                return "CANCELLED";
+            default:
+                return "PENDING";
+        }
+    }
+
+    /**
+     * 当前时间线节点对应的时间（tracking.html 只展示当前节点时间，不虚构历史节点）。
+     */
+    private LocalDateTime resolveCurrentStepTime(String trackingStatus, Orders order,
+                                                 DeliveryTimeRecord record) {
+        switch (trackingStatus) {
+            case "ACCEPTED":
+                if (record != null && record.getAcceptTime() != null) {
+                    return record.getAcceptTime();
+                }
+                return order.getOrderTime();
+            case "DELIVERING":
+                return record == null ? null : record.getPickupTime();
+            case "DELIVERED":
+                if (record != null && record.getDeliverTime() != null) {
+                    return record.getDeliverTime();
+                }
+                return record == null ? order.getCheckoutTime() : order.getUpdateTime();
+            case "CANCELLED":
+                return order.getUpdateTime();
+            default:
+                return order.getOrderTime();
+        }
+    }
+
+    /**
+     * 组装商品摘要：首件商品名 + 件数（单件即商品名）。
+     */
+    private String buildDishSummary(Long orderId) {
+        List<OrderDetail> details = orderDetailService.list(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<OrderDetail>()
+                        .eq(OrderDetail::getOrderId, orderId));
+        if (details.isEmpty()) {
+            return null;
+        }
+        int totalCount = 0;
+        for (OrderDetail detail : details) {
+            totalCount += detail.getNumber() == null ? 1 : detail.getNumber();
+        }
+        String firstName = details.get(0).getName();
+        if (details.size() == 1 && totalCount == 1) {
+            return firstName;
+        }
+        return firstName + " 等" + totalCount + "件商品";
+    }
+
+    /**
+     * Haversine 公式计算两点间距离（km，保留 2 位小数）；任一点坐标缺失返回 null。
+     */
+    private BigDecimal haversineKm(BigDecimal lng1, BigDecimal lat1, BigDecimal lng2, BigDecimal lat2) {
+        if (lng1 == null || lat1 == null || lng2 == null || lat2 == null) {
+            return null;
+        }
+        double earthRadiusKm = 6371.0;
+        double dLat = Math.toRadians(lat2.doubleValue() - lat1.doubleValue());
+        double dLng = Math.toRadians(lng2.doubleValue() - lng1.doubleValue());
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1.doubleValue())) * Math.cos(Math.toRadians(lat2.doubleValue()))
+                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        double km = earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return new BigDecimal(km).setScale(2, BigDecimal.ROUND_HALF_UP);
+    }
+
+    /**
+     * 安全解析 Long（本地订单ID）；非数字返回 null。
+     */
+    private Long parseLongId(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return Long.valueOf(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     // ==================== 平台回调 ====================

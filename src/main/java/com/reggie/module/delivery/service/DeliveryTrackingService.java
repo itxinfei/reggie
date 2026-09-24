@@ -129,6 +129,31 @@ public interface DeliveryTrackingService extends IService<Rider> {
      */
     DeliveryTimeRecord getDeliveryTimeByOrderId(Long orderId);
 
+    /** 骑手动作：接单 */
+    String ACTION_ACCEPT = "ACCEPT";
+    /** 骑手动作：取餐 */
+    String ACTION_PICKUP = "PICKUP";
+    /** 骑手动作：送达 */
+    String ACTION_DELIVER = "DELIVER";
+
+    /**
+     * 记录骑手动作时间戳（接单/取餐/送达），按 orderId upsert delivery_time_record。
+     * <p>
+     * 供订单状态流调用：不存在记录则新建并绑定骑手，存在则补对应时间；
+     * 送达时回填实际耗时 actualMinutes。
+     * </p>
+     *
+     * @param orderId     订单ID
+     * @param orderNumber 订单号
+     * @param orderTime   下单时间
+     * @param riderId     骑手ID
+     * @param riderName   骑手姓名
+     * @param action      动作：{@link #ACTION_ACCEPT} / {@link #ACTION_PICKUP} / {@link #ACTION_DELIVER}
+     * @return 是否成功
+     */
+    boolean recordRiderAction(Long orderId, String orderNumber, LocalDateTime orderTime,
+                              Long riderId, String riderName, String action);
+
     /**
      * Estimate delivery time
      *

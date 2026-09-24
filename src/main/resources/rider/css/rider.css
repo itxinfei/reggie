@@ -1,0 +1,247 @@
+/* 骑手端样式：户外骑行/强光场景，采用较大字号、高对比、全宽主按钮，
+   保证骑手在路上能快速看清并一键操作。颜色仅用品牌金与中性色。 */
+
+:root {
+  --rider-brand: #ffc200;
+  --rider-text: #1f2937;
+  --rider-sub: #6b7280;
+  --rider-border: #ebedf0;
+  --rider-bg: #f5f6fa;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--rider-bg);
+  color: var(--rider-text);
+  font-size: 15px;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.rider-page {
+  min-height: 100%;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+
+/* ---- 卡片 ---- */
+.rider-card {
+  background: #fff;
+  margin: 10px;
+  border-radius: 8px;
+  padding: 14px 12px;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.card-title .bar {
+  display: inline-block;
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--rider-brand);
+  margin-right: 8px;
+}
+
+.card-title.deliver .bar { background: var(--rider-text); }
+
+/* ---- 信息行 ---- */
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.info-row .label {
+  flex: 0 0 64px;
+  color: var(--rider-sub);
+}
+
+.info-row .val {
+  flex: 1;
+  word-break: break-all;
+}
+
+.info-row .val.strong {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.row-tools {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tool-btn {
+  flex: 1;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  border: 1px solid var(--rider-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--rider-text);
+  font-size: 15px;
+  padding: 0;
+}
+
+.tool-btn.primary {
+  border-color: var(--rider-brand);
+  background: var(--rider-brand);
+  color: #1f2937;
+  font-weight: 600;
+}
+
+/* ---- 全宽主操作 ---- */
+.rider-actions {
+  margin: 10px;
+}
+
+.rider-actions .rider-btn {
+  width: 100%;
+  height: 50px;
+  border: none;
+  border-radius: 8px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.rider-btn.primary {
+  background: var(--rider-brand);
+  color: #1f2937;
+}
+
+.rider-btn.ghost {
+  background: #fff;
+  color: var(--rider-text);
+  border: 1px solid var(--rider-border);
+}
+
+.rider-btn + .rider-btn { margin-top: 10px; }
+
+/* ---- 列表卡片 ---- */
+.task-card {
+  background: #fff;
+  margin: 10px;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.task-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.task-number { font-weight: 700; font-size: 16px; }
+
+.task-amount {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.task-line {
+  color: var(--rider-sub);
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.task-line .addr { color: var(--rider-text); }
+
+.task-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  border-top: 1px solid var(--rider-border);
+  padding-top: 10px;
+}
+
+.task-time { color: var(--rider-sub); font-size: 13px; }
+
+/* ---- 空态 ---- */
+.rider-empty {
+  text-align: center;
+  color: var(--rider-sub);
+  padding: 60px 20px;
+}
+
+/* ---- 登录页 ---- */
+.login-wrap {
+  padding: 24px 20px;
+}
+
+.login-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 10px 0 4px;
+}
+
+.login-sub {
+  color: var(--rider-sub);
+  margin-bottom: 24px;
+}
+
+.login-tip {
+  margin-top: 16px;
+  color: var(--rider-sub);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* 顶部状态条：当前骑手与上下线 */
+.rider-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rider-border);
+}
+
+.rider-statusbar .who { font-weight: 600; }
+.rider-statusbar .who small { color: var(--rider-sub); font-weight: 400; margin-left: 6px; }
+
+/* 底部固定「抢单大厅」入口 */
+.hall-entry {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1px solid var(--rider-border);
+}
+
+.rider-page.has-bar { padding-bottom: 84px; }
+
+/* 列表卡片内的小按钮 */
+.mini-btn {
+  min-width: 104px;
+  height: 36px;
+  line-height: 36px;
+  text-align: center;
+  border-radius: 8px;
+  border: 1px solid var(--rider-border);
+  background: #fff;
+  font-size: 14px;
+  padding: 0 12px;
+}
+
+.mini-btn.primary {
+  border-color: var(--rider-brand);
+  background: var(--rider-brand);
+  color: #1f2937;
+  font-weight: 600;
+}

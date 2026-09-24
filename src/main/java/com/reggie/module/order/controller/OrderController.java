@@ -12,6 +12,7 @@ import com.reggie.common.R;
 import com.reggie.dto.OrderDto;
 import com.reggie.dto.EatInOrderRequest;
 import com.reggie.module.order.dto.OrderAgainDTO;
+import com.reggie.module.order.dto.OrderDispatchDTO;
 import com.reggie.module.order.dto.OrderSubmitDTO;
 import com.reggie.module.order.dto.OrderUpdateStatusDTO;
 import com.reggie.module.order.model.OrderDetail;
@@ -69,6 +70,22 @@ public class OrderController {
 
     @Autowired
     private com.reggie.module.payment.service.RefundRecordService refundRecordService;
+
+    /**
+     * 店长派单：将待接单订单指派给指定骑手。
+     * <p>指派后 status 仍为 2（待骑手接单）；骑手超时未接由定时任务回流抢单大厅。</p>
+     *
+     * @param dto 订单ID + 骑手ID
+     * @return 操作结果
+     */
+    @PostMapping("/dispatch")
+    @RequireEmployee
+    @Operation(summary = "店长派单", description = "将待接单订单指派给指定骑手，骑手需在超时前接单")
+    public R<String> dispatch(@Valid @RequestBody OrderDispatchDTO dto) {
+        log.info("店长派单：订单ID={}，骑手ID={}", dto.getOrderId(), dto.getRiderId());
+        statusFlowService.dispatchOrder(dto.getOrderId(), dto.getRiderId());
+        return R.success("派单成功");
+    }
 
     /**
      * 用户下单

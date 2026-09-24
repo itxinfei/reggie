@@ -91,6 +91,14 @@ public class LoginCheckFilter implements Filter{
                 return;
             }
 
+            //4-3、判断骑手会话，如果已登录，则直接放行
+            if (session != null && session.getAttribute("rider") != null) {
+                if (applyRiderContext(session, request, response)) {
+                    filterChain.doFilter(request, response);
+                }
+                return;
+            }
+
             log.info("用户未登录");
             //5、如果未登录则返回未登录结果：HTTP 401 + JSON 体 NOTLOGIN
             //   （此前仅返回 200 + NOTLOGIN，前端按 body 判断；补 401 让标准客户端/网关/监控
@@ -177,6 +185,34 @@ public class LoginCheckFilter implements Filter{
         }
         BaseContext.setCurrentId(userId);
         BaseContext.setCurrentTenantId(tenantId);
+        return true;
+    }
+
+    /**
+     * 应用骑手登录上下文。
+     *
+     * @param session 会话
+     * @param request 请求
+     * @param response 响应
+     * @return true 表示登录态有效已放行；false 表示登录态不完整（已写出 401）
+     * @throws IOException 写响应失败
+     */
+    private boolean applyRiderContext(HttpSession session, HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        log.debug("骑手已登录，骑手id为：{}", session.getAttribute("rider"));
+        Long riderId = (Long) session.getAttribute("rider");
+        Long tenantId = (Long) session.getAttribute("tenantId");
+        // 必须同时有骑手ID和租户ID才算登录有效
+        if (tenantId == null) {
+            log.warn("骑手登录态不完整，tenantId为null");
+            writeNotLogin(response);
+            return false;
+        }
+        BaseContext.setCurrentId(riderId);
+        BaseContext.setCurrentTenantId(tenantId);
+
+        // 将骑手ID存入request属性，供 RiderGuardAspect 鉴权使用
+        request.setAttribute("riderId", riderId);
         return true;
     }
 

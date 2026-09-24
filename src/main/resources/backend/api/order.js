@@ -139,3 +139,12 @@ const updateInternalRemark = (id, remark) => {
     params: { id: id, remark: remark }
   })
 }
+
+// 店长派单（指派骑手）
+const dispatchOrderApi = (data) => {
+  return $axios({
+    url: '/order/dispatch',
+    method: 'post',
+    data: data
+  })
+}

@@ -24,3 +24,6 @@ const deliverySyncMenu = (data) => $axios({ url: '/api/delivery/sync/menu', meth
 
 /** 同步库存到外卖平台（platform 必传，stock 可选） */
 const deliverySyncStock = (data) => $axios({ url: '/api/delivery/sync/stock', method: 'post', data: data || {} })
+
+/** 骑手列表（status 可选：1空闲 2配送中；不传返回全部） */
+const getRiderListApi = (params) => $axios({ url: '/delivery/tracking/rider/list', method: 'get', params })

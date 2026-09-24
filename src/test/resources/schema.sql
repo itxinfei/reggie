@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS dish_flavor;
 DROP TABLE IF EXISTS dish;
 DROP TABLE IF EXISTS setmeal_dish;
 DROP TABLE IF EXISTS setmeal;
+DROP TABLE IF EXISTS dish_evaluation;
 
 -- 分类
 DROP TABLE IF EXISTS category;
@@ -214,6 +215,8 @@ CREATE TABLE orders (
   idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等',
   stock_refunded int NULL DEFAULT 0 COMMENT '已库存数量',
   used_coupon_id bigint NULL DEFAULT NULL COMMENT '优惠券ID',
+  rider_id bigint NULL DEFAULT NULL COMMENT '配送骑手ID（店长派单/骑手抢单后写入）',
+  dispatch_time datetime NULL DEFAULT NULL COMMENT '派单/抢单时间（超时回流判断）',
   platform_type varchar(32) NULL DEFAULT NULL COMMENT '平台来源',
   platform_order_id varchar(128) NULL DEFAULT NULL COMMENT '平台订单',
   platform_shop_id varchar(128) NULL DEFAULT NULL COMMENT '平台门店ID',
@@ -475,6 +478,35 @@ CREATE TABLE region (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '是否删除',
   PRIMARY KEY (id)
 );
+
+-- ==================== 商品评价表（菜品/套餐通用） ====================
+-- 字段与 DishEvaluation 实体及 schema-mysql.sql 权威定义保持一致。
+-- 套餐下单明细只有 setmealId，故 dish_id/setmeal_id 互斥可空。
+CREATE TABLE dish_evaluation (
+  id bigint NOT NULL COMMENT '评价ID(雪花算法)',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
+  order_id bigint NULL DEFAULT NULL COMMENT '订单id',
+  user_id bigint NULL DEFAULT NULL COMMENT '评价用户id',
+  user_name varchar(64) NULL DEFAULT NULL COMMENT '评价用户',
+  dish_id bigint NULL DEFAULT NULL COMMENT '菜品id（菜品下单时填）',
+  setmeal_id bigint NULL DEFAULT NULL COMMENT '套餐id（套餐下单时填，与dish_id互斥）',
+  dish_name varchar(64) NULL DEFAULT NULL COMMENT '商品名称（菜品名/套餐名）',
+  star_rating int NULL DEFAULT NULL COMMENT '评分(1-5)',
+  content varchar(500) NULL DEFAULT NULL COMMENT '评价内容',
+  images varchar(2000) NULL DEFAULT NULL COMMENT '评价图片JSON数组',
+  anonymous int NOT NULL DEFAULT 0 COMMENT '是否匿名 0=实名 1=匿名',
+  reply_content varchar(500) NULL DEFAULT NULL COMMENT '商家回复内容',
+  reply_time datetime NULL DEFAULT NULL COMMENT '商家回复时间',
+  status int NULL DEFAULT 0 COMMENT '审核状态：0待审核，1通过，2拒绝',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '修改人',
+  is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除 0=未删除 1=已删除',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_dish_evaluation_tenant ON dish_evaluation(tenant_id);
+CREATE INDEX idx_dish_evaluation_user_setmeal ON dish_evaluation(user_id,setmeal_id,order_id);
 
 -- ==================== 门店表 ====================
 CREATE TABLE store (

@@ -186,6 +186,14 @@ public class Orders implements Serializable {
     @TableField("used_coupon_id")
     private Long usedCouponId;
 
+    @Schema(description = "配送骑手ID（店长派单或骑手抢单后写入）", example = "1")
+    @TableField("rider_id")
+    private Long riderId;
+
+    @Schema(description = "派单/抢单时间（用于派单超时回流判断）")
+    @TableField("dispatch_time")
+    private LocalDateTime dispatchTime;
+
     @Schema(description = "乐观锁版本号")
     @Version
     private Integer version;

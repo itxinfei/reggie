@@ -11,6 +11,8 @@ import com.reggie.enums.DiningTableStatus;
 import com.reggie.enums.OrderSource;
 import com.reggie.enums.OrderStatus;
 import com.reggie.module.inventory.service.MaterialStockService;
+import com.reggie.module.delivery.model.Rider;
+import com.reggie.module.delivery.service.DeliveryTrackingService;
 import com.reggie.module.dish.service.DishService;
 import com.reggie.module.member.service.MemberRewardService;
 import com.reggie.module.order.mapper.OrderMapper;
@@ -88,6 +90,10 @@ public class OrderStatusFlowServiceImpl
     /** 原料库存联动服务（可选注入，退款时按 BOM 恢复原料） */
     @Autowired(required = false)
     private MaterialStockService materialStockService;
+
+    /** 配送跟踪服务（骑手信息、负载计数、接单/取餐/送达时间戳） */
+    @Autowired
+    private DeliveryTrackingService deliveryTrackingService;
 
     // ==================== 状态流转入口 ====================
 
@@ -272,6 +278,210 @@ public class OrderStatusFlowServiceImpl
 
         // 发布订单取消事件（通知、推荐等模块异步响应）
         eventPublisher.publishEvent(new OrderCancelledEvent(this, id, order.getTenantId(), reason));
+    }
+
+    // ==================== 骑手派单 / 抢单 / 取餐 / 送达 ====================
+
+    /**
+     * 店长派单。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void dispatchOrder(Long orderId, Long riderId) {
+        if (riderId == null) {
+            throw new CustomException("请选择骑手");
+        }
+        Orders order = requireOrderInTenant(orderId);
+        if (!Objects.equals(order.getStatus(), Orders.STATUS_ORDERED)) {
+            throw new CustomException("订单当前为" + getStatusName(order.getStatus()) + "，无法派单");
+        }
+        if (order.getRiderId() != null) {
+            throw new CustomException("该订单已指派骑手");
+        }
+        Rider rider = requireRiderInTenant(riderId, order.getTenantId());
+        if (Objects.equals(rider.getStatus(), Rider.STATUS_OFFLINE)) {
+            throw new CustomException("骑手当前离线，无法派单");
+        }
+
+        // 行级条件：status=2 且未指派，保证并发派单只有一次命中
+        LambdaUpdateWrapper<Orders> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(Orders::getId, orderId)
+                .eq(Orders::getStatus, Orders.STATUS_ORDERED)
+                .isNull(Orders::getRiderId)
+                .set(Orders::getRiderId, riderId)
+                .set(Orders::getDispatchTime, LocalDateTime.now());
+        if (!this.update(null, wrapper)) {
+            throw new CustomException("订单已被处理，请刷新后重试");
+        }
+        log.info("订单已派单：orderId={}, riderId={}", orderId, riderId);
+    }
+
+    /**
+     * 骑手抢单（抢 + 接单一步完成）。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void grabOrder(Long orderId, Long riderId) {
+        Orders order = requireOrderInTenant(orderId);
+        Rider rider = requireRiderInTenant(riderId, order.getTenantId());
+        if (Objects.equals(rider.getStatus(), Rider.STATUS_OFFLINE)) {
+            throw new CustomException("请先上线后再抢单");
+        }
+        if (!Objects.equals(order.getStatus(), Orders.STATUS_ORDERED) || order.getRiderId() != null) {
+            throw new CustomException("订单已被抢走或状态已变更");
+        }
+
+        // CAS：条件 status=2 且 rider_id IS NULL，set 骑手与 status=3；影响行数=1 才算成功
+        LambdaUpdateWrapper<Orders> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(Orders::getId, orderId)
+                .eq(Orders::getStatus, Orders.STATUS_ORDERED)
+                .isNull(Orders::getRiderId)
+                .set(Orders::getRiderId, riderId)
+                .set(Orders::getDispatchTime, LocalDateTime.now())
+                .set(Orders::getStatus, Orders.STATUS_DELIVERING);
+        if (!this.update(null, wrapper)) {
+            throw new CustomException("手慢了，订单已被其他骑手抢走");
+        }
+
+        afterRiderAccepted(order, rider);
+        log.info("骑手抢单成功：orderId={}, riderId={}", orderId, riderId);
+    }
+
+    /**
+     * 骑手确认派单（店长已指派，骑手接单）。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void acceptRiderTask(Long orderId, Long riderId) {
+        Orders order = requireOrderInTenant(orderId);
+        Rider rider = requireRiderInTenant(riderId, order.getTenantId());
+        if (!Objects.equals(order.getStatus(), Orders.STATUS_ORDERED)) {
+            throw new CustomException("订单当前为" + getStatusName(order.getStatus()) + "，无法接单");
+        }
+        if (!Objects.equals(order.getRiderId(), riderId)) {
+            throw new CustomException("该订单未指派给你");
+        }
+
+        LambdaUpdateWrapper<Orders> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(Orders::getId, orderId)
+                .eq(Orders::getStatus, Orders.STATUS_ORDERED)
+                .eq(Orders::getRiderId, riderId)
+                .set(Orders::getStatus, Orders.STATUS_DELIVERING);
+        if (!this.update(null, wrapper)) {
+            throw new CustomException("订单状态已变更，请刷新后重试");
+        }
+
+        afterRiderAccepted(order, rider);
+        log.info("骑手确认派单：orderId={}, riderId={}", orderId, riderId);
+    }
+
+    /**
+     * 骑手确认取餐（主状态仍为配送中，记录取餐时间）。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void pickupRiderTask(Long orderId, Long riderId) {
+        Orders order = requireOrderInTenant(orderId);
+        if (!Objects.equals(order.getRiderId(), riderId)) {
+            throw new CustomException("该订单不属于你");
+        }
+        if (!Objects.equals(order.getStatus(), Orders.STATUS_DELIVERING)) {
+            throw new CustomException("订单当前为" + getStatusName(order.getStatus()) + "，无法确认取餐");
+        }
+        deliveryTrackingService.recordRiderAction(orderId, order.getNumber(), order.getOrderTime(),
+                riderId, riderNameOf(riderId), DeliveryTrackingService.ACTION_PICKUP);
+        log.info("骑手已取餐：orderId={}, riderId={}", orderId, riderId);
+    }
+
+    /**
+     * 骑手确认送达（3 → 4）。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deliverRiderOrder(Long orderId, Long riderId) {
+        Orders order = requireOrderInTenant(orderId);
+        if (!Objects.equals(order.getRiderId(), riderId)) {
+            throw new CustomException("该订单不属于你");
+        }
+        if (!Objects.equals(order.getStatus(), Orders.STATUS_DELIVERING)) {
+            throw new CustomException("订单当前为" + getStatusName(order.getStatus()) + "，无法确认送达");
+        }
+
+        Rider rider = requireRiderInTenant(riderId, order.getTenantId());
+        // 记录送达时间戳 → 完成订单（3→4，发 OrderCompletedEvent）→ 骑手负载 -1
+        deliveryTrackingService.recordRiderAction(orderId, order.getNumber(), order.getOrderTime(),
+                riderId, rider.getName(), DeliveryTrackingService.ACTION_DELIVER);
+        this.completeOrder(orderId);
+        changeRiderLoad(rider, -1);
+        log.info("骑手已送达：orderId={}, riderId={}", orderId, riderId);
+    }
+
+    // ---- 骑手流程私有辅助 ----
+
+    /**
+     * 接单成功后的统一副作用：骑手负载 +1、记录接单时间戳。
+     */
+    private void afterRiderAccepted(Orders order, Rider rider) {
+        changeRiderLoad(rider, 1);
+        deliveryTrackingService.recordRiderAction(order.getId(), order.getNumber(), order.getOrderTime(),
+                rider.getId(), rider.getName(), DeliveryTrackingService.ACTION_ACCEPT);
+    }
+
+    /**
+     * 取订单并做存在性与租户归属校验。
+     */
+    private Orders requireOrderInTenant(Long orderId) {
+        Orders order = this.getById(orderId);
+        if (order == null) {
+            throw new CustomException("订单不存在");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !Objects.equals(currentTenantId, order.getTenantId())) {
+            throw new CustomException("无权操作其他租户的订单");
+        }
+        return order;
+    }
+
+    /**
+     * 取骑手并校验其属于订单所在租户。
+     */
+    private Rider requireRiderInTenant(Long riderId, Long tenantId) {
+        Rider rider = deliveryTrackingService.getRiderById(riderId);
+        if (rider == null) {
+            throw new CustomException("骑手不存在");
+        }
+        if (tenantId != null && !Objects.equals(tenantId, rider.getTenantId())) {
+            throw new CustomException("骑手不属于当前门店");
+        }
+        return rider;
+    }
+
+    private String riderNameOf(Long riderId) {
+        Rider r = deliveryTrackingService.getRiderById(riderId);
+        return r == null ? null : r.getName();
+    }
+
+    /**
+     * 维护骑手在途单量与状态。
+     * delta=+1 接单：在途 +1，在线 → 忙碌；
+     * delta=-1 送达：在途 -1、累计单量 +1，在途归零且原忙碌 → 回到在线。
+     */
+    private void changeRiderLoad(Rider rider, int delta) {
+        int current = rider.getCurrentOrderCount() == null ? 0 : rider.getCurrentOrderCount();
+        current = Math.max(0, current + delta);
+        rider.setCurrentOrderCount(current);
+        Integer st = rider.getStatus();
+        if (delta > 0) {
+            if (current > 0 && st != null && st.intValue() == Rider.STATUS_ONLINE) {
+                rider.setStatus(Rider.STATUS_BUSY);
+            }
+        } else {
+            rider.setTotalOrderCount((rider.getTotalOrderCount() == null ? 0 : rider.getTotalOrderCount()) + 1);
+            if (current == 0 && st != null && st.intValue() == Rider.STATUS_BUSY) {
+                rider.setStatus(Rider.STATUS_ONLINE);
+            }
+        }
+        deliveryTrackingService.saveOrUpdateRider(rider);
     }
 
     // ==================== 堂食桌台释放 ====================

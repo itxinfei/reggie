@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>骑手登录</title>
+  <link rel="stylesheet" href="/front/styles/vant.min.css">
+  <link rel="stylesheet" href="/rider/css/rider.css">
+</head>
+<body>
+  <div id="app">
+    <van-nav-bar title="骑手登录"></van-nav-bar>
+    <div class="login-wrap">
+      <div class="login-title">骑手登录</div>
+      <div class="login-sub">请使用门店分配的骑手账号登录</div>
+      <van-cell-group inset>
+        <van-field v-model="phone" name="phone" label="手机号" placeholder="请输入手机号"
+                   type="tel" maxlength="11" clearable></van-field>
+        <van-field v-model="password" name="password" label="密码" placeholder="请输入密码"
+                   type="password" @keyup.enter="onLogin"></van-field>
+      </van-cell-group>
+      <div class="rider-actions" style="margin-left:0;margin-right:0;">
+        <button class="rider-btn primary" :disabled="loading" @click="onLogin">
+          {{ loading ? '登录中…' : '登 录' }}
+        </button>
+      </div>
+      <div class="login-tip" v-if="isDev">演示账号：13900005003　密码：123456（仅开发环境显示）</div>
+    </div>
+  </div>
+
+  <script src="/backend/plugins/vue/vue.js"></script>
+  <script src="/backend/plugins/axios/axios.min.js"></script>
+  <script src="/front/js/vant.min.js"></script>
+  <script src="/rider/js/request.js"></script>
+  <script src="/rider/js/api.js"></script>
+  <script>
+    Vue.use(vant);
+    new Vue({
+      data: function () {
+        return {
+          phone: '', password: '', loading: false,
+          // 仅本机访问显示演示账号，避免在内网/生产环境泄露
+          isDev: ['localhost', '127.0.0.1'].indexOf(window.location.hostname) !== -1
+        };
+      },
+      methods: {
+        onLogin: function () {
+          var phone = (this.phone || '').trim();
+          var password = this.password || '';
+          if (!/^1[3-9]\d{9}$/.test(phone)) {
+            vant.Toast('请输入正确的手机号');
+            return;
+          }
+          if (!password) {
+            vant.Toast('请输入密码');
+            return;
+          }
+          var vm = this;
+          vm.loading = true;
+          RiderApi.login(phone, password).then(function (res) {
+            var rider = res.data || {};
+            try {
+              sessionStorage.setItem('riderName', rider.name || '');
+              sessionStorage.setItem('riderId', rider.id != null ? String(rider.id) : '');
+            } catch (e) { /* 忽略 */ }
+            window.location.href = '/rider/index.html';
+          }).catch(function () {
+            // 错误提示已在拦截器统一处理
+          }).then(function () {
+            vm.loading = false;
+          });
+        }
+      }
+    }).$mount('#app');
+  </script>
+</body>
+</html>
