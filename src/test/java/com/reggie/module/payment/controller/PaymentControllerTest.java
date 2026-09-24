@@ -6,6 +6,7 @@ import com.reggie.common.CsrfTokenUtil;
 import com.reggie.common.ObjectMapperHolder;
 import com.reggie.dto.PayRequestDTO;
 import com.reggie.dto.RefundRequestDTO;
+import com.reggie.enums.RefundStatus;
 import com.reggie.module.payment.config.PaymentConfigProperties;
 import com.reggie.module.payment.mapper.PaymentOrderMapper;
 import com.reggie.module.payment.mapper.RefundRecordMapper;
@@ -28,6 +29,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -548,7 +550,60 @@ public class PaymentControllerTest {
         assertThat(paymentConfig.isMockMode()).isTrue();
     }
 
+    @Test
+    @DisplayName("21. 退款分析 - 不传日期为累计口径，传日期按 createdTime 区间过滤")
+    void testRefundStats_dateRange() throws Exception {
+        // 3 笔成功退款，分布在 9-01 / 9-10 / 9-20，金额递增便于断言
+        insertTestRefund(901L, "2026-09-01T10:00:00", "100.00", "口味问题");
+        insertTestRefund(902L, "2026-09-10T10:00:00", "200.00", "配送超时");
+        insertTestRefund(903L, "2026-09-20T10:00:00", "300.00", "不想要了");
+
+        // 累计口径：3 笔、成功退款总额 600
+        mockMvc.perform(get("/api/payment/refund/stats")
+                        .sessionAttr("employee", 1L)
+                        .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.successCount").value(3))
+                .andExpect(jsonPath("$.data.totalAmount").value(600.00));
+
+        // 区间 9-05 ~ 9-15：仅命中 9-10 的 200
+        mockMvc.perform(get("/api/payment/refund/stats")
+                        .param("startDate", "2026-09-05")
+                        .param("endDate", "2026-09-15")
+                        .sessionAttr("employee", 1L)
+                        .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.successCount").value(1))
+                .andExpect(jsonPath("$.data.totalAmount").value(200.00));
+
+        // 单日 9-01：命中 100（验证同一天起止边界包含）
+        mockMvc.perform(get("/api/payment/refund/stats")
+                        .param("startDate", "2026-09-01")
+                        .param("endDate", "2026-09-01")
+                        .sessionAttr("employee", 1L)
+                        .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.successCount").value(1))
+                .andExpect(jsonPath("$.data.totalAmount").value(100.00));
+    }
+
     // ==================== Helper Methods ====================
+
+    // 插入一笔成功退款（手动指定 createdTime，绕过自动填充的当前时间）
+    private void insertTestRefund(Long id, String createdTimeIso, String amount, String reason) {
+        RefundRecord r = new RefundRecord();
+        r.setId(id);
+        r.setTenantId(1L);
+        r.setRefundNo("RF-TEST-" + id);
+        r.setPaymentOrderId(80000L + id);
+        r.setOrderId(90000L + id);
+        r.setAmount(new BigDecimal(amount));
+        r.setReason(reason);
+        r.setStatus(RefundStatus.SUCCESS.getCode());
+        r.setCreatedTime(LocalDateTime.parse(createdTimeIso));
+        refundRecordMapper.insert(r);
+    }
 
     private MockHttpServletRequestBuilder withCsrfToken(MockHttpServletRequestBuilder request) {
         String token = CsrfTokenUtil.generateToken();

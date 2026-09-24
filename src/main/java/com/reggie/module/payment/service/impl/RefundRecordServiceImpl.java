@@ -22,8 +22,10 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -236,7 +238,7 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
      * @return 返回结果
      */
     @Override
-    public Map<String, Object> getRefundAnalysis(Long tenantId) {
+    public Map<String, Object> getRefundAnalysis(Long tenantId, String startDate, String endDate) {
         Map<String, Object> result = new LinkedHashMap<>();
         if (tenantId == null) tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
@@ -248,10 +250,26 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
             result.put("byReason", new java.util.ArrayList<>());
             return result;
         }
-        // 当前租户全部退款记录（含逻辑删除过滤，@TableLogic 自动生效）
-        List<RefundRecord> records = this.list(new LambdaQueryWrapper<RefundRecord>()
-                .eq(RefundRecord::getTenantId, tenantId)
-                .orderByDesc(RefundRecord::getCreatedTime));
+        // 当前租户退款记录（含逻辑删除过滤，@TableLogic 自动生效）；
+        // 传入日期时按 createdTime 区间过滤，不传则为累计口径
+        LambdaQueryWrapper<RefundRecord> qw = new LambdaQueryWrapper<RefundRecord>()
+                .eq(RefundRecord::getTenantId, tenantId);
+        if (StringUtils.isNotBlank(startDate)) {
+            try {
+                qw.ge(RefundRecord::getCreatedTime, LocalDate.parse(startDate.trim()).atStartOfDay());
+            } catch (DateTimeParseException ex) {
+                log.warn("[退款分析] startDate 格式非法已忽略: {}", startDate);
+            }
+        }
+        if (StringUtils.isNotBlank(endDate)) {
+            try {
+                qw.le(RefundRecord::getCreatedTime, LocalDate.parse(endDate.trim()).atTime(23, 59, 59));
+            } catch (DateTimeParseException ex) {
+                log.warn("[退款分析] endDate 格式非法已忽略: {}", endDate);
+            }
+        }
+        qw.orderByDesc(RefundRecord::getCreatedTime);
+        List<RefundRecord> records = this.list(qw);
 
         int successCount = 0, pendingCount = 0, failCount = 0;
         BigDecimal successAmount = BigDecimal.ZERO;

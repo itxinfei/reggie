@@ -251,7 +251,7 @@
           // ====== 退款分析（8.5.2） ======
           loadRefundAnalysis: function() {
             const self = this;
-            paymentRefundStats().then(function(res) {
+            paymentRefundStats({ startDate: self.dateRange[0], endDate: self.dateRange[1] }).then(function(res) {
               if (res && res.code === 1 && res.data) {
                 self.refundAnalysis = res.data;
                 self.$nextTick(function() { self.renderRefundChart(); });

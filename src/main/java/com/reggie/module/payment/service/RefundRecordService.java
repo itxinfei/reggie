@@ -104,7 +104,7 @@ public interface RefundRecordService extends IService<RefundRecord> {
      * @param tenantId 租户ID（为空取当前上下文）
      * @return 分析结果 Map
      */
-    java.util.Map<String, Object> getRefundAnalysis(Long tenantId);
+    java.util.Map<String, Object> getRefundAnalysis(Long tenantId, String startDate, String endDate);
 
     /**
      * 用户端发起售后申请（整单退款）。

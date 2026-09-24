@@ -2,7 +2,7 @@ const paymentPage = (params) => $axios({ url: '/api/payment/page', method: 'get'
 const paymentCreate = (params) => $axios({ url: '/api/payment/pay', method: 'post', data: params })
 const paymentRefund = (params) => $axios({ url: '/api/payment/refund', method: 'post', data: params })
 const paymentQuery = (tradeNo) => $axios({ url: `/api/payment/query/${tradeNo}`, method: 'get' })
-const paymentRefundStats = () => $axios({ url: '/api/payment/refund/stats', method: 'get' })
+const paymentRefundStats = (params) => $axios({ url: '/api/payment/refund/stats', method: 'get', params })
 const reconcilePendingCount = () => $axios({ url: '/api/payment/reconcile/pending-count', method: 'get' })
 
 // 支付渠道配置 API（按租户隔离；密钥加密落库，列表/详情仅返回掩码）

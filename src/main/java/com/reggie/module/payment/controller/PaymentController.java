@@ -479,9 +479,12 @@ public class PaymentController {
      */
     @RequireEmployee
     @GetMapping("/refund/stats")
-    @Operation(summary = "退款分析", description = "当前租户退款统计与退款原因TOP5")
-    public R<Map<String, Object>> refundStats() {
-        return R.success(refundRecordService.getRefundAnalysis(BaseContext.getCurrentTenantId()));
+    @Operation(summary = "退款分析", description = "当前租户退款统计与退款原因TOP5；可选 startDate/endDate(yyyy-MM-dd) 按区间统计，不传为累计口径")
+    public R<Map<String, Object>> refundStats(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        return R.success(refundRecordService.getRefundAnalysis(
+                BaseContext.getCurrentTenantId(), startDate, endDate));
     }
 
     /**
