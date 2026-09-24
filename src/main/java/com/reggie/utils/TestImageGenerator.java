@@ -271,7 +271,8 @@ public class TestImageGenerator implements CommandLineRunner {
             }
             basePath = new File(userDir, "uploads").getAbsolutePath() + File.separator;
         }
-        return basePath + "images" + File.separator + "dishes" + File.separator;
+        return basePath + "public" + File.separator + "admin" + File.separator
+                + "dishes" + File.separator;
     }
 
     /**
