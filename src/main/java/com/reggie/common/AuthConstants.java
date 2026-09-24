@@ -39,6 +39,8 @@ public final class AuthConstants {
         "/user/sendMsg",
         "/user/login",
         "/user/loginout",
+        // 骑手登录接口（匿名，登录前无 CSRF token）
+        "/api/rider/login",
         "/tenant/register",
         // 注意：/api/ai/** 已从 CSRF 排除列表中移除（2026-08-23 安全加固）
         // AI 模块的写操作接口（/api/ai/chat, /api/ai/session/* 等）需要 CSRF 防护，
@@ -65,6 +67,8 @@ public final class AuthConstants {
         "/user/sendMsg",
         "/user/login",
         "/user/loginout",
+        // 骑手登录接口（匿名）；其余 /api/rider/** 业务接口需登录，不在此列
+        "/api/rider/login",
         "/tenant/register",
         // 公开的商家信息接口（首页匿名访问）
         "/restaurant/info",
@@ -94,12 +98,15 @@ public final class AuthConstants {
         "/api/payment/notify/**",
         // 支付渠道退款异步回调（同支付回调，渠道服务端无会话天然匿名；验签/解密在控制器内独立完成）
         "/api/payment/refund-notify/**",
-        // 静态资源目录（图片、上传文件）
+        // 静态资源目录：仅公开上传目录 + 三端共享 JS（private 图经 /common/download 鉴权，不匿名放行）
         "/images/**",
-        "/uploads/**",
+        "/uploads/public/**",
+        "/shared/**",
         // 前端静态资源（后台管理系统和用户端）
         "/backend/**",
         "/front/**",
+        // 骑手端静态资源（独立目录）
+        "/rider/**",
         // 根路径导航页（纯链接集合，无敏感数据，允许匿名访问）
         "/",
         "/index.html",

@@ -2,6 +2,7 @@ package com.reggie.config;
 
 import com.reggie.common.JacksonObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
@@ -25,6 +26,10 @@ import java.util.List;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
+    /** 上传根目录（与 CommonController 同源：reggie.path 优先） */
+    @Value("${reggie.path:}")
+    private String configPath;
+
     /**
      * 设置静态资源映射
      * 映射前端页面、后端管理页面资源
@@ -39,6 +44,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/").addResourceLocations("classpath:/");
         registry.addResourceHandler("/backend/**").addResourceLocations("classpath:/backend/");
         registry.addResourceHandler("/front/**").addResourceLocations("classpath:/front/");
+        // 骑手端 H5（独立目录）
+        registry.addResourceHandler("/rider/**").addResourceLocations("classpath:/rider/");
+        // 三端共享 JS（img-path.js 等，Task 1 注入依赖）
+        registry.addResourceHandler("/shared/**").addResourceLocations("classpath:/shared/");
+        // 运行时公开图：仅 public 段静态直出；private 永不映射（走 /common/download 鉴权）
+        String uploadRoot = com.reggie.utils.ImageStoragePathResolver.resolveRoot(configPath);
+        registry.addResourceHandler("/uploads/public/**")
+                .addResourceLocations("file:" + uploadRoot + "public/");
     }
 
     /**
