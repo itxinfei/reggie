@@ -8,7 +8,7 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260924" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
     <!-- 修改点：加载 remixicon 图标库，菜单位图 png → ri-* 矢量图标 -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
@@ -48,7 +48,7 @@
         </div>
         <div class="divHead">
             <div class="divTitle">
-                <i class="ri-arrow-left-s-line" @click="goBack"></i>个人中心
+                <i class="ri-arrow-left-s-line" role="button" tabindex="0" aria-label="返回" @click="goBack" @keydown.enter="goBack"></i>个人中心
             </div>
             <div class="divUser">
                 <!-- 修改点(2026-09-16)：头像支持点击选择 / 拖拽上传，本地即时预览，上传中显示遮罩 -->
@@ -244,7 +244,7 @@
                 </div>
                 <div class="result">
                     <span>共{{order[0].sumNum}} 件商品,实付</span>
-                    <span class="price">￥{{ Number(order[0].amount).toFixed(2) }}</span>
+                    <span class="price">¥{{ Number(order[0].amount).toFixed(2) }}</span>
                 </div>
                 <div class="btn" v-if="order[0].status === 4">
                     <div class="btnAgain"
@@ -329,7 +329,7 @@
                     pendingCount: 0,
                     unreadCount: 0,
                     // 修改点：初始为空数组，v-if="order[0]" 先渲染 false（隐藏卡片），
-                    // 避免旧 dummy 对象在加载间隙闪现「xundefined」/「共0件,实付 ￥NaN」
+                    // 避免旧 dummy 对象在加载间隙闪现「xundefined」/「共0件,实付 ¥NaN」
                     order: [],
                     // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
                     activeTab: 2,
@@ -497,7 +497,7 @@
                                 this.order[0].sumNum = number
                             }
                         } else {
-                            // 修改点：请求失败时置空列表，隐藏"最新订单"卡片，避免渲染 dummy 数据「共0件,实付 ￥NaN」
+                            // 修改点：请求失败时置空列表，隐藏"最新订单"卡片，避免渲染 dummy 数据「共0件,实付 ¥NaN」
                             this.order = []
                         }
                     } catch(e) {

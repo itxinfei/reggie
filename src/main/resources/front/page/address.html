@@ -11,31 +11,31 @@
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260924" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <!-- 修改点：补充加载 remixicon.css + fallback —— 本页新增 ri-edit-line / ri-checkbox-* 图标字体，此前仅位图未加载字体 -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js?v=20260917"></script>
         <!--本页面内容的样式-->
-        <link rel="stylesheet" href="./../styles/address.css?v=20260922" />
+        <link rel="stylesheet" href="./../styles/address.css?v=20260924" />
     </head>
     <body class="scrollable-page">
         <!-- 修改点：移除ElementUI v-loading，改用CSS加载遮罩 -->
-        <div id="address" class="app" style="position:relative;">
+        <div id="address" class="app relative">
          <cend-shell title="地址管理" :show-back="true">
             <!-- 修改点：骨架屏替代 loading 遮罩（skeleton.css 无行布局工具类，
                  行级 flex/gap 以内联样式保留，视觉等价） -->
             <div v-if="loading" class="skeleton-container">
                 <div class="skeleton-card" v-for="i in 3" :key="'sa'+i">
-                    <div style="display:flex;align-items:center;gap:8rem;margin-bottom:12rem;">
+                    <div class="flex items-center gap-8 mb-12">
                         <div class="skeleton-tag"></div>
                         <div class="skeleton-line skeleton-w60"></div>
                     </div>
-                    <div style="display:flex;gap:12rem;margin-bottom:12rem;">
+                    <div class="flex gap-12 mb-12">
                         <div class="skeleton-line skeleton-w30"></div>
                         <div class="skeleton-line skeleton-w40"></div>
                     </div>
-                    <div style="display:flex;">
+                    <div class="flex">
                         <div class="skeleton-line skeleton-w20"></div>
                     </div>
                 </div>
@@ -96,7 +96,7 @@
             <!-- 引入axios -->
             <script src="../../backend/plugins/axios/axios.min.js"></script>
             <script src="./../js/request.js?v=20260917"></script>
-            <script src="./../js/common.js?v=20260917"></script>
+            <script src="./../js/common.js?v=20260924"></script>
             <script>
             new Vue({
                 el:"#address",

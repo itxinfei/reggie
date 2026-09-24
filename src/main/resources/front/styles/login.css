@@ -285,7 +285,10 @@ body.login-page {
 }
 
 /* ---- 验证码按钮（行内右侧文字按钮 + 竖分隔线，美团式金色文字） ---- */
+/* 修改点(2026-09-24)：视觉 30rem 低于 44px 触控标准 —— 加透明 ::after 把命中区
+   扩到 44rem（复用 main.css 菜品加购钮同款方案），不改视觉尺寸 */
 #login .codeBtn {
+  position: relative;
   flex-shrink: 0;
   align-self: center;
   display: flex;
@@ -307,6 +310,17 @@ body.login-page {
 
 #login .codeBtn:hover {
   opacity: 0.75;
+}
+
+/* 透明热区扩容：44rem 命中区居中覆盖，不改变视觉尺寸 */
+#login .codeBtn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44rem;
+  height: 44rem;
+  transform: translate(-50%, -50%);
 }
 
 #login .codeBtn:active {

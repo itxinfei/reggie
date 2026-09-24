@@ -13,18 +13,18 @@
        漏引会导致整页按浏览器默认 16px 根字号放大、严重错位 -->
   <script src="./../js/base.js?v=20260917"></script>
   <script src="./../js/icon-fallback.js?v=20260917"></script>
-  <script src="./../js/common.js?v=20260923"></script>
+  <script src="./../js/common.js?v=20260924"></script>
   <link rel="stylesheet" href="../styles/vant.min.css" />
-  <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+  <link rel="stylesheet" href="../styles/index.css?v=20260924" />
   <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-  <link rel="stylesheet" href="../styles/qrcode-order.css?v=20260923b" />
+  <link rel="stylesheet" href="../styles/qrcode-order.css?v=20260924b" />
 </head>
 <body>
   <div id="dine-app">
     <!-- 修改点(2026-09-17)：头部统一为 .divHead > .divTitle（对齐全站标准）-->
     <div class="divHead">
       <div class="divTitle">
-        <i class="ri-store-2-line" style="margin-right:6rem;"></i>{{ storeInfo.name || '瑞吉外卖' }}
+        <i class="ri-store-2-line"></i>{{ storeInfo.name || '瑞吉外卖' }}
       </div>
       <!-- 无效二维码/任意情况下的返回首页出口，避免落地页成为死胡同 -->
       <a class="qr-home-btn" href="/front/index.html" aria-label="返回首页"><i class="ri-home-4-line"></i></a>
@@ -74,7 +74,7 @@
           </div>
         </div>
       </div>
-      <div v-if="filteredDishes.length === 0" class="empty-state" style="grid-column:1/-1;">
+      <div v-if="filteredDishes.length === 0" class="empty-state">
         <i class="ri-restaurant-line"></i>
         <p>暂无菜品</p>
       </div>

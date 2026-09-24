@@ -7,9 +7,9 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260924" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-    <link rel="stylesheet" href="../styles/tracking.css?v=20260922" />
+    <link rel="stylesheet" href="../styles/tracking.css?v=20260924" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
     <!-- 修改点(2026-09-17)：配送地图配置——申请到「高德 Web 端(JS API)」Key 后填入 amapKey 并将 enabled 改为 true 即可生效。
@@ -48,7 +48,7 @@
             <div class="platform-card" v-if="trackingData && trackingData.platform">
                 <span>配送平台：</span>
                 <span class="platform-tag" :class="platformClass">{{ platformName }}</span>
-                <span style="margin-left:auto;">{{ trackingData.platformOrderId }}</span>
+                <span class="ml-auto">{{ trackingData.platformOrderId }}</span>
             </div>
 
             <!-- 当前状态 -->
@@ -150,7 +150,7 @@
     <script src="./../js/components-cend.js?v=20260922"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js?v=20260917"></script>
-    <script src="./../js/common.js?v=20260917"></script>
+    <script src="./../js/common.js?v=20260924"></script>
     <script src="./../api/tracking.js?v=20260917"></script>
     <script>
         new Vue({

@@ -134,7 +134,7 @@
               <el-button v-if="row.status == '0'" type="text" size="small" class="btn-success" @click="statusHandle(row)">启售</el-button>
               <el-button v-else type="text" size="small" class="btn-warning" @click="statusHandle(row)">停售</el-button>
               <el-dropdown trigger="click"
-                @command="function(cmd){ if(cmd==='stock'){ editStock(row); } else if(cmd==='bom'){ editBOM(row); } else if(cmd==='delete'){ deleteHandle('单删', row); } }"
+                @command="function(cmd){ if(cmd==='stock'){ editStock(row); } else if(cmd==='bom'){ $refs.bomDialog.open(row); } else if(cmd==='delete'){ deleteHandle('单删', row); } }"
                 @click.native.stop>
                 <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
                 <el-dropdown-menu slot="dropdown">
@@ -292,53 +292,9 @@
       </el-form>
     </crud-dialog>
 
-    <!-- 配方编辑弹窗（统一 crud-dialog 组件，M2） -->
-    <crud-dialog :show-submit="true" :show-cancel="true"
-      :size="'lg'"
-      :title="'编辑配方 - ' + (bomDialog.dishName || '')"
-      :visible.sync="bomDialog.visible"
-      :close-on-click-modal="false"
-      :submit-loading="bomSubmitting"
-      custom-class="bom-dialog"
-      @submit="submitBOM"
-    >
-      <div style="margin-bottom: 12px;">
-        <el-button type="primary" size="small" icon="ri-add-line" @click="addBOMItem">添加食材</el-button>
-        <el-button size="small" @click="loadBOMItems">刷新</el-button>
-      </div>
-      <el-table :data="bomItems" size="small" border style="width: 100%;">
-        <el-table-column label="食材名称" width="180" align="center">
-          <template slot-scope="scope">
-            <el-select v-model="scope.row.materialId" placeholder="请选择食材" size="small" filterable
-              @change="onMaterialChange(scope.row, $event)" style="width: 100%;">
-              <el-option v-for="m in materialOptions" :key="m.id" :label="m.name" :value="m.id">
-                <span>{{ m.name }}</span>
-                <span class="ds-form-hint">{{ m.unit }}</span>
-              </el-option>
-            </el-select>
-          </template>
-        </el-table-column>
-        <el-table-column label="用量" width="140" align="center">
-          <template slot-scope="scope">
-            <el-input-number v-model="scope.row.usageQty" :min="0.001" :precision="3"
-              controls-position="right" size="small" style="width: 100%;" />
-          </template>
-        </el-table-column>
-        <el-table-column label="单位" width="100" align="center" :header-align="'center'" :show-overflow-tooltip="true">
-          <template slot-scope="scope">
-            <span style="color: var(--text-secondary);">{{ scope.row.materialUnit || '-' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" align="center" width="120" :header-align="'center'">
-          <template slot-scope="scope">
-            <el-button type="text" size="small" class="btn-delete" @click="delBOMItem(scope.$index)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div class="ds-text-muted ds-text-xs" style="margin-top: var(--space-3)">
-        提示：点击"保存"将提交全部食材配方（已保存的更新、新增的创建、删除的移除）。
-      </div>
-    </crud-dialog>
+    <!-- 修改点(2026-09-24)：配方编辑弹窗拆分为独立组件 js/food-bom-dialog.js（页面瘦身），
+         打开方式 this.$refs.bomDialog.open(row)，保存成功后 @saved 回调刷新列表 -->
+    <food-bom-dialog ref="bomDialog" @saved="refreshAll"></food-bom-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -348,12 +304,16 @@
   <script src="../../js/accessibility-utils.js?v=20260915c"></script>
   <script src="../../js/performance-utils.js?v=20260915c"></script>
   <script src="../../js/components.js?v=20260924"></script>
+  <!-- 修改点(2026-09-24)：配方编辑弹窗独立组件（须在 Vue 实例创建前引入） -->
+  <script src="../../js/food-bom-dialog.js?v=20260924"></script>
   <script src="../../api/food.js?v=20260915c"></script>
   <script src="../../api/inventory.js?v=20260915c"></script>
   <script src="../../api/export.js?v=20260915c"></script>
   <script>
     new Vue({
       el: '#food-app',
+      // 修改点(2026-09-24)：注册配方编辑弹窗组件（定义于 js/food-bom-dialog.js）
+      components: { 'food-bom-dialog': window.FoodBomDialog },
       data: function() {
         return {
           counts: 0,
@@ -415,10 +375,8 @@
             newMinStock: [{ required: true, message: '请输入最低库存预警值', trigger: 'blur' }]
           },
           // 配方编辑
-          bomDialog: { visible: false, dishId: null, dishName: '' },
-          bomItems: [],
-          materialOptions: [],
-          bomSubmitting: false,
+          // 修改点(2026-09-24)：BOM 配方弹窗拆分为独立组件 food-bom-dialog（js/food-bom-dialog.js），
+          // 相关 data/methods 随组件迁移，此处仅保留打开入口 $refs.bomDialog.open(row)
           // C.5 批量修改分类
           categoryDialog: { visible: false },
           categoryForm: { categoryId: '' },
@@ -832,90 +790,9 @@
             ReggieUI.success(hasSelection ? ('已导出选中的 ' + this.checkList.length + ' 个菜品') : ('已按当前筛选导出 ' + (this.counts || 0) + ' 个菜品'))
           } catch (err) { ReggieUI.error('导出失败：' + (err.message || err)) }
         },
-        // ========== 配方编辑 ==========
-        editBOM: function(row) {
-          var self = this
-          self.bomDialog = { visible: true, dishId: row.id, dishName: row.name }
-          self.loadMaterialOptions()
-          self.loadBOMItems()
-        },
-        loadMaterialOptions: function() {
-          var self = this
-          materialList().then(function(res) {
-            if (res.code === 1) { self.materialOptions = res.data || [] }
-          }).catch(function(err) { ReggieUI.error('加载食材列表失败：' + err) })
-        },
-        loadBOMItems: function() {
-          var self = this
-          var dishId = self.bomDialog.dishId
-          if (!dishId) { return }
-          dishMaterialListByDish(dishId).then(function(res) {
-            if (res.code === 1) {
-              var data = res.data || []
-              self.bomItems = data.map(function(item) {
-                return {
-                  id: item.id || null,
-                  dishId: item.dishId || dishId,
-                  materialId: item.materialId || null,
-                  usageQty: item.usageQty != null ? parseFloat(item.usageQty) : 0.001,
-                  sort: item.sort || 0,
-                  materialUnit: item.materialUnit || ''
-                }
-              })
-              if (self.bomItems.length === 0) { self.addBOMItem() }
-            } else { ReggieUI.error(res.msg || '加载配方失败') }
-          }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
-        },
-        addBOMItem: function() {
-          this.bomItems.push({
-            id: null,
-            dishId: this.bomDialog.dishId,
-            materialId: null,
-            usageQty: 0.001,
-            sort: this.bomItems.length,
-            materialUnit: ''
-          })
-        },
-        delBOMItem: function(index) {
-          if (this.bomItems.length <= 1) { ReggieUI.warning('至少保留一条'); return }
-          this.bomItems.splice(index, 1)
-        },
-        onMaterialChange: function(row, value) {
-          for (var i = 0; i < this.materialOptions.length; i++) {
-            if (this.materialOptions[i].id === value) {
-              row.materialUnit = this.materialOptions[i].unit || ''
-              break
-            }
-          }
-        },
-        submitBOM: function() {
-          if (this.bomSubmitting) return
-          var self = this
-          // 校验：所有行必须选食材且用量 > 0
-          for (var i = 0; i < self.bomItems.length; i++) {
-            var item = self.bomItems[i]
-            if (!item.materialId) { ReggieUI.warning('第 ' + (i + 1) + ' 行未选择食材'); return }
-            if (!item.usageQty || item.usageQty <= 0) { ReggieUI.warning('第 ' + (i + 1) + ' 行用量必须大于 0'); return }
-          }
-          var items = self.bomItems.map(function(it) {
-            return {
-              dishId: self.bomDialog.dishId,
-              materialId: it.materialId,
-              usageQty: it.usageQty,
-              sort: it.sort
-            }
-          })
-          var params = { dishId: self.bomDialog.dishId, items: items }
-          self.bomSubmitting = true
-          dishMaterialBatchSave(params).then(function(res) {
-            self.bomSubmitting = false
-            if (res.code === 1) {
-              ReggieUI.success('配方保存成功！')
-              self.bomDialog.visible = false
-              self.bomItems = []
-            } else { ReggieUI.error(res.msg || '保存失败') }
-          }).catch(function(err) { self.bomSubmitting = false; ReggieUI.error('请求失败：' + err) })
-        }
+        // 修改点(2026-09-24)：配方编辑方法（editBOM/loadBOMItems/addBOMItem/delBOMItem/
+        // onMaterialChange/submitBOM 等）已迁移至独立组件 js/food-bom-dialog.js，
+        // 此处仅保留调用入口 $refs.bomDialog.open(row)（见表格操作列 dropdown）
       }
     })
   </script>

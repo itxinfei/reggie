@@ -22,9 +22,9 @@
 <br>
 
 <img src="https://img.shields.io/badge/Modules-39-1677ff?logo=spring" alt="39 Modules">
-<img src="https://img.shields.io/badge/Data_Tables-115-ff6b6b?logo=postgresql" alt="115 Tables">
-<img src="https://img.shields.io/badge/Java_Files-746-4379a7?logo=java" alt="746 Java files">
-<img src="https://img.shields.io/badge/Total_Commits-306-success?logo=git" alt="306 commits">
+<img src="https://img.shields.io/badge/Data_Tables-110-ff6b6b?logo=postgresql" alt="110 Tables">
+<img src="https://img.shields.io/badge/Java_Files-907-4379a7?logo=java" alt="907 Java files">
+<img src="https://img.shields.io/badge/Total_Commits-671-success?logo=git" alt="671 commits">
 <a href="https://gitee.com/itxinfei/reggie"><img src="https://img.shields.io/badge/Gitee-itxinfei/reggie-c71d23?logo=gitee" alt="Gitee"></a>
 <a href="https://github.com/itxinfei/reggie"><img src="https://img.shields.io/badge/GitHub-Mirror-181717?logo=github" alt="GitHub Mirror"></a>
 
@@ -32,9 +32,25 @@
 
 ---
 
+<div align="center">
+
+### 💼 付费二开 · 技术支持
+
+**500 元 / 次** · 功能定制 | 缺陷修复 | 部署答疑 | 项目讲解
+
+> 📲 二开 / 技术支持请直接联系我：QQ **747011882**（邮箱同号）· 交流群 [661543188](https://qm.qq.com/cgi-bin/qm/qr?k=gNgch-wCkfUu-QbI7DZSudrax2BN7vY0)
+
+<img src="docs/心飞为你飞.jpg" width="170" alt="微信公众号二维码" style="border-radius:8px; border:1px solid #e5e7eb;">
+
+<sub>📱 微信公众号（推广号）· 项目仓库 [gitee.com/itxinfei/reggie](https://gitee.com/itxinfei/reggie)</sub>
+
+</div>
+
+---
+
 ## 📖 项目介绍
 
-**瑞吉外卖**是一套完整的餐饮管理系统，基于 Spring Boot + Vue 的单体应用架构，覆盖堂食、外卖、进销存、会员、支付、打印、报表等餐饮全业务场景。
+**瑞吉外卖**是一套完整的餐饮管理系统，基于 Spring Boot + Vue 的单体应用架构，覆盖堂食、外卖、进销存、会员、支付、打印、报表等餐饮全业务场景。前端为**三端覆盖**：管理后台（Element UI）、C 端点餐 H5（Vant）、骑手配送 H5（Vant），单 Jar 一并伺服。
 
 **部署形态**：面向连锁加盟品牌总部的**私有化部署**方案——1 台云服务器 + 1 个数据库，总部统一运维，各门店终端直连总部（对标：银豹 / 二维火 / 美团收银本地版）。系统同时在数据层保留**行级租户隔离**能力（MyBatis-Plus 租户插件自动注入 `tenant_id`），一套实例可服务多品牌/多门店，数据互不穿透。
 
@@ -42,7 +58,7 @@
 
 > ⚠️ **平台外卖对接当前为"占位脚手架"，尚未接通真实开放平台 API**：4 个适配器（JD / Meituan / Eleme / Douyin）的接口路径、鉴权与签名（`buildSign`）均为 AI 生成的"通用约定"，**`buildSign` 未被实际调用**，且京东原网关域名 `openo2o.jddj.com` 为不存在的假域名（已修正为真实网关 `openapi.jddj.com`）。因此默认配置下**定时任务不会真正外呼**——总开关 `reggie.platform.sync-enabled` 默认为 `false`，4 个任务入口直接 `return`。要真正对接某家平台，需入驻其开放平台（美团 developer.waimai.meituan.com、京东 opendj.jd.com、饿了么 open.faas.ele.me、抖音 developer.open-douyin.com），按官方文档重写对应适配器的协议层（含真正调用签名），再于 `application.yml` 置 `reggie.platform.sync-enabled: true`。
 
-系统核心创新在于 **AI 智能引擎**，通过接入大语言模型实现智能点餐推荐、菜品描述生成、经营分析等能力。
+系统核心创新在于 **AI 智能引擎**，通过接入大语言模型实现智能点餐推荐、菜品描述生成、经营分析等能力；配送侧内置**自有骑手体系**（骑手 H5 端 + 店长派单 + GPS 上报与订单实时追踪），不依赖第三方配送平台。
 
 ### 🏗️ 模块化架构
 
@@ -63,7 +79,9 @@
 | 🛒 **shopping** | 购物车 | 增减、清空、结算 |
 | 📋 **order** | 订单管理 | 下单、状态流转、订单明细 |
 | 📍 **address** | 地址管理 | 收货地址 CRUD、默认地址 |
-| 🚚 **delivery** | 配送管理 | 配送范围、配送费规则、骑手 |
+| 🚚 **delivery** | 配送管理 | 配送范围、配送费规则、自有骑手（H5 接单）、店长派单、GPS 上报与实时追踪 |
+| ⭐ **favorite** | 用户收藏 | C 端菜品收藏/星标、收藏列表 |
+| 🖥️ **kds** | 出餐大屏 | 厨房显示（KDS）：厨显看板、出票、超时任务 |
 | 🌐 **platform** | 平台外卖（对接骨架） | 美团/京东/饿了么/抖音适配器 + 工厂模式；拉单/落库/重试/对账任务已搭好，协议层待按官方文档对接（默认关闭） |
 | 🪑 **dining** | 堂食管理 | 桌台区域、排队取号、预约、叫号 |
 | 💰 **payment** | 支付管理 | 支付单、退款、回调、多支付渠道 |
@@ -77,14 +95,12 @@
 | 👥 **member** | 会员管理 | 等级、积分、余额、优惠券 |
 | 🎯 **recommend** | 推荐引擎 | 协同过滤、用户画像、偏好分析 |
 | 🎁 **marketing** | 营销管理 | 秒杀、满减、买赠、新客优惠 |
-| 🔄 **retention** | 用户留存 | 流失预警、发券召回、积分排行 |
 | ⏱️ **urgency** | 催单预警 | 未接单实时扫描、分级告警、接单大屏 |
-| 🤝 **franchise** | 加盟管理 | 加盟商、合同、分账结算 |
 | 👔 **attendance** | 考勤管理 | 员工打卡、排班 |
 | 🛎️ **customer** | 客服管理 | 会话、工单、投诉处理 |
 | 📊 **report** | 报表管理 | 日报、菜品排行、时段分析、经营报表 |
 | 📈 **dashboard** | 仪表盘 | 经营概览、实时数据 |
-| 🖨️ **printer** | 打印管理 | 浏览器本地打印、小票/后厨/配送单模板、打印记录 |
+| 🖨️ **printer** | 打印管理 | 浏览器本地打印、小票/后厨/配送单模板、打印记录、桌贴二维码打印中心（海报生成+批量打印） |
 | 🔔 **notification** | 通知管理 | 模板、短信、推送、多渠道路由 |
 | 📤 **export** | 数据导出 | Excel / PDF 多维度导出 |
 | ⏰ **schedule** | 定时任务 | 订单超时、数据统计、操作日志 |
@@ -99,48 +115,183 @@
 
 ### 🖥️ 后台管理系统
 
+> 以下截图为项目**当前运行版本**实拍（1920×1080，Playwright 自动截图，2026-09-24），
+> 覆盖登录、工作台、订单、菜品、收银、库存、报表、AI 等核心功能页。
+
 <p align="center">
-  <img src="docs/imgs/后台管理系统.png" width="85%" alt="瑞吉外卖后台管理系统"
+  <img src="docs/screenshots/02-dashboard.png" width="88%" alt="工作台 - 今日订单/营收/待办/趋势图"
        style="border-radius:10px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);">
+  <br><sub>📊 工作台：今日订单、营业额、待办事项、近 7 日趋势、订单状态分布</sub>
 </p>
-
-### 📱 移动端（C 端用户）
-
-> 登录 → 点餐 → 选地址 → 支付 → 查订单：移动端共 16 个页面，以下为代表性流程。
 
 <table align="center">
   <tr>
-    <td align="center" width="50%">
-      <img src="docs/imgs/前端用户.png" width="92%" alt="移动端首页 / 登录"
-           style="border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);"><br>
-      <sub>🏠 首页 / 登录</sub>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/01-login.png" width="96%" alt="登录页"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🔐 登录页</sub>
     </td>
-    <td align="center" width="50%">
-      <img src="docs/imgs/review-user.png" width="92%" alt="用户中心"
-           style="border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);"><br>
-      <sub>👤 用户中心</sub>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/03-orders.png" width="96%" alt="订单管理"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>📋 订单管理</sub>
     </td>
-  </tr>
-  <tr>
-    <td align="center" width="50%">
-      <img src="docs/imgs/review-address.png" width="92%" alt="地址管理"
-           style="border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);"><br>
-      <sub>📍 地址管理</sub>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/04-dishes.png" width="96%" alt="菜品管理"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🍽️ 菜品管理</sub>
     </td>
-    <td align="center" width="50%">
-      <img src="docs/imgs/review-paysuccess.png" width="92%" alt="支付成功"
-           style="border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);"><br>
-      <sub>💳 支付成功</sub>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/05-setmeals.png" width="96%" alt="套餐管理"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🍱 套餐管理</sub>
     </td>
   </tr>
   <tr>
-    <td align="center" width="50%">
-      <img src="docs/imgs/review-order.png" width="92%" alt="订单详情"
-           style="border-radius:8px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);"><br>
-      <sub>📋 订单详情</sub>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/06-categories.png" width="96%" alt="分类管理"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🗂️ 分类管理</sub>
     </td>
-    <td align="center" width="50%">
-      <sub>🌟 共 16 个移动端页面<br>完整流程见上方说明</sub>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/07-employees.png" width="96%" alt="员工管理"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>👥 员工管理</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/08-dining.png" width="96%" alt="桌台管理"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🪑 桌台管理</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/09-cashier.png" width="96%" alt="收银台"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>💰 收银台</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/10-inventory.png" width="96%" alt="采购入库"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>📦 采购入库</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/11-reports.png" width="96%" alt="经营报表"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>📈 经营报表</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/12-evaluations.png" width="96%" alt="评价管理"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>⭐ 评价管理</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/13-ai.png" width="96%" alt="AI 助手"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🤖 AI 助手</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/14-roles.png" width="96%" alt="角色权限"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🛡️ 角色权限</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/15-marketing.png" width="96%" alt="营销活动"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🎯 营销活动</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/16-payment.png" width="96%" alt="支付配置"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>💳 支付配置</sub>
+    </td>
+    <td align="center" width="25%">
+      <sub>🧩 后台共 <b>75</b> 个功能页<br>（此处为代表页面）</sub>
+    </td>
+  </tr>
+</table>
+
+<details>
+<summary><b>🖼️ 旧版界面存档（历史版本截图）</b></summary>
+
+<p align="center">
+  <img src="docs/imgs/后台管理系统.png" width="85%" alt="瑞吉外卖后台管理系统（旧版）"
+       style="border-radius:10px; border:1px solid #e5e7eb; box-shadow:0 2px 8px rgba(0,0,0,.06);">
+</p>
+
+</details>
+
+### 📱 C 端用户（Vant H5）
+
+> 手机号验证码登录（新号自动注册）→ 点餐 → 支付 → 订单/评价/收藏/会员/开票：C 端共 22 个页面。
+> 以下为**当前运行版本**实拍（390×844 竖屏，Playwright 自动截图，2026-09-24）。
+
+<table align="center">
+  <tr>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/c-01-login.png" width="96%" alt="登录页"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>📱 登录页</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/c-02-home.png" width="96%" alt="首页"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🏠 首页</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/c-03-menu.png" width="96%" alt="点餐"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🍽️ 点餐</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/c-04-orders.png" width="96%" alt="订单列表"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>📋 订单</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/c-05-profile.png" width="96%" alt="个人中心"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>👤 个人中心</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/c-06-member.png" width="96%" alt="会员中心"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>💎 会员中心</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/c-07-ai.png" width="96%" alt="AI 点餐助手"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🤖 AI 助手</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/c-08-evaluations.png" width="96%" alt="我的评价"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>⭐ 我的评价</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/c-09-favorites.png" width="96%" alt="我的收藏"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>⭐ 我的收藏</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/c-10-qrcode.png" width="96%" alt="扫码点餐"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>📷 扫码点餐</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/c-11-service.png" width="96%" alt="在线客服"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🛎️ 在线客服</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/c-12-message.png" width="96%" alt="消息中心"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🔔 消息中心</sub>
+    </td>
+  </tr>
+</table>
+
+### 🛵 骑手端（Vant H5）
+
+> **自有骑手配送体系**：骑手账号登录 → 接单大厅抢单 → 我的任务 → 送达上报；
+> 店长在后台「配送订单」派单，C 端订单页可实时查看骑手位置。共 4 个页面。
+
+<table align="center">
+  <tr>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/rider-01-login.png" width="96%" alt="骑手登录"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>📱 骑手登录</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/rider-02-hall.png" width="96%" alt="接单大厅"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>📋 接单大厅</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/rider-03-my-tasks.png" width="96%" alt="我的任务"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>🛵 我的任务</sub>
+    </td>
+    <td align="center" width="25%">
+      <img src="docs/screenshots/rider-04-detail.png" width="96%" alt="任务详情"
+           style="border-radius:8px; border:1px solid #e5e7eb;"><br><sub>📍 任务详情</sub>
     </td>
   </tr>
 </table>
@@ -150,16 +301,17 @@
 | 亮点 | 说明 |
 |------|------|
 | 🏢 **企业级架构** | Spring Boot 2.4.5 + MyBatis Plus 3.4.2，RESTful API，39 个领域模块分层清晰 |
-| 📱 **双端覆盖** | 管理后台（Element UI，76 页）+ 移动端（Vant UI H5，16 页）+ 多平台渠道对接骨架（美团/京东/饿了么/抖音） |
+| 📱 **三端覆盖** | 管理后台（Element UI，75 页）+ C 端点餐 H5（Vant，22 页）+ 骑手配送 H5（4 页），单 Jar 一并伺服 |
+| 🛵 **自有骑手配送** | 骑手 H5 接单（大厅抢单/任务/送达）+ 店长后台派单 + GPS 上报与订单实时追踪，不依赖三方配送 |
 | 🔐 **行级租户隔离** | MyBatis-Plus 租户插件自动注入 `tenant_id`，多品牌/多门店数据互不穿透 |
 | ⚡ **前后端一体** | 前端页面内嵌于 Spring Boot，单 Jar 部署，无需分离部署 |
-| 📦 **全业务覆盖** | 堂食 + 外卖配送 + 进销存 + 会员营销 + 支付 + 打印 + 发票 + 报表 + 加盟 + 多平台渠道 |
+| 📦 **全业务覆盖** | 堂食 + 外卖配送 + 进销存 + 会员营销 + 支付 + 打印 + 发票 + 报表 + 多平台渠道 |
 | 🌐 **平台外卖对接骨架** | 适配器 + 工厂模式 + 拉单/重试/对账定时任务已就位；协议层与签名待按官方文档实现，开关默认关闭（不空转外呼） |
 | 🖨️ **门店本地打印** | 员工在后台一键发起，浏览器调本地打印机出小票；打印记录落库，无需额外代理、服务器无需装打印机 |
-| 🏪 **多门店管理** | 门店 CRUD、数据同步、门店仪表盘、员工权限隔离 |
-| 🤝 **加盟连锁** | 加盟商管理、合同签署、分账结算 |
-| 💾 **115 张数据表** | 完整数据库设计 + 30 个迁移脚本 + 7 个演示数据 seed |
-| 🧪 **双层测试** | 414 个 JUnit 单测/集成测试 + Playwright E2E（Allure 报告） |
+| 📷 **桌贴二维码打印中心** | 桌台二维码 → 海报生成 → 批量打印，C 端扫码即点餐 |
+| 💾 **110 张数据表** | 完整数据库设计 + 44 个迁移脚本（`db/` 本地维护，不入版本库） |
+| 🗂️ **运行时图片统一存储** | 上传/访问按 `uploads/{public\|private}/来源/业务/月份` 分层，公私分流鉴权，三端共享 `imgPath()` 单一真源 |
+| 🧪 **双层测试** | 742 个 JUnit 单测/集成测试 + Playwright E2E（Allure 报告） |
 | 🤖 **AI 智能引擎** | DeepSeek/通义千问/OpenAI 多模型，点餐推荐 + 描述生成 + 经营分析 + 对话管理 |
 
 </div>
@@ -182,13 +334,13 @@
 ### 系统架构
 
 ```
-┌────────────────┐   ┌────────────────┐
-│  管理后台 (PC)  │   │   移动端 (H5)   │
-│ Element UI 2.x │   │ Vant UI + AI点餐│
-│ 一键打印小票    │   │   16 个页面     │
-└───────┬────────┘   └───────┬────────┘
-        │                    │
-        └──────────┬─────────┘
+┌────────────────┐   ┌────────────────┐   ┌────────────────┐
+│  管理后台 (PC)  │   │  C 端点餐 (H5)  │   │  骑手端 (H5)    │
+│ Element UI 2.x │   │ Vant UI + AI点餐│   │ Vant 接单/送达  │
+│ 一键打印/派单   │   │   22 个页面     │   │   4 个页面      │
+└───────┬────────┘   └───────┬────────┘   └───────┬────────┘
+        │                    │                    │
+        └──────────┬─────────┴────────────────────┘
                    ▼
         ┌────────────────────────────────┐
         │   Spring Boot 2.4.5            │
@@ -197,9 +349,11 @@
             │           │           │
    ┌────────▼─────┐ ┌───▼──────┐ ┌──▼──────────────┐
    │    MySQL     │ │  Redis   │ │    AI 服务       │
-   │  115 张数据表 │ │ 缓存/限流 │ │ DeepSeek / Qwen │
+   │  110 张数据表 │ │ 缓存/限流 │ │ DeepSeek / Qwen │
    │ 行级租户隔离  │ │ Session  │ │ OpenAI / GLM    │
-   └──────────────┘ └──────────┘ └─────────────────┘
+   │ 图片分层存储  │ └──────────┘ └─────────────────┘
+   │ public/private│
+   └──────────────┘
 
    ┌───────────────────────────────────────────────┐
    │   多平台渠道对接层（工厂模式 + 适配器，占位协议）  │
@@ -226,7 +380,7 @@
 | 依赖 | 版本 | 说明 |
 |------|------|------|
 | ☕ JDK | 8 | **必须 JDK 8**：`pom.xml` 用 maven-enforcer（锁 `[1.8,1.9)`）+ animal-sniffer（字节码级）双保险拦截高版本 |
-| 🗄️ MySQL | 5.7+ / 8.0 | 必须安装，用于存储业务数据（115 张表） |
+| 🗄️ MySQL | 5.7+ / 8.0 | 必须安装，用于存储业务数据（110 张表） |
 | 📦 Maven | 3.6+ | 构建和依赖管理 |
 | ⚡ Redis | 6.0+ | 缓存、Session 共享、API 限流、分布式锁 |
 | 🟢 Node.js | 16+ | 仅 E2E 测试（Playwright）需要 |
@@ -246,9 +400,8 @@ mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS reggie CHARACTER SET utf8mb4;
 cd src/main/resources/db/migration
 for f in $(ls V*.sql | sort); do mysql -u root -p reggie < "$f"; done
 
-# 4.（可选）导入演示数据 —— src/main/resources/db/seed/ 下 7 个脚本，按顺序执行
-#    seed_demo_data.sql → seed_module_demo_data.sql → seed_business_demo_data.sql
-#    注：seed_business_demo_data.sql 需进入 seed 目录依次 source part1 ~ part4
+# 4.（可选）导入演示数据 —— db/ 目录整体不入版本库（.gitignore 忽略），
+#    迁移与演示脚本均本地维护；有 seed 脚本时按文件名顺序 source 即可
 
 # 5. 配置数据源与 Redis
 #    ⚠️ application*.yml 被 .gitignore 忽略（不入库），需自行创建 application-dev.yml
@@ -267,7 +420,8 @@ mvn spring-boot:run
 | 应用 | 地址 | 默认账号 |
 |------|------|----------|
 | 🖥️ 管理后台 | http://localhost:8080/backend/index.html | `admin` / `123456` |
-| 📱 移动端 | http://localhost:8080/front/index.html | 手机号登录 |
+| 📱 C 端点餐 | http://localhost:8080/front/index.html | 手机号验证码登录（新号自动注册） |
+| 🛵 骑手端 | http://localhost:8080/rider/login.html | `13900005003` / `123456`（演示账号） |
 | 🔌 Swagger UI | http://localhost:8080/swagger-ui.html | — |
 
 > **⚠️ 两个高频踩坑**
@@ -320,8 +474,8 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar --spring.profiles.active=prod
 | 模块 | 功能 |
 |------|------|
 | 🌐 **平台外卖（对接骨架）** | 美团/京东/饿了么/抖音适配器 + 工厂模式；拉单/幂等落库/失败重试/日结对账/同步日志任务已搭好，协议层待按官方文档对接（默认 `sync-enabled: false` 不实际外呼） |
-| 🖨️ **打印管理** | 浏览器调本地打印机（小票/后厨/外卖单）、打印记录流水 |
-| 🚚 **外卖配送** | 配送范围围栏、配送费规则、配送订单管理、平台对接 |
+| 🖨️ **打印管理** | 浏览器调本地打印机（小票/后厨/外卖单）、打印记录流水、桌贴二维码打印中心（海报生成+批量打印） |
+| 🚚 **外卖配送** | 配送范围围栏、配送费规则、**自有骑手体系**（骑手 H5 接单、店长派单、GPS 上报与实时追踪）、平台对接骨架 |
 | 🍽️ **堂食管理** | 桌台/区域管理、预订跟踪、取号排队、桌台状态实时看板 |
 | 📦 **进销存** | 原料管理、供应商管理、采购入库、库存盘点、库存流水追踪、智能补货 |
 | 👤 **会员体系** | 会员等级成长、积分管理/调整、优惠券发放核销、余额充值、积分排行 |
@@ -329,7 +483,6 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar --spring.profiles.active=prod
 | 🧾 **发票管理** | 抬头管理、开票申请、开具/作废状态机 |
 | 💸 **提现管理** | 提现申请、审核、打款 |
 | 🎉 **拼团管理** | 拼团活动、成团判定 |
-| 🤝 **加盟管理** | 加盟商管理、合同签署、分账结算 |
 | 🎁 **营销管理** | 秒杀、满减、买赠、新客优惠 |
 | 💳 **收银管理** | 收银记录、日结对账 |
 | 📊 **经营报表** | 日/周/月销售统计、菜品销量排行、时段经营分析、经营报表四合一 |
@@ -341,7 +494,8 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar --spring.profiles.active=prod
 | 👔 **考勤管理** | 员工打卡、排班管理 |
 | 🛎️ **客服管理** | 会话管理、工单处理、投诉跟踪 |
 | ⏱️ **催单预警** | 未接单实时扫描（30s）、分级告警、语音播报、接单大屏 |
-| 🔄 **用户留存** | 流失预警、发券召回、积分排行 Top10 |
+| 🍳 **出餐大屏（KDS）** | 厨房显示看板、厨显出票、出餐超时任务 |
+| ⭐ **用户收藏** | C 端菜品收藏/星标、收藏列表 |
 | 📋 **系统管理** | 角色权限（RBAC）、菜单权限、参数配置、操作日志 |
 | ⏰ **定时任务** | 订单超时取消、数据统计、平台拉单/重试/对账、未接单扫描 |
 
@@ -412,16 +566,16 @@ reggie/
 │   ├── filter/           # 登录拦截过滤器（LoginCheckFilter）
 │   ├── module/           # 🧩 业务模块（39 个，各含 controller/service/mapper/model）
 │   │   ├── platform/     #   🌐 平台外卖对接骨架（美团/京东/饿了么/抖音适配器，默认关闭，协议层待对接）
-│   │   ├── printer/      #   🖨️ 打印（终端注册/任务队列/模板，门店 PC 代理出票）
+│   │   ├── printer/      #   🖨️ 打印（本地打印/任务流水/桌贴二维码打印中心）
+│   │   ├── delivery/     #   🚚 配送（范围/运费规则/自有骑手/派单/GPS 实时追踪）
+│   │   ├── kds/          #   🍳 出餐大屏（厨显看板/厨显出票/超时任务）
+│   │   ├── favorite/     #   ⭐ 用户收藏（菜品收藏/星标/收藏列表）
 │   │   ├── invoice/      #   🧾 发票（抬头管理/开票申请/开具作废）
 │   │   ├── urgency/      #   ⏱️ 未接单预警（30s 实时扫描/分级告警/语音播报）
-│   │   ├── retention/    #   🔄 用户留存（流失预警/发券召回/积分排行）
 │   │   ├── ai/           #   🤖 AI 引擎（推荐/文案生成/经营分析/对话/用户画像）
 │   │   ├── inventory/    #   📦 进销存（原料/供应商/采购/盘点/库存流水）
 │   │   ├── member/       #   👤 会员（等级成长/积分/优惠券/余额充值）
-│   │   ├── dining/       #   🍽️ 堂食（桌台区域/预订/排队/叫号）
-│   │   ├── delivery/     #   🚚 配送（范围围栏/配送费规则）
-│   │   ├── franchise/    #   🤝 加盟（加盟商/合同/分账结算）
+│   │   ├── dining/       #   🍽️ 堂食（桌台区域/预订/排队/叫号/桌贴二维码）
 │   │   ├── report/       #   📊 报表（销售统计/菜品排行/时段分析）
 │   │   ├── sys/          #   📋 系统（角色权限 RBAC/菜单/参数配置/操作日志）
 │   │   └── ...           #   另有 auth/user/dish/order/category/setmeal/shopping/address/
@@ -431,17 +585,18 @@ reggie/
 │   ├── service/          # 业务接口 + 实现类
 │   └── utils/            # 工具类（二维码、验证码、SMS、文件操作）
 ├── src/main/resources/
-│   ├── backend/          # 🖥️ 管理后台（Element UI，76 个页面 + 设计令牌 tokens.css）
-│   ├── front/            # 📱 移动端（Vant UI，16 个页面）
+│   ├── backend/          # 🖥️ 管理后台（Element UI，75 个页面 + 设计令牌 tokens.css）
+│   ├── front/            # 📱 C 端点餐 H5（Vant UI，22 个页面）
+│   ├── rider/            # 🛵 骑手配送 H5（Vant UI，4 个页面：登录/接单大厅/任务/详情）
+│   ├── shared/           # 🔗 三端共享静态资源（img-path.js 等单一真源）
 │   ├── db/
-│   │   ├── migration/    # 🗄️ 30 个迁移脚本（V<日期>__描述.sql，无 Flyway，手动 source）
-│   │   └── seed/         # 🌱 7 个演示数据脚本（全幂等可重跑）
+│   │   └── migration/    # 🗄️ 44 个迁移脚本（V<日期>__描述.sql；db/ 整体 gitignore，本地维护，无 Flyway）
 │   ├── com/reggie/.../   # Mapper XML（与 Java 包同路径，非 resources/mapper/）
 │   └── application.yml   # 主配置（application-dev/prod/test.yml 被 gitignore，需自建）
-├── src/test/java/        # 🧪 414 个单元/集成测试
+├── src/test/java/        # 🧪 742 个单元/集成测试
 ├── src/test/resources/   # schema.sql + schema-<module>.sql（测试库专用）
-├── tests/                # 🎭 Playwright E2E 测试（TypeScript + Allure 报告）
-├── docs/                 # 📚 架构决策/数据模型/模块 API/后台页面清单等文档
+├── tests/                # 🎭 Playwright E2E 测试（TypeScript + Allure 报告）+ 文档截图脚本
+├── docs/                 # 📚 架构决策/数据模型/模块 API/后台页面清单 + screenshots/ 实拍图
 └── pom.xml               # Maven 配置
 ```
 
@@ -453,9 +608,9 @@ reggie/
 |------|------|
 | [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) | 项目总览：背景、目标、范围、角色与核心流程 |
 | [docs/ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md) | 架构决策记录（ADR）：关键技术选型与取舍原因 |
-| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | 数据模型：115 张表的领域划分与核心表结构 |
+| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | 数据模型：110 张表的领域划分与核心表结构 |
 | [docs/MODULES_AND_APIS.md](docs/MODULES_AND_APIS.md) | 模块与接口清单：39 个模块能力与主要 API |
-| [docs/BACKEND_PAGES.md](docs/BACKEND_PAGES.md) | 后台页面清单：76 个页面的实现状态与要点 |
+| [docs/BACKEND_PAGES.md](docs/BACKEND_PAGES.md) | 后台页面清单：75 个页面的实现状态与要点 |
 | `CHANGELOG.md` | 变更记录（**本地维护**：被 `.gitignore` 忽略，不进版本库） |
 
 ---
@@ -469,6 +624,11 @@ reggie/
 | 🏗️ **基础框架** | Spring Boot + MyBatis Plus 分层架构、多租户拦截器、统一响应与全局异常处理 |
 | 🧑‍💼 **核心业务** | 员工/分类/菜品/套餐/订单/购物车/地址 完整 CRUD |
 | 🔐 **安全加固** | CSRF 防护、API 限流、日志脱敏、BCrypt 密码、租户行级隔离、越权防护 |
+| 🛵 **自有骑手配送体系** | 骑手 H5（登录/接单大厅/我的任务/送达上报）+ 店长后台派单 + GPS 上报与 C 端订单实时追踪 |
+| 📷 **桌贴二维码打印中心** | 桌台二维码海报生成与批量打印，C 端扫码即点餐；二维码/AI 配置改为页面内弹窗 |
+| 🗂️ **运行时图片统一存储** | 上传/访问按 public/private 分层落盘、公私分流鉴权（canonical 相对路径防绕过）、三端共享 `imgPath()`、存量迁移工具 |
+| 🧾 **C 端开票与收藏** | 用户端发票申请/抬头/记录页；菜品收藏/星标/收藏列表 |
+| 🍳 **出餐大屏（KDS）** | 厨房显示看板、厨显出票、出餐超时任务 |
 | 🌐 **平台外卖对接骨架** | 美团/京东/饿了么/抖音工厂模式 + 适配器 + 拉单/重试/恢复/对账定时任务（默认关闭，协议层待按官方文档实现） |
 | 🖨️ **门店本地打印** | 浏览器调本地打印机 + 打印记录落库，无需额外代理，服务器无需装打印机 |
 | ⏱️ **未接单预警** | 30s 实时扫描分级告警（Redis 锁防重、每单每级仅告警一次）+ 接单大屏语音播报 |
@@ -477,8 +637,9 @@ reggie/
 | 📋 **RBAC 权限闭环** | 75 个菜单 + 9 个按钮权限 seed、角色分配、权限树分配弹窗、操作日志 |
 | 🤖 **AI 引擎 v2.0** | 多模型适配器（9 种模型）、SSE 流式输出、对话管理、用户画像、后台动态切换供应商 |
 | ⚙️ **自动化任务** | 支付订单超时、定时订单回收、平台拉单/重试/对账、未接单扫描、操作日志归档 |
-| 🧪 **测试体系** | 414 个 JUnit 单测/集成测试（JaCoCo 覆盖率）+ Playwright E2E（Allure 报告） |
+| 🧪 **测试体系** | 742 个 JUnit 单测/集成测试（JaCoCo 覆盖率）+ Playwright E2E（Allure 报告） |
 | 🎨 **前端设计系统** | 设计令牌 `tokens.css`、`crud-table`/`crud-dialog` 统一组件、全站表格列宽与居中治理、响应式与 a11y 对比度达标 |
+| 🛡️ **批量质量治理** | 三批缺陷修复（首页初始化/快捷入口/发票隔离/地址去重/AI 助手等）+ 桌台结账源头收敛 + 全站弹窗修复 |
 
 ### 🔮 规划中
 
@@ -488,7 +649,6 @@ reggie/
 | 💬 **智能客服** | AI 自动回复用户咨询，常见问题自动处理 |
 | 📊 **数据大屏** | 实时经营数据可视化大屏 |
 | 🐳 **Docker 部署** | 一键 Docker Compose 部署方案 |
-| 🧾 **C 端开票** | 用户端发票申请与抬头管理页（后台已支持，用户端待补） |
 | 🎙️ **语音点餐** | 接入语音识别，支持语音下单 |
 | 🌐 **平台外卖真实对接** | 入驻美团/京东/饿了么/抖音开放平台，按官方文档实现签名与协议层，开启 `sync-enabled` 接通真实订单 |
 
@@ -561,7 +721,7 @@ mvn verify
 
 | 测试类型 | 覆盖范围 | 说明 |
 |---------|---------|------|
-| 单元 / 集成测试 | Controller（@SpringBootTest + MockMvc）、Service、Mapper | 414 个，全绿 |
+| 单元 / 集成测试 | Controller（@SpringBootTest + MockMvc）、Service、Mapper | 742 个，全绿 |
 | 覆盖率 | JaCoCo 0.8.10，`mvn verify` 生成报告 | — |
 | 核心业务 | 员工登录、菜品查询、订单提交、购物车 | ✅ |
 | 多租户 | 租户行级隔离、忽略表（`permission` / `role_permission`）回归 | ✅ |
@@ -609,7 +769,7 @@ npm run report               # 生成并打开 Allure 报告
 | `refactor:` | 重构 |
 | `test:` | 测试修改 |
 
-分支结构：`main`（线上）→ `test`（测试）→ `dev`（开发）→ `feature/*`（新功能）。禁止提交 `.log`、`.pyc`、`target/`、`node_modules/` 等临时文件与缓存。
+分支结构：`master`（主干，日常直接提交）→ `backup-before-push`（推送前备份）。禁止提交 `.log`、`.pyc`、`target/`、`node_modules/` 等临时文件与缓存。
 
 ### 开发约定（改代码前必读）
 
@@ -684,7 +844,7 @@ spring:
     database: 0
 ```
 
-> 首次使用需先创建数据库 `CREATE DATABASE reggie CHARACTER SET utf8mb4;`，再按文件名顺序执行 `src/main/resources/db/migration/V*.sql`（项目未启用 Flyway，需手动 source）。演示数据在 `src/main/resources/db/seed/`。
+> 首次使用需先创建数据库 `CREATE DATABASE reggie CHARACTER SET utf8mb4;`，再按文件名顺序执行 `src/main/resources/db/migration/V*.sql`（项目未启用 Flyway，需手动 source）。⚠️ `db/` 整体被 `.gitignore` 忽略、不入版本库，迁移与演示脚本均本地维护。
 </details>
 
 <details>
@@ -835,8 +995,9 @@ server:
 
 | 渠道 | 信息 |
 |------|------|
-| 🌐 Gitee | [itxinfei/reggie](https://gitee.com/itxinfei/reggie) |
-| 💬 QQ 群 | [661543188](https://qm.qq.com/cgi-bin/qm/qr?k=9yLlyD1dRBL97xmBKw43zRt0-6xg8ohb&jump_from=webapi) |
+| 📲 **付费二开 / 技术支持** | QQ **747011882** · 500 元/次（详见文首） |
+| 🔗 项目地址 | [https://gitee.com/itxinfei/reggie](https://gitee.com/itxinfei/reggie) |
+| 💬 QQ 交流群 | [661543188](https://qm.qq.com/cgi-bin/qm/qr?k=gNgch-wCkfUu-QbI7DZSudrax2BN7vY0) |
 | 📧 邮箱 | [747011882@qq.com](mailto:747011882@qq.com) |
 | 🐛 Bug 反馈 | [提交 Issue](https://gitee.com/itxinfei/reggie/issues) |
 
@@ -850,7 +1011,7 @@ server:
 
 Made with ❤️ by [itxinfei](https://gitee.com/itxinfei)
 
-**746** Java 源文件 · **76** 管理后台页面 · **16** 移动端页面 · **39** 业务模块 · **115** 张数据表 · **306** 次提交
+**907** Java 源文件 · **75** 管理后台页面 · **22** C 端页面 · **4** 骑手端页面 · **39** 业务模块 · **110** 张数据表 · **671** 次提交
 
 </div>
 

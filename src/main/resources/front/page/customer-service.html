@@ -8,7 +8,7 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260924" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
     <link rel="stylesheet" href="../styles/cs.css?v=20260922" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
@@ -18,7 +18,7 @@
     <div id="csPage" class="app">
         <div class="divHead">
             <div class="divTitle">
-                <i class="ri-arrow-left-s-line" @click="goBack"></i>{{ view === 'chat' ? '在线客服' : '我要投诉' }}
+                <i class="ri-arrow-left-s-line" role="button" tabindex="0" aria-label="返回" @click="goBack" @keydown.enter="goBack"></i>{{ view === 'chat' ? '在线客服' : '我要投诉' }}
             </div>
             <i v-if="view==='chat'" class="ri-error-warning-line head-home-btn" @click="view='complaint'"
                aria-label="我要投诉" title="我要投诉"></i>
@@ -181,7 +181,7 @@
                                 <div class="cr-result-label">处理结果</div>
                                 <div>{{ c.handleResult }}</div>
                                 <div class="cr-comp" v-if="c.compensationAmount > 0">
-                                    赔偿 ￥{{ Number(c.compensationAmount).toFixed(2) }}
+                                    赔偿 ¥{{ Number(c.compensationAmount).toFixed(2) }}
                                 </div>
                             </div>
                             <!-- 已评价 -->

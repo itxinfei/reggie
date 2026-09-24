@@ -7,20 +7,20 @@
   <link rel="icon" href="./../images/favico.ico">
   <script src="./../js/base.js?v=20260917"></script>
   <link rel="stylesheet" href="../styles/vant.min.css"/>
-  <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+  <link rel="stylesheet" href="../styles/index.css?v=20260924" />
   <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
   <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
   <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
   <!-- 修改点(2026-09-17)：补引 icon-fallback.js（其余页均成对引入），字体加载失败时图标降级而非空白 -->
   <script src="./../js/icon-fallback.js?v=20260917"></script>
-  <link rel="stylesheet" href="../styles/invoice.css?v=20260921" />
+  <link rel="stylesheet" href="../styles/invoice.css?v=20260924" />
 </head>
 <body>
   <div id="invoice-app">
     <!-- 修改点(2026-09-17)：头部统一为 .divHead > .divTitle（对齐全站 13 个子页面标准）-->
     <div class="divHead">
       <div class="divTitle">
-        <i class="ri-arrow-left-s-line" @click="goBack"></i>开发票
+        <i class="ri-arrow-left-s-line" role="button" tabindex="0" aria-label="返回" @click="goBack" @keydown.enter="goBack"></i>开发票
       </div>
     </div>
 
@@ -106,7 +106,7 @@
   <script src="../../backend/plugins/axios/axios.min.js"></script>
   <script src="./../js/request.js?v=20260917"></script>
   <script src="./../api/main.js?v=20260917"></script>
-  <script src="./../js/common.js?v=20260917"></script>
+  <script src="./../js/common.js?v=20260924"></script>
   <script src="./../api/invoice.js?v=20260917"></script>
   <script>
     new Vue({

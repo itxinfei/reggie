@@ -748,6 +748,12 @@
   cursor: pointer;
 }
 
+/* 修改点(2026-09-24)：内联样式收敛 —— 送达时间行右侧箭头（原 font-size/vertical-align 内联） */
+#add_order .divFinishTime .finish-time-arrow {
+  font-size: 12rem;
+  vertical-align: middle;
+}
+
 /* 修改点：优惠标签样式 */
 #add_order .divCart .divNum .divDiscount {
   flex: 0 0 100%;             /* 换到金额下方独立一行 */

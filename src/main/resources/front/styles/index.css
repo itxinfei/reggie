@@ -369,6 +369,13 @@ select {
 .justify-between { justify-content: space-between; }
 .justify-center { justify-content: center; }
 .flex-1 { flex: 1; min-width: 0; }
+/* 修改点(2026-09-24)：补充定位/外距工具类，收敛各页骨架屏与布局内联 style */
+.relative { position: relative; }
+.ml-auto { margin-left: auto; }
+.mt-12 { margin-top: 12rem; }
+.mb-12 { margin-bottom: 12rem; }
+.mb-10 { margin-bottom: 10rem; }
+.mb-8 { margin-bottom: 8rem; }
 
 /* 间距工具：基线 iOS14.5 原生支持 gap；@supports not 给更早 WebView 留 margin 兜底 */
 .gap-8,
@@ -510,7 +517,9 @@ select {
   align-items: center;
   gap: var(--spacing-md, 12rem);
   font-size: var(--font-size-xl, 22rem);
-  color: var(--text-primary, #1a1a1a);
+  /* 修改点(2026-09-24)：原 var(--text-primary, #1a1a1a) 引用了不存在的变量名且 hex 兜底，
+     归并到标准令牌 --color-text-primary */
+  color: var(--color-text-primary);
   cursor: pointer;
 }
 .divHead-right i:active {

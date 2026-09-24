@@ -297,7 +297,7 @@
           <div v-for="item in pickedItems" :key="item.materialId" class="picked-item">
             <span style="flex:1;font-weight:500;">{{ item.name }}</span>
             <span style="color:var(--text-muted);font-size:var(--font-size-xs);">账面：{{ item.bookQty }} {{ item.unit || '' }}</span>
-            <i class="ri-close-circle-line remove-btn" @click="removePick(item.materialId)"></i>
+            <i class="ri-close-circle-line remove-btn" role="button" tabindex="0" title="移除" aria-label="移除该食材" @click="removePick(item.materialId)" @keydown.enter="removePick(item.materialId)"></i>
           </div>
         </div>
       </div>

@@ -11,10 +11,10 @@
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260924" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <!--本页面内容的样式-->
-        <link rel="stylesheet" href="./../styles/order.css?v=20260922" />
+        <link rel="stylesheet" href="./../styles/order.css?v=20260924" />
         <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
         <link rel="stylesheet" href="../styles/tabbar.css?v=20260917" />
         <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
@@ -52,6 +52,11 @@
                         <div class="order-header">
                             <div class="order-meta">
                                 <span class="order-no">订单号 {{order.number || order.id}}</span>
+                                <!-- 修改点(2026-09-24)：订单号一键复制（P3：售后沟通场景免手抄） -->
+                                <span class="copy-btn" role="button" tabindex="0" aria-label="复制订单号"
+                                      @click.stop="copyOrderNo(order)" @keydown.enter.stop="copyOrderNo(order)">
+                                    <i class="ri-file-copy-line"></i>
+                                </span>
                                 <span class="order-time">{{order.orderTime}}</span>
                             </div>
                             <span class="order-status" :class="getStatusClass(order.status)">{{getStatus(order.status)}}</span>
@@ -73,7 +78,7 @@
                                     <span class="dish-name">{{item.name}}</span>
                                     <span class="dish-qty">x{{item.number}}</span>
                                 </div>
-                                <span class="dish-price">￥{{Number(item.amount || 0).toFixed(2)}}</span>
+                                <span class="dish-price">¥{{Number(item.amount || 0).toFixed(2)}}</span>
                             </div>
                             <div v-if="(order.orderDetails || []).length > 3" class="dish-more">
                                 等共{{order.orderDetails.length}}件商品
@@ -82,7 +87,7 @@
                         <!-- 合计行 -->
                         <div class="order-total">
                             <span>共{{order.sumNum}}件  实付</span>
-                            <span class="price">￥{{ Number(order.amount || 0).toFixed(2) }}</span>
+                            <span class="price">¥{{ Number(order.amount || 0).toFixed(2) }}</span>
                         </div>
                         <!-- 操作按钮：对齐美团——主按钮2个 + 更多菜单 -->
                         <div class="order-actions" @click.stop>
@@ -345,6 +350,35 @@
                             vant.Toast.fail('分享失败')
                         }
                         document.body.removeChild(ta)
+                    }
+                },
+                // 修改点(2026-09-24)：订单号一键复制 —— 优先 navigator.clipboard，降级 execCommand（与上方分享复制同款兜底）
+                copyOrderNo(order){
+                    if(!order) return
+                    var no = order.number || order.id
+                    if(!no) return
+                    no = String(no)
+                    var done = () => vant.Toast.success('订单号已复制')
+                    var fail = () => vant.Toast.fail('复制失败')
+                    if(navigator.clipboard && navigator.clipboard.writeText){
+                        navigator.clipboard.writeText(no).then(done).catch(() => { this.copyFallback(no, done, fail) })
+                    } else {
+                        this.copyFallback(no, done, fail)
+                    }
+                },
+                copyFallback(text, done, fail){
+                    try {
+                        var ta = document.createElement('textarea')
+                        ta.value = text
+                        ta.style.position = 'fixed'
+                        ta.style.opacity = '0'
+                        document.body.appendChild(ta)
+                        ta.select()
+                        document.execCommand('copy')
+                        document.body.removeChild(ta)
+                        done()
+                    } catch(e) {
+                        fail()
                     }
                 },
                 // 修改点：点击订单卡进入订单详情页（完整明细、开票、评价等均在详情页）

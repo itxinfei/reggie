@@ -126,6 +126,32 @@
   font-family: var(--font-family-number);
 }
 
+/* 修改点(2026-09-24)：订单号一键复制按钮 —— 行内小图标，透明热区扩到 44rem 保触控 */
+#order .divBody .item .copy-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 2rem;
+  margin-left: 4rem;
+  color: var(--color-text-hint);
+  font-size: 13rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+#order .divBody .item .copy-btn:hover,
+#order .divBody .item .copy-btn:active {
+  color: var(--color-primary-dark);
+}
+#order .divBody .item .copy-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44rem;
+  height: 44rem;
+  transform: translate(-50%, -50%);
+}
+
 #order .divBody .item .order-time {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);

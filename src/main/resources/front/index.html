@@ -18,10 +18,10 @@
     <link rel="stylesheet" href="../backend/plugins/remixicon/remixicon.css"/>
     <script src="js/icon-fallback.js"></script>
     <!-- 引入样式  -->
-    <link rel="stylesheet" href="styles/index.css?v=20260922" />
+    <link rel="stylesheet" href="styles/index.css?v=20260924" />
     <link rel="stylesheet" href="styles/skeleton.css?v=20260922" />
     <!--本页面内容的样式-->
-    <link rel="stylesheet" href="styles/main.css?v=20260922" />
+    <link rel="stylesheet" href="styles/main.css?v=20260924" />
     <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
     <link rel="stylesheet" href="styles/tabbar.css?v=20260917" />
     <!-- 骨架屏样式 -->
@@ -79,9 +79,12 @@
         <!-- 修改点(2026-09-24)：顶部导航改为「定位 | 搜索通栏 | 右侧图标组」——搜索框居中占满主视觉，
              右侧消息/AI/头像三入口收拢为 icon 组（负外边距减小间距），对齐美团外卖头部布局 -->
         <div class="top-bar">
-          <div class="location" @click="toAddressPage">
+          <!-- 修改点(2026-09-24)：地址栏空态引导 —— 未选地址时显示「请选择收货地址」+ 下拉箭头，
+               弱金色高亮提示可点击（P3 优化：新用户未必意识到定位可点） -->
+          <div class="location" :class="{ 'location-empty': !addressInfo }" @click="toAddressPage">
             <i class="ri-map-pin-line"></i>
-            <span>{{ addressInfo ? (addressInfo.label || addressInfo.cityName + addressInfo.districtName) : '收货地址' }}</span>
+            <span>{{ addressInfo ? (addressInfo.label || addressInfo.cityName + addressInfo.districtName) : '请选择收货地址' }}</span>
+            <i v-if="!addressInfo" class="ri-arrow-down-s-line location-guide-arrow" aria-hidden="true"></i>
           </div>
           <!-- 修改点(2026-09-14)：语音入口从搜索框边缘移入「搜索浮层的输入框」内（见 .so-voice）。
                首页搜索框回归干净入口：放大镜 + 占位文案，避免麦克风挤在框边缘。 -->

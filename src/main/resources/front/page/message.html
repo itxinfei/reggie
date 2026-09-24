@@ -8,10 +8,10 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260924" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
     <!-- 修改点：提取内联样式到独立CSS文件 -->
-    <link rel="stylesheet" href="./../styles/message.css?v=20260922" />
+    <link rel="stylesheet" href="./../styles/message.css?v=20260924" />
     <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="./../js/icon-fallback.js?v=20260917"></script>
@@ -20,7 +20,7 @@
     <div id="messageApp" class="app">
         <div class="divHead">
             <div class="divTitle">
-                <i class="ri-arrow-left-s-line" @click="goBack"></i>消息中心
+                <i class="ri-arrow-left-s-line" role="button" tabindex="0" aria-label="返回" @click="goBack" @keydown.enter="goBack"></i>消息中心
                 <span v-if="unreadCount > 0" class="mark-all-btn" @click.stop="markAllRead">全部已读</span>
             </div>
         </div>
@@ -31,7 +31,7 @@
                  原 .skeleton-line-sm(10高) 统一收敛为标准 .skeleton-line(14高) -->
             <div v-if="loading && messages.length === 0" class="skeleton-container">
                 <div class="skeleton-card" v-for="i in 4" :key="'sm'+i">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10rem;">
+                    <div class="flex items-center justify-between mb-10">
                         <div class="skeleton-line skeleton-w50"></div>
                         <div class="skeleton-tag"></div>
                     </div>
@@ -100,7 +100,7 @@
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js?v=20260917"></script>
     <script src="./../api/recommend.js?v=20260917"></script>
-    <script src="./../js/common.js?v=20260917"></script>
+    <script src="./../js/common.js?v=20260924"></script>
     <script>
         // 修改点：用户消息中心页面 - 允许用户查看、阅读营销消息
         new Vue({

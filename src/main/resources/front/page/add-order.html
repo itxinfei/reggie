@@ -11,18 +11,18 @@
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260924" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <!--本页面内容的样式-->
         <!-- 修改点：加载 RemixIcon 真字体（emoji 兜底改由 js/icon-fallback.js 按需注入） -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js?v=20260917"></script>
-        <link rel="stylesheet" href="./../styles/add-order.css?v=20260922" />
+        <link rel="stylesheet" href="./../styles/add-order.css?v=20260924" />
         <link rel="stylesheet" href="./../styles/add-order-pay.css?v=20260917" />
     </head>
     <body>
         <!-- 修改点：移除ElementUI v-loading，改用CSS加载遮罩 -->
-        <div id="add_order" class="app" style="position:relative;">
+        <div id="add_order" class="app relative">
             <div v-if="loading" class="loading-overlay">
                 <!-- 修改点：全局 .loading-overlay 为 absolute 定位，需定位父级限定作用范围 -->
                 <div class="loading-spinner"></div>
@@ -52,12 +52,12 @@
                         <!-- 立即配送：选择时段 -->
                         <div class="divFinishTime" v-if="deliveryMode === 0" @click="showTimePicker = true">
                             预计{{ selectedTimeLabel }}
-                            <i class="ri-arrow-right-s-line" style="font-size:12rem;vertical-align:middle;"></i>
+                            <i class="ri-arrow-right-s-line finish-time-arrow"></i>
                         </div>
                         <!-- 预约配送：选择日期时间 -->
                         <div class="divFinishTime" v-if="deliveryMode === 1" @click="showSchedulePicker = true">
                             {{ scheduleLabel }}
-                            <i class="ri-arrow-right-s-line" style="font-size:12rem;vertical-align:middle;"></i>
+                            <i class="ri-arrow-right-s-line finish-time-arrow"></i>
                         </div>
                     </div>
                 </div>
@@ -130,7 +130,7 @@
                                 <div class="numPrice">
                                     <span class="num">x{{item.number}}</span>
                                     <div class="price">
-                                        <span class="spanMoney">￥</span>{{ (Number(item.amount) || 0).toFixed(2) }}</div>
+                                        <span class="spanMoney">¥</span>{{ (Number(item.amount) || 0).toFixed(2) }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -189,24 +189,24 @@
                     <div class="title">价格明细</div>
                     <div class="price-row">
                         <span>商品小计</span>
-                        <span>￥{{Number(goodsPrice || 0).toFixed(2)}}</span>
+                        <span>¥{{Number(goodsPrice || 0).toFixed(2)}}</span>
                     </div>
                     <div class="price-row">
                         <span>配送费</span>
-                        <span>￥{{Number(deliveryFee || 0).toFixed(2)}}</span>
+                        <span>¥{{Number(deliveryFee || 0).toFixed(2)}}</span>
                     </div>
                     <div class="price-row discount" v-if="frDiscount > 0">
                         <span>满减优惠</span>
-                        <span>-￥{{Number(frDiscount || 0).toFixed(2)}}</span>
+                        <span>-¥{{Number(frDiscount || 0).toFixed(2)}}</span>
                     </div>
                     <div class="price-row discount" v-if="selectedCoupon">
                         <span>优惠券</span>
-                        <span>-￥{{Number(selectedCoupon.discountAmount || 0).toFixed(2)}}</span>
+                        <span>-¥{{Number(selectedCoupon.discountAmount || 0).toFixed(2)}}</span>
                     </div>
                     <!-- 修改点(2026-09-17)：新增实付合计行 —— 最终金额不再只藏在底部栏小字 -->
                     <div class="price-row total">
                         <span>实付</span>
-                        <span>￥{{Number(finalPrice || 0).toFixed(2)}}</span>
+                        <span>¥{{Number(finalPrice || 0).toFixed(2)}}</span>
                     </div>
                 </div>
 
@@ -246,7 +246,7 @@
                 <div :class="{imgCartActive: cartData && cartData.length > 0, imgCart:!cartData || cartData.length<1}"></div>
                 <div :class="{divGoodsNum:true, moreGoods:cartData && cartData.length > 99}" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
                 <div class="divNum">
-                    <span class="num-symbol">￥</span>
+                    <span class="num-symbol">¥</span>
                     <span class="num-main">{{ finalPrice.toFixed(2) }}</span>
                     <span class="divDiscount" v-if="deliveryFee > 0">含配送费¥{{ Number(deliveryFee).toFixed(2) }}</span>
                     <span class="divDiscount" v-if="discountAmount > 0">已优惠¥{{ Number(discountAmount).toFixed(2) }}</span>

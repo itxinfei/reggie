@@ -8,7 +8,7 @@
        首屏先按默认根字号渲染再跳变（FOUC）；全站其余页均在 head 加载 base.js -->
   <script src="../js/base.js?v=20260917"></script>
   <link rel="stylesheet" href="../styles/vant.min.css">
-  <link rel="stylesheet" href="../styles/index.css?v=20260922">
+  <link rel="stylesheet" href="../styles/index.css?v=20260924">
   <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
   <link rel="stylesheet" href="../styles/member-center.css?v=20260922">
   <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css">
@@ -78,7 +78,7 @@
         </div>
         <div class="mc-card-stat-divider"></div>
         <div class="mc-card-stat">
-          <div class="val">￥{{ fmtMoney(memberInfo.member.balance) }}</div>
+          <div class="val">¥{{ fmtMoney(memberInfo.member.balance) }}</div>
           <div class="lbl">储值余额</div>
         </div>
         <div class="mc-card-stat-divider"></div>
@@ -168,12 +168,12 @@
         <div v-if="availCoupons.length===0" class="empty-state"><i class="ri-coupon-line"></i><p class="empty-text">暂无可领取的优惠券</p></div>
         <div class="mc-coupon" v-for="c in availCoupons" :key="'avail-'+c.id">
           <div class="mc-coupon-left">
-            <div class="c-amount">￥{{ Number(c.discountAmount||0).toFixed(2) }}</div>
+            <div class="c-amount">¥{{ Number(c.discountAmount||0).toFixed(2) }}</div>
             <div class="c-type">{{ c.type==='FULL_REDUCTION' ? '满减' : c.type==='DISCOUNT' ? '折扣' : '新客' }}</div>
           </div>
           <div class="mc-coupon-right">
             <div class="c-name">{{ c.name }}</div>
-            <div class="c-cond" v-if="c.conditionAmount>0">满￥{{ c.conditionAmount }}可用</div>
+            <div class="c-cond" v-if="c.conditionAmount>0">满¥{{ c.conditionAmount }}可用</div>
             <div class="mc-coupon-actions">
               <!-- 修改点(2026-09-17 UX)：领取 loading 按券 ID 隔离，点任意一张不再禁用全部领取按钮 -->
               <button class="mc-claim-btn" @click="doClaim(c.id)" :disabled="claimingId === c.id">{{ claimingId === c.id ? '领取中…' : '立即领取' }}</button>
@@ -209,10 +209,10 @@
       <div class="mc-recharge-list mc-tab-pane" v-if="activeTab==='recharge'">
         <div v-if="rechargeData.length===0" class="empty-state"><i class="ri-wallet-line"></i><p class="empty-text">暂无充值记录</p></div>
         <div class="mc-recharge-item" v-for="item in rechargeData" :key="item.id||item.createdTime">
-          <div class="mc-recharge-amount">+￥{{ Number(item.amount || 0).toFixed(2) }}</div>
+          <div class="mc-recharge-amount">+¥{{ Number(item.amount || 0).toFixed(2) }}</div>
           <div class="mc-recharge-info">
             <div class="r-time">{{ item.createdTime ? item.createdTime.replace('T', ' ').substring(0, 16) : '' }}</div>
-            <div class="r-gift" v-if="item.giftAmount > 0">赠送 ￥{{ Number(item.giftAmount || 0).toFixed(2) }}</div>
+            <div class="r-gift" v-if="item.giftAmount > 0">赠送 ¥{{ Number(item.giftAmount || 0).toFixed(2) }}</div>
           </div>
         </div>
       </div>
@@ -249,7 +249,7 @@
       <div class="rc-pending-card">
         <div class="rc-pending-icon"><i class="ri-time-line"></i></div>
         <div class="rc-pending-title">充值待确认</div>
-        <div class="rc-pending-amount">￥{{ Number(pending.amount||0).toFixed(2) }}</div>
+        <div class="rc-pending-amount">¥{{ Number(pending.amount||0).toFixed(2) }}</div>
         <div class="rc-pending-desc">请到店出示{{ pending.paymentMethod==='ALIPAY'?'支付宝':'微信' }}付款，门店确认收款后余额到账</div>
         <div class="rc-pending-no">单号：{{ pending.rechargeNo }}</div>
         <button class="rc-pending-close" @click="closePending">我知道了</button>
@@ -527,7 +527,7 @@
             var zhe = Math.round(Number(c.discountRate) * 100) / 10
             return zhe + '折'
           }
-          return '￥' + Number(c.discountAmount || 0).toFixed(2)
+          return '¥' + Number(c.discountAmount || 0).toFixed(2)
         },
         // 修改点(2026-09-18)：券类型码转中文（模板 type 为 FULL_REDUCTION/DISCOUNT/NEW_MEMBER）
         couponTypeText: function(c) {

@@ -8,7 +8,7 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260924" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
     <!-- 修改点：加载 RemixIcon 真字体（emoji 兜底改由 js/icon-fallback.js 按需注入） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
@@ -35,7 +35,7 @@
         <!-- 修改点(2026-09-17)：二级页补「回首页」入口（底部 Tab 仅覆盖一级页，深层路径易迷路） -->
         <div class="divHead">
             <div class="divTitle">
-                <i class="ri-arrow-left-s-line" @click="goBack"></i>我的评价
+                <i class="ri-arrow-left-s-line" role="button" tabindex="0" aria-label="返回" @click="goBack" @keydown.enter="goBack"></i>我的评价
             </div>
             <i class="ri-home-5-line head-home-btn" @click="goHome"
                aria-label="回到首页" title="回到首页"></i>

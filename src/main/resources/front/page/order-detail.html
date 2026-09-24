@@ -11,10 +11,10 @@
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css?v=20260922" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260924" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <!--订单域样式（含本详情页 .od-* 与复用的 .dish-*/.act-btn 等）-->
-        <link rel="stylesheet" href="./../styles/order.css?v=20260922" />
+        <link rel="stylesheet" href="./../styles/order.css?v=20260924" />
         <!-- 加载 remixicon 图标库 -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="./../js/icon-fallback.js?v=20260917"></script>
@@ -67,7 +67,7 @@
                                     <span v-if="d.dishFlavor" class="od-flavor">{{ d.dishFlavor }}</span>
                                 </div>
                                 <span class="dish-qty">x{{ d.number }}</span>
-                                <span class="dish-price">￥{{ Number(d.amount || 0).toFixed(2) }}</span>
+                                <span class="dish-price">¥{{ Number(d.amount || 0).toFixed(2) }}</span>
                             </div>
                         </div>
                     </div>
@@ -78,19 +78,19 @@
                         <div class="od-rows">
                             <div class="od-row">
                                 <span class="od-label">商品小计</span>
-                                <span class="od-value">￥{{ goodsAmount.toFixed(2) }}</span>
+                                <span class="od-value">¥{{ goodsAmount.toFixed(2) }}</span>
                             </div>
                             <div class="od-row" v-if="Number(order.deliveryFee || 0) > 0">
                                 <span class="od-label">配送费</span>
-                                <span class="od-value">￥{{ Number(order.deliveryFee || 0).toFixed(2) }}</span>
+                                <span class="od-value">¥{{ Number(order.deliveryFee || 0).toFixed(2) }}</span>
                             </div>
                             <div class="od-row" v-if="discount > 0">
                                 <span class="od-label">优惠</span>
-                                <span class="od-value od-discount">-￥{{ discount.toFixed(2) }}</span>
+                                <span class="od-value od-discount">-¥{{ discount.toFixed(2) }}</span>
                             </div>
                             <div class="od-row od-pay-row">
                                 <span class="od-label">实付款</span>
-                                <span class="od-value od-pay-value">￥{{ Number(order.amount || 0).toFixed(2) }}</span>
+                                <span class="od-value od-pay-value">¥{{ Number(order.amount || 0).toFixed(2) }}</span>
                             </div>
                         </div>
                         <div v-if="order.status === 4" class="od-invoice-link" @click="openInvoice">
@@ -146,7 +146,7 @@
                 <div v-for="r in refundRecords" :key="r.id" class="od-rr-item">
                     <div class="od-rr-head">
                         <span class="od-rr-status" :class="'st-' + r.status">{{ refundStatusText(r.status) }}</span>
-                        <span class="od-rr-amount">￥{{ Number(r.amount || 0).toFixed(2) }}</span>
+                        <span class="od-rr-amount">¥{{ Number(r.amount || 0).toFixed(2) }}</span>
                     </div>
                     <div class="od-rr-reason" v-if="r.reason">申请原因：{{ r.reason }}</div>
                     <div class="od-rr-reason" v-if="r.status === 'rejected' && r.rejectReason">

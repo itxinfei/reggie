@@ -102,6 +102,19 @@
    固定子元素（铃铛/AI/头像约 34+34+30rem）会挤占搜索框，导致搜索文字不可见。
    窄屏规则：隐藏铃铛/AI 入口、收紧地址文字、收缩语音按钮，优先保障搜索框。
    ================================================================ */
+/* 修改点(2026-09-24)：地址栏空态引导 —— 未选地址时弱提示样式（金色文字 + 下拉箭头），
+   已选地址时保持原样式不受影响 */
+.top-bar .location-empty span {
+  color: var(--color-primary-dark);
+}
+
+.top-bar .location-guide-arrow {
+  font-size: 14rem;
+  color: var(--color-primary-dark);
+  margin-left: 2rem;
+  flex-shrink: 0;
+}
+
 @media screen and (max-width: 375px) {
   /* 修改点：窄屏隐藏消息铃铛 + AI 入口（非核心功能），把空间让给搜索框 */
   .top-bar .msg-bell,

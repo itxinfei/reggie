@@ -104,6 +104,10 @@ body { background: var(--bg-page); font-family: var(--font-family-base); padding
 .empty-state { text-align: center; padding: 60rem 20rem; color: var(--color-text-hint); }
 .empty-state i { font-size: 48rem; margin-bottom: 12rem; display: block; }
 .empty-state p { font-size: var(--font-size-md); }
+/* 修改点(2026-09-24)：内联样式收敛 —— 菜品网格空态占满整行（原 grid-column 内联）、
+   头部店名前图标间距（原 margin-right 内联） */
+.dish-list .empty-state { grid-column: 1 / -1; }
+.divTitle .ri-store-2-line { margin-right: 6rem; }
 
 /* 底部安全区 */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
