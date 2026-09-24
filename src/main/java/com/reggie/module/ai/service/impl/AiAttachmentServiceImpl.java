@@ -61,15 +61,7 @@ public class AiAttachmentServiceImpl extends ServiceImpl<AiAttachmentMapper, AiA
      */
     @PostConstruct
     public void init() {
-        if (configPath != null && !configPath.isEmpty()) {
-            basePath = configPath;
-        } else {
-            String userDir = System.getProperty("user.dir");
-            if (userDir.contains("target") && userDir.endsWith("classes")) {
-                userDir = new File(userDir).getParentFile().getParent();
-            }
-            basePath = new File(userDir, "uploads").getAbsolutePath() + File.separator;
-        }
+        basePath = com.reggie.utils.ImageStoragePathResolver.resolveRoot(configPath);
         File dir = new File(basePath);
         if (!dir.exists() && !dir.mkdirs()) {
             log.warn("AI附件目录创建失败: {}", basePath);
@@ -123,7 +115,9 @@ public class AiAttachmentServiceImpl extends ServiceImpl<AiAttachmentMapper, AiA
         String sha256 = sha256Hex(bytes);
         String tenantDir = tenantId != null ? tenantId.toString() : "0";
         String fileName = UUID.randomUUID().toString().replace("-", "") + "." + ext;
-        String storagePath = "images/ai/" + tenantDir + "/" + actorType + "/" + fileName;
+        // CUSTOMER→user，其余（EMPLOYEE等）→admin；无 yyyyMM（tenantId 已分桶）
+        String source = "CUSTOMER".equalsIgnoreCase(actorType) ? "user" : "admin";
+        String storagePath = "private/" + source + "/ai/" + tenantDir + "/" + fileName;
 
         File dest = new File(basePath + storagePath);
         File parent = dest.getParentFile();

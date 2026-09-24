@@ -72,8 +72,18 @@ class AiAttachmentServiceImplTest {
         assertEquals("/api/ai/attachments/100", vo.getUrl());
         // 落盘路径隔离租户与身份
         AiAttachment saved = captureInserted();
-        assertTrue(saved.getStoragePath().startsWith("images/ai/7/CUSTOMER/"));
+        assertTrue(saved.getStoragePath().startsWith("private/user/ai/7/"));
         assertTrue(Files.exists(tempDir.resolve(saved.getStoragePath())));
+    }
+
+    @Test
+    void nonCustomerUploadMapsToAdminSource() {
+        byte[] bytes = bytesOf((byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, (byte) 0x00);
+        service.saveImage(mockFile(bytes, "a.jpg"), 3L, 1L, "EMPLOYEE", "x");
+
+        AiAttachment saved = captureInserted();
+        assertTrue(saved.getStoragePath().startsWith("private/admin/ai/3/"));
+        assertFalse(saved.getStoragePath().contains("CUSTOMER"));
     }
 
     @Test
