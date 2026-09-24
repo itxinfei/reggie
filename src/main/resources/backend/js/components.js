@@ -1,3 +1,5 @@
+// 三端共享 imgPath（单一真源，幂等注入）：必须先于本文件所有 Vue 组件定义
+document.write('<script src="/shared/js/img-path.js?v=20260924"><\/script>');
 /**
  * 后台管理系统通用组件库
  * 适用于 iframe 架构 + Vue 2 + Element UI 的无构建工具场景

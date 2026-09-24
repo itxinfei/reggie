@@ -1,9 +1,5 @@
-// 图片路径转换（外部URL直接返回，本地路径走代理）
-function imgPath(path){
-    if (!path) return '/front/images/noImg.png'
-    if (path.indexOf('http://') === 0 || path.indexOf('https://') === 0) return path
-    return '/common/download?name=' + path
-}
+// 三端共享 imgPath（单一真源，幂等注入）：必须先于下方 mixin 装配
+document.write('<script src="/shared/js/img-path.js?v=20260924"><\/script>');
 
 // 读取 :root 上的 CSS 自定义属性值。JS 配置无法直接消费 CSS 变量的场景
 // （如 Vant Dialog 的 confirmButtonColor）用它取令牌，保持单一事实来源
@@ -21,9 +17,51 @@ function goLogin(){
 // 未在实例上声明的标识符返回 true 且不再回退 window，导致模板裸调 window.imgPath/cssVar
 // 时拿到 undefined（imgPath is not a function，整段 render 中断）。
 // 通过全局 mixin 把这两个工具注入为所有实例的方法，模板即可直接调用；幂等防重复安装。
+// 已评价商品集合（供订单列表/详情判断「去评价」入口是否还应显示）。
+// key 规则与 my-evaluations.html 一致：orderId_dishId（菜品）、orderId_s_setmealId（套餐）。
+// 一次拉取后在本页缓存；评价提交后其他页面重新加载时自然取到最新集合。
+var reggieEvalKeysPromise = null;
+function loadEvalKeys(force) {
+    if (!force && reggieEvalKeysPromise) return reggieEvalKeysPromise;
+    reggieEvalKeysPromise = new Promise(function (resolve) {
+        if (typeof $axios !== 'function') { resolve(new Set()); return; }
+        $axios({ url: '/api/dish-evaluation/user/my', method: 'get',
+                 params: { page: 1, pageSize: 200 } })
+            .then(function (res) {
+                var set = new Set();
+                if (res && res.code === 1 && res.data && res.data.records) {
+                    res.data.records.forEach(function (r) {
+                        if (r.orderId && r.dishId) {
+                            set.add(r.orderId + '_' + r.dishId);
+                        } else if (r.orderId && r.setmealId) {
+                            set.add(r.orderId + '_s_' + r.setmealId);
+                        }
+                    });
+                }
+                resolve(set);
+            })
+            .catch(function () { resolve(new Set()); });
+    });
+    return reggieEvalKeysPromise;
+}
+
 function installReggieVueHelpers(){
     if (!window.Vue || window.Vue.__reggieHelpersInstalled) return;
-    window.Vue.mixin({ methods: { imgPath: imgPath, cssVar: cssVar } });
+    window.Vue.mixin({ methods: {
+        imgPath: function (p) { return imgPath(p); },
+        cssVar: cssVar,
+        // 订单是否还有未评价商品；依赖实例数据 evalKeys（页面 created 用 loadEvalKeys 装配）
+        canEvaluateOrder: function (order) {
+            if (!order || !order.orderDetails || !this.evalKeys) return false;
+            var keys = this.evalKeys;
+            return order.orderDetails.some(function (d) {
+                if (!d || (!d.dishId && !d.setmealId)) return false;
+                var key = d.dishId ? (order.id + '_' + d.dishId)
+                                   : (order.id + '_s_' + d.setmealId);
+                return !keys.has(key);
+            });
+        }
+    } });
     window.Vue.__reggieHelpersInstalled = true;
 }
 // common.js 在 vue.js 之后加载的页面：到此 Vue 已就绪，立即安装
