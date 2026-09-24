@@ -165,15 +165,17 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DishEvaluation addEvaluation(DishEvaluation evaluation) {
-        log.info("新增菜品评价：userId={}, dishId={}, starRating={}",
-                evaluation.getUserId(), evaluation.getDishId(), evaluation.getStarRating());
+        log.info("新增商品评价：userId={}, dishId={}, setmealId={}, starRating={}",
+                evaluation.getUserId(), evaluation.getDishId(), evaluation.getSetmealId(),
+                evaluation.getStarRating());
 
         Long userId = evaluation.getUserId();
         Long orderId = evaluation.getOrderId();
         Long dishId = evaluation.getDishId();
+        Long setmealId = evaluation.getSetmealId();
 
         // 校验请求合法性（等价抽取，降低方法长度）
-        validateEvaluationRequest(evaluation, userId, orderId, dishId);
+        validateEvaluationRequest(evaluation, userId, orderId, dishId, setmealId);
 
         // 设置默认审核状态为待审核
         if (evaluation.getStatus() == null) {
@@ -218,8 +220,10 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
      * @param userId 用户ID
      * @param orderId 订单ID
      * @param dishId 菜品ID
+     * @param setmealId 套餐ID
      */
-    private void validateEvaluationRequest(DishEvaluation evaluation, Long userId, Long orderId, Long dishId) {
+    private void validateEvaluationRequest(DishEvaluation evaluation, Long userId, Long orderId,
+                                           Long dishId, Long setmealId) {
         // 校验用户ID
         if (userId == null) {
             throw new CustomException("用户信息缺失");
@@ -228,9 +232,9 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         if (orderId == null) {
             throw new CustomException("订单ID不能为空");
         }
-        // 校验菜品ID
-        if (dishId == null) {
-            throw new CustomException("菜品ID不能为空");
+        // 菜品/套餐至少指定一个（套餐下单时明细只有 setmealId）
+        if (dishId == null && setmealId == null) {
+            throw new CustomException("评价商品不能为空");
         }
 
         // 查询订单信息，校验订单存在性和归属
@@ -247,22 +251,30 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
             throw new CustomException("订单未完成，无法评价");
         }
 
-        // 校验菜品是否属于该订单
+        // 校验商品是否属于该订单（菜品按 dishId，套餐按 setmealId）
         LambdaQueryWrapper<OrderDetail> detailWrapper = new LambdaQueryWrapper<>();
         detailWrapper.eq(OrderDetail::getOrderId, orderId)
-                .eq(OrderDetail::getDishId, dishId)
                 .eq(OrderDetail::getIsDeleted, 0);
+        if (dishId != null) {
+            detailWrapper.eq(OrderDetail::getDishId, dishId);
+        } else {
+            detailWrapper.eq(OrderDetail::getSetmealId, setmealId);
+        }
         OrderDetail orderDetail = orderDetailMapper.selectOne(detailWrapper);
         if (orderDetail == null) {
-            throw new CustomException("该菜品不属于此订单");
+            throw new CustomException("该商品不属于此订单");
         }
 
-        // 校验是否已评价过该菜品（防止重复评价）
+        // 校验是否已评价过该商品（防止重复评价）
         LambdaQueryWrapper<DishEvaluation> evalWrapper = new LambdaQueryWrapper<>();
-        evalWrapper.eq(DishEvaluation::getOrderId, orderId)
-                .eq(DishEvaluation::getDishId, dishId);
+        evalWrapper.eq(DishEvaluation::getOrderId, orderId);
+        if (dishId != null) {
+            evalWrapper.eq(DishEvaluation::getDishId, dishId);
+        } else {
+            evalWrapper.eq(DishEvaluation::getSetmealId, setmealId);
+        }
         if (this.count(evalWrapper) > 0) {
-            throw new CustomException("该菜品已评价过，不能重复评价");
+            throw new CustomException("该商品已评价过，不能重复评价");
         }
 
         // 校验评分范围

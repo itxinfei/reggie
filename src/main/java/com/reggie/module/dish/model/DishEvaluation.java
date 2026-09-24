@@ -44,8 +44,11 @@ public class DishEvaluation implements Serializable {
     @Schema(description = "评价用户名", example = "张三")
     private String userName;
 
-    @Schema(description = "评价菜品ID", example = "1")
+    @Schema(description = "评价菜品ID（菜品下单时必填）", example = "1")
     private Long dishId;
+
+    @Schema(description = "评价套餐ID（套餐下单时必填，与 dishId 互斥）", example = "1")
+    private Long setmealId;
 
     @Schema(description = "菜品名称", example = "鱼香肉丝")
     private String dishName;
