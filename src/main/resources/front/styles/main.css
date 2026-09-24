@@ -79,8 +79,9 @@
   /* 修改点：min-width 保证搜索框在窄屏不被固定子元素挤压到不可用（固定元素合计约 200rem+），
      同时移除低对比半透明背景，改用高不透明度白卡 + 深色文字，提升金色渐变上的可读性 */
   min-width: 88rem;
-  /* 修改点(2026-09-14)：作为"搜索入口"更醒目好点——高度 32→36rem、胶囊圆角、左右留白 14rem */
-  height: 36rem;
+  /* 修改点(2026-09-24)：搜索框作为头部主视觉，加高 36→40rem、占位文字加大，
+     对齐美团「搜索通栏居中」的入口权重 */
+  height: 40rem;
   background: var(--surface-white-85);
   border-radius: 999rem;
   display: flex;
@@ -124,10 +125,11 @@
 }
 
 .top-bar .search-box i {
-  /* 修改点(2026-09-17)：搜索图标同步降权重，与占位文字形成「入口感」 */
+  /* 修改点(2026-09-17)：搜索图标同步降权重，与占位文字形成「入口感」；
+     2026-09-24 搜索框加高后图标同步放大，维持比例 */
   color: var(--gold-text);
-  font-size: 15rem;
-  margin-right: 5rem;
+  font-size: 16rem;
+  margin-right: 6rem;
 }
 
 /* 语音搜索按钮 —— 修改点(2026-09-14)：从首页搜索框边缘移入搜索浮层的输入框内（.so-voice）。
@@ -157,12 +159,22 @@
   flex-shrink: 0;
 }
 
+/* 修改点(2026-09-24)：右侧三入口（消息/AI/头像）收拢为图标组——
+   负外边距抵消各圆钮间 gap，把边距从 10rem 压到视觉 4rem，让出宽度给搜索通栏 */
+.top-bar .top-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 4rem;
+  margin-left: -4rem;
+}
+
 /* 顶部消息铃铛 + AI 入口（统一样式） */
 .top-bar .msg-bell,
 .top-bar .ai-entry {
   position: relative;
-  width: 34rem;
-  height: 34rem;
+  width: 32rem;
+  height: 32rem;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -605,7 +617,8 @@
 }
 
 /* 菜品条目 */
-/* 修改点(2026-09-21 学饿了么紧凑)：padding 14→10，缩略图 90→80，分割线起点随之后移 */
+/* 修改点(2026-09-21 学饿了么紧凑)：padding 14→10，缩略图 90→80，分割线起点随之后移；
+   修改点(2026-09-24 对齐美团)：缩略图 80→88rem 提升图片决策权重，分隔线偏移同步 */
 .dish-item {
   display: flex;
   align-items: flex-start;
@@ -617,7 +630,7 @@
   content: '';
   position: absolute;
   bottom: 0;
-  left: 102rem;
+  left: 110rem;
   right: 10rem;
   height: 1px;
   background: var(--bg-hover);
@@ -628,8 +641,8 @@
 }
 
 .dish-item .di-image {
-  width: 80rem;
-  height: 80rem;
+  width: 88rem;
+  height: 88rem;
   border-radius: var(--radius-md);
   flex-shrink: 0;
   overflow: hidden;
@@ -672,23 +685,27 @@
 }
 
 .dish-item .di-name {
-  font-size: 15rem;
+  /* 修改点(2026-09-24 对齐美团)：菜名 15→16rem 提升首行可读性（美团菜品行标题同为 16 档） */
+  font-size: 16rem;
   font-weight: 600;
   color: var(--color-text-primary);
-  line-height: 21rem;
+  line-height: 22rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-bottom: 4rem;
+  margin-bottom: 3rem;
 }
 
 .dish-item .di-desc {
   font-size: 12rem;
   color: var(--color-text-hint);
-  line-height: 15rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 16rem;
+  /* 修改点(2026-09-24)：描述单行截断 → 两行 clamp，原料/口味信息不再一刀切掉，
+     行高 15→16rem 保证两行时呼吸感；仅一行时高度不变 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   margin-bottom: 4rem;
 }
 

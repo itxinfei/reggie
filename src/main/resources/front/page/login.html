@@ -14,7 +14,7 @@
         <script src="../js/icon-fallback.js?v=20260917"></script>
         <link rel="stylesheet" href="../styles/index.css?v=20260922" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-        <link rel="stylesheet" href="./../styles/login.css?v=20260921" />
+        <link rel="stylesheet" href="./../styles/login.css?v=20260924" />
     </head>
     <body class="login-page">
         <div id="login">
@@ -22,10 +22,14 @@
             <div v-if="loading" class="loading-overlay">
                 <div class="loading-spinner"></div>
             </div>
-            <!-- 修改点(2026-09-15)：简化登录页 — 移除 logo 热气动画与标语，降低视觉复杂度（主色保持品牌金） -->
+            <!-- 修改点(2026-09-24)：完全参考美团 H5 登录页布局重构 —— 白底极简、顶部小 logo、
+                 大标题左对齐、无边框大号输入行（底部细分割线）、金色胶囊登录按钮。
+                 颜色不变（品牌金体系），仅调整布局与样式结构；全部 Vue 逻辑与协议弹窗保留 -->
             <div class="brandArea">
                 <div class="brandIcon">
-                    <svg viewBox="0 0 72 72" width="56" height="56">
+                    <!-- 修改点(2026-09-24 四轮)：删除硬编码 width/height（尺寸统一由 CSS 控制），
+                         补充 role="img" + aria-label 供屏幕阅读器识别 -->
+                    <svg viewBox="0 0 72 72" role="img" aria-label="瑞吉外卖 logo">
                         <!-- 碗体 -->
                         <ellipse class="logo-bowl" cx="36" cy="38" rx="28" ry="22"/>
                         <!-- 碗口 -->
@@ -41,29 +45,25 @@
                 <div class="brandName">瑞吉外卖</div>
             </div>
 
-            <!-- 修改点：新增登录标题，明确告知用户当前页用途 -->
+            <!-- 美团式大标题：左对齐、大字号、无卡片包裹 -->
             <div class="loginHeading">手机号登录</div>
+            <div class="loginSubHeading">未注册的手机号验证后将自动创建账号</div>
 
-            <!-- 表单卡片 -->
+            <!-- 表单区：去卡片化，输入行无边框、底部细分割线（美团式） -->
             <div class="divContainer">
                 <div class="inputItem">
                     <!-- 修改点：新增校验状态class：valid/error，实时视觉反馈 -->
                     <div class="input-wrapper" :class="{ 'is-valid': phoneValid, 'is-error': phoneError }">
-                        <i class="inputIcon ri-user-3-line input-prefix"></i>
                         <input type="tel" class="code-input" placeholder="请输入手机号码" v-model="form.phone" maxlength="11" ref="phoneInput" @input="onPhoneInput">
                         <i v-if="phoneValid" class="validIcon ri-check-line"></i>
                     </div>
                     <!-- 修改点：行内校验提示，不占布局空间 -->
                     <div class="inputHint" v-if="phoneError">请输入正确的11位手机号码</div>
                 </div>
-                <div class="divSplit"></div>
                 <div class="inputItem codeItem">
-                    <!-- 修改点：el-input 替换为原生input；获取验证码按钮移入同一框内 -->
+                    <!-- 修改点：el-input 替换为原生input；获取验证码按钮移入同一行内右侧 -->
                     <div class="input-wrapper">
-                        <i class="inputIcon ri-lock-line input-prefix"></i>
-                        <!-- 修改点：inputmode=numeric 移动端弹数字键盘（仍用 text 避免 number 类型的 e/上下箭头问题），
-                             autocomplete=one-time-code 支持短信验证码自动填充，@input 实时过滤非数字字符 -->
-                        <input type="text" class="code-input" placeholder="输入验证码" v-model="form.code"
+                        <input type="text" class="code-input" placeholder="请输入验证码" v-model="form.code"
                                maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code"
                                @input="form.code = form.code.replace(/\D/g, '')">
                         <span class="codeBtn"
@@ -89,17 +89,20 @@
             </button>
 
             <!-- 修改点：整行可点击切换勾选，不限于小圆点 -->
+            <!-- 修改点(2026-09-24 四轮)：可访问性 —— 勾选框补 role="checkbox" + aria-checked，
+                 协议链接补 role="button"，屏幕阅读器可识别状态与可点性 -->
             <div class="agreementRow" @click="toggleAgreement">
                 <label class="agreementCheckbox" @click.stop="toggleAgreement">
-                    <span class="checkIcon" :class="{checked: agreed}">
+                    <span class="checkIcon" :class="{checked: agreed}"
+                          role="checkbox" :aria-checked="agreed ? 'true' : 'false'" aria-label="同意用户协议与隐私政策">
                         <span v-if="agreed" class="check-mark">✓</span>
                     </span>
                 </label>
                 <span class="agreementText">
                     同意
-                    <span class="agreementLink" @click.stop="showAgreement('user')">《用户协议》</span>
+                    <span class="agreementLink" role="button" @click.stop="showAgreement('user')">《用户协议》</span>
                     和
-                    <span class="agreementLink" @click.stop="showAgreement('privacy')">《隐私政策》</span>
+                    <span class="agreementLink" role="button" @click.stop="showAgreement('privacy')">《隐私政策》</span>
                 </span>
             </div>
 
