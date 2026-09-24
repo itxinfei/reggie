@@ -107,6 +107,18 @@ public interface RefundRecordService extends IService<RefundRecord> {
     java.util.Map<String, Object> getRefundAnalysis(Long tenantId, String startDate, String endDate);
 
     /**
+     * 汇总指定时间区间内成功退款的金额与笔数（按退款记录创建时间，状态 SUCCESS）。
+     * <p>供日结使用：全额/部分退款均按记录实际金额统计，跨日订单的退款按退款发起日落在此区间。</p>
+     *
+     * @param tenantId 租户ID（为空不过滤租户）
+     * @param start    起始时间（含，为空不限）
+     * @param end      截止时间（含，为空不限）
+     * @return Map：amount=成功退款合计(BigDecimal)，count=成功退款笔数(int)
+     */
+    java.util.Map<String, Object> sumRefundBetween(Long tenantId,
+            java.time.LocalDateTime start, java.time.LocalDateTime end);
+
+    /**
      * 用户端发起售后申请（整单退款）。
      *
      * <p>校验：订单存在、归属当前用户、状态为已完成；同订单已有 PENDING 申请则拒绝重复申请。

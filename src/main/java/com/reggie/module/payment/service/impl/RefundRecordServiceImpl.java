@@ -233,6 +233,36 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
     }
 
     /**
+     * 汇总区间内成功退款的金额与笔数（按创建时间）。
+     */
+    @Override
+    public Map<String, Object> sumRefundBetween(Long tenantId, LocalDateTime start, LocalDateTime end) {
+        LambdaQueryWrapper<RefundRecord> qw = new LambdaQueryWrapper<RefundRecord>()
+                .eq(RefundRecord::getStatus, RefundStatus.SUCCESS.getCode());
+        if (tenantId != null) {
+            qw.eq(RefundRecord::getTenantId, tenantId);
+        }
+        if (start != null) {
+            qw.ge(RefundRecord::getCreatedTime, start);
+        }
+        if (end != null) {
+            qw.le(RefundRecord::getCreatedTime, end);
+        }
+        BigDecimal amount = BigDecimal.ZERO;
+        int count = 0;
+        for (RefundRecord r : this.list(qw)) {
+            if (r.getAmount() != null) {
+                amount = amount.add(r.getAmount());
+            }
+            count++;
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("amount", amount);
+        result.put("count", count);
+        return result;
+    }
+
+    /**
      * 获取 refund analysis。
      * @param tenantId 参数 tenantId
      * @return 返回结果

@@ -20,6 +20,7 @@ import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.cost.service.CostService;
 import com.reggie.module.cost.model.DishCost;
 import com.reggie.module.payment.service.PaymentOrderService;
+import com.reggie.module.payment.service.RefundRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -80,6 +81,9 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
 
     @Autowired
     private PaymentOrderService paymentOrderService;
+
+    @Autowired
+    private RefundRecordService refundRecordService;
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
@@ -954,8 +958,18 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
             // 4. 统计营业额与支付方式构成（等价抽取）
             applyDailyStats(settlement, orders);
 
+            // 4.1 当日实际成功退款：直接从退款记录按创建时间聚合实际金额，
+            // 全额/部分退款均准确，跨日订单的退款也归集在退款当日（旧逻辑按订单状态取全额，
+            // 会双重扣减当日全退单、漏扣部分退款、漏算跨日退款）
+            Map<String, Object> refundStat = refundRecordService.sumRefundBetween(
+                    tenantId, settlementDate.atStartOfDay(), settlementDate.atTime(LocalTime.MAX));
+            BigDecimal refundAmount = (BigDecimal) refundStat.get("amount");
+            int refundCount = (Integer) refundStat.get("count");
+            settlement.setRefundAmount(refundAmount);
+            settlement.setRefundCount(refundCount);
+
             // 5. 计算净收入、成本、毛利润
-            BigDecimal netIncome = settlement.getTotalRevenue().subtract(settlement.getRefundAmount());
+            BigDecimal netIncome = settlement.getTotalRevenue().subtract(refundAmount);
 
             // 从 DishCost 表聚合当日已完成订单的材料/人工/其他成本
             // DishCost 按菜品维度记录单位成本（materialCost/laborCost/otherCost），
@@ -1014,33 +1028,37 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         BigDecimal bankcardIncome = BigDecimal.ZERO;
         BigDecimal otherIncome = BigDecimal.ZERO;
         int orderCount = 0;
-        BigDecimal refundAmount = BigDecimal.ZERO;
-        int refundCount = 0;
 
+        // 计入当日毛收入的订单：COMPLETED（有效完成）与 REFUNDED（当日收款后又全额退，
+        // 钱当日确实走过渠道，须计入收入并与当日退款对冲，否则会被"既不计收入又减退款"双重扣减）。
         for (Orders order : orders) {
-            if (order.getStatus() == Orders.STATUS_COMPLETED) {
+            Integer st = order.getStatus();
+            boolean completed = st != null && st == Orders.STATUS_COMPLETED;
+            boolean refunded = st != null && st == Orders.STATUS_REFUNDED;
+            if (!completed && !refunded) {
+                continue;
+            }
+            if (completed) {
                 orderCount++;
-                BigDecimal amount = order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO;
-                totalRevenue = totalRevenue.add(amount);
+            }
 
-                // 按支付方式统计
-                Integer payMethod = order.getPayMethod();
-                if (payMethod == null) {
-                    otherIncome = otherIncome.add(amount);
-                } else if (payMethod == 1) {
-                    cashIncome = cashIncome.add(amount);
-                } else if (payMethod == 2) {
-                    wechatIncome = wechatIncome.add(amount);
-                } else if (payMethod == 3) {
-                    alipayIncome = alipayIncome.add(amount);
-                } else if (payMethod == 4) {
-                    bankcardIncome = bankcardIncome.add(amount);
-                } else {
-                    otherIncome = otherIncome.add(amount);
-                }
-            } else if (order.getStatus() == Orders.STATUS_REFUNDED) {
-                refundCount++;
-                refundAmount = refundAmount.add(order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO);
+            BigDecimal amount = order.getAmount() != null ? order.getAmount() : BigDecimal.ZERO;
+            totalRevenue = totalRevenue.add(amount);
+
+            // 按支付方式统计当日渠道流水
+            Integer payMethod = order.getPayMethod();
+            if (payMethod == null) {
+                otherIncome = otherIncome.add(amount);
+            } else if (payMethod == 1) {
+                cashIncome = cashIncome.add(amount);
+            } else if (payMethod == 2) {
+                wechatIncome = wechatIncome.add(amount);
+            } else if (payMethod == 3) {
+                alipayIncome = alipayIncome.add(amount);
+            } else if (payMethod == 4) {
+                bankcardIncome = bankcardIncome.add(amount);
+            } else {
+                otherIncome = otherIncome.add(amount);
             }
         }
 
@@ -1051,8 +1069,6 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         settlement.setBankcardIncome(bankcardIncome);
         settlement.setOtherIncome(otherIncome);
         settlement.setOrderCount(orderCount);
-        settlement.setRefundAmount(refundAmount);
-        settlement.setRefundCount(refundCount);
     }
 
     /**

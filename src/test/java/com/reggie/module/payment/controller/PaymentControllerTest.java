@@ -12,6 +12,7 @@ import com.reggie.module.payment.mapper.PaymentOrderMapper;
 import com.reggie.module.payment.mapper.RefundRecordMapper;
 import com.reggie.module.payment.model.PaymentOrder;
 import com.reggie.module.payment.model.RefundRecord;
+import com.reggie.module.payment.service.RefundRecordService;
 import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.test.TestDatabaseCleaner;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,6 +87,9 @@ public class PaymentControllerTest {
 
     @Autowired
     private RefundRecordMapper refundRecordMapper;
+
+    @Autowired
+    private RefundRecordService refundRecordService;
 
     @Autowired
     private TestDatabaseCleaner cleaner;
@@ -586,6 +590,34 @@ public class PaymentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.successCount").value(1))
                 .andExpect(jsonPath("$.data.totalAmount").value(100.00));
+    }
+
+    @Test
+    @DisplayName("22. sumRefundBetween - 按创建时间区间聚合成功退款金额与笔数")
+    void testSumRefundBetween() {
+        insertTestRefund(911L, "2026-09-01T10:00:00", "100.00", "原因一");
+        insertTestRefund(912L, "2026-09-10T10:00:00", "200.00", "原因二");
+
+        // 全区间：2 笔合计 300
+        Map<String, Object> all = refundRecordService.sumRefundBetween(1L,
+                LocalDateTime.parse("2026-09-01T00:00:00"),
+                LocalDateTime.parse("2026-09-30T23:59:59"));
+        assertThat(((BigDecimal) all.get("amount")).compareTo(new BigDecimal("300.00"))).isEqualTo(0);
+        assertThat(all.get("count")).isEqualTo(2);
+
+        // 子区间 9-05~9-15：仅命中 200
+        Map<String, Object> part = refundRecordService.sumRefundBetween(1L,
+                LocalDateTime.parse("2026-09-05T00:00:00"),
+                LocalDateTime.parse("2026-09-15T23:59:59"));
+        assertThat(((BigDecimal) part.get("amount")).compareTo(new BigDecimal("200.00"))).isEqualTo(0);
+        assertThat(part.get("count")).isEqualTo(1);
+
+        // 不匹配区间：0 笔
+        Map<String, Object> none = refundRecordService.sumRefundBetween(1L,
+                LocalDateTime.parse("2026-10-01T00:00:00"),
+                LocalDateTime.parse("2026-10-31T23:59:59"));
+        assertThat(((BigDecimal) none.get("amount")).compareTo(BigDecimal.ZERO)).isEqualTo(0);
+        assertThat(none.get("count")).isEqualTo(0);
     }
 
     // ==================== Helper Methods ====================

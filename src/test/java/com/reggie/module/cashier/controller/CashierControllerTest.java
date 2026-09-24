@@ -47,7 +47,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Sql(scripts = "classpath:schema-cashier.sql", executionPhase = ExecutionPhase.BEFORE_TEST_METHOD)
+// 组合 payment-controller schema：日结需查 orders / order_detail / refund_record，
+// 显式声明依赖，避免依赖其他测试类 IF NOT EXISTS 残留的执行顺序耦合
+@Sql(scripts = {"classpath:schema-cashier.sql", "classpath:schema-payment-controller.sql"},
+        executionPhase = ExecutionPhase.BEFORE_TEST_METHOD)
 @Transactional
 public class CashierControllerTest {
 
