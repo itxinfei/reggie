@@ -164,6 +164,9 @@
     .mc-recharge-item:last-child { border-bottom: none; }
     .mc-recharge-amount { font-size: 16rem; font-weight: 600; color: var(--color-primary-dark);
       margin-right: 12rem; min-width: 80rem; }
+    /* 待确认 / 已取消：金额置灰、不带 +，避免被误认为已到账 */
+    .mc-recharge-amount.is-muted { color: var(--color-text-secondary); font-weight: 500; }
+    .mc-recharge-status { margin-top: 2rem; }
     .mc-recharge-info { flex: 1; }
     .mc-recharge-info .r-time { font-size: 13rem; color: var(--color-text-primary); }
     .mc-recharge-info .r-gift { font-size: 12rem; color: var(--color-success); margin-top: 2rem; }

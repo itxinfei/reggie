@@ -488,7 +488,16 @@
                     },
                     //获取默认地址
                     async defaultAddress(){
-                        const res = await  getDefaultAddressApi()
+                        // 本单在地址页临时选择的地址优先（只影响本单，未改动用户默认地址）
+                        const selectedId = sessionStorage.getItem('selectedAddressId')
+                        let res = null
+                        if(selectedId){
+                            const picked = await addressFindOneApi(selectedId)
+                            if(picked && picked.code === 1 && picked.data){ res = picked }
+                        }
+                        if(!res){
+                            res = await getDefaultAddressApi()
+                        }
                         if(res.code === 1){
                            // 修改点：防御 res.data 为 null，避免 addressFull computed 访问空对象属性抛错
                            this.address = res.data || {}
@@ -781,6 +790,8 @@
                                     return
                                 }
                                 orderId = res.data && res.data.id
+                                // 订单已生成，本单临时地址选择使命完成，清除以免影响后续下单
+                                sessionStorage.removeItem('selectedAddressId')
                             } catch (err) {
                                 console.error('提交订单失败:', err)
                                 vant.Toast.fail('提交订单失败，请稍后重试');

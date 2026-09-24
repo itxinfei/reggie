@@ -390,6 +390,8 @@
           exporting: false,
           queryDate: [day7Str, todayStr], // 默认范围：近7天（已格式化为字符串）
           dailyData: {},
+          // 多日区间聚合（由趋势按天 orders/revenues 汇总）；单日时为 null
+          rangeSummary: null,
           chart: null,
           categoryChart: null,
           resizeHandler: null,
@@ -467,6 +469,17 @@
         // statsCards 统一卡片配置（供 stat-cards 组件使用）
         statsCards: function() {
           const self = this;
+          // 多日区间：前 3 张卡为整段聚合；第 4 张卡趋势无状态拆分，
+          // 诚实展示统计天数，不再只显示区间起始日的完成/取消数
+          if (self.rangeSummary) {
+            const rs = self.rangeSummary;
+            return [
+              { key: '订单', icon: 'ri-bar-chart-2-line', label: '订单总数（区间）', value: rs.totalOrders, color: 'primary' },
+              { key: '营业额', icon: 'ri-line-chart-line', label: '营业额（元·区间）', value: '¥' + self.formatMoney(rs.totalAmount), color: 'success' },
+              { key: '客单价', icon: 'ri-money-cny-circle-line', label: '客单价（元·区间）', value: '¥' + self.formatMoney(rs.avgAmount), color: 'warning' },
+              { key: '天数', icon: 'ri-calendar-line', label: '统计天数', value: rs.days + ' 天', color: 'danger' }
+            ]
+          }
           return [
             { key: '订单', icon: 'ri-bar-chart-2-line', label: '订单总数', value: self.dailyData.totalOrders || 0, color: 'primary' },
             { key: '营业额', icon: 'ri-line-chart-line', label: '营业额（元）', value: '¥' + self.formatMoney(self.dailyData.totalAmount), color: 'success' },
@@ -572,8 +585,26 @@
                 }
               })
               this.renderChart(trendList)
+              // 多日区间：按天 orders/revenues 聚合顶部卡片，避免卡片只反映区间起始日
+              if (startDate !== endDate) {
+                var sumOrders = 0
+                var sumRevenue = 0
+                trendList.forEach(function(t) {
+                  sumOrders += t.orderCount || 0
+                  sumRevenue += Number(t.revenue) || 0
+                })
+                this.rangeSummary = {
+                  totalOrders: sumOrders,
+                  totalAmount: sumRevenue,
+                  avgAmount: sumOrders > 0 ? sumRevenue / sumOrders : 0,
+                  days: trendList.length
+                }
+              } else {
+                this.rangeSummary = null
+              }
             } else {
               this.renderChart([])
+              this.rangeSummary = null
             }
 
             // 分类销售数据

@@ -113,7 +113,7 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="秒杀价(元)" prop="flashPrice">
-              <el-input-number v-model="formData.flashPrice" :precision="2" :min="0" style="width: 100%;"></el-input-number>
+              <el-input-number v-model="formData.flashPrice" :precision="2" :min="0.01" style="width: 100%;"></el-input-number>
             </el-form-item>
           </el-col>
         </el-row>
@@ -473,7 +473,16 @@
             ReggieUI.error('总数量不能小于已售数量（已售 ' + sold + ' 件）')
             return
           }
-          if (self.formData.flashPrice && self.formData.originalPrice && self.formData.flashPrice >= self.formData.originalPrice) {
+          // 非空判断而非真值判断：秒杀价为 0 时旧条件被短路，0 元秒杀可绕过
+          if (self.formData.flashPrice == null || self.formData.flashPrice === '') {
+            ReggieUI.error('请输入秒杀价')
+            return
+          }
+          if (Number(self.formData.flashPrice) <= 0) {
+            ReggieUI.error('秒杀价必须大于0')
+            return
+          }
+          if (self.formData.originalPrice != null && self.formData.flashPrice >= self.formData.originalPrice) {
             ReggieUI.error('秒杀价必须低于原价')
             return
           }

@@ -97,8 +97,8 @@
                 size="small"
                 :ref="'cell-price-' + row.id"
                 placeholder="价格"
-                @keyup.enter.native="commitInline('price', row)"
-                @blur="commitInline('price', row)"
+                @keyup.enter.native="commitInline('price', row, 'enter')"
+                @blur="commitInline('price', row, 'blur')"
               ></el-input>
               <span v-else class="inline-value" title="点击编辑价格" tabindex="0" @click="startInline('price', row)" @keydown.enter.prevent="startInline('price', row)">¥{{ formatMoney(row.price) }}</span>
             </template>
@@ -497,7 +497,7 @@
         // ========== C.5 行内编辑 ==========
         isEditing: function(key, id) { return !!this.editingCells[key + '-' + id] },
         startInline: function(key, row) {
-          if (key === 'price') { row._priceEdit = row.price != null ? String(row.price) : '' }
+          if (key === 'price') { row._priceEdit = row.price != null ? String(row.price) : ''; row._priceConfirming = false }
           if (key === 'stock') { row._stockEdit = row.stockQty != null ? String(row.stockQty) : '' }
           this.editingCells = {}
           this.$set(this.editingCells, key + '-' + row.id, true)
@@ -526,19 +526,37 @@
             status: String(row.status) === '1' ? 1 : 0
           }
         },
-        async commitInline(key, row) {
+        async commitInline(key, row, source) {
           if (!this.editingCells[key + '-' + row.id]) { return }
           var self = this
           if (key === 'price') {
             var price = Number(row._priceEdit)
             if (isNaN(price) || price < 0 || price >= 10000) { ReggieUI.warning('价格格式不正确（0 ~ 9999.99）'); return }
-            var params = this.buildDishParams(row)
-            params.price = price
-            try {
-              var res = await editDish(params)
-              if (res.code === 1) { ReggieUI.success('价格已更新'); self.cancelEdit(row) }
-              else { ReggieUI.error(res.msg || '价格更新失败') }
-            } catch (err) { ReggieUI.error('价格更新失败：' + err) }
+            var oldPrice = Number(row.price)
+            // 价格未变化：直接退出编辑，不提交
+            if (price === oldPrice) { self.cancelEdit(row); return }
+            // 确认框弹出后输入框会失焦再次触发 blur，以此标记防重入
+            if (row._priceConfirming) { return }
+            // blur（点击他处）有变化时保留输入，由回车触发确认，避免误提交
+            if (source === 'blur') { return }
+            row._priceConfirming = true
+            var confirmMsg = '菜品「' + (row.name || '') + '」价格由 ¥' + oldPrice.toFixed(2) +
+              ' 调整为 ¥' + price.toFixed(2) + '，确认提交？'
+            ReggieUI.confirm(confirmMsg, '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+              .then(function () {
+                var params = self.buildDishParams(row)
+                params.price = price
+                editDish(params).then(function (res) {
+                  if (res.code === 1) { ReggieUI.success('价格已更新'); self.cancelEdit(row) }
+                  else { ReggieUI.error(res.msg || '价格更新失败') }
+                }).catch(function (err) { ReggieUI.error('价格更新失败：' + err) })
+              })
+              .catch(function () {
+                // 用户取消确认：还原旧价并退出编辑
+                row._priceEdit = row.price != null ? String(row.price) : ''
+                self.cancelEdit(row)
+              })
+              .then(function () { row._priceConfirming = false })
           } else if (key === 'stock') {
             var qty = parseInt(row._stockEdit, 10)
             if (isNaN(qty) || qty < 0) { ReggieUI.warning('库存格式不正确（非负整数）'); return }

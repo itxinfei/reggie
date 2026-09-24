@@ -432,11 +432,17 @@
             }
             if (self.form.startTime) data.shiftStart = self.form.startTime
             if (self.form.endTime) data.shiftEnd = self.form.endTime
-            scheduleSave(data).then(function () {
-              self.submitting = false
-              self.dialog.visible = false
-              ReggieUI.success('排班保存成功')
-              self.fetchScheduleData()
+            scheduleSave(data).then(function (res) {
+              if (res && res.code === 1) {
+                self.submitting = false
+                self.dialog.visible = false
+                ReggieUI.success('排班保存成功')
+                self.fetchScheduleData()
+              } else {
+                // 业务失败：保持弹窗以便修改，不提示成功
+                self.submitting = false
+                ReggieUI.error((res && res.msg) || '排班保存失败')
+              }
             }).catch(function (e) {
               self.submitting = false
               ReggieUI.error((e && e.message) || '保存失败，请重试')

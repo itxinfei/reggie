@@ -110,7 +110,7 @@
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="handleViewDetail(row)">查看</el-button>
           <el-button type="text" size="small" class="btn-warning" @click="handleCancelSettlement(row)" v-if="row.status === 1">取消</el-button>
-          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)">删除</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(row)" v-if="row.status !== 1">删除</el-button>
         </template>
       </crud-table>
     </div>

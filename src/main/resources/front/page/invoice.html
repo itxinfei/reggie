@@ -121,6 +121,8 @@
           // 抬头
           titles: [],
           selectedTitleId: null,
+          // 刚保存的抬头名，用于列表刷新后自动选中（后端 save 不返回新 id）
+          pendingSelectTitle: '',
           // 新增抬头表单
           form: { type: 1, title: '', taxNumber: '' },
           typePickerShow: false,
@@ -218,7 +220,12 @@
           invoiceTitleListApi().then(function(res) {
             if (res.code === 1) {
               self.titles = res.data || []
-              if (self.titles.length > 0 && self.selectedTitleId === null) {
+              if (self.pendingSelectTitle) {
+                // 新建抬头保存后自动选中匹配项，避免仍停在旧抬头导致开错票
+                var created = self.titles.find(function(x) { return x.title === self.pendingSelectTitle })
+                if (created) { self.selectedTitleId = created.id }
+                self.pendingSelectTitle = ''
+              } else if (self.titles.length > 0 && self.selectedTitleId === null) {
                 self.selectedTitleId = self.titles[0].id
               }
             }
@@ -308,6 +315,7 @@
           invoiceTitleSaveApi({ type: this.form.type, title: title, taxNumber: taxNumber }).then(function(res) {
             if (res.code === 1) {
               vant.Toast.success('抬头已保存')
+              self.pendingSelectTitle = title
               self.form.title = ''
               self.form.taxNumber = ''
               self.loadTitles()

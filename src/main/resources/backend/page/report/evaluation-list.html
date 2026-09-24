@@ -167,12 +167,12 @@
               <div class="reply-time">回复时间：{{ formatDate(row.replyTime) }}</div>
             </div>
             <div v-else class="inline-reply__editor">
-              <el-input v-model="inlineReplyContent" type="textarea" :rows="3"
+              <el-input v-model="row._replyDraft" type="textarea" :rows="3"
                 placeholder="请输入回复内容..." maxlength="500" show-word-limit>
               </el-input>
               <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;">
                 <el-button size="small" @click="collapseReply(row)">取 消</el-button>
-                <el-button type="primary" size="small" :loading="inlineReplyLoading" @click="submitInlineReply(row)">发 布 回 复</el-button>
+                <el-button type="primary" size="small" :loading="row._replying" @click="submitInlineReply(row)">发 布 回 复</el-button>
               </div>
             </div>
           </div>
@@ -314,7 +314,6 @@
             // 修改点：8.5.3 回复状态 Tab（''=全部 / '0'=待回复 / '1'=已回复）
             replyTab: '',
             detailVisible: false, detailData: {}, detailImages: [],
-            inlineReplyContent: '', inlineReplyLoading: false,
             previewVisible: false, previewUrl: ''
           }
         },
@@ -423,7 +422,8 @@
           },
           // 修改点：8.5.3 就地回复 —— 展开行内回复框（crud-table 内部 el-table 控制展开）
           openInlineReply: function(row) {
-            this.inlineReplyContent = '';
+            // 回复草稿按行独立，避免多展开行共享同一变量造成串写
+            this.$set(row, '_replyDraft', '');
             const table = this.$refs.crudTable && this.$refs.crudTable.$refs.elTable;
             if (table) table.toggleRowExpansion(row, true);
           },
@@ -433,14 +433,16 @@
           },
           submitInlineReply: function(row) {
             const self = this;
-            if (!self.inlineReplyContent.trim()) { ReggieUI.warning('请输入回复内容'); return; }
-            self.inlineReplyLoading = true;
-            replyEvaluation(row.id, self.inlineReplyContent.trim()).then(function(res) {
+            const draft = (row._replyDraft || '').trim();
+            if (!draft) { ReggieUI.warning('请输入回复内容'); return; }
+            if (row._replying) return;
+            this.$set(row, '_replying', true);
+            replyEvaluation(row.id, draft).then(function(res) {
               if (String(res.code) === '1') {
                 ReggieUI.success('回复成功'); self.collapseReply(row); self.loadData();
               } else { ReggieUI.error(res.msg || '回复失败'); }
             }).catch(function(err) { ReggieUI.error('请求失败：' + (err.message || err)); })
-            .finally(function() { self.inlineReplyLoading = false; });
+            .finally(function() { self.$set(row, '_replying', false); });
           },
           /* ========== 分页处理 ========== */
           // 修改点：分页统一交由 crud-table 组件管理（@page-change 同时携带页码与每页条数）

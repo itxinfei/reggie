@@ -201,14 +201,11 @@
                     itemClick(item){
                         const fromCheckout = sessionStorage.getItem('addressFromCheckout')
                         if(fromCheckout === '1'){
-                            // 修改点：包装为 async/await + try-catch，防止导航时未捕获异常
-                            ;(async () => {
-                                try {
-                                    await this.setDefaultAddress(item)
-                                    sessionStorage.removeItem('addressFromCheckout')
-                                } catch(e) { /* 静默处理，始终返回 */ }
-                                history.go(-1)
-                            })()
+                            // 修改点：结算流程点地址仅作为「本单选择」，记录选中 id 后返回结算页，
+                            // 不再调用 setDefaultAddress 改写用户的默认地址（否则下次外卖会送错地方）
+                            sessionStorage.setItem('selectedAddressId', String(item.id))
+                            sessionStorage.removeItem('addressFromCheckout')
+                            history.go(-1)
                         } else {
                             // 修改点：地址管理场景点击整张卡片进入编辑（原实现非结算入口点击无任何反应）
                             this.toAddressEditPage(item)

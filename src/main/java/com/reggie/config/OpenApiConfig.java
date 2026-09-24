@@ -188,6 +188,8 @@ public class OpenApiConfig {
         TAG_DESCRIPTIONS.put("外卖平台对接", "外卖平台配送订单对接与配送状态同步");
         TAG_DESCRIPTIONS.put("配送增强管理", "配送范围围栏与阶梯配送费规则配置");
         TAG_DESCRIPTIONS.put("配送跟踪管理", "配送订单跟踪、骑手信息管理、配送时效记录");
+        TAG_DESCRIPTIONS.put("骑手认证", "骑手登录/登出/会话/上下线切换");
+        TAG_DESCRIPTIONS.put("骑手任务", "骑手任务列表、抢单大厅、任务详情及接单/取餐/送达动作");
         TAG_DESCRIPTIONS.put("行政区划管理", "省市区行政区划数据查询与维护");
         TAG_DESCRIPTIONS.put("催单管理", "订单催单、未接单实时预警扫描与分级告警");
 

@@ -562,9 +562,10 @@
             <div class="ops-metric">
               <div class="ops-metric-label">客单价</div>
               <div class="ops-metric-value">¥{{ overview.avgAmount || '0.00' }}</div>
-              <div class="ops-metric-compare" :class="revenueTrendClass" v-if="yesterdayRevenue > 0">
-                {{ revenueTrendText }} vs 昨日
+              <div class="ops-metric-compare" :class="avgAmountTrendClass" v-if="yesterdayOrders > 0">
+                客单价 {{ avgAmountTrendText }} vs 昨日
               </div>
+              <div class="ops-metric-compare flat" v-else>暂无昨日数据</div>
             </div>
             <!-- 对比昨日订单 -->
             <div class="ops-metric">
@@ -696,15 +697,19 @@
           orderTrendClass: 'neutral',
           orderTrendText: '--',
           revenueTrendClass: 'neutral',
-          revenueTrendText: '--'
+          revenueTrendText: '--',
+          // 客单价环比（由趋势中今日/昨日 营业额÷订单数 计算）
+          avgAmountTrendClass: 'neutral',
+          avgAmountTrendText: '--'
         }
       },
       computed: {
         // KPI 指标卡（统一 stat-cards 组件）
         kpiCards() {
           const ov = this.overview || {};
-          const orderTrend = this.yesterdayOrders > 0 ? ' · ' + this.orderTrendText : '';
-          const revenueTrend = this.yesterdayRevenue > 0 ? ' · ' + this.revenueTrendText : '';
+          // 百分比前加主语，避免紧跟“完成率/客单价”被误读为后者变化
+          const orderTrend = this.yesterdayOrders > 0 ? ' · 订单 ' + this.orderTrendText : '';
+          const revenueTrend = this.yesterdayRevenue > 0 ? ' · 营业额 ' + this.revenueTrendText : '';
           // 修改点：营收目标进度
           var revSub = '客单价 ¥' + (ov.avgAmount || '0.00') + revenueTrend;
           if (this.dailyTarget > 0) {
@@ -874,6 +879,8 @@
             this.orderTrendText = '--';
             this.revenueTrendClass = 'neutral';
             this.revenueTrendText = '--';
+            this.avgAmountTrendClass = 'neutral';
+            this.avgAmountTrendText = '--';
             return;
           }
           const today = trend[trend.length - 1];
@@ -900,6 +907,18 @@
             this.revenueTrendClass = revenueChange > 0 ? 'up' : revenueChange < 0 ? 'down' : 'neutral';
             this.revenueTrendText = (revenueChange > 0 ? '↑' : revenueChange < 0 ? '↓' : '→')
               + ' ' + Math.abs(revenueChange).toFixed(1) + '%';
+          }
+
+          // 客单价对比：今日(营业额/订单数) vs 昨日(营业额/订单数)
+          if (yesterdayOrdersVal > 0 && todayOrders > 0) {
+            const todayAvg = todayRevenue / todayOrders;
+            const yesterdayAvg = yesterdayRevenueVal / yesterdayOrdersVal;
+            if (yesterdayAvg > 0) {
+              const avgChange = ((todayAvg - yesterdayAvg) / yesterdayAvg * 100);
+              this.avgAmountTrendClass = avgChange > 0 ? 'up' : avgChange < 0 ? 'down' : 'neutral';
+              this.avgAmountTrendText = (avgChange > 0 ? '↑' : avgChange < 0 ? '↓' : '→')
+                + ' ' + Math.abs(avgChange).toFixed(1) + '%';
+            }
           }
         },
 

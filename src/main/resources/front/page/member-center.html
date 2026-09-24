@@ -209,10 +209,14 @@
       <div class="mc-recharge-list mc-tab-pane" v-if="activeTab==='recharge'">
         <div v-if="rechargeData.length===0" class="empty-state"><i class="ri-wallet-line"></i><p class="empty-text">暂无充值记录</p></div>
         <div class="mc-recharge-item" v-for="item in rechargeData" :key="item.id||item.createdTime">
-          <div class="mc-recharge-amount">+¥{{ Number(item.amount || 0).toFixed(2) }}</div>
+          <div class="mc-recharge-amount" :class="{'is-muted': item.status !== 'SUCCESS'}">
+            {{ item.status === 'SUCCESS' ? '+' : '' }}¥{{ Number(item.amount || 0).toFixed(2) }}
+          </div>
           <div class="mc-recharge-info">
             <div class="r-time">{{ item.createdTime ? item.createdTime.replace('T', ' ').substring(0, 16) : '' }}</div>
-            <div class="r-gift" v-if="item.giftAmount > 0">赠送 ¥{{ Number(item.giftAmount || 0).toFixed(2) }}</div>
+            <div class="r-gift" v-if="item.giftAmount > 0 && item.status === 'SUCCESS'">赠送 ¥{{ Number(item.giftAmount || 0).toFixed(2) }}</div>
+            <van-tag v-if="item.status === 'PENDING'" plain type="warning" class="mc-recharge-status">待门店确认</van-tag>
+            <van-tag v-else-if="item.status === 'CANCELLED'" plain type="default" class="mc-recharge-status">已取消</van-tag>
           </div>
         </div>
       </div>
