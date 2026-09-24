@@ -102,8 +102,10 @@
         <table-bar
           :search-items="tableSearchItems"
           :actions="tableActions"
+          :show-refresh="true"
           @search="loadData"
           @reset="resetSearch"
+          @refresh="loadData()"
           @action="onTableAction">
           <template slot="search-extra">
             <el-select v-model="searchName" placeholder="选择活动名称" size="small" clearable filterable
@@ -144,6 +146,7 @@
             :border="true"
             :selection="true"
             :selection-width="45"
+            :show-actions="true"
             :actions-width="180"
             :actions-align="'center'"
             aria-label="营销活动列表"

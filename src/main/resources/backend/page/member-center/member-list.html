@@ -55,8 +55,10 @@
         ref="tableBar"
         :search-items="searchConfig"
         :actions="actionConfig"
+        :show-refresh="true"
         @search="onSearch"
         @reset="onReset"
+        @refresh="init(false)"
         @action="onAction"
       ></table-bar>
 

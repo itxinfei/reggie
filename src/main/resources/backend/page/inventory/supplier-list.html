@@ -39,9 +39,11 @@
       ref="tableBar"
       :search-items="searchConfig"
       :actions="actionConfig"
+      :show-refresh="true"
       @search="onSearch"
       @reset="onReset"
       @action="onAction"
+      @refresh="loadData(false)"
     ></table-bar>
 
     <!-- ============================================================

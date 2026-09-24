@@ -33,6 +33,8 @@
         @search="onSearch"
         @reset="onReset"
         @action="onAction"
+        :show-refresh="true"
+        @refresh="init(false)"
       ></table-bar>
 
       <!-- 数据表格 -->

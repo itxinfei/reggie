@@ -23,8 +23,10 @@
     <!-- 搜索 + 工具栏 -->
     <table-bar
       :search-items="searchItems"
+      :show-refresh="true"
       @search="onMappingSearch"
       @reset="onMappingReset"
+      @refresh="fetchData(false)"
     >
       <!-- 默认插槽：页级操作「营业状态同步」，与筛选无关，独立成组 -->
       <div class="biz-sync">

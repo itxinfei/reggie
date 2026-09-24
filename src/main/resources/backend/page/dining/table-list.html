@@ -108,9 +108,11 @@
         :search-items="searchConfig"
         :actions="actionConfig"
         :show-search-btns="true"
+        :show-refresh="true"
         @search="onSearch"
         @reset="onReset"
         @action="onAction"
+        @refresh="init(false)"
       >
         <!-- 视图切换按钮（table-bar 默认插槽） -->
         <div class="table-grid-toggle" style="margin-left:auto;">

@@ -73,9 +73,11 @@
       :search-items="searchItems"
       :actions="searchActions"
       :loading="loading"
+      :show-refresh="true"
       @search="handleSearch"
       @reset="handleReset"
-      @action="handleAction">
+      @action="handleAction"
+      @refresh="fetchData()">
     </table-bar>
 
     <!-- 表格 -->

@@ -89,8 +89,10 @@
       <table-bar
         :search-items="searchItems"
         :loading="loading"
+        :show-refresh="true"
         @search="handleSearch"
-        @reset="handleReset">
+        @reset="handleReset"
+        @refresh="fetchData()">
       </table-bar>
 
       <!-- 图表区（el-row/el-col 24 栅格，小屏自动折叠为单列） -->

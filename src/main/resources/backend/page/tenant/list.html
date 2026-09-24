@@ -23,6 +23,8 @@
       :search-items="searchConfig"
       @search="onSearch"
       @reset="onReset"
+      :show-refresh="true"
+      @refresh="loadList()"
     ></table-bar>
 
     <!-- 租户表格：Logo/名称/联系人/电话/套餐/到期/状态 + 编辑、启停用 -->

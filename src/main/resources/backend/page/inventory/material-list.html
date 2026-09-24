@@ -26,9 +26,11 @@
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
+        :show-refresh="true"
         @search="handleQuery"
         @reset="reset"
-        @action="onTableAction">
+        @action="onTableAction"
+        @refresh="handleQuery()">
         <template slot="search-extra">
           <el-select v-model="input.name" placeholder="食材名称" class="el-select--narrow-xs" clearable filterable size="small"
             :loading="optionsLoading"

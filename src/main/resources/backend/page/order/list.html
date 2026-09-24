@@ -32,9 +32,11 @@
         ref="tableBar"
         :search-items="searchConfig"
         :actions="actionConfig"
+        :show-refresh="true"
         @search="onSearch"
         @reset="onReset"
         @action="onAction"
+        @refresh="init(false)"
       ></table-bar>
 
       <!-- 数据表格 -->
@@ -491,8 +493,9 @@
         },
         formatDiningType: function(val) {
           if (!val) return '-'
-          // 与 /api/meta/enums orderSource 字典一致（TAKEOUT/EAT_IN/QUEUE/RESERVATION）
-          const map = { TAKEOUT: '外卖配送', EAT_IN: '堂食扫码', QUEUE: '排队', RESERVATION: '预订' }
+          // 与 /api/meta/enums orderSource 字典一致；OUTSIDE/DELIVERY/TAKEOUT 均为外卖配送
+          // （OUTSIDE 为瑞吉原版下单写入值，DELIVERY 为加列前老数据默认值）
+          const map = { DELIVERY: '外卖配送', TAKEOUT: '外卖配送', OUTSIDE: '外卖配送', EAT_IN: '堂食扫码', QUEUE: '排队', RESERVATION: '预订' }
           return map[val] || val
         },
         // 支付方式文案（与 /api/meta/enums payMethod 字典一致：1现金/2微信/3支付宝/4银行卡/5储值/6货到付款）

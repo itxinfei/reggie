@@ -27,9 +27,11 @@
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
+        :show-refresh="true"
         @search="handleQuery"
         @reset="reset"
-        @action="onTableAction">
+        @action="onTableAction"
+        @refresh="fetchData(false)">
         <template slot="search-extra">
           <el-select v-model="input" placeholder="请选择员工姓名" class="el-select--narrow-xs" clearable filterable size="small"
             :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @visible-change="onFilterDropdownVisible">

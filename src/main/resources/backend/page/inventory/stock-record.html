@@ -31,9 +31,11 @@
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
+        :show-refresh="true"
         @search="handleQuery"
         @reset="reset"
-        @action="onAction">
+        @action="onAction"
+        @refresh="handleQuery()">
         <template slot="search-extra">
           <el-select v-model="input.materialId" placeholder="食材" class="el-select--narrow" clearable filterable @change="handleQuery">
             <el-option v-for="item in materialOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>
@@ -52,7 +54,8 @@
         :page-size="pageSize"
         :page-sizes="[10,20,30,40]"
         :total="counts"
-        :show-actions="false"
+        :show-actions="true"
+        :viewable="true"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >

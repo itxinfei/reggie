@@ -52,9 +52,11 @@
     <table-bar
       :search-items="searchItems"
       :actions="actionItems"
+      :show-refresh="true"
       @search="onSearch"
       @reset="onReset"
       @action="onAction"
+      @refresh="fetchData()"
     ></table-bar>
 
     <!-- 数据表格：申请编号/申请人/提现金额/方式/收款账户/状态/申请时间/操作 -->

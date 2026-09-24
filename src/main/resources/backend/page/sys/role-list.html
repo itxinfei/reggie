@@ -63,6 +63,8 @@
         @search="onSearch"
         @reset="onReset"
         @action="onAction"
+        :show-refresh="true"
+        @refresh="loadData()"
       ></table-bar>
 
       <!-- 数据表格 -->

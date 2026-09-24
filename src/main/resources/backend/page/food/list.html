@@ -52,6 +52,8 @@
             @search="onSearch"
             @reset="onReset"
             @action="onAction"
+            :show-refresh="true"
+            @refresh="init()"
           ></table-bar>
 
           <!-- 数据表格（多选 + 自定义图片/状态/库存列 + 操作列） -->

@@ -31,6 +31,8 @@
         :search-items="searchConfig"
         @search="onSearch"
         @reset="onReset"
+        :show-refresh="true"
+        @refresh="init(false)"
       ></table-bar>
 
       <!-- 数据表格 -->
@@ -43,7 +45,8 @@
         :page="page"
         :page-size="pageSize"
         :total="counts"
-        :show-actions="false"
+        :show-actions="true"
+        :viewable="true"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >

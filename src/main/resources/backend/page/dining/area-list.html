@@ -26,9 +26,11 @@
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
+        :show-refresh="true"
         @search="handleQuery"
         @reset="reset"
-        @action="onTableAction">
+        @action="onTableAction"
+        @refresh="fetchData(false)">
         <template slot="search-extra">
           <el-select v-model="input" placeholder="请选择区域名称" class="el-select--narrow-xs" clearable filterable size="small"
             :loading="optionsLoading"

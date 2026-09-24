@@ -50,9 +50,11 @@
     <table-bar
       :search-items="searchItems"
       :actions="actionItems"
+      :show-refresh="true"
       @search="onSearch"
       @reset="onReset"
       @action="onAction"
+      @refresh="fetchData()"
     ></table-bar>
 
     <!-- 数据表格 -->

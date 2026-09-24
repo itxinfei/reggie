@@ -60,7 +60,9 @@
                 :actions="barActions"
                 @search="onBarSearch"
                 @reset="onBarReset"
-                @action="onBarAction">
+                @action="onBarAction"
+                :show-refresh="true"
+                @refresh="loadData(false)">
             </table-bar>
 
             <!-- ===== 数据表格（内置分页/骨架/空态） ===== -->

@@ -24,7 +24,9 @@
         :actions="tableActions"
         @search="handleQuery"
         @reset="reset"
-        @action="onTableAction">
+        @action="onTableAction"
+        :show-refresh="true"
+        @refresh="fetchData(false)">
         <template slot="search-extra">
           <el-select v-model="input.name" placeholder="选择地区名称" class="el-select--narrow-xs" clearable filterable size="small"
             :loading="optionsLoading" :no-data-text="optionsLoadError ? '加载失败，点击下拉框重试' : (optionsLoading ? '加载中...' : '暂无数据')" @change="handleQuery" @visible-change="onFilterDropdownVisible" >

@@ -29,9 +29,11 @@
         ref="tableBar"
         :search-items="searchConfig"
         :actions="actionConfig"
+        :show-refresh="true"
         @search="onSearch"
         @reset="onReset"
         @action="onAction"
+        @refresh="search()"
       ></table-bar>
 
       <!-- 数据表格 -->

@@ -21,8 +21,10 @@
     <!-- 工具栏：添加渠道 -->
     <table-bar
       :show-search-btns="false"
+      :show-refresh="true"
       :actions="barActions"
       @action="onBarAction"
+      @refresh="fetchData(false)"
     ></table-bar>
 
     <!-- 数据表格（空态走 crud-table 内置 empty-hint） -->

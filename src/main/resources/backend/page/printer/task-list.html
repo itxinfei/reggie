@@ -59,9 +59,11 @@
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
+        :show-refresh="true"
         @search="search"
         @reset="reset"
-        @action="onTableAction">
+        @action="onTableAction"
+        @refresh="fetchData(false)">
         <template slot="search-extra">
           <el-input v-model="query.orderId" placeholder="订单ID" class="el-select--narrow-xs" clearable size="small"
             @keyup.enter.native="search"></el-input>

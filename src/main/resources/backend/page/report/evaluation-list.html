@@ -21,7 +21,7 @@
     html { overflow: hidden; }
     body { overflow-x: hidden; overflow-y: auto; }
     .eval-app-wrap { min-height: 100%; display: flex; flex-direction: column; }
-    .eval-app-wrap .container { flex: 1; background: transparent; padding: var(--space-2) var(--space-3);
+    .eval-app-wrap .container { flex: 1; background: transparent; padding: 10px;
       min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
     /* ========== 筛选栏 ========== */
     /* 修改点：筛选栏统一样式 */
@@ -146,6 +146,7 @@
         :loading="loading"
         :stripe="true"
         :border="true"
+        :show-actions="true"
         :actions-width="180"
         :actions-align="'center'"
         aria-label="评价列表"
@@ -180,7 +181,7 @@
           <div style="display:flex;align-items:center;gap:10px;">
             <img v-if="row.dishImage" :src="getImageUrl(row.dishImage)"
               style="width:42px;height:42px;border-radius:var(--radius-md);object-fit:cover;" alt="" />
-            <span style="font-weight:600;color:var(--el-text-primary);">{{ row.dishName }}</span>
+            <span style="font-weight:600;color:var(--el-text-primary);">{{ row.dishName || '（未知商品）' }}</span>
           </div>
         </template>
         <template #col-stars="{ row }">

@@ -60,6 +60,8 @@
       <table-bar
         :search-items="searchConfig"
         :actions="actionConfig"
+        :show-refresh="true"
+        @refresh="loadData()"
         @search="onBarSearch"
         @reset="reset"
         @action="onAction"

@@ -39,9 +39,11 @@
       :search-items="searchItems"
       :actions="tableActions"
       :loading="loading"
+      :show-refresh="true"
       @search="handleSearch"
       @reset="handleReset"
-      @action="handleAction">
+      @action="handleAction"
+      @refresh="fetchData()">
     </table-bar>
 
     <!-- 数据表格：菜品名称/各项成本/售价/毛利率/备注 -->

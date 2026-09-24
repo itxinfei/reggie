@@ -86,6 +86,8 @@
     <table-bar
       :search-items="searchConfig"
       :actions="actionConfig"
+      :show-refresh="true"
+      @refresh="fetchData()"
       @search="fetchData"
       @reset="resetForm"
       @action="onAction"

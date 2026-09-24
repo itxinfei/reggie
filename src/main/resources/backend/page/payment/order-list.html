@@ -64,8 +64,10 @@
       <table-bar
         ref="tableBar"
         :search-items="searchConfig"
+        :show-refresh="true"
         @search="onSearch"
         @reset="onReset"
+        @refresh="init(false)"
       ></table-bar>
 
       <!-- 数据表格 -->

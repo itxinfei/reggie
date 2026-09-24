@@ -22,9 +22,11 @@
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
+        :show-refresh="true"
         @search="handleQuery"
         @reset="reset"
-        @action="onTableAction">
+        @action="onTableAction"
+        @refresh="handleQuery()">
         <template slot="search-extra">
           <el-select v-model="input.name" placeholder="分类名称" class="el-select--narrow-xs" clearable filterable @change="handleQuery">
             <el-option v-for="(n, index) in filterOptions.names" :key="index" :label="n" :value="n"></el-option>

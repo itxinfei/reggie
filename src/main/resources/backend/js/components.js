@@ -228,6 +228,11 @@ Vue.component('table-bar', {
     resetText: {
       type: String,
       default: '重置'
+    },
+    /** 是否显示统一刷新按钮（默认 false；页面开启时须同时监听 @refresh 调用本页加载方法） */
+    showRefresh: {
+      type: Boolean,
+      default: false
     }
   },
   data: function () {
@@ -368,6 +373,7 @@ Vue.component('table-bar', {
         '  {{ btn.text }}' +
         '</el-button>' +
       '</div>' +
+      '<el-button v-if="showRefresh" type="default" size="small" class="table-bar__refresh" icon="el-icon-refresh" title="刷新" aria-label="刷新列表" @click="$emit(\'refresh\')"></el-button>' +
     '</div>',
   computed: {
     visibleActions: function () {
@@ -686,14 +692,14 @@ Vue.component('crud-table', {
         '<template slot-scope="scope">' +
           '<slot v-if="col.slot" :name="\'col-\' + col.prop" :row="scope.row" :col="col" :$index="scope.$index">' +
             '<span v-if="typeof col.formatter === \'function\'">{{ col.formatter(scope.row[col.prop], scope.row, col) }}</span>' +
-            '<span v-else-if="col.type === \'money\'">¥{{ formatMoney(scope.row[col.prop]) }}</span>' +
-            '<span v-else-if="col.type === \'number\'">{{ formatNumber(scope.row[col.prop]) }}</span>' +
-            '<span v-else>{{ scope.row[col.prop] }}</span>' +
+            '<span v-else-if="col.type === \'money\'">{{ isBlankVal(scope.row[col.prop]) ? \'-\' : \'¥\' + formatMoney(scope.row[col.prop]) }}</span>' +
+            '<span v-else-if="col.type === \'number\'">{{ isBlankVal(scope.row[col.prop]) ? \'-\' : formatNumber(scope.row[col.prop]) }}</span>' +
+            '<span v-else>{{ cellText(scope.row[col.prop]) }}</span>' +
           '</slot>' +
           '<span v-else-if="typeof col.formatter === \'function\'">{{ col.formatter(scope.row[col.prop], scope.row, col) }}</span>' +
-          '<span v-else-if="col.type === \'money\'">¥{{ formatMoney(scope.row[col.prop]) }}</span>' +
-          '<span v-else-if="col.type === \'number\'">{{ formatNumber(scope.row[col.prop]) }}</span>' +
-          '<span v-else>{{ scope.row[col.prop] }}</span>' +
+          '<span v-else-if="col.type === \'money\'">{{ isBlankVal(scope.row[col.prop]) ? \'-\' : \'¥\' + formatMoney(scope.row[col.prop]) }}</span>' +
+          '<span v-else-if="col.type === \'number\'">{{ isBlankVal(scope.row[col.prop]) ? \'-\' : formatNumber(scope.row[col.prop]) }}</span>' +
+          '<span v-else>{{ cellText(scope.row[col.prop]) }}</span>' +
         '</template>' +
       '</el-table-column>' +
       // 操作列
@@ -782,6 +788,16 @@ Vue.component('crud-table', {
     }
   },
   methods: {
+    /** 判断单元格值是否"空"：null/undefined/空串/纯空白为真；0、false 不算空 */
+    isBlankVal: function (v) {
+      if (v === null || v === undefined) return true
+      if (typeof v === 'string' && v.trim() === '') return true
+      return false
+    },
+    /** 单元格文本兜底：空值统一显示 '-'（仅用于无 slot/formatter 的裸列） */
+    cellText: function (v) {
+      return this.isBlankVal(v) ? '-' : v
+    },
     /**
      * 列对齐解析：
      *  - 全站表格统一居中（修改点 2026-09-01：用户要求"表头与内容必须居中"，

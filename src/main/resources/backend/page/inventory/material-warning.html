@@ -31,8 +31,6 @@
 
     /* C.4 双 Tab */
     .warn-tabs { margin-bottom: var(--space-4) }
-    /* Tab 内 table-bar 与表格间距 */
-    .warn-tabs .tableBar { margin-bottom: var(--space-3) }
   </style>
 </head>
 <body>
@@ -51,6 +49,8 @@
       <table-bar
         :search-items="warningSearchItems"
         :actions="warningActions"
+        :show-refresh="true"
+        @refresh="loadTable()"
         @search="onWarningSearch"
         @reset="onWarningReset"
         @action="onWarningAction">
@@ -67,6 +67,9 @@
         :page-sizes="[10,20,30,40]"
         :total="counts"
         :selection="true"
+        :show-actions="true"
+        :viewable="true"
+        :actions-width="120"
         empty-hint="所有食材库存充足，暂无预警"
         @page-change="onPageChange"
         @size-change="onSizeChange"
@@ -104,6 +107,8 @@
           <table-bar
             :show-search-btns="false"
             :actions="smartActions"
+            :show-refresh="true"
+            @refresh="loadSmartTable()"
             @action="onSmartAction">
           </table-bar>
           <crud-table

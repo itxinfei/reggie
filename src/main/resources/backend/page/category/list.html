@@ -32,7 +32,9 @@
         :loading="loading"
         @search="handleQuery"
         @reset="reset"
-        @action="onTableAction">
+        @action="onTableAction"
+        :show-refresh="true"
+        @refresh="fetchData(false)">
         <!-- 修改点：动态下拉框通过 search-extra 插槽注入（数据从 API 加载） -->
         <template slot="search-extra">
           <el-select v-model="searchName" placeholder="请选择分类名称" class="el-select--narrow-xs" clearable filterable size="small"

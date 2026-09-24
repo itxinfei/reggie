@@ -161,7 +161,9 @@
       :actions="tableActions"
       @search="handleQuery"
       @reset="reset"
-      @action="onTableAction">
+      @action="onTableAction"
+      :show-refresh="true"
+      @refresh="fetchData(false)">
       <template slot="search-extra">
         <!-- 修改点：修复 el-select 标签缺失闭合 >，添加 @change 触发查询 -->
         <el-select v-model="input" placeholder="请选择套餐名称" class="el-select--narrow-xs" clearable filterable size="small"

@@ -351,6 +351,8 @@
                             :show-search-btns="false"
                             @search="onRecordSearch"
                             @reset="onRecordReset"
+                            :show-refresh="true"
+                            @refresh="loadRecords(recordPage)"
                         ></table-bar>
                         <crud-table
                             :data="records"
@@ -398,6 +400,8 @@
                             @search="onTemplateSearch"
                             @reset="onTemplateReset"
                             @action="onTemplateAction"
+                            :show-refresh="true"
+                            @refresh="loadTemplates(templatePage)"
                         ></table-bar>
                         <crud-table
                             :data="templates"

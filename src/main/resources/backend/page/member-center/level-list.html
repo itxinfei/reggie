@@ -57,8 +57,10 @@
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
+        :show-refresh="true"
         @search="handleQuery"
         @reset="handleReset"
+        @refresh="fetchData(false)"
         @action="onTableAction">
       </table-bar>
 

@@ -27,7 +27,9 @@
         :loading="loading"
         @search="onSearch"
         @reset="onReset"
-        @action="onAction">
+        @action="onAction"
+        :show-refresh="true"
+        @refresh="fetchData(false)">
       </table-bar>
 
       <!-- ========== 文档列表（统一 crud-table 组件） ========== -->

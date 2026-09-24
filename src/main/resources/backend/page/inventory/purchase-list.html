@@ -152,9 +152,11 @@
       <table-bar
         :search-items="tableSearchItems"
         :actions="tableActions"
+        :show-refresh="true"
         @search="handleQuery"
         @reset="reset"
-        @action="onTableAction">
+        @action="onTableAction"
+        @refresh="handleQuery()">
         <template slot="search-extra">
           <el-select v-model="input.supplierId" placeholder="供应商" class="el-select--narrow" clearable @change="handleQuery">
             <el-option v-for="item in supplierOptions" :key="item.id" :label="item.name" :value="item.id"></el-option>

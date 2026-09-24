@@ -22,9 +22,11 @@
     <table-bar
       :search-items="searchItems"
       :actions="barActions"
+      :show-refresh="true"
       @search="onOrderSearch"
       @reset="onOrderReset"
       @action="onBarAction"
+      @refresh="fetchData(false)"
     ></table-bar>
 
     <!-- 数据表格（空态走 crud-table 内置 empty-hint） -->
