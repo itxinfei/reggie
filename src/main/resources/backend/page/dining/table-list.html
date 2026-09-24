@@ -370,6 +370,14 @@
       <iframe v-if="checkoutDialogVisible" :src="cashierFrameUrl"
               style="width:100%;height:78vh;border:0;display:block;"></iframe>
     </el-dialog>
+
+    <!-- 桌贴打印弹窗（iframe 承载原打印中心；iframe 内 window.print 只打印海报，不卷入主页） -->
+    <el-dialog title="桌贴二维码打印" :visible.sync="posterDialogVisible" width="92%" top="4vh"
+               :close-on-click-modal="false" append-to-body destroy-on-close
+               @close="posterDialogVisible = false">
+      <iframe v-if="posterDialogVisible" :src="posterFrameUrl"
+              style="width:100%;height:80vh;border:0;display:block;"></iframe>
+    </el-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -389,6 +397,8 @@
           submitting: false, // 提交防重：请求期间锁定弹窗确认按钮
           checkoutDialogVisible: false, // 修改点(2026-09-16)：结账弹窗显隐
           cashierFrameUrl: '', // 修改点：弹窗内 iframe 加载的收银台地址
+          posterDialogVisible: false, // 桌贴打印弹窗显隐
+          posterFrameUrl: '', // 弹窗内 iframe 加载的二维码打印中心地址
           areaList: [],
           counts: 0,
           page: 1,
@@ -420,7 +430,8 @@
           ],
           // 操作按钮
           actionConfig: [
-            { key: 'add', text: '+ 新增桌台', type: 'primary' }
+            { key: 'add', text: '+ 新增桌台', type: 'primary' },
+            { key: 'printPoster', text: '打印桌贴' }
           ],
           // 缓存搜索参数
           lastSearch: {},
@@ -581,7 +592,15 @@
           this.lastSearch = {}
           this.page = 1; this.init()
         },
-        onAction: function(payload) { if (payload.key === 'add') this.addHandle() },
+        onAction: function(payload) {
+          if (payload.key === 'add') { this.addHandle() }
+          else if (payload.key === 'printPoster') { this.openPosterDialog() }
+        },
+        // 弹窗承载二维码打印中心：iframe 内打印只作用于该 frame，不影响后台主页
+        openPosterDialog: function() {
+          this.posterFrameUrl = '/backend/page/printer/qrcode-center.html?embedded=1'
+          this.posterDialogVisible = true
+        },
         addHandle: function() {
           this.action = 'add'; this.dialog.title = '新增桌台'
           // _originStatus：标记开弹窗时是否已占用，提交时据此拦截「裸占用」

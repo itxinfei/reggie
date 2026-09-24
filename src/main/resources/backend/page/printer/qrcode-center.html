@@ -26,6 +26,7 @@
     }
     .poster-sheet img { width: 100%; display: block; }
     .poster-cap { font-size: 13px; color: #606266; text-align: center; margin-top: 6px; }
+    .poster-empty { text-align: center; color: #909399; font-size: 13px; padding: 60px 0; }
 
     @page { size: A4; margin: 10mm; }
     @media print {
@@ -45,7 +46,7 @@
 </head>
 <body>
   <div id="app" style="padding:10px;">
-    <h3 style="margin:0 0 10px;">二维码打印中心</h3>
+    <h3 v-if="!isEmbedded" style="margin:0 0 10px;">二维码打印中心</h3>
 
     <!-- 配置区 -->
     <div class="no-print">
@@ -92,7 +93,7 @@
         <div class="poster-cap">{{ p.areaName ? p.areaName + ' · ' : '' }}{{ p.name }}</div>
       </div>
     </div>
-    <el-empty v-else description="勾选桌台并生成海报后，在此预览并打印" :image-size="80"></el-empty>
+    <div v-else class="poster-empty">勾选桌台并生成海报后，在此预览并打印</div>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
@@ -103,6 +104,7 @@
     new Vue({
       data: function () {
         return {
+          isEmbedded: /[?&]embedded=1/.test(window.location.search), // 弹窗内嵌时隐藏页内标题
           siteUrl: window.location.origin,
           areas: [],
           tables: [],

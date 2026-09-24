@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 经营分析助手 - 瑞吉外卖管理端</title>
     <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
+    <link rel="stylesheet" href="../../plugins/element-ui/index.css?v=20260915" />
     <link rel="stylesheet" href="../../styles/tokens.css?v=20260920a" />
     <link rel="stylesheet" href="../../styles/main.css?v=20260920a" />
     <link rel="stylesheet" href="../../styles/ai-chat.css?v=20260924" />
@@ -105,6 +106,10 @@
                         <span class="conn-dot"></span>
                         {{ connectionStatus.model }}
                     </span>
+                    <button class="sidebar-toggle" @click="openProviderDialog"
+                            aria-label="模型配置" title="模型配置">
+                        <i class="ri-settings-3-line" aria-hidden="true"></i>
+                    </button>
                 </div>
 
                 <!-- 快捷问题（无对话时展示，内容来自 scene-config） -->
@@ -317,6 +322,14 @@
                         <i class="ri-close-line" aria-hidden="true"></i>
                     </button>
                 </div>
+
+                <!-- 模型配置弹窗：iframe 承载供应商配置页，配置逻辑与样式独立于聊天页 -->
+                <el-dialog title="模型配置" :visible.sync="providerDialogVisible" width="92%" top="4vh"
+                           :close-on-click-modal="false" append-to-body destroy-on-close
+                           @close="providerDialogVisible = false; checkStatus()">
+                    <iframe v-if="providerDialogVisible" :src="providerFrameUrl"
+                            style="width:100%;height:80vh;border:0;display:block;"></iframe>
+                </el-dialog>
             </div>
         </main>
     </div>
@@ -429,6 +442,9 @@
                     connected: false,
                     checking: true
                 },
+                // 模型配置弹窗（iframe 承载供应商配置页）
+                providerDialogVisible: false,
+                providerFrameUrl: '',
 
                 /* 场景切换条（图标保留在前端，标签可被 scene-config 覆盖） */
                 scenes: [
@@ -512,6 +528,14 @@
             },
 
             methods: {
+                // ==================== 模型配置弹窗 ====================
+
+                /** 打开供应商配置弹窗（iframe 加载独立配置页） */
+                openProviderDialog: function() {
+                    this.providerFrameUrl = '/backend/page/ai/provider-config.html?embedded=1'
+                    this.providerDialogVisible = true
+                },
+
                 // ==================== 场景配置与连接状态 ====================
 
                 /** 拉取场景欢迎语/快捷问题/能力开关（失败静默用本地兜底） */
