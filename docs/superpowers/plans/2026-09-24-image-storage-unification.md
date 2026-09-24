@@ -813,7 +813,16 @@ Expected: FAIL（`testDownloadPublicPathWithoutLogin` 现状 401）
             }
 
             // 按路径前段分流鉴权（public 免登录；private 细分角色；旧路径任一登录可读）
-            if (authorizeDownload(normalizedPath, request) == false) {
+            // 注意：鉴权必须用 canonical 相对路径，不能用 raw name——否则
+            // name=public/../private/admin/x 会绕过 startsWith("public/") 判定（评审回写）
+            String canonicalRelativePath;
+            if (targetFile.equals(baseDir)) {
+                canonicalRelativePath = "";
+            } else {
+                canonicalRelativePath = baseDir.toPath().relativize(targetFile.toPath())
+                        .toString().replace(File.separatorChar, '/');
+            }
+            if (authorizeDownload(canonicalRelativePath, request) == false) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write("{\"code\":0,\"msg\":\"NOTLOGIN\"}");
@@ -842,18 +851,19 @@ Expected: FAIL（`testDownloadPublicPathWithoutLogin` 现状 401）
      * download 鉴权分流：public 放行；private/admin 要求 employee；private/user 要求 user；
      * 旧相对路径（无 public|private 前缀）兼容 employee 或 user 任一登录。
      *
+     * @param canonicalRelativePath targetFile 相对 baseDir 的 canonical 相对路径（正斜杠），非 raw name
      * @return true 放行；false 拒绝（调用方写 401 NOTLOGIN）
      */
-    private boolean authorizeDownload(String normalizedPath, HttpServletRequest request) {
+    private boolean authorizeDownload(String canonicalRelativePath, HttpServletRequest request) {
         boolean hasEmployee = request.getSession().getAttribute("employee") != null;
         boolean hasUser = request.getSession().getAttribute("user") != null;
-        if (com.reggie.utils.ImageStoragePathResolver.isPublicPath(normalizedPath)) {
+        if (com.reggie.utils.ImageStoragePathResolver.isPublicPath(canonicalRelativePath)) {
             return true;
         }
-        if (com.reggie.utils.ImageStoragePathResolver.isAdminPrivatePath(normalizedPath)) {
+        if (com.reggie.utils.ImageStoragePathResolver.isAdminPrivatePath(canonicalRelativePath)) {
             return hasEmployee;
         }
-        if (com.reggie.utils.ImageStoragePathResolver.isUserPrivatePath(normalizedPath)) {
+        if (com.reggie.utils.ImageStoragePathResolver.isUserPrivatePath(canonicalRelativePath)) {
             return hasUser;
         }
         return hasEmployee || hasUser;
@@ -863,7 +873,7 @@ Expected: FAIL（`testDownloadPublicPathWithoutLogin` 现状 401）
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `mvn test -Dtest=CommonControllerTest`
-Expected: PASS（全部上传+下载用例）
+Expected: PASS（全部上传+下载用例，含穿越绕过负向用例；修复后 ≥15 用例）
 
 - [ ] **Step 5: Commit**
 
