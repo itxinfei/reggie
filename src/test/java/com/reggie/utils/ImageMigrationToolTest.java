@@ -69,11 +69,45 @@ class ImageMigrationToolTest {
     }
 
     @Test
-    void planSkipsAlreadyMigrated() {
+    void planAlreadyMigratedKeptAsNoopEntry() {
+        // 已迁移项原位返回 {p, p}：回拼时保留原值、无需拷贝（整值场景无变更可跳过 UPDATE）
         List<String[]> plan = ImageMigrationTool.planRow(
                 "dish", "image", "SINGLE", "admin",
                 "public/admin/dishes/202609/a.jpg", "dishes", "202609", tempDir);
-        assertTrue(plan.isEmpty());
+        assertEquals(1, plan.size());
+        assertEquals("public/admin/dishes/202609/a.jpg", plan.get(0)[0]);
+        assertEquals(plan.get(0)[0], plan.get(0)[1]);
+    }
+
+    @Test
+    void planMixedCsvPreservesMigratedItemAndRejoinKeepsOrder() {
+        // 混合 CSV：已迁移项必须原位保留，遗留项迁移，顺序不变（防 UPDATE 丢已迁移项）
+        List<String[]> plan = ImageMigrationTool.planRow(
+                "purchase_order", "voucher_images", "CSV", "admin",
+                "public/admin/dishes/already.jpg,images/dishes/legacy.jpg",
+                "purchase", "202609", tempDir);
+        assertEquals(2, plan.size());
+        assertEquals("public/admin/dishes/already.jpg", plan.get(0)[0]);
+        assertEquals("public/admin/dishes/already.jpg", plan.get(0)[1]);
+        assertEquals("images/dishes/legacy.jpg", plan.get(1)[0]);
+        assertEquals("public/admin/dishes/202609/legacy.jpg", plan.get(1)[1]);
+        assertEquals("public/admin/dishes/already.jpg,public/admin/dishes/202609/legacy.jpg",
+                ImageMigrationTool.rejoinPlan("CSV", plan));
+    }
+
+    @Test
+    void planMixedJsonPreservesMigratedItemAndRejoinKeepsOrder() {
+        List<String[]> plan = ImageMigrationTool.planRow(
+                "dish_evaluation", "images", "JSON", "user",
+                "[\"public/user/evaluation/202609/e1.jpg\",\"images/dishes/e2.jpg\"]",
+                "evaluation", "202609", tempDir);
+        assertEquals(2, plan.size());
+        assertEquals("public/user/evaluation/202609/e1.jpg", plan.get(0)[0]);
+        assertEquals("public/user/evaluation/202609/e1.jpg", plan.get(0)[1]);
+        assertEquals("images/dishes/e2.jpg", plan.get(1)[0]);
+        assertTrue(plan.get(1)[1].startsWith("public/user/evaluation/"));
+        assertEquals("[\"public/user/evaluation/202609/e1.jpg\",\"" + plan.get(1)[1] + "\"]",
+                ImageMigrationTool.rejoinPlan("JSON", plan));
     }
 
     @Test

@@ -23,8 +23,8 @@ import java.util.List;
  * </p>
  * <p>
  * 开关 {@code reggie.image.migration}：off（默认，不执行）/ dry-run（只打印计划）/
- * apply（先拷贝校验字节、后 UPDATE）。幂等：已带 public|private 前缀的值跳过；
- * 行内含不可迁路径则整行跳过；旧文件保留不删（观察期后人工清理）。
+ * apply（先拷贝校验字节、后 UPDATE）。幂等：已带 public|private 前缀的值不重复迁移，
+ * 混合值回拼时原位保留（防丢项）；行内含不可迁路径则整行跳过；旧文件保留不删（观察期后人工清理）。
  * </p>
  *
  * @author reggie
@@ -130,12 +130,16 @@ public class ImageMigrationTool implements CommandLineRunner {
                 List<String> oldList = new ArrayList<String>();
                 List<String> newList = new ArrayList<String>();
                 for (String[] pair : plan) {
-                    planned++;
                     if (pair[1] == null) {
+                        planned++;
                         unmappable++;
                         hasUnmappable = true;
                         continue;
                     }
+                    if (pair[0].equals(pair[1])) {
+                        continue; // 已迁移：rejoinPlan 原位保留，不拷贝、不计 planned
+                    }
+                    planned++;
                     oldList.add(pair[0]);
                     newList.add(pair[1]);
                 }
@@ -179,9 +183,9 @@ public class ImageMigrationTool implements CommandLineRunner {
                 if (!rowOk) {
                     continue;
                 }
-                // 2) 按原格式回拼并 UPDATE
+                // 2) 按原格式回拼并 UPDATE（已迁移项 old==new 原位保留，顺序不变）
                 try {
-                    String newVal = rejoin(format, newList);
+                    String newVal = rejoinPlan(format, plan);
                     jdbcTemplate.update("UPDATE `" + table + "` SET `" + column + "` = ? WHERE id = ?",
                             newVal, id);
                     updated++;
@@ -203,7 +207,8 @@ public class ImageMigrationTool implements CommandLineRunner {
 
     /**
      * 单元格值 → [[oldPath, newPath], ...] 计划（newPath=null 表示不可迁）。
-     * 已迁移项整值返回空表；外链占行记 null；CSV/JSON 内裸名不 fallback；SINGLE 裸名走 fallbackBizDir。
+     * 已迁移项原位返回 {p, p}（old==new，回拼时保留原值、无需拷贝）；
+     * 外链占行记 null；CSV/JSON 内裸名不 fallback；SINGLE 裸名走 fallbackBizDir。
      */
     public static List<String[]> planRow(String table, String column, String format,
             String sourceHint, String rawValue, String fallbackBizDir,
@@ -223,7 +228,8 @@ public class ImageMigrationTool implements CommandLineRunner {
                 continue;
             }
             if (p.startsWith("public/") || p.startsWith("private/")) {
-                continue; // 已迁移
+                out.add(new String[]{p, p}); // 已迁移：原位保留（old==new），防混合值回拼丢项
+                continue;
             }
             String migrated = ImageStoragePathResolver.migratePath(p, sourceHint, fallbackMonth, uploadsRoot);
             if (migrated == null) {
@@ -268,6 +274,18 @@ public class ImageMigrationTool implements CommandLineRunner {
             items.add(trimmed);
         }
         return items;
+    }
+
+    /**
+     * 计划 → 按原格式回拼的最终值：已迁移项（old==new）原位保留原值，
+     * 遗留项用迁移后值，顺序与切分一致。调用方须先行整行跳过含 unmappable 的计划。
+     */
+    static String rejoinPlan(String format, List<String[]> plan) {
+        List<String> finalList = new ArrayList<String>();
+        for (String[] pair : plan) {
+            finalList.add(pair[1]);
+        }
+        return rejoin(format, finalList);
     }
 
     /** 新路径列表 → 按原格式回拼（CSV 逗号、JSON 数组、SINGLE 单值）。 */
