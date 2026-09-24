@@ -40,6 +40,10 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
     @Autowired
     private OrderDetailMapper orderDetailMapper;
 
+    /** 用户Mapper：评价提交时按 userId 补用户姓名 */
+    @Autowired
+    private com.reggie.module.user.mapper.UserMapper userMapper;
+
     /**
      * 最小评分
      */
@@ -174,8 +178,8 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         Long dishId = evaluation.getDishId();
         Long setmealId = evaluation.getSetmealId();
 
-        // 校验请求合法性（等价抽取，降低方法长度）
-        validateEvaluationRequest(evaluation, userId, orderId, dishId, setmealId);
+        // 校验请求合法性（等价抽取，降低方法长度）；同时拿回订单明细用于补商品名
+        OrderDetail orderDetail = validateEvaluationRequest(evaluation, userId, orderId, dishId, setmealId);
 
         // 设置默认审核状态为待审核
         if (evaluation.getStatus() == null) {
@@ -185,6 +189,22 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         // 匿名标记默认实名；user_id/user_name 仍落库供内部追责，仅在公开查询时脱敏
         if (evaluation.getAnonymous() == null) {
             evaluation.setAnonymous(0);
+        }
+
+        // 商品名/用户名兜底：C 端提交可能未携带，按订单明细与用户信息补齐，避免列表出现空字段
+        // 商品名此处不转义，统一交由下方 XSS 防护处理，避免双重转义
+        if (evaluation.getDishName() == null && orderDetail.getName() != null) {
+            evaluation.setDishName(orderDetail.getName());
+        }
+        if (evaluation.getUserName() == null) {
+            if (evaluation.getAnonymous() != null && evaluation.getAnonymous() == 1) {
+                evaluation.setUserName("匿名用户");
+            } else {
+                com.reggie.module.user.model.User user = userMapper.selectById(userId);
+                if (user != null && user.getName() != null) {
+                    evaluation.setUserName(user.getName());
+                }
+            }
         }
 
         // XSS防护：对评价内容和菜品名称进行HTML转义
@@ -222,7 +242,7 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
      * @param dishId 菜品ID
      * @param setmealId 套餐ID
      */
-    private void validateEvaluationRequest(DishEvaluation evaluation, Long userId, Long orderId,
+    private OrderDetail validateEvaluationRequest(DishEvaluation evaluation, Long userId, Long orderId,
                                            Long dishId, Long setmealId) {
         // 校验用户ID
         if (userId == null) {
@@ -288,6 +308,7 @@ public class DishEvaluationServiceImpl extends ServiceImpl<DishEvaluationMapper,
         if (content != null && content.length() > MAX_CONTENT_LENGTH) {
             throw new CustomException("评价内容不能超过" + MAX_CONTENT_LENGTH + "个字符");
         }
+        return orderDetail;
     }
 
     /**

@@ -12,6 +12,8 @@ import com.reggie.module.delivery.model.PlatformEnum;
 import com.reggie.module.delivery.platform.DeliveryPlatform;
 import com.reggie.module.delivery.platform.DeliveryPlatformFactory;
 import com.reggie.module.delivery.service.DeliveryService;
+import com.reggie.module.order.mapper.OrderMapper;
+import com.reggie.module.order.model.Orders;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 配送服务实现
@@ -57,6 +60,10 @@ public class DeliveryServiceImpl implements DeliveryService {
     /** 配送订单Mapper */
     @Autowired
     private DeliveryOrderMapper deliveryOrderMapper;
+
+    /** 本地订单Mapper（按 orderId 回填配送单用户/时间信息） */
+    @Autowired
+    private OrderMapper orderMapper;
 
     /** 状态流转白名单：每个状态允许的合法目标状态 */
     private static final Map<String, Set<String>> ALLOWED_TRANSITIONS = new LinkedHashMap<>();
@@ -143,7 +150,62 @@ public class DeliveryServiceImpl implements DeliveryService {
         }
         qw.orderByDesc(DeliveryOrder::getOrderTime);
         deliveryOrderMapper.selectPage(pageInfo, qw);
+        // 本地订单关联回填：建配送单时未填的用户/电话/地址/下单时间等，按 orderId 批量补齐
+        backfillFromLocalOrder(pageInfo.getRecords());
         return pageInfo;
+    }
+
+    /**
+     * 按 orderId 批量回填配送单的用户/电话/地址/下单时间/金额。
+     * 仅补空字段，不覆盖配送平台已提供的数据；未关联本地订单的行无法回填。
+     * @param records 当前页配送单
+     */
+    private void backfillFromLocalOrder(List<DeliveryOrder> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        List<Long> orderIds = records.stream()
+                .filter(d -> d.getOrderId() != null)
+                .map(DeliveryOrder::getOrderId)
+                .distinct()
+                .collect(Collectors.toList());
+        if (orderIds.isEmpty()) {
+            return;
+        }
+        List<Orders> localOrders = orderMapper.selectBatchIds(orderIds);
+        Map<Long, Orders> orderMap = new HashMap<>();
+        for (Orders o : localOrders) {
+            if (o != null) {
+                orderMap.put(o.getId(), o);
+            }
+        }
+        for (DeliveryOrder d : records) {
+            if (d.getOrderId() == null) {
+                continue;
+            }
+            Orders o = orderMap.get(d.getOrderId());
+            if (o == null) {
+                continue;
+            }
+            if (StringUtils.isBlank(d.getUserName())) {
+                String name = StringUtils.isNotBlank(o.getConsignee()) ? o.getConsignee() : o.getUserName();
+                if (StringUtils.isNotBlank(name)) {
+                    d.setUserName(name);
+                }
+            }
+            if (StringUtils.isBlank(d.getPhone()) && StringUtils.isNotBlank(o.getPhone())) {
+                d.setPhone(o.getPhone());
+            }
+            if (StringUtils.isBlank(d.getAddress()) && StringUtils.isNotBlank(o.getAddress())) {
+                d.setAddress(o.getAddress());
+            }
+            if (d.getOrderTime() == null && o.getOrderTime() != null) {
+                d.setOrderTime(o.getOrderTime());
+            }
+            if (d.getAmount() == null && o.getAmount() != null) {
+                d.setAmount(o.getAmount());
+            }
+        }
     }
 
     /**
