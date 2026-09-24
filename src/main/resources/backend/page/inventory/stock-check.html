@@ -516,7 +516,7 @@
         // 凭证图片逗号串 → 可访问下载 URL 列表
         imageList: function(images) {
           if (!images) return []
-          return images.split(',').filter(function(x) { return !!x }).map(function(x) { return '/common/download?name=' + x })
+          return images.split(',').filter(function(x) { return !!x }).map(function(x) { return imgPath(x) })
         },
         detailRowClass: function(obj) { return this.getDiffValue(obj.row) !== 0 ? 'has-diff' : ''; },
 

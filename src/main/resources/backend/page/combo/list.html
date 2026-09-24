@@ -654,11 +654,8 @@ new Vue({
     },
 
     getImage(image) {
-      // 修改点(2026-09-14)：图片字段可能是外链（http(s)://）或本地文件名，
-      // 外链直接用原 URL，本地文件名才走 /common/download 接口，避免外链被当文件名导致 404
-      if (!image) return ''
-      if (/^https?:\/\//i.test(image)) return image
-      return `/common/download?name=${image}`
+      // 外链/防重复/编码分支统一收敛到共享 imgPath（行为见 shared/js/img-path.js）
+      return imgPath(image)
     },
 
     // ========== 搜索与筛选 ==========
@@ -901,7 +898,7 @@ new Vue({
         }
         return
       }
-      this.comboForm.imageUrl = `/common/download?name=${response.data}`
+      this.comboForm.imageUrl = imgPath(response.data)
       this.comboForm.image = response.data
     },
     // el-upload 的 :on-error 回调 —— 仅 401/未登录才跳登录，500/403 等服务端异常只提示，避免误踢管理员

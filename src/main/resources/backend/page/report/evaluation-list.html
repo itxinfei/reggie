@@ -461,8 +461,8 @@
             try { const parsed = JSON.parse(images); return Array.isArray(parsed) ? parsed : []; } catch(e) { return images ? [images] : []; }
           },
           getImageUrl: function(name) {
-            if (!name) return ''; if (typeof name === 'string' && name.indexOf('http') === 0) return name;
-            return '/common/download?name=' + encodeURIComponent(name);
+            // 外链与编码分支已由共享 imgPath 覆盖
+            return imgPath(name)
           },
           statusClass: function(status) {
             if (status === 0) return 'pending'; if (status === 1) return 'approved'; if (status === 2) return 'rejected'; return '';

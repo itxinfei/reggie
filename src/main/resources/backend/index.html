@@ -266,6 +266,7 @@
                 { id: '4-3', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'ri-ticket-line' },
                 { id: '4-4', name: '预订管理', url: 'page/dining/reservation-list.html', icon: 'ri-calendar-check-line' },
                 { id: '4-6', name: '打印记录', url: 'page/printer/task-list.html', icon: 'ri-file-history-line' },
+                { id: '4-7', name: '二维码打印', url: 'page/printer/qrcode-center.html', icon: 'ri-qr-code-line' },
               ]},
 
               /* ──5. 履约配送（2 项，原「配送平台」拆分）── */
@@ -449,7 +450,7 @@
         },
         methods: {
           imgUrl(name) {
-            return '/common/download?name=' + name
+            return imgPath(name)
           },
           // 拉取当前登录员工最新资料（头像/工号/岗位），失败时静默用 localStorage 兜底
           loadCurrentEmployee() {

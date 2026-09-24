@@ -192,7 +192,7 @@
     },
     methods: {
       imgUrl(name) {
-        return '/common/download?name=' + name
+        return imgPath(name)
       },
       isExpired(str) {
         if (!str) return false

@@ -63,18 +63,6 @@ const queryDishList = (params) => {
   })
 }
 
-// 文件down预览
-const commonDownload = (params) => {
-  return $axios({
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-    },
-    url: '/common/download',
-    method: 'get',
-    params
-  })
-}
-
 // 菜品统计（轻量接口，仅COUNT查询）
 const getDishStats = () => $axios({ url: '/dish/stats', method: 'get' })
 

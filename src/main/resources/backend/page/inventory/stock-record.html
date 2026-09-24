@@ -249,7 +249,7 @@
         // 凭证图片逗号串 → 可访问下载 URL 列表
         imageList(images) {
           if (!images) return []
-          return images.split(',').filter(function(x) { return !!x }).map(function(x) { return '/common/download?name=' + x })
+          return images.split(',').filter(function(x) { return !!x }).map(function(x) { return imgPath(x) })
         },
         firstVoucher(images) {
           const list = this.imageList(images)

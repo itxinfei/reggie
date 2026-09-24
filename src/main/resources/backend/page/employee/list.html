@@ -489,7 +489,7 @@
           /* ── 员工弹窗（新增/编辑/提交） ── */
           // 查看员工（只读模式，复用新增/编辑弹窗）
           imgUrl(name) {
-            return '/common/download?name=' + name
+            return imgPath(name)
           },
           // 打开电子工牌：先弹窗再异步取二维码
           openBadge(row) {

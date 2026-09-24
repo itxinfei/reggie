@@ -541,7 +541,7 @@
         detailVoucherList: function() {
           const raw = this.detailRow && this.detailRow.voucherImages
           if (!raw) return []
-          return raw.split(',').filter(function(x) { return !!x }).map(function(x) { return '/common/download?name=' + x })
+          return raw.split(',').filter(function(x) { return !!x }).map(function(x) { return imgPath(x) })
         },
         // 修改点：statsCards 统一卡片配置（供 <stat-cards> 组件使用）
         statsCards: function() {

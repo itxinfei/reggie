@@ -495,7 +495,7 @@
           var self = this
           getCategoryList({ type: 1 }).then(function(res) { if (res.code === 1) { self.dishList = res.data || [] } }).catch(function(err) { ReggieUI.error('加载菜品分类失败:') })
         },
-        getImage: function(image) { return '/common/download?name=' + image },
+        getImage: function(image) { return imgPath(image) },
         // stat-cards 点击
         onCardClick: function(payload) {
           if (payload.activeKey === 'deleted') { return }
@@ -635,7 +635,7 @@
             var res = await queryDishById(id)
             if (String(res.code) === '1') {
               var data = res.data
-              self.dishForm = { id: data.id, name: data.name, code: data.code || '', categoryId: data.categoryId, price: String(data.price), sort: data.sort || 0, stockQty: data.stockQty != null ? String(data.stockQty) : '', minStock: data.minStock != null ? String(data.minStock) : '', image: data.image, imageUrl: '/common/download?name=' + data.image, description: data.description || '', status: String(data.status) === '1' }
+              self.dishForm = { id: data.id, name: data.name, code: data.code || '', categoryId: data.categoryId, price: String(data.price), sort: data.sort || 0, stockQty: data.stockQty != null ? String(data.stockQty) : '', minStock: data.minStock != null ? String(data.minStock) : '', image: data.image, imageUrl: imgPath(data.image), description: data.description || '', status: String(data.status) === '1' }
               self.dishFlavors = data.flavors && data.flavors.map(function(obj) {
                 var parsedValue = []
                 if (obj.value) {
@@ -755,7 +755,7 @@
             }
             return
           }
-          this.dishForm.imageUrl = '/common/download?name=' + response.data; this.dishForm.image = response.data
+          this.dishForm.imageUrl = imgPath(response.data); this.dishForm.image = response.data
         },
         // el-upload 的 :on-error 回调 —— 仅 401/未登录才跳登录，500/403 等服务端异常只提示，避免误踢管理员
         handleAvatarError: function(err, file, fileList) {

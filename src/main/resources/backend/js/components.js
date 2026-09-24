@@ -1411,7 +1411,7 @@ Vue.component('rg-image-uploader', {
     // 单图模式当前图片的完整回显地址
     singleUrl: function () {
       var rel = this.relativeList()[0]
-      return rel ? ('/common/download?name=' + rel) : ''
+      return rel ? imgPath(rel) : ''
     }
   },
   created: function () {
@@ -1460,7 +1460,7 @@ Vue.component('rg-image-uploader', {
         var rel = p.trim()
         if (rel) {
           var seg = rel.split('/')
-          list.push({ name: seg[seg.length - 1], url: '/common/download?name=' + rel, relative: rel, status: 'success' })
+          list.push({ name: seg[seg.length - 1], url: imgPath(rel), relative: rel, status: 'success' })
         }
       })
       return list
@@ -1503,7 +1503,7 @@ Vue.component('rg-image-uploader', {
         return
       }
       file.relative = response.data
-      file.url = '/common/download?name=' + response.data
+      file.url = imgPath(response.data)
       // 单图模式：只保留最新一张
       this.syncValue(this.single ? [file] : fileList)
     },
