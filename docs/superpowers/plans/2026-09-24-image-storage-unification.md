@@ -883,7 +883,9 @@ git commit -m "feat(download): 按 public/private/来源前段分流鉴权并保
 
 **Interfaces:**
 - Consumes: Task 2 `resolveRoot`；Task 3/4 目录契约
-- Produces: `GET /uploads/public/**` 匿名可读 `{root}/public/**`；`/uploads/private/**` 404；白名单 `/uploads/public/**`（`/common/download` 已在 LOGIN_EXCLUDE_URLS，不动）。
+- Produces: `GET /uploads/public/**` 匿名可读 `{root}/public/**`；`/uploads/private/**` 404；白名单 `/uploads/public/**`；**`GET /shared/**` 匿名可读 classpath `shared/`（Task 1 三端注入的 img-path.js 依赖此映射+白名单，否则 404/401）**；`/common/download` 已在 LOGIN_EXCLUDE_URLS，不动。
+
+> **plan 补丁（Task 1 评审发现）**：原计划遗漏 `/shared/**` 静态映射与白名单，导致 Task 1 注入的 `/shared/js/img-path.js` 线上不可达。本任务 Step 1/3 一并修复。
 
 - [ ] **Step 1: 写失败测试**
 
@@ -943,13 +945,19 @@ class PublicUploadsStaticMappingTest {
         mockMvc.perform(get("/uploads/private/admin/purchase/202609/whatever.jpg"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void sharedScriptAnonymousReadable() throws Exception {
+        mockMvc.perform(get("/shared/js/img-path.js"))
+                .andExpect(status().isOk());
+    }
 }
 ```
 
 - [ ] **Step 2: 运行测试确认失败**
 
 Run: `mvn test -Dtest=PublicUploadsStaticMappingTest`
-Expected: FAIL（`publicUploadIsAnonymousReadable` 404）
+Expected: FAIL（`publicUploadIsAnonymousReadable` 404；`sharedScriptAnonymousReadable` 401 或 404）
 
 - [ ] **Step 3: 实现静态映射与白名单收窄**
 
@@ -977,6 +985,8 @@ import org.springframework.beans.factory.annotation.Value;
         registry.addResourceHandler("/front/**").addResourceLocations("classpath:/front/");
         // 骑手端 H5（独立目录）
         registry.addResourceHandler("/rider/**").addResourceLocations("classpath:/rider/");
+        // 三端共享 JS（img-path.js 等，Task 1 注入依赖）
+        registry.addResourceHandler("/shared/**").addResourceLocations("classpath:/shared/");
         // 运行时公开图：仅 public 段静态直出；private 永不映射（走 /common/download 鉴权）
         String uploadRoot = com.reggie.utils.ImageStoragePathResolver.resolveRoot(configPath);
         registry.addResourceHandler("/uploads/public/**")
@@ -995,9 +1005,10 @@ import org.springframework.beans.factory.annotation.Value;
 替换为：
 
 ```java
-        // 静态资源目录：仅公开上传目录（private 图经 /common/download 鉴权，不匿名放行）
+        // 静态资源目录：仅公开上传目录 + 三端共享 JS（private 图经 /common/download 鉴权，不匿名放行）
         "/images/**",
         "/uploads/public/**",
+        "/shared/**",
 ```
 
 `/common/download`、`/common/download/**` 两行保持不动。
@@ -1005,7 +1016,7 @@ import org.springframework.beans.factory.annotation.Value;
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `mvn test -Dtest=PublicUploadsStaticMappingTest`
-Expected: PASS（2 用例）
+Expected: PASS（3 用例）
 
 - [ ] **Step 5: 回归 download 用例**
 
