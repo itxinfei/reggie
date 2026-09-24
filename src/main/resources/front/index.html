@@ -76,7 +76,8 @@
       <!-- ====== 美团：渐变色头部区域 ====== -->
       <!-- 修改点(2026-09-17)：可访问性——页面地标（landmark），便于屏幕阅读器快速跳转 -->
       <div class="header-section" role="banner">
-        <!-- 顶部导航：定位 | 搜索 | 用户 -->
+        <!-- 修改点(2026-09-24)：顶部导航改为「定位 | 搜索通栏 | 右侧图标组」——搜索框居中占满主视觉，
+             右侧消息/AI/头像三入口收拢为 icon 组（负外边距减小间距），对齐美团外卖头部布局 -->
         <div class="top-bar">
           <div class="location" @click="toAddressPage">
             <i class="ri-map-pin-line"></i>
@@ -88,19 +89,20 @@
             <i class="ri-search-line"></i>
             <span>搜索菜品、套餐</span>
           </div>
-          <!-- 修改点：消息铃铛入口 + 未读角标 -->
-          <div class="msg-bell" @click="toMessagePage">
-            <i class="bell-icon ri-notification-line" aria-hidden="true"></i>
-            <span v-if="unreadMsgCount > 0" class="msg-badge">
-              {{ unreadMsgCount > 99 ? '99+' : unreadMsgCount }}
-            </span>
-          </div>
-          <!-- 修改点：AI点餐助手入口 -->
-          <div class="ai-entry" @click="toAIAssistant">
-            <i class="ai-icon ri-robot-line" aria-hidden="true"></i>
-          </div>
-          <div class="user-btn" @click="toUserPage">
-            <img :src="userAvatar || './images/headPage.png'" alt="用户头像"/>
+          <!-- 修改点(2026-09-24)：消息/AI/头像收拢为右侧图标组，缩小边距（样式见 .top-actions） -->
+          <div class="top-actions">
+            <div class="msg-bell" @click="toMessagePage">
+              <i class="bell-icon ri-notification-line" aria-hidden="true"></i>
+              <span v-if="unreadMsgCount > 0" class="msg-badge">
+                {{ unreadMsgCount > 99 ? '99+' : unreadMsgCount }}
+              </span>
+            </div>
+            <div class="ai-entry" @click="toAIAssistant">
+              <i class="ai-icon ri-robot-line" aria-hidden="true"></i>
+            </div>
+            <div class="user-btn" @click="toUserPage">
+              <img :src="userAvatar || './images/headPage.png'" alt="用户头像"/>
+            </div>
           </div>
         </div>
 
@@ -925,12 +927,6 @@
               }finally{
                 this._favLock = null
               }
-            },
-            // 修改点：将common.js的全局函数imgPath注册为Vue实例方法，Vue模板中无法访问全局函数
-            imgPath(path){
-              if (!path) return './images/noImg.png'
-              if (path.indexOf('http://') === 0 || path.indexOf('https://') === 0) return path
-              return '/common/download?name=' + path
             },
             // 修改点：图片加载失败兜底，替代el-image的error slot
             imgError(e){

@@ -438,12 +438,6 @@
                 toOrderPageWithStatus: function(status){
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/order.html?status=' + status })
                 },
-                // 修改点：注册 common.js 的全局 imgPath（Vue 模板中无法直接访问全局函数，index.html/add-order.html 同款）
-                imgPath: function(path){
-                    if (!path) return '/front/images/noImg.png'
-                    if (path.indexOf('http://') === 0 || path.indexOf('https://') === 0) return path
-                    return '/common/download?name=' + path
-                },
                 // 修改点：图片加载失败兜底占位图
                 imgError: function(e){
                     var src = e.target && e.target.src

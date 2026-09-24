@@ -94,18 +94,19 @@
                             <!-- 待接单 -->
                             <template v-if="order.status === 2">
                                 <div class="act-btn act-outline" @click="urgeOrder(order)">催单</div>
-                                <div class="act-btn act-outline" v-if="order.platformOrderId" @click="viewTracking(order)">查看配送</div>
+                                <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking(order)">查看配送</div>
                             </template>
                             <!-- 配送中 -->
                             <template v-if="order.status === 3">
                                 <div class="act-btn act-outline" @click="urgeOrder(order)">催单</div>
-                                <div class="act-btn act-outline" v-if="order.platformOrderId" @click="viewTracking(order)">查看配送</div>
+                                <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking(order)">查看配送</div>
                                 <div class="act-btn act-primary" @click="confirmReceipt(order)">确认收货</div>
                             </template>
                             <!-- 已完成 -->
                             <template v-if="order.status === 4">
                                 <div class="act-btn act-outline" @click="applyRefund(order)">申请售后</div>
-                                <div class="act-btn act-outline" @click="evaluateOrder(order)">去评价</div>
+                                <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking(order)">查看配送</div>
+                                <div class="act-btn act-outline" v-if="canEvaluateOrder(order)" @click="evaluateOrder(order)">去评价</div>
                                 <div class="act-btn act-primary" @click="addOrderAgain(order)">再来一单</div>
                             </template>
                             <!-- 已取消/已退款 -->
@@ -135,7 +136,7 @@
         <script src="../../backend/plugins/axios/axios.min.js"></script>
         <script src="./../js/request.js?v=20260917"></script>
         <script src="./../api/main.js?v=20260917"></script>
-        <script src="./../js/common.js?v=20260917"></script>
+        <script src="./../js/common.js?v=20260924"></script>
         <script src="./../api/order.js?v=20260917"></script>
         <!-- C 端跨页面复用组件（必须在 new Vue 之前加载） -->
         <script src="./../js/components-cend.js?v=20260922"></script>
@@ -169,7 +170,9 @@
                         { label: '已退款', value: 6 }
                     ],
                     // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
-                    activeTab: 1
+                    activeTab: 1,
+                    // 我的已评价商品集合（loadEvalKeys 装配），控制卡片「去评价」入口
+                    evalKeys: new Set()
                 }
             },
             computed:{},
@@ -182,6 +185,7 @@
                 } else {
                     this.initData()
                 }
+                loadEvalKeys().then(function(keys) { self.evalKeys = keys })
             },
             mounted(){
                 // 修改点(2026-09-17)：状态Tab滚动粘滞阴影
@@ -206,13 +210,6 @@
                     window.requestAnimationFrame(()=>{
                         window.location.href = '/front/index.html'
                     })
-                },
-                // 修改点(P2-1)：图片裸文件名需经 /common/download 访问，修历史订单缩略图 404
-                imgPath(path){
-                    if(!path) return ''
-                    if(path.indexOf('http://') === 0 || path.indexOf('https://') === 0) return path
-                    if(path.indexOf('/common/download') === 0) return path
-                    return '/common/download?name=' + path
                 },
                 // 修改点(2026-09-22)：底部 Tab 切换已统一由 cend-shell 组件处理，页面不再重复定义
                 initData(){
@@ -366,16 +363,19 @@
                         })
                     }
                 },
-                // 修改点：配送追踪
-                // 注意：/api/delivery/tracking/{orderId} 接收的是【平台订单号 platformOrderId】
-                // （delivery_order 表主键是 platformOrderId，getByPlatformOrderId 查询）。
-                // 本系统 Orders.number 是自增主键字符串，与平台订单号不同，直接传会导致"配送订单不存在"。
+                // 是否可看配送追踪：平台配送单 或 自有骑手配送单（有收货地址、非堂食，待接单/配送中/已完成）
+                canViewTracking(order){
+                    if(!order) return false;
+                    if(order.platformOrderId) return true;
+                    return order.addressBookId != null && order.tableId == null
+                        && (order.status === 2 || order.status === 3 || order.status === 4);
+                },
+                // 配送追踪：平台单传 platformOrderId，自有骑手单传本地订单ID；后端两种入参兼容
                 viewTracking(order){
-                    // 仅平台配送订单才有 platformOrderId；自配送/堂食无追踪，按钮已隐藏，此处兜底
-                    var platformOrderId = order && order.platformOrderId;
-                    if(platformOrderId){
+                    var trackingId = order && (order.platformOrderId || order.id);
+                    if(trackingId){
                         window.requestAnimationFrame(()=>{
-                            window.location.href = '/front/page/tracking.html?orderId=' + encodeURIComponent(platformOrderId)
+                            window.location.href = '/front/page/tracking.html?orderId=' + encodeURIComponent(trackingId)
                         })
                     } else {
                         vant.Toast.fail('该订单暂无配送追踪信息');
