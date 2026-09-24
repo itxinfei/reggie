@@ -46,6 +46,17 @@ public interface DeliveryTrackingService extends IService<Rider> {
     boolean saveOrUpdateRider(Rider rider);
 
     /**
+     * 原子调整骑手在途单量（避免读-改-写并发丢失更新）。
+     * <p>delta=+1 接单：在途 +1 并置忙碌；delta=-1 送达：在途 -1（不小于 0）、
+     * 累计单量 +1，在途归零且仍忙碌时回到在线。</p>
+     *
+     * @param riderId 骑手ID
+     * @param delta   负载变化（+1 / -1）
+     * @return 调整后的在途单量
+     */
+    int adjustRiderLoad(Long riderId, int delta);
+
+    /**
      * Delete rider
      *
      * @param id Rider ID

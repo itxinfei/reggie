@@ -55,6 +55,9 @@ public class OrderStatusFlowServiceImpl
         extends ServiceImpl<OrderMapper, Orders>
         implements OrderStatusFlowService {
 
+    /** 骑手在途单量上限，与派单"可用骑手 currentOrderCount<3"口径保持一致 */
+    private static final int MAX_RIDER_LOAD = 3;
+
     /** 订单明细服务 */
     @Autowired
     private OrderDetailService orderDetailService;
@@ -327,6 +330,10 @@ public class OrderStatusFlowServiceImpl
         if (Objects.equals(rider.getStatus(), Rider.STATUS_OFFLINE)) {
             throw new CustomException("请先上线后再抢单");
         }
+        int riderLoad = rider.getCurrentOrderCount() == null ? 0 : rider.getCurrentOrderCount();
+        if (riderLoad >= MAX_RIDER_LOAD) {
+            throw new CustomException("当前在途订单已达上限，请完成配送后再抢单");
+        }
         if (!Objects.equals(order.getStatus(), Orders.STATUS_ORDERED) || order.getRiderId() != null) {
             throw new CustomException("订单已被抢走或状态已变更");
         }
@@ -467,21 +474,8 @@ public class OrderStatusFlowServiceImpl
      * delta=-1 送达：在途 -1、累计单量 +1，在途归零且原忙碌 → 回到在线。
      */
     private void changeRiderLoad(Rider rider, int delta) {
-        int current = rider.getCurrentOrderCount() == null ? 0 : rider.getCurrentOrderCount();
-        current = Math.max(0, current + delta);
-        rider.setCurrentOrderCount(current);
-        Integer st = rider.getStatus();
-        if (delta > 0) {
-            if (current > 0 && st != null && st.intValue() == Rider.STATUS_ONLINE) {
-                rider.setStatus(Rider.STATUS_BUSY);
-            }
-        } else {
-            rider.setTotalOrderCount((rider.getTotalOrderCount() == null ? 0 : rider.getTotalOrderCount()) + 1);
-            if (current == 0 && st != null && st.intValue() == Rider.STATUS_BUSY) {
-                rider.setStatus(Rider.STATUS_ONLINE);
-            }
-        }
-        deliveryTrackingService.saveOrUpdateRider(rider);
+        // 在途计数与在线/忙碌状态由底层原子 SQL 维护，避免读-改-写并发丢失更新
+        deliveryTrackingService.adjustRiderLoad(rider.getId(), delta);
     }
 
     // ==================== 堂食桌台释放 ====================

@@ -1,6 +1,7 @@
 package com.reggie.module.delivery.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
@@ -111,6 +112,44 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
             rider.setTenantId(existing.getTenantId());
             return riderMapper.updateById(rider) > 0;
         }
+    }
+
+    /**
+     * 原子调整骑手在途单量。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int adjustRiderLoad(Long riderId, int delta) {
+        if (riderId == null) {
+            throw new CustomException("骑手ID不能为空");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (delta > 0) {
+            // 在途原子自增，接单后必为忙碌（delta 为内部固定 ±1，非外部输入，setSql 无注入风险）
+            riderMapper.update(null, new LambdaUpdateWrapper<Rider>()
+                    .eq(Rider::getId, riderId)
+                    .setSql("current_order_count = current_order_count + " + delta)
+                    .set(Rider::getStatus, Rider.STATUS_BUSY)
+                    .set(Rider::getUpdateTime, now));
+        } else if (delta < 0) {
+            int n = -delta;
+            // 在途原子自减（GREATEST 兜底不为负）、累计单量同步增加
+            riderMapper.update(null, new LambdaUpdateWrapper<Rider>()
+                    .eq(Rider::getId, riderId)
+                    .setSql("current_order_count = GREATEST(current_order_count - " + n + ", 0)")
+                    .setSql("total_order_count = total_order_count + " + n)
+                    .set(Rider::getUpdateTime, now));
+            // 仅当在途真正归零且仍忙碌时回到在线（条件更新，并发送达时安全）
+            riderMapper.update(null, new LambdaUpdateWrapper<Rider>()
+                    .eq(Rider::getId, riderId)
+                    .eq(Rider::getStatus, Rider.STATUS_BUSY)
+                    .eq(Rider::getCurrentOrderCount, 0)
+                    .set(Rider::getStatus, Rider.STATUS_ONLINE)
+                    .set(Rider::getUpdateTime, now));
+        }
+        Rider latest = riderMapper.selectById(riderId);
+        return latest != null && latest.getCurrentOrderCount() != null
+                ? latest.getCurrentOrderCount() : 0;
     }
 
     /**

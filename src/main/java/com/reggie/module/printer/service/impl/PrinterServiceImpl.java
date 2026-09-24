@@ -1,6 +1,7 @@
 package com.reggie.module.printer.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
@@ -60,6 +61,11 @@ public class PrinterServiceImpl implements PrinterService {
         Orders order = orderService.getById(orderId);
         if (order == null) {
             throw new CustomException("订单不存在");
+        }
+        // 校验订单归属当前租户，防止传入他租户 orderId 渲染并输出别家小票内容
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(order.getTenantId())) {
+            throw new CustomException("无权操作其他租户的订单");
         }
 
         List<OrderDetail> details = orderDetailService.list(
