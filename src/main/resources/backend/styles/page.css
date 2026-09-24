@@ -10,9 +10,14 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  margin-bottom: 20px;
+  margin: 0 0 20px; /* 上下边距全站统一：上 0、下 20px（原仅 margin-bottom，杜绝个别页漂移） */
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* table-bar 统一刷新按钮：推到最右；action-group 已靠右时剩余空间为 0，自然成组 */
+.container .tableBar .table-bar__refresh {
+  margin-left: auto;
 }
 
 /* 搜索区域（<table-bar> 组件使用，聚合搜索控件+查询/重置按钮） */

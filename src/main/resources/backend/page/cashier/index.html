@@ -23,7 +23,7 @@
       overflow-y: auto;
     }
     .cashier-container {
-      padding: 24px 32px;
+      padding: 10px; /* 主内容区边距全站统一 10px（原 24px 32px） */
       max-width: 1400px;
       margin: 0 auto;
     }
@@ -68,7 +68,7 @@
     /* 响应式：小屏切换单列，避免 400px 支付面板溢出 375px 视口 */
     @media (max-width: 900px) {
       .cashier-main { grid-template-columns: 1fr; }
-      .cashier-container { padding: 16px; }
+      .cashier-container { padding: 10px; }
     }
     .order-panel {
       background: var(--bg-surface);

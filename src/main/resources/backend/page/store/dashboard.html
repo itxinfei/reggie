@@ -24,7 +24,7 @@
         body { overflow-x: hidden; overflow-y: auto; }
         .store-dashboard { min-height: 100%; display: flex; flex-direction: column; }
         .store-dashboard .container {
-            flex: 1; background: transparent; padding: var(--space-3) var(--space-4);
+            flex: 1; background: transparent; padding: 10px;
             min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%;
         }
 
@@ -121,11 +121,11 @@
 
         /* ========== 响应式 ========== */
         @media (max-width: 1200px) {
-            .container { padding: var(--space-3) var(--space-4) !important; }
+            .container { padding: 10px; }
             .content-grid { grid-template-columns: 1fr; gap: var(--space-4); }
         }
         @media (max-width: 768px) {
-            .container { padding: var(--space-2) var(--space-3) !important; }
+            .container { padding: 10px; }
             .chart-box { min-height: 260px; }
         }
     </style>

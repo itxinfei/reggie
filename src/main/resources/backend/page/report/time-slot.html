@@ -21,7 +21,7 @@
     html { overflow: hidden; }
     body { overflow-x: hidden; overflow-y: auto; }
     .timeslot-page { min-height: 100%; display: flex; flex-direction: column; }
-    .timeslot-page .container { flex: 1; background: transparent; padding: var(--space-2) var(--space-3);
+    .timeslot-page .container { flex: 1; background: transparent; padding: 10px;
       min-width: 0; max-width: 1400px; margin: 0 auto; width: 100%; }
 
     /* 工具栏统一走 table-bar 组件 + page.css 的 .container .tableBar 纯 flex 栏规则，
@@ -51,6 +51,8 @@
         :search-items="searchItems"
         :actions="searchActions"
         :loading="loading"
+        :show-refresh="true"
+        @refresh="loadData()"
         @search="handleSearch"
         @reset="handleReset"
         @action="handleAction">
