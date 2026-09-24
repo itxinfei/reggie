@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -140,7 +141,13 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         r.setStatus(ReservationStatus.ARRIVED.getValue());
         updateById(r);
         if (r.getTableId() != null) {
-            diningTableService.changeStatus(r.getTableId(), DiningTableStatus.OCCUPIED.getValue());
+            // 到店即开台：预订确认时桌台为 RESERVED，先在本事务内释放回 FREE，再一键开台
+            // 建 EAT_IN 占位订单并置占用，修复旧实现裸改占用却不建单、结账无单可结的问题。
+            diningTableService.changeStatus(r.getTableId(), DiningTableStatus.FREE.getValue());
+            Map<String, Object> openResult = diningTableService.openWithOrder(
+                    r.getTableId(), r.getSeatCount(), "预订到店 " + r.getCustomerName());
+            log.info("[预订到店] 已开台: reservationId={}, tableId={}, orderId={}",
+                    id, r.getTableId(), openResult.get("orderId"));
         }
     }
 

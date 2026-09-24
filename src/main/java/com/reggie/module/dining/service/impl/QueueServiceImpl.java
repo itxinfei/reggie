@@ -8,6 +8,7 @@ import com.reggie.module.dining.mapper.QueueMapper;
 import com.reggie.module.dining.model.QueueRecord;
 import com.reggie.module.dining.vo.QueueStatsVO;
 import com.reggie.enums.QueueRecordStatus;
+import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.module.dining.service.QueueService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -50,6 +52,10 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
 
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
+
+    /** 堂食桌台服务：入座时联动开台建单 */
+    @Autowired
+    private DiningTableService diningTableService;
 
     /**
      * 处理 take number。
@@ -345,8 +351,17 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
                 .set(QueueRecord::getStatus, QueueRecordStatus.SEATED.getValue())
                 .update();
         if (success) {
-            log.info("[安排入座] 排队记录已入座: queueId={}, queueNo={}, tableId={}",
-                    queueId, record.getQueueNo(), tableId);
+            // 入座即开台：选择了桌台则一键开台（建 EAT_IN 占位待付款订单 + 桌台置占用并绑定），
+            // 修复旧实现 tableId 仅打印日志不落库、桌台仍显示空闲而被二次开台的问题。
+            if (tableId != null) {
+                Map<String, Object> openResult = diningTableService.openWithOrder(
+                        tableId, record.getSeatCount(), "排队入座 " + record.getQueueNo());
+                log.info("[安排入座] 已开台: queueId={}, tableId={}, orderId={}",
+                        queueId, tableId, openResult.get("orderId"));
+            } else {
+                log.info("[安排入座] 排队记录已入座(未指定桌台): queueId={}, queueNo={}",
+                        queueId, record.getQueueNo());
+            }
         } else {
             log.warn("[安排入座] CAS更新失败，记录已被其他线程修改: queueId={}", queueId);
         }

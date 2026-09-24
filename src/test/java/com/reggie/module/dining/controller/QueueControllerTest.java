@@ -1,8 +1,13 @@
 package com.reggie.module.dining.controller;
 
 import com.reggie.common.BaseContext;
+import com.reggie.enums.DiningTableStatus;
+import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.model.QueueRecord;
+import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.module.dining.service.QueueService;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +29,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@Sql(scripts = "classpath:schema-dining.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+// 组合 payment-controller schema：开台联动会写 orders 表（IF NOT EXISTS，与 dining 表无冲突）
+@Sql(scripts = {"classpath:schema-dining.sql", "classpath:schema-payment-controller.sql"},
+        executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class QueueControllerTest {
 
     @Autowired
@@ -32,6 +39,12 @@ public class QueueControllerTest {
 
     @Autowired
     private QueueService queueService;
+
+    @Autowired
+    private DiningTableService diningTableService;
+
+    @Autowired
+    private OrderService orderService;
 
     @BeforeEach
     void setUp() {
@@ -119,5 +132,46 @@ public class QueueControllerTest {
                 .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
+    }
+
+    @Test
+    void testSeatCustomerOpensTable() throws Exception {
+        // 准备 FREE 桌台
+        DiningTable table = new DiningTable();
+        table.setId(10L);
+        table.setTenantId(1L);
+        table.setName("测试桌10");
+        table.setSeatCount(4);
+        table.setStatus(DiningTableStatus.FREE.getValue());
+        diningTableService.save(table);
+
+        // 排队记录置为 CALLED（入座前置状态）
+        QueueRecord called = queueService.getById(1L);
+        called.setStatus("CALLED");
+        queueService.updateById(called);
+
+        // 安排入座并指定桌台 → 应联动开台
+        mockMvc.perform(put("/api/dining/queue/seat")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"queueId\":1,\"tableId\":10}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 桌台已占用并绑定订单
+        DiningTable updated = diningTableService.getById(10L);
+        org.junit.jupiter.api.Assertions.assertEquals(
+                DiningTableStatus.OCCUPIED.getValue(), updated.getStatus());
+        org.junit.jupiter.api.Assertions.assertNotNull(updated.getCurrentOrderId());
+        // 占位订单：待付款、EAT_IN、绑定桌台、金额0
+        Orders order = orderService.getById(updated.getCurrentOrderId());
+        org.junit.jupiter.api.Assertions.assertEquals(Orders.STATUS_PENDING_PAY, order.getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals("EAT_IN", order.getSource());
+        org.junit.jupiter.api.Assertions.assertEquals(10L, order.getTableId().longValue());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                0, order.getAmount().compareTo(java.math.BigDecimal.ZERO));
+        // 排队记录状态为 SEATED
+        org.junit.jupiter.api.Assertions.assertEquals("SEATED", queueService.getById(1L).getStatus());
     }
 }

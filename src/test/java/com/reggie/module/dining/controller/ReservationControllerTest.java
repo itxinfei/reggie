@@ -1,8 +1,14 @@
 package com.reggie.module.dining.controller;
 
 import com.reggie.common.BaseContext;
+import com.reggie.enums.DiningTableStatus;
+import com.reggie.enums.ReservationStatus;
+import com.reggie.module.dining.model.DiningTable;
 import com.reggie.module.dining.model.Reservation;
+import com.reggie.module.dining.service.DiningTableService;
 import com.reggie.module.dining.service.ReservationService;
+import com.reggie.module.order.model.Orders;
+import com.reggie.module.order.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +31,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@Sql(scripts = "classpath:schema-dining.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+// 组合 payment-controller schema：到店联动开台会写 orders 表
+@Sql(scripts = {"classpath:schema-dining.sql", "classpath:schema-payment-controller.sql"},
+        executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class ReservationControllerTest {
 
     @Autowired
@@ -33,6 +41,12 @@ public class ReservationControllerTest {
 
     @Autowired
     private ReservationService reservationService;
+
+    @Autowired
+    private DiningTableService diningTableService;
+
+    @Autowired
+    private OrderService orderService;
 
     @BeforeEach
     void setUp() {
@@ -124,6 +138,50 @@ public class ReservationControllerTest {
                 .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
+    }
+
+    @Test
+    void testArriveOpensTable() throws Exception {
+        // 预订确认时桌台已置 RESERVED
+        DiningTable table = new DiningTable();
+        table.setId(20L);
+        table.setTenantId(1L);
+        table.setName("测试桌20");
+        table.setSeatCount(4);
+        table.setStatus(DiningTableStatus.RESERVED.getValue());
+        diningTableService.save(table);
+
+        // 第二条预订（setUp 的 id=1 未绑桌台），绑定桌台
+        Reservation r = new Reservation();
+        r.setId(2L);
+        r.setTenantId(1L);
+        r.setCustomerName("李四");
+        r.setPhone("13900139000");
+        r.setReservedTime(LocalDateTime.now().plusHours(2));
+        r.setSeatCount(4);
+        r.setStatus(ReservationStatus.CONFIRMED.getValue());
+        r.setTableId(20L);
+        reservationService.save(r);
+
+        // 到店 → 先释放 RESERVED→FREE 再联动开台
+        mockMvc.perform(put("/api/dining/reservation/arrive/2")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 桌台已占用并绑定订单
+        DiningTable updated = diningTableService.getById(20L);
+        org.junit.jupiter.api.Assertions.assertEquals(
+                DiningTableStatus.OCCUPIED.getValue(), updated.getStatus());
+        org.junit.jupiter.api.Assertions.assertNotNull(updated.getCurrentOrderId());
+        // 占位订单：待付款、EAT_IN
+        Orders order = orderService.getById(updated.getCurrentOrderId());
+        org.junit.jupiter.api.Assertions.assertEquals(Orders.STATUS_PENDING_PAY, order.getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals("EAT_IN", order.getSource());
+        // 预订状态 ARRIVED
+        org.junit.jupiter.api.Assertions.assertEquals(
+                ReservationStatus.ARRIVED.getValue(), reservationService.getById(2L).getStatus());
     }
 
     @Test
