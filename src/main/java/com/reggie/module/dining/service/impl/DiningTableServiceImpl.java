@@ -35,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -566,7 +567,7 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
         }
 
         // 3. 将指定订单转移到新桌台（等价抽取，同步 tableName）
-        transferOrdersToTable(splitOrderIds, newTableId, tenantId, newTable.getName());
+        transferOrdersToTable(splitOrderIds, originalTableId, newTableId, tenantId, newTable.getName());
 
         // 4. 更新原桌台状态（等价抽取）
         updateOriginalTableAfterSplit(originalTableId, tenantId);
@@ -582,19 +583,23 @@ public class DiningTableServiceImpl extends ServiceImpl<DiningTableMapper, Dinin
      * 将指定订单转移到新桌台（等价抽取，降低方法长度）。
      * 校验每个订单确实归属原桌台，防止越权转移。
      *
-     * @param splitOrderIds 需要转移的订单ID列表
-     * @param newTableId    目标桌台ID
-     * @param tenantId      租户ID
-     * @param newTableName  目标桌台名称（同步更新到订单 table_name 列）
+     * @param splitOrderIds  需要转移的订单ID列表
+     * @param originalTableId 原桌台ID（订单必须当前绑定此桌台）
+     * @param newTableId     目标桌台ID
+     * @param tenantId       租户ID
+     * @param newTableName   目标桌台名称（同步更新到订单 table_name 列）
      */
-    private void transferOrdersToTable(List<Long> splitOrderIds, Long newTableId, Long tenantId, String newTableName) {
+    private void transferOrdersToTable(List<Long> splitOrderIds, Long originalTableId,
+            Long newTableId, Long tenantId, String newTableName) {
         for (Long orderId : splitOrderIds) {
             Orders order = orderService.getById(orderId);
             if (order == null || !tenantId.equals(order.getTenantId())) {
                 throw new CustomException("订单不存在或无权操作: orderId=" + orderId);
             }
-            // 校验订单归属原桌台（tableId 在后续 updateOriginalTableAfterSplit 中由调用方传入）
-            // 此处仅校验租户归属，桌台归属在 splitTable 方法的上下文中已隐式保证
+            // 校验订单确实绑定原桌台，防止传入他桌订单ID把别人的在途单强行改绑
+            if (!Objects.equals(order.getTableId(), originalTableId)) {
+                throw new CustomException("订单不属于该桌台，无法转移: orderId=" + orderId);
+            }
             LambdaUpdateWrapper<Orders> orderUw = new LambdaUpdateWrapper<>();
             orderUw.eq(Orders::getId, orderId)
                    .eq(Orders::getTenantId, tenantId)

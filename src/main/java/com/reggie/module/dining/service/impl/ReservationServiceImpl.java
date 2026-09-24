@@ -91,6 +91,19 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         if (currentTenantId != null && !currentTenantId.equals(r.getTenantId())) {
             throw new CustomException("无权操作其他租户的预订");
         }
+        // 仅待确认(PENDING)可确认：防止已取消预订被重新确认复活、重复确认
+        if (ReservationStatus.CONFIRMED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订已确认，请勿重复操作");
+        }
+        if (ReservationStatus.ARRIVED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订已到店，无法确认");
+        }
+        if (ReservationStatus.CANCELLED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订已取消，无法重新确认");
+        }
+        if (!ReservationStatus.PENDING.getValue().equals(r.getStatus())) {
+            throw new CustomException("当前预订状态无法确认");
+        }
         if (r.getTableId() != null) {
             diningTableService.changeStatus(r.getTableId(), DiningTableStatus.RESERVED.getValue());
         }
@@ -137,6 +150,17 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (currentTenantId != null && !currentTenantId.equals(r.getTenantId())) {
             throw new CustomException("无权操作其他租户的预订");
+        }
+        // 仅已确认(CONFIRMED)可办理到店：重复到店会把已占用桌台 OCCUPIED→FREE 踢走首单、
+        // 已取消预订到店会夺回已让给他人的桌台，均须在开台前拦下
+        if (ReservationStatus.ARRIVED.getValue().equals(r.getStatus())) {
+            throw new CustomException("该预订已办理到店，请勿重复操作");
+        }
+        if (ReservationStatus.CANCELLED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订已取消，无法办理到店");
+        }
+        if (!ReservationStatus.CONFIRMED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订尚未确认，请先确认后再办理到店");
         }
         r.setStatus(ReservationStatus.ARRIVED.getValue());
         updateById(r);

@@ -123,12 +123,26 @@ public class ReservationControllerTest {
 
     @Test
     void testArrive() throws Exception {
+        // 到店仅对已确认(CONFIRMED)预订开放，先确认
+        mockMvc.perform(put("/api/dining/reservation/confirm/1")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
         mockMvc.perform(put("/api/dining/reservation/arrive/1")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("到店成功"));
+
+        // 重复到店须拦截，避免把已开桌台的首单踢成孤儿单
+        mockMvc.perform(put("/api/dining/reservation/arrive/1")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
     }
 
     @Test
