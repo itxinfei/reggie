@@ -204,5 +204,59 @@ public class CommonControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().contentTypeCompatibleWith("image/svg+xml"));
     }
+
+    @Test
+    void testDownloadPublicPathWithoutLogin() throws Exception {
+        // public 前缀免登录；文件不存在也回 200 占位 SVG（鉴权先于存在性）
+        mockMvc.perform(get("/common/download")
+                .param("name", "public/admin/dishes/202609/not-exist.jpg"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .content().contentTypeCompatibleWith("image/svg+xml"));
+    }
+
+    @Test
+    void testDownloadPrivateAdminWithoutEmployeeRejected() throws Exception {
+        mockMvc.perform(get("/common/download")
+                .param("name", "private/admin/purchase/202609/x.jpg")
+                .sessionAttr("user", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.msg").value("NOTLOGIN"));
+    }
+
+    @Test
+    void testDownloadPrivateUserWithoutUserRejected() throws Exception {
+        mockMvc.perform(get("/common/download")
+                .param("name", "private/user/avatar/202609/x.jpg")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.msg").value("NOTLOGIN"));
+    }
+
+    @Test
+    void testDownloadPrivateAdminWithEmployeeAllowed() throws Exception {
+        mockMvc.perform(get("/common/download")
+                .param("name", "private/admin/purchase/202609/not-exist.jpg")
+                .sessionAttr("employee", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .content().contentTypeCompatibleWith("image/svg+xml"));
+    }
+
+    @Test
+    void testDownloadLegacyPathStillRequiresAnyLogin() throws Exception {
+        // 旧相对路径（迁移窗口期兼容）：未登录 401，user 登录可读
+        mockMvc.perform(get("/common/download")
+                .param("name", "images/dishes/legacy.jpg"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/common/download")
+                .param("name", "images/dishes/legacy.jpg")
+                .sessionAttr("user", 1L)
+                .sessionAttr("tenantId", 1L))
+                .andExpect(status().isOk());
+    }
 }
 

@@ -237,28 +237,13 @@ public class CommonController {
     @Operation(summary = "文件下载", description = "下载图片文件，需要登录")
     @Parameter(name = "name", description = "文件名", required = true)
     public void download(String name, HttpServletResponse response, HttpServletRequest request) {
-        // 登录态校验
-        if (request.getSession().getAttribute("employee") == null
-                && request.getSession().getAttribute("user") == null) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json;charset=UTF-8");
-            try {
-                response.getWriter().write("{\"code\":0,\"msg\":\"NOTLOGIN\"}");
-            } catch (IOException e) {
-                log.error("发送登录校验响应失败", e);
-            }
-            return;
-        }
         String filePath = null;
         try {
-            // 先解码 URL 编码字符（浏览器会自动对反斜杠等字符编码）
             String decodedName = java.net.URLDecoder.decode(name, java.nio.charset.StandardCharsets.UTF_8.name());
-            // 统一分隔符为 /
             String normalizedPath = decodedName.replace("\\", "/");
             File baseDir = new File(basePath).getCanonicalFile();
             File targetFile = new File(baseDir, normalizedPath).getCanonicalFile();
 
-            // 校验目标路径是否在允许的基础路径内（须带上分隔符，避免 uploads-xxx 等同级目录被误判为子路径）
             if (!targetFile.equals(baseDir)
                     && !targetFile.getPath().startsWith(baseDir.getPath() + File.separator)) {
                 log.warn("路径穿越攻击被拦截: name={}, resolved={}", name, targetFile.getPath());
@@ -266,23 +251,23 @@ public class CommonController {
                 return;
             }
 
+            // 按路径前段分流鉴权（public 免登录；private 细分角色；旧路径任一登录可读）
+            if (authorizeDownload(normalizedPath, request) == false) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":0,\"msg\":\"NOTLOGIN\"}");
+                return;
+            }
+
             filePath = targetFile.getAbsolutePath();
-
-//            log.info("文件下载请求: name={}, path={}, exists={}", name, filePath, targetFile.exists());
-
-            // 如果文件不存在，返回 SVG 占位图（不依赖外部文件）
             if (!targetFile.exists()) {
                 log.warn("文件不存在，返回占位图: {}", filePath);
                 sendPlaceholderImage(response);
                 return;
             }
-
-            // 根据文件扩展名设置Content-Type（等价抽取）
             applyContentType(response, decodedName);
-            // 流式写出文件（等价抽取）
             streamFile(targetFile, response);
         } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("文件下载失败: {}", filePath, e);
             try {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "文件不存在");
@@ -290,6 +275,27 @@ public class CommonController {
                 log.error("发送错误响应失败", ex);
             }
         }
+    }
+
+    /**
+     * download 鉴权分流：public 放行；private/admin 要求 employee；private/user 要求 user；
+     * 旧相对路径（无 public|private 前缀）兼容 employee 或 user 任一登录。
+     *
+     * @return true 放行；false 拒绝（调用方写 401 NOTLOGIN）
+     */
+    private boolean authorizeDownload(String normalizedPath, HttpServletRequest request) {
+        boolean hasEmployee = request.getSession().getAttribute("employee") != null;
+        boolean hasUser = request.getSession().getAttribute("user") != null;
+        if (com.reggie.utils.ImageStoragePathResolver.isPublicPath(normalizedPath)) {
+            return true;
+        }
+        if (com.reggie.utils.ImageStoragePathResolver.isAdminPrivatePath(normalizedPath)) {
+            return hasEmployee;
+        }
+        if (com.reggie.utils.ImageStoragePathResolver.isUserPrivatePath(normalizedPath)) {
+            return hasUser;
+        }
+        return hasEmployee || hasUser;
     }
 
     /**
