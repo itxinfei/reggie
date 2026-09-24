@@ -247,15 +247,15 @@ public class MaterialController {
     }
 
     /**
-     * 批量补货：创建采购单并自动入库
+     * 批量补货：按主供应商分组生成「已下单」采购单，不直接入库
      */
     @PostMapping("/batch-restock")
     @RateLimit(maxRequestsPerSecond = 3)
-    @Operation(summary = "批量补货", description = "批量补货：创建采购单并自动入库")
-    public R<Long> batchRestock(@Parameter(description = "批量补货信息", required =
+    @Operation(summary = "批量补货", description = "批量补货：按主供应商分组生成已下单采购单，收货时入库")
+    public R<java.util.List<String>> batchRestock(@Parameter(description = "批量补货信息", required =
             true) @Validated @RequestBody BatchRestockDTO dto) {
-        Long orderId = materialService.batchRestock(dto);
-        return R.success(orderId);
+        java.util.List<String> orderNos = materialService.batchRestock(dto);
+        return R.success(orderNos);
     }
 }
 

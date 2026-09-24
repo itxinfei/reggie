@@ -578,7 +578,8 @@
               remark: this.restockForm.remark
             })
             if (String(res.code) === '1') {
-              ReggieUI.success('补货成功：已生成采购单并自动入库，采购单ID=' + res.data)
+              var orderNos = Array.isArray(res.data) ? res.data : []
+              ReggieUI.success('补货成功：已按供应商生成 ' + orderNos.length + ' 张采购单（待收货），请在采购管理中确认收货')
               this.restockForm.dialogVisible = false
               this.selectedRows = []
               this.smartSelectedRows = []

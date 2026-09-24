@@ -65,10 +65,10 @@ public interface MaterialService extends IService<Material> {
     List<Map<String, Object>> replenishSuggest(int days);
 
     /**
-     * 批量补货：创建采购单并自动入库
+     * 批量补货：按主供应商分组生成「已下单」采购单，不直接入库
      *
      * @param dto 批量补货请求
-     * @return 生成的采购单ID
+     * @return 各采购单的单号列表
      */
-    Long batchRestock(BatchRestockDTO dto);
+    java.util.List<String> batchRestock(BatchRestockDTO dto);
 }

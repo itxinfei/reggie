@@ -384,82 +384,86 @@ public class MaterialServiceImpl extends ServiceImpl<MaterialMapper, Material> i
     }
 
     /**
-     * 批量补货：创建采购单并自动入库
+     * 批量补货：按食材的主供应商分组，各生成一张「已下单」采购单，不直接入库。
      * <p>
      * 流程：
-     * 1. 获取第一条补货食材的 supplierId 作为采购单供应商
-     * 2. 创建采购单（草稿状态）
-     * 3. 为每个补货食材添加采购明细
-     * 4. 直接调用 stockIn 完成入库（无需等待确认收货）
+     * 1. 收集有效补货行，一次取出食材档案
+     * 2. 按 material.supplierId 分组（不同供应商的食材不再混挂到同一家）
+     * 3. 每个供应商：创建采购单（草稿）→ 逐条添加明细 → 审核为「已下单」
+     * 4. 入库统一由后续「采购收货」动作完成，货没到不再虚增库存
      * </p>
      *
      * @param dto 批量补货请求
-     * @return 生成的采购单ID
+     * @return 各采购单的单号列表
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Long batchRestock(BatchRestockDTO dto) {
+    public List<String> batchRestock(BatchRestockDTO dto) {
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new CustomException("补货明细不能为空");
         }
-
-        List<BatchRestockDTO.RestockItem> items = dto.getItems();
-
-        // 获取第一条补货食材的 supplierId 作为采购单供应商
-        Long supplierId = items.get(0).getMaterialId() != null
-            ? getByItemId(items.get(0).getMaterialId()) : null;
-
-        // 若无法确定供应商，尝试取第一条有效食材的供应商
-        if (supplierId == null) {
-            for (BatchRestockDTO.RestockItem item : items) {
-                if (item.getMaterialId() == null) {
-                    continue;
-                }
-                Material m = getById(item.getMaterialId());
-                if (m != null && m.getSupplierId() != null) {
-                    supplierId = m.getSupplierId();
-                    break;
-                }
-            }
-            if (supplierId == null) {
-                throw new CustomException("无法确定供应商");
-            }
-        }
-
-        // 创建采购单
-        Long tenantId = BaseContext.getCurrentTenantId();
-        Long orderSupplierId = supplierId;
         String operator = dto.getOperator() != null ? dto.getOperator() : "系统补货";
-        String remark = dto.getRemark() != null ? dto.getRemark() : "批量补货";
-        PurchaseOrder po = purchaseOrderService.createOrder(orderSupplierId, operator, remark);
-        Long orderId = po != null ? po.getId() : null;
+        String baseRemark = dto.getRemark() != null ? dto.getRemark() : "批量补货";
 
-        // 为每个补货食材添加采购明细并入库
-        for (BatchRestockDTO.RestockItem item : items) {
-            Long materialId = item.getMaterialId();
-            if (materialId == null) continue;
-
+        // 1. 汇总有效补货行并收集食材ID
+        List<BatchRestockDTO.RestockItem> validItems = new ArrayList<>();
+        List<Long> materialIds = new ArrayList<>();
+        for (BatchRestockDTO.RestockItem item : dto.getItems()) {
+            if (item.getMaterialId() == null) {
+                continue;
+            }
             BigDecimal qty = new BigDecimal(item.getQty() != null ? item.getQty() : "0");
-            if (qty.compareTo(BigDecimal.ZERO) <= 0) continue;
-
-            Material material = getById(materialId);
-            if (material == null) continue;
-
-            BigDecimal unitPrice = material.getUnitPrice() != null ? material.getUnitPrice() : BigDecimal.ZERO;
-
-            // 添加采购明细
-            purchaseOrderService.addDetail(orderId, materialId, qty, unitPrice);
-
-            // 直接入库（补货模式：无需等待确认收货）
-            stockRecordService.stockIn(materialId, qty, unitPrice, orderId, "批量补货入库", operator);
+            if (qty.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            validItems.add(item);
+            materialIds.add(item.getMaterialId());
+        }
+        if (validItems.isEmpty()) {
+            throw new CustomException("补货数量必须大于0");
+        }
+        Map<Long, Material> materialMap = new HashMap<>();
+        List<Material> materials = listByIds(materialIds);
+        if (materials != null) {
+            for (Material m : materials) {
+                materialMap.put(m.getId(), m);
+            }
         }
 
-        return orderId;
-    }
+        // 2. 按主供应商分组
+        Map<Long, List<BatchRestockDTO.RestockItem>> groupBySupplier = new HashMap<>();
+        for (BatchRestockDTO.RestockItem item : validItems) {
+            Material m = materialMap.get(item.getMaterialId());
+            Long supplierId = m != null ? m.getSupplierId() : null;
+            List<BatchRestockDTO.RestockItem> group = groupBySupplier.get(supplierId);
+            if (group == null) {
+                group = new ArrayList<>();
+                groupBySupplier.put(supplierId, group);
+            }
+            group.add(item);
+        }
 
-    private Long getByItemId(Long materialId) {
-        Material m = getById(materialId);
-        return m != null ? m.getSupplierId() : null;
+        // 3. 每个供应商建一张采购单：建单(草稿) → 加明细 → 审核为已下单；不入库
+        List<String> orderNos = new ArrayList<>();
+        for (Map.Entry<Long, List<BatchRestockDTO.RestockItem>> entry : groupBySupplier.entrySet()) {
+            Long supplierId = entry.getKey();
+            if (supplierId == null) {
+                throw new CustomException("部分食材未设置主供应商，请先在食材档案中完善供应商后再补货");
+            }
+            PurchaseOrder po = purchaseOrderService.createOrder(supplierId, operator, baseRemark);
+            Long orderId = po.getId();
+            for (BatchRestockDTO.RestockItem item : entry.getValue()) {
+                Material m = materialMap.get(item.getMaterialId());
+                BigDecimal qty = new BigDecimal(item.getQty());
+                BigDecimal unitPrice = m != null && m.getUnitPrice() != null
+                        ? m.getUnitPrice() : BigDecimal.ZERO;
+                purchaseOrderService.addDetail(orderId, item.getMaterialId(), qty, unitPrice);
+            }
+            // 明细加完后审核为已下单；入库留给后续「采购收货」
+            purchaseOrderService.approveOrder(orderId);
+            orderNos.add(po.getOrderNo());
+        }
+        return orderNos;
     }
 
     /**

@@ -1,7 +1,11 @@
 package com.reggie.module.inventory;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.dto.StockCheckItemDTO;
+import com.reggie.enums.PurchaseOrderStatus;
+import com.reggie.module.inventory.dto.BatchRestockDTO;
 import com.reggie.module.inventory.model.*;
 import com.reggie.module.inventory.service.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -277,6 +282,79 @@ public class InventoryServiceTest {
 
         Material updated = materialService.getById(material.getId());
         assertEquals(0, new BigDecimal("8").compareTo(updated.getStockQty()));
+    }
+
+    @Test
+    void testBatchRestockGroupsBySupplier() {
+        // 两个供应商
+        Supplier s1 = new Supplier();
+        s1.setTenantId(1L); s1.setName("补货供应商甲"); s1.setStatus(1);
+        supplierService.save(s1);
+        Supplier s2 = new Supplier();
+        s2.setTenantId(1L); s2.setName("补货供应商乙"); s2.setStatus(1);
+        supplierService.save(s2);
+
+        // 三个食材：甲供2个、乙供1个；记录初始库存，验证补货不自动入库
+        Material m1 = buildRestockMaterial("补货食材1", s1.getId(), "10");
+        Material m2 = buildRestockMaterial("补货食材2", s1.getId(), "20");
+        Material m3 = buildRestockMaterial("补货食材3", s2.getId(), "30");
+
+        BatchRestockDTO dto = new BatchRestockDTO();
+        dto.setOperator("测试员");
+        dto.setRemark("批量补货测试");
+        List<BatchRestockDTO.RestockItem> items = new ArrayList<>();
+        items.add(restockItem(m1.getId(), "5"));
+        items.add(restockItem(m2.getId(), "8"));
+        items.add(restockItem(m3.getId(), "3"));
+        dto.setItems(items);
+
+        List<String> orderNos = materialService.batchRestock(dto);
+
+        // 按主供应商拆成 2 张采购单
+        assertEquals(2, orderNos.size());
+        List<PurchaseOrder> orders = purchaseOrderService.list(
+                new LambdaQueryWrapper<PurchaseOrder>().in(PurchaseOrder::getOrderNo, orderNos));
+        assertEquals(2, orders.size());
+        // 全部为 ORDERED（已下单待收货），不是 DRAFT
+        List<Long> orderIds = orders.stream().map(PurchaseOrder::getId).collect(Collectors.toList());
+        orders.forEach(o -> assertEquals(PurchaseOrderStatus.ORDERED.getValue(), o.getStatus()));
+        // 明细共 3 行
+        long detailCount = purchaseOrderDetailService.count(new LambdaQueryWrapper<PurchaseOrderDetail>()
+                .in(PurchaseOrderDetail::getPurchaseOrderId, orderIds));
+        assertEquals(3, detailCount);
+        // 库存保持不变（收货时才入库）
+        assertEquals(0, new BigDecimal("10").compareTo(materialService.getById(m1.getId()).getStockQty()));
+        assertEquals(0, new BigDecimal("20").compareTo(materialService.getById(m2.getId()).getStockQty()));
+        assertEquals(0, new BigDecimal("30").compareTo(materialService.getById(m3.getId()).getStockQty()));
+
+        // 未设主供应商的食材补货：应报错而不是挂到任意供应商
+        Material m4 = buildRestockMaterial("补货食材4", null, "5");
+        BatchRestockDTO dto2 = new BatchRestockDTO();
+        List<BatchRestockDTO.RestockItem> items2 = new ArrayList<>();
+        items2.add(restockItem(m4.getId(), "1"));
+        dto2.setItems(items2);
+        assertThrows(CustomException.class, () -> materialService.batchRestock(dto2));
+    }
+
+    /** 构造补货测试食材：启用、带单价与初始库存 */
+    private Material buildRestockMaterial(String name, Long supplierId, String stockQty) {
+        Material m = new Material();
+        m.setTenantId(1L);
+        m.setName(name);
+        m.setUnit("斤");
+        m.setSupplierId(supplierId);
+        m.setStockQty(new BigDecimal(stockQty));
+        m.setUnitPrice(new BigDecimal("5.00"));
+        m.setStatus(1);
+        materialService.save(m);
+        return m;
+    }
+
+    private BatchRestockDTO.RestockItem restockItem(Long materialId, String qty) {
+        BatchRestockDTO.RestockItem item = new BatchRestockDTO.RestockItem();
+        item.setMaterialId(materialId);
+        item.setQty(qty);
+        return item;
     }
 }
 
