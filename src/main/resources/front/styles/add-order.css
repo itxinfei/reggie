@@ -16,7 +16,8 @@
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 68rem;
+  /* 贴底通栏高 56 + 安全区，再留 12 呼吸位，避免最后一项被栏遮挡 */
+  padding-bottom: calc(68rem + env(safe-area-inset-bottom, 0rem));
 }
 
 #add_order .divContent .divAddress {
@@ -245,41 +246,47 @@
   height: 103rem;
 }
 
+/* 底部结算栏：由悬浮圆角胶囊改为贴底通栏（去左右边距与圆角，固定贴底 + 安全区） */
 #add_order .divCart {
-  /* 左右各 10rem 自适应宽度，替代固定 345rem（320 窄屏不再横向溢出/裁切按钮） */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-modal, 3000);
   height: 56rem;
   background: var(--bg-cart-bar);
-  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sheet);
-  z-index: 3000;
-  position: absolute;
-  bottom: 12rem;
-  bottom: calc(12rem + constant(safe-area-inset-bottom));
-  bottom: calc(12rem + env(safe-area-inset-bottom, 0px));
-  left: 10rem;
-  right: 10rem;
+  padding-left: 10rem;
   display: flex;
   align-items: center;
 }
-
-#add_order .divCart .imgCartActive {
-  background-image: url("./../images/cart_active.png");
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  #add_order .divCart {
+    height: calc(56rem + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
-#add_order .divCart .imgCart {
-  background-image: url("./../images/cart.png");
-}
-
-#add_order .divCart > div:first-child {
+/* 购物车入口：位图改 RemixIcon 圆底；空车深灰圆，有货品牌金圆并略突出栏顶 */
+#add_order .divCart .cart-entry {
   position: relative;
-  width: 60rem;
-  height: 60rem;
-  margin-left: 6rem;
-  margin-top: -4rem;              /* 图标略突出栏顶，对标美团 */
+  width: 46rem;
+  height: 46rem;
+  margin-top: -10rem;
   flex-shrink: 0;
-  background-size: 60rem 60rem;
-  background-repeat: no-repeat;
-  background-position: center;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-cart-icon-idle);
+  color: var(--color-text-disabled);
+  cursor: pointer;
+}
+#add_order .divCart .cart-entry i { font-size: 24rem; line-height: 1; }
+#add_order .divCart .cart-entry.active {
+  background: var(--color-primary);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-cart-icon);
 }
 
 #add_order .divCart .divNum {
@@ -297,15 +304,16 @@
 
 #add_order .divCart > div:last-child {
   flex-shrink: 0;
-  width: 108rem;
+  width: 112rem;
   height: 40rem;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   font-size: 15rem;
   font-family: var(--font-family-body);
-  font-weight: 500;
+  font-weight: 600;
   text-align: center;
   line-height: 40rem;
-  margin-right: 8rem;
+  margin-left: auto;
+  margin-right: 12rem;
 }
 
 #add_order .divCart .btnSubmit {
@@ -332,30 +340,28 @@
   cursor: progress;
 }
 
-#add_order .divCart .divGoodsNum {
-  width: 18rem;
+/* 数量角标：嵌套在购物车圆内，定位到其右上角 */
+#add_order .divCart .cart-entry .divGoodsNum {
+  position: absolute;
+  top: -5rem;
+  right: -5rem;
+  min-width: 18rem;
   height: 18rem;
-  opacity: 1;
+  padding: 0 4rem;
   background: var(--color-danger);
-  border-radius: 50%;
+  border-radius: 9rem;
   text-align: center;
   font-size: 12rem;
-  font-family: "PingFangSC", "PingFangSC-Regular";
+  font-family: var(--font-family-body);
   font-weight: 500;
   color: var(--color-text-white);
   line-height: 18rem;
-  /* 角标与图标是兄弟节点，相对 .divCart 定位到图标右上角（图标突出栏顶 4rem） */
-  position: absolute;
-  left: 57rem;
-  top: -8rem;
 }
 
-#add_order .divCart .moreGoods {
-  width: 25rem;
-  height: 25rem;
-  line-height: 25rem;
-  left: 50rem;
-  top: -10rem;
+#add_order .divCart .cart-entry .moreGoods {
+  min-width: 24rem;
+  height: 24rem;
+  line-height: 24rem;
 }
 
 /* 修改点：支付方式选择 */
@@ -540,72 +546,114 @@
 }
 
 /* 修改点：优惠券选择 */
+/* 优惠券入口行（点击底部弹层选择），与其它白卡行同高 */
 #add_order .divContent .coupon-section {
+  display: flex;
+  align-items: center;
   background: var(--bg-card);
   border-radius: var(--radius-md);
   margin-top: 10rem;
   margin-bottom: 10rem;
-  padding: 3rem 10rem 10rem 16rem;
+  padding: 0 12rem;
+  height: 48rem;
   box-shadow: 0 1rem 4rem var(--border-hair);
+  cursor: pointer;
 }
-
-#add_order .divContent .coupon-section .title {
-  height: 44rem;
-  line-height: 44rem;
-  font-size: 16rem;
-  font-family: "PingFangSC", "PingFangSC-Semibold";
+#add_order .divContent .coupon-section .coupon-entry-label {
+  font-size: 15rem;
   font-weight: 600;
   color: var(--color-text-primary);
-  border-bottom: 1px solid var(--bg-hover);
-  margin-bottom: 8rem;
 }
-
-#add_order .divContent .coupon-section .coupon-tip {
-  font-size: 12rem;
-  font-weight: 400;
+#add_order .divContent .coupon-section .coupon-entry-state {
+  flex: 1;
+  margin-left: 10rem;
+  text-align: right;
+  font-size: 13rem;
+  color: var(--color-text-hint);
+}
+#add_order .divContent .coupon-section .coupon-entry-state.active {
   color: var(--color-price);
 }
-
-#add_order .divContent .coupon-section .coupon-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8rem;
+#add_order .divContent .coupon-section .coupon-entry-arrow {
+  margin-left: 2rem;
+  font-size: 18rem;
+  color: var(--color-text-hint);
 }
 
-#add_order .divContent .coupon-section .coupon-card {
+/* ===== 优惠券选择弹层 ===== */
+#add_order .coupon-popup { padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0rem)); }
+#add_order .coupon-popup .coupon-popup-header {
+  position: relative;
   display: flex;
   align-items: center;
-  height: 64rem;
-  border-radius: var(--radius-md);
-  padding: 0 12rem;
+  justify-content: space-between;
+  padding: 14rem 16rem;
+  border-bottom: var(--hairline);
+}
+#add_order .coupon-popup .coupon-popup-title {
+  font-size: 16rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+#add_order .coupon-popup .coupon-popup-close {
+  font-size: 20rem;
+  color: var(--color-text-hint);
   cursor: pointer;
-  /* card-in-card 收敛：面板内默认无框，按压/选中才显色 */
-  border: 1px solid transparent;
-  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+#add_order .coupon-popup .coupon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10rem;
+  padding: 12rem 16rem 4rem;
+}
+
+/* 票券卡：默认浅边框，选中加金边；点击有轻微按压 */
+#add_order .coupon-popup .coupon-card {
   position: relative;
+  display: flex;
+  align-items: center;
+  height: 80rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  cursor: pointer;
   overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-#add_order .divContent .coupon-section .coupon-card:active {
-  transform: scale(0.98);
+#add_order .coupon-popup .coupon-card:active { border-color: var(--color-primary); }
+#add_order .coupon-popup .coupon-card.active {
   border-color: var(--color-primary);
+  box-shadow: 0 2rem 10rem var(--color-primary-tint-lg);
 }
 
-#add_order .divContent .coupon-section .coupon-card.active {
-  border-color: var(--color-primary);
-  background: linear-gradient(135deg, var(--color-primary-light), var(--add-order-coupon-active-end));
-  box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
-}
-
-#add_order .divContent .coupon-section .coupon-left {
-  width: 72rem;
-  text-align: center;
-  /* 修改点(2026-09-17)：2px dashed 移动端渲染成密集方块且灰色抢戏 → 1px 浅色虚线 */
-  border-right: 1px dashed var(--border-light);
+/* 左：金额区，浅金底 + 右缘金虚线，虚线两端用白圆咬出撕票缺口 */
+#add_order .coupon-popup .coupon-left {
+  position: relative;
+  width: 96rem;
+  height: 100%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding-right: 12rem;
-  margin-right: 12rem;
+  background: var(--color-primary-tint);
+  border-right: 1px dashed var(--color-primary-tint-lg);
 }
+#add_order .coupon-popup .coupon-left::before,
+#add_order .coupon-popup .coupon-left::after {
+  content: '';
+  position: absolute;
+  right: -5rem;
+  width: 10rem;
+  height: 10rem;
+  border-radius: 50%;
+  background: var(--bg-card);
+}
+#add_order .coupon-popup .coupon-left::before { top: -5rem; }
+#add_order .coupon-popup .coupon-left::after { bottom: -5rem; }
 
-#add_order .divContent .coupon-section .coupon-amount {
+#add_order .coupon-popup .coupon-amount {
   display: block;
   font-size: 22rem;
   font-family: DIN, DIN-Medium;
@@ -613,64 +661,89 @@
   color: var(--color-price);
   line-height: 1.2;
 }
-
-#add_order .divContent .coupon-section .coupon-condition {
-  font-size: 11rem;
-  color: var(--color-text-hint);
-}
-
-#add_order .divContent .coupon-section .coupon-right {
-  flex: 1;
-}
-
-#add_order .divContent .coupon-section .coupon-name {
+#add_order .coupon-popup .coupon-condition { font-size: 11rem; color: var(--color-text-hint); }
+#add_order .coupon-popup .coupon-right { flex: 1; min-width: 0; padding-left: 12rem; }
+#add_order .coupon-popup .coupon-name {
   font-size: 15rem;
   font-weight: 500;
   color: var(--color-text-primary);
-  margin-bottom: 2rem;
+  margin-bottom: 4rem;
 }
-
-#add_order .divContent .coupon-section .coupon-desc {
-  font-size: 12rem;
-  color: var(--color-text-hint);
-}
-
-#add_order .divContent .coupon-section .coupon-check {
+#add_order .coupon-popup .coupon-desc { font-size: 12rem; color: var(--color-text-hint); }
+#add_order .coupon-popup .coupon-check {
+  margin-right: 12rem;
   color: var(--color-primary);
   font-size: 20rem;
   font-weight: bold;
 }
 
-#add_order .divContent .coupon-section .coupon-no-use {
+#add_order .coupon-popup .coupon-no-use {
   text-align: center;
-  padding: 12rem 0 4rem 0;
+  padding: 12rem 0 4rem;
   font-size: 13rem;
   color: var(--color-text-hint);
   cursor: pointer;
 }
+#add_order .coupon-popup .coupon-no-use:active { color: var(--color-text-secondary); }
 
-#add_order .divContent .coupon-section .coupon-no-use:active {
-  color: var(--color-text-secondary);
-}
-
-/* 修改点：可用券为空时的空态 + 加载中状态 */
-#add_order .divContent .coupon-section .coupon-empty {
+/* 空态 + 加载中 */
+#add_order .coupon-popup .coupon-empty {
   text-align: center;
-  padding: 20rem 0 8rem 0;
+  padding: 20rem 0 8rem;
   font-size: 13rem;
   color: var(--color-text-hint);
 }
-#add_order .divContent .coupon-section .coupon-empty a {
+#add_order .coupon-popup .coupon-empty a {
   color: var(--color-primary);
   text-decoration: underline;
   margin-left: 4rem;
 }
-#add_order .divContent .coupon-section .coupon-loading {
+#add_order .coupon-popup .coupon-loading {
   text-align: center;
   padding: 12rem 0;
   font-size: 12rem;
   color: var(--color-text-hint);
 }
+
+/* 明细超 3 件折叠行 */
+#add_order .divContent .order .items-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 10rem 0;
+  font-size: 13rem;
+  color: var(--color-text-hint);
+  cursor: pointer;
+}
+#add_order .divContent .order .items-toggle i { font-size: 16rem; }
+
+/* ===== 已选商品清单弹层 ===== */
+#add_order .items-popup { padding-bottom: calc(8rem + env(safe-area-inset-bottom, 0rem)); }
+#add_order .items-popup .items-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rem 16rem;
+  border-bottom: var(--hairline);
+}
+#add_order .items-popup .items-popup-title { font-size: 16rem; font-weight: 600; color: var(--color-text-primary); }
+#add_order .items-popup .items-popup-close { font-size: 20rem; color: var(--color-text-hint); cursor: pointer; }
+#add_order .items-popup .items-popup-list { padding: 4rem 16rem; max-height: 56vh; overflow-y: auto; }
+#add_order .items-popup .items-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 10rem;
+  padding: 10rem 0;
+  border-bottom: var(--hairline);
+}
+#add_order .items-popup .items-popup-item:last-child { border-bottom: none; }
+#add_order .items-popup .pi-thumb { width: 44rem; height: 44rem; border-radius: var(--radius-md); object-fit: cover; flex-shrink: 0; background: var(--bg-hover); }
+#add_order .items-popup .pi-info { flex: 1; min-width: 0; }
+#add_order .items-popup .pi-name { font-size: 14rem; color: var(--color-text-primary); }
+#add_order .items-popup .pi-meta { font-size: 12rem; color: var(--color-text-hint); margin-top: 2rem; }
+#add_order .items-popup .pi-num { font-size: 13rem; color: var(--color-text-hint); flex-shrink: 0; }
+#add_order .items-popup .pi-amount { font-size: 14rem; font-weight: 600; color: var(--color-price); font-family: DIN, DIN-Medium; flex-shrink: 0; }
 
 /* 修改点：送达时间选择器弹窗样式 */
 #add_order .time-picker-popup {

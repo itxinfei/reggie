@@ -49,42 +49,58 @@
       <a class="invalid-btn" href="/front/index.html">返回首页</a>
     </div>
 
-    <!-- 分类Tab -->
-    <div class="category-tabs" v-if="!loading && !invalidTable">
-      <div class="category-tab" :class="{active: activeCategory === 0}" @click="switchCategory(0)">全部</div>
-      <div class="category-tab" v-for="cat in categories" :key="cat.id" :class="{active: activeCategory === cat.id}" @click="switchCategory(cat.id)">
-        {{ cat.name }}
+    <!-- 菜单主体（美团范式）：左侧固定窄分类竖栏 + 右侧菜品行列表 -->
+    <div class="menu-body" v-if="!loading && !invalidTable">
+      <!-- 左：分类竖栏（选中态=左侧品牌金竖条+加粗+浅金底） -->
+      <div class="category-rail">
+        <div class="cat-item" :class="{active: activeCategory === 0}" @click="switchCategory(0)">
+          <span class="cat-name">全部</span>
+        </div>
+        <div class="cat-item" v-for="cat in categories" :key="cat.id" :class="{active: activeCategory === cat.id}" @click="switchCategory(cat.id)">
+          <span class="cat-name">{{ cat.name }}</span>
+        </div>
       </div>
-    </div>
 
-    <!-- 菜品列表 -->
-    <div class="dish-list" v-if="!loading && !invalidTable">
-      <div class="dish-card" v-for="dish in filteredDishes" :key="dish.id" :class="{'sold-out': dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)}" @click="addToCart(dish)">
-        <div class="dish-img-wrap">
-          <img :src="imgPath(dish.image)" loading="lazy" class="dish-img" :alt="dish.name || '菜品图片'" @error="$event.target.src='../images/noImg.png'" />
-          <div v-if="dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)" class="sold-out-overlay">
-            <span class="sold-out-text">售罄</span>
+      <!-- 右：菜品行（左图 + 菜名/库存 + 价格/圆形步进器） -->
+      <div class="dish-rows">
+        <div class="dish-row" v-for="dish in filteredDishes" :key="dish.id" :class="{'sold-out': isSoldOut(dish)}">
+          <div class="dish-thumb">
+            <img :src="imgPath(dish.image)" loading="lazy" :alt="dish.name || '菜品图片'" @error="$event.target.src='../images/noImg.png'" />
+            <div v-if="isSoldOut(dish)" class="sold-out-overlay">
+              <span class="sold-out-text">售罄</span>
+            </div>
+          </div>
+          <div class="dish-main">
+            <div class="dish-name">{{ dish.name }}</div>
+            <div class="dish-meta" v-if="dish.stockQty != null">库存 {{ dish.stockQty }}</div>
+            <div class="dish-price-row">
+              <div class="dish-price">{{ Number(dish.price || 0).toFixed(2) }}</div>
+              <!-- 售罄：文字占位；在售：圆形步进器，数量行内回显 -->
+              <span v-if="isSoldOut(dish)" class="sold-out-flag">售罄</span>
+              <div v-else class="stepper">
+                <button v-if="getDishQty(dish) > 0" class="step-btn step-minus" @click.stop="stepMinus(dish)" aria-label="减少一份">
+                  <i class="ri-subtract-line"></i>
+                </button>
+                <span v-if="getDishQty(dish) > 0" class="step-num">{{ getDishQty(dish) }}</span>
+                <button class="step-btn step-plus" @click.stop="addToCart(dish)" aria-label="增加一份">
+                  <i class="ri-add-line"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="dish-info">
-          <div class="dish-name">{{ dish.name }}</div>
-          <div class="dish-bottom">
-            <div class="dish-price">{{ Number(dish.price || 0).toFixed(2) }}</div>
-            <div class="dish-stock" v-if="dish.stockQty != null">库存{{ dish.stockQty }}</div>
-          </div>
+        <div v-if="filteredDishes.length === 0" class="empty-state">
+          <i class="ri-restaurant-line"></i>
+          <p>暂无菜品</p>
         </div>
-      </div>
-      <div v-if="filteredDishes.length === 0" class="empty-state">
-        <i class="ri-restaurant-line"></i>
-        <p>暂无菜品</p>
       </div>
     </div>
 
     <!-- 购物车栏 -->
     <div class="cart-bar" v-if="!loading && !invalidTable && cartTotal() > 0">
-      <div class="cart-icon" @click="showCartDialog">
+      <div class="cart-icon" :class="{bounce: cartBounce}" @click="showCartDialog">
         <i class="ri-shopping-cart-2-line"></i>
-        <div class="cart-badge" v-if="cartTotal() > 0">{{ cartTotal() }}</div>
+        <div class="cart-badge">{{ cartTotal() }}</div>
       </div>
       <div class="cart-info">
         <div class="cart-total">{{ cartAmount().toFixed(2) }}</div>
@@ -212,7 +228,9 @@
           submitting: false,
           // 到店支付下单成功弹窗及新建订单ID
           successDialogVisible: false,
-          successOrderId: null
+          successOrderId: null,
+          // 加购时购物车图标轻微弹跳一次的动画开关
+          cartBounce: false
         }
       },
       computed: {
@@ -279,7 +297,7 @@
           this.activeCategory = catId
         },
         addToCart: function(dish) {
-          if (dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)) {
+          if (this.isSoldOut(dish)) {
             vant.Toast.fail('该菜品已售罄')
             return
           }
@@ -300,7 +318,31 @@
               qty: 1
             })
           }
-          vant.Toast.success({ message: '已添加', duration: 800 })
+          // 行内步进器即时反馈，不再弹 Toast；购物车图标轻微弹跳一次
+          this.triggerCartBounce()
+        },
+        // 行内步进器减一份：数量减到 0 时由 changeQty 移出购物车
+        stepMinus: function(dish) {
+          var item = this.cart.find(function(it) { return it.dishId === dish.id })
+          if (item) this.changeQty(item, -1)
+        },
+        // 菜品是否售罄（停售或缺货）
+        isSoldOut: function(dish) {
+          return dish.status === 0 || (dish.stockQty != null && dish.stockQty <= 0)
+        },
+        // 取菜品在购物车中的当前数量，未选为 0
+        getDishQty: function(dish) {
+          var item = this.cart.find(function(it) { return it.dishId === dish.id })
+          return item ? item.qty : 0
+        },
+        // 加购反馈：购物车图标 scale 轻微弹跳一次（先关后开，保证连续加购动画可重复触发）
+        triggerCartBounce: function() {
+          var self = this
+          self.cartBounce = false
+          setTimeout(function() {
+            self.cartBounce = true
+            setTimeout(function() { self.cartBounce = false }, 320)
+          }, 10)
         },
         changeQty: function(item, delta) {
           item.qty += delta

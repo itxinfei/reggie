@@ -8,44 +8,27 @@
   background: var(--bg-page);
 }
 
-/* 快捷标题栏 */
+/* 页面标题行：金色渐变横幅退场，改为素净标题（大标题 + 灰色副标题），
+   左缘与下方分类/卡片对齐（12rem）。常购清单与我的收藏共用。 */
 .dish-card-page .quick-header {
-  margin: 12rem;
-  padding: 16rem var(--spacing-md);
-  background: var(--color-primary-gradient);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  display: flex;
-  align-items: center;
-  gap: 10rem;
+  margin: 0;
+  padding: 16rem 12rem 4rem;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  display: block;
 }
-.dish-card-page .quick-header .qi-icon {
-  width: 44rem;
-  height: 44rem;
-  border-radius: 50%;
-  background: var(--surface-white-50);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.dish-card-page .quick-header .qi-icon i {
-  font-size: 22rem;
-  color: var(--color-text-primary);
-}
-.dish-card-page .quick-header .qi-text {
-  flex: 1;
-}
+.dish-card-page .quick-header .qi-icon { display: none; }
 .dish-card-page .quick-header .qi-title {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
+  font-size: 20rem;
+  font-weight: 700;
   color: var(--color-text-primary);
-  line-height: 24rem;
+  line-height: 28rem;
 }
 .dish-card-page .quick-header .qi-desc {
   font-size: var(--font-size-sm);
-  color: var(--gold-text);
-  line-height: 20rem;
+  color: var(--color-text-hint);
+  line-height: 18rem;
   margin-top: 2rem;
 }
 
@@ -90,17 +73,19 @@
   padding: 12rem;
   position: relative;
 }
+/* 菜品缩略图放大到 152rem（美团详情式大图行），卡片随之增高；
+   常购清单与我的收藏共用此规则，两页同步放大 */
 .dish-card-page .dish-card .dish-img {
-  width: 64rem;
-  height: 64rem;
+  width: 152rem;
+  height: 152rem;
   border-radius: var(--radius-md);
   object-fit: cover;
   flex-shrink: 0;
   background: var(--bg-hover);
 }
 .dish-card-page .dish-card .dish-img-placeholder {
-  width: 64rem;
-  height: 64rem;
+  width: 152rem;
+  height: 152rem;
   border-radius: var(--radius-md);
   background: var(--bg-hover);
   display: flex;
@@ -109,14 +94,14 @@
   flex-shrink: 0;
 }
 .dish-card-page .dish-card .dish-img-placeholder i {
-  font-size: 24rem;
+  font-size: 48rem;
   color: var(--color-text-disabled);
 }
 .dish-card-page .dish-card .dish-info {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   min-width: 0;
 }
 .dish-card-page .dish-card .dish-name {
@@ -148,7 +133,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 4rem;
+  margin-top: auto;
+  padding-top: 8rem;
 }
 .dish-card-page .dish-card .dish-price {
   font-size: var(--font-size-lg);

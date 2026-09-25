@@ -124,7 +124,7 @@
                     <div class="title">订单明细</div>
                     <div class="divSplit"></div>
                     <div class="itemList">
-                        <div class="item" v-for="(item,index) in detailView" :key="index">
+                        <div class="item" v-for="(item,index) in visibleItems" :key="index">
                             <!-- 修改点：el-image替换为原生img，错误时显示占位图 -->
                             <img :src="imgPath(item.image)" @error="imgError" class="dish-image" :alt="item.name || '菜品'" loading="lazy" />
                             <div class="desc">
@@ -136,6 +136,11 @@
                                     </div>
                                 </div>
                             </div>
+                    </div>
+                    <!-- 超过 3 件折叠：展开全部 / 收起 -->
+                    <div class="items-toggle" v-if="detailView.length > 3" @click="itemsExpanded = !itemsExpanded">
+                        {{ itemsExpanded ? '收起' : ('展开全部 ' + detailView.length + ' 件') }}
+                        <i :class="itemsExpanded ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
                     </div>
                     <!-- 赠品明细（0 元，买赠活动命中） -->
                     <div class="gift-item" v-for="(g,i) in (pricing ? pricing.gifts : [])" :key="'gift'+i">
@@ -221,41 +226,75 @@
                     </div>
                 </div>
 
-                <!-- 修改点：优惠券选择 -->
-                <div class="coupon-section" v-if="!reorderId">
-                    <div class="title">
-                        优惠券
-                        <span class="coupon-tip" v-if="selectedCoupon">（可减¥{{ Number(selectedCoupon.discountAmount || 0).toFixed(2) }}）</span>
-                    </div>
-                    <div class="coupon-list">
-                        <div class="coupon-loading" v-if="couponLoading">加载中…</div>
-                        <div class="coupon-empty" v-else-if="couponList.length === 0">
-                            暂无可用优惠券，去 <a href="javascript:void(0)" @click="goMemberCenter">领券</a>
-                        </div>
-                        <div class="coupon-card"
-                             v-for="coupon in couponList"
-                             :key="coupon.id"
-                             :class="{active: selectedCoupon && selectedCoupon.id === coupon.id}"
-                             @click="selectCoupon(coupon)">
-                            <div class="coupon-left">
-                                <span class="coupon-amount">¥{{ Number(coupon.discountAmount || 0).toFixed(2) }}</span>
-                                <span class="coupon-condition">满¥{{ Number(coupon.conditionAmount || 0).toFixed(2) }}可用</span>
-                            </div>
-                            <div class="coupon-right">
-                                <div class="coupon-name">{{ coupon.templateName }}</div>
-                                <div class="coupon-desc">过期：{{ coupon.expireTime }}</div>
-                            </div>
-                            <i class="coupon-check" v-if="selectedCoupon && selectedCoupon.id === coupon.id">✓</i>
-                        </div>
-                    </div>
-                    <div class="coupon-no-use" @click="selectCoupon(null)" v-if="selectedCoupon">
-                        不使用优惠券
-                    </div>
+                <!-- 优惠券：由平铺改为入口行，点击底部弹层选择 -->
+                <div class="coupon-section" v-if="!reorderId" @click="couponPopupVisible = true">
+                    <span class="coupon-entry-label">优惠券</span>
+                    <span class="coupon-entry-state" :class="{active: selectedCoupon}">{{ couponEntryText }}</span>
+                    <i class="ri-arrow-right-s-line coupon-entry-arrow"></i>
                 </div>
+
+            <!-- 优惠券选择弹层 -->
+            <van-popup v-model="couponPopupVisible" position="bottom" round :style="{ maxHeight: '75vh' }"
+                       role="dialog" aria-modal="true" aria-label="选择优惠券">
+              <div class="coupon-popup">
+                <div class="coupon-popup-header">
+                  <span class="coupon-popup-title">选择优惠券</span>
+                  <i class="ri-close-line coupon-popup-close" @click="couponPopupVisible = false"></i>
+                </div>
+                <div class="coupon-list">
+                  <div class="coupon-loading" v-if="couponLoading">加载中…</div>
+                  <div class="coupon-empty" v-else-if="couponList.length === 0">
+                    暂无可用优惠券，去 <a href="javascript:void(0)" @click="goMemberCenter">领券</a>
+                  </div>
+                  <div class="coupon-card"
+                       v-for="coupon in couponList"
+                       :key="coupon.id"
+                       :class="{active: selectedCoupon && selectedCoupon.id === coupon.id}"
+                       @click="selectCoupon(coupon); couponPopupVisible = false">
+                    <div class="coupon-left">
+                      <span class="coupon-amount">¥{{ Number(coupon.discountAmount || 0).toFixed(2) }}</span>
+                      <span class="coupon-condition">满¥{{ Number(coupon.conditionAmount || 0).toFixed(2) }}可用</span>
+                    </div>
+                    <div class="coupon-right">
+                      <div class="coupon-name">{{ coupon.templateName }}</div>
+                      <div class="coupon-desc">过期：{{ coupon.expireTime }}</div>
+                    </div>
+                    <i class="coupon-check" v-if="selectedCoupon && selectedCoupon.id === coupon.id">✓</i>
+                  </div>
+                </div>
+                <div class="coupon-no-use" @click="selectCoupon(null); couponPopupVisible = false" v-if="selectedCoupon">
+                  不使用优惠券
+                </div>
+              </div>
+            </van-popup>
+
+            <!-- 已选商品清单弹层（点击底部购物车图标展开） -->
+            <van-popup v-model="itemsPopupVisible" position="bottom" round :style="{ maxHeight: '70vh' }"
+                       role="dialog" aria-modal="true" aria-label="已选商品">
+              <div class="items-popup">
+                <div class="items-popup-header">
+                  <span class="items-popup-title">已选商品</span>
+                  <i class="ri-close-line items-popup-close" @click="itemsPopupVisible = false"></i>
+                </div>
+                <div class="items-popup-list">
+                  <div class="items-popup-item" v-for="(item,index) in cartData" :key="'pi'+index">
+                    <img :src="imgPath(item.image)" @error="imgError" class="pi-thumb" :alt="item.name || '菜品'" loading="lazy" />
+                    <div class="pi-info">
+                      <div class="pi-name">{{ item.name }}<span class="flash-tag" v-if="item.flashSaleId">秒杀</span></div>
+                      <div class="pi-meta" v-if="item.dishFlavor">{{ item.dishFlavor }}</div>
+                    </div>
+                    <span class="pi-num">x{{ item.number }}</span>
+                    <span class="pi-amount"><span class="spanMoney">¥</span>{{ (Number(item.amount) || 0).toFixed(2) }}</span>
+                  </div>
+                </div>
+              </div>
+            </van-popup>
             </div>
             <div class="divCart">
-                <div :class="{imgCartActive: cartData && cartData.length > 0, imgCart:!cartData || cartData.length<1}"></div>
-                <div :class="{divGoodsNum:true, moreGoods:cartData && cartData.length > 99}" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
+                <div class="cart-entry" :class="{active: cartData && cartData.length > 0}" @click="openItemsPopup">
+                  <i class="ri-shopping-cart-2-fill"></i>
+                  <div class="divGoodsNum" :class="{moreGoods:cartData && cartData.length > 99}" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
+                </div>
                 <div class="divNum">
                     <span class="num-symbol">¥</span>
                     <span class="num-main">{{ finalPrice.toFixed(2) }}</span>
@@ -350,7 +389,11 @@
                             { value: 'AFTERNOON', label: '下午茶', time: '14:00-16:00' },
                             { value: 'DINNER', label: '晚餐', time: '17:30-19:00' }
                         ]
-                    }
+                    },
+                    // 优惠券选择弹层 / 已选商品清单弹层 / 订单明细是否展开全部
+                    couponPopupVisible: false,
+                    itemsPopupVisible: false,
+                    itemsExpanded: false
                 },
                 computed:{
                     goodsNum(){
@@ -391,6 +434,17 @@
                             })
                         }
                         return this.cartData
+                    },
+                    // 折叠时仅显示前 3 件，展开后显示全部
+                    visibleItems(){
+                        return this.itemsExpanded ? this.detailView : this.detailView.slice(0, 3)
+                    },
+                    // 优惠券入口行右侧状态文案
+                    couponEntryText(){
+                        if(this.couponLoading){ return '加载中…' }
+                        if(!this.couponList.length){ return '暂无可用优惠券' }
+                        if(this.selectedCoupon){ return '已选 ¥' + Number(this.selectedCoupon.discountAmount || 0).toFixed(2) + ' 优惠券' }
+                        return this.couponList.length + ' 张优惠券可用'
                     },
                     // 配送费（服务端按地址+距离核价）
                     deliveryFee(){
@@ -680,6 +734,12 @@
                                     ? null : coupon
                         }
                         this.maybeLoadPreview()
+                    },
+                    // 点击底部购物车图标：有已选商品才展开清单弹层，空车轻提示
+                    openItemsPopup(){
+                        if(this.cartData && this.cartData.length > 0){
+                            this.itemsPopupVisible = true
+                        }
                     },
                     // 修改点：加载当前订单金额对应的可用券列表
                     async loadUsableCoupons(){
