@@ -135,7 +135,7 @@
             <div class="ticket__ops">
               <el-button type="primary" size="small" :disabled="t._acting" @click="act('start',t)">开始制作</el-button>
               <el-button size="small" :disabled="t._acting" @click="act('urgent',t)">{{ t.urgent===1 ? '取消加急' : '加急' }}</el-button>
-              <el-button type="danger" plain size="small" :disabled="t._acting" @click="act('cancel',t)">取消</el-button>
+              <el-button type="text" size="small" :disabled="t._acting" @click="act('cancel',t)">取消</el-button>
             </div>
           </div>
           <div class="col-empty" v-if="!board.pending.length">暂无待制作工单</div>
@@ -160,7 +160,7 @@
             <div class="ticket__ops">
               <el-button type="success" size="small" :disabled="t._acting" @click="act('ready',t)">制作完成 · 叫号</el-button>
               <el-button size="small" :disabled="t._acting" @click="act('urgent',t)">{{ t.urgent===1 ? '取消加急' : '加急' }}</el-button>
-              <el-button type="danger" plain size="small" :disabled="t._acting" @click="act('cancel',t)">取消</el-button>
+              <el-button type="text" size="small" :disabled="t._acting" @click="act('cancel',t)">取消</el-button>
             </div>
           </div>
           <div class="col-empty" v-if="!board.cooking.length">暂无制作中工单</div>

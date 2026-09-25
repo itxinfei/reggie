@@ -145,7 +145,7 @@
                 <el-button type="primary" size="small" :disabled="t.status !== 1" @click="openIssue(t)">发放</el-button>
                 <el-button size="small" @click="showEffect(t)">效果</el-button>
                 <el-button size="small" @click="editHandle(t)">修改</el-button>
-                <el-button size="small" type="danger" @click="deleteHandle(t.id)">删除</el-button>
+                <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(t.id)">删除</el-button>
               </div>
             </div>
           </div>

@@ -268,7 +268,7 @@
                 <el-button v-if="mapSelected.status === 'OCCUPIED'" type="primary" size="small" plain @click="transferHandle(mapSelected)">转台</el-button>
                 <el-button size="small" @click="editHandle(mapSelected)">修改</el-button>
                 <el-button size="small" @click="showQrcode(mapSelected)">二维码</el-button>
-                <el-button type="danger" size="small" plain @click="deleteHandle(mapSelected.id)">删除</el-button>
+                <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(mapSelected.id)">删除</el-button>
               </div>
             </template>
             <div v-else class="map-detail__empty">点击桌号查看详情与快捷操作</div>

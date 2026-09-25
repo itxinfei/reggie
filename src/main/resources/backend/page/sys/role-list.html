@@ -169,7 +169,7 @@
         ></el-input>
         <el-button size="small" @click="toggleExpand">{{ expanded ? '折叠全部' : '展开全部' }}</el-button>
         <el-button size="small" type="primary" plain @click="quickSelect('all')">全选</el-button>
-        <el-button size="small" type="danger" plain @click="quickSelect('clear')">清空已选</el-button>
+        <el-button type="text" size="small" @click="quickSelect('clear')">清空已选</el-button>
       </div>
       <el-tree
         ref="permTree"

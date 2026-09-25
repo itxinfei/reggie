@@ -134,7 +134,7 @@
           <el-button type="primary" size="small" icon="ri-add-line" @click="showRecharge(selectedMember)">充值</el-button>
           <el-button size="small" icon="ri-edit-line" @click="showEdit(selectedMember)">编辑</el-button>
           <el-button size="small" :type="selectedMember.status === 1 ? 'warning' : 'success'" icon="ri-toggle-line" @click="toggleStatus(selectedMember)">{{ selectedMember.status === 1 ? '禁用' : '启用' }}</el-button>
-          <el-button size="small" type="danger" icon="ri-delete-bin-line" @click="handleDelete(selectedMember)">删除</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="handleDelete(selectedMember)">删除</el-button>
         </div>
         <el-tabs v-model="detailTab">
           <el-tab-pane label="充值记录" name="recharge">

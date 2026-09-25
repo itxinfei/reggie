@@ -747,9 +747,9 @@
       </div>
     </el-dialog>
 
-    <!-- 转台弹窗 -->
-    <el-dialog title="转台" :visible.sync="showTransferDialog" width="420px" custom-class="el-dialog--sm">
-      <el-form label-width="80px">
+    <!-- 转台弹窗：标准小表单，统一走 crud-dialog（footer 插槽保留未选桌台时禁用确认） -->
+    <crud-dialog title="转台" :visible.sync="showTransferDialog" size="sm">
+      <el-form label-width="80px" @submit.native.prevent>
         <el-form-item label="目标桌台">
           <el-select v-model="transferToTableId" placeholder="选择空闲桌台" style="width:100%;">
             <el-option v-for="t in freeTables" :key="t.id" :label="t.name + '（'+t.seatCount+'人）'" :value="t.id"></el-option>
@@ -760,7 +760,7 @@
         <el-button @click="showTransferDialog=false">取消</el-button>
         <el-button type="primary" :loading="transferLoading" :disabled="!transferToTableId" @click="handleTransfer">确认转台</el-button>
       </div>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- C.1：页内日结条（本日应收/实收/差异 + 一键日结，收敛 daily-settlement） -->
     <div class="settle-bar" v-if="todayStats">

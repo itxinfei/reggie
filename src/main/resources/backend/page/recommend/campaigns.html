@@ -128,7 +128,7 @@
         <!-- 批量操作栏：选中行后显示在表格上方，避免滚动到表格底部才能操作 -->
         <div class="batch-bar" v-show="selectedRows.length > 0">
           <span class="batch-bar__count">已选 {{ selectedRows.length }} 项</span>
-          <el-button size="small" type="danger" plain @click="batchDelete">批量删除</el-button>
+          <el-button type="text" size="small" class="btn-delete" @click="batchDelete">批量删除</el-button>
           <el-button size="small" type="warning" plain @click="batchPause">批量暂停</el-button>
           <el-button size="small" type="text" @click="clearSelection">清空选择</el-button>
         </div>

@@ -111,7 +111,7 @@
             <el-button type="success" size="small" @click="confirmOne(o)" :loading="o._confirming" :aria-label="'接单 ' + (o.orderNo || '')">
               <i class="ri-check-line"></i> 接单
             </el-button>
-            <el-button type="danger" size="small" plain @click="rejectOne(o)" :loading="o._rejecting" :aria-label="'拒绝 ' + (o.orderNo || '')">
+            <el-button type="text" size="small" @click="rejectOne(o)" :loading="o._rejecting" :aria-label="'拒绝 ' + (o.orderNo || '')">
               <i class="ri-close-line"></i> 拒绝
             </el-button>
           </div>
@@ -276,7 +276,7 @@
         rejectOne: function (o) {
           if (o._rejecting) return
           var self = this
-          this.$confirm('确认拒绝订单 #' + this.tail(o.orderNo) + '？拒绝后不可恢复。', '拒绝确认', {
+          ReggieUI.confirm('确认拒绝订单 #' + this.tail(o.orderNo) + '？拒绝后不可恢复。', '拒绝确认', {
             confirmButtonText: '确认拒绝', cancelButtonText: '取消', type: 'warning'
           }).then(function () {
             self.$set(o, '_rejecting', true)

@@ -381,7 +381,7 @@
                   <el-option label="禁用" :value="0"></el-option>
                 </el-select>
                 <el-button size="small" icon="ri-edit-line" @click="openGroupDialog(currentGroup)">编辑组</el-button>
-                <el-button type="danger" plain size="small" icon="ri-delete-bin-line" @click="handleDeleteGroup(currentGroup)">删除组</el-button>
+                <el-button type="text" size="small" class="btn-delete" @click="handleDeleteGroup(currentGroup)">删除组</el-button>
                 <el-button type="primary" size="small" icon="ri-add-line" @click="openOptionDialog()">新增选项</el-button>
               </div>
             </div>

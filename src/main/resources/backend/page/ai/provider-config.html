@@ -104,7 +104,7 @@
                     <el-button v-else type="info" size="small" disabled>已激活</el-button>
                     <el-button type="primary" size="small" @click="testProvider(provider.id)">测试</el-button>
                     <el-button size="small" @click="openEditDialog(provider)">编辑</el-button>
-                    <el-button type="danger" size="small" @click="deleteProvider(provider.id)"
+                    <el-button type="text" size="small" class="btn-delete" @click="deleteProvider(provider.id)"
                                :disabled="provider.isActive">删除</el-button>
                 </div>
             </div>
