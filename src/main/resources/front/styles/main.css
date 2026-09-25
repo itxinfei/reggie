@@ -39,23 +39,25 @@
   height: 20rem;
 }
 
-/* ---- 顶部导航栏 ---- */
+/* ---- 顶部导航栏（双行：定位+图标组 / 通栏搜索） ---- */
 .top-bar {
+  padding-top: 6rem;
+}
+.top-bar-row {
   display: flex;
   align-items: center;
-  height: 44rem;
-  padding: 6rem 0 0 0;
-  gap: 10rem;
+}
+.top-bar-row--search {
+  margin-top: 10rem;
 }
 
 .top-bar .location {
   display: flex;
   align-items: center;
-  /* 修改点：flex-shrink:0 → 1 + min-width:0，允许窄屏收缩地址文字（span 已有 ellipsis），把宽度让给搜索框 */
-  flex-shrink: 1;
+  /* 第一行定位占满剩余宽度，文字省略号兜底 */
+  flex: 1;
   min-width: 0;
   cursor: pointer;
-  max-width: 110rem;
 }
 
 .top-bar .location .ri-map-pin-line {
@@ -75,13 +77,10 @@
 }
 
 .top-bar .search-box {
-  flex: 1;
-  /* 修改点：min-width 保证搜索框在窄屏不被固定子元素挤压到不可用（固定元素合计约 200rem+），
-     同时移除低对比半透明背景，改用高不透明度白卡 + 深色文字，提升金色渐变上的可读性 */
-  min-width: 88rem;
-  /* 修改点(2026-09-24)：搜索框作为头部主视觉，加高 36→40rem、占位文字加大，
-     对齐美团「搜索通栏居中」的入口权重 */
-  height: 40rem;
+  /* 第二行通栏胶囊：左右对齐 header 边距 */
+  width: 100%;
+  box-sizing: border-box;
+  height: 38rem;
   background: var(--surface-white-85);
   border-radius: 999rem;
   display: flex;
@@ -96,45 +95,22 @@
   background: var(--surface-white-95);
 }
 
-/* ================================================================
-   顶部导航 — 窄屏响应式
-   修改点：main.css 此前无任何 @media 查询。在 375px 及以下，
-   固定子元素（铃铛/AI/头像约 34+34+30rem）会挤占搜索框，导致搜索文字不可见。
-   窄屏规则：隐藏铃铛/AI 入口、收紧地址文字、收缩语音按钮，优先保障搜索框。
-   ================================================================ */
+/* 修改点(2026-09-25)：双行布局后不再需要窄屏隐藏铃铛/AI 的 @media 妥协（整块移除）。 */
 /* 修改点(2026-09-24)：地址栏空态引导 —— 未选地址时弱提示样式（金色文字 + 下拉箭头），
    已选地址时保持原样式不受影响 */
 .top-bar .location-empty span {
   color: var(--color-primary-dark);
 }
 
+/* 定位下拉箭头常驻：已选态弱化为金底弱文字，空态保留金色高亮 */
 .top-bar .location-guide-arrow {
-  font-size: 14rem;
-  color: var(--color-primary-dark);
+  font-size: 16rem;
+  color: var(--gold-text);
   margin-left: 2rem;
   flex-shrink: 0;
 }
-
-@media screen and (max-width: 375px) {
-  /* 修改点：窄屏隐藏消息铃铛 + AI 入口（非核心功能），把空间让给搜索框 */
-  .top-bar .msg-bell,
-  .top-bar .ai-entry {
-    display: none;
-  }
-
-  /* 修改点：窄屏地址文字进一步收窄，保证搜索框有充足宽度 */
-  .top-bar .location {
-    max-width: 68rem;
-  }
-
-  .top-bar .location span {
-    font-size: 14rem;
-  }
-
-  /* 修改点(2026-09-14)：麦克风已移出搜索框，窄屏无需再隐藏占位文字 */
-  .top-bar .search-box span {
-    font-size: 13rem;
-  }
+.top-bar .location-empty .location-guide-arrow {
+  color: var(--color-primary-dark);
 }
 
 .top-bar .search-box i {
@@ -165,10 +141,9 @@
 }
 
 .top-bar .search-box span {
-  /* 修改点(2026-09-17)：占位文字降权重（主文字色→金底弱化档），区分「未输入」与「已输入」状态 */
+  /* 占位文字用金底弱化档，区分「未输入」与「已输入」状态 */
   color: var(--gold-text);
-  font-size: 12rem;
-  /* 修改点：flex-shrink:0 防止占位文字在窄屏被压缩换行 */
+  font-size: 13rem;
   flex-shrink: 0;
 }
 
@@ -200,6 +175,17 @@
 .top-bar .ai-entry:active {
   transform: scale(0.9);
   opacity: 0.7;
+}
+/* 热区：视觉圆钮保持 32rem，::after 透明命中区扩到 44rem（复用全站统一扩展模式） */
+.top-bar .msg-bell::after,
+.top-bar .ai-entry::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44rem;
+  height: 44rem;
+  transform: translate(-50%, -50%);
 }
 .top-bar .msg-bell .bell-icon,
 .top-bar .ai-entry .ai-icon {
@@ -434,6 +420,119 @@
 }
 
 /* ================================================================
+   金刚区（白底大圆角卡，5 列 grid，数据复用 categoryList 前 10 项）
+   ================================================================ */
+.kingkong {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  margin-top: 10rem;
+  padding: 6rem 0;
+  box-shadow: var(--shadow-card);
+}
+.kk-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+.kk-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* 整格即点击区，≥44px 高，长分类名自然增高 */
+  min-height: 44rem;
+  padding: 6rem 2rem;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.kk-icon-wrap {
+  width: 40rem;
+  height: 40rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-tint);
+}
+/* 无图标分类：首字圆底用实金底 + 深色字 */
+.kk-icon-wrap--char {
+  background: var(--color-primary);
+}
+.kk-icon {
+  font-family: remixicon;
+  font-size: 20rem;
+  line-height: 1;
+  color: var(--color-primary-dark);
+}
+.kk-char {
+  font-size: 17rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-primary-text);
+}
+.kk-text {
+  margin-top: 5rem;
+  font-size: 11rem;
+  line-height: 14rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  /* 长分类名最多两行，不破坏宫格 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ================================================================
+   Banner 轮播（默认无数据不渲染；圆角 12px、高 140rem、吸附滑动+指示点）
+   ================================================================ */
+.banner-wrap {
+  position: relative;
+  margin-top: 10rem;
+}
+.banner-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  border-radius: var(--radius-lg);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.banner-track::-webkit-scrollbar {
+  display: none;
+}
+.banner-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+}
+.banner-slide img {
+  display: block;
+  width: 100%;
+  height: 140rem;
+  object-fit: cover;
+}
+.banner-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8rem;
+  display: flex;
+  justify-content: center;
+  gap: 5rem;
+}
+.banner-dot {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 50%;
+  background: var(--surface-white-50);
+  transition: width var(--transition-fast), background var(--transition-fast);
+}
+.banner-dot.active {
+  width: 12rem;
+  border-radius: 3rem;
+  background: var(--color-text-white);
+}
+
+/* ================================================================
    核心内容区：左侧分类 + 右侧菜品
    ================================================================ */
 /* 修改点(2026-09-16)：建立滚动高度链 —— 下拉刷新容器作为 #main 的 flex 填充项，
@@ -605,12 +704,14 @@
   display: none;
 }
 /* 修改点(2026-09-16)：右侧分类分组标题（美团式左右联动），滚动时吸顶 */
+/* 修改点(2026-09-25)：灰块改白底 + 底部 1px 发丝线，消除白面板里的灰块 */
 .category-dish-title {
   position: sticky;
   top: 0;
   z-index: 5;
-  padding: 10rem 14rem 8rem;
-  background: var(--bg-page);
+  padding: 10rem 14rem 7rem;
+  background: var(--bg-card);
+  border-bottom: var(--hairline);
   font-size: 13rem;
   font-weight: 700;
   color: var(--color-text-primary);
@@ -772,15 +873,15 @@
   color: var(--color-primary);
 }
 
-/* 修改点(2026-09-18)：圆按钮视觉仅 24rem，低于触控标准。用透明 ::after 把命中区扩到 40rem
+/* 修改点：圆按钮视觉仅 24rem。用透明 ::after 把命中区扩到 44rem
    （图标字形占用 ::before，::after 空闲），不改视觉大小，快速加/减购不易点偏。 */
 .dish-item .di-action i::after {
   content: '';
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 40rem;
-  height: 40rem;
+  width: 44rem;
+  height: 44rem;
   transform: translate(-50%, -50%);
 }
 
@@ -2025,7 +2126,8 @@
   background: var(--bg-card);
   margin: 8rem 12rem 0;
   padding: 12rem 0 10rem;
-  border-radius: var(--radius-xl);
+  /* 圆角统一 12px（--radius-lg，2026-09-25 对标美团收口） */
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
 .recommend-header {
@@ -2090,13 +2192,50 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.ri-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2rem;
+}
 .ri-price {
   font-size: 14rem;
   font-weight: 700;
   color: var(--color-price);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
-  margin-top: 2rem;
+}
+/* 价格行右下角小号金色圆形直达加购钮（视觉 22rem，透明命中区 40rem） */
+.ri-add {
+  position: relative;
+  flex-shrink: 0;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-gradient);
+  box-shadow: 0 2rem 5rem var(--color-primary-shadow);
+  cursor: pointer;
+}
+.ri-add i {
+  font-family: remixicon;
+  font-size: 14rem;
+  line-height: 1;
+  color: var(--color-text-white);
+}
+.ri-add::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40rem;
+  height: 40rem;
+  transform: translate(-50%, -50%);
+}
+.ri-add:active {
+  transform: scale(0.9);
 }
 
 /* ================================================================

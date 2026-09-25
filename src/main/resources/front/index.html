@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="styles/tabbar.css?v=20260917" />
     <!-- 骨架屏样式 -->
     <style>
-      .skeleton-container { padding: 12rem; }
+      /* 骨架屏内边距统一走 skeleton.css 的 .skeleton-container（2026-09-25 对标美团优化） */
       .skeleton-restaurant { display: flex; align-items: center; padding: 16rem; background: var(--bg-card); border-radius: 12rem; margin-bottom: 12rem; }
       .skeleton-logo { width: 60rem; height: 60rem; border-radius: 8rem; background: var(--skeleton-gradient); background-size: 200% 100%; animation: rg-skeleton-shine 1.5s infinite; flex-shrink: 0; }
       .skeleton-info { flex: 1; margin-left: 12rem; }
@@ -79,32 +79,36 @@
         <!-- 修改点(2026-09-24)：顶部导航改为「定位 | 搜索通栏 | 右侧图标组」——搜索框居中占满主视觉，
              右侧消息/AI/头像三入口收拢为 icon 组（负外边距减小间距），对齐美团外卖头部布局 -->
         <div class="top-bar">
-          <!-- 修改点(2026-09-24)：地址栏空态引导 —— 未选地址时显示「请选择收货地址」+ 下拉箭头，
-               弱金色高亮提示可点击（P3 优化：新用户未必意识到定位可点） -->
-          <div class="location" :class="{ 'location-empty': !addressInfo }" @click="toAddressPage">
-            <i class="ri-map-pin-line"></i>
-            <span>{{ addressInfo ? (addressInfo.label || addressInfo.cityName + addressInfo.districtName) : '请选择收货地址' }}</span>
-            <i v-if="!addressInfo" class="ri-arrow-down-s-line location-guide-arrow" aria-hidden="true"></i>
-          </div>
-          <!-- 修改点(2026-09-14)：语音入口从搜索框边缘移入「搜索浮层的输入框」内（见 .so-voice）。
-               首页搜索框回归干净入口：放大镜 + 占位文案，避免麦克风挤在框边缘。 -->
-          <div class="search-box" @click="onSearchClick">
-            <i class="ri-search-line"></i>
-            <span>搜索菜品、套餐</span>
-          </div>
-          <!-- 修改点(2026-09-24)：消息/AI/头像收拢为右侧图标组，缩小边距（样式见 .top-actions） -->
-          <div class="top-actions">
-            <div class="msg-bell" @click="toMessagePage">
-              <i class="bell-icon ri-notification-line" aria-hidden="true"></i>
-              <span v-if="unreadMsgCount > 0" class="msg-badge">
-                {{ unreadMsgCount > 99 ? '99+' : unreadMsgCount }}
-              </span>
+          <!-- 第一行：门店定位（名称+常驻下拉箭头） + 右侧图标组 -->
+          <div class="top-bar-row">
+            <!-- 修改点(2026-09-24)：地址栏空态引导 —— 未选地址时显示「请选择收货地址」+ 下拉箭头，
+                 弱金色高亮提示可点击（P3 优化：新用户未必意识到定位可点） -->
+            <div class="location" :class="{ 'location-empty': !addressInfo }" @click="toAddressPage">
+              <i class="ri-map-pin-line"></i>
+              <span>{{ addressInfo ? (addressInfo.label || addressInfo.cityName + addressInfo.districtName) : '请选择收货地址' }}</span>
+              <i class="ri-arrow-down-s-line location-guide-arrow" aria-hidden="true"></i>
             </div>
-            <div class="ai-entry" @click="toAIAssistant">
-              <i class="ai-icon ri-robot-line" aria-hidden="true"></i>
+            <!-- 修改点(2026-09-24)：消息/AI/头像收拢为右侧图标组，缩小边距（样式见 .top-actions） -->
+            <div class="top-actions">
+              <div class="msg-bell" @click="toMessagePage">
+                <i class="bell-icon ri-notification-line" aria-hidden="true"></i>
+                <span v-if="unreadMsgCount > 0" class="msg-badge">
+                  {{ unreadMsgCount > 99 ? '99+' : unreadMsgCount }}
+                </span>
+              </div>
+              <div class="ai-entry" @click="toAIAssistant">
+                <i class="ai-icon ri-robot-line" aria-hidden="true"></i>
+              </div>
+              <div class="user-btn" @click="toUserPage">
+                <img :src="userAvatar || './images/headPage.png'" alt="用户头像"/>
+              </div>
             </div>
-            <div class="user-btn" @click="toUserPage">
-              <img :src="userAvatar || './images/headPage.png'" alt="用户头像"/>
+          </div>
+          <!-- 第二行：通栏圆角胶囊搜索框（左右对齐 header 边距） -->
+          <div class="top-bar-row top-bar-row--search">
+            <div class="search-box" @click="onSearchClick">
+              <i class="ri-search-line"></i>
+              <span>搜索菜品</span>
             </div>
           </div>
         </div>
@@ -185,6 +189,34 @@
           <span class="notice-text">{{ restaurantInfo.notice || '欢迎光临！本店精选新鲜食材，用心烹饪每一道菜品' }}</span>
           <span class="notice-arrow">›</span>
         </div>
+
+        <!-- ====== 金刚区：复用 categoryList 前 10 个分类，点击复用 categoryClick 联动右侧菜品面板 ====== -->
+        <div class="kingkong" v-if="kingkongList.length">
+          <div class="kk-grid">
+            <div class="kk-item" v-for="(item,index) in kingkongList" :key="'kk-'+item.id"
+                 @click="categoryClick(index,item.id,item.type)">
+              <span class="kk-icon-wrap" :class="{ 'kk-icon-wrap--char': !hasCategoryIcon(item.name) }">
+                <i v-if="hasCategoryIcon(item.name)" :class="getCategoryIcon(item.name)" class="kk-icon"></i>
+                <span v-else class="kk-char">{{ (item.name || '').charAt(0) }}</span>
+              </span>
+              <span class="kk-text">{{ item.name }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====== Banner 轮播：后端暂无轮播数据源，bannerList 恒空 → 容器默认不渲染、不占位；
+             未来接入数据后自动按「横向吸附滑动 + 底部指示点」呈现 ====== -->
+        <div class="banner-wrap" v-if="bannerList && bannerList.length">
+          <div class="banner-track" ref="bannerTrack" @scroll="onBannerScroll">
+            <div class="banner-slide" v-for="(b,bi) in bannerList" :key="'bn-'+bi">
+              <img :src="b.image" :alt="b.title || '活动图片'" loading="lazy"/>
+            </div>
+          </div>
+          <div class="banner-dots">
+            <span class="banner-dot" v-for="(b,bi) in bannerList" :key="'bd-'+bi"
+                  :class="{active: bi === bannerIndex}" @click="scrollBannerTo(bi)"></span>
+          </div>
+        </div>
       </div>
 
       <!-- ====== 智能推荐：为你推荐 ====== -->
@@ -201,7 +233,12 @@
             </div>
             <div class="ri-info">
               <div class="ri-name">{{ dish.name }}</div>
-              <div class="ri-price">¥{{ Number(dish.price || 0).toFixed(2) }}</div>
+              <div class="ri-price-row">
+                <span class="ri-price">¥{{ Number(dish.price || 0).toFixed(2) }}</span>
+                <span class="ri-add" @click.stop="recommendQuickAdd(dish, $event)" role="button" aria-label="加入购物车">
+                  <i class="ri-add-line"></i>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -289,8 +326,8 @@
       </div>
       </van-pull-refresh>
 
-      <!-- ====== 底部购物车栏 ====== -->
-      <div class="cart-bar" v-if="cartData && cartData.length > 0" :style="{ zIndex: dialogFlavor.show ? 100 : 3000 }">
+      <!-- ====== 底部购物车栏（常驻：空态保留深色栏+灰色圆钮+空文案+禁用态结算块） ====== -->
+      <div class="cart-bar" :style="{ zIndex: dialogFlavor.show ? 100 : 3000 }">
         <div class="cart-icon-wrap" @click="openCart">
           <div :class="['cart-icon-img', cartData && cartData.length > 0 ? 'cart-icon-active' : 'cart-icon-empty']"></div>
           <div class="cart-badge" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
@@ -677,6 +714,27 @@
         <script src="./api/favorite.js?v=20260921"></script>
   </body>
   <script>
+      // 分类名 → RemixIcon 映射（金刚区与左侧分类栏共用；仅映射表中显式存在的分类才算"有图标"）
+      var CATEGORY_ICON_MAP = {
+        '热销': 'ri-fire-line',       '新品': 'ri-sparkling-line',
+        '优惠': 'ri-confetti-line',   '特价': 'ri-diamond-line',
+        '主食': 'ri-rice-line',       '盖饭': 'ri-curry-line',
+        '炒菜': 'ri-omelette-line',   '煲仔': 'ri-pot-line',
+        '凉菜': 'ri-salad-line',      '汤羹': 'ri-stock-line',
+        '小吃': 'ri-skewer-line',     '卤味': 'ri-drumstick-line',
+        '饮品': 'ri-glass-line',      '酒水': 'ri-beer-line',
+        '甜点': 'ri-cake-2-line',     '蛋糕': 'ri-cupcake-line',
+        '套餐': 'ri-gift-line',       '面条': 'ri-noodles-line',
+        '火锅': 'ri-stock-line',      '粉面': 'ri-noodles-line',
+        '烧烤': 'ri-drumstick-line',  '海鲜': 'ri-shrimp-line',
+        '素菜': 'ri-leaf-line',       '煎炸': 'ri-drumstick-line',
+        '汉堡': 'ri-sandwich-line',   '炸鸡': 'ri-drumstick-line',
+        '披萨': 'ri-pizza-line',      '寿司': 'ri-sushi-line',
+        '早餐': 'ri-bread-line',      '午餐': 'ri-bento-line',
+        '晚餐': 'ri-restaurant-line', '夜宵': 'ri-moon-cloudy-line',
+        '小炒': 'ri-pot-line',        '干锅': 'ri-pot-line',
+        '砂锅': 'ri-pot-line',        '蒸菜': 'ri-dumpling-line'
+      };
       new Vue({
           el:'#main',
           data(){
@@ -756,6 +814,9 @@
               loadFailed: false,
               // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
               activeTab: 0,
+              // Banner 轮播（后端暂无数据源，恒为空数组 → 页面不渲染轮播容器）
+              bannerList: [],
+              bannerIndex: 0,
             }
           },
           computed:{
@@ -816,6 +877,11 @@
                 return this.categoryList[this.activeType].name
               }
               return ''
+            },
+            // 金刚区数据：复用 categoryList 前 10 个分类（顺序与索引与 categoryList 保持一致，
+            // 点击可直接把 index 交给 categoryClick）
+            kingkongList(){
+              return Array.isArray(this.categoryList) ? this.categoryList.slice(0, 10) : []
             }
           },
           watch:{
@@ -1030,29 +1096,47 @@
                 this.dishDetails(Object.assign({}, item, { type: 'dish', flavors: [] }))
               }
             },
-            // 修改点：分类图标映射（RemixIcon 类名，禁止使用 emoji）
+            // 推荐卡直达加购：推荐接口不返回 flavors（与 recommendDishClick 同一数据假设），
+            // 菜品按无规格直接 addCart、套餐走 setmeal 分支（item.flavors===undefined）。
+            // 复用 addCart：登录校验/防重点/购物车刷新全部沿用，不新增加购链路。
+            recommendQuickAdd(item, e){
+              if(!item) return
+              if(item.type === 'setmeal'){
+                this.addCart(Object.assign({}, item))
+              }else{
+                this.addCart(Object.assign({}, item, { type: 'dish', flavors: [] }))
+              }
+              if(e && e.target && this.flyToCart){ this.flyToCart(e.target) }
+            },
+            // Banner 横滑时同步指示点（rAF 节流；容器宽度=单张宽度，按 slide 宽度取整）
+            onBannerScroll(){
+              if(this._bnRaf) return
+              var self = this
+              this._bnRaf = requestAnimationFrame(function(){
+                self._bnRaf = null
+                var track = self.$refs.bannerTrack
+                if(!track) return
+                var slide = track.children[0]
+                var w = slide ? slide.offsetWidth : 0
+                if(!w) return
+                var idx = Math.round(track.scrollLeft / w)
+                if(idx !== self.bannerIndex) self.bannerIndex = idx
+              })
+            },
+            // 点击指示点吸附到对应 Banner
+            scrollBannerTo(i){
+              var track = this.$refs.bannerTrack
+              if(!track) return
+              var slide = track.children[i]
+              if(slide) track.scrollTo({ left: slide.offsetLeft, behavior: 'smooth' })
+            },
+            // 修改点：分类图标映射（复用页面级 CATEGORY_ICON_MAP，RemixIcon 类名，禁止使用 emoji）
             getCategoryIcon(name){
-              const map = {
-                '热销': 'ri-fire-line',       '新品': 'ri-sparkling-line',
-                '优惠': 'ri-confetti-line',   '特价': 'ri-diamond-line',
-                '主食': 'ri-rice-line',       '盖饭': 'ri-curry-line',
-                '炒菜': 'ri-omelette-line',   '煲仔': 'ri-pot-line',
-                '凉菜': 'ri-salad-line',      '汤羹': 'ri-stock-line',
-                '小吃': 'ri-skewer-line',     '卤味': 'ri-drumstick-line',
-                '饮品': 'ri-glass-line',      '酒水': 'ri-beer-line',
-                '甜点': 'ri-cake-2-line',     '蛋糕': 'ri-cupcake-line',
-                '套餐': 'ri-gift-line',       '面条': 'ri-noodles-line',
-                '火锅': 'ri-stock-line',      '粉面': 'ri-noodles-line',
-                '烧烤': 'ri-drumstick-line',  '海鲜': 'ri-shrimp-line',
-                '素菜': 'ri-leaf-line',       '煎炸': 'ri-drumstick-line',
-                '汉堡': 'ri-sandwich-line',   '炸鸡': 'ri-drumstick-line',
-                '披萨': 'ri-pizza-line',      '寿司': 'ri-sushi-line',
-                '早餐': 'ri-bread-line',      '午餐': 'ri-bento-line',
-                '晚餐': 'ri-restaurant-line', '夜宵': 'ri-moon-cloudy-line',
-                '小炒': 'ri-pot-line',        '干锅': 'ri-pot-line',
-                '砂锅': 'ri-pot-line',        '蒸菜': 'ri-dumpling-line'
-              };
-              return map[name] || 'ri-restaurant-line';
+              return CATEGORY_ICON_MAP[name] || 'ri-restaurant-line';
+            },
+            // 金刚区用：映射表中显式存在的分类才渲染图标，否则渲染分类名首字圆底
+            hasCategoryIcon(name){
+              return Object.prototype.hasOwnProperty.call(CATEGORY_ICON_MAP, name);
             },
             // 修改点：搜索功能 — 打开搜索浮层
             onSearchClick(){
