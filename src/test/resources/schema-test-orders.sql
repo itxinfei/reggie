@@ -1,7 +1,9 @@
 -- Test orders data (MySQL compatible)
 -- 只插入数据，不创建表（生产 schema 已存在）
 
-DELETE FROM order_detail WHERE order_id IN (1, 2, 3);
+-- 同时按主键 id 清理：本地真实库可能存在 id=1/2 但 order_id 不在 (1,2,3) 的明细，
+-- 只按 order_id 删会漏，导致下面 INSERT 主键冲突
+DELETE FROM order_detail WHERE id IN (1, 2) OR order_id IN (1, 2, 3);
 DELETE FROM orders WHERE id IN (1, 2, 3);
 
 INSERT INTO orders (id, number, status, user_id, address_book_id, order_time, checkout_time, pay_method, amount, remark, phone, address, user_name, consignee, dining_type, create_time, update_time, create_user, update_user, is_deleted, tenant_id)

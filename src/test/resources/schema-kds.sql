@@ -28,9 +28,6 @@ CREATE TABLE IF NOT EXISTS kitchen_ticket (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除：0未删除，1已删除',
   PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS uk_kitchen_order ON kitchen_ticket(order_id);
-CREATE INDEX IF NOT EXISTS idx_kitchen_tenant_status ON kitchen_ticket(tenant_id, status);
-CREATE INDEX IF NOT EXISTS idx_kitchen_finish ON kitchen_ticket(finish_time);
 
 -- 清理测试残留数据
 DELETE FROM kitchen_ticket WHERE tenant_id = 1;

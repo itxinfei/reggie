@@ -118,8 +118,8 @@ public class OrderControllerTest extends BaseControllerTest {
     void testSubmitWithFullReduction() throws Exception {
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         // 生效满减活动：满20减5（setUp 购物车商品金额=2×10=20，正好命中）
-        jdbcTemplate.update("INSERT INTO marketing_campaign (id, tenant_id, name, campaign_type, status, start_time, end_time, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                10L, 1L, "满20减5", 1, 1, now.minusDays(1), now.plusDays(1), now, now);
+        jdbcTemplate.update("INSERT INTO marketing_campaign (id, tenant_id, name, campaign_type, status, start_time, end_time, create_time, update_time, create_user, update_user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                10L, 1L, "满20减5", 1, 1, now.minusDays(1), now.plusDays(1), now, now, 1L,1L);
         jdbcTemplate.update("INSERT INTO full_reduction_rule (id, campaign_id, rule_name, discount_type, min_amount, discount_value, status, tenant_id, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 1L, 10L, "满20减5", 1, new BigDecimal("20.00"), new BigDecimal("5.00"), 1, 1L, now, now);
 

@@ -184,7 +184,10 @@ public class KitchenTicketServiceImpl
         ticket.setStatus(KitchenTicket.STATUS_READY);
         ticket.setReadyTime(now);
         if (ticket.getCookStartTime() != null) {
-            ticket.setCookDurationSeconds(Duration.between(ticket.getCookStartTime(), now).getSeconds());
+            long seconds = Duration.between(ticket.getCookStartTime(), now).getSeconds();
+            // MySQL DATETIME 仅精确到秒且对小数秒四舍五入，起止跨进位边界时可能算出 -1；
+            // 制作耗时不存在负值，钳为 0
+            ticket.setCookDurationSeconds(Math.max(0L, seconds));
         }
         updateById(ticket);
         return ticket;

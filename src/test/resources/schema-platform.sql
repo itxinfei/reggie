@@ -40,11 +40,6 @@ CREATE TABLE IF NOT EXISTS orders (
   split_count int NULL DEFAULT NULL COMMENT '分账份数（AA分账记录拆分数量）',
   PRIMARY KEY (id)
 );
-CREATE INDEX IF NOT EXISTS idx_order_user ON orders(user_id, order_time);
-CREATE INDEX IF NOT EXISTS idx_order_number ON orders(number);
-CREATE INDEX IF NOT EXISTS idx_order_status ON orders(status);
-CREATE INDEX IF NOT EXISTS idx_order_tenant ON orders(tenant_id);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_orders_platform ON orders(tenant_id, platform_type, platform_order_id);
 
 -- ==================== 订单明细表 ====================
 CREATE TABLE IF NOT EXISTS order_detail (
@@ -66,7 +61,6 @@ CREATE TABLE IF NOT EXISTS order_detail (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
-CREATE INDEX IF NOT EXISTS idx_order_detail_order ON order_detail(order_id);
 
 -- 清理平台订单残留数据（之前测试运行插入的订单），避免 @DirtiesContext 重启后数据残留导致去重误判
 DELETE FROM order_detail WHERE order_id IN (SELECT id FROM orders WHERE platform_type IS NOT NULL);

@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * CashierController 测试 — 收银管理
  *
  * 测试策略：
- * - 使用真实 MySQL 数据库（application-test.yml + jdbc:mysql://localhost:3306/reggie）
+ * - 使用本地 MySQL（application-test.yml，localhost:3306/reggie），严禁指向公网/生产库
  * - schema-cashier.sql 通过 @Sql 在每个测试方法前执行建表
  * - @Transactional 每个测试方法回滚，天然隔离
  * - 仅用 sessionAttr 注入：employee=1L、tenantId=1L 触发 LoginCheckFilter 设置 BaseContext

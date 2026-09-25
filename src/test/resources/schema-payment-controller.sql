@@ -43,11 +43,6 @@ CREATE TABLE IF NOT EXISTS orders (
   split_count int NULL DEFAULT NULL COMMENT '分账份数（AA分账记录拆分数量）',
   PRIMARY KEY (id)
 );
-CREATE INDEX IF NOT EXISTS idx_order_user ON orders(user_id, order_time);
-CREATE INDEX IF NOT EXISTS idx_order_number ON orders(number);
-CREATE INDEX IF NOT EXISTS idx_order_status ON orders(status);
-CREATE INDEX IF NOT EXISTS idx_order_tenant ON orders(tenant_id);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_orders_platform ON orders(tenant_id, platform_type, platform_order_id);
 
 -- ==================== 订单明细表 ====================
 CREATE TABLE IF NOT EXISTS order_detail (
@@ -69,7 +64,6 @@ CREATE TABLE IF NOT EXISTS order_detail (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
-CREATE INDEX IF NOT EXISTS idx_order_detail_order ON order_detail(order_id);
 
 -- ==================== 支付订单表 ====================
 CREATE TABLE IF NOT EXISTS payment_order (
@@ -91,10 +85,6 @@ CREATE TABLE IF NOT EXISTS payment_order (
   update_user bigint DEFAULT NULL COMMENT '修改人ID',
   PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS uk_trade_no ON payment_order(trade_no);
-CREATE INDEX IF NOT EXISTS idx_payment_order ON payment_order(order_id);
-CREATE INDEX IF NOT EXISTS idx_payment_tenant ON payment_order(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_channel_trade ON payment_order(channel_trade_no);
 
 -- ==================== 退款记录表 ====================
 CREATE TABLE IF NOT EXISTS refund_record (
@@ -120,9 +110,6 @@ CREATE TABLE IF NOT EXISTS refund_record (
   update_user bigint DEFAULT NULL COMMENT '修改人ID',
   PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS uk_refund_no ON refund_record(refund_no);
-CREATE INDEX IF NOT EXISTS idx_payment_refund ON refund_record(payment_order_id);
-CREATE INDEX IF NOT EXISTS idx_refund_tenant ON refund_record(tenant_id);
 
 -- ==================== 支付渠道配置表 ====================
 CREATE TABLE IF NOT EXISTS payment_channel_config (
@@ -152,8 +139,6 @@ CREATE TABLE IF NOT EXISTS payment_channel_config (
   update_user bigint DEFAULT NULL COMMENT '修改人',
   PRIMARY KEY (id)
 );
-CREATE INDEX IF NOT EXISTS idx_pcc_tenant_channel ON payment_channel_config(tenant_id, channel, is_deleted);
-CREATE INDEX IF NOT EXISTS idx_pcc_tenant ON payment_channel_config(tenant_id);
 
 -- 清理测试残留数据
 DELETE FROM refund_record WHERE tenant_id = 1;
