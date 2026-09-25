@@ -13,6 +13,12 @@ import com.reggie.module.address.model.AddressBook;
 import com.reggie.module.cashier.mapper.CashierRecordMapper;
 import com.reggie.module.cashier.model.CashierRecord;
 import com.reggie.module.dish.model.Dish;
+import com.reggie.module.marketing.dto.GiftMatch;
+import com.reggie.module.marketing.dto.NewCustomerEvaluation;
+import com.reggie.module.marketing.model.FlashSale;
+import com.reggie.module.order.dto.CheckoutPreviewDTO;
+import com.reggie.module.order.dto.CheckoutPreviewRequestDTO;
+import com.reggie.module.order.dto.CheckoutPricing;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.service.statusflow.OrderStatusFlowService;
@@ -150,6 +156,18 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     @Autowired(required = false)
     private com.reggie.module.marketing.service.MarketingService marketingService;
 
+    /** 营销工具服务（秒杀/新客立减/买赠核价；缺失时降级，仅满减/券生效） */
+    @Autowired(required = false)
+    private com.reggie.module.marketing.service.MarketingToolService marketingToolService;
+
+    /** 秒杀活动 Mapper（落库 CAS 扣库存） */
+    @Autowired
+    private com.reggie.module.marketing.mapper.FlashSaleMapper flashSaleMapper;
+
+    /** 买赠活动 Mapper（落库回写使用次数） */
+    @Autowired
+    private com.reggie.module.marketing.mapper.BuyGetFreeMapper buyGetFreeMapper;
+
     /** 下单幂等锁过期时间（分钟） */
     private static final long IDEMPOTENCY_TTL_MINUTES = 30;
 
@@ -195,56 +213,34 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         long orderId = IdWorker.getId();//订单号
 
-        // 服务端重新核价并构建订单明细（等价抽取，幽灵菜品防御）
-        Map<String, Object> detailsHolder = buildOrderDetailsAndComputeAmount(shoppingCarts, orderId,
-                currentTenantId);
-        @SuppressWarnings("unchecked")
-        List<OrderDetail> orderDetails = (List<OrderDetail>) detailsHolder.get("orderDetails");
-        BigDecimal totalAmount = (BigDecimal) detailsHolder.get("totalAmount");
+        // 一次性同源核价（只读）：商品(含秒杀) → 配送费 → 满减 → 新客立减 → 券 → 买赠。
+        // 确认页 preview 与真实下单共用 computeCheckout，前端展示与实扣绝不漂移。
+        CheckoutPricing pricing = computeCheckout(shoppingCarts, orderId, userId, currentTenantId, addressBook,
+                storeInfo, deliveryCheckEnabled, orders.getUsedCouponId());
+        CheckoutPreviewDTO preview = pricing.getView();
+        BigDecimal goodsAmount = preview.getGoodsAmount();
+        BigDecimal deliveryFee = pricing.getDeliveryFee();
 
-        // 起送价精确校验 + 配送费精确计算（等价抽取）
-        BigDecimal deliveryFee = computeDeliveryFee(deliveryCheckEnabled, storeInfo, addressBook, totalAmount,
-                currentTenantId);
-        // 配送费计入订单总额
-        BigDecimal finalAmount = totalAmount.add(deliveryFee);
-
-        // 满减优惠（真满减：按商品金额试算，不含配送费；与券可叠加，先满减后券，美团口径）
-        // 试算与下单同源，避免前端展示优惠与实际扣费不一致的信任问题
-        Map<String, Object> frHit = null;
-        BigDecimal fullReductionAmount = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        if (marketingService != null) {
-            Map<String, Object> frEval = marketingService.evaluateFullReduction(totalAmount, userId,
-                    currentTenantId);
-            Object frDiscountObj = frEval.get("discount");
-            BigDecimal frDiscount = frDiscountObj instanceof BigDecimal ? (BigDecimal) frDiscountObj
-                    : new BigDecimal(String.valueOf(frDiscountObj));
-            if (frDiscount.compareTo(BigDecimal.ZERO) > 0) {
-                fullReductionAmount = frDiscount.setScale(2, RoundingMode.HALF_UP);
-                finalAmount = finalAmount.subtract(fullReductionAmount);
-                frHit = new HashMap<>();
-                frHit.put("campaignId", frEval.get("campaignId"));
-                frHit.put("ruleId", frEval.get("ruleId"));
-                frHit.put("discount", fullReductionAmount);
-                frHit.put("goodsAmount", totalAmount);
+        // 起送价 / 配送范围硬拦截（与试算同源；不满足直接拒绝，不进入落库）
+        if (deliveryCheckEnabled) {
+            if (preview.isBelowMinOrder()) {
+                throw new CustomException("订单金额未达到起送价 " + storeInfo.getMinDeliveryAmount() + " 元，无法下单");
+            }
+            Map<String, Object> dr = evaluateDelivery(storeInfo, addressBook, goodsAmount, currentTenantId);
+            if (Boolean.TRUE.equals(dr.get("rangeChecked")) && Boolean.FALSE.equals(dr.get("inRange"))) {
+                throw new CustomException("收货地址不在配送范围内");
             }
         }
-        orders.setFullReductionAmount(fullReductionAmount);
 
-        // 优惠券折扣：此处仅【试算】用于核价，不核销；实际 useCoupon 移到幂等锁抢占成功之后，
-        // 防止并发提交时券被绑定到从未落库的 orderId（修复券既不生效又无法再用的资金/权益缺陷）
-        Map<String, Object> couponHolder = previewCouponDiscount(orders, userId, totalAmount);
-        BigDecimal couponDiscount = (BigDecimal) couponHolder.get("couponDiscount");
-        Long usedCouponId = (Long) couponHolder.get("usedCouponId");
-        finalAmount = finalAmount.subtract(couponDiscount);
-        if (finalAmount.compareTo(BigDecimal.ZERO) < 0) {
-            finalAmount = BigDecimal.ZERO;
-        }
-        orders.setUsedCouponId(usedCouponId);
+        // 回填营销金额与选定券（券不可用时 preview 已将 usedCouponId 置空，口径与试算一致）
+        orders.setFullReductionAmount(preview.getFullReduction().getAmount());
+        orders.setNewCustomerDiscountAmount(preview.getNewCustomer().getAmount());
+        orders.setUsedCouponId(preview.getCoupon().getCampaignId());
 
-        // 设置订单字段（等价抽取）
-        applySubmitOrderFields(orders, orderId, userId, user, addressBook, finalAmount, deliveryFee);
+        // 设置订单其余字段（应付金额以同源核价为准）
+        applySubmitOrderFields(orders, orderId, userId, user, addressBook, preview.getPayAmount(), deliveryFee);
         //向订单表插入数据，一条数据
-        // 修复 check-then-act 竞态：用 Redis SETNX 原子抢占幂等令牌，防止并发重复下单（等价抽取）
+        // 修复 check-then-act 竞态：用 Redis SETNX 原子抢占幂等令牌，防止并发重复下单
         String idempotencyKey = orders.getIdempotencyKey();
         String lockKey = "order:idem:" + idempotencyKey;
         int lockState = prepareIdempotencyLock(orders, idempotencyKey, lockKey);
@@ -254,8 +250,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         }
         boolean lockAcquired = lockState == 1;
 
-        // 落库订单与明细、扣库存、清空购物车（失败释放幂等锁）（等价抽取）
-        saveOrderWithLockRelease(orders, orderDetails, shoppingCarts, wrapper, lockAcquired, lockKey, frHit);
+        // 花钱明细 + 赠品明细合并落库；落库订单、营销核销、扣库存、清空购物车（失败释放幂等锁）
+        List<OrderDetail> allDetails = new ArrayList<>();
+        allDetails.addAll(pricing.getPayableDetails());
+        allDetails.addAll(pricing.getGiftDetails());
+        saveOrderWithLockRelease(orders, allDetails, shoppingCarts, wrapper, lockAcquired, lockKey, pricing);
     }
 
     /**
@@ -285,15 +284,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     /**
-     * 服务端重新核价并构建订单明细（幽灵菜品防御）（等价抽取，降低方法长度）。
+     * 商品段核价（试算/下单同源）：服务端重新核价（幽灵菜品防御）并应用秒杀替换价。
+     * 菜品/套餐存在性、租户归属、启售状态、原价一律以数据库为准，禁止信任购物车客户端金额；
+     * 命中生效秒杀的菜品以秒杀价作为实付单价，并按活动聚合扣库存行与统一限购校验。
      *
-     * @return {orderDetails, totalAmount}
+     * @return 商品段核价结果（花钱明细/视图行/秒杀行/各金额）
      */
-    private Map<String, Object> buildOrderDetailsAndComputeAmount(List<ShoppingCart> shoppingCarts, long orderId,
-            Long currentTenantId) {
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        // 幽灵菜品防御：下单时服务端重新核价——菜品/套餐存在性、租户归属、启售状态、
-        // 价格一律以数据库为准，禁止信任购物车中可能被注入的客户端金额（与 submitEatInOrder 核价逻辑对齐）
+    private GoodsPricing priceGoods(List<ShoppingCart> shoppingCarts, long orderId, Long currentTenantId,
+            Long userId) {
         List<Long> dishIds = new ArrayList<>();
         List<Long> setmealIds = new ArrayList<>();
         for (ShoppingCart item : shoppingCarts) {
@@ -319,9 +317,22 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             }
         }
 
-        List<OrderDetail> orderDetails = new ArrayList<>();
+        // 当前生效秒杀按菜品收敛（仅菜品参与，套餐不参与秒杀）
+        Map<Long, FlashSale> flashMap = marketingToolService != null
+                ? marketingToolService.mapActiveFlashSales(currentTenantId) : null;
+
+        List<OrderDetail> payableDetails = new ArrayList<>();
+        List<CheckoutPreviewDTO.DetailLine> detailLines = new ArrayList<>();
+        // 秒杀命中按活动聚合：扣库存行 + 本单数量 + 活动引用
+        Map<Long, CheckoutPricing.FlashHitLine> flashHitMap = new LinkedHashMap<>();
+        Map<Long, Integer> flashQtyMap = new LinkedHashMap<>();
+        Map<Long, FlashSale> hitFlashMap = new LinkedHashMap<>();
+
+        BigDecimal goodsAmount = BigDecimal.ZERO;
+        BigDecimal originalGoodsAmount = BigDecimal.ZERO;
+
         for (ShoppingCart item : shoppingCarts) {
-            BigDecimal unitPrice;
+            BigDecimal originalUnitPrice;
             if (item.getDishId() != null) {
                 Dish dish = dishMap.get(item.getDishId());
                 if (dish == null) {
@@ -333,7 +344,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 if (dish.getStatus() == null || dish.getStatus() != DishStatus.ENABLED.getValue()) {
                     throw new CustomException("菜品「" + dish.getName() + "」已停售，无法下单");
                 }
-                unitPrice = dish.getPrice() != null ? dish.getPrice() : BigDecimal.ZERO;
+                originalUnitPrice = dish.getPrice() != null ? dish.getPrice() : BigDecimal.ZERO;
             } else {
                 Setmeal setmeal = setmealMap.get(item.getSetmealId());
                 if (setmeal == null) {
@@ -345,11 +356,42 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 if (setmeal.getStatus() == null || setmeal.getStatus() != DishStatus.ENABLED.getValue()) {
                     throw new CustomException("套餐「" + setmeal.getName() + "」已停用，无法下单");
                 }
-                unitPrice = setmeal.getPrice() != null ? setmeal.getPrice() : BigDecimal.ZERO;
+                originalUnitPrice = setmeal.getPrice() != null ? setmeal.getPrice() : BigDecimal.ZERO;
             }
-            // 行小计 = 服务端单价 × 数量（明细金额语义与 submitEatInOrder 对齐）
+
             Integer num = item.getNumber() != null ? item.getNumber() : 0;
-            BigDecimal lineTotal = unitPrice.multiply(new BigDecimal(num));
+            BigDecimal originalLineTotal = originalUnitPrice.multiply(new BigDecimal(num));
+
+            // 默认实付单价 = 原价；命中秒杀（秒杀价严格更低）才替换
+            BigDecimal unitPrice = originalUnitPrice;
+            Long flashSaleId = null;
+            String flashSaleName = null;
+            if (item.getDishId() != null && flashMap != null) {
+                FlashSale fs = flashMap.get(item.getDishId());
+                if (fs != null && fs.getFlashPrice() != null
+                        && fs.getFlashPrice().compareTo(originalUnitPrice) < 0) {
+                    unitPrice = fs.getFlashPrice();
+                    flashSaleId = fs.getId();
+                    flashSaleName = fs.getName();
+                    if (!flashHitMap.containsKey(fs.getId())) {
+                        CheckoutPricing.FlashHitLine fl = new CheckoutPricing.FlashHitLine();
+                        fl.setFlashSaleId(fs.getId());
+                        fl.setFlashSaleName(fs.getName());
+                        fl.setDishId(fs.getDishId());
+                        fl.setDishName(fs.getDishName());
+                        fl.setQuantity(0);
+                        fl.setOriginalTotal(BigDecimal.ZERO);
+                        fl.setPayableTotal(BigDecimal.ZERO);
+                        flashHitMap.put(fs.getId(), fl);
+                        flashQtyMap.put(fs.getId(), 0);
+                        hitFlashMap.put(fs.getId(), fs);
+                    }
+                }
+            }
+
+            BigDecimal payableLineTotal = unitPrice.multiply(new BigDecimal(num));
+
+            // 落库明细（amount=实付行金额）
             OrderDetail orderDetail = new OrderDetail();
             orderDetail.setOrderId(orderId);
             orderDetail.setNumber(item.getNumber());
@@ -358,34 +400,273 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             orderDetail.setSetmealId(item.getSetmealId());
             orderDetail.setName(item.getName());
             orderDetail.setImage(item.getImage());
-            orderDetail.setAmount(lineTotal);
-            orderDetails.add(orderDetail);
-            totalAmount = totalAmount.add(lineTotal);
+            orderDetail.setAmount(payableLineTotal);
+            payableDetails.add(orderDetail);
+
+            // 视图明细行（保留原价/秒杀信息，确认页与落库同源展示）
+            CheckoutPreviewDTO.DetailLine line = new CheckoutPreviewDTO.DetailLine();
+            line.setName(item.getName());
+            line.setDishId(item.getDishId());
+            line.setSetmealId(item.getSetmealId());
+            line.setDishFlavor(item.getDishFlavor());
+            line.setImage(item.getImage());
+            line.setQuantity(item.getNumber());
+            line.setOriginalUnitPrice(originalUnitPrice);
+            line.setUnitPrice(unitPrice);
+            line.setLineAmount(payableLineTotal);
+            line.setFlashSaleId(flashSaleId);
+            line.setFlashSaleName(flashSaleName);
+            line.setLineSavings(originalLineTotal.subtract(payableLineTotal));
+            detailLines.add(line);
+
+            goodsAmount = goodsAmount.add(payableLineTotal);
+            originalGoodsAmount = originalGoodsAmount.add(originalLineTotal);
+
+            if (flashSaleId != null) {
+                CheckoutPricing.FlashHitLine fl = flashHitMap.get(flashSaleId);
+                fl.setQuantity(fl.getQuantity() + num);
+                fl.setOriginalTotal(fl.getOriginalTotal().add(originalLineTotal));
+                fl.setPayableTotal(fl.getPayableTotal().add(payableLineTotal));
+                flashQtyMap.put(flashSaleId, flashQtyMap.get(flashSaleId) + num);
+            }
         }
 
-        Map<String, Object> holder = new HashMap<>();
-        holder.put("orderDetails", orderDetails);
-        holder.put("totalAmount", totalAmount);
-        return holder;
+        // 秒杀限购统一校验：已购件数 + 本单件数 > 每人限购即拒绝（尽力校验，与满减限次同级）
+        if (marketingToolService != null) {
+            for (Map.Entry<Long, Integer> e : flashQtyMap.entrySet()) {
+                FlashSale fs = hitFlashMap.get(e.getKey());
+                Integer maxPerUser = fs != null ? fs.getMaxPerUser() : null;
+                if (maxPerUser != null && maxPerUser > 0) {
+                    int purchased = marketingToolService.sumFlashSalePurchasedQuantity(
+                            e.getKey(), userId, currentTenantId);
+                    if ((long) purchased + e.getValue() > maxPerUser) {
+                        throw new CustomException("秒杀商品「" + fs.getDishName() + "」每人限购 "
+                                + maxPerUser + " 件，您已购买 " + purchased + " 件");
+                    }
+                }
+            }
+        }
+
+        GoodsPricing result = new GoodsPricing();
+        result.payableDetails = payableDetails;
+        result.detailLines = detailLines;
+        result.flashHits = new ArrayList<>(flashHitMap.values());
+        result.goodsAmount = goodsAmount;
+        result.originalGoodsAmount = originalGoodsAmount;
+        result.flashSavings = originalGoodsAmount.subtract(goodsAmount);
+        return result;
     }
 
     /**
-     * 校验起送价并计算配送费（下单用：不满足约束时抛 CustomException）。
-     * 计算委托 {@link #evaluateDelivery}，与 C 端配送费试算共用同一核心，保证下单实扣与试算永远一致。
+     * 商品段核价结果（内部承载，不出网）。
      */
-    private BigDecimal computeDeliveryFee(boolean deliveryCheckEnabled, StoreInfo storeInfo, AddressBook addressBook,
-            BigDecimal totalAmount, Long currentTenantId) {
-        if (!deliveryCheckEnabled) {
+    private static final class GoodsPricing {
+        private List<OrderDetail> payableDetails;
+        private List<CheckoutPreviewDTO.DetailLine> detailLines;
+        private List<CheckoutPricing.FlashHitLine> flashHits;
+        private BigDecimal goodsAmount;
+        private BigDecimal originalGoodsAmount;
+        private BigDecimal flashSavings;
+    }
+
+    /**
+     * 结算核价核心（只读）：商品(含秒杀) → 配送费 → 满减 → 新客立减 → 券 → 买赠。
+     * 全程只 SELECT：不扣库存、不抢幂等锁、不核销券。{@code submit} 落库与 {@code previewCheckout}
+     * 共用本核心，保证确认页展示与真实扣费绝不漂移。
+     *
+     * @param usedCouponId 用户所选优惠券ID（可空）
+     * @return 完整核价结果
+     */
+    private CheckoutPricing computeCheckout(List<ShoppingCart> carts, long orderId, Long userId, Long tenantId,
+            AddressBook addressBook, StoreInfo storeInfo, boolean deliveryCheckEnabled, Long usedCouponId) {
+        // 1) 商品段（含秒杀替换价）
+        GoodsPricing goods = priceGoods(carts, orderId, tenantId, userId);
+        BigDecimal goodsAmount = goods.goodsAmount;
+
+        // 2) 配送费（基数 goodsAmount；只读评估不抛异常，起送/范围硬拦截仍由 submit 落单前决定）
+        BigDecimal deliveryFee = BigDecimal.ZERO;
+        boolean belowMinOrder = false;
+        boolean rangeChecked = false;
+        boolean inRange = false;
+        if (deliveryCheckEnabled) {
+            Map<String, Object> dr = evaluateDelivery(storeInfo, addressBook, goodsAmount, tenantId);
+            Object feeObj = dr.get("fee");
+            if (feeObj instanceof BigDecimal) {
+                deliveryFee = (BigDecimal) feeObj;
+            }
+            belowMinOrder = Boolean.TRUE.equals(dr.get("belowMinOrder"));
+            rangeChecked = Boolean.TRUE.equals(dr.get("rangeChecked"));
+            inRange = Boolean.TRUE.equals(dr.get("inRange"));
+        }
+
+        // 3) 满减（唯一基数 goodsAmount，不含配送费）
+        Map<String, Object> frHit = null;
+        BigDecimal frAmount = BigDecimal.ZERO;
+        if (marketingService != null) {
+            Map<String, Object> frEval = marketingService.evaluateFullReduction(goodsAmount, userId, tenantId);
+            BigDecimal frDiscount = toBigDecimal(frEval.get("discount"));
+            if (frDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                frAmount = frDiscount.setScale(2, RoundingMode.HALF_UP);
+                frHit = new HashMap<>();
+                frHit.put("campaignId", frEval.get("campaignId"));
+                frHit.put("ruleId", frEval.get("ruleId"));
+                frHit.put("discount", frAmount);
+                frHit.put("goodsAmount", goodsAmount);
+            }
+        }
+
+        // 4) 新客立减（首单判定在 order 模块做，避免 marketing→order 反向依赖）
+        boolean firstOrder = !hasEffectiveOrderHistory(userId, tenantId);
+        NewCustomerEvaluation ncHit = null;
+        BigDecimal ncAmount = BigDecimal.ZERO;
+        if (marketingToolService != null) {
+            NewCustomerEvaluation eval = marketingToolService.evaluateNewCustomerDiscount(
+                    userId, goodsAmount, tenantId, firstOrder);
+            if (eval != null && eval.isEligible() && eval.getDiscountAmount() != null
+                    && eval.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+                ncHit = eval;
+                ncAmount = eval.getDiscountAmount().setScale(2, RoundingMode.HALF_UP);
+            }
+        }
+
+        // 5) 优惠券（基数 goodsAmount）。复用现有试算，临时载体仅承载 usedCouponId
+        Orders priceCarrier = new Orders();
+        priceCarrier.setUsedCouponId(usedCouponId);
+        Map<String, Object> couponHolder = previewCouponDiscount(priceCarrier, userId, goodsAmount);
+        BigDecimal couponAmount = toBigDecimal(couponHolder.get("couponDiscount"));
+        Long resolvedCouponId = (Long) couponHolder.get("usedCouponId");
+
+        // 6) 买赠（基数 goodsAmount），并构造 amount=0 赠品明细
+        List<GiftMatch> giftHits = marketingToolService != null
+                ? marketingToolService.matchOrderGifts(carts, goodsAmount, tenantId)
+                : new ArrayList<GiftMatch>();
+        List<OrderDetail> giftDetails = buildGiftDetails(giftHits, orderId);
+
+        // 应付 = goodsAmount + deliveryFee - 满减 - 新客 - 券，下限 0；配送费不被任何优惠扣减
+        BigDecimal payAmount = goodsAmount.add(deliveryFee)
+                .subtract(frAmount).subtract(ncAmount).subtract(couponAmount);
+        if (payAmount.compareTo(BigDecimal.ZERO) < 0) {
+            payAmount = BigDecimal.ZERO;
+        }
+        BigDecimal totalDiscount = goods.flashSavings.add(frAmount).add(ncAmount).add(couponAmount);
+
+        // 组装出网视图
+        CheckoutPreviewDTO view = new CheckoutPreviewDTO();
+        view.setDetails(goods.detailLines);
+        List<CheckoutPreviewDTO.GiftLine> giftLines = new ArrayList<>();
+        for (GiftMatch m : giftHits) {
+            CheckoutPreviewDTO.GiftLine gl = new CheckoutPreviewDTO.GiftLine();
+            gl.setActivityId(m.getActivityId());
+            gl.setGiftDishId(m.getGiftDishId());
+            gl.setName(m.getGiftDishName());
+            gl.setQuantity(m.getGiftQuantity());
+            giftLines.add(gl);
+        }
+        view.setGifts(giftLines);
+        view.setGoodsAmount(scale2(goodsAmount));
+        view.setOriginalGoodsAmount(scale2(goods.originalGoodsAmount));
+        view.setFlashSavings(scale2(goods.flashSavings));
+        view.setFullReduction(frHit != null
+                ? buildHit((Long) frHit.get("campaignId"), frAmount, "满减优惠 -¥" + frAmount)
+                : buildHit(null, BigDecimal.ZERO, null));
+        view.setNewCustomer(ncHit != null
+                ? buildHit(ncHit.getCampaignId(), ncAmount, ncHit.getCopyText())
+                : buildHit(null, BigDecimal.ZERO, null));
+        view.setCoupon(resolvedCouponId != null
+                ? buildHit(resolvedCouponId, couponAmount, "优惠券 -¥" + couponAmount)
+                : buildHit(null, BigDecimal.ZERO, null));
+        view.setDeliveryFee(scale2(deliveryFee));
+        view.setTotalDiscount(scale2(totalDiscount));
+        view.setPayAmount(scale2(payAmount));
+        view.setBelowMinOrder(belowMinOrder);
+        view.setRangeChecked(rangeChecked);
+        view.setInRange(inRange);
+        view.setUnavailableReason(null);
+
+        CheckoutPricing pricing = new CheckoutPricing();
+        pricing.setView(view);
+        pricing.setPayableDetails(goods.payableDetails);
+        pricing.setGiftDetails(giftDetails);
+        pricing.setFrHit(frHit);
+        pricing.setNcHit(ncHit);
+        pricing.setFlashHits(goods.flashHits);
+        pricing.setGiftHits(giftHits);
+        pricing.setDeliveryFee(deliveryFee);
+        return pricing;
+    }
+
+    /**
+     * 是否存在有效成单历史（status 已接单/配送中/已完成）。存在即非新客；
+     * 待付款/已取消/已退款不计，避免下单未支付或取消后永久失去新客资格。
+     */
+    private boolean hasEffectiveOrderHistory(Long userId, Long tenantId) {
+        LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
+        qw.eq(Orders::getUserId, userId)
+                .in(Orders::getStatus, Orders.STATUS_ORDERED, Orders.STATUS_DELIVERING, Orders.STATUS_COMPLETED);
+        if (tenantId != null) {
+            qw.eq(Orders::getTenantId, tenantId);
+        }
+        return this.count(qw) > 0;
+    }
+
+    /**
+     * 由买赠命中构造 amount=0 赠品明细，按 giftDishId 合并（多活动赠同一道菜数量累加），
+     * 名称统一加「（赠品）」。
+     */
+    private List<OrderDetail> buildGiftDetails(List<GiftMatch> giftHits, long orderId) {
+        Map<Long, OrderDetail> merged = new LinkedHashMap<>();
+        for (GiftMatch m : giftHits) {
+            Long gid = m.getGiftDishId();
+            if (gid == null) {
+                continue;
+            }
+            int add = m.getGiftQuantity() != null ? m.getGiftQuantity() : 0;
+            if (add <= 0) {
+                continue;
+            }
+            OrderDetail d = merged.get(gid);
+            if (d == null) {
+                d = new OrderDetail();
+                d.setOrderId(orderId);
+                d.setDishId(gid);
+                d.setName((m.getGiftDishName() != null ? m.getGiftDishName() : "赠品") + "（赠品）");
+                d.setImage(null);
+                d.setAmount(BigDecimal.ZERO);
+                d.setNumber(0);
+                merged.put(gid, d);
+            }
+            d.setNumber(d.getNumber() + add);
+        }
+        return new ArrayList<>(merged.values());
+    }
+
+    /** 金额统一两位小数（null 兜底 0）。 */
+    private static BigDecimal scale2(BigDecimal v) {
+        return (v != null ? v : BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /** 宽松转 BigDecimal：兼容 String/Number，null 与非法值兜底 0。 */
+    private static BigDecimal toBigDecimal(Object obj) {
+        if (obj == null) {
             return BigDecimal.ZERO;
         }
-        Map<String, Object> r = evaluateDelivery(storeInfo, addressBook, totalAmount, currentTenantId);
-        if (Boolean.TRUE.equals(r.get("belowMinOrder"))) {
-            throw new CustomException("订单金额未达到起送价 " + storeInfo.getMinDeliveryAmount() + " 元，无法下单");
+        if (obj instanceof BigDecimal) {
+            return (BigDecimal) obj;
         }
-        if (Boolean.TRUE.equals(r.get("rangeChecked")) && Boolean.FALSE.equals(r.get("inRange"))) {
-            throw new CustomException("收货地址不在配送范围内");
+        try {
+            return new BigDecimal(String.valueOf(obj));
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
         }
-        return (BigDecimal) r.get("fee");
+    }
+
+    /** 构造整单优惠命中视图。 */
+    private static CheckoutPreviewDTO.ActivityHit buildHit(Long campaignId, BigDecimal amount, String copyText) {
+        CheckoutPreviewDTO.ActivityHit hit = new CheckoutPreviewDTO.ActivityHit();
+        hit.setCampaignId(campaignId);
+        hit.setAmount(scale2(amount));
+        hit.setCopyText(copyText);
+        return hit;
     }
 
     /**
@@ -475,9 +756,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         List<ShoppingCart> carts = shoppingCartService.list(cartWrapper);
         if (carts != null && !carts.isEmpty()) {
             try {
-                Map<String, Object> holder = buildOrderDetailsAndComputeAmount(carts, IdWorker.getId(),
-                        currentTenantId);
-                totalAmount = (BigDecimal) holder.get("totalAmount");
+                GoodsPricing gp = priceGoods(carts, IdWorker.getId(), currentTenantId, userId);
+                totalAmount = gp.goodsAmount;
             } catch (CustomException e) {
                 // 含停售/跨租户菜：透出不可下单原因，不再给配送费
                 result.put("goodsInvalid", true);
@@ -503,6 +783,36 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             result.put("message", "收货地址不在配送范围内");
         }
         return result;
+    }
+
+    @Override
+    public CheckoutPreviewDTO previewCheckout(CheckoutPreviewRequestDTO request) {
+        Long userId = BaseContext.getCurrentId();
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (request == null || request.getAddressBookId() == null) {
+            throw new CustomException("请选择收货地址");
+        }
+        AddressBook addressBook = addressBookService.getById(request.getAddressBookId());
+        // 校验地址归属，防止越权读取/试算他人地址
+        if (addressBook == null || !userId.equals(addressBook.getUserId())) {
+            throw new CustomException("收货地址不可用");
+        }
+
+        LambdaQueryWrapper<ShoppingCart> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ShoppingCart::getUserId, userId);
+        List<ShoppingCart> carts = shoppingCartService.list(wrapper);
+        if (carts == null || carts.isEmpty()) {
+            throw new CustomException("购物车为空，不能下单");
+        }
+
+        StoreInfo storeInfo = (storeService != null) ? storeService.findByTenantId(currentTenantId) : null;
+        boolean deliveryCheckEnabled = deliveryEnhancedService != null && storeInfo != null
+                && storeInfo.getIsDeliveryEnabled() != null && storeInfo.getIsDeliveryEnabled() == 1;
+
+        // 只读核价，不产生任何写；与 submit 共用 computeCheckout
+        CheckoutPricing pricing = computeCheckout(carts, IdWorker.getId(), userId, currentTenantId, addressBook,
+                storeInfo, deliveryCheckEnabled, request.getUsedCouponId());
+        return pricing.getView();
     }
 
     /**
@@ -626,21 +936,56 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     }
 
     /**
-     * 落库订单与明细、扣库存、清空购物车，失败释放幂等锁（等价抽取，降低方法长度）。
+     * 落库订单与明细、营销核销、扣库存、清空购物车，失败释放幂等锁。
+     * 全部写操作在同一事务，任一失败整体回滚，杜绝「扣了秒杀库存/用了券/占了限购但订单没了」。
      */
     private void saveOrderWithLockRelease(Orders orders, List<OrderDetail> orderDetails,
             List<ShoppingCart> shoppingCarts, LambdaQueryWrapper<ShoppingCart> wrapper, boolean lockAcquired,
-            String lockKey, Map<String, Object> frHit) {
+            String lockKey, CheckoutPricing pricing) {
         try {
-            // 幂等锁确认本单落库后才核销券（核销失败抛异常 → catch 释放锁并回滚整个订单）
+            // 1) 幂等锁确认本单落库后才核销券（核销失败抛异常 → catch 释放锁并回滚整个订单）
             redeemCouponAfterLock(orders, orders.getUserId());
+            // 2) 落库订单
             this.save(orders);
-            //向订单明细表插入数据，多条数据
+            // 3) 落库全部明细（花钱 + 赠品），多条数据
             orderDetailService.saveBatch(orderDetails);
-            // 满减核销：订单与明细落库成功后写入，支撑每人限次与对账；后续步骤失败随事务一并回滚
-            recordFullReductionIfHit(orders, frHit);
+
+            // 4) 秒杀：CAS 原子扣库存，库存不足返回 0 → 抛异常整体回滚；成功写 rule_type=3 参与记录
+            if (marketingToolService != null) {
+                for (CheckoutPricing.FlashHitLine fl : pricing.getFlashHits()) {
+                    int rows = flashSaleMapper.deductStock(fl.getFlashSaleId(), fl.getQuantity());
+                    if (rows == 0) {
+                        throw new CustomException("秒杀商品「" + fl.getDishName() + "」已被抢完，请修改后重新下单");
+                    }
+                    marketingToolService.recordFlashSaleUsage(fl.getFlashSaleId(), orders.getId(),
+                            orders.getNumber(), orders.getUserId(), fl.getQuantity(), fl.getOriginalTotal(),
+                            fl.getOriginalTotal().subtract(fl.getPayableTotal()), fl.getPayableTotal(),
+                            orders.getTenantId());
+                }
+            }
+
+            // 5) 满减核销记录（rule_type=1），支撑每人限次与对账
+            recordFullReductionIfHit(orders, pricing.getFrHit());
+
+            // 6) 新客立减核销记录（rule_type=4）
+            if (marketingToolService != null && pricing.getNcHit() != null) {
+                marketingToolService.recordNewCustomerUsage(orders.getUserId(), pricing.getNcHit(),
+                        orders.getId(), orders.getNumber(), pricing.getView().getGoodsAmount(),
+                        pricing.getView().getPayAmount(), orders.getTenantId());
+            }
+
+            // 7) 买赠：原子回写活动使用次数（每命中一单 +1）+ rule_type=5 参与记录
+            if (marketingToolService != null) {
+                for (GiftMatch m : pricing.getGiftHits()) {
+                    buyGetFreeMapper.incrementUsageCount(m.getActivityId(), 1);
+                    marketingToolService.recordBuyGetFreeUsage(orders.getUserId(), m, orders.getId(),
+                            orders.getNumber(), orders.getTenantId());
+                }
+            }
+
+            // 8) 扣减菜品库存
             this.deductStockForOrder(shoppingCarts);
-            //清空购物车数据
+            // 9) 清空购物车数据
             shoppingCartService.remove(wrapper);
         } catch (RuntimeException e) {
             // 落库失败时释放锁，允许用户重试（锁成功保留则作为去重记录由 TTL 过期）

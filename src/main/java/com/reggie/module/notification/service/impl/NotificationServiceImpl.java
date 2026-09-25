@@ -571,6 +571,8 @@ public class NotificationServiceImpl implements NotificationService {
             }
 
             MarketingMessage msg = new MarketingMessage();
+            // 系统/业务通知不关联营销活动，campaign_id 列 NOT NULL，用 0 标识系统消息，避免插入缺省值失败
+            msg.setCampaignId(MarketingMessage.CAMPAIGN_SYSTEM);
             msg.setUserId(userId);
             msg.setPushType(channel == 1 || channel == 3
                     ? MarketingMessage.PUSH_SMS : MarketingMessage.PUSH_NOTIFICATION);

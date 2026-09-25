@@ -82,6 +82,10 @@ public class Orders implements Serializable {
     @TableField("full_reduction_amount")
     private BigDecimal fullReductionAmount;
 
+    @Schema(description = "新客立减金额（新客活动扣减，未享受为0）", example = "8.00")
+    @TableField("new_customer_discount_amount")
+    private BigDecimal newCustomerDiscountAmount;
+
     @Schema(description = "备注", example = "少放辣")
     @Size(max = 200, message = "备注不能超过200个字符")
     private String remark;

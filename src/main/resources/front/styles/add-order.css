@@ -895,3 +895,42 @@
   font-weight: 600;
   font-size: 16rem;
 }
+
+/* ===== 秒杀标记 / 赠品明细（数据来自同源结算预览） ===== */
+#add_order .divContent .order .itemList .item .desc .name .flash-tag {
+  display: inline-block;
+  margin-left: 8rem;
+  padding: 0 6rem;
+  font-size: 11rem;
+  font-weight: 500;
+  line-height: 16rem;
+  color: #fff;
+  background: #ff4d4f;
+  border-radius: 4rem;
+  vertical-align: middle;
+}
+#add_order .divContent .order .itemList .gift-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8rem;
+  padding-left: 10rem;
+  font-size: 14rem;
+}
+#add_order .divContent .order .itemList .gift-item .gift-name {
+  color: var(--color-text-secondary);
+}
+#add_order .divContent .order .itemList .gift-item .gift-tag {
+  display: inline-block;
+  margin-left: 8rem;
+  padding: 0 6rem;
+  font-size: 11rem;
+  line-height: 16rem;
+  color: #b35900;
+  background: var(--color-brand-500, #ffc200);
+  border-radius: 4rem;
+}
+#add_order .divContent .order .itemList .gift-item .gift-num {
+  font-family: DIN, DIN-Medium;
+  color: var(--color-text-secondary);
+}

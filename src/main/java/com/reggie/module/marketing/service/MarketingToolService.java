@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.marketing.model.NewCustomerDiscount;
 import com.reggie.module.marketing.model.BuyGetFree;
 import com.reggie.module.marketing.model.FlashSale;
+import com.reggie.module.marketing.dto.GiftMatch;
+import com.reggie.module.marketing.dto.NewCustomerEvaluation;
+import com.reggie.module.shopping.model.ShoppingCart;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -161,4 +164,74 @@ public interface MarketingToolService extends IService<NewCustomerDiscount> {
      * @return Statistics
      */
     Map<String, Object> getMarketingToolStatistics(Long tenantId);
+
+    // ==================== 下单核价（外卖主链路，试算/下单同源） ====================
+
+    /**
+     * 当前生效秒杀按菜品收敛：dishId → 唯一秒杀活动。
+     * 同菜多活动取 flashPrice 最低 → 开始时间最早 → id 最小。
+     *
+     * @param tenantId 租户ID
+     * @return dishId → 生效秒杀
+     */
+    Map<Long, FlashSale> mapActiveFlashSales(Long tenantId);
+
+    /**
+     * 统计用户在某秒杀活动已占用限购的购买件数（排除取消/退款订单）。
+     *
+     * @param flashSaleId 秒杀活动ID
+     * @param userId      用户ID
+     * @param tenantId    租户ID
+     * @return 已购件数
+     */
+    int sumFlashSalePurchasedQuantity(Long flashSaleId, Long userId, Long tenantId);
+
+    /**
+     * 当前生效买赠活动（status=1 且当前时间在窗口内）。
+     *
+     * @param tenantId 租户ID
+     * @return 生效买赠列表
+     */
+    List<BuyGetFree> getActiveBuyGetFreeActivities(Long tenantId);
+
+    /**
+     * 按整单购物车匹配全部生效买赠活动。
+     *
+     * @param carts       购物车条目
+     * @param goodsAmount 商品应付金额（秒杀后）
+     * @param tenantId    租户ID
+     * @return 买赠命中列表
+     */
+    List<GiftMatch> matchOrderGifts(List<ShoppingCart> carts, BigDecimal goodsAmount, Long tenantId);
+
+    /**
+     * 新客立减核价（首单且注册在有效期内且达门槛）。
+     *
+     * @param userId      用户ID
+     * @param goodsAmount 商品应付金额
+     * @param tenantId    租户ID
+     * @param firstOrder  是否首单（order 模块据历史成单判定）
+     * @return 新客立减结果
+     */
+    NewCustomerEvaluation evaluateNewCustomerDiscount(Long userId, BigDecimal goodsAmount,
+            Long tenantId, boolean firstOrder);
+
+    /**
+     * 落库后写秒杀参与记录（rule_type=3）。
+     */
+    void recordFlashSaleUsage(Long flashSaleId, Long orderId, String orderNumber, Long userId,
+            Integer quantity, BigDecimal originalAmount, BigDecimal discountAmount,
+            BigDecimal actualAmount, Long tenantId);
+
+    /**
+     * 落库后写新客立减核销记录（rule_type=4）。
+     */
+    void recordNewCustomerUsage(Long userId, NewCustomerEvaluation hit, Long orderId,
+            String orderNumber, BigDecimal goodsAmount, BigDecimal payAmount, Long tenantId);
+
+    /**
+     * 落库后写买赠核销记录（rule_type=5）。
+     */
+    void recordBuyGetFreeUsage(Long userId, GiftMatch match, Long orderId, String orderNumber,
+            Long tenantId);
 }

@@ -15,6 +15,7 @@ CREATE TABLE orders (
   amount decimal(10,2) NOT NULL COMMENT '实收金',
   delivery_fee decimal(10,2) NULL DEFAULT NULL COMMENT '配费（卖单配费，堂食为 null',
   full_reduction_amount decimal(10,2) NULL DEFAULT 0.00 COMMENT '满减优惠金额（满减活动扣减，未享受为0）',
+  new_customer_discount_amount decimal(10,2) NULL DEFAULT 0.00 COMMENT '新客立减金额（新客活动扣减，未享受为0）',
   remark varchar(100) NULL DEFAULT NULL COMMENT '备注',
   internal_remark varchar(500) NULL DEFAULT NULL COMMENT '内部备注（仅后台可见）',
   expect_delivery_time varchar(20) NULL DEFAULT NULL COMMENT '预送达时间',

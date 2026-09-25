@@ -202,6 +202,7 @@ CREATE TABLE orders (
   amount decimal(10,2) NOT NULL COMMENT '实收金',
   delivery_fee decimal(10,2) NULL DEFAULT NULL COMMENT '配送费（外卖单独立存储，堂食为0）',
   full_reduction_amount decimal(10,2) NULL DEFAULT 0.00 COMMENT '满减优惠金额（满减活动扣减，未享受为0）',
+  new_customer_discount_amount decimal(10,2) NULL DEFAULT 0.00 COMMENT '新客立减金额（新客活动扣减，未享受为0）',
   remark varchar(100) NULL DEFAULT NULL COMMENT '备注',
   internal_remark varchar(500) NULL DEFAULT NULL COMMENT '内部备注（仅后台可见）',
   expect_delivery_time varchar(20) NULL DEFAULT NULL COMMENT '预送达时间',
@@ -759,7 +760,8 @@ CREATE TABLE campaign_usage_record (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   campaign_id bigint NOT NULL COMMENT '活动ID',
   rule_id bigint NULL DEFAULT NULL COMMENT '规则ID',
-  rule_type int NULL DEFAULT NULL COMMENT '类型 1满减 2折扣',
+  rule_type int NULL DEFAULT NULL COMMENT '类型 1满减 2折扣 3秒杀 4新客立减 5买赠',
+  quantity int NULL DEFAULT NULL COMMENT '数量（秒杀购买件数/买赠赠品件数，满减可空）',
   order_id bigint NULL DEFAULT NULL COMMENT '订单ID',
   order_number varchar(50) NULL DEFAULT NULL COMMENT '订单号',
   user_id bigint NULL DEFAULT NULL COMMENT '用户ID',
@@ -776,6 +778,82 @@ CREATE INDEX idx_cur_user ON campaign_usage_record(user_id);
 CREATE INDEX idx_cur_order ON campaign_usage_record(order_id);
 CREATE INDEX idx_cur_time ON campaign_usage_record(use_time);
 CREATE INDEX idx_cur_tenant ON campaign_usage_record(tenant_id);
+
+-- 秒杀活动（C 端下单秒杀替换价 / CAS 扣库存）
+DROP TABLE IF EXISTS flash_sale;
+CREATE TABLE flash_sale (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  name varchar(100) NOT NULL COMMENT '活动名称',
+  description varchar(500) NULL DEFAULT NULL COMMENT '描述',
+  dish_id bigint NOT NULL COMMENT '菜品ID',
+  dish_name varchar(100) NULL DEFAULT NULL COMMENT '菜品名称',
+  original_price decimal(10,2) NULL DEFAULT NULL COMMENT '原价',
+  flash_price decimal(10,2) NOT NULL COMMENT '秒杀价',
+  total_quantity int NOT NULL DEFAULT 0 COMMENT '总库存',
+  sold_quantity int NOT NULL DEFAULT 0 COMMENT '已售数量',
+  max_per_user int NULL DEFAULT NULL COMMENT '每人限购',
+  start_time datetime NOT NULL COMMENT '开始时间',
+  end_time datetime NOT NULL COMMENT '结束时间',
+  status int NOT NULL DEFAULT 0 COMMENT '状态 0草稿 1进行中 2暂停 3结束',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '修改人',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_flash_dish ON flash_sale(dish_id);
+CREATE INDEX idx_flash_tenant ON flash_sale(tenant_id);
+
+-- 买赠活动
+DROP TABLE IF EXISTS buy_get_free;
+CREATE TABLE buy_get_free (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  name varchar(100) NOT NULL COMMENT '活动名称',
+  description varchar(500) NULL DEFAULT NULL COMMENT '描述',
+  buy_quantity int NOT NULL COMMENT '购买数量',
+  get_quantity int NOT NULL COMMENT '赠品数量',
+  dish_id bigint NULL DEFAULT NULL COMMENT '适用菜品ID',
+  setmeal_id bigint NULL DEFAULT NULL COMMENT '适用套餐ID',
+  gift_dish_id bigint NOT NULL COMMENT '赠品菜品ID',
+  gift_dish_name varchar(100) NULL DEFAULT NULL COMMENT '赠品菜品名称',
+  min_order_amount decimal(10,2) NULL DEFAULT NULL COMMENT '最低订单金额',
+  max_times_per_order int NULL DEFAULT NULL COMMENT '每单最多触发次数',
+  start_time datetime NOT NULL COMMENT '开始时间',
+  end_time datetime NOT NULL COMMENT '结束时间',
+  status tinyint NULL DEFAULT 0 COMMENT '状态 0草稿 1生效 2暂停 3结束',
+  usage_count int NULL DEFAULT 0 COMMENT '已使用次数',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '修改人',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_bgf_tenant ON buy_get_free(tenant_id);
+CREATE INDEX idx_bgf_dish ON buy_get_free(dish_id);
+CREATE INDEX idx_bgf_gift ON buy_get_free(gift_dish_id);
+
+-- 新客立减
+DROP TABLE IF EXISTS new_customer_discount;
+CREATE TABLE new_customer_discount (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  name varchar(100) NOT NULL COMMENT '活动名称',
+  discount_type tinyint NOT NULL COMMENT '优惠类型 1固定金额 2百分比',
+  discount_value decimal(10,2) NOT NULL COMMENT '优惠值',
+  max_discount_amount decimal(10,2) NULL DEFAULT NULL COMMENT '最大优惠金额',
+  min_order_amount decimal(10,2) NULL DEFAULT NULL COMMENT '最低订单金额',
+  valid_days int NULL DEFAULT NULL COMMENT '注册后有效天数',
+  status tinyint NULL DEFAULT 1 COMMENT '状态 0停用 1启用',
+  remark varchar(500) NULL DEFAULT NULL COMMENT '备注',
+  tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
+  create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
+  update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  create_user bigint NULL DEFAULT NULL COMMENT '创建人',
+  update_user bigint NULL DEFAULT NULL COMMENT '修改人',
+  PRIMARY KEY (id)
+);
+CREATE INDEX idx_ncd_tenant ON new_customer_discount(tenant_id);
 
 -- ==================== 用户收藏 ====================
 DROP TABLE IF EXISTS user_favorite;

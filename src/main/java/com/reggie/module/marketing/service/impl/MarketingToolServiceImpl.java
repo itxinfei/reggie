@@ -8,9 +8,14 @@ import com.reggie.common.CustomException;
 import com.reggie.module.marketing.mapper.NewCustomerDiscountMapper;
 import com.reggie.module.marketing.mapper.BuyGetFreeMapper;
 import com.reggie.module.marketing.mapper.FlashSaleMapper;
+import com.reggie.module.marketing.mapper.CampaignUsageRecordMapper;
 import com.reggie.module.marketing.model.NewCustomerDiscount;
 import com.reggie.module.marketing.model.BuyGetFree;
 import com.reggie.module.marketing.model.FlashSale;
+import com.reggie.module.marketing.model.CampaignUsageRecord;
+import com.reggie.module.marketing.dto.GiftMatch;
+import com.reggie.module.marketing.dto.NewCustomerEvaluation;
+import com.reggie.module.shopping.model.ShoppingCart;
 import com.reggie.module.marketing.service.MarketingToolService;
 import com.reggie.module.user.model.User;
 import com.reggie.module.user.service.UserService;
@@ -22,7 +27,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -44,6 +51,9 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
 
     @Autowired
     private FlashSaleMapper flashSaleMapper;
+
+    @Autowired
+    private CampaignUsageRecordMapper campaignUsageRecordMapper;
 
     @Autowired
     private UserService userService;
@@ -102,6 +112,11 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
      * @param tenantId 参数 tenantId
      * @return 返回结果
      */
+    /**
+     * @deprecated 仅后台试算使用；真实下单核价已由
+     *             {@link #evaluateNewCustomerDiscount} 取代（补首单判定）。
+     */
+    @Deprecated
     @Override
     public BigDecimal calculateNewCustomerDiscount(Long userId, BigDecimal orderAmount, Long tenantId) {
         // Check if user is new customer
@@ -485,6 +500,270 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         result.put("activeFlashSaleCount", activeFlashSales.size());
 
         return result;
+    }
+
+    // ==================== 下单核价（外卖主链路，试算/下单同源） ====================
+
+    @Override
+    public Map<Long, FlashSale> mapActiveFlashSales(Long tenantId) {
+        Map<Long, FlashSale> map = new LinkedHashMap<>();
+        List<FlashSale> active = getActiveFlashSales(tenantId);
+        if (active == null || active.isEmpty()) {
+            return map;
+        }
+        // 按 dishId 分组
+        Map<Long, List<FlashSale>> grouped = new LinkedHashMap<>();
+        for (FlashSale fs : active) {
+            if (fs.getDishId() == null) {
+                continue;
+            }
+            List<FlashSale> list = grouped.get(fs.getDishId());
+            if (list == null) {
+                list = new ArrayList<>();
+                grouped.put(fs.getDishId(), list);
+            }
+            list.add(fs);
+        }
+        // 同菜多活动归约：flashPrice 最低 → 开始最早 → id 最小
+        for (Map.Entry<Long, List<FlashSale>> e : grouped.entrySet()) {
+            FlashSale best = null;
+            for (FlashSale fs : e.getValue()) {
+                if (best == null || compareFlashSale(fs, best) < 0) {
+                    best = fs;
+                }
+            }
+            map.put(e.getKey(), best);
+        }
+        return map;
+    }
+
+    /**
+     * 秒杀归约比较：flashPrice 升序 → startTime 升序 → id 升序。
+     */
+    private int compareFlashSale(FlashSale a, FlashSale b) {
+        BigDecimal pa = a.getFlashPrice() != null ? a.getFlashPrice() : BigDecimal.ZERO;
+        BigDecimal pb = b.getFlashPrice() != null ? b.getFlashPrice() : BigDecimal.ZERO;
+        int c = pa.compareTo(pb);
+        if (c != 0) {
+            return c;
+        }
+        if (a.getStartTime() != null && b.getStartTime() != null) {
+            c = a.getStartTime().compareTo(b.getStartTime());
+            if (c != 0) {
+                return c;
+            }
+        }
+        Long ia = a.getId() != null ? a.getId() : Long.MAX_VALUE;
+        Long ib = b.getId() != null ? b.getId() : Long.MAX_VALUE;
+        return ia.compareTo(ib);
+    }
+
+    @Override
+    public int sumFlashSalePurchasedQuantity(Long flashSaleId, Long userId, Long tenantId) {
+        return flashSaleMapper.sumPurchasedQuantity(flashSaleId, userId, tenantId);
+    }
+
+    @Override
+    public List<BuyGetFree> getActiveBuyGetFreeActivities(Long tenantId) {
+        LambdaQueryWrapper<BuyGetFree> qw = new LambdaQueryWrapper<>();
+        if (tenantId != null) {
+            qw.eq(BuyGetFree::getTenantId, tenantId);
+        }
+        qw.eq(BuyGetFree::getStatus, 1);
+        LocalDateTime now = LocalDateTime.now();
+        qw.le(BuyGetFree::getStartTime, now);
+        qw.ge(BuyGetFree::getEndTime, now);
+        return buyGetFreeMapper.selectList(qw);
+    }
+
+    @Override
+    public List<GiftMatch> matchOrderGifts(List<ShoppingCart> carts, BigDecimal goodsAmount, Long tenantId) {
+        List<GiftMatch> matches = new ArrayList<>();
+        List<BuyGetFree> activities = getActiveBuyGetFreeActivities(tenantId);
+        if (carts == null || carts.isEmpty() || activities.isEmpty()) {
+            return matches;
+        }
+        // 聚合本单数量（同菜多口味行合并）
+        Map<Long, Integer> dishQty = new HashMap<>();
+        Map<Long, Integer> setmealQty = new HashMap<>();
+        int allQty = 0;
+        for (ShoppingCart c : carts) {
+            int n = c.getNumber() != null ? c.getNumber() : 0;
+            if (n <= 0) {
+                continue;
+            }
+            allQty += n;
+            if (c.getDishId() != null) {
+                addQty(dishQty, c.getDishId(), n);
+            } else if (c.getSetmealId() != null) {
+                addQty(setmealQty, c.getSetmealId(), n);
+            }
+        }
+        for (BuyGetFree a : activities) {
+            int applicableQty;
+            if (a.getDishId() != null) {
+                applicableQty = qtyOf(dishQty, a.getDishId());
+            } else if (a.getSetmealId() != null) {
+                applicableQty = qtyOf(setmealQty, a.getSetmealId());
+            } else {
+                applicableQty = allQty;
+            }
+            int buyN = a.getBuyQuantity() != null ? a.getBuyQuantity() : 0;
+            if (buyN <= 0 || applicableQty < buyN) {
+                continue;
+            }
+            // 商品总额门槛（按整单 goodsAmount，不按触发菜小计）
+            if (a.getMinOrderAmount() != null && goodsAmount != null
+                    && goodsAmount.compareTo(a.getMinOrderAmount()) < 0) {
+                continue;
+            }
+            int times = applicableQty / buyN;
+            if (a.getMaxTimesPerOrder() != null && a.getMaxTimesPerOrder() > 0 && times > a.getMaxTimesPerOrder()) {
+                times = a.getMaxTimesPerOrder();
+            }
+            int getM = a.getGetQuantity() != null ? a.getGetQuantity() : 0;
+            int giftQuantity = times * getM;
+            if (giftQuantity <= 0) {
+                continue;
+            }
+            GiftMatch m = new GiftMatch();
+            m.setActivityId(a.getId());
+            m.setActivityName(a.getName());
+            m.setGiftDishId(a.getGiftDishId());
+            m.setGiftDishName(a.getGiftDishName());
+            m.setTimes(times);
+            m.setGiftQuantity(giftQuantity);
+            matches.add(m);
+        }
+        return matches;
+    }
+
+    private void addQty(Map<Long, Integer> map, Long id, int n) {
+        Integer cur = map.get(id);
+        map.put(id, (cur == null ? 0 : cur) + n);
+    }
+
+    private int qtyOf(Map<Long, Integer> map, Long id) {
+        Integer v = map.get(id);
+        return v == null ? 0 : v;
+    }
+
+    @Override
+    public NewCustomerEvaluation evaluateNewCustomerDiscount(Long userId, BigDecimal goodsAmount,
+            Long tenantId, boolean firstOrder) {
+        NewCustomerEvaluation ev = new NewCustomerEvaluation();
+        ev.setEligible(false);
+        ev.setDiscountAmount(BigDecimal.ZERO);
+        if (!firstOrder || userId == null || goodsAmount == null) {
+            return ev;
+        }
+        User user = userService.getById(userId);
+        if (user == null || user.getCreateTime() == null) {
+            return ev;
+        }
+        // 首单且注册在 validDays 内且达门槛（三者且），多配置取优惠最大
+        List<NewCustomerDiscount> configs = getNewCustomerDiscounts(tenantId);
+        BigDecimal best = BigDecimal.ZERO;
+        NewCustomerDiscount bestConfig = null;
+        for (NewCustomerDiscount d : configs) {
+            if (d.getValidDays() != null) {
+                LocalDateTime validUntil = user.getCreateTime().plusDays(d.getValidDays());
+                if (LocalDateTime.now().isAfter(validUntil)) {
+                    continue;
+                }
+            }
+            if (d.getMinOrderAmount() != null && goodsAmount.compareTo(d.getMinOrderAmount()) < 0) {
+                continue;
+            }
+            BigDecimal amount = calcNcdAmount(d, goodsAmount);
+            if (amount.compareTo(best) > 0) {
+                best = amount;
+                bestConfig = d;
+            }
+        }
+        if (bestConfig == null || best.compareTo(BigDecimal.ZERO) <= 0) {
+            return ev;
+        }
+        ev.setEligible(true);
+        ev.setCampaignId(bestConfig.getId());
+        ev.setName(bestConfig.getName());
+        ev.setDiscountAmount(best.setScale(2, RoundingMode.HALF_UP));
+        ev.setCopyText(buildNcdCopy(bestConfig, best));
+        return ev;
+    }
+
+    private BigDecimal calcNcdAmount(NewCustomerDiscount d, BigDecimal goodsAmount) {
+        Integer type = d.getDiscountType();
+        if (type != null && type == NewCustomerDiscount.TYPE_PERCENTAGE) {
+            BigDecimal value = d.getDiscountValue() != null ? d.getDiscountValue() : BigDecimal.ZERO;
+            BigDecimal amount = goodsAmount.multiply(value)
+                    .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            if (d.getMaxDiscountAmount() != null && amount.compareTo(d.getMaxDiscountAmount()) > 0) {
+                amount = d.getMaxDiscountAmount();
+            }
+            return amount;
+        }
+        return d.getDiscountValue() != null ? d.getDiscountValue() : BigDecimal.ZERO;
+    }
+
+    private String buildNcdCopy(NewCustomerDiscount d, BigDecimal amount) {
+        if (d.getDiscountType() != null && d.getDiscountType() == NewCustomerDiscount.TYPE_PERCENTAGE) {
+            return "新客 " + d.getDiscountValue().stripTrailingZeros().toPlainString() + " 折立减";
+        }
+        return "新客立减 ¥" + amount.setScale(2, RoundingMode.HALF_UP).toPlainString();
+    }
+
+    @Override
+    public void recordFlashSaleUsage(Long flashSaleId, Long orderId, String orderNumber, Long userId,
+            Integer quantity, BigDecimal originalAmount, BigDecimal discountAmount,
+            BigDecimal actualAmount, Long tenantId) {
+        CampaignUsageRecord rec = baseUsageRecord(3, orderId, orderNumber, userId, tenantId);
+        rec.setCampaignId(flashSaleId);
+        rec.setQuantity(quantity);
+        rec.setOrderAmount(originalAmount);
+        rec.setDiscountAmount(discountAmount);
+        rec.setActualAmount(actualAmount);
+        campaignUsageRecordMapper.insert(rec);
+    }
+
+    @Override
+    public void recordNewCustomerUsage(Long userId, NewCustomerEvaluation hit, Long orderId,
+            String orderNumber, BigDecimal goodsAmount, BigDecimal payAmount, Long tenantId) {
+        if (hit == null || !hit.isEligible()) {
+            return;
+        }
+        CampaignUsageRecord rec = baseUsageRecord(4, orderId, orderNumber, userId, tenantId);
+        rec.setCampaignId(hit.getCampaignId());
+        rec.setRuleId(hit.getCampaignId());
+        rec.setOrderAmount(goodsAmount);
+        rec.setDiscountAmount(hit.getDiscountAmount());
+        rec.setActualAmount(payAmount);
+        campaignUsageRecordMapper.insert(rec);
+    }
+
+    @Override
+    public void recordBuyGetFreeUsage(Long userId, GiftMatch match, Long orderId, String orderNumber,
+            Long tenantId) {
+        if (match == null) {
+            return;
+        }
+        CampaignUsageRecord rec = baseUsageRecord(5, orderId, orderNumber, userId, tenantId);
+        rec.setCampaignId(match.getActivityId());
+        rec.setQuantity(match.getGiftQuantity());
+        rec.setDiscountAmount(BigDecimal.ZERO);
+        campaignUsageRecordMapper.insert(rec);
+    }
+
+    private CampaignUsageRecord baseUsageRecord(int ruleType, Long orderId, String orderNumber,
+            Long userId, Long tenantId) {
+        CampaignUsageRecord rec = new CampaignUsageRecord();
+        rec.setRuleType(ruleType);
+        rec.setOrderId(orderId);
+        rec.setOrderNumber(orderNumber);
+        rec.setUserId(userId);
+        rec.setUseTime(LocalDateTime.now());
+        rec.setTenantId(tenantId);
+        return rec;
     }
 }
 

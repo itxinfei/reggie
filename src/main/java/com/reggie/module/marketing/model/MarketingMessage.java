@@ -41,6 +41,9 @@ public class MarketingMessage implements Serializable {
     /** 状态 - 已使用 */
     public static final int STATUS_USED = 3;
 
+    /** 关联活动 - 系统消息（非营销活动触发的通知，如催单/超时提醒，无真实活动可关联） */
+    public static final long CAMPAIGN_SYSTEM = 0L;
+
     /** 主键ID */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;

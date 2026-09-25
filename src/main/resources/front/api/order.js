@@ -7,6 +7,15 @@ function  addOrderApi(data){
       })
 }
 
+// C 端结算预览（只读核价，与下单同源；不扣库存/不抢锁/不核销券）
+function previewCheckoutApi(data){
+    return $axios({
+        'url': '/api/order/preview',
+        'method': 'post',
+        data
+    })
+}
+
 // 查询订单详情（C 端用于支付结果回查等场景）
 function getOrderDetailApi(id) {
   return $axios({

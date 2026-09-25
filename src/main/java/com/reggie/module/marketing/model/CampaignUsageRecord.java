@@ -35,8 +35,11 @@ public class CampaignUsageRecord implements Serializable {
     @Schema(description = "规则ID（满减规则/折扣规则）")
     private Long ruleId;
 
-    @Schema(description = "规则类型：1-满减，2-折扣")
+    @Schema(description = "规则类型：1-满减，2-折扣，3-秒杀，4-新客立减，5-买赠")
     private Integer ruleType;
+
+    @Schema(description = "数量（秒杀购买件数/买赠赠品件数，满减可为空）")
+    private Integer quantity;
 
     @Schema(description = "订单ID")
     private Long orderId;

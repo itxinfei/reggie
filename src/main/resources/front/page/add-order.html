@@ -17,7 +17,7 @@
         <!-- 修改点：加载 RemixIcon 真字体（emoji 兜底改由 js/icon-fallback.js 按需注入） -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js?v=20260917"></script>
-        <link rel="stylesheet" href="./../styles/add-order.css?v=20260924" />
+        <link rel="stylesheet" href="./../styles/add-order.css?v=20260925" />
         <link rel="stylesheet" href="./../styles/add-order-pay.css?v=20260917" />
     </head>
     <body>
@@ -33,7 +33,8 @@
                     <div @click="toAddressPage">                    
                         <div class="address">{{ addressFull }}</div>
                         <div class="name">
-                            <span>{{address.consignee}}{{address.sex === '1' ? '先生':'女士'}}</span>
+                            <!-- 后端 sex 返回数字 1/0，用宽松比较兼容数字与字符串（严格 === '1' 会把先生误判成女士） -->
+                            <span>{{address.consignee}}{{address.sex == 1 ? '先生':'女士'}}</span>
                             <span>{{address.phone}}</span>
                         </div>
                         <i class="ri-arrow-right-s-line"></i>
@@ -51,7 +52,8 @@
                         </div>
                         <!-- 立即配送：选择时段 -->
                         <div class="divFinishTime" v-if="deliveryMode === 0" @click="showTimePicker = true">
-                            预计{{ selectedTimeLabel }}
+                            <!-- "预计"由 selectedTimeLabel 自带，模板不再重复拼接（曾出现"预计预计"） -->
+                            {{ selectedTimeLabel }}
                             <i class="ri-arrow-right-s-line finish-time-arrow"></i>
                         </div>
                         <!-- 预约配送：选择日期时间 -->
@@ -122,11 +124,11 @@
                     <div class="title">订单明细</div>
                     <div class="divSplit"></div>
                     <div class="itemList">
-                        <div class="item" v-for="(item,index) in cartData" :key="index">
+                        <div class="item" v-for="(item,index) in detailView" :key="index">
                             <!-- 修改点：el-image替换为原生img，错误时显示占位图 -->
                             <img :src="imgPath(item.image)" @error="imgError" class="dish-image" :alt="item.name || '菜品'" loading="lazy" />
                             <div class="desc">
-                                <div class="name">{{item.name}}</div>
+                                <div class="name">{{item.name}}<span class="flash-tag" v-if="item.flashSaleId">秒杀</span></div>
                                 <div class="numPrice">
                                     <span class="num">x{{item.number}}</span>
                                     <div class="price">
@@ -134,6 +136,11 @@
                                     </div>
                                 </div>
                             </div>
+                    </div>
+                    <!-- 赠品明细（0 元，买赠活动命中） -->
+                    <div class="gift-item" v-for="(g,i) in (pricing ? pricing.gifts : [])" :key="'gift'+i">
+                        <span class="gift-name">{{g.name}}<span class="gift-tag">赠</span></span>
+                        <span class="gift-num">x{{g.quantity}}</span>
                     </div>
                 </div>
                 <div class="note" v-if="!reorderId">
@@ -199,9 +206,13 @@
                         <span>满减优惠</span>
                         <span>-¥{{Number(frDiscount || 0).toFixed(2)}}</span>
                     </div>
-                    <div class="price-row discount" v-if="selectedCoupon">
+                    <div class="price-row discount" v-if="ncDiscount > 0">
+                        <span>新客立减</span>
+                        <span>-¥{{Number(ncDiscount || 0).toFixed(2)}}</span>
+                    </div>
+                    <div class="price-row discount" v-if="couponDiscount > 0">
                         <span>优惠券</span>
-                        <span>-¥{{Number(selectedCoupon.discountAmount || 0).toFixed(2)}}</span>
+                        <span>-¥{{Number(couponDiscount || 0).toFixed(2)}}</span>
                     </div>
                     <!-- 修改点(2026-09-17)：新增实付合计行 —— 最终金额不再只藏在底部栏小字 -->
                     <div class="price-row total">
@@ -268,7 +279,7 @@
         <script src="./../js/request.js?v=20260917"></script>
         <script src="./../js/common.js?v=20260924"></script>
         <script src="./../api/main.js?v=20260917"></script>
-        <script src="./../api/order.js?v=20260917"></script>
+        <script src="./../api/order.js?v=20260925"></script>
         <script src="./../api/coupon.js?v=20260917"></script>
         <script src="./../api/payment.js?v=20260917"></script>
         <script src="./../api/marketing.js?v=20260921"></script>
@@ -311,14 +322,13 @@
                         couponLoading:false,
                         // 配送方式：0=立即配送，1=预约配送
                         deliveryMode: 0,
-                        // 配送费：按收货地址实时试算（与下单扣费同源）
-                        deliveryFee: 0,
-                        // 满减优惠（与下单同源试算；续付订单不重算，走订单落库应付）
-                        frDiscount: 0,
-                        frEval: null,
-                        // 试算是否阻断下单（超范围/未达起送价/商品失效）及说明
-                        feeBlocked: false,
-                        feeMessage: '',
+                        // 结算预览（/api/order/preview）：确认页价格/赠品/配送范围的唯一数据源
+                        pricing: null,
+                        previewLoading: false,
+                        // 上次预览签名（地址|券|总件数），签名不变不重复请求
+                        lastPreviewSig: '',
+                        // 已按某商品金额加载过可用券（金额不变不重复拉券）
+                        couponsLoadedForAmount: '',
                         // 送达时间选择（立即配送）
                         showTimePicker: false,
                         selectedTimeIdx: 0,
@@ -355,12 +365,68 @@
                         }
                     },
                     goodsPrice(){
-                    let price = 0
-                    this.cartData.forEach(item=>{
-                        price += (item.number * item.amount)
-                    })
-                    // 修改点：四舍五入到分，避免浮点数累加误差（如 3.7199999999999998）
-                    return Math.round(price * 100) / 100
+                        // 预览就绪以服务端核价（含秒杀替换）为唯一基数；未就绪用购物车本地合计兜底
+                        if(this.pricing){
+                            return Number(this.pricing.goodsAmount) || 0
+                        }
+                        let price = 0
+                        this.cartData.forEach(item=>{
+                            price += (item.number * item.amount)
+                        })
+                        return Math.round(price * 100) / 100
+                    },
+                    // 订单明细渲染数据：优先用预览（带秒杀价/秒杀标记），否则直接用购物车
+                    detailView(){
+                        if(this.pricing && Array.isArray(this.pricing.details) && this.pricing.details.length){
+                            return this.pricing.details.map(function(d){
+                                return {
+                                    name: d.name,
+                                    image: d.image,
+                                    number: d.quantity,
+                                    amount: d.lineAmount,
+                                    flashSaleId: d.flashSaleId,
+                                    flashSaleName: d.flashSaleName,
+                                    lineSavings: d.lineSavings
+                                }
+                            })
+                        }
+                        return this.cartData
+                    },
+                    // 配送费（服务端按地址+距离核价）
+                    deliveryFee(){
+                        return this.pricing ? (Number(this.pricing.deliveryFee) || 0) : 0
+                    },
+                    // 满减优惠
+                    frDiscount(){
+                        return (this.pricing && this.pricing.fullReduction)
+                                ? (Number(this.pricing.fullReduction.amount) || 0) : 0
+                    },
+                    // 新客立减
+                    ncDiscount(){
+                        return (this.pricing && this.pricing.newCustomer)
+                                ? (Number(this.pricing.newCustomer.amount) || 0) : 0
+                    },
+                    // 优惠券实际抵扣
+                    couponDiscount(){
+                        return (this.pricing && this.pricing.coupon)
+                                ? (Number(this.pricing.coupon.amount) || 0) : 0
+                    },
+                    // 是否阻断下单（不可用原因/未达起送价/超出配送范围）
+                    feeBlocked(){
+                        if(this.reorderId || !this.pricing){ return false }
+                        const p = this.pricing
+                        if(p.unavailableReason){ return true }
+                        if(p.belowMinOrder){ return true }
+                        if(p.rangeChecked && !p.inRange){ return true }
+                        return false
+                    },
+                    feeMessage(){
+                        if(this.reorderId || !this.pricing){ return '' }
+                        const p = this.pricing
+                        if(p.unavailableReason){ return p.unavailableReason }
+                        if(p.belowMinOrder){ return '未达到起送价' }
+                        if(p.rangeChecked && !p.inRange){ return '收货地址不在配送范围内' }
+                        return ''
                     },
                     // 预计送达时间
                     expectDeliveryTime(){
@@ -375,21 +441,21 @@
                         }
                         return this.finishTime + ' ' + (this.selectedTimeIdx === 0 ? '尽快送达' : this.timeOptions[this.selectedTimeIdx].label)
                     },
-                    // 修改点：计算优惠金额（直接取券对象里的 discountAmount，conditionAmount 已在后端可用券接口中校验过）
+                    // 已优惠合计（秒杀差价 + 满减 + 新客 + 券），底部栏「已优惠」口径
                     discountAmount(){
-                        if(this.selectedCoupon){
-                            return Number(this.selectedCoupon.discountAmount) || 0
-                        }
-                        return 0
+                        return this.pricing ? (Number(this.pricing.totalDiscount) || 0) : 0
                     },
-                    // 修改点：计算实付金额（菜品 + 配送费 - 优惠券），展示用；后端按距离实际计算配送费为准
+                    // 实付金额：续付取订单落库应付；否则取服务端预览应付（含配送费），前端绝不另算
                     finalPrice(){
                         // 修改点（P1-1）：续付直接显示该待付款订单的真实应付（已含落库的配送费/优惠），不前端重算
                         if(this.reorderId){
                             return this.orderAmount == null ? 0 : Math.round(this.orderAmount * 100) / 100
                         }
-                        const raw = Math.max(0, this.goodsPrice + this.deliveryFee - this.frDiscount - this.discountAmount)
-                        // 修改点：四舍五入到分，避免浮点数减法误差
+                        if(this.pricing){
+                            return Number(this.pricing.payAmount) || 0
+                        }
+                        // 预览未就绪兜底（极短）
+                        const raw = Math.max(0, this.goodsPrice + this.deliveryFee - this.frDiscount - this.couponDiscount)
                         return Math.round(raw * 100) / 100
                     },
                     // 修改点：送达时间显示标签
@@ -502,8 +568,8 @@
                            // 修改点：防御 res.data 为 null，避免 addressFull computed 访问空对象属性抛错
                            this.address = res.data || {}
                            this.finishTime = getFinishTime()
-                           // 新建订单：地址就绪后按地址试算真实配送费（续付按订单落库金额，不试算）
-                           if(!this.reorderId){ this.loadDeliveryFee() }
+                           // 新建订单：地址就绪后触发同源结算预览（续付走订单落库金额，不预览）
+                           if(!this.reorderId){ this.maybeLoadPreview() }
                            // 修改点：动态计算各送达时间选项的预计时刻
                            const base = new Date()
                            const h = base.getHours()
@@ -541,28 +607,46 @@
                             window.location.href = '/front/page/address.html'
                         })
                     },
-                    // 按收货地址试算配送费（后端按购物车实时核价，与下单扣费同源）
-                    async loadDeliveryFee(){
+                    // 地址 + 购物车就绪后触发同源结算预览；签名（地址|券|总件数）不变则跳过
+                    maybeLoadPreview(){
+                        if(this.reorderId){ return }
                         if(!this.address || !this.address.id){ return }
+                        if(!this.cartData || this.cartData.length === 0){ return }
+                        let qty = 0
+                        this.cartData.forEach(function(it){ qty += it.number || 0 })
+                        const couponId = this.selectedCoupon ? this.selectedCoupon.id : ''
+                        const sig = this.address.id + '|' + couponId + '|' + qty
+                        if(sig === this.lastPreviewSig){ return }
+                        this.lastPreviewSig = sig
+                        this.loadCheckoutPreview(couponId || null)
+                    },
+                    // 调只读结算预览，回填 pricing；并按权威商品金额加载可用券列表
+                    async loadCheckoutPreview(couponId){
+                        this.previewLoading = true
                         try{
-                            const res = await previewDeliveryFeeApi({ addressBookId: this.address.id })
-                            if(res.code !== 1 || !res.data){ return }
-                            const d = res.data
-                            this.deliveryFee = Number(d.fee) || 0
-                            if(d.goodsInvalid || d.addressInvalid){
-                                this.feeBlocked = true
-                                this.feeMessage = d.message || '当前商品或地址不可用'
-                                return
+                            const res = await previewCheckoutApi({
+                                addressBookId: this.address.id,
+                                usedCouponId: couponId
+                            })
+                            if(res.code === 1 && res.data){
+                                this.pricing = res.data
+                                const resolvedId = res.data.coupon ? res.data.coupon.campaignId : null
+                                if(!resolvedId && this.selectedCoupon){
+                                    // 服务端判定该券不可用：对齐本地选中态并重预览
+                                    this.selectedCoupon = null
+                                    this.maybeLoadPreview()
+                                }
+                                // 商品金额变化才重拉可用券
+                                const amt = String(res.data.goodsAmount)
+                                if(this.couponsLoadedForAmount !== amt){
+                                    this.couponsLoadedForAmount = amt
+                                    this.loadUsableCoupons()
+                                }
                             }
-                            if(d.checkEnabled && ((d.rangeChecked && d.inRange === false) || d.belowMinOrder)){
-                                this.feeBlocked = true
-                                this.feeMessage = d.belowMinOrder ? '未达到起送价' : '收货地址不在配送范围内'
-                                return
-                            }
-                            this.feeBlocked = false
-                            this.feeMessage = ''
                         }catch(e){
-                            console.warn('[add-order] 配送费试算失败:', e)
+                            console.warn('[add-order] 结算预览失败:', e)
+                        }finally{
+                            this.previewLoading = false
                         }
                     },
                     //获取购物车数据
@@ -583,47 +667,34 @@
                             this.cartData = []
                             vant.Toast.fail('加载购物车失败，请稍后重试')
                         } finally {
-                            // 修改点：购物车数据就绪后再加载可用优惠券，避免 $nextTick 时 goodsPrice 仍为 0
-                            this.loadUsableCoupons()
-                            // 新建订单：商品金额就绪后同源试算满减（续付订单走落库应付，不重算）
-                            if(!this.reorderId){
-                                this.loadFullReduction()
-                            }
+                            // 购物车就绪后触发同源结算预览（预览内部再按金额拉可用券）
+                            this.maybeLoadPreview()
                         }
                     },
-                    // 满减试算（与下单计费同源；失败不阻断下单，仅不展示满减行）
-                    async loadFullReduction(){
-                        try{
-                            const amount = this.goodsPrice
-                            if(!(amount > 0)){ this.frDiscount = 0; return }
-                            const res = await evaluateFullReduction(amount)
-                            if(res && res.code === 1){
-                                this.frEval = res.data
-                                this.frDiscount = Number(res.data.discount) || 0
-                            }
-                        }catch(e){
-                            console.warn('[add-order] 满减试算失败:', e)
-                        }
-                    },
-                    // 修改点：选择优惠券（传入券对象，再次点击相同券取消选中）
+                    // 修改点：选择优惠券（传入券对象，再次点击相同券取消选中）；选中后重新同源预览
                     selectCoupon(coupon){
                         if(!coupon){
                             this.selectedCoupon = null
-                            return
+                        }else{
+                            this.selectedCoupon = (this.selectedCoupon && this.selectedCoupon.id === coupon.id)
+                                    ? null : coupon
                         }
-                        this.selectedCoupon = (this.selectedCoupon && this.selectedCoupon.id === coupon.id) ? null : coupon
+                        this.maybeLoadPreview()
                     },
                     // 修改点：加载当前订单金额对应的可用券列表
                     async loadUsableCoupons(){
-                        if(!this.goodsPrice || this.goodsPrice <= 0){
+                        // 仅在服务端预览给出权威商品金额后加载（金额为预览 goodsAmount）
+                        const baseAmount = this.pricing ? (Number(this.pricing.goodsAmount) || 0) : 0
+                        if(baseAmount <= 0){
                             this.couponList = []
                             return
                         }
                         if(this.couponLoading) return
                         this.couponLoading = true
                         try{
-                            var amount = Number(this.goodsPrice || 0).toFixed(2)
+                            var amount = baseAmount.toFixed(2)
                             const res = await getUsableCoupons(amount)
+                            let couponChanged = false
                             if(res.code === 1 && Array.isArray(res.data)){
                                 this.couponList = res.data
                                 // 若当前选中的券不在新列表里（金额变化导致不可用），清空
@@ -632,7 +703,7 @@
                                     for(var i=0;i<this.couponList.length;i++){
                                         if(this.couponList[i].id === this.selectedCoupon.id){ found = true; break }
                                     }
-                                    if(!found){ this.selectedCoupon = null }
+                                    if(!found){ this.selectedCoupon = null; couponChanged = true }
                                 }
                                 // 新建订单且用户尚未手动选券：自动选面额最大的可用券（用户仍可手动改）
                                 if(!this.reorderId && !this.selectedCoupon && this.couponList.length){
@@ -643,10 +714,13 @@
                                         }
                                     }
                                     this.selectedCoupon = best
+                                    couponChanged = true
                                 }
                             }else{
                                 this.couponList = []
                             }
+                            // 选中/清空券后用带券口径重预览（金额不变不会再重拉券，无循环）
+                            if(couponChanged){ this.maybeLoadPreview() }
                         }catch(e){
                             this.couponList = []
                         }finally{
@@ -718,6 +792,10 @@
                         }
                         return this.idempotencyKey
                     },
+                    // 后端下单拒绝且原因为"商品失效"（库存不足/已下架等）
+                    isItemInvalidMsg(msg){
+                        return /库存不足|库存为空|已下架|已售罄|售罄|商品不存在|已停售|停售|已失效/.test(msg || '')
+                    },
                     async goToPaySuccess(){
                         // 修改点（P2-11）：reorderId 表示为已有待付款订单发起支付，
                         // 跳过 addOrderApi 直接调用支付，避免创建重复订单
@@ -775,7 +853,7 @@
                             addressBookId:this.address.id,
                             amount: this.finalPrice,
                             expectDeliveryTime: this.expectDeliveryTime,
-                            usedCouponId: this.selectedCoupon ? this.selectedCoupon.id : null,
+                            usedCouponId: (this.pricing && this.pricing.coupon) ? this.pricing.coupon.campaignId : null,
                             // 修改点(2026-09-17)：this.userId 未定义导致幂等键拼接出 "undefined_xxx"，改用 sessionStorage 手机号；
                             // 修改点(2026-09-17 UX)：键改为页面会话级生成、失败重试复用（见 ensureIdempotencyKey）
                             idempotencyKey: this.ensureIdempotencyKey()
@@ -786,7 +864,21 @@
                             try {
                                 const res = await addOrderApi(params)
                                 if(res.code !== 1){
-                                    vant.Toast.fail(res.msg || '提交订单失败');
+                                    var failMsg = res.msg || '提交订单失败'
+                                    if(this.isItemInvalidMsg(failMsg)){
+                                        // 失效商品：重新拉购物车，并用持续可见的对话框给出路，
+                                        // 替代一闪而过的 Toast（用户曾因此以为页面"卡死"）
+                                        this.getCartData()
+                                        vant.Dialog.alert({
+                                            title: '商品已失效',
+                                            message: failMsg + '，请调整后重新下单',
+                                            confirmButtonText: '去购物车'
+                                        }).then(function(){
+                                            window.location.href = '/front/index.html'
+                                        }).catch(function(){})
+                                    }else{
+                                        vant.Toast.fail(failMsg)
+                                    }
                                     return
                                 }
                                 orderId = res.data && res.data.id

@@ -3,6 +3,8 @@ package com.reggie.module.order.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.dto.OrderDto;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.reggie.module.order.dto.CheckoutPreviewDTO;
+import com.reggie.module.order.dto.CheckoutPreviewRequestDTO;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 
@@ -194,5 +196,14 @@ public interface OrderService extends IService<Orders> {
      * @return fee/checkEnabled/goodsAmount/distance/inRange/belowMinOrder 等试算字段
      */
     Map<String, Object> previewDeliveryFee(Long addressBookId);
+
+    /**
+     * 结算预览（只读）：按收货地址 + 当前购物车 + 所选优惠券实时核价，与真实下单同源，
+     * 不产生任何写（不扣库存/不抢锁/不核销券）。
+     *
+     * @param request 预览请求（addressBookId + usedCouponId）
+     * @return 结算预览视图
+     */
+    CheckoutPreviewDTO previewCheckout(CheckoutPreviewRequestDTO request);
 }
 
