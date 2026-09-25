@@ -1,0 +1,49 @@
+SET NAMES utf8mb4;
+-- ai_provider_config: 12
+DELETE FROM `ai_provider_config`;
+INSERT INTO `ai_provider_config` (`id`,`provider_code`,`provider_name`,`base_url`,`model_name`,`api_key`,`timeout`,`max_tokens`,`temperature`,`api_format`,`extra_headers`,`request_template`,`response_path`,`icon_url`,`enabled`,`is_active`,`last_test_time`,`last_test_result`,`sort`,`remark`,`create_time`,`update_time`,`create_user`,`update_user`,`is_deleted`,`capabilities`,`embedding_dimensions`) VALUES (1,'deepseek','DeepSeek','https://api.deepseek.com/v1','deepseek-chat','b81e2xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',60,4096,0.79,'openai','{"User-Agent":"reggie/1.0"}',NULL,'choices.0.message.content',NULL,1,1,'2026-09-23 10:09:00','成功',1,NULL,'2026-08-15 09:08:00','2026-09-25 18:00:00',1,1,0,'["chat"]',NULL),
+(2,'openai','OpenAI','https://api.openai.com/v1','gpt-4o-mini','sk-projxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',60,4096,0.78,'openai','{"User-Agent":"reggie/1.0"}',NULL,'choices.0.message.content',NULL,1,1,'2026-09-16 11:39:00','成功',2,NULL,'2026-08-10 12:00:00','2026-09-25 18:00:00',1,1,0,'["chat"]',NULL),
+(3,'moonshot','Kimi(月之暗面)','https://api.moonshot.cn/v1','moonshot-v1-8k','sk-moonxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',60,4096,0.66,'openai','{"User-Agent":"reggie/1.0"}',NULL,'choices.0.message.content',NULL,1,1,'2026-09-24 19:01:00','成功',3,NULL,'2026-08-24 14:24:00','2026-09-25 18:00:00',1,1,0,'["chat"]',NULL),
+(4,'zhipu','智谱GLM','https://open.bigmodel.cn/api/paas/v4','glm-4-flash','gl-4fxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',60,4096,0.31,'openai','{"User-Agent":"reggie/1.0"}',NULL,'choices.0.message.content',NULL,1,1,'2026-09-19 18:26:00','成功',4,NULL,'2026-08-08 14:09:00','2026-09-25 18:00:00',1,1,0,'["chat"]',NULL),
+(5,'qianfan','百度文心','https://qianfan.bj.baidubce.com/v2','ernie-4.0-tiny-8k','ern-4txxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',60,4096,0.69,'openai','{"User-Agent":"reggie/1.0"}',NULL,'choices.0.message.content',NULL,1,1,'2026-09-18 20:00:00','成功',5,NULL,'2026-08-31 15:16:00','2026-09-25 18:00:00',1,1,0,'["chat"]',NULL),
+(6,'dashscope','阿里通义千问','https://dashscope.aliyuncs.com/compatible-mode/v1','qwen-turbo','sk-dashxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',60,4096,0.62,'openai','{"User-Agent":"reggie/1.0"}',NULL,'choices.0.message.content',NULL,1,1,'2026-09-23 16:12:00','成功',6,NULL,'2026-09-08 18:43:00','2026-09-25 18:00:00',1,1,0,'["chat"]',NULL),
+(7,'baichuan','百川智能','https://api.baichuan-ai.com/v1','baichuan2-turbo','bc-turboxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',60,4096,0.67,'openai','{"User-Agent":"reggie/1.0"}',NULL,'choices.0.message.content',NULL,1,0,'2026-09-21 18:10:00','成功',7,NULL,'2026-07-30 09:44:00','2026-09-25 18:00:00',1,1,0,'["chat"]',NULL),
+(8,'yi','零一万物','https://api.lingyiwanwu.com/v1','yi-lightning','yi-litexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',60,4096,0.45,'openai','{"User-Agent":"reggie/1.0"}',NULL,'choices.0.message.content',NULL,1,0,'2026-09-24 11:35:00','成功',8,NULL,'2026-08-13 20:36:00','2026-09-25 18:00:00',1,1,0,'["chat"]',NULL),
+(9,'step','阶跃星辰','https://api.stepfun.com/v1','step-2-16k','st-2-16kxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',60,4096,0.72,'openai','{"User-Agent":"reggie/1.0"}',NULL,'choices.0.message.content',NULL,1,0,'2026-09-23 18:47:00','成功',9,NULL,'2026-07-29 16:15:00','2026-09-25 18:00:00',1,1,0,'["chat"]',NULL),
+(10,'minimax','MiniMax','https://api.minimax.chat/v1','abab6.5s-chat','mm-65sxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',60,4096,0.39,'openai','{"User-Agent":"reggie/1.0"}',NULL,'choices.0.message.content',NULL,1,0,'2026-09-21 12:10:00','成功',10,NULL,'2026-09-12 18:18:00','2026-09-25 18:00:00',1,1,0,'["chat"]',NULL),
+(11,'local-bge','本地BGE向量模型','http://192.168.1.10:8001/v1','bge-large-zh-v1.5','local-keyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',120,8192,0.45,'openai','{"User-Agent":"reggie/1.0"}',NULL,'choices.0.message.content',NULL,1,0,'2026-09-25 17:37:00','成功',11,'向量嵌入专用，1536维','2026-09-15 11:41:00','2026-09-25 18:00:00',1,1,0,'["embedding"]',1536),
+(12,'mistral','Mistral','https://api.mistral.ai/v1','mistral-small-latest','ms-smlxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',60,4096,0.8,'openai','{"User-Agent":"reggie/1.0"}',NULL,'choices.0.message.content',NULL,1,0,'2026-09-25 17:01:00','失败: 需订阅套餐',12,NULL,'2026-07-29 16:15:00','2026-09-25 18:00:00',1,1,0,'["chat"]',NULL);
+-- platform_config: 12
+DELETE FROM `platform_config`;
+INSERT INTO `platform_config` (`id`,`platform_type`,`platform_name`,`shop_id`,`app_key`,`app_secret`,`access_token`,`enabled`,`sync_scope`,`remark`,`tenant_id`,`is_deleted`,`create_time`,`update_time`) VALUES (1,'meituan_waimai','美团外卖','88001234','mt_a91xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx','MT_A91YYYYYYYYYYYYYYYYYYYYYYYY','tk_20260900abcdef',1,1,NULL,1,0,'2026-09-03 18:05:00','2026-09-25 18:00:00'),
+(2,'eleme','饿了么','ELM_556677','el_b23xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx','EL_B23YYYYYYYYYYYYYYYYYYYYYYYY','tk_20260901abcdef',1,1,NULL,1,0,'2026-08-14 22:32:00','2026-09-25 18:00:00'),
+(3,'jd_takeout','京东到家','JD_778899','jd_c34xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx','JD_C34YYYYYYYYYYYYYYYYYYYYYYYY','tk_20260902abcdef',1,1,NULL,1,0,'2026-08-15 15:33:00','2026-09-25 18:00:00'),
+(4,'douyin_group','抖音团购','DY_112233','dy_d45xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx','DY_D45YYYYYYYYYYYYYYYYYYYYYYYY','tk_20260903abcdef',1,1,NULL,1,0,'2026-06-27 22:36:00','2026-09-25 18:00:00'),
+(5,'kuaishou_group','快手团购','KS_334455','ks_e56xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx','KS_E56YYYYYYYYYYYYYYYYYYYYYYYY','tk_20260904abcdef',1,1,NULL,1,0,'2026-06-30 22:08:00','2026-09-25 18:00:00'),
+(6,'meituan_kandan','美团看店宝','88001234','mt_f67xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx','MT_F67YYYYYYYYYYYYYYYYYYYYYYYY','tk_20260905abcdef',1,1,NULL,1,0,'2026-07-20 15:23:00','2026-09-25 18:00:00'),
+(7,'eleme_dinner','饿了么到店','ELM_556677','el_g78xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx','EL_G78YYYYYYYYYYYYYYYYYYYYYYYY','tk_20260906abcdef',1,1,NULL,1,0,'2026-07-07 09:33:00','2026-09-25 18:00:00'),
+(8,'wechat_store','微信视频号小店','WX_667788','wx_h89xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx','WX_H89YYYYYYYYYYYYYYYYYYYYYYYY','tk_20260907abcdef',0,1,NULL,1,0,'2026-08-27 10:28:00','2026-09-25 18:00:00'),
+(9,'xiaohongshu','小红书团购','XHS_889900','xh_i90xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx','XH_I90YYYYYYYYYYYYYYYYYYYYYYYY','tk_20260908abcdef',0,1,NULL,1,0,'2026-07-27 09:53:00','2026-09-25 18:00:00'),
+(10,'baidu_waimai','百度外卖','BD_990011','bd_j01xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx','BD_J01YYYYYYYYYYYYYYYYYYYYYYYY','tk_20260909abcdef',0,1,NULL,1,0,'2026-08-01 17:17:00','2026-09-25 18:00:00'),
+(11,'pinduoduo','拼多多小时达','PDD_112234','pd_k12xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx','PD_K12YYYYYYYYYYYYYYYYYYYYYYYY','tk_20260910abcdef',0,1,NULL,1,0,'2026-09-01 19:11:00','2026-09-25 18:00:00'),
+(12,'pos_local','本地POS收银','POS-STORE-01','pos_l34xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx','POS_L34YYYYYYYYYYYYYYYYYYYYYYYY','tk_20260911abcdef',0,1,NULL,1,0,'2026-08-06 16:17:00','2026-09-25 18:00:00');
+-- refund_record: 18
+DELETE FROM `refund_record`;
+INSERT INTO `refund_record` (`id`,`payment_order_id`,`order_id`,`tenant_id`,`refund_no`,`amount`,`reason`,`status`,`refund_type`,`apply_user_id`,`created_time`,`is_deleted`,`version`,`create_user`,`update_time`,`update_user`,`audit_user_id`,`audit_time`,`reject_reason`,`refund_time`) VALUES (1,5000,1004,1,'RF2026090000000',187.63,'餐品有异物','3',1,1,'2026-09-14 20:48:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-14 21:18:00',NULL,'2026-09-14 21:48:00'),
+(2,5001,1005,1,'RF2026090000131',66.84,'配送超时严重','3',2,1,'2026-09-12 16:08:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-12 16:38:00',NULL,'2026-09-12 17:08:00'),
+(3,5002,1006,1,'RF2026090000262',262.89,'少送餐品','2',1,1,'2026-09-17 18:35:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-17 19:05:00',NULL,NULL),
+(4,5003,1007,1,'RF2026090000393',117.1,'餐品未加热','3',1,1,'2026-09-16 15:47:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-16 16:17:00',NULL,'2026-09-16 16:47:00'),
+(5,5004,1008,1,'RF2026090000524',60.74,'口味与描述不符','3',2,1,'2026-09-10 10:37:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-10 11:07:00',NULL,'2026-09-10 11:37:00'),
+(6,5005,1009,1,'RF2026090000655',194.02,'包装破损洒漏','3',1,1,'2026-09-07 19:37:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-07 20:07:00',NULL,'2026-09-07 20:37:00'),
+(7,5006,1010,1,'RF2026090000786',436.96,'错送餐品','2',1,1,'2026-09-07 10:03:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-07 10:33:00',NULL,NULL),
+(8,5007,1011,1,'RF2026090000917',51.21,'骑手态度差','2',2,1,'2026-09-23 21:30:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-23 22:00:00',NULL,NULL),
+(9,5008,1012,1,'RF2026090001048',319.78,'餐品份量不足','2',1,1,'2026-09-24 11:57:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-24 12:27:00',NULL,NULL),
+(10,5009,1013,1,'RF2026090001179',208.04,'变质发霉','2',1,1,'2026-09-13 19:17:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-13 19:47:00',NULL,NULL),
+(11,5010,1014,1,'RF2026090001310',65.26,'与图片严重不符','2',2,1,'2026-09-05 17:15:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-05 17:45:00',NULL,NULL),
+(12,5011,1015,1,'RF2026090001441',241.48,'漏送餐具','3',1,1,'2026-09-24 12:04:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-24 12:34:00',NULL,'2026-09-24 13:04:00'),
+(13,5012,1016,1,'RF2026090001572',120.55,'金额重复扣款','3',1,1,'2026-09-15 16:49:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-15 17:19:00',NULL,'2026-09-15 17:49:00'),
+(14,5013,1017,1,'RF2026090001703',131.07,'用户改主意','3',2,1,'2026-09-21 11:49:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-21 12:19:00',NULL,'2026-09-21 12:49:00'),
+(15,5014,1018,1,'RF2026090001834',338.88,'下单错误','1',1,1,'2026-09-17 14:00:00',0,1,1,'2026-09-25 18:00:00',1,NULL,NULL,NULL,NULL),
+(16,5015,1019,1,'RF2026090001965',112.92,'地址填写有误','2',1,1,'2026-09-15 21:29:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-15 21:59:00',NULL,NULL),
+(17,5016,1020,1,'RF2026090002096',76.14,'联系不上用户','3',2,1,'2026-09-09 20:44:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-09 21:14:00',NULL,'2026-09-09 21:44:00'),
+(18,5017,1021,1,'RF2026090002227',106.5,'用户要求取消','2',1,1,'2026-09-25 14:59:00',0,2,1,'2026-09-25 18:00:00',1,1,'2026-09-25 15:29:00',NULL,NULL);

@@ -48,15 +48,35 @@ node_modules/
 postcss.config.js
 
 # ===== 数据库 =====
-db/
+# db/ 建表脚本与真实业务种子数据入库，随代码分发供新环境一键灌数
+db/**
+!db/migration/
+!db/migration/**
+!db/seed/
+!db/seed/**
 
 # ===== 脚本和工具 =====
-scripts/
+# 脚本入库：数据生成器 + 图片资源收口 + 一致性校验，换机可复现
+# 仅排除本地一次性调试/诊断产物
+!scripts/**
+scripts/debug-login.js
+scripts/debug-qr-generate.js
+scripts/diag-pay.js
+scripts/counts.sql
+scripts/seed-spec.txt
+# Python 版本已被 Node 版取代（本机无 Python 运行环境）
+scripts/*.py
+# 行政区划源数据缓存（从 modood/Administrative-divisions-of-China 拉取，可重下）
+scripts/pca.json
 tools/
 tests/
 
 # ===== 上传文件 =====
-uploads/
+# 图片资源入库（菜品/套餐/头像/门店logo/执照/系统默认图），
+# 应用通过 CommonController.download 以 baseDir+路径 拼接读取，DB 存 images/... 相对路径
+uploads/**
+!uploads/images/
+!uploads/images/**
 
 # ===== 其他 =====
 .gitattributes

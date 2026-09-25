@@ -1,0 +1,139 @@
+{
+  "categories": [
+    { "sort": 1, "name": "招牌热销", "type": 1 },
+    { "sort": 2, "name": "川湘热菜", "type": 1 },
+    { "sort": 3, "name": "家常小炒", "type": 1 },
+    { "sort": 4, "name": "营养素菜", "type": 1 },
+    { "sort": 5, "name": "开胃凉菜", "type": 1 },
+    { "sort": 6, "name": "暖胃汤羹", "type": 1 },
+    { "sort": 7, "name": "主食面点", "type": 1 },
+    { "sort": 8, "name": "特色小吃", "type": 1 },
+    { "sort": 9, "name": "酒水饮品", "type": 1 },
+    { "sort": 10, "name": "超值套餐", "type": 2 }
+  ],
+  "dishes": [
+    { "name": "麻婆豆腐", "file": "mapodoufu", "cat": "招牌热销", "price": 18.00, "code": "MPDF", "desc": "嫩豆腐配郫县豆瓣与花椒，麻辣鲜香，下饭一绝" },
+    { "name": "宫保鸡丁", "file": "gongbaojiding", "cat": "招牌热销", "price": 26.00, "code": "GBJD", "desc": "鸡丁配花生米、干辣椒爆炒，酸甜微辣" },
+    { "name": "鱼香肉丝", "file": "yuxiangrousi", "cat": "招牌热销", "price": 24.00, "code": "YXRS", "desc": "猪肉丝配木耳笋丝，鱼香味浓，经典川菜" },
+    { "name": "红烧肉", "file": "hongshaorou", "cat": "招牌热销", "price": 38.00, "code": "HSR", "desc": "五花肉慢炖，肥而不腻，入口即化" },
+    { "name": "水煮牛肉", "file": "shuizhuniurou", "cat": "招牌热销", "price": 48.00, "code": "SZNR", "desc": "嫩滑牛肉片，麻辣红油，香气十足" },
+
+    { "name": "回锅肉", "file": "huiguorou", "cat": "川湘热菜", "price": 28.00, "code": "HGR", "desc": "五花肉配青蒜豆瓣酱，川菜之魂" },
+    { "name": "水煮鱼", "file": "shuizhuyu", "cat": "川湘热菜", "price": 58.00, "code": "SZY", "desc": "草鱼片麻辣水煮，鲜嫩爽滑" },
+    { "name": "辣子鸡", "file": "laziji", "cat": "川湘热菜", "price": 32.00, "code": "LZJ", "desc": "鸡丁与大量干红辣椒爆炒，酥香麻辣" },
+    { "name": "毛血旺", "file": "maoxuewang", "cat": "川湘热菜", "price": 42.00, "code": "MXW", "desc": "鸭血毛肚黄鳝，麻辣鲜香一大盆" },
+    { "name": "剁椒鱼头", "file": "duojiaoyutou", "cat": "川湘热菜", "price": 58.00, "code": "DJYT", "desc": "鳙鱼头铺剁椒蒸制，鲜辣开胃" },
+    { "name": "辣椒炒肉", "file": "lajiaochaorou", "cat": "川湘热菜", "price": 26.00, "code": "LJCR", "desc": "前腿肉配青椒，湘菜代表" },
+    { "name": "小炒黄牛肉", "file": "xiaochaohuangniurou", "cat": "川湘热菜", "price": 39.00, "code": "XCHNR", "desc": "黄牛肉配小米辣快炒，鲜嫩下饭" },
+    { "name": "农家小炒肉", "file": "nongjiaxiaochorou", "cat": "川湘热菜", "price": 25.00, "code": "NJXR", "desc": "五花肉瘦肉配青红椒，家常湘味" },
+
+    { "name": "番茄炒蛋", "file": "fanqiechaodan", "cat": "家常小炒", "price": 16.00, "code": "FQCD", "desc": "番茄鸡蛋家常快炒，酸甜可口" },
+    { "name": "糖醋里脊", "file": "tangculiji", "cat": "家常小炒", "price": 32.00, "code": "TCLJ", "desc": "里脊裹糖醋汁，外酥里嫩" },
+    { "name": "糖醋排骨", "file": "tangcupaigu", "cat": "家常小炒", "price": 34.00, "code": "TCPG", "desc": "小排烧糖醋，酸甜入味" },
+    { "name": "可乐鸡翅", "file": "kelejichi", "cat": "家常小炒", "price": 28.00, "code": "KLJC", "desc": "鸡翅与可乐同烧，色泽红亮甜香" },
+    { "name": "红烧茄子", "file": "hongshaoqiezi", "cat": "家常小炒", "price": 18.00, "code": "HSQZ", "desc": "茄子过油红烧，软糯咸香" },
+    { "name": "地三鲜", "file": "disanxian", "cat": "家常小炒", "price": 18.00, "code": "DSX", "desc": "土豆茄子青椒，东北经典素菜" },
+    { "name": "干煸豆角", "file": "ganbiandoujiao", "cat": "家常小炒", "price": 18.00, "code": "GBDJ", "desc": "豆角干煸至虎皮，配肉末香辣" },
+    { "name": "酸辣土豆丝", "file": "suanlatudousi", "cat": "家常小炒", "price": 12.00, "code": "SLTDS", "desc": "土豆丝爽脆，酸辣开胃" },
+    { "name": "木须肉", "file": "muxurou", "cat": "家常小炒", "price": 24.00, "code": "MXR", "desc": "猪肉鸡蛋木耳黄瓜同炒，营养丰富" },
+    { "name": "香菇青菜", "file": "xiangguqingcai", "cat": "家常小炒", "price": 16.00, "code": "XGQC", "desc": "小青菜配鲜香菇，清淡爽口" },
+
+    { "name": "蒜蓉西兰花", "file": "suarongxilanhua", "cat": "营养素菜", "price": 18.00, "code": "SRXLH", "desc": "西兰花配蒜蓉清炒，健康营养" },
+    { "name": "手撕包菜", "file": "shousibaocai", "cat": "营养素菜", "price": 16.00, "code": "SSBC", "desc": "包菜手撕爆炒，爽脆清甜" },
+    { "name": "干煸四季豆", "file": "ganbiansijidou", "cat": "营养素菜", "price": 18.00, "code": "GBSJD", "desc": "四季豆煸至起皱，咸香下饭" },
+    { "name": "清炒时蔬", "file": "qingchaoshishu", "cat": "营养素菜", "price": 14.00, "code": "QCSS", "desc": "当季绿叶菜清炒，清淡解腻" },
+    { "name": "清蒸鲈鱼", "file": "qingzhengluyu", "cat": "营养素菜", "price": 58.00, "code": "QZLY", "desc": "鲈鱼清蒸，葱姜提鲜，肉嫩味美" },
+
+    { "name": "拍黄瓜", "file": "paihuanggua", "cat": "开胃凉菜", "price": 12.00, "code": "PHG", "desc": "黄瓜拍碎凉拌，蒜香爽脆" },
+    { "name": "老醋花生", "file": "laocuhuasheng", "cat": "开胃凉菜", "price": 14.00, "code": "LCHS", "desc": "花生米老醋浸泡，酸甜开胃" },
+    { "name": "凉拌木耳", "file": "liangbanmuer", "cat": "开胃凉菜", "price": 14.00, "code": "LBME", "desc": "木耳凉拌，爽脆可口" },
+    { "name": "皮蛋豆腐", "file": "pidandoufu", "cat": "开胃凉菜", "price": 14.00, "code": "PDDF", "desc": "内酯豆腐配皮蛋，浇汁清凉" },
+    { "name": "凉拌牛肉", "file": "liangbanniurou", "cat": "开胃凉菜", "price": 32.00, "code": "LBNR", "desc": "卤牛肉切片凉拌，鲜香有嚼劲" },
+
+    { "name": "番茄蛋花汤", "file": "fanqiedanhuatang", "cat": "暖胃汤羹", "price": 12.00, "code": "FQDHT", "desc": "番茄蛋花，酸甜暖胃" },
+    { "name": "紫菜蛋花汤", "file": "zicaidanhuatang", "cat": "暖胃汤羹", "price": 12.00, "code": "ZCDHT", "desc": "紫菜蛋花，鲜香清淡" },
+    { "name": "酸辣汤", "file": "suanlatang", "cat": "暖胃汤羹", "price": 14.00, "code": "SLT", "desc": "酸辣开胃，料足暖胃" },
+    { "name": "玉米排骨汤", "file": "yumipaitang", "cat": "暖胃汤羹", "price": 28.00, "code": "YMPT", "desc": "排骨玉米慢炖，清甜滋补" },
+    { "name": "西湖牛肉羹", "file": "xihuniurougeng", "cat": "暖胃汤羹", "price": 22.00, "code": "XHNRG", "desc": "牛肉末豆腐香菇，鲜香滑嫩" },
+
+    { "name": "蛋炒饭", "file": "danchaofan", "cat": "主食面点", "price": 12.00, "code": "DCF", "desc": "鸡蛋米饭快炒，粒粒分明" },
+    { "name": "扬州炒饭", "file": "yangzhouchaofan", "cat": "主食面点", "price": 16.00, "code": "YZCF", "desc": "火腿虾仁青豆鸡蛋，配料丰富" },
+    { "name": "红烧牛肉面", "file": "hongshaoniuroumian", "cat": "主食面点", "price": 24.00, "code": "HSNRM", "desc": "牛肉卤汁配手擀面，汤浓肉烂" },
+    { "name": "阳春面", "file": "yangchunmian", "cat": "主食面点", "price": 10.00, "code": "YCM", "desc": "清汤光面，葱花猪油，简单鲜美" },
+    { "name": "猪肉水饺", "file": "zhuroushuijiao", "cat": "主食面点", "price": 18.00, "code": "ZRSJ", "desc": "现包水饺，皮薄馅大" },
+    { "name": "小笼包", "file": "xiaolongbao", "cat": "主食面点", "price": 16.00, "code": "XLB", "desc": "灌汤小笼包，一笼八个" },
+    { "name": "米饭", "file": "mifan", "cat": "主食面点", "price": 2.00, "code": "MF", "desc": "东北大米蒸制，香糯可口" },
+
+    { "name": "鸡米花", "file": "jimihua", "cat": "特色小吃", "price": 16.00, "code": "JMH", "desc": "炸鸡米花，外酥里嫩" },
+    { "name": "烤羊肉串", "file": "kaoyangrouchuan", "cat": "特色小吃", "price": 8.00, "code": "KYRC", "desc": "羊肉串炭火烤制，孜然飘香" },
+    { "name": "薯条", "file": "shutiao", "cat": "特色小吃", "price": 12.00, "code": "ST", "desc": "金黄炸薯条，配番茄酱" },
+    { "name": "香辣炸鸡翅", "file": "xianglazhajichi", "cat": "特色小吃", "price": 10.00, "code": "XLZJC", "desc": "鸡翅炸至金黄，香辣多汁" },
+    { "name": "南瓜饼", "file": "nanguabing", "cat": "特色小吃", "price": 12.00, "code": "NGB", "desc": "糯米南瓜饼，外酥里糯甜香" },
+    { "name": "葱油饼", "file": "congyoubing", "cat": "特色小吃", "price": 10.00, "code": "CYB", "desc": "葱油手抓饼，层层酥脆" },
+    { "name": "春卷", "file": "chunjuan", "cat": "特色小吃", "price": 12.00, "code": "CJ", "desc": "炸春卷，金黄酥脆" },
+
+    { "name": "柠檬水", "file": "ningmengshui", "cat": "酒水饮品", "price": 8.00, "code": "NMS", "desc": "鲜柠檬冰镇，酸甜解渴" },
+    { "name": "珍珠奶茶", "file": "zhenzhunaicha", "cat": "酒水饮品", "price": 12.00, "code": "ZZNC", "desc": "香浓奶茶配黑糖珍珠" },
+    { "name": "鲜榨橙汁", "file": "xianzhachengzhi", "cat": "酒水饮品", "price": 12.00, "code": "XZCZ", "desc": "橙子鲜榨，维C满满" },
+    { "name": "可乐", "file": "kele", "cat": "酒水饮品", "price": 5.00, "code": "KL", "desc": "冰镇可乐，气泡畅爽" },
+    { "name": "豆浆", "file": "doujiang", "cat": "酒水饮品", "price": 6.00, "code": "DJ", "desc": "现磨豆浆，香浓醇厚" },
+    { "name": "酸梅汤", "file": "suanmeitang", "cat": "酒水饮品", "price": 8.00, "code": "SMT", "desc": "古法熬制酸梅汤，生津解渴" }
+  ],
+  "setmeals": [
+    {
+      "name": "工作实惠餐", "file": "setmeal-gongzuo", "price": 25.00, "code": "GZC",
+      "desc": "一荤一素一汤一饭，吃饱吃好",
+      "items": [
+        { "f": "mapodoufu", "n": 1 },
+        { "f": "ganbiandoujiao", "n": 1 },
+        { "f": "fanqiedanhuatang", "n": 1 },
+        { "f": "mifan", "n": 1 }
+      ]
+    },
+    {
+      "name": "商务豪华餐", "file": "setmeal-shangwu", "price": 42.00, "code": "SWC",
+      "desc": "两荤一素一汤，商务待客有面子",
+      "items": [
+        { "f": "gongbaojiding", "n": 1 },
+        { "f": "huiguorou", "n": 1 },
+        { "f": "suarongxilanhua", "n": 1 },
+        { "f": "zicaidanhuatang", "n": 1 },
+        { "f": "mifan", "n": 1 }
+      ]
+    },
+    {
+      "name": "亲子欢乐餐", "file": "setmeal-qinzi", "price": 38.00, "code": "QZC",
+      "desc": "主菜加小吃饮品，孩子爱吃",
+      "items": [
+        { "f": "tangculiji", "n": 1 },
+        { "f": "jimihua", "n": 1 },
+        { "f": "shutiao", "n": 1 },
+        { "f": "ningmengshui", "n": 1 }
+      ]
+    },
+    {
+      "name": "闺蜜双人餐", "file": "setmeal-guimi", "price": 56.00, "code": "GMC",
+      "desc": "两份主菜配小吃饮品，分享刚好",
+      "items": [
+        { "f": "yuxiangrousi", "n": 1 },
+        { "f": "xiaochaohuangniurou", "n": 1 },
+        { "f": "nanguabing", "n": 1 },
+        { "f": "zhenzhunaicha", "n": 2 }
+      ]
+    },
+    {
+      "name": "团圆家庭餐", "file": "setmeal-haohua", "price": 88.00, "code": "JTC",
+      "desc": "四荤两素一汤，全家共享",
+      "items": [
+        { "f": "hongshaorou", "n": 1 },
+        { "f": "shuizhuniurou", "n": 1 },
+        { "f": "laziji", "n": 1 },
+        { "f": "duojiaoyutou", "n": 1 },
+        { "f": "disanxian", "n": 1 },
+        { "f": "shousibaocai", "n": 1 },
+        { "f": "suanlatang", "n": 1 },
+        { "f": "mifan", "n": 2 }
+      ]
+    }
+  ]
+}
