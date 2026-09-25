@@ -37,8 +37,8 @@
   font-size: 13rem;
   color: var(--color-text-secondary);
 }
-#invoice-list-app .inv-card .row .mono { font-family: var(--font-family-number, monospace); color: var(--color-text-primary); }
-#invoice-list-app .inv-card .row .price { color: var(--color-price); font-weight: 700; font-size: 15rem; font-family: var(--font-family-number, monospace); }
+#invoice-list-app .inv-card .row .mono { font-family: var(--font-family-number, monospace); color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
+#invoice-list-app .inv-card .row .price { color: var(--color-price); font-weight: 700; font-size: 15rem; font-family: var(--font-family-number, monospace); font-variant-numeric: tabular-nums; }
 #invoice-list-app .inv-card .row .label { color: var(--color-text-hint); }
 
 /* 分页 */
@@ -51,7 +51,7 @@
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(255, 255, 255, 0.6);
-  z-index: 999;
+  z-index: var(--z-overlay);
   display: flex; align-items: center; justify-content: center;
 }
 #invoice-list-app .loading-spinner {

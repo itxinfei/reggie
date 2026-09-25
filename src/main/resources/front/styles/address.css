@@ -61,7 +61,7 @@ body.scrollable-page {
   padding: 16rem 16rem;
   position: relative;
   box-shadow: 0 2rem 10rem var(--mask-light);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   /* 修改点(2026-09-17)：px→rem 统一（宽屏随根字号缩放） */
   border-left: 3rem solid transparent;
@@ -235,7 +235,7 @@ body.scrollable-page {
   color: var(--color-text-hint);
   border-radius: var(--radius-md);
   background: var(--bg-page);
-  transition: all 0.25s;
+  transition: color 0.25s, background-color 0.25s, transform 0.25s;
 }
 #address .divContent .divItem .ri-edit-line:active {
   color: var(--color-primary);
@@ -266,7 +266,7 @@ body.scrollable-page {
   width: calc(100% - 24rem);
   max-width: 334rem;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-cta);
   user-select: none;
 }
@@ -351,7 +351,7 @@ body.scrollable-page {
   padding: 8rem 12rem;
   min-height: 44rem;
   border-radius: var(--radius-sm);
-  transition: all 0.2s;
+  transition: color 0.2s, background-color 0.2s;
 }
 
 #address .divContent .divItem .divActionBar .actionBtn i {

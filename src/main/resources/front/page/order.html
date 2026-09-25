@@ -89,7 +89,7 @@
                             <span>共{{order.sumNum}}件  实付</span>
                             <span class="price">¥{{ Number(order.amount || 0).toFixed(2) }}</span>
                         </div>
-                        <!-- 操作按钮：对齐美团——主按钮2个 + 更多菜单 -->
+                        <!-- 操作按钮：按订单状态平铺 2~4 个，窄屏自动换行（见 .order-actions） -->
                         <div class="order-actions" @click.stop>
                             <!-- 待付款 -->
                             <template v-if="order.status === 1">

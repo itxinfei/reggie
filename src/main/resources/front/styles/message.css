@@ -83,7 +83,7 @@
   box-shadow: var(--shadow-card);
   position: relative;
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: background-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 #messageApp .msg-card:active {

@@ -56,7 +56,7 @@
     .mc-card-stats { display: flex; position: relative; z-index: 1; }
     .mc-card-stat { flex: 1; text-align: center; }
     .mc-card-stat .val { font-size: 20rem; font-weight: 700; color: var(--color-text-primary);
-      font-family: var(--font-family-number); line-height: 1.2; }
+      font-family: var(--font-family-number); font-variant-numeric: tabular-nums; line-height: 1.2; }
     .mc-card-stat .lbl { font-size: 12rem; color: var(--gold-text-muted); margin-top: 4rem; }
     .mc-card-stat-divider { width: 1px; background: var(--gold-text); margin: 4rem 0; }
     .mc-card-progress { margin-top: 14rem; position: relative; z-index: 1; }
@@ -324,4 +324,15 @@
   background: var(--color-primary);
   border: none;
   border-radius: 21rem;
+}
+
+/* 窄屏（≤360px）：会员卡三格统计与权益四宫格收字号/间距，保证 320px 不挤压 */
+@media (max-width: 360px) {
+  .mc-card-stat .val { font-size: 18rem; }
+  .mc-card-stat .lbl { font-size: 11rem; }
+  .mc-benefits { grid-template-columns: repeat(4, 1fr); gap: 6rem; padding: 14rem 8rem; }
+  .mc-benefit { padding: 8rem 2rem; }
+  .mc-benefit-icon { width: 48rem; height: 48rem; }
+  .mc-benefit-name,
+  .mc-benefit-desc { font-size: 11rem; }
 }

@@ -11,11 +11,15 @@
      不满足 4.5:1 对比度，禁止直接用于文字
    - 与首页购物车栏共存：购物车栏上移至 bottom:50rem（见 main.css .cart-bar）
    ================================================================ */
+:root {
+  --shadow-tabbar: 0 -1rem 6rem rgba(0, 0, 0, 0.06);  /* 底部 Tab 向上投影（浓度同 --shadow-card） */
+}
+
 .app-tabbar {
   height: calc(50rem + env(safe-area-inset-bottom, 0px)) !important;
   padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   border-top: 1px solid var(--border-light);
-  box-shadow: 0 -1rem 6rem rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-tabbar);
   z-index: 2000 !important;
 }
 

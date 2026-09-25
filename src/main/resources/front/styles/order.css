@@ -303,6 +303,7 @@
 #order .order-actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) 0 var(--spacing-xs);
 }
@@ -319,7 +320,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast);
   white-space: nowrap;
 }
 

@@ -3,6 +3,8 @@
 /* ---- 加单页专属令牌（收敛硬编码 hex） ---- */
 :root {
   --add-order-coupon-active-end: #fff8e0;  /* 优惠券激活渐变结束色（浅金） */
+  --color-flash-tag: #ff4d4f;              /* 秒杀标记红（区别于 --color-danger #e94e3c） */
+  --color-gift-tag-text: #b35900;          /* 赠品标记文字棕 */
 }
 
 /* 头部已由 cend-shell 的 .cend-navbar 统一接管（2026-09-22），不再定义金色 .divHead */
@@ -315,7 +317,7 @@
   color: var(--color-text-primary);
   background: var(--color-primary-gradient);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.2s;
   box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
 }
 
@@ -389,13 +391,14 @@
   border-radius: var(--radius-md);
   padding: 0 12rem;
   cursor: pointer;
-  border: 1px solid var(--bg-hover);
-  transition: all 0.2s;
+  /* card-in-card 收敛：面板内默认无框，仅选中态浅金面反馈 */
+  border: 1px solid transparent;
+  transition: border-color 0.2s, background-color 0.2s;
 }
 
 #add_order .divContent .pay-method .pay-option.active {
-  border-color: var(--color-primary);
-  background: var(--color-primary-light);
+  border-color: transparent;
+  background: var(--color-primary-tint);
 }
 
 #add_order .divContent .pay-method .pay-icon {
@@ -469,7 +472,7 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
 }
 
 #add_order .utensils-btn.active {
@@ -574,10 +577,11 @@
   align-items: center;
   height: 64rem;
   border-radius: var(--radius-md);
-  border: 1px solid var(--bg-hover);
   padding: 0 12rem;
   cursor: pointer;
-  transition: all 0.2s;
+  /* card-in-card 收敛：面板内默认无框，按压/选中才显色 */
+  border: 1px solid transparent;
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s, transform 0.2s;
   position: relative;
   overflow: hidden;
 }
@@ -716,7 +720,7 @@
   cursor: pointer;
   border: 1px solid var(--bg-hover);
   margin-bottom: 8rem;
-  transition: all 0.2s;
+  transition: border-color 0.2s, background-color 0.2s;
 }
 
 #add_order .time-picker-item.active {
@@ -786,7 +790,7 @@
   font-weight: 500;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: color 0.2s, background-color 0.2s;
   position: relative;
 }
 #add_order .delivery-mode .mode-tab.active {
@@ -859,7 +863,7 @@
   border: 1px solid var(--bg-hover);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 0.2s, background-color 0.2s;
   position: relative;
 }
 #add_order .schedule-time-item.active {
@@ -904,8 +908,8 @@
   font-size: 11rem;
   font-weight: 500;
   line-height: 16rem;
-  color: #fff;
-  background: #ff4d4f;
+  color: var(--color-text-white);
+  background: var(--color-flash-tag);
   border-radius: 4rem;
   vertical-align: middle;
 }
@@ -926,8 +930,8 @@
   padding: 0 6rem;
   font-size: 11rem;
   line-height: 16rem;
-  color: #b35900;
-  background: var(--color-brand-500, #ffc200);
+  color: var(--color-gift-tag-text);
+  background: var(--color-primary);
   border-radius: 4rem;
 }
 #add_order .divContent .order .itemList .gift-item .gift-num {

@@ -23,12 +23,14 @@ body { background: var(--bg-page); }
   font-family: var(--font-family-number);
   color: var(--color-text-secondary);
   font-size: 13rem;
+  font-variant-numeric: tabular-nums;
 }
 /* 订单金额：价格红（语义统一，原误用品品牌金） */
 #invoice-app .order-row .price {
   color: var(--color-price);
   font-weight: 700;
   font-size: 16rem;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- 发票状态卡 ---- */
@@ -56,7 +58,7 @@ body { background: var(--bg-page); }
   padding: 4rem 0;
   line-height: 1.6;
 }
-#invoice-app .rec-row .mono { font-family: var(--font-family-number); }
+#invoice-app .rec-row .mono { font-family: var(--font-family-number); font-variant-numeric: tabular-nums; }
 #invoice-app .view-btn { margin-top: 12rem; }
 
 /* ---- 申请区 ---- */

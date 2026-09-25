@@ -268,6 +268,7 @@
   color: var(--color-price);
   font-weight: 600;
   font-family: var(--font-family-number);
+  font-variant-numeric: tabular-nums;
 }
 
 #user .divOrders .btn {
@@ -290,7 +291,7 @@
   line-height: 36rem;
   position: relative;
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: background-color var(--transition-normal), border-color var(--transition-normal), color var(--transition-normal);
   user-select: none;
 }
 
@@ -674,14 +675,6 @@
   object-fit: cover; display: block;
   border-radius: 50%;
 }
-#user .avatar-edit-hint {
-  position: absolute; right: 0; bottom: 0;
-  width: 20rem; height: 20rem;
-  border-radius: 50%;
-  background: var(--mask-strong);
-  color: var(--color-text-white); font-size: 12rem;
-  display: flex; align-items: center; justify-content: center;
-}
 #user .avatar-mask {
   position: absolute; inset: 0;
   background: var(--mask-strong);
@@ -694,6 +687,15 @@
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   opacity: 0; cursor: pointer; font-size: 0;
+}
+
+/* 窄屏（≤360px）：收窄头部与卡片侧距、用户名字号，保证 320px 不挤压 */
+@media (max-width: 360px) {
+  #user .divHead { padding-left: 14rem; padding-right: 14rem; }
+  #user .divLinks,
+  #user .divOrders { margin-left: 10rem; margin-right: 10rem; }
+  #user .divLinks { padding: 0 12rem; }
+  #user .divHead .divUser .desc .divName { font-size: 16rem; }
 }
 #user .edit-profile-icon {
   margin-left: 8rem; font-size: 15rem; color: var(--gold-text);

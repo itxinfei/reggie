@@ -183,7 +183,7 @@
   --skeleton-gradient: linear-gradient(90deg, var(--bg-hover) 25%, var(--border-light) 50%, var(--bg-hover) 75%);
 
   /* ---- 动画 ---- */
-  --transition-fast: 0.15s ease;
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ================================================================
@@ -230,6 +230,34 @@
   /* 弹窗统一尺寸 */
   --dialog-width: 335rem;
   --dialog-radius: var(--radius-xl);
+
+  /* ---- 层级（z-index 命名刻度，2026-09-25 收口魔数） ---- */
+  --z-overlay: 999;    /* 遮罩/全屏 loading */
+  --z-modal: 1000;     /* 侧边栏/弹窗 */
+  --z-toast: 2000;
+  --z-lightbox: 3000;  /* 大图预览 */
+
+  /* ---- 浅灰头像底/禁用发送钮底（客服页） ---- */
+  --bg-avatar: #e7e7e7;
+
+  /* ---- 客服工单状态色（文字 + 12% 底，状态识别功能色） ---- */
+  --tag-pending: #ff976a;
+  --tag-pending-bg: rgba(255, 151, 106, 0.12);
+  --tag-processing: #1989fa;
+  --tag-processing-bg: rgba(25, 137, 250, 0.12);
+  --tag-done: #07c160;
+  --tag-done-bg: rgba(7, 193, 96, 0.12);
+
+  /* ---- 代码块配色（明暗模式均深底；暗色 bg 覆盖见 ai-assistant.css） ---- */
+  --color-code-bg: #1f2937;
+  --color-code-text: #e5e7eb;
+  --color-code-inline-dark-bg: rgba(255, 255, 255, 0.12);
+  --color-code-inline-dark-text: #fca5a5;
+
+  /* ---- 聊天气泡/灯箱投影（收敛散写 rgba） ---- */
+  --shadow-bubble-assistant: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-bubble-user: 0 2px 8px rgba(201, 146, 0, 0.25);
+  --shadow-lightbox: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 /* 修改点(2026-09-17)：全站骨架屏动画统一为 @keyframes rg-skeleton-shine，各页面删除独立定义 */
 @keyframes rg-skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -462,8 +490,10 @@ select {
   cursor: pointer;
 }
 .cend-navbar__btn:active { opacity: 0.6; }
-.cend-navbar__back { left: 4rem; }
-.cend-navbar__home { right: 4rem; }
+/* 必须靠这两个类定到左右两侧：只写 .cend-navbar__btn 时 left/right 均 auto，
+   图标会停在 flex 居中布局的假设位置、与标题重叠（2026-09-24 实测故障） */
+.cend-navbar__back { left: 4rem; right: auto; }
+.cend-navbar__home { right: 4rem; left: auto; }
 
 /* 白底轻导航（对标美团二级页） */
 .cend-navbar.is-light {
@@ -868,7 +898,7 @@ select:focus-visible,
   font-weight: 600;
   color: var(--color-text-primary);
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: transform var(--transition-normal), opacity var(--transition-normal);
 }
 .empty-state .empty-action:active {
   transform: scale(0.95);

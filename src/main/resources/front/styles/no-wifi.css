@@ -91,7 +91,7 @@
   color: var(--color-text-primary);
   line-height: var(--btn-h);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
 }
 
 #no_wifi .divContent .btnRefresh:active {
@@ -117,7 +117,7 @@
   color: var(--color-primary-dark);
   text-align: center;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
 }
 
 #no_wifi .divContent .btnHome:active {

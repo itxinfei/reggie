@@ -69,7 +69,7 @@
   color: var(--color-text-secondary);
   background: var(--bg-card);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
   border: 1px solid transparent;
 }
 .dish-card-page .category-tab.active {

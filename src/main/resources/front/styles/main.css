@@ -533,7 +533,7 @@
   font-size: 12rem;
   color: var(--color-text-secondary);
   line-height: 16rem;
-  transition: all 0.2s;
+  transition: color 0.2s, font-weight 0.2s;
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -845,7 +845,7 @@
   border-radius: 999rem;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.12s;
+  transition: background-color 0.12s, transform 0.12s;
   line-height: 1;
   height: 22rem;
 }
@@ -991,7 +991,7 @@
   font-size: 14rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s, opacity 0.15s;
   flex-shrink: 0;
 }
 
@@ -1066,7 +1066,7 @@
   font-size: 13rem;
   color: var(--color-text-primary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.15s;
   box-sizing: border-box;
 }
 
@@ -1113,7 +1113,7 @@
   font-weight: 700;
   color: var(--color-text-primary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: transform 0.15s;
 }
 
 #main .dialogFlavor .divBottom .flavor-cta:active {
@@ -2185,7 +2185,7 @@
   flex: none;
   font-size: 24rem;
   line-height: 1;
-  color: #c9c9c9;
+  color: var(--color-text-disabled);
   padding: 10rem;
   margin: -10rem -2rem;
 }

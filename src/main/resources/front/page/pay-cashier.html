@@ -14,7 +14,7 @@
         <script src="../js/icon-fallback.js?v=20260917"></script>
         <style>
             /* 收银台页样式（2026-09-21：px→rem、硬编码色→index.css 令牌） */
-            .cashier-wrap { min-height: 100vh; background: var(--bg-page); padding-bottom: calc(88rem + env(safe-area-inset-bottom)); }
+            .cashier-wrap { min-height: 100vh; min-height: 100dvh; background: var(--bg-page); padding-bottom: calc(88rem + env(safe-area-inset-bottom)); }
             .cashier-head {
                 height: 46rem; display: flex; align-items: center; justify-content: center;
                 /* 默认 content-box：内容区 46，padding-top 叠加刘海安全区，总高 = 46 + safe */

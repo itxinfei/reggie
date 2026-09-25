@@ -42,11 +42,15 @@
 }
 
 /* 页面全局覆盖 — 避免使用内联样式 */
+/* 必须保持 height:100% + overflow:hidden：
+   滚动由内部 .divScroll（flex:1 + overflow-y:auto）承担，.divFooter 常驻底部。
+   若改 height:auto/overflow:visible，高度链条断裂 → .divScroll 不滚动，
+   而 html 全局 overflow:hidden 会把超长表单连同底部保存栏一起裁掉（曾出现"看不到保存按钮"）。
+   不设 max-width:none，桌面端沿用 index.css 的 750px 居中"手机预览"。 */
 body.scrollable-page {
-  overflow: visible;
+  overflow: hidden;
   background: transparent;
-  max-width: none;
-  height: auto;
+  height: 100%;
 }
 
 /* ---- 页面容器 ---- */
@@ -118,7 +122,7 @@ body.scrollable-page {
   background: var(--bg-input);
   border-radius: var(--radius-lg);
   border: 1.5rem solid transparent;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   position: relative;
 }
@@ -236,7 +240,7 @@ body.scrollable-page {
   border: 1.5rem solid var(--bg-input);
   cursor: pointer;
   user-select: none;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -284,7 +288,7 @@ body.scrollable-page {
   white-space: nowrap;
   padding: 0 6rem 0 8rem;
   position: relative;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: color 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
 }
 #address_edit .divContent .formGroup .regionSlot:active { transform: scale(0.97); }
@@ -341,7 +345,7 @@ body.scrollable-page {
   cursor: pointer;
   user-select: none;
   padding: 0 16rem;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: color 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 #address_edit .divContent .formGroup .tagBtn:active { transform: scale(0.94); }
 /* 公司 - 品牌金 */
@@ -391,7 +395,7 @@ body.scrollable-page {
   letter-spacing: 2rem;
   cursor: pointer;
   user-select: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: var(--shadow-cta);
   display: flex;
   align-items: center;
@@ -433,7 +437,7 @@ body.scrollable-page {
   cursor: pointer;
   user-select: none;
   border-radius: var(--radius-xl);
-  transition: all 0.25s;
+  transition: background-color 0.25s, color 0.25s;
   background: var(--bg-input);
 }
 #address_edit .divFooter .btnDelete:active:not(.btnDeleteDisabled) {

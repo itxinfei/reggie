@@ -122,7 +122,7 @@
   background: var(--bg-hover);
   flex-shrink: 0;
   z-index: 1;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast);
 }
 /* 已完成步骤：金色圆点 */
 #tracking .timeline-item.done .timeline-dot {
@@ -243,7 +243,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   box-shadow: 0 2rem 8rem var(--color-primary-tint-lg);
 }
 #tracking .rider-action-btn:active {

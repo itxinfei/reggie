@@ -31,7 +31,7 @@
 
 /* 卡片壳：白底，内部放占位元素 */
 .skeleton-card {
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: var(--radius-md);
   padding: 16rem;
   margin-bottom: 12rem;

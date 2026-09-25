@@ -70,6 +70,10 @@
     --ai-dark-bg-base: #1a1a2e;
     --ai-dark-bg-elevated: #16213e;
     --ai-dark-bg-deep: #0f3460;
+    /* 头部单色实底（原 elevated→deep 深蓝渐变，2026-09-25 去渐变取中间色） */
+    --ai-dark-bg-header: #132a4f;
+    /* 代码块暗色底覆盖全局 --color-code-bg */
+    --color-code-bg: #111827;
     --ai-dark-bg-bubble: #2a2a4a;
     --ai-dark-bg-input: #3a3a5a;
     --ai-dark-border: #2a2a4a;
@@ -91,7 +95,7 @@
 .ai-container.dark-mode .dish-card .dish-name { color: var(--ai-dark-text); }
 .ai-container.dark-mode .dish-card .dish-reason {color: var(--ai-dark-text-muted); }
 .ai-container.dark-mode .ai-header--custom {
-    background: linear-gradient(135deg, var(--ai-dark-bg-elevated) 0%, var(--ai-dark-bg-deep) 100%);
+    background: var(--ai-dark-bg-header);
     /* 修改点：暗色头部深底 → 亮色文字，与亮色模式金底深字区分层级 */
 }
 .ai-container.dark-mode .ai-header-btn { color: var(--ai-dark-text); }
@@ -238,13 +242,13 @@
 /* ========== 对话管理侧边栏 ========== */
 .sidebar-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.4); z-index: 999;
+    background: rgba(0,0,0,0.4); z-index: var(--z-overlay);
     opacity: 0; pointer-events: none; transition: opacity 0.3s;
 }
 .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
 .conversation-sidebar {
     position: fixed; top: 0; left: 0; bottom: 0; width: 280px;
-    background: var(--bg-card); z-index: 1000; transform: translateX(-100%);
+    background: var(--bg-card); z-index: var(--z-modal); transform: translateX(-100%);
     transition: transform 0.3s ease; display: flex; flex-direction: column;
     box-shadow: 2px 0 12px var(--mask-medium);
 }
@@ -261,7 +265,7 @@
 .sidebar-list { flex: 1; overflow-y: auto; padding: var(--spacing-sm); }
 .sidebar-item {
     padding: var(--spacing-md) 14px; border-radius: var(--radius-md); cursor: pointer;
-    margin-bottom: 4px; transition: all 0.2s; position: relative;
+    margin-bottom: 4px; transition: background-color 0.2s; position: relative;
 }
 .sidebar-item:hover { background: var(--bg-hover); }
 .sidebar-item.active { background: var(--color-primary-tint); }
@@ -292,7 +296,7 @@
 .clear-all-btn {
     padding: 6px 20px; font-size: var(--font-size-sm); color: var(--color-danger);
     border: 1px solid rgba(233, 78, 60, 0.2); background: rgba(233, 78, 60, 0.06);
-    border-radius: 14px; cursor: pointer; transition: all 0.2s;
+    border-radius: 14px; cursor: pointer; transition: background-color 0.2s;
 }
 .clear-all-btn:hover { background: var(--color-danger-tint); }
 
@@ -305,7 +309,7 @@
 .scene-tab {
     padding: 10px 14px; font-size: 13px; font-weight: 500;
     color: var(--color-text-hint); cursor: pointer; border-bottom: 2px solid transparent;
-    white-space: nowrap; transition: all 0.2s;
+    white-space: nowrap; transition: color 0.2s, border-bottom-color 0.2s;
 }
 .scene-tab:hover { color: var(--color-primary-dark); }
 .scene-tab.active { color: var(--color-primary-dark); border-bottom-color: var(--color-primary-dark); }
@@ -319,7 +323,7 @@
 .quick-tip {
     font-size: var(--font-size-sm); padding: 6px 14px; border-radius: var(--radius-lg);
     background: var(--bg-card); border: 1px solid var(--color-primary-dark); color: var(--color-primary-dark);
-    cursor: pointer; white-space: nowrap; transition: all 0.2s;
+    cursor: pointer; white-space: nowrap; transition: background-color 0.2s, color 0.2s;
 }
 .quick-tip:active { background: var(--color-primary); color: var(--color-text-primary); }
 .quick-tip.profile-tag {
@@ -371,11 +375,11 @@
 }
 .chat-msg.assistant .chat-bubble {
     background: var(--bg-page); border-top-left-radius: 4px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-bubble-assistant);
 }
 .chat-msg.user .chat-bubble {
     background: var(--color-primary); color: var(--color-text-primary); border-top-right-radius: 4px;
-    box-shadow: 0 2px 8px rgba(201, 146, 0, 0.25);
+    box-shadow: var(--shadow-bubble-user);
 }
 
 /* 消息操作按钮（复制） */
@@ -385,7 +389,7 @@
 .copy-btn {
     padding: 2px 8px; border-radius: var(--radius-md); font-size: 11px;
     border: 1px solid var(--ai-border-medium); background: var(--bg-card); color: var(--color-text-secondary);
-    cursor: pointer; transition: all 0.2s;
+    cursor: pointer; transition: border-color 0.2s, color 0.2s;
 }
 .copy-btn:hover { border-color: var(--color-primary-dark); color: var(--color-primary-dark); }
 
@@ -470,7 +474,7 @@
 .feedback-btn {
     padding: 3px 10px; border-radius: var(--radius-md); font-size: 11px;
     border: 1px solid var(--bg-hover); background: var(--bg-card); color: var(--color-text-secondary);
-    cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 3px;
+    cursor: pointer; transition: background-color 0.2s, border-color 0.2s, color 0.2s; display: flex; align-items: center; gap: 3px;
 }
 .feedback-btn:hover { border-color: var(--color-primary-dark); color: var(--color-primary-dark); }
 .feedback-btn.active-good { border-color: var(--color-success); color: var(--color-success); background: var(--color-success-tint); }
@@ -540,7 +544,7 @@
     width: 40px; height: 40px; border-radius: var(--radius-round); border: 1px solid var(--bg-hover);
     background: var(--bg-card); font-size: 18px; cursor: pointer;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    transition: all 0.2s; user-select: none;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s; user-select: none;
 }
 .voice-btn:active { background: var(--bg-page); transform: scale(0.95); }
 .voice-btn.recording {
@@ -552,7 +556,7 @@
     background: var(--color-primary-gradient);
     color: var(--color-text-primary); border: none; font-size: 18px; cursor: pointer;
     flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s; user-select: none;
+    transition: background-color 0.2s, transform 0.2s, opacity 0.2s; user-select: none;
 }
 .send-btn:disabled { background: var(--color-text-disabled); cursor: not-allowed; }
 .send-btn:not(:disabled):active { transform: scale(0.92); opacity: 0.85; }
@@ -652,7 +656,7 @@
     background: var(--color-danger); color: var(--color-text-white);
     border: none; font-size: 16px; cursor: pointer;
     flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s; user-select: none;
+    transition: transform 0.2s, opacity 0.2s; user-select: none;
 }
 .stop-btn:active { transform: scale(0.92); opacity: 0.85; }
 
@@ -704,7 +708,7 @@
 }
 .md-code-block {
     font-family: Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.6;
-    background: #1f2937; color: #e5e7eb;
+    background: var(--color-code-bg); color: var(--color-code-text);
     padding: 10px 12px; border-radius: var(--radius-md);
     overflow-x: auto; margin: 8px 0; white-space: pre;
     -webkit-overflow-scrolling: touch;
@@ -720,8 +724,8 @@
 .md-table th { background: var(--bg-hover); font-weight: 600; }
 
 /* 暗色模式下的代码块/表格微调 */
-.ai-container.dark-mode .md-code-inline { background: rgba(255,255,255,0.12); color: #fca5a5; }
-.ai-container.dark-mode .md-code-block { background: #111827; color: #e5e7eb; }
+.ai-container.dark-mode .md-code-inline { background: var(--color-code-inline-dark-bg); color: var(--color-code-inline-dark-text); }
+.ai-container.dark-mode .md-code-block { background: var(--color-code-bg); color: var(--color-code-text); }
 .ai-container.dark-mode .md-table th { background: rgba(255,255,255,0.06); }
 .ai-container.dark-mode blockquote,
 .ai-container.dark-mode .md-body blockquote { background: rgba(255,255,255,0.06); }
@@ -742,7 +746,7 @@
     border: 1px solid var(--bg-hover); background: var(--bg-card);
     color: var(--color-text-secondary); font-size: 19px; line-height: 1;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    cursor: pointer; transition: all 0.2s; user-select: none; padding: 0;
+    cursor: pointer; transition: background-color 0.2s, transform 0.2s, opacity 0.2s; user-select: none; padding: 0;
 }
 .image-btn:active:not(:disabled) { background: var(--bg-page); transform: scale(0.95); }
 .image-btn:disabled { cursor: not-allowed; opacity: 0.6; }
@@ -789,14 +793,14 @@
 
 /* 大图预览 lightbox */
 .image-lightbox {
-    position: fixed; inset: 0; z-index: 3000;
+    position: fixed; inset: 0; z-index: var(--z-lightbox);
     background: rgba(0, 0, 0, 0.78);
     display: flex; align-items: center; justify-content: center;
     padding: 24px;
 }
 .image-lightbox img {
     max-width: 100%; max-height: 100%;
-    border-radius: var(--radius-sm); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    border-radius: var(--radius-sm); box-shadow: var(--shadow-lightbox);
 }
 .lightbox-close {
     position: absolute; top: 16px; right: 16px;
@@ -869,7 +873,7 @@
     background: var(--bg-card); color: var(--color-text-secondary);
     font-size: 18px; line-height: 1;
     display: inline-flex; align-items: center; justify-content: center;
-    cursor: pointer; flex-shrink: 0; transition: all 0.2s;
+    cursor: pointer; flex-shrink: 0; transition: background-color 0.2s, transform 0.2s;
 }
 .tool-icon:active { background: var(--bg-hover); transform: scale(0.94); }
 .tool-icon.image-btn.is-off {
@@ -884,7 +888,7 @@
     background: var(--color-primary); color: var(--color-text-primary);
     font-size: 19px; line-height: 1;
     display: inline-flex; align-items: center; justify-content: center;
-    cursor: pointer; flex-shrink: 0; transition: all 0.2s;
+    cursor: pointer; flex-shrink: 0; transition: background-color 0.2s, color 0.2s, transform 0.2s, opacity 0.2s;
 }
 .send-btn:disabled { background: var(--color-text-disabled); color: var(--color-text-white); cursor: not-allowed; }
 .send-btn:not(:disabled):active { transform: scale(0.92); opacity: 0.9; }
@@ -895,7 +899,7 @@
     background: var(--color-text-primary); color: var(--color-text-white);
     font-size: 15px; line-height: 1;
     display: inline-flex; align-items: center; justify-content: center;
-    cursor: pointer; flex-shrink: 0; transition: all 0.2s;
+    cursor: pointer; flex-shrink: 0; transition: transform 0.2s, opacity 0.2s;
 }
 .stop-btn:active { transform: scale(0.92); opacity: 0.85; }
 
