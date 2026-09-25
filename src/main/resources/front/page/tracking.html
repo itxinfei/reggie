@@ -60,6 +60,43 @@
                 <div class="status-desc">{{ statusDesc }}</div>
             </div>
 
+            <!-- ====== 首屏核心（对标美团：地图优先，无Key则ETA大字优先） ====== -->
+            <!-- 地图可用：骑手地图 + 骑手卡紧贴状态卡，首屏即可见 -->
+            <template v-if="isDelivering && mapEnabled">
+                <div class="map-card">
+                    <div class="map-title"><i class="ri-map-pin-range-line"></i> 骑手位置</div>
+                    <div id="deliveryMap" class="map-container"></div>
+                    <div class="map-tip" v-if="!riderHasLocation">骑手位置获取中…</div>
+                </div>
+                <div class="rider-card" v-if="hasRiderInfo">
+                    <div class="rider-avatar"><i class="ri-user-line"></i></div>
+                    <div class="rider-info">
+                        <div class="rider-name">{{ trackingData.riderName || '配送骑手' }}</div>
+                        <div class="rider-status-text">{{ statusText }}</div>
+                    </div>
+                    <div class="rider-actions">
+                        <div class="rider-action-btn" @click="callRider"><i class="ri-phone-line"></i></div>
+                    </div>
+                </div>
+            </template>
+            <!-- 无地图Key降级：ETA大字卡上提首屏（内含骑手距离） -->
+            <div class="eta-card eta-card--hero" v-else-if="isDelivering && etaMinutes() !== null">
+                <div class="eta-main">
+                    <span class="eta-num">{{ etaMinutes() }}</span>
+                    <span class="eta-unit">分钟后送达</span>
+                </div>
+                <div class="eta-sub">
+                    <span v-if="distanceText()">距您 {{ distanceText() }}</span>
+                    <span class="eta-sep" v-if="distanceText()">·</span>
+                    <span>{{ locationFreshnessText() }}</span>
+                </div>
+            </div>
+            <!-- ETA也无但有距离：静态距离卡占位，避免纯时间轴单薄 -->
+            <div class="distance-card" v-if="isDelivering && !mapEnabled && etaMinutes() === null && distanceText()">
+                <i class="ri-distance-line"></i>
+                <span>骑手距您 {{ distanceText() }}</span>
+            </div>
+
             <!-- 配送时间线 -->
             <div class="timeline-card">
                 <div class="section-title">配送进度</div>
@@ -80,10 +117,8 @@
                 </div>
             </div>
 
-            <!-- 修改点(2026-09-17)：实时层增强——消费后端已返回的 estimatedMinutes / distance /
-                 riderLocation，展示预计送达倒计时与骑手距离、位置新鲜度，缓解等待焦虑
-                 （原仅展示静态状态文案，用户无法感知履约进度） -->
-            <div class="eta-card" v-if="isDelivering && etaMinutes() !== null">
+            <!-- 实时层：地图模式下 ETA 卡保留在时间线之后（无Key模式已上提首屏） -->
+            <div class="eta-card" v-if="isDelivering && mapEnabled && etaMinutes() !== null">
                 <div class="eta-main">
                     <span class="eta-num">{{ etaMinutes() }}</span>
                     <span class="eta-unit">分钟后送达</span>
@@ -95,31 +130,7 @@
                 </div>
             </div>
 
-            <!-- 修改点(2026-09-17)：配送地图（骑手实时位置）——未配置地图 Key 时 mapEnabled 为 false，
-                 整块不渲染，自动降级为上方 ETA 文字版；Key 配置后自动启用 -->
-            <div class="map-card" v-if="isDelivering && mapEnabled">
-                <div class="map-title"><i class="ri-map-pin-range-line"></i> 骑手位置</div>
-                <div id="deliveryMap" class="map-container"></div>
-                <div class="map-tip" v-if="!riderHasLocation">骑手位置获取中…</div>
-            </div>
-
-            <!-- 骑手信息（仅存在真实骑手数据时展示，避免以顾客信息冒充骑手） -->
-            <div class="rider-card" v-if="isDelivering && hasRiderInfo">
-                <div class="rider-avatar">
-                    <i class="ri-user-line"></i>
-                </div>
-                <div class="rider-info">
-                    <div class="rider-name">{{ trackingData.riderName || '配送骑手' }}</div>
-                    <div class="rider-status-text">{{ statusText }}</div>
-                </div>
-                <div class="rider-actions">
-                    <div class="rider-action-btn" @click="callRider">
-                        <i class="ri-phone-line"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 底部操作（仅终态显示"查看订单"，骑手卡片已有电话按钮） -->
+            <!-- 底部操作：非终态=联系客服；终态=查看订单（骑手卡片已有电话按钮） -->
             <div class="bottom-actions" v-if="trackingData">
                 <van-button
                     v-if="isFinalStatus"
@@ -129,6 +140,15 @@
                     @click="goToOrders"
                 >
                     查看订单
+                </van-button>
+                <van-button
+                    v-else
+                    type="default"
+                    block
+                    round
+                    @click="contactService"
+                >
+                    联系商家/客服
                 </van-button>
             </div>
         </div>
@@ -457,6 +477,14 @@
                     sessionStorage.setItem('orderFromTracking', '1');
                     window.requestAnimationFrame(() => {
                         window.location.href = '/front/page/order.html';
+                    });
+                },
+                // 联系商家/客服：后端追踪数据无商家电话字段，统一进在线客服页（带上订单号便于核对）
+                contactService() {
+                    var url = '/front/page/customer-service.html';
+                    if (this.orderId) { url += '?orderId=' + encodeURIComponent(this.orderId); }
+                    window.requestAnimationFrame(() => {
+                        window.location.href = url;
                     });
                 }
             }

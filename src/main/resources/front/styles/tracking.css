@@ -323,6 +323,31 @@
 }
 .eta-card .eta-sep { margin: 0 6rem; }
 
+/* 首屏降级态 ETA：浅金底强化"倒计时"焦点 */
+.eta-card.eta-card--hero {
+  background: var(--color-primary-tint);
+  padding: var(--spacing-lg) var(--spacing-lg) calc(var(--spacing-lg) + 2rem);
+}
+.eta-card.eta-card--hero .eta-num { font-size: 40rem; }
+
+/* 无ETA时的静态距离卡 */
+.distance-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  box-shadow: var(--shadow-card);
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+.distance-card i {
+  font-size: 18rem;
+  color: var(--color-primary-dark);
+}
+
 /* 修改点(2026-09-17)：配送地图卡片——未配置地图 Key 时该块不渲染，样式不影响既有布局 */
 .map-card {
   background: var(--bg-card);

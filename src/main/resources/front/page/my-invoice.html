@@ -52,7 +52,7 @@
       <div v-for="item in records" :key="item.id" class="inv-card" @click="goInvoice(item)">
         <div class="card-head">
           <span class="title-name">{{ item.title || '未填写抬头' }}</span>
-          <van-tag :style="'background:' + stateColor(item.status) + '; color:' + stateTextColor(item.status) + '; border:none;'" size="medium">{{ statusText(item.status) }}</van-tag>
+          <van-tag :class="'inv-status-tag inv-status-' + item.status" size="medium">{{ statusText(item.status) }}</van-tag>
         </div>
         <div class="row">
           <span class="label">订单号</span>
@@ -64,15 +64,17 @@
         </div>
         <div class="row">
           <span class="label">开票金额</span>
-          <span class="price">￥{{ Number(item.amount || 0).toFixed(2) }}</span>
+          <span class="price">¥{{ Number(item.amount || 0).toFixed(2) }}</span>
         </div>
       </div>
     </div>
 
-    <!-- 空状态 -->
+    <!-- 空状态：三段式（图标+主标题+引导副文案+操作按钮） -->
     <div class="empty-state" v-else-if="!loading">
       <i class="ri-file-text-line"></i>
       <p class="empty-text">暂无发票记录</p>
+      <p class="empty-sub">下单后可在此开具发票</p>
+      <button class="empty-action" @click="goHome">去点餐</button>
     </div>
     </van-pull-refresh>
 
@@ -154,25 +156,7 @@
           if (s == 3) return '已作废'
           return '未知'
         },
-        // Vant 2 van-tag 合法类型：default/primary/success/danger/warning
-        // 修改点：stateColor 优先使用品牌令牌语义色（令牌绿/红由全局 --van-* 变量统一），Vant 内置色作为兜底
-        // 修改点(2026-09-15)：状态底色改用设计令牌（替代硬编码 rgba），与全站状态色体系统一
-        stateColor: function(s) {
-          if (s == 1) return 'var(--color-primary-tint)' // 待开具：品牌金浅底
-          if (s == 2) return 'var(--color-success-bg)'  // 已开具：成功绿浅底
-          return 'var(--bg-input)'                        // 待申请/已作废：中性灰
-        },
-        tagType: function(s) {
-          if (s == 1) return 'default'
-          if (s == 2) return 'default'
-          return 'default'
-        },
-        // 状态文字色：1 警告黄 / 2 成功绿 / 其余中性灰
-        stateTextColor: function(s) {
-          if (s == 1) return 'var(--color-warning)'
-          if (s == 2) return 'var(--color-success)'
-          return 'var(--color-text-hint)'
-        },
+        // 状态标签颜色：改由 CSS 按 .inv-status-{status} 类驱动（走 --tag/状态令牌），此处仅保留文案
         // 时间格式化（兼容后端 LocalDateTime 的 ISO 带 T 格式）
         fmtTime: function(val) {
           if (!val) return '-'
@@ -186,6 +170,11 @@
               + '&amount=' + encodeURIComponent(item.amount != null ? item.amount : '')
           window.requestAnimationFrame(function() {
             window.location.href = '/front/page/invoice.html?' + qs
+          })
+        },
+        goHome: function() {
+          window.requestAnimationFrame(function() {
+            window.location.href = '/front/index.html'
           })
         },
         goBack: function() {

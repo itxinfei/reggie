@@ -48,16 +48,18 @@
                     @load="getList"
                     >
                     <van-cell v-for="order in orderList" :key="order.id" class="item" @click="openDetail(order)">
-                        <!-- 卡片头部：订单号 + 时间 + 状态 -->
+                        <!-- 卡片头部：主标题（外卖订单·下单时间）+ 次要单号行 + 状态（对标美团） -->
                         <div class="order-header">
                             <div class="order-meta">
-                                <span class="order-no">订单号 {{order.number || order.id}}</span>
-                                <!-- 修改点(2026-09-24)：订单号一键复制（P3：售后沟通场景免手抄） -->
-                                <span class="copy-btn" role="button" tabindex="0" aria-label="复制订单号"
-                                      @click.stop="copyOrderNo(order)" @keydown.enter.stop="copyOrderNo(order)">
-                                    <i class="ri-file-copy-line"></i>
-                                </span>
-                                <span class="order-time">{{order.orderTime}}</span>
+                                <span class="order-title">外卖订单<span class="title-dot">·</span><span class="order-time">{{order.orderTime}}</span></span>
+                                <div class="order-no-row">
+                                    <span class="order-no">单号 {{order.number || order.id}}</span>
+                                    <!-- 订单号一键复制：售后沟通场景免手抄 -->
+                                    <span class="copy-btn" role="button" tabindex="0" aria-label="复制订单号"
+                                          @click.stop="copyOrderNo(order)" @keydown.enter.stop="copyOrderNo(order)">
+                                        <i class="ri-file-copy-line"></i>
+                                    </span>
+                                </div>
                             </div>
                             <span class="order-status" :class="getStatusClass(order.status)">{{getStatus(order.status)}}</span>
                         </div>
@@ -170,6 +172,7 @@
                         { label: '待付款', value: 1 },
                         { label: '待接单', value: 2 },
                         { label: '配送中', value: 3 },
+                        { label: '待评价', value: 'needEval' },
                         { label: '已完成', value: 4 },
                         { label: '已取消', value: 5 },
                         { label: '已退款', value: 6 }
@@ -190,7 +193,17 @@
                 } else {
                     this.initData()
                 }
-                loadEvalKeys().then(function(keys) { self.evalKeys = keys })
+                loadEvalKeys().then(function(keys) {
+                    self.evalKeys = keys
+                    // 待评价Tab下列表可能先于评价数据加载，此时补刷新一次
+                    if(self.activeStatus === 'needEval' && self.orderList.length >= 0 && !self.firstLoading){
+                        self.paging.page = 1
+                        self.orderList = []
+                        self.finished = false
+                        self.loading = true
+                        self.getList()
+                    }
+                })
             },
             mounted(){
                 // 修改点(2026-09-17)：状态Tab滚动粘滞阴影
@@ -254,9 +267,11 @@
                         return
                     }
                     // 修改点：仅在有状态筛选时传递status参数
+                    // 「待评价」后端无对应状态：取已完成(status=4)单后前端本地过滤未评价的
                     const params = { ...this.paging }
+                    var isNeedEval = this.activeStatus === 'needEval'
                     if(this.activeStatus !== null){
-                        params.status = this.activeStatus
+                        params.status = isNeedEval ? 4 : this.activeStatus
                     }
                     try {
                         const res = await orderPagingApi(params)
@@ -277,6 +292,11 @@
                                     }
                                     item.sumNum = number
                                 })
+                                // 待评价：仅保留还有未评价商品的订单
+                                if(isNeedEval){
+                                    var selfRef = this
+                                    records = records.filter(function(r){ return selfRef.canEvaluateOrder(r) })
+                                }
                                 this.orderList.push(...records)
                             }
                             // 修改点(2026-09-15)：原 finished 判断依赖 res.data.pages，若后端未返回 pages（undefined）

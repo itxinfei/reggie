@@ -107,13 +107,7 @@
   border-radius: var(--radius-round);
 }
 
-#messageApp .read-badge {
-  position: absolute;
-  top: var(--spacing-lg);
-  right: var(--spacing-lg);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
+/* 已读消息无任何标记（对标美团：仅未读显示红点） */
 
 /* ---- 消息头部 ---- */
 #messageApp .msg-header {

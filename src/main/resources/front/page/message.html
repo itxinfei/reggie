@@ -49,7 +49,6 @@
                  :class="['msg-card', msg.status === 1 ? 'unread' : 'read']"
                  @click="openDetail(msg)">
                 <div v-if="msg.status === 1" class="unread-dot"></div>
-                <div v-else class="read-badge">已读</div>
                 <div class="msg-header">
                     <span class="msg-title">{{ msg.title || '系统消息' }}</span>
                     <span :class="['msg-tag', pushTypeClass(msg.pushType)]">{{ pushTypeName(msg.pushType) }}</span>
@@ -62,6 +61,7 @@
             <div class="empty-state" v-if="messages.length === 0 && !loading && !loadError">
                 <i class="ri-chat-3-line"></i>
                 <p class="empty-text">暂无消息</p>
+                <p class="empty-sub">订单和优惠通知会显示在这里</p>
             </div>
 
             <!-- 修改点(2026-09-18)：首屏加载失败错误态，点击可重试，不再误报"暂无消息" -->

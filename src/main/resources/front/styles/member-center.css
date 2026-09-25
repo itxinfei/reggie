@@ -25,7 +25,7 @@
       margin-bottom: 20rem; position: relative; z-index: 2; }
     .mc-back { width: 32rem; height: 32rem; display: flex; align-items: center;
       justify-content: center; cursor: pointer; }
-    .mc-back::before { content: '‹'; color: var(--color-text-primary); font-size: 28rem; font-weight: 300; line-height: 1; }
+    .mc-back i { color: var(--color-text-primary); font-size: 24rem; line-height: 1; }
     .mc-title { font-size: 17rem; font-weight: 600; color: var(--color-text-primary); letter-spacing: 1rem; }
     .mc-rule { font-size: 12rem; color: var(--gold-text); cursor: pointer; }
 

@@ -22,13 +22,16 @@
         <div id="pay_success" class="app">
             <cend-shell title="瑞吉外卖" light :show-back="true" :show-home="true">
             <div class="divContent">
-                <!-- 结果图标按订单状态切换：成功绿勾选 / 取消灰 / 退款 -->
-                <i class="ri-checkbox-circle-fill success-icon" v-if="!resultState" aria-hidden="true"></i>
+                <!-- 结果图标按订单状态切换：成功对勾（SVG 一次绘制）/ 取消灰 / 退款 -->
+                <svg class="success-icon success-icon-svg" viewBox="0 0 52 52" v-if="!resultState" aria-hidden="true">
+                    <circle class="ss-circle" cx="26" cy="26" r="24"/>
+                    <path class="ss-check" d="M14 27 L22.5 35.5 L38 18"/>
+                </svg>
                 <i class="ri-close-circle-fill cancel-icon" v-else-if="resultState === 'CANCELLED'" aria-hidden="true"></i>
                 <i class="ri-refund-2-line refund-icon" v-else aria-hidden="true"></i>
                 <div class="divSuccess">{{ resultTitle }}</div>
                 <div class="divOrderNo" v-if="orderNo">订单号：{{orderNo}}</div>
-                <div class="divAmount" v-if="amount > 0">实付金额：<span class="price">￥{{amount.toFixed(2)}}</span></div>
+                <div class="divAmount" v-if="amount > 0">实付金额：<span class="price">¥{{amount.toFixed(2)}}</span></div>
                 <!-- 预计送达时间（仅外卖、支付成功显示） -->
                 <div class="divEta" v-if="!resultState && !isEatIn">
                     <i class="ri-time-line"></i>

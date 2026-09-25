@@ -25,6 +25,44 @@
   color: var(--color-success);
 }
 
+/* SVG 成功对勾：圆圈 + 对勾一次绘制（品牌金，约 500ms） */
+#pay_success .divContent .success-icon-svg {
+  width: 90rem;
+  height: 90rem;
+  overflow: visible;
+}
+#pay_success .success-icon-svg .ss-circle {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 3;
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+  animation: ss-draw-circle .35s ease-out forwards;
+}
+#pay_success .success-icon-svg .ss-check {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+  animation: ss-draw-check .2s ease-in .32s forwards;
+}
+@keyframes ss-draw-circle {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ss-draw-check {
+  to { stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #pay_success .success-icon-svg .ss-circle,
+  #pay_success .success-icon-svg .ss-check {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
 /* 取消/退款结果图标：复用成功图标尺寸，仅改色 */
 #pay_success .divContent .cancel-icon,
 #pay_success .divContent .refund-icon {

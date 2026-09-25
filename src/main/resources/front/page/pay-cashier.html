@@ -50,6 +50,8 @@
             .pay-icon.alipay { background: var(--platform-alipay); } /* 支付宝品牌蓝令牌 */
             .pay-item .pay-name { flex: 1; font-size: 15rem; color: var(--color-text-primary); }
             .pay-item .pay-check { font-size: 20rem; color: var(--color-primary); }
+            .pay-item .pay-check:not([class*="fill"]) { color: var(--border-light); }
+            .pay-item:active { background: var(--bg-hover); }
             .mock-tip {
                 margin: 4rem 12rem 0; padding: 12rem; border-radius: var(--radius-md);
                 background: var(--color-primary-light); color: var(--color-primary-dark);
@@ -106,17 +108,28 @@
 
                 <div class="amount-card">
                     <div class="label">应付金额</div>
-                    <div class="amount"><span class="sym">￥</span>{{ amountText }}</div>
+                    <div class="amount"><span class="sym">¥</span>{{ amountText }}</div>
                     <div class="order-no" v-if="orderNo">订单号：{{ orderNo }}</div>
                 </div>
 
                 <div class="pay-card">
-                    <div class="pay-item">
-                        <div class="pay-icon" :class="isWechat ? 'wechat' : 'alipay'">
-                            <i :class="isWechat ? 'ri-wechat-line' : 'ri-alipay-line'"></i>
+                    <div class="pay-item" role="button" tabindex="0"
+                         :class="{ 'pay-item--on': channel === 'WECHAT' }"
+                         @click="selectChannel('WECHAT')" @keydown.enter="selectChannel('WECHAT')">
+                        <div class="pay-icon wechat">
+                            <i class="ri-wechat-line"></i>
                         </div>
-                        <span class="pay-name">{{ channelName }}</span>
-                        <i class="ri-checkbox-circle-fill pay-check"></i>
+                        <span class="pay-name">微信支付</span>
+                        <i class="pay-check" :class="channel === 'WECHAT' ? 'ri-checkbox-blank-circle-fill' : 'ri-checkbox-blank-circle-line'"></i>
+                    </div>
+                    <div class="pay-item" role="button" tabindex="0"
+                         :class="{ 'pay-item--on': channel === 'ALIPAY' }"
+                         @click="selectChannel('ALIPAY')" @keydown.enter="selectChannel('ALIPAY')">
+                        <div class="pay-icon alipay">
+                            <i class="ri-alipay-line"></i>
+                        </div>
+                        <span class="pay-name">支付宝</span>
+                        <i class="pay-check" :class="channel === 'ALIPAY' ? 'ri-checkbox-blank-circle-fill' : 'ri-checkbox-blank-circle-line'"></i>
                     </div>
                 </div>
 
@@ -134,7 +147,7 @@
                 <div class="qr-pay-box">
                     <div class="qr-pay-title">请使用{{ channelName }}扫一扫</div>
                     <img class="qr-pay-img" :src="qrCodeUrl" alt="支付二维码">
-                    <div class="qr-pay-amount">￥{{ amountText }}</div>
+                    <div class="qr-pay-amount">¥{{ amountText }}</div>
                     <div class="qr-pay-tip">支付完成后页面自动跳转，无需手动操作</div>
                     <button class="qr-pay-cancel" @click="showQrPopup = false">取消支付</button>
                 </div>
@@ -151,7 +164,7 @@
             </div>
 
             <div class="pay-bar" v-if="loaded">
-                <div class="bar-amount">应付 <b>￥{{ amountText }}</b></div>
+                <div class="bar-amount">应付 <b>¥{{ amountText }}</b></div>
                 <button class="confirm-btn" :disabled="paying" @click="confirmPay">
                     {{ paying ? '支付处理中...' : '确认支付' }}
                 </button>
@@ -216,6 +229,11 @@
                 this.stopPolling();
             },
             methods: {
+                // 选择支付渠道：支付进行中/轮询中禁止切换，避免单据错乱
+                selectChannel: function (ch) {
+                    if (this.paying) return;
+                    this.channel = ch;
+                },
                 parseQuery: function () {
                     var map = {};
                     (window.location.search.replace(/^\?/, '').split('&') || []).forEach(function (pair) {

@@ -33,8 +33,19 @@
                         <i :class="['od-hero-icon', statusIcon]"></i>
                         <div class="od-hero-main">
                             <span class="od-hero-title">{{ getStatus(order.status) }}</span>
-                            <span class="od-hero-desc">{{ statusDesc }}</span>
+                            <span class="od-hero-desc" v-if="!isDeliveringLive">{{ statusDesc }}</span>
+                            <!-- 待接单/配送中：预计送达时间加粗高亮 -->
+                            <span class="od-hero-desc od-eta-live" v-if="isDeliveringLive">
+                                预计 <b>{{ order.expectDeliveryTime || '尽快' }}</b> 送达
+                            </span>
                         </div>
+                    </div>
+
+                    <!-- 配送快捷入口（对标美团 hero 下「查看骑手」直达） -->
+                    <div v-if="isDeliveringLive && canViewTracking(order)" class="od-tracking-entry" @click="viewTracking">
+                        <i class="ri-motorbike-line"></i>
+                        <span>查看骑手实时位置</span>
+                        <i class="ri-arrow-right-s-line"></i>
                     </div>
 
                     <!-- 收货地址 / 堂食桌台 -->
@@ -47,10 +58,18 @@
                             <div class="od-row">
                                 <span class="od-label">收货人</span>
                                 <span class="od-value">{{ order.consignee }}　{{ order.phone }}</span>
+                                <span class="od-mini-btn" role="button" tabindex="0" aria-label="拨打收货人电话"
+                                      @click="callConsignee" @keydown.enter="callConsignee">
+                                    <i class="ri-phone-line"></i>
+                                </span>
                             </div>
                             <div class="od-row">
                                 <span class="od-label">收货地址</span>
                                 <span class="od-value">{{ order.address }}</span>
+                                <span class="od-mini-btn" role="button" tabindex="0" aria-label="复制收货地址"
+                                      @click="copyAddress" @keydown.enter="copyAddress">
+                                    <i class="ri-navigation-line"></i>
+                                </span>
                             </div>
                         </template>
                     </div>
@@ -210,6 +229,10 @@
             },
             computed: {
                 isEatIn: function() { return !!this.order.tableId },
+                // 外卖待接单/配送中（堂食不算"送达"），用于hero预计时间高亮与配送入口
+                isDeliveringLive: function() {
+                    return !this.isEatIn && (this.order.status === 2 || this.order.status === 3)
+                },
                 // 菜品小计（服务端核价口径，明细行金额求和）
                 goodsAmount: function() {
                     var sum = 0
@@ -329,6 +352,36 @@
                     window.requestAnimationFrame(function() {
                         window.location.href = '/front/page/customer-service.html?orderId=' + oid
                     })
+                },
+                // 拨打收货人电话
+                callConsignee: function() {
+                    if (this.order.phone) {
+                        window.location.href = 'tel:' + this.order.phone
+                    } else {
+                        vant.Toast.fail('暂无联系电话')
+                    }
+                },
+                // 复制收货地址（clipboard 优先，降级 execCommand）
+                copyAddress: function() {
+                    var text = this.order.address
+                    if (!text) { vant.Toast.fail('暂无地址'); return }
+                    var done = function() { vant.Toast.success('地址已复制') }
+                    var fail = function() { vant.Toast.fail('复制失败') }
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(done).catch(fail)
+                    } else {
+                        try {
+                            var ta = document.createElement('textarea')
+                            ta.value = text
+                            ta.style.position = 'fixed'
+                            ta.style.opacity = '0'
+                            document.body.appendChild(ta)
+                            ta.select()
+                            document.execCommand('copy')
+                            document.body.removeChild(ta)
+                            done()
+                        } catch (e) { fail() }
+                    }
                 },
                 urgeOrder: async function() {
                     if (this._urging) return

@@ -117,7 +117,32 @@
 #order .divBody .item .order-meta {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 4rem;
+}
+
+/* 主标题：外卖订单 · 下单时间（对标美团卡头，15rem 主文字色） */
+#order .divBody .item .order-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+#order .divBody .item .order-title .title-dot {
+  margin: 0 6rem;
+  color: var(--color-text-hint);
+  font-weight: 400;
+}
+
+#order .divBody .item .order-title .order-time {
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+
+/* 次要单号行：小号弱化 */
+#order .divBody .item .order-no-row {
+  display: flex;
+  align-items: center;
 }
 
 #order .divBody .item .order-no {
@@ -150,11 +175,6 @@
   width: 44rem;
   height: 44rem;
   transform: translate(-50%, -50%);
-}
-
-#order .divBody .item .order-time {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
 }
 
 #order .divBody .item .order-status {
@@ -273,10 +293,10 @@
 }
 
 #order .dish-more {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-hint);
-  text-align: center;
-  padding: 4rem 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted, var(--color-text-hint));
+  text-align: left;
+  padding: 2rem 0;
 }
 
 /* ---- 合计行 ---- */
@@ -410,6 +430,47 @@
 #order .od-hero-title { font-size: 18rem; font-weight: 700; line-height: 1.2; }
 
 #order .od-hero-desc { font-size: 12rem; opacity: .85; }
+
+/* 配送中：预计送达时间高亮（美团式倒计时强调） */
+#order .od-eta-live { opacity: 1; font-size: 13rem; }
+#order .od-eta-live b { font-size: 15rem; font-weight: 700; }
+
+/* hero 下「查看骑手实时位置」入口行 */
+#order .od-tracking-entry {
+  display: flex;
+  align-items: center;
+  gap: 6rem;
+  background: var(--color-primary-tint);
+  border-radius: var(--radius-lg);
+  padding: 12rem var(--spacing-lg);
+  font-size: 14rem;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  cursor: pointer;
+}
+#order .od-tracking-entry .ri-motorbike-line { font-size: 18rem; }
+#order .od-tracking-entry .ri-arrow-right-s-line {
+  margin-left: auto;
+  font-size: 18rem;
+}
+#order .od-tracking-entry:active { opacity: .8; }
+
+/* 收货信息行内的拨号/复制小图标按钮 */
+#order .od-mini-btn {
+  margin-left: auto;
+  width: 32rem;
+  height: 32rem;
+  border-radius: 50%;
+  background: var(--color-primary-tint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: center;
+  cursor: pointer;
+}
+#order .od-mini-btn i { font-size: 16rem; color: var(--color-primary-dark); }
+#order .od-mini-btn:active { background: var(--bg-hover); }
 
 /* 信息 / 价格行 */
 #order .od-rows { display: flex; flex-direction: column; gap: 12rem; }

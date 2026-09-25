@@ -44,6 +44,13 @@
 /* 分页 */
 #invoice-list-app .pagination-wrap { margin-top: 8rem; }
 
+/* 发票状态标签：按状态 class 驱动，颜色走全局令牌（替代内联拼色） */
+#invoice-list-app .inv-status-tag { border: none; }
+#invoice-list-app .inv-status-1 { background: var(--color-primary-tint); color: var(--color-warning); }
+#invoice-list-app .inv-status-2 { background: var(--color-success-bg); color: var(--color-success); }
+#invoice-list-app .inv-status-0,
+#invoice-list-app .inv-status-3 { background: var(--bg-input); color: var(--color-text-hint); }
+
 /* 空状态 — 使用全局 .empty-state 组件（index.css） */
 
 /* loading */
