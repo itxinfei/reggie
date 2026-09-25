@@ -64,7 +64,6 @@
                     <div v-if="avatarUploading" class="avatar-mask">
                         <i class="ri-loader-4-line rotating"></i>
                     </div>
-                    <div v-else class="avatar-edit-hint"><i class="ri-camera-line"></i></div>
                     <input ref="avatarInput" class="avatar-input" type="file"
                            accept="image/jpeg,image/png,image/gif" @change="onAvatarChange"/>
                 </div>
@@ -115,7 +114,8 @@
                 <div class="card-coupon-tag" v-if="memberInfo.isMember && memberInfo.couponCount > 0">
                     你有 <span class="coupon-count">{{ memberInfo.couponCount }}</span> 张可用优惠券
                 </div>
-                <div class="non-member-tip" v-else>
+                <!-- v-else-if 而非 v-else：会员但0券时不显示"开通会员"，避免向已是会员的用户要其开通 -->
+                <div class="non-member-tip" v-else-if="!memberInfo.isMember">
                     开通会员解锁更多权益
                 </div>
             </div>
@@ -355,9 +355,9 @@
                 // 修改点：下拉刷新
                 onRefresh(){
                     var self = this
-                    this.loadData().finally(function(){
+                    // 成功提示由 van-pull-refresh 的 success-text 统一展示，不再手动 Toast 造成双重提示
+                    this.loadData().catch(function(){}).finally(function(){
                         self.refreshing = false
-                        vant.Toast('刷新成功')
                     })
                 },
                 async loadData(){
@@ -378,7 +378,11 @@
                         if(res.code === 1 && res.data){
                             this.userName = res.data.name || ''
                             this.userAvatar = res.data.avatar || ''
-                            this.userPhone = res.data.phone || this.userPhone
+                            // 仅接受完整手机号：后端可能返回脱敏号(如 138****8000)，
+                            // 让它覆盖会污染 sessionStorage，导致点餐联系人手机预填失效
+                            if(res.data.phone && /^1\d{10}$/.test(res.data.phone)){
+                                this.userPhone = res.data.phone
+                            }
                             this.userGender = res.data.sex !== undefined ? res.data.sex : undefined
                             sessionStorage.setItem("userName", this.userName)
                             sessionStorage.setItem("userAvatar", this.userAvatar)
@@ -537,6 +541,10 @@
                             sessionStorage.removeItem("userName")
                             sessionStorage.removeItem("userAvatar")
                             sessionStorage.removeItem("memberId")
+                            // CSRF Token 同时从 sessionStorage 和 Cookie 清掉，
+                            // 否则旧 token 残留可能被下一用户的首个变更请求携带
+                            sessionStorage.removeItem("csrfToken")
+                            document.cookie = 'csrfToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
                             window.requestAnimationFrame(function(){ goLogin() })
                         }else{
                             vant.Toast.fail(res.msg || '退出失败');

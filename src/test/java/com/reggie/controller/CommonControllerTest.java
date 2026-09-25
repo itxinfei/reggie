@@ -35,7 +35,7 @@ public class CommonControllerTest {
     @BeforeEach
     void setUp() {
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @Test
@@ -56,7 +56,7 @@ public class CommonControllerTest {
         mockMvc.perform(multipart("/common/upload")
                 .file(file)
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.startsWith("public/admin/dishes/")));
@@ -74,7 +74,7 @@ public class CommonControllerTest {
         mockMvc.perform(multipart("/common/upload")
                 .file(file)
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("上传文件不能为空"));
@@ -92,7 +92,7 @@ public class CommonControllerTest {
         mockMvc.perform(multipart("/common/upload")
                 .file(file)
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("文件类型不支持，仅支持jpg、jpeg、png、gif格式"));
@@ -115,7 +115,7 @@ public class CommonControllerTest {
         mockMvc.perform(multipart("/common/upload")
                 .file(file)
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.startsWith("public/admin/dishes/")));
@@ -139,7 +139,7 @@ public class CommonControllerTest {
         String responseContent = mockMvc.perform(multipart("/common/upload")
                 .file(file)
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andReturn()
@@ -171,7 +171,7 @@ public class CommonControllerTest {
                 .file(file)
                 .param("bizType", "avatar")
                 .sessionAttr("user", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.startsWith("private/user/avatar/")));
@@ -191,7 +191,7 @@ public class CommonControllerTest {
                 .file(file)
                 .param("bizType", "purchase")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.startsWith("private/admin/purchase/")));
@@ -203,7 +203,7 @@ public class CommonControllerTest {
         mockMvc.perform(get("/common/download")
                 .param("name", "non-existing-file.jpg")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().contentTypeCompatibleWith("image/svg+xml"));
     }
@@ -223,7 +223,7 @@ public class CommonControllerTest {
         mockMvc.perform(get("/common/download")
                 .param("name", "private/admin/purchase/202609/x.jpg")
                 .sessionAttr("user", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.msg").value("NOTLOGIN"));
     }
@@ -233,7 +233,7 @@ public class CommonControllerTest {
         mockMvc.perform(get("/common/download")
                 .param("name", "private/user/avatar/202609/x.jpg")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.msg").value("NOTLOGIN"));
     }
@@ -243,7 +243,7 @@ public class CommonControllerTest {
         mockMvc.perform(get("/common/download")
                 .param("name", "private/admin/purchase/202609/not-exist.jpg")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
                         .content().contentTypeCompatibleWith("image/svg+xml"));
@@ -289,7 +289,7 @@ public class CommonControllerTest {
         mockMvc.perform(get("/common/download")
                 .param("name", "images/dishes/legacy.jpg")
                 .sessionAttr("user", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk());
     }
 }

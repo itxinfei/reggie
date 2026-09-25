@@ -66,7 +66,7 @@ body { background: var(--bg-page); font-family: var(--font-family-base); }
 .stepper { display: flex; align-items: center; gap: 8rem; flex-shrink: 0; }
 .step-btn { position: relative; width: 24rem; height: 24rem; padding: 0; border-radius: var(--radius-round); display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .step-btn i { font-size: 16rem; line-height: 1; }
-.step-btn::after { content: ''; position: absolute; inset: -8rem; border-radius: var(--radius-round); }
+.step-btn::after { content: ''; position: absolute; inset: -10rem; border-radius: var(--radius-round); }
 .step-plus { background: var(--color-primary); color: var(--color-text-primary); border: none; box-shadow: var(--shadow-sm); transition: transform var(--transition-fast); }
 .step-plus:active { transform: scale(0.88); }
 .step-minus { background: var(--bg-card); color: var(--color-primary-dark); border: 1px solid var(--color-primary); transition: transform var(--transition-fast); }
@@ -101,6 +101,13 @@ body { background: var(--bg-page); font-family: var(--font-family-base); }
 .cart-item-info { flex: 1; min-width: 0; }
 .cart-item-name { font-size: var(--font-size-md); color: var(--color-text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cart-item-price { font-size: var(--font-size-sm); color: var(--color-price); font-weight: 600; margin-top: 2rem; }
+.qty-control { display: flex; align-items: center; gap: 8rem; flex-shrink: 0; }
+.qty-num { min-width: 20rem; text-align: center; font-size: var(--font-size-md); font-weight: 600; color: var(--color-text-primary); font-family: var(--font-family-number); }
+.qty-btn { position: relative; width: 24rem; height: 24rem; padding: 0; border-radius: var(--radius-round); display: flex; align-items: center; justify-content: center; font-size: 16rem; line-height: 1; cursor: pointer; }
+/* 视觉24px，伪元素把点击热区扩到44px（inset -10） */
+.qty-btn::after { content: ''; position: absolute; inset: -10rem; border-radius: var(--radius-round); }
+.qty-btn.minus { background: var(--bg-card); color: var(--color-primary-dark); border: 1px solid var(--color-primary); }
+.qty-btn:not(.minus) { background: var(--color-primary); color: var(--color-text-primary); border: none; box-shadow: var(--shadow-sm); }
 
 /* ========== 确认订单弹窗 ========== */
 .order-popup { padding: 20rem 16rem; }

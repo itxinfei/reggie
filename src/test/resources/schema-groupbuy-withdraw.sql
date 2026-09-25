@@ -2,13 +2,9 @@
 -- Matches MyBatis-Plus 3.4.2 default UPPER_SNAKE_CASE column naming
 -- Note: supplier_settlement is already in schema-inventory.sql, NOT duplicated here
 
-DROP TABLE IF EXISTS group_buy_participation;
-DROP TABLE IF EXISTS group_buy_campaign;
-DROP TABLE IF EXISTS withdrawal_record;
-DROP TABLE IF EXISTS withdrawal_request;
 
 -- 拼团活动表
-CREATE TABLE group_buy_campaign (
+CREATE TABLE IF NOT EXISTS group_buy_campaign (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NOT NULL DEFAULT 0 COMMENT '租户ID',
   NAME varchar(100) NOT NULL COMMENT '活动名称',
@@ -30,11 +26,9 @@ CREATE TABLE group_buy_campaign (
   PRIMARY KEY (ID)
 );
 
-CREATE INDEX idx_group_buy_campaign_tenant_id ON group_buy_campaign(TENANT_ID);
-CREATE INDEX idx_group_buy_campaign_status ON group_buy_campaign(STATUS);
 
 -- 拼团参与记录表
-CREATE TABLE group_buy_participation (
+CREATE TABLE IF NOT EXISTS group_buy_participation (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NOT NULL DEFAULT 0 COMMENT '租户ID',
   GROUP_BUY_ID bigint NOT NULL COMMENT '拼团活动ID',
@@ -47,12 +41,9 @@ CREATE TABLE group_buy_participation (
   PRIMARY KEY (ID)
 );
 
-CREATE INDEX idx_group_buy_participation_tenant_id ON group_buy_participation(TENANT_ID);
-CREATE INDEX idx_group_buy_participation_group_buy_id ON group_buy_participation(GROUP_BUY_ID);
-CREATE INDEX idx_group_buy_participation_order_id ON group_buy_participation(ORDER_ID);
 
 -- 提现申请表
-CREATE TABLE withdrawal_request (
+CREATE TABLE IF NOT EXISTS withdrawal_request (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NOT NULL DEFAULT 0 COMMENT '租户ID',
   USER_ID bigint NOT NULL COMMENT '用户ID',
@@ -69,12 +60,9 @@ CREATE TABLE withdrawal_request (
   PRIMARY KEY (ID)
 );
 
-CREATE INDEX idx_withdrawal_request_tenant_id ON withdrawal_request(TENANT_ID);
-CREATE INDEX idx_withdrawal_request_user_id ON withdrawal_request(USER_ID);
-CREATE INDEX idx_withdrawal_request_status ON withdrawal_request(STATUS);
 
 -- 提现记录表
-CREATE TABLE withdrawal_record (
+CREATE TABLE IF NOT EXISTS withdrawal_record (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NOT NULL DEFAULT 0 COMMENT '租户ID',
   WITHDRAWAL_ID bigint NOT NULL COMMENT '提现申请ID',
@@ -86,5 +74,3 @@ CREATE TABLE withdrawal_record (
   PRIMARY KEY (ID)
 );
 
-CREATE INDEX idx_withdrawal_record_tenant_id ON withdrawal_record(TENANT_ID);
-CREATE INDEX idx_withdrawal_record_withdrawal_id ON withdrawal_record(WITHDRAWAL_ID);

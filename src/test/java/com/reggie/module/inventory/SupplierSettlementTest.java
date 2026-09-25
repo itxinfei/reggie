@@ -41,14 +41,14 @@ public class SupplierSettlementTest {
 
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @Test
     void createSettlement_valid_createsPending() {
         // 准备供应商
         Supplier supplier = new Supplier();
-        supplier.setTenantId(1L);
+        supplier.setTenantId(999L);
         supplier.setName("测试供应商");
         supplier.setContact("张三");
         supplier.setPhone("13900139000");
@@ -73,7 +73,7 @@ public class SupplierSettlementTest {
     void paySettlement_partialPayment_updatesPaidAmount() {
         // 准备供应商和结算单
         Supplier supplier = new Supplier();
-        supplier.setTenantId(1L);
+        supplier.setTenantId(999L);
         supplier.setName("部分付款测试");
         supplier.setContact("李四");
         supplier.setPhone("13900139001");
@@ -97,7 +97,7 @@ public class SupplierSettlementTest {
     void paySettlement_fullPayment_marksPaid() {
         // 准备供应商和结算单
         Supplier supplier = new Supplier();
-        supplier.setTenantId(1L);
+        supplier.setTenantId(999L);
         supplier.setName("全额付款测试");
         supplier.setContact("王五");
         supplier.setPhone("13900139002");
@@ -124,7 +124,7 @@ public class SupplierSettlementTest {
     void paySettlement_overPayment_allowsOverpayment() {
         // 准备供应商和结算单
         Supplier supplier = new Supplier();
-        supplier.setTenantId(1L);
+        supplier.setTenantId(999L);
         supplier.setName("超额付款测试");
         supplier.setContact("赵六");
         supplier.setPhone("13900139003");
@@ -148,7 +148,7 @@ public class SupplierSettlementTest {
     void pageSettlements_findsBySupplier() {
         // 准备两个供应商
         Supplier supplier1 = new Supplier();
-        supplier1.setTenantId(1L);
+        supplier1.setTenantId(999L);
         supplier1.setName("供应商A");
         supplier1.setContact("用户A");
         supplier1.setPhone("13900139004");
@@ -156,7 +156,7 @@ public class SupplierSettlementTest {
         supplierService.save(supplier1);
 
         Supplier supplier2 = new Supplier();
-        supplier2.setTenantId(1L);
+        supplier2.setTenantId(999L);
         supplier2.setName("供应商B");
         supplier2.setContact("用户B");
         supplier2.setPhone("13900139005");
@@ -190,7 +190,7 @@ public class SupplierSettlementTest {
     void pageSettlements_findsByStatus() {
         // 准备供应商
         Supplier supplier = new Supplier();
-        supplier.setTenantId(1L);
+        supplier.setTenantId(999L);
         supplier.setName("状态筛选测试");
         supplier.setContact("测试");
         supplier.setPhone("13900139006");

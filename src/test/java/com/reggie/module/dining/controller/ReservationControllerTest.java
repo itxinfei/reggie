@@ -50,11 +50,11 @@ public class ReservationControllerTest {
 
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         Reservation reservation = new Reservation();
         reservation.setId(1L);
-        reservation.setTenantId(1L);
+        reservation.setTenantId(999L);
         reservation.setCustomerName("张三");
         reservation.setPhone("13800138000");
         reservation.setReservedTime(LocalDateTime.now().plusDays(1));
@@ -71,7 +71,7 @@ public class ReservationControllerTest {
                 .param("page", "1")
                 .param("pageSize", "10")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.records[0].customerName").value("张三"));
@@ -84,7 +84,7 @@ public class ReservationControllerTest {
         
         mockMvc.perform(post("/api/dining/reservation")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"customerName\":\"李四\",\"phone\":\"13900139000\",\"reservedTime\":\"" + reservedTimeStr + "\",\"seatCount\":2,\"remark\":\"无烟区\"}"))
                 .andExpect(status().isOk())
@@ -96,7 +96,7 @@ public class ReservationControllerTest {
     void testConfirm() throws Exception {
         mockMvc.perform(put("/api/dining/reservation/confirm/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("确认预订成功"));
@@ -106,7 +106,7 @@ public class ReservationControllerTest {
     void testConfirmNonExistent() throws Exception {
         mockMvc.perform(put("/api/dining/reservation/confirm/999")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }
@@ -115,7 +115,7 @@ public class ReservationControllerTest {
     void testCancel() throws Exception {
         mockMvc.perform(put("/api/dining/reservation/cancel/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("取消预订成功"));
@@ -126,13 +126,13 @@ public class ReservationControllerTest {
         // 到店仅对已确认(CONFIRMED)预订开放，先确认
         mockMvc.perform(put("/api/dining/reservation/confirm/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
         mockMvc.perform(put("/api/dining/reservation/arrive/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("到店成功"));
@@ -140,7 +140,7 @@ public class ReservationControllerTest {
         // 重复到店须拦截，避免把已开桌台的首单踢成孤儿单
         mockMvc.perform(put("/api/dining/reservation/arrive/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -149,7 +149,7 @@ public class ReservationControllerTest {
     void testArriveNonExistent() throws Exception {
         mockMvc.perform(put("/api/dining/reservation/arrive/999")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }
@@ -159,7 +159,7 @@ public class ReservationControllerTest {
         // 预订确认时桌台已置 RESERVED
         DiningTable table = new DiningTable();
         table.setId(20L);
-        table.setTenantId(1L);
+        table.setTenantId(999L);
         table.setName("测试桌20");
         table.setSeatCount(4);
         table.setStatus(DiningTableStatus.RESERVED.getValue());
@@ -168,7 +168,7 @@ public class ReservationControllerTest {
         // 第二条预订（setUp 的 id=1 未绑桌台），绑定桌台
         Reservation r = new Reservation();
         r.setId(2L);
-        r.setTenantId(1L);
+        r.setTenantId(999L);
         r.setCustomerName("李四");
         r.setPhone("13900139000");
         r.setReservedTime(LocalDateTime.now().plusHours(2));
@@ -180,7 +180,7 @@ public class ReservationControllerTest {
         // 到店 → 先释放 RESERVED→FREE 再联动开台
         mockMvc.perform(put("/api/dining/reservation/arrive/2")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -202,7 +202,7 @@ public class ReservationControllerTest {
     void testGetById() throws Exception {
         mockMvc.perform(get("/api/dining/reservation/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.customerName").value("张三"))
@@ -213,7 +213,7 @@ public class ReservationControllerTest {
     void testGetByIdNonExistent() throws Exception {
         mockMvc.perform(get("/api/dining/reservation/999")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -225,7 +225,7 @@ public class ReservationControllerTest {
 
         mockMvc.perform(put("/api/dining/reservation")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":1,\"customerName\":\"张三改\",\"phone\":\"13800138001\",\"reservedTime\":\""
                         + reservedTimeStr + "\",\"seatCount\":6,\"remark\":\"改为大桌\"}"))
@@ -239,7 +239,7 @@ public class ReservationControllerTest {
     void testUpdateMissingId() throws Exception {
         mockMvc.perform(put("/api/dining/reservation")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"customerName\":\"张三\",\"phone\":\"13800138000\",\"reservedTime\":\"2026-12-01 18:00:00\",\"seatCount\":2}"))
                 .andExpect(status().isOk())
@@ -251,14 +251,14 @@ public class ReservationControllerTest {
         // 先取消预订（只有已取消状态才允许删除）
         mockMvc.perform(put("/api/dining/reservation/cancel/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
         // 删除已取消的预订
         mockMvc.perform(delete("/api/dining/reservation/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("删除成功"));
@@ -269,7 +269,7 @@ public class ReservationControllerTest {
         // PENDING 状态直接删除应失败
         mockMvc.perform(delete("/api/dining/reservation/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("只有已取消的预订才能删除，请先取消预订"));

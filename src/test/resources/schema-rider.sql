@@ -2,8 +2,7 @@
 -- 配合主 schema.sql 使用：主 schema 已含 orders/order_detail/address_book/tenant/store_info，
 -- 本文件补骑手链路所需的 rider 与 delivery_time_record 两表。
 
-DROP TABLE IF EXISTS rider;
-CREATE TABLE rider (
+CREATE TABLE IF NOT EXISTS rider (
   id bigint NOT NULL AUTO_INCREMENT,
   name varchar(50) NOT NULL,
   phone varchar(20) DEFAULT NULL,
@@ -22,8 +21,7 @@ CREATE TABLE rider (
   PRIMARY KEY (id)
 );
 
-DROP TABLE IF EXISTS delivery_time_record;
-CREATE TABLE delivery_time_record (
+CREATE TABLE IF NOT EXISTS delivery_time_record (
   id bigint NOT NULL AUTO_INCREMENT,
   order_id bigint NOT NULL,
   order_number varchar(50) DEFAULT NULL,
@@ -45,8 +43,7 @@ CREATE TABLE delivery_time_record (
   UNIQUE (order_id)
 );
 
-DROP TABLE IF EXISTS rider_location_record;
-CREATE TABLE rider_location_record (
+CREATE TABLE IF NOT EXISTS rider_location_record (
   id bigint NOT NULL AUTO_INCREMENT,
   rider_id bigint NOT NULL,
   order_id bigint DEFAULT NULL,

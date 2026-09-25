@@ -39,7 +39,7 @@ public class OrderDetailControllerTest {
     void setUp() {
         cleaner.cleanTables("order_detail", "orders");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @Test

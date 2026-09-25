@@ -2,19 +2,8 @@
 -- Matches MyBatis-Plus 3.4.2 default UPPER_SNAKE_CASE column naming
 
 -- Drop child tables first, parent tables last
-DROP TABLE IF EXISTS dish_material;
-DROP TABLE IF EXISTS stock_record;
-DROP TABLE IF EXISTS stock_check_detail;
-DROP TABLE IF EXISTS purchase_order_detail;
-DROP TABLE IF EXISTS material;
-DROP TABLE IF EXISTS purchase_order;
-DROP TABLE IF EXISTS stock_check;
-DROP TABLE IF EXISTS supplier;
-DROP TABLE IF EXISTS material_category;
-DROP TABLE IF EXISTS price_history;
-DROP TABLE IF EXISTS supplier_settlement;
 
-CREATE TABLE material_category (
+CREATE TABLE IF NOT EXISTS material_category (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
   NAME varchar(50) NULL DEFAULT NULL COMMENT '分类名称',
@@ -27,7 +16,7 @@ CREATE TABLE material_category (
   PRIMARY KEY (ID)
 );
 
-CREATE TABLE supplier (
+CREATE TABLE IF NOT EXISTS supplier (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
   NAME varchar(100) NULL DEFAULT NULL COMMENT '供应商名称',
@@ -44,7 +33,7 @@ CREATE TABLE supplier (
   PRIMARY KEY (ID)
 );
 
-CREATE TABLE material (
+CREATE TABLE IF NOT EXISTS material (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
   CATEGORY_ID bigint NULL DEFAULT NULL COMMENT '分类ID',
@@ -64,7 +53,7 @@ CREATE TABLE material (
   PRIMARY KEY (ID)
 );
 
-CREATE TABLE purchase_order (
+CREATE TABLE IF NOT EXISTS purchase_order (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
   ORDER_NO varchar(50) NULL DEFAULT NULL COMMENT '订单编号',
@@ -83,7 +72,7 @@ CREATE TABLE purchase_order (
   PRIMARY KEY (ID)
 );
 
-CREATE TABLE stock_check (
+CREATE TABLE IF NOT EXISTS stock_check (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
   CHECK_NO varchar(50) NULL DEFAULT NULL COMMENT '盘点单号',
@@ -100,7 +89,7 @@ CREATE TABLE stock_check (
   PRIMARY KEY (ID)
 );
 
-CREATE TABLE purchase_order_detail (
+CREATE TABLE IF NOT EXISTS purchase_order_detail (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
   PURCHASE_ORDER_ID bigint NULL DEFAULT NULL COMMENT '采购订单ID',
@@ -118,7 +107,7 @@ CREATE TABLE purchase_order_detail (
   PRIMARY KEY (ID)
 );
 
-CREATE TABLE stock_check_detail (
+CREATE TABLE IF NOT EXISTS stock_check_detail (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
   CHECK_ID bigint NULL DEFAULT NULL COMMENT '盘点ID',
@@ -135,7 +124,7 @@ CREATE TABLE stock_check_detail (
   PRIMARY KEY (ID)
 );
 
-CREATE TABLE dish_material (
+CREATE TABLE IF NOT EXISTS dish_material (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
   DISH_ID bigint NULL DEFAULT NULL COMMENT '菜品ID',
@@ -150,7 +139,7 @@ CREATE TABLE dish_material (
   PRIMARY KEY (ID)
 );
 
-CREATE TABLE stock_record (
+CREATE TABLE IF NOT EXISTS stock_record (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
   MATERIAL_ID bigint NULL DEFAULT NULL COMMENT '物料ID',
@@ -171,33 +160,9 @@ CREATE TABLE stock_record (
 );
 
 -- Separate CREATE INDEX statements for H2 compatibility
-CREATE INDEX idx_material_category_tenant_id ON material_category(TENANT_ID);
-CREATE INDEX idx_supplier_tenant_id ON supplier(TENANT_ID);
-CREATE INDEX idx_material_tenant_id ON material(TENANT_ID);
-CREATE INDEX idx_material_category_id ON material(CATEGORY_ID);
-CREATE INDEX idx_material_supplier_id ON material(SUPPLIER_ID);
-CREATE INDEX idx_purchase_order_tenant_id ON purchase_order(TENANT_ID);
-CREATE INDEX idx_purchase_order_supplier_id ON purchase_order(SUPPLIER_ID);
-CREATE INDEX idx_purchase_order_order_no ON purchase_order(ORDER_NO);
-CREATE INDEX idx_stock_check_tenant_id ON stock_check(TENANT_ID);
-CREATE INDEX idx_stock_check_check_no ON stock_check(CHECK_NO);
-CREATE INDEX idx_purchase_order_detail_tenant_id ON purchase_order_detail(TENANT_ID);
-CREATE INDEX idx_purchase_order_detail_purchase_order_id ON purchase_order_detail(PURCHASE_ORDER_ID);
-CREATE INDEX idx_purchase_order_detail_material_id ON purchase_order_detail(MATERIAL_ID);
-CREATE INDEX idx_stock_check_detail_tenant_id ON stock_check_detail(TENANT_ID);
-CREATE INDEX idx_stock_check_detail_check_id ON stock_check_detail(CHECK_ID);
-CREATE INDEX idx_stock_check_detail_material_id ON stock_check_detail(MATERIAL_ID);
-CREATE INDEX idx_stock_record_tenant_id ON stock_record(TENANT_ID);
-CREATE INDEX idx_stock_record_material_id ON stock_record(MATERIAL_ID);
-CREATE INDEX idx_stock_record_biz_id ON stock_record(BIZ_ID);
-CREATE INDEX idx_stock_record_type ON stock_record(TYPE);
-CREATE INDEX idx_dish_material_tenant_id ON dish_material(TENANT_ID);
-CREATE INDEX idx_dish_material_dish_id ON dish_material(DISH_ID);
-CREATE INDEX idx_dish_material_material_id ON dish_material(MATERIAL_ID);
-CREATE UNIQUE INDEX idx_dish_material_dish_material ON dish_material(TENANT_ID, DISH_ID, MATERIAL_ID);
 
 -- 价格历史记录表（H2 兼容）
-CREATE TABLE price_history (
+CREATE TABLE IF NOT EXISTS price_history (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
   MATERIAL_ID bigint NOT NULL COMMENT '物料ID',
@@ -208,12 +173,9 @@ CREATE TABLE price_history (
   CREATE_TIME datetime NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (ID)
 );
-CREATE INDEX idx_price_history_tenant_id ON price_history(TENANT_ID);
-CREATE INDEX idx_price_history_material_id ON price_history(MATERIAL_ID);
-CREATE INDEX idx_price_history_create_time ON price_history(CREATE_TIME);
 
 -- 供应商结算单表（H2 兼容）
-CREATE TABLE supplier_settlement (
+CREATE TABLE IF NOT EXISTS supplier_settlement (
   ID bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   TENANT_ID bigint NULL DEFAULT NULL COMMENT '租户ID',
   SUPPLIER_ID bigint NOT NULL COMMENT '供应商ID',
@@ -228,7 +190,3 @@ CREATE TABLE supplier_settlement (
   IS_DELETED int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (ID)
 );
-CREATE INDEX idx_supplier_settlement_tenant_id ON supplier_settlement(TENANT_ID);
-CREATE INDEX idx_supplier_settlement_supplier_id ON supplier_settlement(SUPPLIER_ID);
-CREATE INDEX idx_supplier_settlement_period ON supplier_settlement(PERIOD);
-CREATE INDEX idx_supplier_settlement_status ON supplier_settlement(STATUS);

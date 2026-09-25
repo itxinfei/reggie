@@ -59,7 +59,7 @@
             <div v-for="item in evalList" :key="item.id" class="eval-card">
                 <div class="eval-header">
                     <div class="dish-info">
-                        <img v-if="item.dishImage" :src="imgPath(item.dishImage)" class="dish-img" :alt="item.dishName || '菜品'" loading="lazy" @error="$event.target.src='./../images/noImg.png'" />
+                        <img v-if="item.dishImage" :src="imgPath(item.dishImage)" class="dish-img" :alt="item.dishName || '菜品'" loading="lazy" @error="imgFallback($event)" />
                         <div class="dish-text">
                             <div class="dish-name">{{ item.dishName || '未知菜品' }}</div>
                             <div class="eval-meta">
@@ -79,7 +79,7 @@
                 <!-- 评价图片 -->
                 <div class="eval-imgs" v-if="item.images && item.images.length > 0">
                     <img v-for="(img, idx) in getImageList(item.images)" :key="idx"
-                         :src="imgPath(img)" :alt="'评价图片' + (idx + 1)" @click="previewImage(imgPath(img))" loading="lazy" @error="$event.target.src='./../images/noImg.png'" />
+                         :src="imgPath(img)" :alt="'评价图片' + (idx + 1)" @click="previewImage(imgPath(img))" loading="lazy" @error="imgFallback($event)" />
                 </div>
 
                 <!-- 商家回复 -->
@@ -98,6 +98,12 @@
             </div>
         </div>
 
+        <!-- 错误态：自动加载已停止，仅支持手动重试 -->
+        <div class="empty-state" v-else-if="loadError">
+            <i class="ri-wifi-line"></i>
+            <p class="empty-text">加载失败，请稍后重试</p>
+            <button class="btn-primary" @click="loadData">重新加载</button>
+        </div>
         <!-- 空状态 -->
         <div class="empty-state" v-else-if="!loading">
             <i class="ri-star-line"></i>
@@ -200,6 +206,8 @@
                 return {
                     loading: false,
                     finished: false, // 修改点(2026-09-17 UX)：van-list 上拉加载结束标记
+                    // 加载失败标志：失败即结束自动加载，展示手动重试，杜绝 van-list 无限重试风暴
+                    loadError: false,
                     evalList: [],
                     total: 0,
                     page: 1,
@@ -274,6 +282,7 @@
                     if(isRefresh){
                         this.evalList = []
                         this.finished = false
+                        this.loadError = false
                     } else if(this.finished){
                         // 已加载完（理论上 van-list 不会再触发 load），复位 loading 避免卡在加载态
                         this.loading = false
@@ -292,11 +301,16 @@
                                 this.finished = true
                             }
                         } else {
+                            // 失败即结束自动加载，否则 loading 复位后 van-list 会再次触发 @load 形成重试风暴
+                            this.loadError = true
+                            this.finished = true
                             vant.Toast.fail(res.msg || '加载失败')
                         }
                     } catch (err) {
                         // 修改点(2026-09-17 UX)：技术错误细节进 console，用户只见友好文案
                         console.error('[my-evaluations] 加载评价失败:', err)
+                        this.loadError = true
+                        this.finished = true
                         vant.Toast.fail('加载失败，请稍后重试')
                     } finally {
                         this._loadingData = false
@@ -454,7 +468,9 @@
                     this.previewShow = true
                 },
                 goBack() {
-                    window.history.back()
+                    // 深链直接进入无历史记录时 history.back() 无反应，兜底回首页
+                    if (window.history.length > 1) { window.history.back() }
+                    else { window.location.href = '/front/index.html' }
                 },
                 goHome() {
                     window.location.href = '/front/index.html'
@@ -540,13 +556,20 @@
                     try {
                         // 修改点(P1-2)：先构建已评集合，hasEvaluableDishes 才能过滤掉整单已评的订单
                         await this.ensureEvaluatedSet()
-                        const res = await orderPagingApi({ page: 1, pageSize: 5, status: 4 })
-                        if (res.code === 1 && res.data && res.data.records) {
-                            const orders = res.data.records || []
-                            const pendingOrder = orders.find(o => this.hasEvaluableDishes(o))
-                            this.canEvaluate = !!pendingOrder
-                            this.pendingOrder = pendingOrder || null
+                        // 原仅查近 5 单：最近 5 单都已评时，更早的未评价单永远检测不到。
+                        // 逐页向后找，最多覆盖 60 单，找到即停
+                        var page = 1
+                        var pendingOrder = null
+                        while (!pendingOrder && page <= 3) {
+                            const res = await orderPagingApi({ page: page, pageSize: 20, status: 4 })
+                            if (res.code !== 1 || !res.data || !res.data.records
+                                || res.data.records.length === 0) { break }
+                            pendingOrder = res.data.records.find(o => this.hasEvaluableDishes(o)) || null
+                            if (page >= (res.data.pages || 1)) { break }
+                            page++
                         }
+                        this.canEvaluate = !!pendingOrder
+                        this.pendingOrder = pendingOrder
                     } catch (e) {
                         // 不影响页面展示
                     }

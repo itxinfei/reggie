@@ -79,7 +79,7 @@ public class CustomerServiceControllerTest {
     void setUp() {
         cleaner.cleanTables("cs_session", "cs_message", "complaint");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     // ==================== 会话管理 ====================
@@ -89,7 +89,7 @@ public class CustomerServiceControllerTest {
     void testCreateSession_success() throws Exception {
         mockMvc.perform(withCsrfToken(post("/cs/session/create")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("sessionType", "1")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -103,7 +103,7 @@ public class CustomerServiceControllerTest {
     void testCreateSession_withOrderId() throws Exception {
         mockMvc.perform(withCsrfToken(post("/cs/session/create")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("sessionType", "2")
                         .param("orderId", "1001")))
                 .andExpect(status().isOk())
@@ -116,7 +116,7 @@ public class CustomerServiceControllerTest {
     void testGetSessionList_empty() throws Exception {
         mockMvc.perform(get("/cs/session/list")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
@@ -131,7 +131,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(get("/cs/session/list")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("status", "0"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -148,7 +148,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(get("/cs/session/{id}", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.userName").value("UserB"));
@@ -163,7 +163,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cs/session/{id}/assign", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("agentId", "100")
                         .param("agentName", "客服小张")))
                 .andExpect(status().isOk())
@@ -182,7 +182,7 @@ public class CustomerServiceControllerTest {
     void testAssignAgent_sessionNotFound() throws Exception {
         mockMvc.perform(withCsrfToken(post("/cs/session/{id}/assign", 999999L)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("agentId", "100")
                         .param("agentName", "客服小张")))
                 .andExpect(status().isOk())
@@ -200,7 +200,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cs/session/{id}/close", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("rating", "5")
                         .param("feedback", "非常满意")))
                 .andExpect(status().isOk())
@@ -219,7 +219,7 @@ public class CustomerServiceControllerTest {
     void testCloseSession_sessionNotFound() throws Exception {
         mockMvc.perform(withCsrfToken(post("/cs/session/{id}/close", 999999L)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)))
+                        .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -235,7 +235,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cs/message/send")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("sessionId", sessionId.toString())
                         .param("senderType", "2")
                         .param("messageType", "1")
@@ -264,7 +264,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(get("/cs/message/list/{sessionId}", sessionId)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
@@ -291,7 +291,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(get("/cs/message/unread/{sessionId}", sessionId)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("userType", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -313,7 +313,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cs/message/read/{sessionId}", sessionId)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("userType", "1")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
@@ -329,7 +329,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cs/complaint/create")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(complaint))))
                 .andExpect(status().isOk())
@@ -343,7 +343,7 @@ public class CustomerServiceControllerTest {
     void testGetComplaintList_empty() throws Exception {
         mockMvc.perform(get("/cs/complaint/list")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
@@ -359,7 +359,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(get("/cs/complaint/list")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("status", "0"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -377,7 +377,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(get("/cs/complaint/{id}", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.title").value("价格问题"));
@@ -393,7 +393,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cs/complaint/{id}/handle", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("handleResult", "已联系用户道歉")
                         .param("compensationAmount", "20.00")))
                 .andExpect(status().isOk())
@@ -419,7 +419,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cs/complaint/{id}/close", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)))
+                        .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -439,7 +439,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cs/complaint/{id}/rate", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("satisfaction", "4")
                         .param("feedback", "处理速度还可以")))
                 .andExpect(status().isOk())
@@ -463,7 +463,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(get("/cs/statistics")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("startDate", formatDateTime(LocalDateTime.of(2026, 8, 28, 0, 0, 0)))
                         .param("endDate", formatDateTime(LocalDateTime.of(2026, 8, 28, 23, 59, 59))))
                 .andExpect(status().isOk())
@@ -484,7 +484,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(get("/cs/complaint/statistics")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("startDate", formatDateTime(LocalDateTime.of(2026, 8, 28, 0, 0, 0)))
                         .param("endDate", formatDateTime(LocalDateTime.of(2026, 8, 28, 23, 59, 59))))
                 .andExpect(status().isOk())
@@ -507,7 +507,7 @@ public class CustomerServiceControllerTest {
 
         mockMvc.perform(get("/cs/agent/{agentId}/workload", 100L)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("startDate", formatDateTime(LocalDateTime.of(2026, 8, 28, 0, 0, 0)))
                         .param("endDate", formatDateTime(LocalDateTime.of(2026, 8, 28, 23, 59, 59))))
                 .andExpect(status().isOk())
@@ -543,7 +543,7 @@ public class CustomerServiceControllerTest {
         message.setMessageType(messageType);
         message.setContent(content);
         message.setIsRead(0);
-        message.setTenantId(1L);
+        message.setTenantId(999L);
         message.setCreateTime(LocalDateTime.now());
         return message;
     }
@@ -561,7 +561,7 @@ public class CustomerServiceControllerTest {
         complaint.setTitle(title);
         complaint.setContent(content);
         complaint.setStatus(Complaint.STATUS_PENDING);
-        complaint.setTenantId(1L);
+        complaint.setTenantId(999L);
         complaint.setCreateTime(LocalDateTime.now());
         complaint.setUpdateTime(LocalDateTime.now());
         return complaint;

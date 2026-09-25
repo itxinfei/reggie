@@ -98,7 +98,7 @@ public class PaymentControllerTest {
     void setUp() {
         cleaner.cleanTables("refund_record", "payment_order");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     // ==================== 创建支付单 ====================
@@ -113,7 +113,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/pay")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(dto))))
                 .andExpect(status().isOk())
@@ -140,7 +140,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/pay")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(dto))))
                 .andExpect(status().isOk())
@@ -161,7 +161,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/pay")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(dto))))
                 .andExpect(status().isOk())
@@ -186,7 +186,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/notify/WECHAT")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(params))))
                 .andExpect(status().isOk())
@@ -226,7 +226,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/notify/ALIPAY")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(params))))
                 .andExpect(status().isOk())
@@ -247,7 +247,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/notify/WECHAT")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(params))))
                 .andExpect(status().isOk())
@@ -265,7 +265,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/notify/WECHAT")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(params))))
                 .andExpect(status().isOk())
@@ -286,7 +286,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/notify/WECHAT")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(params))))
                 .andExpect(status().isOk())
@@ -308,7 +308,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/notify/WECHAT")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(params))))
                 .andExpect(status().isOk())
@@ -330,7 +330,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/notify/WECHAT")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(params))))
                 .andExpect(status().isOk())
@@ -353,7 +353,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/refund")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(dto))))
                 .andExpect(status().isOk())
@@ -376,7 +376,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/refund")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(dto))))
                 .andExpect(status().isOk())
@@ -396,7 +396,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/refund")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(dto))))
                 .andExpect(status().isOk())
@@ -416,7 +416,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/api/payment/refund")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(dto))))
                 .andExpect(status().isOk())
@@ -433,7 +433,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(get("/api/payment/query/{tradeNo}", tradeNo)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.tradeNo").value(tradeNo))
@@ -446,7 +446,7 @@ public class PaymentControllerTest {
     void testQuery_trade_no_not_found() throws Exception {
         mockMvc.perform(get("/api/payment/query/{tradeNo}", "NON_EXISTENT")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("支付订单不存在"));
@@ -461,7 +461,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(get("/api/payment/user/query/{tradeNo}", po.getTradeNo())
                         .sessionAttr("user", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.status").value("PENDING"))
@@ -489,7 +489,7 @@ public class PaymentControllerTest {
     void testUserQuery_trade_no_not_found() throws Exception {
         mockMvc.perform(get("/api/payment/user/query/{tradeNo}", "NON_EXISTENT")
                         .sessionAttr("user", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("支付订单不存在"));
@@ -506,7 +506,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(get("/api/payment/page")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("page", "1")
                         .param("pageSize", "10")
                         .param("channel", "ALIPAY"))
@@ -526,7 +526,7 @@ public class PaymentControllerTest {
 
         mockMvc.perform(get("/api/payment/page")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("page", "1")
                         .param("pageSize", "10")
                         .param("status", "SUCCESS"))
@@ -540,7 +540,7 @@ public class PaymentControllerTest {
     void testPage_empty() throws Exception {
         mockMvc.perform(get("/api/payment/page")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("page", "1")
                         .param("pageSize", "10"))
                 .andExpect(status().isOk())
@@ -565,7 +565,7 @@ public class PaymentControllerTest {
         // 累计口径：3 笔、成功退款总额 600
         mockMvc.perform(get("/api/payment/refund/stats")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.successCount").value(3))
@@ -576,7 +576,7 @@ public class PaymentControllerTest {
                         .param("startDate", "2026-09-05")
                         .param("endDate", "2026-09-15")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.successCount").value(1))
                 .andExpect(jsonPath("$.data.totalAmount").value(200.00));
@@ -586,7 +586,7 @@ public class PaymentControllerTest {
                         .param("startDate", "2026-09-01")
                         .param("endDate", "2026-09-01")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.successCount").value(1))
                 .andExpect(jsonPath("$.data.totalAmount").value(100.00));
@@ -626,7 +626,7 @@ public class PaymentControllerTest {
     private void insertTestRefund(Long id, String createdTimeIso, String amount, String reason) {
         RefundRecord r = new RefundRecord();
         r.setId(id);
-        r.setTenantId(1L);
+        r.setTenantId(999L);
         r.setRefundNo("RF-TEST-" + id);
         r.setPaymentOrderId(80000L + id);
         r.setOrderId(90000L + id);

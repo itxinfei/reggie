@@ -154,6 +154,9 @@
                 // 修改点：下拉刷新
                 // 修改点：下拉刷新（refreshing 由 loadMessages.finally 复位，与网络实际完成同步）
                 onRefresh: function() {
+                    // 首屏/上一次加载仍在进行时不重入：直接结束下拉动画，
+                    // 否则 loadMessages 守卫 return 后没人复位 refreshing，刷新动画永久卡死
+                    if (this.loading) { this.refreshing = false; return; }
                     this.page = 1;
                     this.hasMore = true;
                     this.loadError = false;

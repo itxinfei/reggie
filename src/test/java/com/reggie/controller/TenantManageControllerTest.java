@@ -46,7 +46,7 @@ public class TenantManageControllerTest extends BaseControllerTest {
     @BeforeEach
     void setUp() {
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         // 锚点：显式保证 id=1 的当前租户存在，testCannotDisableCurrentTenant 始终有锚点可依赖
         if (tenantService.getById(1L) == null) {

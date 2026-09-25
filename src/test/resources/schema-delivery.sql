@@ -2,13 +2,12 @@
 -- Matches entity column names from MyBatis-Plus 3.4.2 default camelCase conversion
 -- Note: createdUser → create_user, updateUser → update_user (explicit @TableField)
 
-DROP TABLE IF EXISTS delivery_order;
 
 -- DeliveryOrder entity (@TableName("delivery_order"))
 -- Columns: id, tenantId, platformOrderId, platform, dishSummary, amount,
 --          userName, phone, address, status, orderTime, createdTime, updateTime,
 --          createdUser(→create_user), updateUser(→update_user)
-CREATE TABLE delivery_order (
+CREATE TABLE IF NOT EXISTS delivery_order (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   platform_order_id varchar(64) NULL DEFAULT NULL COMMENT '平台订单',
@@ -30,6 +29,3 @@ CREATE TABLE delivery_order (
   PRIMARY KEY (id)
 );
 
-CREATE INDEX idx_delivery_order_tenant_id ON delivery_order(tenant_id);
-CREATE INDEX idx_delivery_order_platform_order_id ON delivery_order(platform_order_id);
-CREATE INDEX idx_delivery_order_order_id ON delivery_order(order_id);

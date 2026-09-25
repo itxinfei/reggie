@@ -14,9 +14,7 @@
   <style>
     /* 提取的内联样式类 */
     .combo-img-btn { width: 36px; height: 36px; object-fit: cover; border: none; cursor: pointer; border-radius: var(--radius-sm); flex-shrink: 0; }
-    /* 套餐名称列：缩略图 + 名称同一格（与菜品管理一致，取消独立图片列） */
-    .combo-name-cell { display: inline-flex; align-items: center; gap: var(--space-2); max-width: 100%; }
-    .combo-name-cell .combo-name-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* 图片列：缩略图独占一列，点击可预览大图 */
     /* 已选菜品移除按钮（位图改 remixicon） */
     .del { display: inline-flex; align-items: center; cursor: pointer; color: var(--text-muted); font-size: 18px; line-height: 1; transition: color var(--transition-base); }
     .del:hover, .del:focus-visible { color: var(--color-danger); outline: none; }
@@ -193,20 +191,22 @@
       @page-change="onPageChange"
       @size-change="onSizeChange"
     >
+      <!-- 图片列（缩略图独占一列，点击预览大图） -->
+      <template #col-image="{ row }">
+        <el-image
+          class="combo-img-btn"
+          :src="getImage(row.image)"
+          :preview-src-list="[getImage(row.image)]"
+          alt="套餐图片"
+        >
+          <div slot="error" class="image-slot">
+            <img src="./../../images/noImg.png" class="combo-img-btn" alt="暂无图片">
+          </div>
+        </el-image>
+      </template>
+      <!-- 套餐名称列 -->
       <template #col-name="{ row }">
-        <span class="combo-name-cell">
-          <el-image
-            class="combo-img-btn"
-            :src="getImage(row.image)"
-            :preview-src-list="[getImage(row.image)]"
-            alt="套餐图片"
-          >
-            <div slot="error" class="image-slot">
-              <img src="./../../images/noImg.png" class="combo-img-btn" alt="暂无图片">
-            </div>
-          </el-image>
-          <span class="combo-name-text" :title="row.name">{{ row.name }}</span>
-        </span>
+        <span :title="row.name">{{ row.name }}</span>
       </template>
       <template #col-description="{ row }">
         <span :title="row.description || ''">{{ row.description || '-' }}</span>
@@ -456,6 +456,7 @@ new Vue({
       ],
       // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
       columns: [
+        { prop: 'image', label: '图片', slot: true, width: 76, align: 'center' },
         { prop: 'name', label: '套餐名称', slot: true, minWidth: 150 },
         { prop: 'categoryName', label: '分类', width: 100, align: 'center' },
         { prop: 'price', label: '价格', width: 110, slot: true, type: 'money' },

@@ -62,13 +62,13 @@ CREATE TABLE IF NOT EXISTS order_detail (
   PRIMARY KEY (id)
 );
 
--- 清理平台订单残留数据（之前测试运行插入的订单），避免 @DirtiesContext 重启后数据残留导致去重误判
-DELETE FROM order_detail WHERE order_id IN (SELECT id FROM orders WHERE platform_type IS NOT NULL);
-DELETE FROM orders WHERE platform_type IS NOT NULL;
+-- 只清理本测试专用的平台订单（订单号前缀 MT20260824），绝不删开发库（tenant=1）的平台订单。
+-- 避免 @DirtiesContext 重启后残留导致去重误判；明细按 orders 子查询一并清理。
+DELETE FROM order_detail WHERE order_id IN (SELECT id FROM (SELECT id FROM orders WHERE platform_order_id LIKE 'MT20260824%') t);
+DELETE FROM orders WHERE platform_order_id LIKE 'MT20260824%';
 
 -- 外卖平台接入配置 测试库建表（H2 / MySQL 兼容）
-DROP TABLE IF EXISTS platform_config;
-CREATE TABLE platform_config (
+CREATE TABLE IF NOT EXISTS platform_config (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   platform_type varchar(32) NOT NULL COMMENT '平台类型 MEITUAN/ELEME/DOUYIN/SELF/OTHER',
   platform_name varchar(128) NULL DEFAULT NULL COMMENT '平台展示名称',
@@ -85,12 +85,9 @@ CREATE TABLE platform_config (
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_platform_type_shop ON platform_config(platform_type, shop_id);
-CREATE INDEX idx_platform_tenant ON platform_config(tenant_id);
 
 -- ==================== 商品平台映射表 ====================
-DROP TABLE IF EXISTS dish_platform_mapping;
-CREATE TABLE dish_platform_mapping (
+CREATE TABLE IF NOT EXISTS dish_platform_mapping (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   dish_id bigint NOT NULL COMMENT '朳统菜品ID',
   platform_type varchar(32) NOT NULL COMMENT '平台类型 MEITUAN/ELEME/DOUYIN/SELF/OTHER',
@@ -108,8 +105,7 @@ CREATE TABLE dish_platform_mapping (
 );
 
 -- ==================== 平台同步操作日志表 ====================
-DROP TABLE IF EXISTS platform_sync_log;
-CREATE TABLE platform_sync_log (
+CREATE TABLE IF NOT EXISTS platform_sync_log (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
   platform_type varchar(32) NOT NULL COMMENT '平台类型',
@@ -125,13 +121,9 @@ CREATE TABLE platform_sync_log (
   create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_sync_log_platform_order ON platform_sync_log(platform_type, platform_order_id);
-CREATE INDEX idx_sync_log_local_order ON platform_sync_log(local_order_id);
-CREATE INDEX idx_sync_log_create_time ON platform_sync_log(create_time);
 
 -- ==================== 平台对账任务表 ====================
-DROP TABLE IF EXISTS platform_reconcile_task;
-CREATE TABLE platform_reconcile_task (
+CREATE TABLE IF NOT EXISTS platform_reconcile_task (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
   platform_type varchar(32) NOT NULL COMMENT '平台类型',
@@ -149,4 +141,9 @@ CREATE TABLE platform_reconcile_task (
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX idx_reconcile_task_date_platform ON platform_reconcile_task(reconcile_date, platform_type, tenant_id);
+
+-- 清理测试租户段（999 默认 / 998 第二租户）的平台配置相关数据，保证可重复执行；不触碰 tenant=1/2。
+DELETE FROM platform_reconcile_task WHERE tenant_id IN (999, 998);
+DELETE FROM platform_sync_log WHERE tenant_id IN (999, 998);
+DELETE FROM dish_platform_mapping WHERE tenant_id IN (999, 998);
+DELETE FROM platform_config WHERE tenant_id IN (999, 998);

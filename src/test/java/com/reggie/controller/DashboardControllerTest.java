@@ -28,7 +28,7 @@ public class DashboardControllerTest {
     @Test
     void testGetOverview() throws Exception {
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         mockMvc.perform(get("/api/dashboard/overview"))
                 .andExpect(status().isOk());
@@ -37,7 +37,7 @@ public class DashboardControllerTest {
     @Test
     void testGetTrend() throws Exception {
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         mockMvc.perform(get("/api/dashboard/trend"))
                 .andExpect(status().isOk());
@@ -46,7 +46,7 @@ public class DashboardControllerTest {
     @Test
     void testGetOrderStatus() throws Exception {
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         mockMvc.perform(get("/api/dashboard/order-status"))
                 .andExpect(status().isOk());
@@ -55,7 +55,7 @@ public class DashboardControllerTest {
     @Test
     void testGetHotDishes() throws Exception {
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         mockMvc.perform(get("/api/dashboard/hot-dishes")
                 .param("limit", "10"))
@@ -65,7 +65,7 @@ public class DashboardControllerTest {
     @Test
     void testGetHotDishesWithCustomLimit() throws Exception {
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         mockMvc.perform(get("/api/dashboard/hot-dishes")
                 .param("limit", "5"))
@@ -75,7 +75,7 @@ public class DashboardControllerTest {
     @Test
     void testGetSystemHealth() throws Exception {
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         mockMvc.perform(get("/api/dashboard/health"))
                 .andExpect(status().isOk())
@@ -85,7 +85,7 @@ public class DashboardControllerTest {
     @Test
     void testGetAllData() throws Exception {
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         mockMvc.perform(get("/api/dashboard/all")
                 .param("hotDishLimit", "10"))

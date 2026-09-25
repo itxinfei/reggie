@@ -39,13 +39,13 @@ public class SupplierControllerVoucherTest extends com.reggie.controller.BaseCon
     @BeforeEach
     void setUp() {
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @Test
     void testUpdateLicenseImages() throws Exception {
         Supplier supplier = new Supplier();
-        supplier.setTenantId(1L);
+        supplier.setTenantId(999L);
         supplier.setName("凭证供应商");
         supplier.setContact("旧联系人");
         supplier.setPhone("13500135000");

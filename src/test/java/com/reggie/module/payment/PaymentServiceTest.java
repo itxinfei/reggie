@@ -39,7 +39,7 @@ public class PaymentServiceTest {
     @BeforeEach
     void setUp() {
         cleaner.cleanTables("refund_record", "payment_order");
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @Test

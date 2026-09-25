@@ -117,19 +117,6 @@ reggie:
         base-url: https://open.douyin.com
         notify-token:
 
-  # 修改点(2026-07-10)：AI配置已全面迁移至数据库 ai_provider_config 表
-  # 以下 yml 配置仅作为兜底参考值，实际使用的供应商/模型/密钥全部从数据库读取
-  # 请在 后台管理 → AI供应商配置 中管理所有AI大模型参数
-  ai:
-    enabled: true
-    provider: deepseek        # 已废弃：仅当数据库无激活配置时作为 providerCode 参考
-    api-key:                  # 已废弃：请勿在此配置，统一在数据库管理
-    base-url: https://api.deepseek.com/v1  # 已废弃
-    model: deepseek-chat      # 已废弃
-    timeout: 60               # 兜底超时（若数据库未设置 timeout 则回退此值）
-    max-tokens: 2048          # 兜底 Token（若数据库未设置 maxTokens 则回退此值）
-    temperature: 0.7          # 兜底温度（若数据库未设置 temperature 则回退此值）
-
 # API文档配置（必须在Spring根级别，不能嵌套在reggie下）
 springdoc:
   api-docs:

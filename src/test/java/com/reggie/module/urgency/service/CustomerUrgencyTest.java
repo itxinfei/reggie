@@ -55,7 +55,7 @@ class CustomerUrgencyTest {
 
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @AfterEach
@@ -69,7 +69,7 @@ class CustomerUrgencyTest {
         Orders order = new Orders();
         order.setId(id);
         order.setUserId(userId);
-        order.setTenantId(1L);
+        order.setTenantId(999L);
         order.setStatus(status);
         order.setNumber("202609210001");
         order.setAmount(new BigDecimal("50.00"));

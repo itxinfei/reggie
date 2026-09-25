@@ -58,7 +58,7 @@ public class DeliveryServiceTest extends BaseControllerTest {
     @BeforeEach
     void setUp() {
         // 测试环境初始化租户上下文（MockMvc 不经过 LoginCheckFilter，需手动设置）
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @Test
@@ -75,7 +75,7 @@ public class DeliveryServiceTest extends BaseControllerTest {
         deliveryService.handleCallback("MEITUAN", params);
 
         // handleCallback 的 finally 块会清理 BaseContext，后续服务调用需重新设置租户上下文
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
         boolean result = deliveryService.acceptOrder("MEITUAN", "MT123456");
         assertTrue(result);
     }
@@ -130,7 +130,7 @@ public class DeliveryServiceTest extends BaseControllerTest {
         deliveryService.handleCallback("MEITUAN", params);
 
         // handleCallback 的 finally 块会清理 BaseContext，后续服务调用需重新设置租户上下文
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
         DeliveryOrder order = deliveryService.getByPlatformOrderId("MT_TRACK_002");
         assertNotNull(order);
         assertEquals("MEITUAN", order.getPlatform());
@@ -150,20 +150,20 @@ public class DeliveryServiceTest extends BaseControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createParams)
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)))
+                .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
         // 回调的 finally 块清理了 BaseContext，接单请求前需重新设置租户上下文
         // （acceptOrder 内部 fail-closed：tenantId 为 null 时直接返回 false）
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         String json = "{\"platform\":\"MEITUAN\",\"platformOrderId\":\"MT123456\"}";
         mockMvc.perform(post("/api/delivery/accept")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }
@@ -181,16 +181,16 @@ public class DeliveryServiceTest extends BaseControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createParams)
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)))
+                .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
         // 回调的 finally 块清理了 BaseContext，tracking 请求前需重新设置租户上下文
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         mockMvc.perform(get("/api/delivery/tracking/MT_TRACK_001")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.platformOrderId").value("MT_TRACK_001"))

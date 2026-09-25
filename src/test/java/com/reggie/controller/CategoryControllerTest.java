@@ -40,7 +40,7 @@ public class CategoryControllerTest extends BaseControllerTest {
     void setUp() {
         cleaner.cleanTables("category");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         Category category = new Category();
         category.setId(1L);
@@ -59,7 +59,7 @@ public class CategoryControllerTest extends BaseControllerTest {
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/category")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"新增分类\",\"type\":2,\"sort\":2}")))
                 .andExpect(status().isOk())
@@ -90,7 +90,7 @@ public class CategoryControllerTest extends BaseControllerTest {
 
         mockMvc.perform(withCsrfToken(mockMvc, delete("/category/" + generatedId)
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)))
+                .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("分类删除成功"));
@@ -100,7 +100,7 @@ public class CategoryControllerTest extends BaseControllerTest {
     void testUpdate() throws Exception {
         mockMvc.perform(withCsrfToken(mockMvc, put("/category")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":1,\"name\":\"修改后分类\",\"type\":1,\"sort\":1}")))
                 .andExpect(status().isOk())
@@ -114,7 +114,7 @@ public class CategoryControllerTest extends BaseControllerTest {
     void testGetById() throws Exception {
         mockMvc.perform(get("/category/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.name").value("测试分类"));

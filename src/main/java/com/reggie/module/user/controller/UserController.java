@@ -237,8 +237,9 @@ public class UserController {
      * @return 用户信息
      */
     @GetMapping("/info")
-    @Operation(summary = "获取当前登录用户信息", description = "返回当前登录用户的基本信息（已脱敏），需携带有效会话")
-    public R<User> getCurrentUser(HttpSession session) {
+    @Operation(summary = "获取当前登录用户信息", description = "返回当前登录用户的基本信息（默认手机号脱敏；full=true 时返回本人完整手机号），需携带有效会话")
+    public R<User> getCurrentUser(@RequestParam(value = "full", required = false, defaultValue = "false") Boolean full,
+                                  HttpSession session) {
         Long userId = (Long) session.getAttribute("user");
         if (userId == null) {
             return R.error("NOTLOGIN");
@@ -249,7 +250,11 @@ public class UserController {
         }
         // 脱敏：返回前清除敏感字段
         user.setIdNumber(null);
-        user.setPhone(user.getPhone() != null ? maskPhone(user.getPhone()) : null);
+        // full=true：会话已鉴权且只查本人，返回完整手机号供前端恢复本地登录态（新标签页场景）；
+        // 默认仍脱敏，保持既有调用方行为
+        if (full == null || !full) {
+            user.setPhone(user.getPhone() != null ? maskPhone(user.getPhone()) : null);
+        }
         return R.success(user);
     }
 

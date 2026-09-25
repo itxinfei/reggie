@@ -53,7 +53,7 @@
                     </div>
                     <div class="addrContact">
                         <span class="consignee">{{item.consignee}}</span>
-                        <span class="sexText">{{item.sex === '0' ? '女士' : '先生'}}</span>
+                        <span class="sexText">{{Number(item.sex) === 0 ? '女士' : '先生'}}</span>
                         <span class="phone">{{item.phone}}</span>
                     </div>
                     <div class="divActionBar">
@@ -111,6 +111,15 @@
                 computed:{},
                 created(){
                     this.initData()
+                    // 兜底：从结算页跳入后若未选地址直接返回/刷新，pagehide 时清掉一次性标志，
+                    // 避免残留标志劫持日后正常进入地址管理的点击导航
+                    this._onPageHide = function() {
+                        sessionStorage.removeItem('addressFromCheckout')
+                    }
+                    window.addEventListener('pagehide', this._onPageHide)
+                },
+                beforeDestroy(){
+                    if (this._onPageHide) window.removeEventListener('pagehide', this._onPageHide)
                 },
                 methods:{
                     // 修改点：下拉刷新（refreshing 由 initData.finally 复位）

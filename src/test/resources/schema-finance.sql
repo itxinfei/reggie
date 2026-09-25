@@ -1,12 +1,9 @@
 -- Finance module test schema (MySQL compatible)
 -- Matches entity column names from MyBatis-Plus default camelCase conversion
 
-DROP TABLE IF EXISTS profit_analysis;
-DROP TABLE IF EXISTS reconciliation_statement;
-DROP TABLE IF EXISTS withdrawal_application;
 
 -- WithdrawalApplication entity (@TableName("withdrawal_application"))
-CREATE TABLE withdrawal_application (
+CREATE TABLE IF NOT EXISTS withdrawal_application (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   application_no varchar(50) NULL DEFAULT NULL COMMENT '申编号',
   applicant_id bigint NULL DEFAULT NULL COMMENT '申人ID',
@@ -30,7 +27,7 @@ CREATE TABLE withdrawal_application (
 );
 
 -- ReconciliationStatement entity (@TableName("reconciliation_statement"))
-CREATE TABLE reconciliation_statement (
+CREATE TABLE IF NOT EXISTS reconciliation_statement (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   statement_no varchar(50) NULL DEFAULT NULL COMMENT '对账单编',
   statement_date date NULL DEFAULT NULL COMMENT '对账日期',
@@ -55,7 +52,7 @@ CREATE TABLE reconciliation_statement (
 );
 
 -- ProfitAnalysis entity (@TableName("profit_analysis"))
-CREATE TABLE profit_analysis (
+CREATE TABLE IF NOT EXISTS profit_analysis (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   analysis_date date NULL DEFAULT NULL COMMENT '分析日期',
   total_revenue decimal(12,2) NULL DEFAULT NULL COMMENT '总营',

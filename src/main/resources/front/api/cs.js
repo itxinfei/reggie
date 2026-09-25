@@ -36,11 +36,14 @@ function csSendMessage(data) {
   })
 }
 
-// 会话消息列表
-function csListMessages(sessionId) {
+// 会话消息列表（opts.silent=true 时网络瞬断不跳断网页/不弹横幅，供 4s 后台轮询使用）
+function csListMessages(sessionId, opts) {
+  var silent = opts && opts.silent;
   return $axios({
     url: '/cs/portal/message/list/' + sessionId,
-    method: 'get'
+    method: 'get',
+    skipNoWifiRedirect: !!silent,
+    silent: !!silent
   })
 }
 

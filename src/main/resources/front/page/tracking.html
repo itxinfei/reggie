@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css?v=20260924" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-    <link rel="stylesheet" href="../styles/tracking.css?v=20260924" />
+    <link rel="stylesheet" href="../styles/tracking.css?v=20260925" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
     <!-- 修改点(2026-09-17)：配送地图配置——申请到「高德 Web 端(JS API)」Key 后填入 amapKey 并将 enabled 改为 true 即可生效。
@@ -178,7 +178,6 @@
             data() {
                 return {
                     pageLoading: false,
-                    refreshing: false,
                     trackingData: null,
                     orderId: null,
                     // URL 未带 orderId：空态据此引导回订单列表，而非提供无效的"重新加载"
@@ -246,7 +245,7 @@
                         ACCEPTED: 'status-accepted',
                         PICKING: 'status-accepted',
                         DELIVERING: 'status-shipped',
-                        DELIVERED: 'status-shipped',
+                        DELIVERED: 'status-completed',
                         CANCELLED: 'status-cancelled'
                     };
                     return map[this.trackingData.status] || 'status-pending';
@@ -295,15 +294,24 @@
                 if (this.orderId) {
                     this.loadTracking();
                     // 修改点：30秒自动轮询刷新（仅页面可见时）
+                    this._pollBeginTs = Date.now();
                     this._pollTimer = setInterval(function(){
                         if(!document.hidden && this.orderId){
+                            // 最大轮询 2 小时（仅累计页面停留），超时自动停，避免用户忘关页面长期空轮询
+                            if(Date.now() - this._pollBeginTs > 2 * 60 * 60 * 1000){
+                                clearInterval(this._pollTimer);
+                                this._pollTimer = null;
+                                return;
+                            }
                             this.loadTracking(true);
                         }
                     // 修改点(2026-09-17)：轮询 30s → 15s，配送中状态变化感知更及时
                     // （终态会在 loadTracking 内自动停止轮询，不会产生无效请求）
                     }.bind(this), 15000);
                     this._onVisibility = function(){
-                        if(!document.hidden && this.orderId){
+                        // 回前台距上次请求不足 10s 不补发，避免慢网下与在飞请求重叠
+                        if(!document.hidden && this.orderId
+                            && (!this._lastFetchTs || Date.now() - this._lastFetchTs > 10000)){
                             this.loadTracking(true);
                         }
                     }.bind(this);
@@ -316,15 +324,14 @@
             beforeDestroy(){
                 if(this._pollTimer) clearInterval(this._pollTimer);
                 if(this._onVisibility) document.removeEventListener('visibilitychange', this._onVisibility);
+                // 销毁高德地图实例，释放内部事件/图层资源
+                if(this.mapInstance){
+                    try { this.mapInstance.destroy(); } catch(e) {}
+                    this.mapInstance = null;
+                }
             },
             methods: {
                 // 修改点(2026-09-22)：goBack 已统一由 cend-shell 接管（组件调 window.goBack 兜底），页面不再定义
-                // 下拉刷新
-                async onRefresh(){
-                    // finally 保证 refreshing 一定复位（loadTracking 抛错也不会卡在下拉态）
-                    try { await this.loadTracking(true); }
-                    finally { this.refreshing = false; }
-                },
                 getUrlParam(name) {
                     const reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)');
                     const r = window.location.search.substr(1).match(reg);
@@ -361,6 +368,10 @@
                 async loadTracking(silent) {
                     // 缺订单号不发请求（空态区已引导去订单列表），避免无意义接口调用
                     if (!this.orderId) { return; }
+                    // 慢网/快速切前台时防止请求重叠：上一轮还在飞则跳过本次（轮询下轮再来）
+                    if (this._reqInFlight) { return; }
+                    this._reqInFlight = true;
+                    this._lastFetchTs = Date.now();
                     // 修改点：记录刷新前状态，用于状态变更时主动提示
                     const prevStatus = this.trackingData ? this.trackingData.status : null;
                     // silent=true（15s 轮询/可见性刷新/下拉刷新）走静默更新，不弹全屏遮罩、不打断阅读；
@@ -397,6 +408,7 @@
                             vant.Toast.fail('网络异常，请稍后重试');
                         }
                     } finally {
+                        this._reqInFlight = false;
                         if (!silent) {
                             this.pageLoading = false;
                         }

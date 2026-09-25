@@ -1,12 +1,10 @@
 -- Cashier module test schema (H2 compatible)
 -- Matches entity column names from MyBatis-Plus default camelCase conversion
 
-DROP TABLE IF EXISTS daily_settlement;
-DROP TABLE IF EXISTS cashier_record;
 
 -- CashierRecord entity (@TableName("cashier_record"))
 -- Columns: id, orderId, orderNumber, payType, amount, actualAmount, changeAmount, cashierTime, cashierId, cashierName, remark, tenantId, createTime, createUser
-CREATE TABLE cashier_record (
+CREATE TABLE IF NOT EXISTS cashier_record (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   order_id bigint NULL DEFAULT NULL COMMENT '订单ID',
   order_number varchar(50) NULL DEFAULT NULL COMMENT '订单',
@@ -26,7 +24,7 @@ CREATE TABLE cashier_record (
 
 -- DailySettlement entity (@TableName("daily_settlement"))
 -- Columns: id, settlementDate, totalRevenue, cashIncome, wechatIncome, alipayIncome, bankcardIncome, otherIncome, orderCount, refundAmount, refundCount, netIncome, materialCost, laborCost, otherCost, totalCost, grossProfit, profitRate, status, settlementTime, settlementUserId, settlementUserName, remark, tenantId, createTime, updateTime, createUser, updateUser
-CREATE TABLE daily_settlement (
+CREATE TABLE IF NOT EXISTS daily_settlement (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   settlement_date date NULL DEFAULT NULL COMMENT '结算日期',
   total_revenue decimal(10,2) NULL DEFAULT NULL COMMENT '营业',

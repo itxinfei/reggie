@@ -2,46 +2,23 @@
 -- 从 reggie.sql 提取并转换为 H2 语法
 
 -- 核心表
-DROP TABLE IF EXISTS order_detail;
-DROP TABLE IF EXISTS orders;
-DROP TABLE IF EXISTS shopping_cart;
-DROP TABLE IF EXISTS address_book;
-DROP TABLE IF EXISTS user;
 
 -- 菜品/套餐
-DROP TABLE IF EXISTS dish_flavor;
-DROP TABLE IF EXISTS dish;
-DROP TABLE IF EXISTS setmeal_dish;
-DROP TABLE IF EXISTS setmeal;
-DROP TABLE IF EXISTS dish_evaluation;
 
 -- 分类
-DROP TABLE IF EXISTS category;
 
 -- 系统配置
-DROP TABLE IF EXISTS system_config;
 
 -- 员工/权限
-DROP TABLE IF EXISTS employee;
-DROP TABLE IF EXISTS role_permission;
-DROP TABLE IF EXISTS employee_role;
-DROP TABLE IF EXISTS role;
-DROP TABLE IF EXISTS permission;
-DROP TABLE IF EXISTS menu;
 
 -- 操作日志
-DROP TABLE IF EXISTS log;
-DROP TABLE IF EXISTS operation_log;
-DROP TABLE IF EXISTS tenant;
 
 -- 区域
-DROP TABLE IF EXISTS region;
 
 -- 门店
-DROP TABLE IF EXISTS store;
 
 -- ==================== 用户表 ====================
-CREATE TABLE user (
+CREATE TABLE IF NOT EXISTS user (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   name varchar(50) NULL DEFAULT NULL COMMENT '姓名',
   phone varchar(100) NOT NULL COMMENT '手机号',
@@ -54,11 +31,9 @@ CREATE TABLE user (
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_user_phone ON user(phone);
-CREATE INDEX idx_user_tenant ON user(tenant_id);
 
 -- ==================== 地址簿 ====================
-CREATE TABLE address_book (
+CREATE TABLE IF NOT EXISTS address_book (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   user_id bigint NOT NULL COMMENT '用户id',
   consignee varchar(50) NOT NULL COMMENT '收货人',
@@ -89,11 +64,9 @@ CREATE TABLE address_book (
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_address_user ON address_book(user_id);
-CREATE INDEX idx_address_tenant ON address_book(tenant_id);
 
 -- ==================== 分类表 ====================
-CREATE TABLE category (
+CREATE TABLE IF NOT EXISTS category (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   type int NOT NULL DEFAULT 1 COMMENT '类型 1 菜品分类 2 套餐分类',
   name varchar(64) NOT NULL COMMENT '分类名称',
@@ -106,11 +79,9 @@ CREATE TABLE category (
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_category_type ON category(type);
-CREATE INDEX idx_category_tenant ON category(tenant_id);
 
 -- ==================== 菜品表 ====================
-CREATE TABLE dish (
+CREATE TABLE IF NOT EXISTS dish (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   category_id bigint NOT NULL COMMENT '菜品分类id',
   name varchar(64) NOT NULL COMMENT '菜品名称',
@@ -130,11 +101,9 @@ CREATE TABLE dish (
   min_stock decimal(10,2) NOT NULL DEFAULT 0 COMMENT '最低库存预警阈值',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_dish_category ON dish(category_id);
-CREATE INDEX idx_dish_tenant ON dish(tenant_id);
 
 -- ==================== 菜品口味表 ====================
-CREATE TABLE dish_flavor (
+CREATE TABLE IF NOT EXISTS dish_flavor (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   dish_id bigint NOT NULL COMMENT '菜品',
   name varchar(64) NOT NULL COMMENT '口味名称',
@@ -147,10 +116,9 @@ CREATE TABLE dish_flavor (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '是否删除',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_dish_flavor_dish ON dish_flavor(dish_id);
 
 -- ==================== 套餐表 ====================
-CREATE TABLE setmeal (
+CREATE TABLE IF NOT EXISTS setmeal (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   category_id bigint NOT NULL COMMENT '菜品分类id',
   name varchar(64) NOT NULL COMMENT '套餐名称',
@@ -167,11 +135,9 @@ CREATE TABLE setmeal (
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_setmeal_category ON setmeal(category_id);
-CREATE INDEX idx_setmeal_tenant ON setmeal(tenant_id);
 
 -- ==================== 套餐菜品关联表 ====================
-CREATE TABLE setmeal_dish (
+CREATE TABLE IF NOT EXISTS setmeal_dish (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   setmeal_id bigint NOT NULL COMMENT '套餐id',
   dish_id bigint NOT NULL COMMENT '菜品id',
@@ -187,10 +153,9 @@ CREATE TABLE setmeal_dish (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '是否删除',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_setmeal_dish_setmeal ON setmeal_dish(setmeal_id);
 
 -- ==================== 订单表 ====================
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
   id bigint NOT NULL COMMENT '主键',
   number varchar(50) NULL DEFAULT NULL COMMENT '订单',
   status int NOT NULL DEFAULT 1 COMMENT '订单状',
@@ -233,14 +198,9 @@ CREATE TABLE orders (
   split_count int NULL DEFAULT NULL COMMENT '分账份数（AA分账记录拆分数量）',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_order_user ON orders(user_id, order_time);
-CREATE INDEX idx_order_number ON orders(number);
-CREATE INDEX idx_order_status ON orders(status);
-CREATE INDEX idx_order_tenant ON orders(tenant_id);
-CREATE UNIQUE INDEX uq_orders_platform ON orders(tenant_id, platform_type, platform_order_id);
 
 -- ==================== 订单明细表 ====================
-CREATE TABLE order_detail (
+CREATE TABLE IF NOT EXISTS order_detail (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   name varchar(50) NOT NULL COMMENT '名称',
   order_id bigint NOT NULL COMMENT '订单id',
@@ -259,10 +219,9 @@ CREATE TABLE order_detail (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_order_detail_order ON order_detail(order_id);
 
 -- ==================== 购物车 ====================
-CREATE TABLE shopping_cart (
+CREATE TABLE IF NOT EXISTS shopping_cart (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   name varchar(50) NOT NULL COMMENT '名称',
   user_id bigint NOT NULL COMMENT '主键',
@@ -276,10 +235,9 @@ CREATE TABLE shopping_cart (
   create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_cart_user ON shopping_cart(user_id);
 
 -- ==================== 员工表 ====================
-CREATE TABLE employee (
+CREATE TABLE IF NOT EXISTS employee (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   username varchar(50) NOT NULL COMMENT '用户名',
   name varchar(50) NULL DEFAULT NULL COMMENT '姓名',
@@ -300,13 +258,10 @@ CREATE TABLE employee (
   role int NOT NULL DEFAULT 2 COMMENT '角色 1:超级管理员 2:普通员工',
   PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX idx_employee_username ON employee(username);
-CREATE INDEX idx_employee_tenant ON employee(tenant_id);
 -- 工号租户内唯一（job_number 为 NULL 时不参与约束，允许多个未设工号员工）
-CREATE UNIQUE INDEX idx_employee_tenant_jobno ON employee(tenant_id, job_number);
 
 -- ==================== 角色表 ====================
-CREATE TABLE role (
+CREATE TABLE IF NOT EXISTS role (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID（NULL=全局角色）',
   role_name varchar(50) NOT NULL COMMENT '角色名称',
@@ -321,10 +276,9 @@ CREATE TABLE role (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '是否删除',
   PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX idx_role_key ON role(role_key);
 
 -- ==================== 权限表 ====================
-CREATE TABLE permission (
+CREATE TABLE IF NOT EXISTS permission (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   permission_name varchar(50) NOT NULL COMMENT '权限名称',
   permission_key varchar(100) NOT NULL COMMENT '权限标识',
@@ -338,22 +292,18 @@ CREATE TABLE permission (
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX idx_permission_key ON permission(permission_key);
-CREATE INDEX idx_permission_parent ON permission(parent_id);
 
 -- ==================== 角色权限关联表 ====================
-CREATE TABLE role_permission (
+CREATE TABLE IF NOT EXISTS role_permission (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   role_id bigint NOT NULL COMMENT '角色ID',
   permission_id bigint NOT NULL COMMENT '权限ID',
   create_time datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_role_permission_role ON role_permission(role_id);
-CREATE INDEX idx_role_permission_permission ON role_permission(permission_id);
 
 -- ==================== 员工角色关联表（RBAC 闭环：用户→角色，多对多） ====================
-CREATE TABLE employee_role (
+CREATE TABLE IF NOT EXISTS employee_role (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   employee_id bigint NOT NULL COMMENT '员工ID',
   role_id bigint NOT NULL COMMENT '角色ID',
@@ -362,11 +312,9 @@ CREATE TABLE employee_role (
   PRIMARY KEY (id),
   UNIQUE KEY uk_employee_role (employee_id, role_id)
 );
-CREATE INDEX idx_employee_role_employee ON employee_role(employee_id);
-CREATE INDEX idx_employee_role_role ON employee_role(role_id);
 
 -- ==================== 系统配置表 ====================
-CREATE TABLE system_config (
+CREATE TABLE IF NOT EXISTS system_config (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID（NULL=全局配置）',
   config_key varchar(100) NOT NULL COMMENT '配置键',
@@ -379,10 +327,9 @@ CREATE TABLE system_config (
   update_user bigint NULL DEFAULT NULL COMMENT '修改人ID',
   PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX idx_system_config_key_tenant ON system_config(config_key, tenant_id);
 
 -- ==================== 菜单表 ====================
-CREATE TABLE menu (
+CREATE TABLE IF NOT EXISTS menu (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   parent_id bigint NULL DEFAULT 0 COMMENT '父菜单ID',
   name varchar(50) NOT NULL COMMENT '菜单名称',
@@ -398,13 +345,11 @@ CREATE TABLE menu (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '是否删除',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_menu_parent ON menu(parent_id);
 
 -- AI供应商配置
-DROP TABLE IF EXISTS ai_provider_config;
 
 -- ==================== 操作日志表 ====================
-CREATE TABLE log (
+CREATE TABLE IF NOT EXISTS log (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   operate_user bigint NULL DEFAULT NULL COMMENT '操作人ID',
   operate_name varchar(50) NULL DEFAULT NULL COMMENT '操作人姓名',
@@ -423,12 +368,9 @@ CREATE TABLE log (
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_log_user ON log(operate_user);
-CREATE INDEX idx_log_time ON log(create_time);
-CREATE INDEX idx_log_tenant ON log(tenant_id);
 
 -- ==================== AI供应商配置表 ====================
-CREATE TABLE ai_provider_config (
+CREATE TABLE IF NOT EXISTS ai_provider_config (
   id bigint NOT NULL COMMENT '主键',
   provider_code varchar(50) NOT NULL COMMENT '供应商编码',
   provider_name varchar(100) NOT NULL COMMENT '供应商名称',
@@ -456,8 +398,6 @@ CREATE TABLE ai_provider_config (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_ai_provider_config_code ON ai_provider_config(provider_code);
-CREATE INDEX idx_ai_provider_config_active ON ai_provider_config(is_active);
 
 -- ==================== 区域表 ====================
 -- 字段与 Region 实体（com.reggie.module.region.model.Region）及
@@ -465,7 +405,7 @@ CREATE INDEX idx_ai_provider_config_active ON ai_provider_config(is_active);
 -- 说明：早期此处仅有 id/name/sort 等 6 列，缺少实体映射的
 -- code/parent_id/level/create_user/update_user，任何走 RegionMapper 的
 -- 查询都会报 Unknown column 'code' in 'field list'。
-CREATE TABLE region (
+CREATE TABLE IF NOT EXISTS region (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   name varchar(50) NOT NULL COMMENT '地区名称',
   code varchar(20) NULL DEFAULT NULL COMMENT '行政区划代码',
@@ -483,7 +423,7 @@ CREATE TABLE region (
 -- ==================== 商品评价表（菜品/套餐通用） ====================
 -- 字段与 DishEvaluation 实体及 schema-mysql.sql 权威定义保持一致。
 -- 套餐下单明细只有 setmealId，故 dish_id/setmeal_id 互斥可空。
-CREATE TABLE dish_evaluation (
+CREATE TABLE IF NOT EXISTS dish_evaluation (
   id bigint NOT NULL COMMENT '评价ID(雪花算法)',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   order_id bigint NULL DEFAULT NULL COMMENT '订单id',
@@ -506,11 +446,9 @@ CREATE TABLE dish_evaluation (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除 0=未删除 1=已删除',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_dish_evaluation_tenant ON dish_evaluation(tenant_id);
-CREATE INDEX idx_dish_evaluation_user_setmeal ON dish_evaluation(user_id,setmeal_id,order_id);
 
 -- ==================== 门店表 ====================
-CREATE TABLE store (
+CREATE TABLE IF NOT EXISTS store (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   name varchar(100) NOT NULL COMMENT '门店名称',
   address varchar(255) NOT NULL COMMENT '门店地址',
@@ -524,11 +462,9 @@ CREATE TABLE store (
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_store_tenant ON store(tenant_id);
 
 -- ==================== 门店配置表 ====================
-DROP TABLE IF EXISTS store_config;
-CREATE TABLE store_config (
+CREATE TABLE IF NOT EXISTS store_config (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户/门店ID',
   config_key varchar(100) NULL DEFAULT NULL COMMENT '配置键',
@@ -543,8 +479,7 @@ CREATE TABLE store_config (
 );
 
 -- ==================== 门店基础信息表 ====================
-DROP TABLE IF EXISTS store_info;
-CREATE TABLE store_info (
+CREATE TABLE IF NOT EXISTS store_info (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '所属租户/门店ID',
   store_code varchar(50) NULL DEFAULT NULL COMMENT '门店编码，如：BJ001、SH001',
@@ -570,8 +505,7 @@ CREATE TABLE store_info (
 );
 
 -- ==================== 门店日报汇总 ====================
-DROP TABLE IF EXISTS store_daily_summary;
-CREATE TABLE store_daily_summary (
+CREATE TABLE IF NOT EXISTS store_daily_summary (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '门店ID',
   summary_date date NULL DEFAULT NULL COMMENT '统计日期',
@@ -590,8 +524,7 @@ CREATE TABLE store_daily_summary (
 );
 
 -- ==================== 门店员工权限 ====================
-DROP TABLE IF EXISTS store_employee_permission;
-CREATE TABLE store_employee_permission (
+CREATE TABLE IF NOT EXISTS store_employee_permission (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   employee_id bigint NULL DEFAULT NULL COMMENT '员工ID',
   tenant_id bigint NULL DEFAULT NULL COMMENT '门店ID',
@@ -607,8 +540,7 @@ CREATE TABLE store_employee_permission (
 );
 
 -- ==================== 门店同步日志 ====================
-DROP TABLE IF EXISTS store_sync_log;
-CREATE TABLE store_sync_log (
+CREATE TABLE IF NOT EXISTS store_sync_log (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   source_tenant_id bigint NULL DEFAULT NULL COMMENT '来源门店ID(通常指总部)',
   target_tenant_id bigint NULL DEFAULT NULL COMMENT '目标门店ID',
@@ -630,8 +562,7 @@ CREATE TABLE store_sync_log (
 );
 
 -- ==================== 外卖平台接入配置 ====================
-DROP TABLE IF EXISTS platform_config;
-CREATE TABLE platform_config (
+CREATE TABLE IF NOT EXISTS platform_config (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   platform_type varchar(32) NOT NULL COMMENT '平台类型 MEITUAN/ELEME/DOUYIN/SELF/OTHER',
   platform_name varchar(128) NULL DEFAULT NULL COMMENT '平台展示名称',
@@ -648,11 +579,9 @@ CREATE TABLE platform_config (
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_platform_type_shop ON platform_config(platform_type, shop_id);
-CREATE INDEX idx_platform_tenant ON platform_config(tenant_id);
 
 -- ==================== tenant ====================
-CREATE TABLE tenant (
+CREATE TABLE IF NOT EXISTS tenant (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   name varchar(64) NULL DEFAULT NULL COMMENT '租户名称',
   phone varchar(20) NULL DEFAULT NULL COMMENT '电话',
@@ -672,7 +601,7 @@ CREATE TABLE tenant (
 );
 
 -- ==================== operation_log ====================
-CREATE TABLE operation_log (
+CREATE TABLE IF NOT EXISTS operation_log (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   operator_id bigint NULL DEFAULT NULL COMMENT '操作人ID',
   operator_name varchar(50) NULL DEFAULT NULL COMMENT '操作人姓名',
@@ -695,15 +624,10 @@ CREATE TABLE operation_log (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_operation_log_tenant ON operation_log(tenant_id);
-CREATE INDEX idx_operation_log_operator ON operation_log(operator_id);
-CREATE INDEX idx_operation_log_module ON operation_log(module);
-CREATE INDEX idx_operation_log_time ON operation_log(create_time);
 
 -- ==================== 营销活动 / 满减规则 / 核销（满减引擎计费依赖） ====================
 -- 与本脚本其他表保持一致：建表前先 DROP，保证脚本在测试上下文里被重复执行时幂等
-DROP TABLE IF EXISTS marketing_campaign;
-CREATE TABLE marketing_campaign (
+CREATE TABLE IF NOT EXISTS marketing_campaign (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NOT NULL COMMENT '租户ID',
   name varchar(100) NOT NULL COMMENT '活动名称',
@@ -726,11 +650,8 @@ CREATE TABLE marketing_campaign (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_mc_tenant_status ON marketing_campaign(tenant_id, status);
-CREATE INDEX idx_mc_time ON marketing_campaign(start_time, end_time);
 
-DROP TABLE IF EXISTS full_reduction_rule;
-CREATE TABLE full_reduction_rule (
+CREATE TABLE IF NOT EXISTS full_reduction_rule (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   campaign_id bigint NOT NULL COMMENT '活动ID',
   rule_name varchar(100) NULL DEFAULT NULL COMMENT '规则名称',
@@ -752,11 +673,8 @@ CREATE TABLE full_reduction_rule (
   update_time datetime NOT NULL COMMENT '更新时间',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_frr_campaign ON full_reduction_rule(campaign_id);
-CREATE INDEX idx_frr_tenant ON full_reduction_rule(tenant_id);
 
-DROP TABLE IF EXISTS campaign_usage_record;
-CREATE TABLE campaign_usage_record (
+CREATE TABLE IF NOT EXISTS campaign_usage_record (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   campaign_id bigint NOT NULL COMMENT '活动ID',
   rule_id bigint NULL DEFAULT NULL COMMENT '规则ID',
@@ -773,15 +691,9 @@ CREATE TABLE campaign_usage_record (
   create_time datetime NOT NULL COMMENT '创建时间',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_cur_campaign ON campaign_usage_record(campaign_id);
-CREATE INDEX idx_cur_user ON campaign_usage_record(user_id);
-CREATE INDEX idx_cur_order ON campaign_usage_record(order_id);
-CREATE INDEX idx_cur_time ON campaign_usage_record(use_time);
-CREATE INDEX idx_cur_tenant ON campaign_usage_record(tenant_id);
 
 -- 秒杀活动（C 端下单秒杀替换价 / CAS 扣库存）
-DROP TABLE IF EXISTS flash_sale;
-CREATE TABLE flash_sale (
+CREATE TABLE IF NOT EXISTS flash_sale (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   name varchar(100) NOT NULL COMMENT '活动名称',
   description varchar(500) NULL DEFAULT NULL COMMENT '描述',
@@ -802,12 +714,9 @@ CREATE TABLE flash_sale (
   update_user bigint NULL DEFAULT NULL COMMENT '修改人',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_flash_dish ON flash_sale(dish_id);
-CREATE INDEX idx_flash_tenant ON flash_sale(tenant_id);
 
 -- 买赠活动
-DROP TABLE IF EXISTS buy_get_free;
-CREATE TABLE buy_get_free (
+CREATE TABLE IF NOT EXISTS buy_get_free (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   name varchar(100) NOT NULL COMMENT '活动名称',
   description varchar(500) NULL DEFAULT NULL COMMENT '描述',
@@ -830,13 +739,9 @@ CREATE TABLE buy_get_free (
   update_user bigint NULL DEFAULT NULL COMMENT '修改人',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_bgf_tenant ON buy_get_free(tenant_id);
-CREATE INDEX idx_bgf_dish ON buy_get_free(dish_id);
-CREATE INDEX idx_bgf_gift ON buy_get_free(gift_dish_id);
 
 -- 新客立减
-DROP TABLE IF EXISTS new_customer_discount;
-CREATE TABLE new_customer_discount (
+CREATE TABLE IF NOT EXISTS new_customer_discount (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   name varchar(100) NOT NULL COMMENT '活动名称',
   discount_type tinyint NOT NULL COMMENT '优惠类型 1固定金额 2百分比',
@@ -853,11 +758,9 @@ CREATE TABLE new_customer_discount (
   update_user bigint NULL DEFAULT NULL COMMENT '修改人',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_ncd_tenant ON new_customer_discount(tenant_id);
 
 -- ==================== 用户收藏 ====================
-DROP TABLE IF EXISTS user_favorite;
-CREATE TABLE user_favorite (
+CREATE TABLE IF NOT EXISTS user_favorite (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   user_id bigint NOT NULL COMMENT '用户ID',
   target_type int NOT NULL COMMENT '类型 1菜品 2商家',
@@ -866,13 +769,10 @@ CREATE TABLE user_favorite (
   create_time datetime NOT NULL COMMENT '收藏时间',
   PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX uq_user_favorite ON user_favorite(user_id, target_type, target_id, tenant_id);
-CREATE INDEX idx_uf_user ON user_favorite(user_id);
 
 
 -- ==================== 在线客服 / 投诉 ====================
-DROP TABLE IF EXISTS cs_session;
-CREATE TABLE cs_session (
+CREATE TABLE IF NOT EXISTS cs_session (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   session_no varchar(50) NULL DEFAULT NULL COMMENT '会话编号',
   user_id bigint NULL DEFAULT NULL COMMENT '用户ID',
@@ -891,11 +791,8 @@ CREATE TABLE cs_session (
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_css_user ON cs_session(user_id);
-CREATE INDEX idx_css_tenant ON cs_session(tenant_id);
 
-DROP TABLE IF EXISTS cs_message;
-CREATE TABLE cs_message (
+CREATE TABLE IF NOT EXISTS cs_message (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   session_id bigint NOT NULL COMMENT '会话ID',
   sender_type int NULL DEFAULT NULL COMMENT '发送方 1用户 2客服 3系统',
@@ -909,11 +806,8 @@ CREATE TABLE cs_message (
   create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_csm_session ON cs_message(session_id);
-CREATE INDEX idx_csm_tenant ON cs_message(tenant_id);
 
-DROP TABLE IF EXISTS complaint;
-CREATE TABLE complaint (
+CREATE TABLE IF NOT EXISTS complaint (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   complaint_no varchar(50) NULL DEFAULT NULL COMMENT '投诉编号',
   user_id bigint NULL DEFAULT NULL COMMENT '用户ID',
@@ -938,5 +832,3 @@ CREATE TABLE complaint (
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_cp_user ON complaint(user_id);
-CREATE INDEX idx_cp_tenant ON complaint(tenant_id);

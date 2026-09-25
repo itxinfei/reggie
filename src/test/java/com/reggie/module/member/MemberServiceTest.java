@@ -45,16 +45,16 @@ public class MemberServiceTest {
 
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
         if (memberLevelService.count() == 0) {
             MemberLevel l1 = new MemberLevel();
-            l1.setId(1L); l1.setTenantId(1L); l1.setName("普通会员"); l1.setMinPoints(0L); l1.setDiscount(new BigDecimal("1.00"));
+            l1.setId(1L); l1.setTenantId(999L); l1.setName("普通会员"); l1.setMinPoints(0L); l1.setDiscount(new BigDecimal("1.00"));
             memberLevelService.save(l1);
             MemberLevel l2 = new MemberLevel();
-            l2.setId(2L); l2.setTenantId(1L); l2.setName("银卡会员"); l2.setMinPoints(100L); l2.setDiscount(new BigDecimal("0.95"));
+            l2.setId(2L); l2.setTenantId(999L); l2.setName("银卡会员"); l2.setMinPoints(100L); l2.setDiscount(new BigDecimal("0.95"));
             memberLevelService.save(l2);
             MemberLevel l3 = new MemberLevel();
-            l3.setId(3L); l3.setTenantId(1L); l3.setName("金卡会员"); l3.setMinPoints(500L); l3.setDiscount(new BigDecimal("0.90"));
+            l3.setId(3L); l3.setTenantId(999L); l3.setName("金卡会员"); l3.setMinPoints(500L); l3.setDiscount(new BigDecimal("0.90"));
             memberLevelService.save(l3);
         }
     }
@@ -137,7 +137,7 @@ public class MemberServiceTest {
     void testClaimCoupon() {
         Member member = memberService.registerByPhone("13800138008", "测试领券");
         CouponTemplate template = new CouponTemplate();
-        template.setTenantId(1L);
+        template.setTenantId(999L);
         template.setName("满100减20");
         template.setType("FULL_REDUCE");
         template.setConditionAmount(new BigDecimal("100.00"));
@@ -167,7 +167,7 @@ public class MemberServiceTest {
     void testUseCoupon() {
         Member member = memberService.registerByPhone("13800138009", "测试用券");
         CouponTemplate template = new CouponTemplate();
-        template.setTenantId(1L);
+        template.setTenantId(999L);
         template.setName("满50减10");
         template.setType("FULL_REDUCE");
         template.setConditionAmount(new BigDecimal("50.00"));

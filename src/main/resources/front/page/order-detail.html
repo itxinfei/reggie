@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
     <head>
         <meta charset="UTF-8">
@@ -14,7 +14,7 @@
         <link rel="stylesheet" href="../styles/index.css?v=20260924" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <!--订单域样式（含本详情页 .od-* 与复用的 .dish-*/.act-btn 等）-->
-        <link rel="stylesheet" href="./../styles/order.css?v=20260924" />
+        <link rel="stylesheet" href="./../styles/order.css?v=20260925" />
         <!-- 加载 remixicon 图标库 -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="./../js/icon-fallback.js?v=20260917"></script>
@@ -79,7 +79,7 @@
                         <div class="od-section-title">商品清单</div>
                         <div class="od-goods">
                             <div v-for="(d, di) in (order.orderDetails || [])" :key="di" class="dish-item">
-                                <img v-if="d.image || d.dishImage" :src="imgPath(d.image || d.dishImage)" loading="lazy" class="dish-img" :alt="d.name || '菜品图片'" @error="$event.target.src='./../images/noImg.png'"/>
+                                <img v-if="d.image || d.dishImage" :src="imgPath(d.image || d.dishImage)" loading="lazy" class="dish-img" :alt="d.name || '菜品图片'" @error="imgFallback($event)"/>
                                 <div v-else class="dish-img dish-img-placeholder"><i class="ri-restaurant-line"></i></div>
                                 <div class="dish-info">
                                     <span class="dish-name">{{ d.name }}</span>
@@ -144,6 +144,13 @@
                         </div>
                     </div>
                 </template>
+
+                <!-- 加载失败：与"不存在/无权查看"区分，提供重试 -->
+                <div v-else-if="loadError" class="od-card od-notfound">
+                    <i class="ri-wifi-line"></i>
+                    <p>加载失败，请稍后重试</p>
+                    <button class="od-retry-btn" @click="loadDetail">重新加载</button>
+                </div>
 
                 <!-- 不存在 / 无权查看 -->
                 <div v-else class="od-card od-notfound">
@@ -220,6 +227,7 @@
                     orderId: null,
                     order: {},
                     loading: true,
+                    loadError: false,
                     submitting: false,
                     // 本订单售后/退款记录（审核与退款进度）
                     refundRecords: [],
@@ -246,7 +254,8 @@
                     return d > 0 ? Math.round(d * 100) / 100 : 0
                 },
                 payMethodText: function() {
-                    var map = { 1: '店内支付', 2: '微信支付', 3: '支付宝支付', 6: '货到付款' }
+                    // 口径对齐后端：1现金 2微信 3支付宝 4银行卡 5会员储值 6货到付款
+                    var map = { 1: '现金支付', 2: '微信支付', 3: '支付宝支付', 4: '银行卡支付', 5: '会员储值支付', 6: '货到付款' }
                     return map[this.order.payMethod] || ('方式' + this.order.payMethod)
                 },
                 statusIcon: function() {
@@ -286,11 +295,23 @@
                 loadDetail: async function() {
                     if (!this.orderId) { this.loading = false; return }
                     this.loading = true
+                    this.loadError = false
                     try {
                         var res = await getOrderDetailApi(this.orderId)
-                        if (res && res.code === 1) { this.order = res.data || {} }
+                        if (res && res.code === 1) {
+                            this.order = res.data || {}
+                        } else if (res && /不存在|找不到|无权限/.test(res.msg || '')) {
+                            // 后端明确判定不存在/无权：显示"未找到"，不误归为加载失败
+                            this.order = {}
+                        } else {
+                            this.loadError = true
+                        }
                     } catch (e) {
-                        console.warn('[order-detail] 加载失败:', e)
+                        if (e && e.message === 'NOTLOGIN') { /* request.js 已跳登录 */ }
+                        else {
+                            console.warn('[order-detail] 加载失败:', e)
+                            this.loadError = true
+                        }
                     } finally {
                         this.loading = false
                     }
@@ -458,24 +479,18 @@
                 },
                 applyRefund: function() {
                     var self = this
-                    vant.Dialog.confirm({
-                        title: '申请售后',
-                        message: '确定要为此订单申请售后退款吗？提交后客服将尽快处理。',
+                    // 原"确认申请 → 原因输入"两个连续模态合并为单个 prompt，避免弹窗堆叠
+                    vant.Dialog.prompt({
+                        title: '申请售后退款',
+                        message: '请填写退款原因（如商品质量问题、漏送、错送等），提交后客服将尽快处理。',
+                        inputPlaceholder: '请输入退款原因',
+                        inputValidator: function(val) {
+                            if (!val || !val.trim()) { return '退款原因不能为空' }
+                            if (val.trim().length > 200) { return '退款原因不超过 200 字' }
+                            return true
+                        },
                         confirmButtonText: '提交申请',
                         cancelButtonText: '取消'
-                    }).then(function() {
-                        return vant.Dialog.prompt({
-                            title: '退款原因',
-                            message: '请简要描述退款原因（如商品质量问题、漏送、错送等）',
-                            inputPlaceholder: '请输入退款原因',
-                            inputValidator: function(val) {
-                                if (!val || !val.trim()) { return '退款原因不能为空' }
-                                if (val.trim().length > 200) { return '退款原因不超过 200 字' }
-                                return true
-                            },
-                            confirmButtonText: '提交',
-                            cancelButtonText: '取消'
-                        })
                     }).then(async function(val) {
                         var reason = (val && val.trim) ? val.trim() : ('' + val).trim()
                         self.submitting = true

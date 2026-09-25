@@ -10,7 +10,7 @@
 -- ============================================================
 
 -- 1) 菜单权限（顶级模块 + 页面，parent_id=0 为顶级）
-INSERT INTO permission (id, permission_name, permission_key, permission_type, parent_id, route_path, icon, sort, status, create_time) VALUES
+INSERT IGNORE INTO permission (id, permission_name, permission_key, permission_type, parent_id, route_path, icon, sort, status, create_time) VALUES
 (1,   '数据概览',   'module:dashboard',     1, 0, 'page/dashboard/overview.html',        'ri-dashboard-line',       1,  1, NOW()),
 (2,   '商品管理',   'module:dish',          1, 0, NULL,                                  'ri-shopping-bag-3-line',  2,  1, NOW()),
 (3,   '订单中心',   'module:order',         1, 0, NULL,                                  'ri-file-list-3-line',     3,  1, NOW()),
@@ -100,7 +100,7 @@ INSERT INTO permission (id, permission_name, permission_key, permission_type, pa
 (912, '模型配置', 'page:provider-config',    1, 9, 'page/ai/provider-config.html',       'ri-cpu-line',               12,  1, NOW());
 
 -- 2) 按钮权限（对齐后端 @RequiresPermission 全部 key，parent 挂在对应页面下）
-INSERT INTO permission (id, permission_name, permission_key, permission_type, parent_id, route_path, icon, sort, status, create_time) VALUES
+INSERT IGNORE INTO permission (id, permission_name, permission_key, permission_type, parent_id, route_path, icon, sort, status, create_time) VALUES
 (10002, '评价查看',       'evaluation:view',     2, 707, NULL, NULL, 1, 1, NOW()),
 (10003, '评价审核',       'evaluation:audit',    2, 707, NULL, NULL, 2, 1, NOW()),
 (10004, '评价回复',       'evaluation:reply',    2, 707, NULL, NULL, 3, 1, NOW()),
@@ -112,15 +112,15 @@ INSERT INTO permission (id, permission_name, permission_key, permission_type, pa
 
 -- 3) 角色默认权限分配
 -- 超级管理员（18）：全量（75 菜单 + 9 按钮）
-INSERT INTO role_permission (role_id, permission_id, create_time)
+INSERT IGNORE INTO role_permission(role_id, permission_id, create_time)
 SELECT 18, id, NOW() FROM permission WHERE status = 1;
 
 -- 店长（19）：全量（管理员可在界面按门店裁剪）
-INSERT INTO role_permission (role_id, permission_id, create_time)
+INSERT IGNORE INTO role_permission(role_id, permission_id, create_time)
 SELECT 19, id, NOW() FROM permission WHERE status = 1;
 
 -- 公共收银员（20）：数据概览 + 商品管理 + 订单核心(收银/支付/明细/日结) + 堂食管理 + 会员(不含C端/挽留) + 报表只读
-INSERT INTO role_permission (role_id, permission_id, create_time) VALUES
+INSERT IGNORE INTO role_permission(role_id, permission_id, create_time) VALUES
 (20, 1, NOW()),
 (20, 201, NOW()), (20, 202, NOW()), (20, 203, NOW()), (20, 204, NOW()),
 (20, 301, NOW()), (20, 302, NOW()), (20, 303, NOW()), (20, 304, NOW()),
@@ -129,7 +129,7 @@ INSERT INTO role_permission (role_id, permission_id, create_time) VALUES
 (20, 701, NOW()), (20, 702, NOW()), (20, 703, NOW()), (20, 705, NOW()), (20, 706, NOW());
 
 -- 门店厨师（21）：数据概览 + 菜品规格 + 紧急催菜/未接单监控/订单明细
-INSERT INTO role_permission (role_id, permission_id, create_time) VALUES
+INSERT IGNORE INTO role_permission(role_id, permission_id, create_time) VALUES
 (21, 1, NOW()),
 (21, 204, NOW()),
 (21, 301, NOW()), (21, 312, NOW()), (21, 313, NOW());

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
     <head>
         <meta charset="UTF-8">
@@ -14,7 +14,7 @@
         <link rel="stylesheet" href="../styles/index.css?v=20260924" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <!--本页面内容的样式-->
-        <link rel="stylesheet" href="./../styles/order.css?v=20260924" />
+        <link rel="stylesheet" href="./../styles/order.css?v=20260925" />
         <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
         <link rel="stylesheet" href="../styles/tabbar.css?v=20260917" />
         <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
@@ -36,8 +36,11 @@
             </div>
             <!-- 修改点(2026-09-17 UX)：首屏骨架屏移出列表 v-if 容器独立渲染——原放在 v-if="orderList.length > 0"
                  容器内部，首屏列表为空时整个容器不渲染，骨架屏永不出现（首屏白屏无任何反馈） -->
-            <div v-if="firstLoading" class="has-tabbar" style="padding: 16rem 12rem;">
-                <van-skeleton :row="5" title :avatar="true" />
+            <!-- 修改点(2026-09-25)：切 tab 也会清空列表并置 loading=true，此时 firstLoading 已是 false，
+                 若骨架屏只认 firstLoading 就是切 tab 全程白屏。故骨架屏条件补上 loading，与下方空态的
+                 !loading 条件互斥：加载中空列表显示骨架，加载完仍空才落到空态 -->
+            <div v-if="showListSkeleton" class="has-tabbar" style="padding: 16rem 12rem;">
+                <van-skeleton :row="5" title :avatar="true"></van-skeleton>
             </div>
             <div class="divBody has-tabbar" v-if="!firstLoading && orderList.length > 0">
                 <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
@@ -51,7 +54,7 @@
                         <!-- 卡片头部：主标题（外卖订单·下单时间）+ 次要单号行 + 状态（对标美团） -->
                         <div class="order-header">
                             <div class="order-meta">
-                                <span class="order-title">外卖订单<span class="title-dot">·</span><span class="order-time">{{order.orderTime}}</span></span>
+                                <span class="order-title">{{order.tableId ? '堂食订单' : '外卖订单'}}<span class="title-dot">·</span><span class="order-time">{{order.orderTime}}</span></span>
                                 <div class="order-no-row">
                                     <span class="order-no">单号 {{order.number || order.id}}</span>
                                     <!-- 订单号一键复制：售后沟通场景免手抄 -->
@@ -63,18 +66,27 @@
                             </div>
                             <span class="order-status" :class="getStatusClass(order.status)">{{getStatus(order.status)}}</span>
                         </div>
-                        <!-- 配送中/待接单：迷你进度条 -->
-                        <div class="order-progress" v-if="order.status === 2 || order.status === 3">
-                            <div class="progress-step" :class="{done: order.status >= 2, active: order.status === 2}">已接单</div>
+                        <!-- 外卖：待接单(status=2)/配送中(3)迷你进度条。
+                             注意 status=2 是"待接单"，首步只 active 不 done -->
+                        <div class="order-progress" v-if="!order.tableId && (order.status === 2 || order.status === 3)">
+                            <div class="progress-step" :class="{done: order.status >= 3, active: order.status === 2}">商家接单</div>
                             <div class="progress-line" :class="{done: order.status >= 3}"></div>
-                            <div class="progress-step" :class="{done: order.status >= 3, active: order.status === 3}">配送中</div>
+                            <div class="progress-step" :class="{active: order.status === 3}">配送中</div>
                             <div class="progress-line"></div>
                             <div class="progress-step">已送达</div>
+                        </div>
+                        <!-- 堂食：显示出餐进度而非配送进度 -->
+                        <div class="order-progress" v-else-if="order.tableId && (order.status === 2 || order.status === 3)">
+                            <div class="progress-step" :class="{done: order.status >= 3, active: order.status === 2}">商家接单</div>
+                            <div class="progress-line" :class="{done: order.status >= 3}"></div>
+                            <div class="progress-step" :class="{active: order.status === 3}">后厨制作</div>
+                            <div class="progress-line"></div>
+                            <div class="progress-step">叫号上菜</div>
                         </div>
                         <!-- 菜品列表：左侧缩略图 + 名称数量 + 右侧价格 -->
                         <div class="dish-list">
                             <div v-for="(item,dIdx) in (order.orderDetails || []).slice(0,3)" :key="dIdx" class="dish-item">
-                                <img v-if="item.image || item.dishImage" :src="imgPath(item.image || item.dishImage)" loading="lazy" class="dish-img" :alt="item.name || '菜品图片'" @error="$event.target.src='./../images/noImg.png'"/>
+                                <img v-if="item.image || item.dishImage" :src="imgPath(item.image || item.dishImage)" loading="lazy" class="dish-img" :alt="item.name || '菜品图片'" @error="imgFallback($event)"/>
                                 <div v-else class="dish-img dish-img-placeholder"><i class="ri-restaurant-line"></i></div>
                                 <div class="dish-info">
                                     <span class="dish-name">{{item.name}}</span>
@@ -125,9 +137,10 @@
                 </van-list>
                 </van-pull-refresh>
             </div>
-            <!-- 修改点(2026-09-22)：空态改用 cend-empty 组件，统一文字+图标风格 -->
+            <!-- 修改点(2026-09-22)：空态改用 cend-empty 组件，统一文字+图标风格。
+                 加载/切tab/下拉刷新期间不显示空态，避免内容替换瞬间误闪"暂无订单" -->
             <cend-empty
-                v-else-if="!firstLoading"
+                v-else-if="!firstLoading && !loading && !refreshing"
                 icon="ri-file-list-3-line"
                 text="暂无订单"
                 action-text="去逛逛"
@@ -183,7 +196,11 @@
                     evalKeys: new Set()
                 }
             },
-            computed:{},
+            computed:{
+                // 首屏或「切 tab / 下拉刷新」清空列表后正在加载时显示骨架屏。
+                // 必须与空态条件（!firstLoading && !loading && !refreshing）互斥，否则空列表期间两者都不渲染 = 白屏
+                showListSkeleton:function(){ return (this.firstLoading || this.loading || this.refreshing) && this.orderList.length === 0 }
+            },
             created(){
                 // 修改点：先加载后端枚举字典，使列表状态文案与后端保持一致
                 // （字典加载失败时 getStatus 自动回退到 common.js 的兜底常量）
@@ -195,14 +212,6 @@
                 }
                 loadEvalKeys().then(function(keys) {
                     self.evalKeys = keys
-                    // 待评价Tab下列表可能先于评价数据加载，此时补刷新一次
-                    if(self.activeStatus === 'needEval' && self.orderList.length >= 0 && !self.firstLoading){
-                        self.paging.page = 1
-                        self.orderList = []
-                        self.finished = false
-                        self.loading = true
-                        self.getList()
-                    }
                 })
             },
             mounted(){
@@ -281,6 +290,9 @@
                                 this.orderList = []
                             }
                             let records = res.data.records
+                            // 后端本页原始条数：finished 必须按它（而非前端过滤后的条数）判断，
+                            // 否则待评价 tab 第一页全是已评价单时会提前结束，更早页的未评价单再也加载不到
+                            var rawCount = (records && Array.isArray(records)) ? records.length : 0
                             if(records && Array.isArray(records)){
                                 records.forEach(item=>{
                                     let number = 0
@@ -301,12 +313,21 @@
                             }
                             // 修改点(2026-09-15)：原 finished 判断依赖 res.data.pages，若后端未返回 pages（undefined）
                             // 则 finished 永远为 false → van-list 反复触发 @load → 同批订单被重复 push（主键重复 + 控制台告警）。
-                            // 改为：本页无数据 或 页数耗尽即结束；pages 缺失时按「本页无数据」兜底，避免无限加载
+                            // 改为：本页无原始数据 或 页数耗尽即结束；pages 缺失时按「本页无数据」兜底，避免无限加载
                             var finishedPages = (typeof res.data.pages === 'number') ? res.data.pages : 1
-                            if(records.length === 0 || this.paging.page >= finishedPages){
+                            if(rawCount === 0 || this.paging.page >= finishedPages){
                                 this.finished = true;
                             }
                             this.paging.page = this.paging.page + 1
+                            // 待评价 tab：本页过滤后为空但后端还有页时立即续拉下一页，
+                            // 不空等 van-list 的 check，避免中间露出"暂无订单"空态
+                            if(isNeedEval && this.orderList.length === 0 && !this.finished){
+                                var selfContinue = this
+                                setTimeout(function(){
+                                    selfContinue.loading = true
+                                    selfContinue.getList()
+                                }, 0)
+                            }
                         }else{
                             vant.Toast.fail(res.msg || '加载订单失败');
                         }

@@ -92,8 +92,8 @@
                 margin-top: 12rem; font-variant-numeric: tabular-nums; }
             .qr-pay-tip { font-size: 12rem; color: var(--color-text-hint);
                 margin-top: 8rem; line-height: 1.6; }
-            .qr-pay-cancel { margin-top: 16rem; width: 100%; height: 42rem; border: none;
-                border-radius: 21rem; background: var(--color-primary-light);
+            .qr-pay-cancel { margin-top: 16rem; width: 100%; height: 44rem; border: none;
+                border-radius: 22rem; background: var(--color-primary-light);
                 color: var(--color-primary-dark); font-size: 15rem; }
         </style>
     </head>
@@ -395,7 +395,11 @@
                     this.stopPolling();
                     this.showQrPopup = false;
                     this.paying = false;
-                    vant.Toast('支付结果等待超时，如已付款请稍后在订单中查看');
+                    // 原 Toast 弱提示易错过：改用弹窗明确告知，并提示去订单列表核实
+                    vant.Dialog.alert({
+                        title: '等待支付结果超时',
+                        message: '如您已完成付款，可在订单列表中查看支付结果。'
+                    }).then(function () {}).catch(function () {});
                 },
                 // 扫码弹窗关闭（用户点取消）：停止轮询与等待；H5 场景弹窗未开，不受影响
                 onQrPopupClose: function () {
@@ -407,6 +411,9 @@
                 handleVisibility: function () {
                     if (document.hidden) {
                         this.hiddenTs = Date.now();
+                        // 隐藏期间暂停 2s 轮询：避免后台空转耗电与无意义请求；
+                        // 返回时由下方 paying && !pollTimer 条件自动重启
+                        if (this.pollTimer) this.stopPolling();
                         return;
                     }
                     if (this.hiddenTs) {

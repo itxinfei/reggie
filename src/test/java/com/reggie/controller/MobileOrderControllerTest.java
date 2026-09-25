@@ -50,7 +50,7 @@ public class MobileOrderControllerTest extends BaseControllerTest {
     void setUp() {
         cleaner.cleanTables("order_detail", "orders");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @Test
@@ -81,7 +81,7 @@ public class MobileOrderControllerTest extends BaseControllerTest {
         mockMvc.perform(get("/order/userPage")
                 .param("page", "1")
                 .param("pageSize", "10")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.records[0].orderDetails[0].name").value("测试菜品"));
@@ -111,7 +111,7 @@ public class MobileOrderControllerTest extends BaseControllerTest {
         mockMvc.perform(withCsrfToken(mockMvc, post("/order/again")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":2}")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }
@@ -121,7 +121,7 @@ public class MobileOrderControllerTest extends BaseControllerTest {
         mockMvc.perform(get("/order/userPage")
                 .param("page", "1")
                 .param("pageSize", "10")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }

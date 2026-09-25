@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
     <head>
         <meta charset="UTF-8">
@@ -17,7 +17,7 @@
         <!-- 修改点：加载 RemixIcon 真字体（emoji 兜底改由 js/icon-fallback.js 按需注入） -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js?v=20260917"></script>
-        <link rel="stylesheet" href="./../styles/add-order.css?v=20260925" />
+        <link rel="stylesheet" href="./../styles/add-order.css?v=20260925b" />
         <link rel="stylesheet" href="./../styles/add-order-pay.css?v=20260917" />
     </head>
     <body>
@@ -124,7 +124,7 @@
                     <div class="title">订单明细</div>
                     <div class="divSplit"></div>
                     <div class="itemList">
-                        <div class="item" v-for="(item,index) in visibleItems" :key="index">
+                        <div class="item" v-for="item in visibleItems" :key="cartItemKey(item)">
                             <!-- 修改点：el-image替换为原生img，错误时显示占位图 -->
                             <img :src="imgPath(item.image)" @error="imgError" class="dish-image" :alt="item.name || '菜品'" loading="lazy" />
                             <div class="desc">
@@ -303,7 +303,7 @@
                 </div>
                 <div class="divPrice"></div>
                 <!-- 修改点(2026-09-17 UX)：提交中按钮文案变为"支付中…"，配合 isLoading 样式给出明确提交反馈 -->
-                <div :class="{btnSubmitActive: !feeBlocked && (reorderId || (cartData && cartData.length > 0)), btnSubmit: feeBlocked || (!reorderId && (!cartData || cartData.length < 1)), isLoading: loading}" @click="goToPaySuccess">{{ loading ? '支付中…' : (feeBlocked ? '暂不可下单' : (reorderId ? '继续支付' : '去支付')) }}</div>
+                <div :class="{btnSubmitActive: !feeBlocked && (reorderId || (cartData && cartData.length > 0)), btnSubmit: feeBlocked || (!reorderId && (!cartData || cartData.length < 1)), isLoading: loading}" @click="goToPaySuccess">{{ loading ? '支付中…' : (previewLoading && !reorderId ? '金额核算中…' : (feeBlocked ? '暂不可下单' : (reorderId ? '继续支付' : '去支付'))) }}</div>
               </div>
         </div>
             </cend-shell>
@@ -388,12 +388,12 @@
                             { value: 'LUNCH', label: '午餐', time: '11:30-12:30' },
                             { value: 'AFTERNOON', label: '下午茶', time: '14:00-16:00' },
                             { value: 'DINNER', label: '晚餐', time: '17:30-19:00' }
-                        ]
-                    },
-                    // 优惠券选择弹层 / 已选商品清单弹层 / 订单明细是否展开全部
-                    couponPopupVisible: false,
-                    itemsPopupVisible: false,
-                    itemsExpanded: false
+                        ],
+                        // 优惠券选择弹层 / 已选商品清单弹层 / 订单明细是否展开全部
+                        couponPopupVisible: false,
+                        itemsPopupVisible: false,
+                        itemsExpanded: false
+                    }
                 },
                 computed:{
                     goodsNum(){
@@ -467,7 +467,9 @@
                     },
                     // 是否阻断下单（不可用原因/未达起送价/超出配送范围）
                     feeBlocked(){
-                        if(this.reorderId || !this.pricing){ return false }
+                        if(this.reorderId){ return false }
+                        // 服务端核价未就绪时先阻断：避免起送价/配送范围/优惠未算清时抢跑提交
+                        if(this.previewLoading || !this.pricing){ return true }
                         const p = this.pricing
                         if(p.unavailableReason){ return true }
                         if(p.belowMinOrder){ return true }
@@ -475,7 +477,8 @@
                         return false
                     },
                     feeMessage(){
-                        if(this.reorderId || !this.pricing){ return '' }
+                        if(this.reorderId){ return '' }
+                        if(this.previewLoading || !this.pricing){ return '金额核算中，请稍候' }
                         const p = this.pricing
                         if(p.unavailableReason){ return p.unavailableReason }
                         if(p.belowMinOrder){ return '未达到起送价' }
@@ -508,9 +511,9 @@
                         if(this.pricing){
                             return Number(this.pricing.payAmount) || 0
                         }
-                        // 预览未就绪兜底（极短）
-                        const raw = Math.max(0, this.goodsPrice + this.deliveryFee - this.frDiscount - this.couponDiscount)
-                        return Math.round(raw * 100) / 100
+                        // 预览未就绪（极短窗口）：提交按钮此时已置灰，该金额仅展示且不参与交易
+                        // （后端提交时全量重算）。原前端兜底漏减新客优惠、配送费还会退化为0反而误导，直接显示0
+                        return 0
                     },
                     // 修改点：送达时间显示标签
                     // 修改点(2026-09-17 UX)：只展示预计送达时刻，去掉「18:30 约30分钟」时间+相对时长的重复文案
@@ -541,31 +544,47 @@
                 },
                 created(){
                     // 修改点：未登录重定向到登录页
-                    if(!sessionStorage.getItem("userPhone")){
-                        goLogin()
-                        return
-                    }
-                    // 修改点（P2-11）：解析订单列表「去支付」跳转携带的 reorderId（待付款订单 ID）
-                    const reorderId = this.getUrlParam('reorderId')
-                    if(reorderId){
-                        // 修改点（P1-1）：续付回填该订单真实明细/金额（不再依赖已清空的购物车，
-                        // 避免明细空白、金额显 ¥0），支付方式由订单回填，地址仅作展示
-                        this.reorderId = reorderId
-                        this.loadReorderDetail()
-                        this.defaultAddress()
-                        return
-                    }
-                    this.initData()
-                    // bfcache 兜底：从地址页用浏览器"返回"恢复时，重新加载地址并重试配送费
+                    // 修复：新标签页 sessionStorage 丢失但 cookie 会话可能仍有效，先静默恢复
                     var self = this
-                    window.addEventListener('pageshow', function(e){
-                        if(e.persisted){ self.defaultAddress() }
+                    restoreUserSession().then(function(ok){
+                        if(!ok){ goLogin(); return }
+                        self.startAfterLogin()
                     })
                 },
                 methods:{
+                    // 会话确认有效后再启动：原 created 主体（reorderId 续付分支 / 常规初始化）
+                    startAfterLogin(){
+                        // 修改点（P2-11）：解析订单列表「去支付」跳转携带的 reorderId（待付款订单 ID）
+                        const reorderId = this.getUrlParam('reorderId')
+                        if(reorderId){
+                            // 修改点（P1-1）：续付回填该订单真实明细/金额（不再依赖已清空的购物车，
+                            // 避免明细空白、金额显 ¥0），支付方式由订单回填，地址仅作展示
+                            this.reorderId = reorderId
+                            this.loadReorderDetail()
+                            this.defaultAddress()
+                            return
+                        }
+                        this.initData()
+                        // bfcache 兜底：从地址页用浏览器"返回"恢复时，重新加载地址并重试配送费
+                        var self = this
+                        window.addEventListener('pageshow', function(e){
+                            if(e.persisted){ self.defaultAddress() }
+                        })
+                    },
                     // 修改点：图片加载失败兜底
                     imgError(e){
                         e.target.src = './../images/noImg.png'
+                    },
+                    // 购物车行唯一键：区分菜品/套餐，并把口味纳入（原 :key="index" 在列表重排时会复用错 DOM）
+                    cartItemKey(item){
+                        if(item.dishId != null){
+                            return 'd_' + item.dishId + '_' + (item.dishFlavor || '')
+                        }
+                        if(item.setmealId != null){
+                            return 's_' + item.setmealId
+                        }
+                        // 兜底：dishId/setmealId 均缺失时用记录主键，避免异常数据产生重复 key
+                        return 'x_' + (item.id != null ? item.id : item.name)
                     },
                     // 修改点（P2-11）：解析 URL 查询参数（my-evaluations.html 权威写法）
                     getUrlParam(name){
@@ -911,7 +930,7 @@
                             remark: remarkParts.join('，'),
                             payMethod:this.payMethod,
                             addressBookId:this.address.id,
-                            amount: this.finalPrice,
+                            // 不传 amount：金额一律由后端 computeCheckout 重算，杜绝前端值被篡改/与服务端口径不一致
                             expectDeliveryTime: this.expectDeliveryTime,
                             usedCouponId: (this.pricing && this.pricing.coupon) ? this.pricing.coupon.campaignId : null,
                             // 修改点(2026-09-17)：this.userId 未定义导致幂等键拼接出 "undefined_xxx"，改用 sessionStorage 手机号；

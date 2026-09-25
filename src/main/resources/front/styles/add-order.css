@@ -305,13 +305,14 @@
 #add_order .divCart > div:last-child {
   flex-shrink: 0;
   width: 112rem;
-  height: 40rem;
+  /* 点击热区 44px（原40），56px 栏内居中 */
+  height: 44rem;
   border-radius: var(--radius-lg);
   font-size: 15rem;
   font-family: var(--font-family-body);
   font-weight: 600;
   text-align: center;
-  line-height: 40rem;
+  line-height: 44rem;
   margin-left: auto;
   margin-right: 12rem;
 }

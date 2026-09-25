@@ -55,32 +55,32 @@ public class RoleControllerTest extends BaseControllerTest {
     private Long testRoleId;
     private Long testPermId;
     // 测试员工ID（employee_role 表无 FK 约束，虚拟 id 即可验证关联逻辑，无需建员工实体）
-    private static final Long TEST_EMP_ID_1 = 1L;
-    private static final Long TEST_EMP_ID_2 = 2L;
+    private static final Long TEST_EMP_ID_1 = 990101L;
+    private static final Long TEST_EMP_ID_2 = 990102L;
 
     @BeforeEach
     void setUp() {
         cleaner.cleanTables("role", "permission", "role_permission", "system_config", "employee_role");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
-        // 创建测试权限
+        // 创建测试权限（permission_key 全局唯一，统一加 test: 前缀，固定 990xxx id）
         Permission perm = new Permission();
-        perm.setId(1L);
+        perm.setId(990001L);
         perm.setPermissionName("菜品管理");
-        perm.setPermissionKey("dish:view");
+        perm.setPermissionKey("test:dish:view");
         perm.setPermissionType(Permission.TYPE_MENU);
         perm.setParentId(0L);
         perm.setStatus(1);
         perm.setCreateTime(java.time.LocalDateTime.now());
         perm.setUpdateTime(java.time.LocalDateTime.now());
         permissionMapper.insert(perm);
-        testPermId = 1L;
+        testPermId = 990001L;
 
-        // 创建测试角色
-        roleService.addTenantRole("店长", "manager", "店铺管理员", 10, 1);
+        // 创建测试角色（role_key 全局唯一，统一加 test_ 前缀；租户取自 BaseContext=999）
+        roleService.addTenantRole("店长", "test_manager", "店铺管理员", 10, 1);
         Role role = roleService.getOne(
-                new LambdaQueryWrapper<Role>().eq(Role::getRoleKey, "manager"));
+                new LambdaQueryWrapper<Role>().eq(Role::getRoleKey, "test_manager"));
         testRoleId = role.getId();
     }
 
@@ -188,21 +188,21 @@ public class RoleControllerTest extends BaseControllerTest {
         roleService.deleteTenantRole(testRoleId);
 
         // 级联清理后，该员工不再关联已删角色
-        List<Long> roleIds = roleService.getEmployeeRoleIds(TEST_EMP_ID_1, 1L);
+        List<Long> roleIds = roleService.getEmployeeRoleIds(TEST_EMP_ID_1, 999L);
         assertFalse(roleIds.contains(testRoleId));
     }
 
     @Test
     void testGetEmployeeRoleIdsMultiple() {
         // 同一员工分配多个角色，验证多角色聚合（PermissionAspect.loadPermissionsFromDb 改造依赖）
-        roleService.addTenantRole("收银员", "cashier", "前台收银", 8, 1);
+        roleService.addTenantRole("收银员", "test_cashier", "前台收银", 8, 1);
         Role cashier = roleService.getOne(
-                new LambdaQueryWrapper<Role>().eq(Role::getRoleKey, "cashier"));
+                new LambdaQueryWrapper<Role>().eq(Role::getRoleKey, "test_cashier"));
 
         roleService.assignUsersToRole(testRoleId, java.util.Arrays.asList(TEST_EMP_ID_1));
         roleService.assignUsersToRole(cashier.getId(), java.util.Arrays.asList(TEST_EMP_ID_1));
 
-        List<Long> roleIds = roleService.getEmployeeRoleIds(TEST_EMP_ID_1, 1L);
+        List<Long> roleIds = roleService.getEmployeeRoleIds(TEST_EMP_ID_1, 999L);
         assertEquals(2, roleIds.size());
         assertTrue(roleIds.contains(testRoleId));
         assertTrue(roleIds.contains(cashier.getId()));
@@ -259,7 +259,7 @@ public class RoleControllerTest extends BaseControllerTest {
 
     @Test
     void testStatsWithDisabled() throws Exception {
-        roleService.addTenantRole("厨师", "chef", "厨房厨师", 5, 0);
+        roleService.addTenantRole("厨师", "test_chef", "厨房厨师", 5, 0);
 
         mockMvc.perform(get("/sys/role/stats")
                 .with(request -> {
@@ -313,7 +313,7 @@ public class RoleControllerTest extends BaseControllerTest {
 
     @Test
     void testAdd() throws Exception {
-        String json = "{\"roleName\":\"收银员\",\"roleKey\":\"cashier\",\"description\":\"前台收银\",\"sort\":5,\"status\":1}";
+        String json = "{\"roleName\":\"收银员\",\"roleKey\":\"test_cashier\",\"description\":\"前台收银\",\"sort\":5,\"status\":1}";
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/sys/role")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -328,16 +328,16 @@ public class RoleControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.data").value("角色创建成功"));
 
         Role saved = roleService.getOne(
-                new LambdaQueryWrapper<Role>().eq(Role::getRoleKey, "cashier"));
+                new LambdaQueryWrapper<Role>().eq(Role::getRoleKey, "test_cashier"));
         assert saved != null;
         assert saved.getRoleName().equals("收银员");
-        assert saved.getTenantId().equals(1L);
+        assert saved.getTenantId().equals(999L);
     }
 
     @Test
     void testAddDuplicateRoleKey() throws Exception {
-        // roleKey="manager" 已存在于 setUp，service 抛 CustomException → 422
-        String json = "{\"roleName\":\"重复角色\",\"roleKey\":\"manager\",\"description\":\"重复的key\"}";
+        // roleKey="test_manager" 已存在于 setUp，service 抛 CustomException → 422
+        String json = "{\"roleName\":\"重复角色\",\"roleKey\":\"test_manager\",\"description\":\"重复的key\"}";
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/sys/role")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -372,7 +372,7 @@ public class RoleControllerTest extends BaseControllerTest {
 
     @Test
     void testUpdate() throws Exception {
-        String json = "{\"id\":" + testRoleId + ",\"roleName\":\"超级店长\",\"roleKey\":\"manager\",\"description\":\"升级后的店长\",\"sort\":20,\"status\":1}";
+        String json = "{\"id\":" + testRoleId + ",\"roleName\":\"超级店长\",\"roleKey\":\"test_manager\",\"description\":\"升级后的店长\",\"sort\":20,\"status\":1}";
 
         mockMvc.perform(withCsrfToken(mockMvc, put("/sys/role")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -507,7 +507,9 @@ public class RoleControllerTest extends BaseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data[0].permissionName").value("菜品管理"));
+                // permission 为全局表（不清空），按 key 过滤断言本测试权限存在，不依赖下标顺序
+                .andExpect(jsonPath("$.data[?(@.permissionKey=='test:dish:view')].permissionName")
+                        .value(org.hamcrest.Matchers.hasItem("菜品管理")));
     }
 
     @Test
@@ -526,7 +528,7 @@ public class RoleControllerTest extends BaseControllerTest {
 
     @Test
     void testOptionsWithMultipleRoles() throws Exception {
-        roleService.addTenantRole("厨师", "chef", "厨房", 5, 1);
+        roleService.addTenantRole("厨师", "test_chef", "厨房", 5, 1);
 
         String response = mockMvc.perform(get("/sys/role/options")
                 .with(request -> {

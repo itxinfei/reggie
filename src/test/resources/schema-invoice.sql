@@ -1,12 +1,10 @@
 -- Invoice module test schema (MySQL compatible)
 -- Matches entity column names from MyBatis-Plus default camelCase conversion
 
-DROP TABLE IF EXISTS invoice_record;
-DROP TABLE IF EXISTS invoice_title;
 
 -- InvoiceTitle entity (@TableName("invoice_title"))
 -- Columns: id, title, taxNumber, companyName, type, tenantId, userId, createTime, updateTime
-CREATE TABLE invoice_title (
+CREATE TABLE IF NOT EXISTS invoice_title (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   title varchar(200) NOT NULL COMMENT '发票抬头',
   tax_number varchar(100) NULL DEFAULT NULL COMMENT '税号',
@@ -23,7 +21,7 @@ CREATE TABLE invoice_title (
 -- Columns: id, orderId, userId, orderNo, titleId, title, taxNumber, type, amount, status,
 --          invoiceNo, invoiceCode, invoiceUrl, applyTime, issueTime, tenantId, createTime, updateTime
 -- userId 为真实列（申请用户ID，用户端归属过滤），对应迁移 V20260905__invoice_user_id.sql
-CREATE TABLE invoice_record (
+CREATE TABLE IF NOT EXISTS invoice_record (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   order_id bigint NOT NULL COMMENT '关联订单ID',
   user_id bigint NULL DEFAULT NULL COMMENT '申请用户ID（用户端归属列）',

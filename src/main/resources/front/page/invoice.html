@@ -66,11 +66,16 @@
         <div v-if="titles.length === 0" class="empty-state"><i class="ri-file-list-line"></i><p class="empty-text">暂无发票抬头，请先在下方新增</p></div>
 
         <div class="new-title-title">新增抬头</div>
-        <!-- 修改点(2026-09-18)：v-model 直绑数字 type 会在框内显示 1/2，改为只读 :value 展示中文 -->
-        <van-field :value="form.type === 1 ? '个人' : '企业'" label="抬头类型" readonly is-link @click="typePickerShow = true"></van-field>
-        <van-field v-model="form.title" label="抬头名称" placeholder="个人填姓名，企业填公司名称" maxlength="50"></van-field>
-        <van-field v-model="form.taxNumber" label="税号" placeholder="企业填写纳税人识别号（个人可留空）" maxlength="30"></van-field>
-        <van-button type="primary" plain block size="small" @click="saveTitle" :loading="saving">保存抬头</van-button>
+        <!-- van-form 内联校验：字段错误直接显示在输入框下方，避免只靠 toast 一闪而过 -->
+        <van-form ref="newTitleForm" @submit="saveTitle">
+          <!-- 修改点(2026-09-18)：v-model 直绑数字 type 会在框内显示 1/2，改为只读 :value 展示中文 -->
+          <van-field :value="form.type === 1 ? '个人' : '企业'" label="抬头类型" readonly is-link @click="typePickerShow = true"></van-field>
+          <van-field v-model="form.title" label="抬头名称" placeholder="个人填姓名，企业填公司名称" maxlength="50"
+                     :rules="newTitleRules"></van-field>
+          <van-field v-model="form.taxNumber" label="税号" placeholder="企业填写纳税人识别号（个人可留空）" maxlength="30"
+                     :rules="newTaxRules"></van-field>
+          <van-button native-type="submit" type="primary" plain block size="small" :loading="saving">保存抬头</van-button>
+        </van-form>
 
         <!-- 修改点：主 CTA 语义色 danger红/warning橙 → primary金（index.css 品牌化为金底深字） -->
         <van-button class="apply-btn" type="primary" block :disabled="!selectedTitleId" :loading="submitting" @click="apply">申请开票</van-button>
@@ -87,11 +92,16 @@
     <van-popup v-model="editPopupShow" position="bottom" round :close-on-click-overlay="false">
       <div class="edit-popup">
         <div class="edit-popup-title">编辑抬头</div>
-        <!-- 修改点(2026-09-18)：编辑弹窗抬头类型同样以中文展示，避免显示原始数字 -->
-        <van-field :value="editForm.type === 1 ? '个人' : '企业'" label="抬头类型" readonly is-link @click="editTypePickerShow = true"></van-field>
-        <van-field v-model="editForm.title" label="抬头名称" placeholder="个人填姓名，企业填公司名称" maxlength="50"></van-field>
-        <van-field v-model="editForm.taxNumber" label="税号" placeholder="企业填写纳税人识别号（个人可留空）" maxlength="30"></van-field>
-        <van-button type="primary" block @click="saveEditTitle" :loading="editing">保存修改</van-button>
+        <!-- 编辑弹窗同样走 van-form 内联校验 -->
+        <van-form ref="editTitleForm" @submit="saveEditTitle">
+          <!-- 修改点(2026-09-18)：编辑弹窗抬头类型同样以中文展示，避免显示原始数字 -->
+          <van-field :value="editForm.type === 1 ? '个人' : '企业'" label="抬头类型" readonly is-link @click="editTypePickerShow = true"></van-field>
+          <van-field v-model="editForm.title" label="抬头名称" placeholder="个人填姓名，企业填公司名称" maxlength="50"
+                     :rules="editTitleRules"></van-field>
+          <van-field v-model="editForm.taxNumber" label="税号" placeholder="企业填写纳税人识别号（个人可留空）" maxlength="30"
+                     :rules="editTaxRules"></van-field>
+          <van-button native-type="submit" type="primary" block :loading="editing">保存修改</van-button>
+        </van-form>
       </div>
     </van-popup>
 
@@ -121,8 +131,8 @@
           // 抬头
           titles: [],
           selectedTitleId: null,
-          // 刚保存的抬头名，用于列表刷新后自动选中（后端 save 不返回新 id）
-          pendingSelectTitle: '',
+          // 刚保存的抬头（名称+税号），用于列表刷新后自动选中（后端 save 不返回新 id）
+          pendingSelect: null,
           // 新增抬头表单
           form: { type: 1, title: '', taxNumber: '' },
           typePickerShow: false,
@@ -156,28 +166,56 @@
           if (s == 2) return 'success'
           if (s == 3) return 'default'
           return 'default'
+        },
+        // 新增抬头：抬头名称非空（去空白）
+        newTitleRules: function() {
+          return [{ validator: function(v) { return (v || '').trim().length > 0; }, message: '请填写抬头名称' }];
+        },
+        // 新增抬头：企业类型才校验税号，个人留空合法
+        newTaxRules: function() {
+          var self = this;
+          return [{ validator: function(v) {
+            if (self.form.type !== 2) { return true; }
+            return self.normalizeTaxNumber(v) != null;
+          }, message: '请填写正确的企业税号（15/17/18/20位字母或数字）' }];
+        },
+        editTitleRules: function() {
+          return [{ validator: function(v) { return (v || '').trim().length > 0; }, message: '请填写抬头名称' }];
+        },
+        editTaxRules: function() {
+          var self = this;
+          return [{ validator: function(v) {
+            if (self.editForm.type !== 2) { return true; }
+            return self.normalizeTaxNumber(v) != null;
+          }, message: '请填写正确的企业税号（15/17/18/20位字母或数字）' }];
         }
       },
       created: function() {
         // 未登录前置拦截：发票信息敏感，重定向登录页并携带回跳地址
-        if (!sessionStorage.getItem('userPhone')) {
-          window.location.href = '/front/page/login.html?redirect='
-            + encodeURIComponent(window.location.pathname + window.location.search);
-          return
-        }
+        // 修复：新标签页本地登录态丢失但 cookie 会话可能仍有效，先静默恢复
         var self = this
-        var q = this.parseQuery()
-        this.orderId = q.orderId || ''
-        this.orderNo = q.orderNo || ''
-        this.amountText = q.amount ? Number(q.amount).toFixed(2) : '0.00'
-        if (!this.orderId) {
-          vant.Notify({ type: 'warning', message: '参数错误，请从订单页进入' })
-          return
-        }
-        this.loadInvoice()
-        this.loadTitles()
+        restoreUserSession().then(function(ok) {
+          if (!ok) {
+            window.location.href = '/front/page/login.html?redirect='
+              + encodeURIComponent(window.location.pathname + window.location.search);
+            return
+          }
+          self.startAfterLogin()
+        })
       },
       methods: {
+        startAfterLogin: function() {
+          var q = this.parseQuery()
+          this.orderId = q.orderId || ''
+          this.orderNo = q.orderNo || ''
+          this.amountText = q.amount ? Number(q.amount).toFixed(2) : '0.00'
+          if (!this.orderId) {
+            vant.Notify({ type: 'warning', message: '参数错误，请从订单页进入' })
+            return
+          }
+          this.loadInvoice()
+          this.loadTitles()
+        },
         parseQuery: function() {
           var q = {}
           var pairs = (window.location.search || '').substring(1).split('&')
@@ -220,11 +258,14 @@
           invoiceTitleListApi().then(function(res) {
             if (res.code === 1) {
               self.titles = res.data || []
-              if (self.pendingSelectTitle) {
-                // 新建抬头保存后自动选中匹配项，避免仍停在旧抬头导致开错票
-                var created = self.titles.find(function(x) { return x.title === self.pendingSelectTitle })
+              if (self.pendingSelect) {
+                // 新建抬头保存后自动选中匹配项；名称+税号双键匹配，避免同名抬头选到旧记录
+                var created = self.titles.find(function(x) {
+                  return x.title === self.pendingSelect.title
+                      && (x.taxNumber || '') === (self.pendingSelect.taxNumber || '')
+                })
                 if (created) { self.selectedTitleId = created.id }
-                self.pendingSelectTitle = ''
+                self.pendingSelect = null
               } else if (self.titles.length > 0 && self.selectedTitleId === null) {
                 self.selectedTitleId = self.titles[0].id
               }
@@ -247,25 +288,17 @@
           this.editTypePickerShow = false
         },
         // 保存抬头编辑
+        // van-form 校验通过后才会触发 submit，此处不再重复 toast 校验名称/税号
         saveEditTitle: function() {
           var self = this
-          var title = (this.editForm.title || '').trim()
-          var taxNumber = (this.editForm.taxNumber || '').trim()
           if (!this.editForm.id) {
             vant.Toast.fail('参数错误，请重试')
             return
           }
-          if (!title) {
-            vant.Toast.fail('请填写抬头名称')
-            return
-          }
+          var title = (this.editForm.title || '').trim()
+          var taxNumber = ''
           if (this.editForm.type === 2) {
-            var edited = this.normalizeTaxNumber(taxNumber)
-            if (!edited) {
-              vant.Toast.fail('请填写正确的企业税号（15/18位字母或数字）')
-              return
-            }
-            taxNumber = edited
+            taxNumber = this.normalizeTaxNumber((this.editForm.taxNumber || '').trim())
           }
           this.editing = true
           invoiceTitleUpdateApi(this.editForm.id, {
@@ -295,27 +328,19 @@
           return ok ? v : null
         },
         // 保存抬头
+        // van-form 校验通过后才会触发 submit
         saveTitle: function() {
           var self = this
           var title = (this.form.title || '').trim()
-          var taxNumber = (this.form.taxNumber || '').trim()
-          if (!title) {
-            vant.Toast.fail('请填写抬头名称')
-            return
-          }
+          var taxNumber = ''
           if (this.form.type === 2) {
-            var normalized = this.normalizeTaxNumber(taxNumber)
-            if (!normalized) {
-              vant.Toast.fail('请填写正确的企业税号（15/18位字母或数字）')
-              return
-            }
-            taxNumber = normalized
+            taxNumber = this.normalizeTaxNumber((this.form.taxNumber || '').trim())
           }
           this.saving = true
           invoiceTitleSaveApi({ type: this.form.type, title: title, taxNumber: taxNumber }).then(function(res) {
             if (res.code === 1) {
               vant.Toast.success('抬头已保存')
-              self.pendingSelectTitle = title
+              self.pendingSelect = { title: title, taxNumber: taxNumber }
               self.form.title = ''
               self.form.taxNumber = ''
               self.loadTitles()

@@ -62,7 +62,7 @@ public class UserControllerTest {
             redisTemplate.delete(lockedKeys);
         }
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         // 创建测试用户
         User user = new User();

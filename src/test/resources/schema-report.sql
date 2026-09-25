@@ -1,9 +1,7 @@
 -- Report module test schema (H2 compatible)
 
-DROP TABLE IF EXISTS order_detail;
-DROP TABLE IF EXISTS orders;
 
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
   id bigint NOT NULL COMMENT '主键',
   number varchar(50) NULL DEFAULT NULL COMMENT '订单',
   status int NOT NULL DEFAULT 1 COMMENT '订单状',
@@ -47,7 +45,7 @@ CREATE TABLE orders (
   PRIMARY KEY (id)
 );
 
-CREATE TABLE order_detail (
+CREATE TABLE IF NOT EXISTS order_detail (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   name varchar(50) NOT NULL COMMENT '名称',
   order_id bigint NOT NULL COMMENT '订单id',
@@ -66,4 +64,3 @@ CREATE TABLE order_detail (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
-CREATE INDEX idx_order_detail_order ON order_detail(order_id);

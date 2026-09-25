@@ -68,7 +68,7 @@ class UserFavoriteServiceTest {
     @BeforeEach
     void setUp() {
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @AfterEach
@@ -84,7 +84,7 @@ class UserFavoriteServiceTest {
         d.setPrice(new BigDecimal(price));
         d.setImage("img/" + id + ".jpg");
         d.setStatus(status);
-        d.setTenantId(1L);
+        d.setTenantId(999L);
         return d;
     }
 
@@ -94,7 +94,7 @@ class UserFavoriteServiceTest {
         f.setUserId(1L);
         f.setTargetType(UserFavorite.TYPE_DISH);
         f.setTargetId(targetId);
-        f.setTenantId(1L);
+        f.setTenantId(999L);
         return f;
     }
 

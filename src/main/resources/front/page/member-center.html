@@ -96,6 +96,16 @@
           <div class="mc-prog-fill" :style="{width: progressPct + '%'}"></div>
         </div>
       </div>
+      <!-- 已达最高等级：进度条不再整块消失，给满进度条与满级反馈 -->
+      <div class="mc-card-progress" v-else-if="memberInfo.isMember">
+        <div class="mc-prog-label">
+          <span>已达最高等级{{ memberInfo.level ? ' ' + memberInfo.level.name : '' }}</span>
+          <span class="next">尊享全部权益</span>
+        </div>
+        <div class="mc-prog-bar">
+          <div class="mc-prog-fill" style="width:100%"></div>
+        </div>
+      </div>
       <div class="mc-non-member" v-else-if="!memberInfo.isMember">
         成为会员，享专属折扣与权益
         <van-button type="warning" size="small" round class="mc-activate-btn" @click="activateMember">立即开通</van-button>
@@ -113,7 +123,7 @@
         <div class="mc-benefit">
           <div class="mc-benefit-icon mc-benefit-icon--gold" :class="{locked: !memberInfo || !memberInfo.isMember}"><i class="ri-vip-diamond-line"></i></div>
           <div class="mc-benefit-name">等级折扣</div>
-          <div class="mc-benefit-desc" v-if="memberInfo && memberInfo.level && memberInfo.level.discount != null">{{ (memberInfo.level.discount * 100).toFixed(0) }}折优惠</div>
+          <div class="mc-benefit-desc" v-if="memberInfo && memberInfo.level && memberInfo.level.discount != null">{{ formatDiscount(memberInfo.level.discount) }}折优惠</div>
           <div class="mc-benefit-desc" v-else>按等级享优惠</div>
         </div>
         <div class="mc-benefit">
@@ -341,6 +351,11 @@
       created: function() { this.loadAll() },
       beforeDestroy: function() { this.stopRechargePolling() },
       methods: {
+        // 等级折扣格式化：0.95 → "9.5"，0.9 → "9"（原 (discount*100) 把 9.5 折显示成 95 折）
+        formatDiscount(d) {
+          var s = (Number(d) * 10).toFixed(1)
+          return s.slice(-2) === '.0' ? s.slice(0, -2) : s
+        },
         async loadAll() {
           this.loading = true
           // 修改点：getMyMemberInfo 独立 try/catch。此前会员信息接口失败会直接抛到外层，
@@ -476,6 +491,7 @@
         startRechargePolling: function() {
           this.stopRechargePolling()
           this._rcTicks = 0
+          this._rcFailTicks = 0
           this._rcTimer = setInterval(this.pollRechargeStatus, 3000)
         },
         pollRechargeStatus: async function() {
@@ -484,6 +500,7 @@
           try {
             var res = await getRechargeStatusApi(this.pending.rechargeNo)
             if (res.code === 1) {
+              this._rcFailTicks = 0
               var st = (res.data || {}).status
               if (st === 'SUCCESS') {
                 this.stopRechargePolling()
@@ -495,13 +512,25 @@
                 this.pending.show = false
                 vant.Toast.fail('充值单已取消')
               }
+            } else {
+              this.onRechargePollFail()
             }
-          } catch(e) { /* 轮询失败，下一次重试 */ }
+          } catch(e) { this.onRechargePollFail() }
           // 最多轮询约10分钟（200次×3s），超时静默停止
           if (this._rcTicks >= 200) { this.stopRechargePolling() }
         },
         stopRechargePolling: function() {
           if (this._rcTimer) { clearInterval(this._rcTimer); this._rcTimer = null }
+        },
+        // 连续约30秒（10次×3s）查询失败才提示一次并停轮询，零散失败静默重试，既不轰炸也不无感
+        onRechargePollFail: function() {
+          this._rcFailTicks = (this._rcFailTicks || 0) + 1
+          if (this._rcFailTicks >= 10) {
+            this.stopRechargePolling()
+            if (this.pending.show) {
+              vant.Toast.fail('充值状态查询中断，请稍后在会员中心查看')
+            }
+          }
         },
         showRules: function() {
           vant.Dialog.alert({

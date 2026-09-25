@@ -59,7 +59,7 @@ public class DishControllerTest extends BaseControllerTest {
         cleaner.cleanTables("dish_flavor", "dish", "category");
 
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         // 确保测试分类存在（saveDish 需要校验分类存在性）
         Category category = new Category();
@@ -106,7 +106,7 @@ public class DishControllerTest extends BaseControllerTest {
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/dish")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto))))
                 .andExpect(status().isOk())
@@ -120,7 +120,7 @@ public class DishControllerTest extends BaseControllerTest {
                 .param("page", "1")
                 .param("pageSize", "10")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.records[0].name").value("测试菜品"));
@@ -133,7 +133,7 @@ public class DishControllerTest extends BaseControllerTest {
                 .param("pageSize", "10")
                 .param("name", "测试")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.total").value(1));
@@ -143,7 +143,7 @@ public class DishControllerTest extends BaseControllerTest {
     void testGetById() throws Exception {
         mockMvc.perform(get("/dish/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.name").value("测试菜品"));
@@ -173,7 +173,7 @@ public class DishControllerTest extends BaseControllerTest {
 
         mockMvc.perform(withCsrfToken(mockMvc, put("/dish")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto))))
                 .andExpect(status().isOk())
@@ -199,7 +199,7 @@ public class DishControllerTest extends BaseControllerTest {
         mockMvc.perform(withCsrfToken(mockMvc, delete("/dish")
                 .param("ids", "2")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)))
+                .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("删除成功"));
@@ -212,7 +212,7 @@ public class DishControllerTest extends BaseControllerTest {
         mockMvc.perform(withCsrfToken(mockMvc, post("/dish/status/0")
                 .param("ids", "1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -238,7 +238,7 @@ public class DishControllerTest extends BaseControllerTest {
         mockMvc.perform(withCsrfToken(mockMvc, post("/dish/status/0")
                 .param("ids", "1,2")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
@@ -252,7 +252,7 @@ public class DishControllerTest extends BaseControllerTest {
         mockMvc.perform(get("/dish/list")
                 .param("categoryId", "1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data[0].name").value("测试菜品"));

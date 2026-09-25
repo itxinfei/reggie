@@ -48,11 +48,11 @@ public class QueueControllerTest {
 
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         QueueRecord record = new QueueRecord();
         record.setId(1L);
-        record.setTenantId(1L);
+        record.setTenantId(999L);
         record.setQueueNo("A001");
         record.setPhone("13800138000");
         record.setSeatCount(2);
@@ -67,7 +67,7 @@ public class QueueControllerTest {
                 .param("page", "1")
                 .param("pageSize", "10")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.records[0].queueNo").value("A001"));
@@ -77,7 +77,7 @@ public class QueueControllerTest {
     void testTakeNumber() throws Exception {
         mockMvc.perform(post("/api/dining/queue/take")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"seatCount\":4,\"phone\":\"13900139000\"}"))
                 .andExpect(status().isOk())
@@ -91,7 +91,7 @@ public class QueueControllerTest {
     void testCallNext() throws Exception {
         mockMvc.perform(put("/api/dining/queue/call")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"seatCount\":2}"))
                 .andExpect(status().isOk())
@@ -103,12 +103,12 @@ public class QueueControllerTest {
         // 先取消所有等待中的顾客
         mockMvc.perform(put("/api/dining/queue/cancel/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk());
 
         mockMvc.perform(put("/api/dining/queue/call")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"seatCount\":2}"))
                 .andExpect(status().isOk())
@@ -119,7 +119,7 @@ public class QueueControllerTest {
     void testCancel() throws Exception {
         mockMvc.perform(put("/api/dining/queue/cancel/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("取消排队成功"));
@@ -129,7 +129,7 @@ public class QueueControllerTest {
     void testCancelNonExistent() throws Exception {
         mockMvc.perform(put("/api/dining/queue/cancel/999")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }
@@ -139,7 +139,7 @@ public class QueueControllerTest {
         // 准备 FREE 桌台
         DiningTable table = new DiningTable();
         table.setId(10L);
-        table.setTenantId(1L);
+        table.setTenantId(999L);
         table.setName("测试桌10");
         table.setSeatCount(4);
         table.setStatus(DiningTableStatus.FREE.getValue());
@@ -153,7 +153,7 @@ public class QueueControllerTest {
         // 安排入座并指定桌台 → 应联动开台
         mockMvc.perform(put("/api/dining/queue/seat")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"queueId\":1,\"tableId\":10}"))
                 .andExpect(status().isOk())

@@ -43,7 +43,7 @@ public class GroupBuyServiceTest {
 
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @Test
@@ -249,7 +249,7 @@ public class GroupBuyServiceTest {
 
     private void insertPaidParticipation(Long campaignId, Long orderId, Long userId) {
         GroupBuyParticipation p = new GroupBuyParticipation();
-        p.setTenantId(1L);
+        p.setTenantId(999L);
         p.setGroupBuyId(campaignId);
         p.setOrderId(orderId);
         p.setUserId(userId);

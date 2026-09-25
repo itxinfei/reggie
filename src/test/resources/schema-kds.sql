@@ -30,4 +30,4 @@ CREATE TABLE IF NOT EXISTS kitchen_ticket (
 );
 
 -- 清理测试残留数据
-DELETE FROM kitchen_ticket WHERE tenant_id = 1;
+DELETE FROM kitchen_ticket WHERE tenant_id = 999;

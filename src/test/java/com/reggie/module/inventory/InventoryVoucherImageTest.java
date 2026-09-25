@@ -52,12 +52,12 @@ public class InventoryVoucherImageTest {
 
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     private Material prepareMaterial(String name) {
         Material material = new Material();
-        material.setTenantId(1L);
+        material.setTenantId(999L);
         material.setCategoryId(1L);
         material.setName(name);
         material.setUnit("瓶");
@@ -71,7 +71,7 @@ public class InventoryVoucherImageTest {
     @Test
     void testSupplierLicenseImages() {
         Supplier supplier = new Supplier();
-        supplier.setTenantId(1L);
+        supplier.setTenantId(999L);
         supplier.setName("资质供应商");
         supplier.setContact("王五");
         supplier.setPhone("13500135000");
@@ -107,7 +107,7 @@ public class InventoryVoucherImageTest {
     @Test
     void testCreateOrderVoucherImages() {
         Supplier supplier = new Supplier();
-        supplier.setTenantId(1L);
+        supplier.setTenantId(999L);
         supplier.setName("采购供应商");
         supplier.setContact("赵六");
         supplier.setPhone("13600136000");

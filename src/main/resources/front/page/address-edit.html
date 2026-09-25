@@ -258,12 +258,16 @@
         },
         created() {
             // 未登录前置拦截：重定向登录页并携带回跳地址（含编辑 id）
-            if (!sessionStorage.getItem('userPhone')) {
-                window.location.href = '/front/page/login.html?redirect='
-                    + encodeURIComponent(window.location.pathname + window.location.search);
-                return;
-            }
-            this.initData()
+            // 修复：新标签页本地登录态丢失但 cookie 会话可能仍有效，先静默恢复
+            var self = this;
+            restoreUserSession().then(function (ok) {
+                if (!ok) {
+                    window.location.href = '/front/page/login.html?redirect='
+                        + encodeURIComponent(window.location.pathname + window.location.search);
+                    return;
+                }
+                self.initData();
+            });
         },
         methods: {
             // ---- 标签样式 ----
@@ -298,7 +302,8 @@
                         this.form = {
                             consignee: d.consignee || '',
                             phone: d.phone || '',
-                            sex: String(d.sex || '1'),
+                            // 注意：sex=0 是女士，原写法 String(d.sex || '1') 会把 0 吞掉回显成男
+                            sex: (d.sex === 0 || d.sex === '0') ? '0' : '1',
                             provinceCode: d.provinceCode || '', provinceName: d.provinceName || '',
                             cityCode: d.cityCode || '', cityName: d.cityName || '',
                             districtCode: d.districtCode || '', districtName: d.districtName || '',
@@ -528,13 +533,19 @@
                         res = await addAddressApi(this.form)
                     }
                     if (res.code === 1) {
+                        var backToCheckout = sessionStorage.getItem('addressFromCheckout') === '1'
+                        if (backToCheckout) {
+                            sessionStorage.removeItem('addressFromCheckout')
+                            // 关键：新建地址后必须把新 id 回写给结算页，
+                            // 否则 selectedAddressId 仍为空/旧值，本单可能送错地方
+                            var chosenId = this.id || (res.data && res.data.id)
+                            if (chosenId) sessionStorage.setItem('selectedAddressId', String(chosenId))
+                        }
                         vant.Toast.success && vant.Toast.success('保存成功')
                         setTimeout(function () {
                             // 修改点：从结算页跳转来时（addressFromCheckout=1），
                             // 保存成功后直接跳回结算页，不再卡在地址列表。
-                            // 后端已自动将首个地址设为默认，getDefault() 能正确返回。
-                            if (sessionStorage.getItem('addressFromCheckout') === '1') {
-                                sessionStorage.removeItem('addressFromCheckout')
+                            if (backToCheckout) {
                                 window.location.replace('/front/page/add-order.html')
                             } else {
                                 window.location.replace('/front/page/address.html')

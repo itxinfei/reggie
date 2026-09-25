@@ -69,6 +69,13 @@
       </div>
     </div>
 
+    <!-- 加载失败错误态：与"暂无数据"区分，避免网络失败被误读成没有发票 -->
+    <div class="empty-state" v-else-if="loadError">
+      <i class="ri-wifi-line"></i>
+      <p class="empty-text">加载失败，请稍后重试</p>
+      <button class="empty-action" @click="loadData">重新加载</button>
+    </div>
+
     <!-- 空状态：三段式（图标+主标题+引导副文案+操作按钮） -->
     <div class="empty-state" v-else-if="!loading">
       <i class="ri-file-text-line"></i>
@@ -103,6 +110,7 @@
         return {
           loading: false,
           refreshing: false,
+          loadError: false,
           records: [],
           total: 0,
           page: 1,
@@ -111,12 +119,16 @@
       },
       created: function() {
         // 未登录前置拦截：重定向登录页并携带回跳地址
-        if (!sessionStorage.getItem('userPhone')) {
-          window.location.href = '/front/page/login.html?redirect='
-            + encodeURIComponent(window.location.pathname + window.location.search);
-          return
-        }
-        this.loadData()
+        // 修复：新标签页本地登录态丢失但 cookie 会话可能仍有效，先静默恢复
+        var self = this
+        restoreUserSession().then(function(ok) {
+          if (!ok) {
+            window.location.href = '/front/page/login.html?redirect='
+              + encodeURIComponent(window.location.pathname + window.location.search);
+            return
+          }
+          self.loadData()
+        })
       },
       methods: {
         // 修改点：下拉刷新（refreshing 由 loadData.finally 复位）
@@ -127,15 +139,20 @@
         loadData: function() {
           var self = this
           this.loading = true
+          this.loadError = false
           invoiceMyPageApi({ page: this.page, pageSize: this.pageSize }).then(function(res) {
             if (res.code === 1) {
               self.records = (res.data && res.data.records) || []
               self.total = (res.data && res.data.total) || 0
             } else {
+              self.loadError = true
               vant.Toast.fail(res.msg || '加载发票记录失败')
             }
           }).catch(function(err) {
-            if (err.message !== 'NOTLOGIN') vant.Toast.fail('加载发票记录失败')
+            if (err.message !== 'NOTLOGIN') {
+              self.loadError = true
+              vant.Toast.fail('加载发票记录失败')
+            }
           }).finally(function() {
             self.loading = false
             // 修改点：下拉刷新与实际加载同步

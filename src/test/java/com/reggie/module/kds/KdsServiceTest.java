@@ -54,7 +54,7 @@ public class KdsServiceTest {
     void setUp() {
         cleaner.cleanTables("kitchen_ticket", "order_detail", "orders");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     /** 构造一个订单（orders.id 测试库无自增，需手动指定） */
@@ -68,7 +68,7 @@ public class KdsServiceTest {
         o.setCustomerCount(2);
         o.setAmount(new BigDecimal("58.00"));
         o.setRemark("不要香菜");
-        o.setTenantId(1L);
+        o.setTenantId(999L);
         orderMapper.insert(o);
         return o;
     }
@@ -80,7 +80,7 @@ public class KdsServiceTest {
         d.setDishFlavor(flavor);
         d.setNumber(num);
         d.setAmount(new BigDecimal("29.00"));
-        d.setTenantId(1L);
+        d.setTenantId(999L);
         orderDetailMapper.insert(d);
     }
 

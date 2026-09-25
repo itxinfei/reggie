@@ -49,7 +49,7 @@ public class PrinterServiceTest {
     @BeforeEach
     void setUp() {
         cleaner.cleanTables("order_detail", "orders", "print_task");
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
         testOrder = new Orders();
         testOrder.setId(100L);
         testOrder.setNumber("TEST202607010001");
@@ -81,7 +81,7 @@ public class PrinterServiceTest {
         testDetails.add(d2);
 
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
         orderService.save(testOrder);
     }
 

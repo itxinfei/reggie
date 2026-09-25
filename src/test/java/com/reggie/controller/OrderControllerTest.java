@@ -64,16 +64,16 @@ public class OrderControllerTest extends BaseControllerTest {
     void setUp() {
         cleaner.cleanTables("order_detail", "orders", "dish", "dish_flavor", "category", "shopping_cart", "address_book", "user");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         jdbcTemplate.update("INSERT INTO user (id, name, phone, status, create_time, tenant_id) VALUES (?, ?, ?, ?, ?, ?)",
-                1L, "测试用户", "13800138000", 1, java.time.LocalDateTime.now(), 1L);
+                1L, "测试用户", "13800138000", 1, java.time.LocalDateTime.now(), 999L);
 
         // 插入分类和菜品（submit 会查询菜品并扣减库存，dish 表不在租户忽略列表中，需设置 tenant_id）
         jdbcTemplate.update("INSERT INTO category (id, name, type, sort, create_time, update_time, create_user, update_user, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                1L, "测试分类", 1, 1, java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 1L);
+                1L, "测试分类", 1, 1, java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 999L);
         jdbcTemplate.update("INSERT INTO dish (id, category_id, name, code, price, status, stock_qty, image, description, create_time, update_time, create_user, update_user, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                1L, 1L, "测试菜品", "001", new BigDecimal("10.00"), 1, new BigDecimal("100"), "test.jpg", "测试", java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 1L);
+                1L, 1L, "测试菜品", "001", new BigDecimal("10.00"), 1, new BigDecimal("100"), "test.jpg", "测试", java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 999L);
 
         AddressBook address = new AddressBook();
         address.setId(1L);
@@ -104,7 +104,7 @@ public class OrderControllerTest extends BaseControllerTest {
         // 控制器返回 Map（id/number/amount/status/duplicate），不再是纯字符串
         mockMvc.perform(withCsrfToken(mockMvc, post("/order/submit")
                 .sessionAttr("user", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"addressBookId\":1}")))
                 .andExpect(status().isOk())
@@ -116,16 +116,17 @@ public class OrderControllerTest extends BaseControllerTest {
 
     @Test
     void testSubmitWithFullReduction() throws Exception {
+        cleaner.cleanTables("marketing_campaign", "full_reduction_rule", "campaign_usage_record");
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         // 生效满减活动：满20减5（setUp 购物车商品金额=2×10=20，正好命中）
         jdbcTemplate.update("INSERT INTO marketing_campaign (id, tenant_id, name, campaign_type, status, start_time, end_time, create_time, update_time, create_user, update_user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                10L, 1L, "满20减5", 1, 1, now.minusDays(1), now.plusDays(1), now, now, 1L,1L);
+                10L, 999L, "满20减5", 1, 1, now.minusDays(1), now.plusDays(1), now, now, 1L,1L);
         jdbcTemplate.update("INSERT INTO full_reduction_rule (id, campaign_id, rule_name, discount_type, min_amount, discount_value, status, tenant_id, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                1L, 10L, "满20减5", 1, new BigDecimal("20.00"), new BigDecimal("5.00"), 1, 1L, now, now);
+                1L, 10L, "满20减5", 1, new BigDecimal("20.00"), new BigDecimal("5.00"), 1, 999L, now, now);
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/order/submit")
                 .sessionAttr("user", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"addressBookId\":1}")))
                 .andExpect(status().isOk())
@@ -133,7 +134,7 @@ public class OrderControllerTest extends BaseControllerTest {
 
         // 商品20（无配送费/券）- 满减5 = 实付15，且满减金额落库
         Map<String, Object> orderRow = jdbcTemplate.queryForMap(
-                "SELECT amount, full_reduction_amount FROM orders ORDER BY id DESC LIMIT 1");
+                "SELECT amount, full_reduction_amount FROM orders WHERE tenant_id = 999 ORDER BY id DESC LIMIT 1");
         assertEquals(0, new BigDecimal(String.valueOf(orderRow.get("amount"))).compareTo(new BigDecimal("15.00")));
         assertEquals(0, new BigDecimal(String.valueOf(orderRow.get("full_reduction_amount"))).compareTo(new BigDecimal("5.00")));
         // 核销记录1条，支撑每人限次与对账
@@ -144,11 +145,12 @@ public class OrderControllerTest extends BaseControllerTest {
 
     @Test
     void testSubmitEmptyCart() throws Exception {
-        shoppingCartService.remove(null);
+        shoppingCartService.remove(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ShoppingCart>().eq("user_id", 1L));
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/order/submit")
                 .sessionAttr("user", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"addressBookId\":1}")))
                 .andExpect(status().isOk())
@@ -170,7 +172,7 @@ public class OrderControllerTest extends BaseControllerTest {
                 .param("page", "1")
                 .param("pageSize", "10")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.records[0].number").value("2024001"));
@@ -192,7 +194,7 @@ public class OrderControllerTest extends BaseControllerTest {
                 .param("pageSize", "10")
                 .param("number", "2024002")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.total").value(1));
@@ -211,7 +213,7 @@ public class OrderControllerTest extends BaseControllerTest {
 
         mockMvc.perform(get("/order/list")
                 .sessionAttr("user", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data[0].number").value("2024010"));
@@ -258,7 +260,7 @@ public class OrderControllerTest extends BaseControllerTest {
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/order/again")
                 .sessionAttr("user", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":40}")))
                 .andExpect(status().isOk())
@@ -279,7 +281,7 @@ public class OrderControllerTest extends BaseControllerTest {
 
         mockMvc.perform(withCsrfToken(mockMvc, put("/order")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":50,\"status\":3}")))
                 .andExpect(status().isOk())

@@ -1,12 +1,9 @@
 -- Customer Service module test schema (MySQL compatible)
 -- Matches entity column names from MyBatis-Plus default camelCase conversion
 
-DROP TABLE IF EXISTS cs_message;
-DROP TABLE IF EXISTS cs_session;
-DROP TABLE IF EXISTS complaint;
 
 -- CsSession entity (@TableName("cs_session"))
-CREATE TABLE cs_session (
+CREATE TABLE IF NOT EXISTS cs_session (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   session_no varchar(50) NULL DEFAULT NULL COMMENT '会话编号',
   user_id bigint NULL DEFAULT NULL COMMENT '用户ID',
@@ -27,7 +24,7 @@ CREATE TABLE cs_session (
 );
 
 -- CsMessage entity (@TableName("cs_message"))
-CREATE TABLE cs_message (
+CREATE TABLE IF NOT EXISTS cs_message (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   session_id bigint NOT NULL COMMENT '会话ID',
   sender_type int NULL DEFAULT NULL COMMENT '发类 1-用户 2-客服 3-系统',
@@ -43,7 +40,7 @@ CREATE TABLE cs_message (
 );
 
 -- Complaint entity (@TableName("complaint"))
-CREATE TABLE complaint (
+CREATE TABLE IF NOT EXISTS complaint (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   complaint_no varchar(50) NULL DEFAULT NULL COMMENT '投诉编号',
   user_id bigint NULL DEFAULT NULL COMMENT '用户ID',

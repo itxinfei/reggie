@@ -2,14 +2,10 @@
 -- Matches entity column names from MyBatis-Plus default camelCase conversion
 -- Note: cost module tables do NOT have is_deleted column (physical delete)
 
-DROP TABLE IF EXISTS other_cost;
-DROP TABLE IF EXISTS labor_cost;
-DROP TABLE IF EXISTS cost_record;
-DROP TABLE IF EXISTS dish_cost;
 
 -- DishCost entity (@TableName("dish_cost"))
 -- Columns: id, dishId, dishName, materialCost, laborCost, otherCost, totalCost, salePrice, profitRate, remark, tenantId, createTime, updateTime, createUser, updateUser
-CREATE TABLE dish_cost (
+CREATE TABLE IF NOT EXISTS dish_cost (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   dish_id bigint NULL DEFAULT NULL COMMENT '菜品ID',
   dish_name varchar(100) NULL DEFAULT NULL COMMENT '菜品名称',
@@ -30,7 +26,7 @@ CREATE TABLE dish_cost (
 
 -- CostRecord entity (@TableName("cost_record"))
 -- Columns: id, costType, refId, refName, amount, costDate, remark, tenantId, createTime, createUser
-CREATE TABLE cost_record (
+CREATE TABLE IF NOT EXISTS cost_record (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   cost_type int NULL DEFAULT NULL COMMENT '成本类型 1-食材/2-人工/3-其他',
   ref_id bigint NULL DEFAULT NULL COMMENT '关联ID',
@@ -47,7 +43,7 @@ CREATE TABLE cost_record (
 
 -- LaborCost entity (@TableName("labor_cost"))
 -- Columns: id, employeeId, employeeName, salary, socialInsurance, housingFund, otherBenefits, totalCost, costMonth, remark, tenantId, createTime, updateTime, createUser, updateUser
-CREATE TABLE labor_cost (
+CREATE TABLE IF NOT EXISTS labor_cost (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   employee_id bigint NULL DEFAULT NULL COMMENT '员工ID',
   employee_name varchar(50) NULL DEFAULT NULL COMMENT '员工姓名',
@@ -68,7 +64,7 @@ CREATE TABLE labor_cost (
 
 -- OtherCost entity (@TableName("other_cost"))
 -- Columns: id, name, costType, amount, costDate, remark, tenantId, createTime, updateTime, createUser, updateUser
-CREATE TABLE other_cost (
+CREATE TABLE IF NOT EXISTS other_cost (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   name varchar(100) NULL DEFAULT NULL COMMENT '成本名称',
   cost_type int NULL DEFAULT NULL COMMENT '成本类型 1-租金/2-水电/3-设/4-耗材/5-营销/6-其他',

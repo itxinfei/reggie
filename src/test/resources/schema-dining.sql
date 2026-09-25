@@ -1,14 +1,10 @@
 -- Dining module test schema (H2 compatible)
 -- Matches entity column names from MyBatis-Plus default camelCase conversion
 
-DROP TABLE IF EXISTS dining_queue;
-DROP TABLE IF EXISTS dining_reservation;
-DROP TABLE IF EXISTS dining_table;
-DROP TABLE IF EXISTS dining_area;
 
 -- TableArea entity (@TableName("dining_area"))
 -- Columns: id, tenantId, name, sort, createdTime, updateTime
-CREATE TABLE dining_area (
+CREATE TABLE IF NOT EXISTS dining_area (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   name varchar(50) NULL DEFAULT NULL COMMENT '区域名称',
@@ -24,7 +20,7 @@ CREATE TABLE dining_area (
 -- DiningTable entity (table name from class: dining_table)
 -- Columns: id, tenantId, areaId, name, seatCount, status, minAmount, qrCodeUrl, currentOrderId, sort, createdTime, updateTime
 -- areaName is @TableField(exist=false), not persisted
-CREATE TABLE dining_table (
+CREATE TABLE IF NOT EXISTS dining_table (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   area_id bigint NULL DEFAULT NULL COMMENT '区域ID',
@@ -45,7 +41,7 @@ CREATE TABLE dining_table (
 
 -- QueueRecord entity (@TableName("dining_queue"))
 -- Columns: id, tenantId, queueNo, phone, seatCount, status, createdTime, updateTime
-CREATE TABLE dining_queue (
+CREATE TABLE IF NOT EXISTS dining_queue (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   queue_no varchar(32) NULL DEFAULT NULL COMMENT '排队',
@@ -62,7 +58,7 @@ CREATE TABLE dining_queue (
 
 -- Reservation entity (@TableName("dining_reservation"))
 -- Columns: id, tenantId, tableId, customerName, phone, reservedTime, seatCount, status, remark, createdTime, updateTime
-CREATE TABLE dining_reservation (
+CREATE TABLE IF NOT EXISTS dining_reservation (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   table_id bigint NULL DEFAULT NULL COMMENT '桌台ID',

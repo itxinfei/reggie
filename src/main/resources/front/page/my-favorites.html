@@ -35,7 +35,7 @@
                      v-for="item in items" :key="item.targetId">
                     <img v-if="item.image" :src="imgPath(item.image)" loading="lazy" class="dish-img"
                          :alt="item.name || '菜品图片'"
-                         @error="$event.target.src='./../images/noImg.png'"/>
+                         @error="imgFallback($event)"/>
                     <div v-else class="dish-img-placeholder">
                         <i class="ri-restaurant-line"></i>
                     </div>

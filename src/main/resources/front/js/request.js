@@ -84,6 +84,10 @@
       }
       // 修改点：防御性检查res和res.data，防止异常响应导致TypeError
       if (res && res.data && res.data.code === 0 && res.data.msg === 'NOTLOGIN') {
+        // 会话探测请求：留在原页，由调用方按游客态处理（与下方 401 分支开关一致）
+        if (res.config && res.config.skipAuthRedirect) {
+          return Promise.reject(new Error('NOTLOGIN'))
+        }
         // 修改点：本项目不使用iframe，直接用window.location
         clearCsrfToken();
         window.location.href = buildLoginUrl()
@@ -103,6 +107,11 @@
         var body = errResp.data;
         var isNotLogin = !body || (body.code === 0 && body.msg === 'NOTLOGIN');
         if (isNotLogin) {
+          // 请求声明 skipAuthRedirect：会话探测场景（如首页静默恢复登录态），
+          // 不强制跳登录页，reject 后由调用方按游客态处理
+          if (error.config && error.config.skipAuthRedirect) {
+            return Promise.reject(error);
+          }
           clearCsrfToken();
           var curPage = window.location.pathname;
           if (!curPage.includes('login')) {
@@ -131,14 +140,20 @@
       var reqMethod = (error && error.config && error.config.method || '').toLowerCase();
       var isMutating = reqMethod === 'post' || reqMethod === 'put'
           || reqMethod === 'delete' || reqMethod === 'patch';
-      if (!isMutating
+      // 单个请求可在 config 中声明 skipNoWifiRedirect（如后台轮询），
+      // 瞬断时留在原页由调用方静默重试，避免整页跳走丢掉用户已填草稿
+      var skipNoWifi = error && error.config && error.config.skipNoWifiRedirect;
+      if (!skipNoWifi
+          && !isMutating
           && (message === "Network Error" || message === "后端接口连接异常" || message.includes("timeout"))
           && !currentPage.includes('no-wifi')
           && !currentPage.includes('login')) {
         window.location.href = '/front/page/no-wifi.html'
       }
+      // silent 请求（后台轮询等）连错误横幅也不弹，由调用方静默处理
+      var isSilent = error && error.config && error.config.silent;
       // 修改点：防御性检查vant是否加载
-      if(window.vant && window.vant.Notify){
+      if(!isSilent && window.vant && window.vant.Notify){
         window.vant.Notify({
           message: message,
           type: 'warning',

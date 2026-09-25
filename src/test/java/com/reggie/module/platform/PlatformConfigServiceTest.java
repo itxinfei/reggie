@@ -33,7 +33,7 @@ public class PlatformConfigServiceTest {
 
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @Test
@@ -126,7 +126,7 @@ public class PlatformConfigServiceTest {
 
     @Test
     void testTenantIsolation() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
         platformConfigService.addConfig(buildConfig("MEITUAN", "A1", "k", "s", "t"));
         // 切到租户2，新建设置 tenant_id=2
         BaseContext.setCurrentTenantId(2L);

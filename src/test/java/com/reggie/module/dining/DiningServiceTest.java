@@ -39,13 +39,13 @@ public class DiningServiceTest {
 
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @Test
     void testAreaCrud() {
         TableArea area = new TableArea();
-        area.setTenantId(1L);
+        area.setTenantId(999L);
         area.setName("大厅");
         area.setSort(1);
         tableAreaService.save(area);
@@ -66,13 +66,13 @@ public class DiningServiceTest {
     @Test
     void testTableCrud() {
         TableArea area = new TableArea();
-        area.setTenantId(1L);
+        area.setTenantId(999L);
         area.setName("大厅");
         area.setSort(1);
         tableAreaService.save(area);
 
         DiningTable table = new DiningTable();
-        table.setTenantId(1L);
+        table.setTenantId(999L);
         table.setAreaId(area.getId());
         table.setName("A01");
         table.setSeatCount(4);
@@ -98,7 +98,7 @@ public class DiningServiceTest {
     @Test
     void testTableStatusChange() {
         DiningTable table = new DiningTable();
-        table.setTenantId(1L);
+        table.setTenantId(999L);
         table.setName("B01");
         table.setSeatCount(6);
         table.setStatus("FREE");
@@ -147,12 +147,12 @@ public class DiningServiceTest {
     @Test
     void testCreateReservation() {
         TableArea area = new TableArea();
-        area.setTenantId(1L);
+        area.setTenantId(999L);
         area.setName("大厅");
         tableAreaService.save(area);
 
         DiningTable table = new DiningTable();
-        table.setTenantId(1L);
+        table.setTenantId(999L);
         table.setAreaId(area.getId());
         table.setName("A01");
         table.setSeatCount(4);

@@ -50,13 +50,13 @@ public class InventoryServiceTest {
 
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @Test
     void testSupplierCrud() {
         Supplier supplier = new Supplier();
-        supplier.setTenantId(1L);
+        supplier.setTenantId(999L);
         supplier.setName("新供应商");
         supplier.setContact("李四");
         supplier.setPhone("13900139000");
@@ -76,7 +76,7 @@ public class InventoryServiceTest {
     @Test
     void testMaterialCategoryCrud() {
         MaterialCategory category = new MaterialCategory();
-        category.setTenantId(1L);
+        category.setTenantId(999L);
         category.setName("调味品");
         category.setSort(3);
         materialCategoryService.save(category);
@@ -89,7 +89,7 @@ public class InventoryServiceTest {
     @Test
     void testMaterialCrud() {
         Material material = new Material();
-        material.setTenantId(1L);
+        material.setTenantId(999L);
         material.setCategoryId(1L);
         material.setName("大白菜");
         material.setUnit("斤");
@@ -106,7 +106,7 @@ public class InventoryServiceTest {
     @Test
     void testStockIn() {
         Material material = new Material();
-        material.setTenantId(1L);
+        material.setTenantId(999L);
         material.setCategoryId(1L);
         material.setName("土豆");
         material.setUnit("斤");
@@ -129,7 +129,7 @@ public class InventoryServiceTest {
     @Test
     void testStockOut() {
         Material material = new Material();
-        material.setTenantId(1L);
+        material.setTenantId(999L);
         material.setCategoryId(1L);
         material.setName("猪肉");
         material.setUnit("斤");
@@ -148,7 +148,7 @@ public class InventoryServiceTest {
     @Test
     void testStockOutInsufficient() {
         Material material = new Material();
-        material.setTenantId(1L);
+        material.setTenantId(999L);
         material.setCategoryId(1L);
         material.setName("牛肉");
         material.setUnit("斤");
@@ -166,7 +166,7 @@ public class InventoryServiceTest {
     @Test
     void testStockWarning() {
         Material material = new Material();
-        material.setTenantId(1L);
+        material.setTenantId(999L);
         material.setCategoryId(1L);
         material.setName("鸡蛋");
         material.setUnit("个");
@@ -182,7 +182,7 @@ public class InventoryServiceTest {
     @Test
     void testPurchaseOrderFlow() {
         Material material = new Material();
-        material.setTenantId(1L);
+        material.setTenantId(999L);
         material.setCategoryId(1L);
         material.setName("大米");
         material.setUnit("袋");
@@ -232,7 +232,7 @@ public class InventoryServiceTest {
     @Test
     void testAddDetailAfterApproveRejected() {
         Material material = new Material();
-        material.setTenantId(1L);
+        material.setTenantId(999L);
         material.setCategoryId(1L);
         material.setName("面粉");
         material.setUnit("袋");
@@ -254,7 +254,7 @@ public class InventoryServiceTest {
     @Test
     void testStockCheck() {
         Material material = new Material();
-        material.setTenantId(1L);
+        material.setTenantId(999L);
         material.setCategoryId(1L);
         material.setName("食用油");
         material.setUnit("桶");
@@ -288,10 +288,10 @@ public class InventoryServiceTest {
     void testBatchRestockGroupsBySupplier() {
         // 两个供应商
         Supplier s1 = new Supplier();
-        s1.setTenantId(1L); s1.setName("补货供应商甲"); s1.setStatus(1);
+        s1.setTenantId(999L); s1.setName("补货供应商甲"); s1.setStatus(1);
         supplierService.save(s1);
         Supplier s2 = new Supplier();
-        s2.setTenantId(1L); s2.setName("补货供应商乙"); s2.setStatus(1);
+        s2.setTenantId(999L); s2.setName("补货供应商乙"); s2.setStatus(1);
         supplierService.save(s2);
 
         // 三个食材：甲供2个、乙供1个；记录初始库存，验证补货不自动入库
@@ -339,7 +339,7 @@ public class InventoryServiceTest {
     /** 构造补货测试食材：启用、带单价与初始库存 */
     private Material buildRestockMaterial(String name, Long supplierId, String stockQty) {
         Material m = new Material();
-        m.setTenantId(1L);
+        m.setTenantId(999L);
         m.setName(name);
         m.setUnit("斤");
         m.setSupplierId(supplierId);

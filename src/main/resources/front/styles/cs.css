@@ -78,6 +78,11 @@
   color: var(--color-text-secondary);
   text-align: center;
 }
+.chat-loading .retry-link {
+  margin-left: 6rem;
+  color: var(--color-primary);
+  font-weight: 600;
+}
 .msg-row {
   display: flex;
   align-items: flex-start;
@@ -151,6 +156,18 @@
   font-size: 12rem;
   color: var(--color-text-secondary);
   text-align: center;
+}
+.session-end .reconsult-btn {
+  display: inline-block;
+  margin-top: 12rem;
+  padding: 10rem 28rem;
+  font-size: 14rem;
+  color: var(--color-text-primary);
+  background: var(--color-primary);
+  border-radius: 22rem;
+}
+.session-end .reconsult-btn:active {
+  opacity: 0.85;
 }
 
 /* ---------- 底部输入栏 ---------- */

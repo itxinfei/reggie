@@ -39,24 +39,20 @@
   height: 20rem;
 }
 
-/* ---- 顶部导航栏（双行：定位+图标组 / 通栏搜索） ---- */
+/* ---- 顶部导航栏（单行：定位 | 搜索胶囊 | 右侧图标组） ---- */
 .top-bar {
-  padding-top: 6rem;
-}
-.top-bar-row {
   display: flex;
   align-items: center;
-}
-.top-bar-row--search {
-  margin-top: 10rem;
+  padding-top: 6rem;
 }
 
 .top-bar .location {
   display: flex;
   align-items: center;
-  /* 第一行定位占满剩余宽度，文字省略号兜底 */
-  flex: 1;
+  /* 定位取所需宽度并收缩省略，把主视觉宽度让给搜索胶囊 */
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 110rem;
   cursor: pointer;
 }
 
@@ -77,15 +73,17 @@
 }
 
 .top-bar .search-box {
-  /* 第二行通栏胶囊：左右对齐 header 边距 */
-  width: 100%;
-  box-sizing: border-box;
+  /* 搜索胶囊：夹在定位与右侧图标组之间占满剩余宽度 */
+  flex: 1;
+  min-width: 88rem;
+  margin-left: 10rem;
   height: 38rem;
   background: var(--surface-white-85);
   border-radius: 999rem;
   display: flex;
   align-items: center;
   padding: 0 14rem;
+  box-sizing: border-box;
   cursor: pointer;
   transition: background 0.2s, box-shadow 0.2s;
   box-shadow: var(--shadow-sm);
@@ -95,7 +93,28 @@
   background: var(--surface-white-95);
 }
 
-/* 修改点(2026-09-25)：双行布局后不再需要窄屏隐藏铃铛/AI 的 @media 妥协（整块移除）。 */
+/* 修改点(2026-09-25)：单行头部回到窄屏约束 —— 窄屏隐藏非核心的消息/AI 入口，
+   收紧定位文字，优先保障搜索胶囊可用（此前双行布局整块移除过该段） */
+@media screen and (max-width: 375px) {
+  .top-bar .msg-bell,
+  .top-bar .ai-entry {
+    display: none;
+  }
+  .top-bar .location {
+    max-width: 72rem;
+  }
+  .top-bar .location span {
+    font-size: 14rem;
+  }
+  .top-bar .search-box {
+    min-width: 76rem;
+    padding: 0 12rem;
+  }
+  .top-bar .search-box span {
+    font-size: 12rem;
+  }
+}
+
 /* 修改点(2026-09-24)：地址栏空态引导 —— 未选地址时弱提示样式（金色文字 + 下拉箭头），
    已选地址时保持原样式不受影响 */
 .top-bar .location-empty span {
@@ -417,119 +436,6 @@
   flex-shrink: 0;
   margin-left: 4rem;
   opacity: 0.5;
-}
-
-/* ================================================================
-   金刚区（白底大圆角卡，5 列 grid，数据复用 categoryList 前 10 项）
-   ================================================================ */
-.kingkong {
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  margin-top: 10rem;
-  padding: 6rem 0;
-  box-shadow: var(--shadow-card);
-}
-.kk-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-}
-.kk-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  /* 整格即点击区，≥44px 高，长分类名自然增高 */
-  min-height: 44rem;
-  padding: 6rem 2rem;
-  box-sizing: border-box;
-  cursor: pointer;
-}
-.kk-icon-wrap {
-  width: 40rem;
-  height: 40rem;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-primary-tint);
-}
-/* 无图标分类：首字圆底用实金底 + 深色字 */
-.kk-icon-wrap--char {
-  background: var(--color-primary);
-}
-.kk-icon {
-  font-family: remixicon;
-  font-size: 20rem;
-  line-height: 1;
-  color: var(--color-primary-dark);
-}
-.kk-char {
-  font-size: 17rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--color-primary-text);
-}
-.kk-text {
-  margin-top: 5rem;
-  font-size: 11rem;
-  line-height: 14rem;
-  color: var(--color-text-secondary);
-  text-align: center;
-  /* 长分类名最多两行，不破坏宫格 */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* ================================================================
-   Banner 轮播（默认无数据不渲染；圆角 12px、高 140rem、吸附滑动+指示点）
-   ================================================================ */
-.banner-wrap {
-  position: relative;
-  margin-top: 10rem;
-}
-.banner-track {
-  display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  border-radius: var(--radius-lg);
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-.banner-track::-webkit-scrollbar {
-  display: none;
-}
-.banner-slide {
-  flex: 0 0 100%;
-  scroll-snap-align: start;
-}
-.banner-slide img {
-  display: block;
-  width: 100%;
-  height: 140rem;
-  object-fit: cover;
-}
-.banner-dots {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 8rem;
-  display: flex;
-  justify-content: center;
-  gap: 5rem;
-}
-.banner-dot {
-  width: 5rem;
-  height: 5rem;
-  border-radius: 50%;
-  background: var(--surface-white-50);
-  transition: width var(--transition-fast), background var(--transition-fast);
-}
-.banner-dot.active {
-  width: 12rem;
-  border-radius: 3rem;
-  background: var(--color-text-white);
 }
 
 /* ================================================================
@@ -1094,6 +1000,16 @@
   cursor: pointer;
   transition: background-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s, opacity 0.15s;
   flex-shrink: 0;
+  position: relative;
+}
+/* 视觉高 36rem，伪元素把垂直点击热区补到 44rem（cart-bar 高 48rem，容得下） */
+.cart-bar .cart-submit::after {
+  content: '';
+  position: absolute;
+  top: -4rem;
+  bottom: -4rem;
+  left: -4rem;
+  right: -4rem;
 }
 
 .cart-bar .cart-submit-active {
@@ -2230,8 +2146,8 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 40rem;
-  height: 40rem;
+  width: 44rem;
+  height: 44rem;
   transform: translate(-50%, -50%);
 }
 .ri-add:active {

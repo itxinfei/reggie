@@ -559,6 +559,16 @@
 
 #order .od-notfound p { font-size: 14rem; margin: 0; }
 
+#order .od-retry-btn {
+  padding: 10rem 32rem;
+  font-size: 14rem;
+  color: var(--color-text-primary);
+  background: var(--color-primary);
+  border: none;
+  border-radius: 22rem;
+}
+#order .od-retry-btn:active { opacity: 0.85; }
+
 /* 固定底部操作栏 */
 #order .od-bar {
   position: fixed;

@@ -52,7 +52,7 @@ class CustomerPortalControllerTest {
     @BeforeEach
     void setUp() {
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @AfterEach

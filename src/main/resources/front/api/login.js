@@ -26,6 +26,8 @@ function getUserInfoApi() {
   return $axios({
     'url': '/user/info',
     'method': 'get',
+    // 取本人完整手机号，修复新标签页 sessionStorage 丢失后无法恢复真实手机号
+    params: { full: 1 }
   })
 }
 

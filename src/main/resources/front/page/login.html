@@ -275,14 +275,8 @@
                 this.$nextTick(() => {
                     if (this.$refs.phoneInput) this.$refs.phoneInput.focus()
                 })
-                // 修改点(2026-09-17 UX)：恢复持久化的验证码倒计时（防刷新绕过防刷间隔）
-                var savedDeadline = null
-                try { savedDeadline = sessionStorage.getItem('smsCodeDeadline') } catch(e) {}
-                if(savedDeadline && Number(savedDeadline) > Date.now()){
-                    this.startCountdown(Number(savedDeadline))
-                } else {
-                    try { sessionStorage.removeItem('smsCodeDeadline') } catch(e) {}
-                }
+                // 倒计时按手机号分别持久化（见 syncCountdownForPhone）：
+                // 页面刚打开时手机号为空，不恢复全局倒计时，避免锁住另一个号码的发码按钮
             },
             beforeDestroy(){
                 if(this.countdownTimer){
@@ -295,16 +289,39 @@
                 onPhoneInput(){
                     this.msgFlag = false
                     if(!this.phoneTouched) this.phoneTouched = true
+                    // 手机号变化：按该号码自己的 deadline 恢复/解除倒计时
+                    this.syncCountdownForPhone()
+                },
+                // 倒计时按手机号隔离：各号码 60s 防刷间隔独立，A 号的倒计时不再锁住 B 号的发码按钮
+                deadlineKey: function(phone){ return 'smsCodeDeadline_' + phone },
+                syncCountdownForPhone: function(){
+                    var phone = this.form.phone || ''
+                    var deadline = 0
+                    try {
+                        var raw = sessionStorage.getItem(this.deadlineKey(phone))
+                        if(raw) deadline = Number(raw)
+                    } catch(e) {}
+                    if(deadline > Date.now()){
+                        this.startCountdown(deadline, this.deadlineKey(phone))
+                    } else {
+                        if(this.countdownTimer){ clearInterval(this.countdownTimer); this.countdownTimer = null }
+                        this.countdown = 0
+                        if(deadline){
+                            try { sessionStorage.removeItem(this.deadlineKey(phone)) } catch(e) {}
+                        }
+                    }
                 },
                 // 修改点(2026-09-17 UX)：按截止时间戳驱动倒计时（支持刷新页面后恢复剩余秒数）
-                startCountdown(deadline){
+                startCountdown(deadline, storageKey){
                     var self = this
                     var tick = function(){
                         var left = Math.ceil((deadline - Date.now()) / 1000)
                         if(left <= 0){
                             self.countdown = 0
                             if(self.countdownTimer){ clearInterval(self.countdownTimer); self.countdownTimer = null }
-                            try { sessionStorage.removeItem('smsCodeDeadline') } catch(e) {}
+                            if(storageKey){
+                                try { sessionStorage.removeItem(storageKey) } catch(e) {}
+                            }
                         } else {
                             self.countdown = left
                         }
@@ -331,16 +348,18 @@
                     try {
                         const res = await sendMsgApi({phone: this.form.phone})
                         if(res.code === 1){
-                            // 修改点(2026-09-17 UX)：倒计时截止时间戳持久化 sessionStorage，
-                            // 刷新/重进页面恢复剩余秒数，防止刷页面绕过 60s 防刷间隔
+                            // 倒计时截止时间戳按手机号持久化 sessionStorage：
+                            // 刷新后重新输入同一手机号可恢复剩余秒数，换手机号不受其倒计时限制
                             var deadline = Date.now() + 60 * 1000
-                            try { sessionStorage.setItem('smsCodeDeadline', String(deadline)) } catch(e) {}
-                            this.startCountdown(deadline)
+                            var dKey = this.deadlineKey(this.form.phone)
+                            try { sessionStorage.setItem(dKey, String(deadline)) } catch(e) {}
+                            this.startCountdown(deadline, dKey)
                         } else {
                             vant.Notify({ type:'warning', message: res.msg || '验证码发送失败'});
                         }
                     } catch(e) {
-                        vant.Notify({ type:'warning', message:'网络异常，请稍后再试'});
+                        // 网络异常提示已由 request.js 拦截器统一 Notify，此处不重复弹
+                        console.warn('[login] 验证码发送异常:', e)
                     } finally {
                         this.sending = false
                     }
@@ -390,7 +409,8 @@
                             vant.Notify({ type:'warning', message:res.msg || '登录失败'});
                         }
                     } catch(e) {
-                        vant.Notify({ type:'warning', message:'网络异常，请稍后再试'});
+                        // 网络异常提示已由 request.js 拦截器统一 Notify，不重复弹
+                        console.warn('[login] 登录异常:', e)
                     } finally {
                         this.loading = false
                     }

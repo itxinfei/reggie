@@ -69,7 +69,7 @@ public class CostControllerTest {
     void setUp() {
         cleaner.cleanTables("dish_cost", "cost_record", "labor_cost", "other_cost");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     // ==================== 菜品成本管理 ====================
@@ -79,7 +79,7 @@ public class CostControllerTest {
     void testGetDishCostList_empty() throws Exception {
         mockMvc.perform(get("/cost/dish/list")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
@@ -95,7 +95,7 @@ public class CostControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cost/dish")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(dishCost))))
                 .andExpect(status().isOk())
@@ -126,7 +126,7 @@ public class CostControllerTest {
 
         mockMvc.perform(withCsrfToken(put("/cost/dish")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(saved))))
                 .andExpect(status().isOk())
@@ -151,7 +151,7 @@ public class CostControllerTest {
 
         mockMvc.perform(withCsrfToken(delete("/cost/dish/{id}", saved.getId())
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)))
+                        .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -171,7 +171,7 @@ public class CostControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cost/dish/batch")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(json)))
                 .andExpect(status().isOk())
@@ -196,7 +196,7 @@ public class CostControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cost/record")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(record))))
                 .andExpect(status().isOk())
@@ -227,7 +227,7 @@ public class CostControllerTest {
 
         mockMvc.perform(get("/cost/record/list?costType=1")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
@@ -250,7 +250,7 @@ public class CostControllerTest {
 
         mockMvc.perform(withCsrfToken(delete("/cost/record/{id}", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)))
+                        .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -274,7 +274,7 @@ public class CostControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cost/labor")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(laborCost))))
                 .andExpect(status().isOk())
@@ -305,7 +305,7 @@ public class CostControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cost/labor/batch")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(json)))
                 .andExpect(status().isOk())
@@ -329,7 +329,7 @@ public class CostControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cost/other")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(otherCost))))
                 .andExpect(status().isOk())
@@ -364,7 +364,7 @@ public class CostControllerTest {
 
         mockMvc.perform(get("/cost/summary?startDate=" + today + "&endDate=" + today)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isMap());
@@ -380,7 +380,7 @@ public class CostControllerTest {
 
         mockMvc.perform(get("/cost/dish/ranking?limit=5")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
@@ -395,7 +395,7 @@ public class CostControllerTest {
 
         mockMvc.perform(get("/cost/dish/profit-rate/{dishId}", 101L)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isNumber());
@@ -411,7 +411,7 @@ public class CostControllerTest {
 
         mockMvc.perform(get("/cost/alert?threshold=30")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray());
@@ -429,7 +429,7 @@ public class CostControllerTest {
         cost.setLaborCost(laborCost);
         cost.setOtherCost(otherCost);
         cost.setSalePrice(salePrice);
-        cost.setTenantId(1L);
+        cost.setTenantId(999L);
         return cost;
     }
 

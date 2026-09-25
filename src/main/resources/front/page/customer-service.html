@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="../styles/vant.min.css"/>
     <link rel="stylesheet" href="../styles/index.css?v=20260924" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-    <link rel="stylesheet" href="../styles/cs.css?v=20260922" />
+    <link rel="stylesheet" href="../styles/cs.css?v=20260925" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
 </head>
@@ -20,9 +20,9 @@
             <div class="divTitle">
                 <i class="ri-arrow-left-s-line" role="button" tabindex="0" aria-label="返回" @click="goBack" @keydown.enter="goBack"></i>{{ view === 'chat' ? '在线客服' : '我要投诉' }}
             </div>
-            <i v-if="view==='chat'" class="ri-error-warning-line head-home-btn" @click="view='complaint'"
+            <i v-if="view==='chat'" class="ri-error-warning-line head-home-btn" @click="switchView('complaint')"
                aria-label="我要投诉" title="我要投诉"></i>
-            <i v-else class="ri-customer-service-2-line head-home-btn" @click="view='chat'"
+            <i v-else class="ri-customer-service-2-line head-home-btn" @click="switchView('chat')"
                aria-label="返回客服" title="返回客服"></i>
         </div>
 
@@ -35,12 +35,16 @@
                 </div>
 
                 <!-- 无消息时的常见问题，点击直接发送 -->
-                <div class="quick-asks" v-if="messages.length===0 && !loading">
+                <div class="quick-asks" v-if="messages.length===0 && !loading && !initError">
                     <span class="quick-ask" v-for="q in quickQuestions" :key="q" @click="quickSend(q)">{{ q }}</span>
                 </div>
 
                 <div class="msg-list" ref="msgList">
                     <div v-if="loading" class="chat-loading">加载中…</div>
+                    <div v-else-if="initError" class="chat-loading">
+                        客服加载失败
+                        <span class="retry-link" @click="initChat">点击重试</span>
+                    </div>
                     <div class="msg-row" v-for="m in messages" :key="m.id"
                          :class="{ 'is-agent': m.senderType===2, 'is-system': m.senderType===3 }">
                         <div v-if="m.senderType===3" class="sys-msg">{{ m.content }}</div>
@@ -64,7 +68,10 @@
                             </div>
                         </template>
                     </div>
-                    <div v-if="sessionClosed" class="session-end">— 会话已结束 —</div>
+                    <div v-if="sessionClosed" class="session-end">
+                        — 会话已结束 —
+                        <div class="reconsult-btn" @click="restartSession">重新咨询</div>
+                    </div>
                 </div>
 
                 <!-- 输入栏 -->
@@ -231,6 +238,7 @@
                 return {
                     view: 'chat',
                     loading: false,
+                    initError: false,
                     activeSession: null,
                     messages: [],
                     draft: '',
@@ -272,23 +280,14 @@
                 }
             },
             created: function () {
-                this.userAvatar = sessionStorage.getItem('userAvatar') || '';
                 document.addEventListener('visibilitychange', this.onVisibility);
-                if (!sessionStorage.getItem('userPhone')) {
-                    this.toLogin();
-                    return;
-                }
-                // 修复(2026-09-23 P2-7)：sessionStorage 与服务端会话可能不一致（会话过期/换浏览器），
-                // 以轻量 /user/info 确认真实登录态，避免页面放行但后续接口全部 NOTLOGIN
+                // 修复：新标签页 sessionStorage 丢失但 cookie 会话可能仍有效，
+                // 先静默恢复（restoreUserSession 内部做 /user/info 探测），成功再初始化；失败才跳登录
                 var self = this;
-                $axios({ url: '/user/info', method: 'get' }).then(function (r) {
-                    if (r && r.code === 1) {
-                        self.initChat();
-                    } else {
-                        self.toLogin();
-                    }
-                }).catch(function () {
-                    self.toLogin();
+                restoreUserSession().then(function (ok) {
+                    if (!ok) { self.toLogin(); return; }
+                    self.userAvatar = sessionStorage.getItem('userAvatar') || '';
+                    self.initChat();
                 });
             },
             beforeDestroy: function () {
@@ -313,10 +312,22 @@
                         this.startPolling();
                     }
                 },
+                // 切换聊天/投诉视图：投诉视图不需要消息轮询，及时停掉避免空转请求
+                switchView: function (v) {
+                    if (this.view === v) { return; }
+                    this.view = v;
+                    if (v === 'complaint') {
+                        this.stopPolling();
+                    } else if (!this.sessionClosed) {
+                        this.pollMessages();
+                        this.startPolling();
+                    }
+                },
 
                 // ---------- 会话初始化 ----------
                 initChat: async function () {
                     this.loading = true;
+                    this.initError = false;
                     try {
                         // 从订单详情带入 orderId：优先复用该订单的进行中会话，否则创建订单类型会话
                         var presetOrderId = new URLSearchParams(window.location.search).get('orderId');
@@ -343,12 +354,39 @@
                         if (this.activeSession) {
                             await this.loadMessages();
                             this.startPolling();
+                        } else {
+                            // 接口返回成功但会话未建立（如创建会话业务失败），同样进入可重试错误态
+                            this.initError = true;
                         }
                     } catch (e) {
                         console.error('[客服] 初始化失败:', e);
+                        this.initError = true;
                         vant.Toast.fail('客服加载失败，请稍后重试');
                     } finally {
                         this.loading = false;
+                    }
+                },
+                // 会话被客服结束后，用户可主动发起新会话继续咨询
+                restartSession: async function () {
+                    if (this.sending) { return; }
+                    this.sending = true;
+                    try {
+                        var presetOrderId = new URLSearchParams(window.location.search).get('orderId');
+                        var cr = await csCreateSession(presetOrderId ? 2 : 1, presetOrderId || null);
+                        if (cr && cr.code === 1 && cr.data) {
+                            this.activeSession = cr.data;
+                            this.messages = [];
+                            this.draft = '';
+                            await this.loadMessages();
+                            this.startPolling();
+                        } else {
+                            vant.Toast.fail((cr && cr.msg) || '发起咨询失败，请稍后重试');
+                        }
+                    } catch (e) {
+                        console.error('[客服] 重新咨询失败:', e);
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    } finally {
+                        this.sending = false;
                     }
                 },
                 loadMessages: async function () {
@@ -363,7 +401,7 @@
                 pollMessages: async function () {
                     if (!this.activeSession) { return; }
                     try {
-                        var res = await csListMessages(this.activeSession.id);
+                        var res = await csListMessages(this.activeSession.id, { silent: true });
                         if (res && res.code === 1) {
                             var list = res.data || [];
                             if (list.length !== this.messages.length) {
@@ -420,12 +458,15 @@
                     }
                 },
                 pickImage: function () {
+                    // 无有效会话（初始化失败/会话已结束）时禁止选图，否则上传后无处发送
+                    if (!this.activeSession) { return; }
                     this.$refs.imgFile.click();
                 },
                 onImagePicked: async function (e) {
                     var file = e.target.files && e.target.files[0];
                     e.target.value = '';
                     if (!file) { return; }
+                    if (!this.activeSession) { return; }
                     if (file.size > 5 * 1024 * 1024) {
                         vant.Toast.fail('图片大小不能超过5MB');
                         return;

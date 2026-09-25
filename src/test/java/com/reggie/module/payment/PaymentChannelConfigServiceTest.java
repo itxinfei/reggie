@@ -46,7 +46,7 @@ public class PaymentChannelConfigServiceTest {
     @BeforeEach
     void setUp() {
         cleaner.cleanTables("payment_channel_config");
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     private PaymentChannelConfig buildWechat() {

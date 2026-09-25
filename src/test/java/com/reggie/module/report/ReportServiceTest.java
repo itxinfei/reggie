@@ -54,7 +54,7 @@ public class ReportServiceTest {
     @BeforeEach
     void setUp() {
         cleaner.cleanTables("order_detail", "orders");
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         Orders o1 = new Orders();
         o1.setId(1L);
@@ -195,7 +195,7 @@ public class ReportServiceTest {
         mockMvc.perform(get("/api/report/daily")
                         .param("date", "2026-07-01")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))

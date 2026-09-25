@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="../styles/vant.min.css" />
   <link rel="stylesheet" href="../styles/index.css?v=20260924" />
   <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-  <link rel="stylesheet" href="../styles/qrcode-order.css?v=20260924b" />
+  <link rel="stylesheet" href="../styles/qrcode-order.css?v=20260925" />
 </head>
 <body>
   <div id="dine-app">
@@ -65,7 +65,7 @@
       <div class="dish-rows">
         <div class="dish-row" v-for="dish in filteredDishes" :key="dish.id" :class="{'sold-out': isSoldOut(dish)}">
           <div class="dish-thumb">
-            <img :src="imgPath(dish.image)" loading="lazy" :alt="dish.name || '菜品图片'" @error="$event.target.src='../images/noImg.png'" />
+            <img :src="imgPath(dish.image)" loading="lazy" :alt="dish.name || '菜品图片'" @error="imgFallback($event)" />
             <div v-if="isSoldOut(dish)" class="sold-out-overlay">
               <span class="sold-out-text">售罄</span>
             </div>
@@ -122,7 +122,7 @@
           <i class="ri-shopping-cart-line"></i>
           <p>购物车是空的</p>
         </div>
-        <div v-for="item in cart" :key="item.dishId" class="cart-item">
+        <div v-for="item in cart" :key="item.dishId || ('s' + item.setmealId)" class="cart-item">
           <div class="cart-item-info">
             <div class="cart-item-name">{{ item.name }}</div>
             <div class="cart-item-price">¥{{ Number(item.price || 0).toFixed(2) }}</div>
@@ -207,6 +207,7 @@
   <script src="../api/food.js?v=20260917"></script>
   <script src="../api/dining.js?v=20260917"></script>
   <script src="../api/payment.js?v=20260917"></script>
+  <script src="../api/order.js?v=20260917"></script>
   <script>
     new Vue({
       el: '#dine-app',
@@ -320,6 +321,8 @@
           }
           // 行内步进器即时反馈，不再弹 Toast；购物车图标轻微弹跳一次
           this.triggerCartBounce()
+          // 选菜过程实时落 sessionStorage：刷新/标签页被回收后本桌已选菜可恢复，不静默丢菜
+          this.scheduleCartPersist()
         },
         // 行内步进器减一份：数量减到 0 时由 changeQty 移出购物车
         stepMinus: function(dish) {
@@ -345,11 +348,41 @@
           }, 10)
         },
         changeQty: function(item, delta) {
+          // 弹层内加量同样校验售罄/库存上限（套餐无库存概念，跳过）
+          if (delta > 0 && item.dishId) {
+            var dish = this.dishes.find(function(d) { return d.id === item.dishId })
+            if (dish) {
+              if (this.isSoldOut(dish)) {
+                vant.Toast.fail('该菜品已售罄')
+                return
+              }
+              if (dish.stockQty != null && item.qty >= dish.stockQty) {
+                vant.Toast.fail('库存不足')
+                return
+              }
+            }
+          }
           item.qty += delta
           if (item.qty <= 0) {
             var idx = this.cart.indexOf(item)
             if (idx >= 0) this.cart.splice(idx, 1)
           }
+          this.scheduleCartPersist()
+        },
+        // 购物车防抖持久化（400ms）：连续加菜只写一次；空车则清除暂存键
+        scheduleCartPersist: function() {
+          var self = this
+          if (this._cartPersistTimer) clearTimeout(this._cartPersistTimer)
+          this._cartPersistTimer = setTimeout(function() {
+            self._cartPersistTimer = null
+            try {
+              if (self.cart.length) {
+                sessionStorage.setItem(self.resumeCartKey(), JSON.stringify(self.cart))
+              } else {
+                sessionStorage.removeItem(self.resumeCartKey())
+              }
+            } catch (e) {}
+          }, 400)
         },
         cartTotal: function() {
           return this.cart.reduce(function(sum, item) { return sum + item.qty }, 0)
@@ -370,6 +403,7 @@
           }).then(function() {
             self.cart = []
             self.cartDialogVisible = false
+            self.scheduleCartPersist()
           }).catch(function() {})
         },
         showSubmitDialog: function() {
@@ -442,23 +476,29 @@
               customerCount: this.tableInfo ? this.tableInfo.seatCount : 4
             },
             orderDetails: orderDetails
-          }).then(async function(res) {
+          }).then(function(res) {
             if (res && res.code === 1 && res.data) {
               var created = res.data
               var pm = self.submitForm.payMethod
               if (pm === 2 || pm === 3) {
-                // 在线支付：堂食单后端已按支付方式置为待付款，直接创建支付并跳收银台
+                // 在线支付：堂食单后端已按支付方式置为待付款，创建支付并跳收银台
                 var channel = pm === 2 ? 'WECHAT' : 'ALIPAY'
-                var payRes = await paymentCreateApi({ orderId: created.id, channel: channel })
-                if (payRes && payRes.code === 1 && payRes.data && payRes.data.tradeNo) {
-                  self.cart = []
-                  self.clearCartForResume()
-                  window.location.replace('/front/page/pay-cashier.html?orderId=' + created.id
-                    + '&channel=' + channel + '&tradeNo=' + encodeURIComponent(payRes.data.tradeNo))
-                  return
-                }
-                vant.Toast.fail((payRes && payRes.data && payRes.data.errorMsg)
-                  || (payRes && payRes.msg) || '支付发起失败')
+                // 两阶段处理：订单此刻已创建。支付发起若失败/超时，不得提示"下单失败"
+                // 诱导用户重复下单，须引导去订单列表对已建订单续付
+                paymentCreateApi({ orderId: created.id, channel: channel }).then(function(payRes) {
+                  if (payRes && payRes.code === 1 && payRes.data && payRes.data.tradeNo) {
+                    self.cart = []
+                    self.clearCartForResume()
+                    window.location.replace('/front/page/pay-cashier.html?orderId=' + created.id
+                      + '&channel=' + channel + '&tradeNo=' + encodeURIComponent(payRes.data.tradeNo))
+                    return
+                  }
+                  console.error('[qrcode-order] 支付发起业务失败:', payRes)
+                  self.payCreateFailed()
+                }).catch(function(payErr) {
+                  console.error('[qrcode-order] 支付发起异常:', payErr)
+                  self.payCreateFailed()
+                })
                 return
               }
               // 到店支付(payMethod=6)：订单已提交为待接单，等待到店收银
@@ -472,9 +512,10 @@
               vant.Toast.fail((res ? res.msg : '') || '下单失败')
             }
           }).catch(function(err) {
-            // 修改点(2026-09-17 UX)：技术错误不再直接展示给用户（原会把 err 对象拼成 [object Object]）
+            // 下单请求本身失败/超时：订单可能已在后端创建。先按本桌+近5分钟回查待付款订单，
+            // 查到则引导续付，查无再提示重试，杜绝响应丢失后重复下单
             console.error('[qrcode-order] 下单失败:', err)
-            vant.Toast.fail('下单失败，请稍后重试')
+            self.recoverPendingOrder()
           }).finally(function() {
             self.submitting = false
           })
@@ -527,6 +568,48 @@
             var p = sessionStorage.getItem('userPhone') || ''
             if (/^1\d{10}$/.test(p)) this.submitForm.contactPhone = p
           }
+        },
+        // 下单请求失败后兜底：查当前用户待付款订单，只匹配本桌且 5 分钟内下单的记录
+        recoverPendingOrder: function() {
+          var self = this
+          var tid = Number(this.tableId)
+          orderPagingApi({ page: 1, pageSize: 10, status: 1 }).then(function(res) {
+            var found = null
+            if (res && res.code === 1 && res.data && res.data.records) {
+              var now = Date.now()
+              res.data.records.forEach(function(o) {
+                if (found || Number(o.tableId) !== tid) return
+                var t = self.parseOrderTime(o.orderTime)
+                // 5 分钟窗口：只认本次提交可能产生的订单，不把同桌历史待付款单误匹配
+                if (t && now - t <= 5 * 60 * 1000) found = o
+              })
+            }
+            if (found) {
+              self.payCreateFailed()
+            } else {
+              vant.Toast.fail('下单失败，请稍后重试')
+            }
+          }).catch(function(e) {
+            console.error('[qrcode-order] 待付款订单回查失败:', e)
+            vant.Toast.fail('下单失败，请稍后重试')
+          })
+        },
+        // 订单时间字符串兼容解析（yyyy-MM-dd HH:mm:ss 在部分浏览器需把 - 换成 /）
+        parseOrderTime: function(t) {
+          if (!t) return null
+          var ms = new Date(String(t).replace(/-/g, '/')).getTime()
+          return isNaN(ms) ? null : ms
+        },
+        // 订单已创建但支付未拉起：明确告知"订单已提交"，引导去订单列表续付，杜绝重复下单
+        payCreateFailed: function() {
+          vant.Dialog.alert({
+            title: '支付未完成',
+            message: '订单已提交成功，您可稍后在订单列表中找到该订单继续支付。'
+          }).then(function() {
+            window.location.replace('/front/page/order.html')
+          }).catch(function() {
+            window.location.replace('/front/page/order.html')
+          })
         }
       }
     })

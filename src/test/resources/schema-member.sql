@@ -1,13 +1,7 @@
 -- Member module test schema (H2 compatible)
 
-DROP TABLE IF EXISTS points_record;
-DROP TABLE IF EXISTS recharge_record;
-DROP TABLE IF EXISTS coupon_user;
-DROP TABLE IF EXISTS coupon_template;
-DROP TABLE IF EXISTS member;
-DROP TABLE IF EXISTS member_level;
 
-CREATE TABLE member_level (
+CREATE TABLE IF NOT EXISTS member_level (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   name varchar(50) NULL DEFAULT NULL COMMENT '等级名称',
@@ -24,7 +18,7 @@ CREATE TABLE member_level (
   PRIMARY KEY (id)
 );
 
-CREATE TABLE member (
+CREATE TABLE IF NOT EXISTS member (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   user_id bigint NULL DEFAULT NULL COMMENT '关联用户ID',
@@ -44,7 +38,7 @@ CREATE TABLE member (
   PRIMARY KEY (id)
 );
 
-CREATE TABLE coupon_template (
+CREATE TABLE IF NOT EXISTS coupon_template (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   name varchar(100) NULL DEFAULT NULL COMMENT '模板名称',
@@ -64,7 +58,7 @@ CREATE TABLE coupon_template (
   PRIMARY KEY (id)
 );
 
-CREATE TABLE coupon_user (
+CREATE TABLE IF NOT EXISTS coupon_user (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   member_id bigint NULL DEFAULT NULL COMMENT '会员ID',
@@ -82,9 +76,8 @@ CREATE TABLE coupon_user (
   PRIMARY KEY (id)
 );
 -- 修改点：防重复领取唯一索引（与 reggie.sql uk_member_template 对齐）
-CREATE UNIQUE INDEX uk_member_template ON coupon_user(member_id, template_id);
 
-CREATE TABLE points_record (
+CREATE TABLE IF NOT EXISTS points_record (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   member_id bigint NULL DEFAULT NULL COMMENT '会员ID',
@@ -103,7 +96,7 @@ CREATE TABLE points_record (
   UNIQUE KEY uq_points_biz (tenant_id, biz_type, biz_id, type)
 );
 
-CREATE TABLE recharge_record (
+CREATE TABLE IF NOT EXISTS recharge_record (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户id',
   member_id bigint NULL DEFAULT NULL COMMENT '会员ID',
@@ -124,5 +117,3 @@ CREATE TABLE recharge_record (
   PRIMARY KEY (id)
 );
 -- 充值单号唯一索引（NULL 不冲突，兼容历史无单号数据）
-CREATE UNIQUE INDEX uk_recharge_no ON recharge_record(recharge_no);
-CREATE INDEX idx_rr_member_status ON recharge_record(member_id, status);

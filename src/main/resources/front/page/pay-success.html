@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
     <head>
         <meta charset="UTF-8">
@@ -16,62 +16,108 @@
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js?v=20260917"></script>
         <!--本页面内容的样式-->
-        <link rel="stylesheet" href="./../styles/pay-success.css?v=20260924" />
+        <link rel="stylesheet" href="./../styles/pay-success.css?v=20260925b" />
     </head>
     <body>
         <div id="pay_success" class="app">
-            <cend-shell title="瑞吉外卖" light :show-back="true" :show-home="true">
+            <cend-shell title="瑞吉外卖" light :show-back="true" :show-home="true" @back="goBack">
             <div class="divContent">
-                <!-- 结果图标按订单状态切换：成功对勾（SVG 一次绘制）/ 取消灰 / 退款 -->
-                <svg class="success-icon success-icon-svg" viewBox="0 0 52 52" v-if="!resultState" aria-hidden="true">
-                    <circle class="ss-circle" cx="26" cy="26" r="24"/>
-                    <path class="ss-check" d="M14 27 L22.5 35.5 L38 18"/>
-                </svg>
-                <i class="ri-close-circle-fill cancel-icon" v-else-if="resultState === 'CANCELLED'" aria-hidden="true"></i>
-                <i class="ri-refund-2-line refund-icon" v-else aria-hidden="true"></i>
-                <div class="divSuccess">{{ resultTitle }}</div>
-                <div class="divOrderNo" v-if="orderNo">订单号：{{orderNo}}</div>
-                <div class="divAmount" v-if="amount > 0">实付金额：<span class="price">¥{{amount.toFixed(2)}}</span></div>
-                <!-- 预计送达时间（仅外卖、支付成功显示） -->
-                <div class="divEta" v-if="!resultState && !isEatIn">
-                    <i class="ri-time-line"></i>
-                    <span>预计 <strong>{{finishTime}}</strong> 送达</span>
-                </div>
-                <!-- 堂食：不适用配送，提示留意叫号 -->
-                <div class="divEta" v-if="!resultState && isEatIn">
-                    <i class="ri-notification-1-line"></i>
-                    <span>请留意商家叫号，凭桌台就餐</span>
-                </div>
-                <!-- 订单进度迷你条（取消/退款时不显示） -->
-                <div class="order-mini-progress" v-if="!resultState">
-                    <div class="mp-step done">
-                        <i class="ri-checkbox-circle-fill"></i>
-                        <span>已下单</span>
+                <!-- ============ 支付结果确认中（初始态，不渲染成功视觉） ============ -->
+                <van-loading v-if="phase === 'confirming'" class="ps-loading" size="40px" type="spinner" color="#9ca3af" vertical>支付结果确认中</van-loading>
+
+                <!-- ============ 支付成功 ============ -->
+                <template v-else-if="phase === 'success'">
+                    <!-- 成功对勾（SVG 一次绘制） -->
+                    <svg class="success-icon success-icon-svg" viewBox="0 0 52 52" aria-hidden="true">
+                        <circle class="ss-circle" cx="26" cy="26" r="24"/>
+                        <path class="ss-check" d="M14 27 L22.5 35.5 L38 18"/>
+                    </svg>
+                    <div class="divSuccess title-success">下单成功</div>
+                    <div class="divOrderNo" v-if="orderNo">订单号：{{orderNo}}</div>
+                    <div class="divAmount" v-if="amount > 0">实付金额：<span class="price">¥{{amount.toFixed(2)}}</span></div>
+                    <!-- 预计送达时间（仅外卖） -->
+                    <div class="divEta" v-if="!isEatIn">
+                        <i class="ri-time-line"></i>
+                        <span>预计 <strong>{{finishTime}}</strong> 送达</span>
                     </div>
-                    <div class="mp-line"></div>
-                    <div class="mp-step">
-                        <i class="ri-radio-button-line"></i>
-                        <span>商家接单</span>
+                    <!-- 堂食：提示留意叫号 -->
+                    <div class="divEta" v-else>
+                        <i class="ri-notification-1-line"></i>
+                        <span>请留意商家叫号，凭桌台就餐</span>
                     </div>
-                    <div class="mp-line"></div>
-                    <div class="mp-step">
-                        <i class="ri-radio-button-line"></i>
-                        <span>制作中</span>
+                    <!-- 订单进度迷你条 -->
+                    <div class="order-mini-progress">
+                        <div class="mp-step done">
+                            <i class="ri-checkbox-circle-fill"></i>
+                            <span>已下单</span>
+                        </div>
+                        <div class="mp-line"></div>
+                        <div class="mp-step">
+                            <i class="ri-radio-button-line"></i>
+                            <span>商家接单</span>
+                        </div>
+                        <div class="mp-line"></div>
+                        <div class="mp-step">
+                            <i class="ri-radio-button-line"></i>
+                            <span>制作中</span>
+                        </div>
+                        <div class="mp-line"></div>
+                        <div class="mp-step">
+                            <i class="ri-radio-button-line"></i>
+                            <span>{{ isEatIn ? '叫号上菜' : '配送中' }}</span>
+                        </div>
                     </div>
-                    <div class="mp-line"></div>
-                    <div class="mp-step">
-                        <i class="ri-radio-button-line"></i>
-                        <span>{{ isEatIn ? '叫号上菜' : '配送中' }}</span>
-                    </div>
-                </div>
-                <div class="divDesc1" v-if="!resultState">{{ isEatIn ? '后厨正在加紧制作，请留意叫号~' : '后厨正在加紧制作中，请耐心等待~' }}</div>
-                <div class="divDesc1" v-else-if="resultState === 'CANCELLED'">订单已取消，欢迎再次点餐</div>
-                <div class="divDesc1" v-else>退款将原路返回，请注意查收</div>
+                    <div class="divDesc1">{{ isEatIn ? '后厨正在加紧制作，请留意叫号~' : '后厨正在加紧制作中，请耐心等待~' }}</div>
+                </template>
+
+                <!-- ============ 已取消 ============ -->
+                <template v-else-if="phase === 'cancelled'">
+                    <i class="ri-close-circle-fill cancel-icon" aria-hidden="true"></i>
+                    <div class="divSuccess">订单已取消</div>
+                    <div class="divOrderNo" v-if="orderNo">订单号：{{orderNo}}</div>
+                    <div class="divAmount" v-if="amount > 0">实付金额：<span class="price">¥{{amount.toFixed(2)}}</span></div>
+                    <div class="divDesc1">订单已取消，欢迎再次点餐</div>
+                </template>
+
+                <!-- ============ 已退款 ============ -->
+                <template v-else-if="phase === 'refunded'">
+                    <i class="ri-refund-2-line refund-icon" aria-hidden="true"></i>
+                    <div class="divSuccess">订单已退款</div>
+                    <div class="divOrderNo" v-if="orderNo">订单号：{{orderNo}}</div>
+                    <div class="divAmount" v-if="amount > 0">退款金额：<span class="price">¥{{amount.toFixed(2)}}</span></div>
+                    <div class="divDesc1">退款将原路返回，请注意查收</div>
+                </template>
+
+                <!-- ============ 支付未完成 / 结果未确认 ============ -->
+                <template v-else>
+                    <i v-if="phase === 'unpaid'" class="ri-money-cny-circle-line unpaid-icon" aria-hidden="true"></i>
+                    <i v-else class="ri-question-line cancel-icon" aria-hidden="true"></i>
+                    <div class="divSuccess">{{ phase === 'unpaid' ? '支付未完成' : '支付结果未确认' }}</div>
+                    <div class="divOrderNo" v-if="orderNo">订单号：{{orderNo}}</div>
+                    <div class="divAmount" v-if="amount > 0">待付金额：<span class="price">¥{{amount.toFixed(2)}}</span></div>
+                    <div class="divDesc1">{{ phase === 'unpaid' ? '订单已提交但尚未完成支付，请尽快完成付款' : '暂未获取到支付结果，请在订单列表中核实' }}</div>
+                </template>
+
+                <!-- ============ 操作区（按阶段分流） ============ -->
                 <div class="divActions">
-                    <div class="btnView" @click="toOrderPage">查看订单</div>
-                    <div class="btnContinue" @click="goBack">
-                        <i class="ri-restaurant-line"></i> 继续点餐
-                    </div>
+                    <!-- 未支付：继续支付(主) + 重新点餐 -->
+                    <template v-if="phase === 'unpaid'">
+                        <div class="btnView" @click="continuePay">继续支付</div>
+                        <div class="btnContinue" @click="goBack">
+                            <i class="ri-restaurant-line"></i> 重新点餐
+                        </div>
+                    </template>
+                    <!-- 确认中：仅查看订单 -->
+                    <template v-else-if="phase === 'confirming'">
+                        <div class="btnView" @click="toOrderPage">查看订单</div>
+                    </template>
+                    <!-- 其余：查看订单 + 继续点餐 -->
+                    <template v-else>
+                        <div class="btnView" @click="toOrderPage">查看订单</div>
+                        <div class="btnContinue" @click="goBack">
+                            <i class="ri-restaurant-line"></i> 继续点餐
+                        </div>
+                    </template>
                 </div>
             </div>
             </cend-shell>
@@ -84,8 +130,8 @@
         <script src="./../js/common.js?v=20260924"></script>
         <script src="../js/vant.min.js"></script>
         <!-- C 端跨页面复用组件（必须在 vant 之后、new Vue 之前加载） -->
-        <script src="../js/components-cend.js?v=20260922"></script>
-        <!-- 修改点（P2-11）：支付结果回查依赖支付发起接口，加载 payment.js -->
+        <script src="../js/components-cend.js?v=20260925"></script>
+        <!-- 支付结果回查依赖支付发起接口，加载 payment.js -->
         <script src="./../api/payment.js?v=20260917"></script>
         <script src="./../api/order.js?v=20260917"></script>
         <script>
@@ -94,50 +140,37 @@
             data(){
                 return {
                     finishTime:'',
-                    // 修改点（P2-11）：订单列表「去支付」/下单后携带的订单 ID，用于回查支付结果
+                    // 订单列表「去支付」/下单后携带的订单 ID，用于回查支付结果
                     reorderId: '',
-                    // 修改点：展示订单号和实付金额
                     orderNo: '',
                     amount: 0,
-                    // 结果状态：''=支付成功，CANCELLED=已取消，REFUNDED=已退款
-                    resultState: '',
-                    // 是否堂食单（订单带 tableId 即为堂食）：结果页按此分流为叫号语义而非配送
+                    // 阶段：confirming=确认中(初始) · success · cancelled · refunded
+                    //       unpaid=仍待付款 · unknown=查不到结果（均中性，不显示成功）
+                    phase: 'confirming',
+                    // 是否堂食单（订单带 tableId 即为堂食）
                     isEatIn: false,
                     // 堂食桌台ID：「继续点餐」回到同一桌扫码页
                     tableId: ''
                 }
             },
-            computed:{
-                resultTitle: function () {
-                    if (this.resultState === 'CANCELLED') return '订单已取消'
-                    if (this.resultState === 'REFUNDED') return '订单已退款'
-                    return '下单成功'
-                }
-            },
             created(){
-                // 2026-09-22：头部改由 cend-shell 接管。本页「返回」语义为回首页（非 history.back），
-                // 覆盖 common.js 挂在 window 上的 goBack，保证组件返回钮行为与旧金头一致
-                var self = this
-                window.goBack = function(){ self.goBack() }
                 this.finishTime = getFinishTime()
-                // 修改点（P2-11）：解析 reorderId，主动查询该订单支付结果，避免用户停留在"下单成功"
-                // 页面而订单实际未支付（此前下单跳转后支付结果不可见，形成死循环）
+                // 解析 reorderId，主动回查支付结果，避免订单实际未支付却显示"下单成功"
                 var match = location.search.match(new RegExp('[?&]reorderId=([^&]+)'))
                 if(match){
                     this.reorderId = decodeURIComponent(match[1])
                     this.checkPayResult()
+                }else{
+                    // 无订单 ID（理论兼容旧跳转）：无法回查，按成功展示
+                    this.phase = 'success'
                 }
             },
             methods:{
-                // 修改点（P2-11）：根据订单号回查支付结果。查询成功/失败均为幂等操作，
-                // 结果通过 Toast 展示，不阻塞页面；错误静默（网络抖动）不影响主流程
-                // 修改点：轮询查询支付结果（最多5次，间隔2秒），异步支付回调可能延迟到达
+                // 轮询回查支付结果（最多5次，间隔2秒，异步回调可能延迟到达）
                 async checkPayResult(){
-                    if(!this.reorderId) return
                     var maxRetries = 5
                     var retryDelay = 2000
-                    // 修改点：轮询期间展示持续 loading（duration:0 不自动关闭，由成功/最终提示替换），
-                    // forbidClick:false 不拦截「查看订单」按钮，用户仍可主动跳转
+                    var lastStatus = null
                     vant.Toast.loading({ message: '支付结果确认中...', duration: 0, forbidClick: false })
                     for(var attempt = 1; attempt <= maxRetries; attempt++){
                         try {
@@ -146,37 +179,45 @@
                                 var d = res.data
                                 this.orderNo = d.number || d.orderNo || ''
                                 this.amount = Number(d.amount || d.actualAmount || 0)
-                                // 堂食单带 tableId：据此为结果页分流（叫号语义，而非配送）
+                                // 堂食单带 tableId：据此分流为叫号语义
                                 this.isEatIn = !!d.tableId
                                 this.tableId = d.tableId ? String(d.tableId) : ''
                                 var orderStatus = d.status || d.orderStatus
-                                // 2待接单/3派送中/4已完成/7已分账 均视为支付成功；
-                                // 5已取消、6已退款不得误报成功，否则用户放弃支付后不再下单
+                                lastStatus = orderStatus
+                                // 2待接单/3派送中/4已完成/7已分账 均视为支付成功
                                 if (orderStatus === 2 || orderStatus === 3 || orderStatus === 4 || orderStatus === 7) {
+                                    this.phase = 'success'
                                     vant.Toast.success('支付成功')
                                     return
                                 }
                                 if (orderStatus === 5) {
-                                    this.resultState = 'CANCELLED'
-                                    vant.Toast('订单已取消', { duration: 3000 })
+                                    this.phase = 'cancelled'
+                                    vant.Toast.clear()
                                     return
                                 }
                                 if (orderStatus === 6) {
-                                    this.resultState = 'REFUNDED'
-                                    vant.Toast('订单已退款', { duration: 3000 })
+                                    this.phase = 'refunded'
+                                    vant.Toast.clear()
                                     return
                                 }
+                                // status=1 待付款：继续轮询等待异步支付回调
                             }
                         } catch (e) {
                             console.warn('[pay-success] 第' + attempt + '次回查失败:', e)
                         }
-                        // 未确认成功且还有重试次数，等待后重试
                         if(attempt < maxRetries){
-                            await new Promise(function(resolve){ setTimeout(resolve, retryDelay) })
+                            await new Promise(function(resolve){ setTimeout(res, retryDelay) })
                         }
                     }
-                    // 所有重试均未确认成功
-                    vant.Toast('支付结果未确认，请在订单列表中查看', { duration: 3000 })
+                    // 轮询结束：仍待付款 → 支付未完成；查不到/出错 → 结果未确认（均不报成功）
+                    this.phase = lastStatus === 1 ? 'unpaid' : 'unknown'
+                    vant.Toast.clear()
+                },
+                // 未支付 → 结算页续付（与订单列表「去支付」同源）
+                continuePay(){
+                    window.requestAnimationFrame(()=>{
+                        window.location.replace('/front/page/add-order.html?reorderId=' + this.reorderId)
+                    })
                 },
                 goBack(){
                     window.requestAnimationFrame(()=>{
@@ -189,13 +230,10 @@
                     })
                 },
                 toOrderPage(){
-                    // 修改点(2026-09-17)：移除 orderFromPaySuccess 标志——order.html 从未读取，属死标志
                     window.requestAnimationFrame(()=>{
                         window.location.replace('/front/page/order.html')
-                    })  
-                },
-                // 修改点(2026-09-22)：toMainPage 随金色头部一并移除，首页入口由 cend-shell 内部处理
-                // 修改点(2026-09-17)：移除 shareOrder 死代码——模板无任何按钮调用该方法
+                    })
+                }
             }
         })
         </script>

@@ -18,9 +18,9 @@
 
     /* —— 勾选计数行 —— */
     .sel-bar { display: flex; align-items: center; gap: 8px; }
-    .sel-count { color: #909399; font-size: 13px; }
+    .sel-count { color: var(--text-muted); font-size: 13px; }
     .action-bar { display: flex; align-items: center; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
-    .action-bar__tip { color: #909399; font-size: 13px; }
+    .action-bar__tip { color: var(--text-muted); font-size: 13px; }
 
     /* ============ 预览弹窗（屏幕查看） ============ */
     .pv-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; flex-wrap: wrap; }
@@ -32,7 +32,7 @@
     .pv-page {
       height: 100%;
       aspect-ratio: 194 / 281;       /* A4 可打印区比例，所见即所得 */
-      background: #fff;
+      background: var(--bg-surface);
       border: 1px solid var(--el-border, #dcdfe6);
       box-shadow: 0 2px 12px rgba(0,0,0,0.08);
       display: grid;
@@ -41,7 +41,7 @@
     }
     .pv-cell {
       min-width: 0; min-height: 0;
-      border: 1px dashed #cfd3dc; border-radius: 3px;
+      border: 1px dashed var(--border-default); border-radius: 3px;
       display: flex;
     }
     .pv-cell img {
@@ -49,8 +49,8 @@
       margin: auto; display: block; object-fit: contain;
     }
     .pv-nav { width: 36px; height: 36px; flex-shrink: 0; }
-    .pv-pager { text-align: center; color: #909399; font-size: 13px; margin-top: 10px; }
-    .pv-cut-tip { text-align: center; color: #c0c4cc; font-size: 12px; margin-top: 4px; }
+    .pv-pager { text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 10px; }
+    .pv-cut-tip { text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 4px; }
     .dialog-footer.is-flex { display: flex; align-items: center; gap: 4px; }
     .dialog-footer__spacer { flex: 1; }
 
@@ -147,14 +147,14 @@
       :close-on-click-modal="false">
       <div class="pv-toolbar">
         <el-radio-group v-model="layout" size="small" @change="onLayoutChange">
-          <span style="color:#606266;font-size:13px;margin-right:8px;">每张纸</span>
+          <span style="color:var(--text-secondary);font-size:13px;margin-right:8px;">每张纸</span>
           <el-radio-button :label="1">1</el-radio-button>
           <el-radio-button :label="2">2</el-radio-button>
           <el-radio-button :label="4">4</el-radio-button>
           <el-radio-button :label="6">6</el-radio-button>
           <el-radio-button :label="9">9</el-radio-button>
         </el-radio-group>
-        <span style="color:#909399;font-size:12px;">切换后实时重排，无需重新生成</span>
+        <span style="color:var(--text-muted);font-size:12px;">切换后实时重排，无需重新生成</span>
       </div>
 
       <div class="pv-stage">
@@ -415,18 +415,18 @@
           vm.renderPageCanvas(pg).then(function (canvas) {
             return vm.saveCanvas(canvas, '桌贴A4_第' + (index + 1) + '页.png');
           }).then(function () {
-            vm.$message.success('已下载第 ' + (index + 1) + ' 页（高清 PNG，可直接按 A4 打印）');
+            ReggieUI.success('已下载第 ' + (index + 1) + ' 页（高清 PNG，可直接按 A4 打印）');
           });
         },
         downloadAll: function () {
           var vm = this;
           if (vm.posterPages.length > 1) {
-            vm.$message.info('若浏览器询问是否允许多个文件下载，请点「允许」');
+            ReggieUI.info('若浏览器询问是否允许多个文件下载，请点「允许」');
           }
           var i = 0;
           function step() {
             if (i >= vm.posterPages.length) {
-              vm.$message.success('已下载全部 ' + vm.posterPages.length + ' 张 A4 拼版图片');
+              ReggieUI.success('已下载全部 ' + vm.posterPages.length + ' 张 A4 拼版图片');
               return;
             }
             var idx = i++;

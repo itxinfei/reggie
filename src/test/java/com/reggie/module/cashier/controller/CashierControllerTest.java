@@ -74,7 +74,7 @@ public class CashierControllerTest {
     void setUp() {
         cleaner.cleanTables("cashier_record", "daily_settlement");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     // ==================== 收银记录管理 ====================
@@ -84,7 +84,7 @@ public class CashierControllerTest {
     void testGetCashierRecordList_empty() throws Exception {
         mockMvc.perform(get("/cashier/record/list")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
@@ -99,7 +99,7 @@ public class CashierControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cashier/record")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(record))))
                 .andExpect(status().isOk())
@@ -120,7 +120,7 @@ public class CashierControllerTest {
 
         mockMvc.perform(get("/cashier/record/order/{orderId}", 2001L)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.orderNumber").value("ORD002"));
@@ -131,7 +131,7 @@ public class CashierControllerTest {
     void testCashPayment_orderNotFound() throws Exception {
         mockMvc.perform(withCsrfToken(post("/cashier/cash-payment")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("orderId", "999999")
                         .param("orderNumber", "ORD_NOT_FOUND")
                         .param("amount", "120.00")
@@ -158,7 +158,7 @@ public class CashierControllerTest {
 
         mockMvc.perform(withCsrfToken(delete("/cashier/record/{id}", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)))
+                        .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -173,7 +173,7 @@ public class CashierControllerTest {
     void testGetDailySettlementList_empty() throws Exception {
         mockMvc.perform(get("/cashier/settlement/list")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
@@ -192,7 +192,7 @@ public class CashierControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/cashier/settlement/execute")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("settlementDate", settlementDate.toString())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
@@ -212,12 +212,12 @@ public class CashierControllerTest {
         settlement.setStatus(1);
         settlement.setSettlementUserId(1L);
         settlement.setSettlementUserName("操作员");
-        settlement.setTenantId(1L);
+        settlement.setTenantId(999L);
         settlementMapper.insert(settlement);
 
         mockMvc.perform(get("/cashier/settlement/date/{date}", "2026-08-20")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.settlementDate").value("2026-08-20"))
@@ -234,14 +234,14 @@ public class CashierControllerTest {
         settlement.setStatus(1);
         settlement.setSettlementUserId(1L);
         settlement.setSettlementUserName("操作员");
-        settlement.setTenantId(1L);
+        settlement.setTenantId(999L);
         settlementMapper.insert(settlement);
 
         LocalDate settlementDate = LocalDate.of(2026, 8, 21);
 
         mockMvc.perform(withCsrfToken(post("/cashier/settlement/cancel")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("settlementDate", settlementDate.toString())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
@@ -261,7 +261,7 @@ public class CashierControllerTest {
         settlement.setStatus(1);
         settlement.setSettlementUserId(1L);
         settlement.setSettlementUserName("操作员");
-        settlement.setTenantId(1L);
+        settlement.setTenantId(999L);
         settlementMapper.insert(settlement);
 
         DailySettlement saved = cashierService.getDailySettlementByDate(LocalDate.of(2026, 8, 22), 1L);
@@ -270,7 +270,7 @@ public class CashierControllerTest {
 
         mockMvc.perform(withCsrfToken(delete("/cashier/settlement/{id}", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)))
+                        .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -290,7 +290,7 @@ public class CashierControllerTest {
 
         mockMvc.perform(get("/cashier/statistics")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("startDate", "2026-08-27 00:00:00")
                         .param("endDate", "2026-08-27 23:59:59"))
                 .andExpect(status().isOk())
@@ -313,7 +313,7 @@ public class CashierControllerTest {
 
         mockMvc.perform(get("/cashier/statistics/payment-type")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("startDate", "2026-08-27 00:00:00")
                         .param("endDate", "2026-08-27 23:59:59"))
                 .andExpect(status().isOk())
@@ -331,7 +331,7 @@ public class CashierControllerTest {
 
         mockMvc.perform(get("/cashier/trend")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("startDate", "2026-08-27 00:00:00")
                         .param("endDate", "2026-08-27 23:59:59"))
                 .andExpect(status().isOk())
@@ -344,7 +344,7 @@ public class CashierControllerTest {
     void testGetDailySettlementSummary() throws Exception {
         mockMvc.perform(get("/cashier/settlement/summary")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("startDate", "2026-08-20")
                         .param("endDate", "2026-08-27"))
                 .andExpect(status().isOk())
@@ -363,7 +363,7 @@ public class CashierControllerTest {
         record.setAmount(amount);
         record.setActualAmount(actualAmount);
         record.setCashierTime(LocalDateTime.now());
-        record.setTenantId(1L);
+        record.setTenantId(999L);
         return record;
     }
 

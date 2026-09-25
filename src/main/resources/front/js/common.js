@@ -45,10 +45,48 @@ function loadEvalKeys(force) {
     return reggieEvalKeysPromise;
 }
 
+// 图片加载失败统一兜底：dataset 标记保证只兜底一次，
+// 避免兜底图本身也失败时 error 事件被无限触发（内联 $event.target.src=... 写法有此风险）
+function imgFallback(e) {
+    var el = e && e.target;
+    if (!el || el.dataset.imgFallback) return;
+    el.dataset.imgFallback = '1';
+    el.src = '/front/images/noImg.png';
+}
+
+// 静默恢复用户会话：sessionStorage 按 tab 隔离，新标签页/复制链接打开时本地登录态会丢失，
+// 但服务端 cookie 会话可能仍有效。以 /user/info?full=1 探测并回填本地缓存。
+// 返回 Promise<boolean>：true=已具备有效登录态（原有或恢复成功）；false=真实未登录。
+// 纯 GET 探测 + skipAuthRedirect，不会触发 NOTLOGIN 强制跳转，游客页面可安全调用。
+function restoreUserSession() {
+    var phone = '';
+    try { phone = sessionStorage.getItem('userPhone') || ''; } catch (e) {}
+    if (/^1\d{10}$/.test(phone)) { return Promise.resolve(true); }
+    if (typeof $axios !== 'function') { return Promise.resolve(false); }
+    return $axios({ url: '/user/info', method: 'get', params: { full: 1 },
+                    skipAuthRedirect: true, silent: true })
+        .then(function (r) {
+            var u = r && r.data;
+            // 仅接受完整手机号，脱敏/异常号不回填，避免污染本地登录态
+            if (r.code === 1 && u && /^1\d{10}$/.test(u.phone)) {
+                try {
+                    sessionStorage.setItem('userPhone', u.phone);
+                    if (u.id) { sessionStorage.setItem('userId', u.id); }
+                    if (u.name) { sessionStorage.setItem('userName', u.name); }
+                    if (u.avatar) { sessionStorage.setItem('userAvatar', u.avatar); }
+                } catch (e) {}
+                return true;
+            }
+            return false;
+        })
+        .catch(function () { return false; });
+}
+
 function installReggieVueHelpers(){
     if (!window.Vue || window.Vue.__reggieHelpersInstalled) return;
     window.Vue.mixin({ methods: {
         imgPath: function (p) { return imgPath(p); },
+        imgFallback: imgFallback,
         cssVar: cssVar,
         // 订单是否还有未评价商品；依赖实例数据 evalKeys（页面 created 用 loadEvalKeys 装配）
         canEvaluateOrder: function (order) {

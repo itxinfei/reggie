@@ -82,7 +82,7 @@ public class FinanceControllerTest {
     void setUp() {
         cleaner.cleanTables("withdrawal_application", "reconciliation_statement", "profit_analysis");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     // ==================== 提现管理 ====================
@@ -92,7 +92,7 @@ public class FinanceControllerTest {
     void testGetWithdrawalList_empty() throws Exception {
         mockMvc.perform(get("/finance/withdrawal/list")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
@@ -107,7 +107,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/finance/withdrawal")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .contentType("application/json")
                         .content(toJson(application))))
                 .andExpect(status().isOk())
@@ -134,7 +134,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/finance/withdrawal/{id}/review", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("status", String.valueOf(WithdrawalApplication.STATUS_APPROVED))
                         .param("remark", "审核通过")))
                 .andExpect(status().isOk())
@@ -158,7 +158,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/finance/withdrawal/{id}/review", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("status", String.valueOf(WithdrawalApplication.STATUS_REJECTED))
                         .param("remark", "资料不全")))
                 .andExpect(status().isOk())
@@ -185,7 +185,7 @@ public class FinanceControllerTest {
         // 再付款
         mockMvc.perform(withCsrfToken(post("/finance/withdrawal/{id}/payment", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("paymentNo", "PAY202608280001")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
@@ -209,7 +209,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/finance/withdrawal/{id}/cancel", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)))
+                        .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -230,7 +230,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(withCsrfToken(delete("/finance/withdrawal/{id}", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)))
+                        .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -250,7 +250,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(get("/finance/withdrawal/{id}", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.applicationNo").isNotEmpty())
@@ -270,7 +270,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(get("/finance/withdrawal/list?status=0")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
@@ -284,7 +284,7 @@ public class FinanceControllerTest {
     void testGetReconciliationList_empty() throws Exception {
         mockMvc.perform(get("/finance/reconciliation/list")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
@@ -298,7 +298,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/finance/reconciliation/generate")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("date", date.toString())
                         .param("platform", "all")))
                 .andExpect(status().isOk())
@@ -325,7 +325,7 @@ public class FinanceControllerTest {
         statement.setDifferenceAmount(BigDecimal.ZERO);
         statement.setOrderCount(10);
         statement.setStatus(ReconciliationStatement.STATUS_UNRECONCILED);
-        statement.setTenantId(1L);
+        statement.setTenantId(999L);
         reconciliationMapper.insert(statement);
 
         List<ReconciliationStatement> list = financeService.getReconciliationList(
@@ -334,7 +334,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/finance/reconciliation/{id}/confirm", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)))
+                        .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -356,7 +356,7 @@ public class FinanceControllerTest {
         statement.setDifferenceAmount(BigDecimal.ZERO);
         statement.setOrderCount(8);
         statement.setStatus(ReconciliationStatement.STATUS_UNRECONCILED);
-        statement.setTenantId(1L);
+        statement.setTenantId(999L);
         reconciliationMapper.insert(statement);
 
         List<ReconciliationStatement> list = financeService.getReconciliationList(
@@ -365,7 +365,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/finance/reconciliation/{id}/confirm", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)))
+                        .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -387,7 +387,7 @@ public class FinanceControllerTest {
         statement.setDifferenceAmount(BigDecimal.ZERO);
         statement.setOrderCount(5);
         statement.setStatus(ReconciliationStatement.STATUS_UNRECONCILED);
-        statement.setTenantId(1L);
+        statement.setTenantId(999L);
         reconciliationMapper.insert(statement);
 
         List<ReconciliationStatement> list = financeService.getReconciliationList(
@@ -396,7 +396,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(withCsrfToken(delete("/finance/reconciliation/{id}", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)))
+                        .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -416,7 +416,7 @@ public class FinanceControllerTest {
         statement.setDifferenceAmount(BigDecimal.ZERO);
         statement.setOrderCount(20);
         statement.setStatus(ReconciliationStatement.STATUS_UNRECONCILED);
-        statement.setTenantId(1L);
+        statement.setTenantId(999L);
         reconciliationMapper.insert(statement);
 
         List<ReconciliationStatement> list = financeService.getReconciliationList(
@@ -425,7 +425,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(get("/finance/reconciliation/{id}", id)
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.statementDate").value("2026-08-20"))
@@ -439,7 +439,7 @@ public class FinanceControllerTest {
     void testGetProfitAnalysisList_empty() throws Exception {
         mockMvc.perform(get("/finance/profit/list")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray())
@@ -453,7 +453,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(withCsrfToken(post("/finance/profit/generate")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("date", date.toString())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -476,12 +476,12 @@ public class FinanceControllerTest {
         analysis.setGrossProfit(new BigDecimal("2000.00"));
         analysis.setOrderCount(50);
         analysis.setCustomerCount(30);
-        analysis.setTenantId(1L);
+        analysis.setTenantId(999L);
         profitAnalysisMapper.insert(analysis);
 
         mockMvc.perform(get("/finance/profit/date/{date}", "2026-08-20")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.analysisDate").value("2026-08-20"))
@@ -499,7 +499,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(get("/finance/profit/trend")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("startDate", "2026-08-25")
                         .param("endDate", "2026-08-27"))
                 .andExpect(status().isOk())
@@ -517,7 +517,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(get("/finance/profit/structure")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("startDate", "2026-08-27")
                         .param("endDate", "2026-08-27"))
                 .andExpect(status().isOk())
@@ -539,7 +539,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(get("/finance/statistics")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L)
+                        .sessionAttr("tenantId", 999L)
                         .param("startDate", today.atStartOfDay().format(fmt))
                         .param("endDate", today.atTime(23, 59, 59).format(fmt)))
                 .andExpect(status().isOk())
@@ -560,7 +560,7 @@ public class FinanceControllerTest {
 
         mockMvc.perform(get("/finance/withdrawal/statistics")
                         .sessionAttr("employee", 1L)
-                        .sessionAttr("tenantId", 1L))
+                        .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isMap());
@@ -578,7 +578,7 @@ public class FinanceControllerTest {
         application.setWithdrawMethod(withdrawMethod);
         application.setReceiveAccount(receiveAccount);
         application.setReceiveName(receiveName);
-        application.setTenantId(1L);
+        application.setTenantId(999L);
         return application;
     }
 
@@ -591,7 +591,7 @@ public class FinanceControllerTest {
         analysis.setGrossProfit(grossProfit);
         analysis.setOrderCount(10);
         analysis.setCustomerCount(5);
-        analysis.setTenantId(1L);
+        analysis.setTenantId(999L);
         profitAnalysisMapper.insert(analysis);
     }
 

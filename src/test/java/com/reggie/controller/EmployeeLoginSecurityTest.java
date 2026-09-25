@@ -36,28 +36,28 @@ class EmployeeLoginSecurityTest {
     void setUp() {
         cleaner.cleanTables("employee");
 
-        // 创建测试用户 admin，密码为 123456 的 MD5 加密
-        Employee admin = new Employee();
-        admin.setId(1L);
-        admin.setUsername("admin");
-        admin.setName("管理员");
-        admin.setPassword("e10adc3949ba59abbe56e057f20f883e");
-        admin.setPasswordType("MD5");
-        admin.setPhone("13800138000");
-        admin.setSex("1");
-        admin.setIdNumber("110101199001011234");
-        admin.setStatus(1);
-        admin.setTenantId(1L);
-        admin.setCreateUser(1L);
-        admin.setUpdateUser(1L);
-        employeeService.save(admin);
+        // 创建测试专用账号 test_md5_login（隔离租户 999），密码为 123456 的 MD5
+        Employee md5User = new Employee();
+        md5User.setId(990001L);
+        md5User.setUsername("test_md5_login");
+        md5User.setName("管理员");
+        md5User.setPassword("e10adc3949ba59abbe56e057f20f883e");
+        md5User.setPasswordType("MD5");
+        md5User.setPhone("13800138000");
+        md5User.setSex("1");
+        md5User.setIdNumber("110101199001011234");
+        md5User.setStatus(1);
+        md5User.setTenantId(999L);
+        md5User.setCreateUser(990001L);
+        md5User.setUpdateUser(990001L);
+        employeeService.save(md5User);
     }
 
     @Test
     void testLoginWithBCryptPassword() throws Exception {
         mockMvc.perform(post("/employee/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"admin\",\"password\":\"123456\"}"))
+                .content("{\"username\":\"test_md5_login\",\"password\":\"123456\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(1));
     }
@@ -66,7 +66,7 @@ class EmployeeLoginSecurityTest {
     void testLoginWithWrongPassword() throws Exception {
         mockMvc.perform(post("/employee/login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"admin\",\"password\":\"wrong\"}"))
+                .content("{\"username\":\"test_md5_login\",\"password\":\"wrong\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0));
     }

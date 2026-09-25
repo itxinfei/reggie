@@ -281,7 +281,11 @@
                          提到 3072m 留出裕量，且在 16GB+ 空闲物理内存下可可靠连续分配。
                          @{argLine} 为 Maven 延迟属性解析，运行时注入 JaCoCo prepare-agent 设置的
                          javaagent，避免循环引用。 -->
-                    <argLine>@{argLine} -Xmx3072m -Xms512m</argLine>
+                    <!-- -Dfile.encoding=UTF-8：强制测试 JVM 默认字符集为 UTF-8。
+                         否则 Windows 中文系统默认 GBK，Spring 读取 @Sql 脚本（未显式指定 encoding 时
+                         用平台默认字符集）会把 UTF-8 中文按 GBK 解析，导致"测试菜品/测试套餐"等
+                         中文以乱码（娴嬭瘯鑿滃搧）入库。生产 Linux 默认即 UTF-8，测试对齐更真实。 -->
+                    <argLine>@{argLine} -Xmx3072m -Xms512m -Dfile.encoding=UTF-8</argLine>
                 </configuration>
             </plugin>
 

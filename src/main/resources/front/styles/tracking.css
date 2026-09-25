@@ -288,7 +288,8 @@
 
 /* 底部操作 */
 #tracking .bottom-actions {
-  padding: 10rem 12rem;
+  /* 底部留白叠加安全区，避免全面屏手势条遮挡按钮 */
+  padding: 10rem 12rem calc(10rem + env(safe-area-inset-bottom, 0px));
   display: flex;
   gap: 10rem;
 }

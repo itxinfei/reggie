@@ -43,7 +43,7 @@ public class SystemConfigControllerTest extends BaseControllerTest {
     void setUp() {
         cleaner.cleanTables("role", "permission", "role_permission", "system_config");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         // 创建测试配置
         systemConfigService.addTenantConfig("order.auto_cancel_minutes", "30");

@@ -91,7 +91,7 @@ class UrgencyUnacceptedScanTest {
         order.setStatus(Orders.STATUS_ORDERED);
         order.setOrderTime(LocalDateTime.now().minusMinutes(waitMinutesAgo));
         order.setCreateTime(LocalDateTime.now().minusMinutes(waitMinutesAgo));
-        order.setTenantId(1L);
+        order.setTenantId(999L);
         order.setUserName("测试用户");
         order.setPhone("13800000000");
         order.setAmount(new BigDecimal("88.00"));

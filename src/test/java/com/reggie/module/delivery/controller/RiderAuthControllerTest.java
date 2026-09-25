@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public class RiderAuthControllerTest extends com.reggie.controller.BaseControllerTest {
 
     private static final long RIDER_ID = 1001L;
-    private static final String PHONE = "13800000001";
+    private static final String PHONE = "13900100001";
 
     @Autowired
     private MockMvc mockMvc;
@@ -42,9 +42,11 @@ public class RiderAuthControllerTest extends com.reggie.controller.BaseControlle
     @BeforeEach
     void setUp() {
         String bcrypt = PasswordUtils.encodePassword("123456");
+        // 先按 id/专用 phone 清理上轮残留（非全表删），再插入 tenant=999 的测试骑手
+        jdbcTemplate.update("DELETE FROM rider WHERE id = ? OR phone = ?", RIDER_ID, PHONE);
         jdbcTemplate.update("INSERT INTO rider (id, name, phone, password, status, current_order_count, "
                 + "total_order_count, tenant_id, create_time, update_time) "
-                + "VALUES (?, '张骑手', ?, ?, 1, 0, 0, 1, NOW(), NOW())", RIDER_ID, PHONE, bcrypt);
+                + "VALUES (?, '张骑手', ?, ?, 1, 0, 0, 999, NOW(), NOW())", RIDER_ID, PHONE, bcrypt);
     }
 
     @Test
@@ -103,7 +105,7 @@ public class RiderAuthControllerTest extends com.reggie.controller.BaseControlle
     void meWithSession() throws Exception {
         mockMvc.perform(get("/api/rider/me")
                 .sessionAttr("rider", RIDER_ID)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.id").value(RIDER_ID))
@@ -114,7 +116,7 @@ public class RiderAuthControllerTest extends com.reggie.controller.BaseControlle
     void logoutThenMeRejected() throws Exception {
         mockMvc.perform(withCsrfToken(mockMvc, post("/api/rider/logout")
                 .sessionAttr("rider", RIDER_ID)
-                .sessionAttr("tenantId", 1L)))
+                .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("退出成功"));
@@ -125,14 +127,14 @@ public class RiderAuthControllerTest extends com.reggie.controller.BaseControlle
         // 下线
         mockMvc.perform(withCsrfToken(mockMvc, post("/api/rider/offline")
                 .sessionAttr("rider", RIDER_ID)
-                .sessionAttr("tenantId", 1L)))
+                .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("已下线"));
         // 再上线
         mockMvc.perform(withCsrfToken(mockMvc, post("/api/rider/online")
                 .sessionAttr("rider", RIDER_ID)
-                .sessionAttr("tenantId", 1L)))
+                .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("已上线"));
@@ -142,7 +144,7 @@ public class RiderAuthControllerTest extends com.reggie.controller.BaseControlle
     void reportLocationSuccess() throws Exception {
         mockMvc.perform(withCsrfToken(mockMvc, post("/api/rider/location")
                 .sessionAttr("rider", RIDER_ID)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"longitude\":116.397428,\"latitude\":39.90923,\"speed\":32.5,\"heading\":180}"))
                 .andExpect(status().isOk())
@@ -167,7 +169,7 @@ public class RiderAuthControllerTest extends com.reggie.controller.BaseControlle
     void reportLocationMissingCoordinates() throws Exception {
         mockMvc.perform(withCsrfToken(mockMvc, post("/api/rider/location")
                 .sessionAttr("rider", RIDER_ID)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"longitude\":116.397428}"))
                 .andExpect(status().isOk())
@@ -179,7 +181,7 @@ public class RiderAuthControllerTest extends com.reggie.controller.BaseControlle
     void reportLocationOutOfRange() throws Exception {
         mockMvc.perform(withCsrfToken(mockMvc, post("/api/rider/location")
                 .sessionAttr("rider", RIDER_ID)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"longitude\":200,\"latitude\":39.9}"))
                 .andExpect(status().isOk())

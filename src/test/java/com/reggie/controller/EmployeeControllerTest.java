@@ -39,13 +39,15 @@ public class EmployeeControllerTest extends BaseControllerTest {
     @BeforeEach
     void setUp() {
         cleaner.cleanTables("employee");
+        // 清理 tenant=2 的跨租户固定夹具（id=50/60），保证连续多轮跑测不撞主键
+        cleaner.cleanByCondition("employee", "id IN (50, 60)");
 
-        BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentId(990001L);
+        BaseContext.setCurrentTenantId(999L);
 
         Employee employee = new Employee();
-        employee.setId(1L);
-        employee.setUsername("admin");
+        employee.setId(990001L);
+        employee.setUsername("test_admin");
         employee.setName("管理员");
         employee.setPassword(PasswordUtils.encodePassword("123456"));
         employee.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
@@ -54,16 +56,16 @@ public class EmployeeControllerTest extends BaseControllerTest {
         employee.setStatus(1);
         employee.setSex("1");
         employee.setRole(1);
-        employee.setTenantId(1L);
+        employee.setTenantId(999L);
         employeeService.save(employee);
     }
 
     @Test
     void testLogin() throws Exception {
         mockMvc.perform(post("/employee/login")
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"admin\",\"password\":\"123456\"}"))
+                .content("{\"username\":\"test_admin\",\"password\":\"123456\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }
@@ -71,9 +73,9 @@ public class EmployeeControllerTest extends BaseControllerTest {
     @Test
     void testLoginWrongPassword() throws Exception {
         mockMvc.perform(post("/employee/login")
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"admin\",\"password\":\"wrong\"}"))
+                .content("{\"username\":\"test_admin\",\"password\":\"wrong\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -81,21 +83,21 @@ public class EmployeeControllerTest extends BaseControllerTest {
     @Test
     void testLoginDisabledAccount() throws Exception {
         Employee disabled = new Employee();
-        disabled.setId(2L);
-        disabled.setUsername("disabled");
+        disabled.setId(990002L);
+        disabled.setUsername("test_disabled");
         disabled.setName("禁用员工");
         disabled.setPassword(PasswordUtils.encodePassword("123456"));
         disabled.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
         disabled.setPhone("13900139000");
         disabled.setStatus(0);
         disabled.setSex("1");
-        disabled.setTenantId(1L);
+        disabled.setTenantId(999L);
         employeeService.save(disabled);
 
         mockMvc.perform(post("/employee/login")
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"disabled\",\"password\":\"123456\"}"))
+                .content("{\"username\":\"test_disabled\",\"password\":\"123456\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -103,8 +105,8 @@ public class EmployeeControllerTest extends BaseControllerTest {
     @Test
     void testLogout() throws Exception {
         mockMvc.perform(post("/employee/logout")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("退出成功"));
@@ -113,12 +115,12 @@ public class EmployeeControllerTest extends BaseControllerTest {
     @Test
     void testSave() throws Exception {
         org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder builder = post("/employee")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\":\"newemp\",\"name\":\"新员工\",\"phone\":\"13700137000\",\"sex\":\"0\"}")
                 .with(request -> {
-                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("employeeId", 990001L);
                     request.setAttribute("roleKey", "SUPER_ADMIN");
                     return request;
                 });
@@ -133,11 +135,11 @@ public class EmployeeControllerTest extends BaseControllerTest {
         mockMvc.perform(get("/employee/page")
                 .param("page", "1")
                 .param("pageSize", "10")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data.records[0].username").value("admin"));
+                .andExpect(jsonPath("$.data.records[0].username").value("test_admin"));
     }
 
     @Test
@@ -146,8 +148,8 @@ public class EmployeeControllerTest extends BaseControllerTest {
                 .param("page", "1")
                 .param("pageSize", "10")
                 .param("name", "管理")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.total").value(1));
@@ -156,20 +158,20 @@ public class EmployeeControllerTest extends BaseControllerTest {
     @Test
     void testUpdate() throws Exception {
         mockMvc.perform(withCsrfToken(mockMvc, put("/employee")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L)
                 .with(request -> {
-                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("employeeId", 990001L);
                     request.setAttribute("roleKey", "SUPER_ADMIN");
                     return request;
                 })
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":1,\"name\":\"修改后管理员\",\"phone\":\"13600136000\"}")))
+                .content("{\"id\":990001,\"name\":\"修改后管理员\",\"phone\":\"13600136000\"}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("员工信息修改成功"));
 
-        org.junit.jupiter.api.Assertions.assertEquals("修改后管理员", employeeService.getById(1L).getName());
+        org.junit.jupiter.api.Assertions.assertEquals("修改后管理员", employeeService.getById(990001L).getName());
     }
 
     /** 构造一个已占用工号 EMP001 的在职员工（绕过控制器直接落库） */
@@ -184,7 +186,7 @@ public class EmployeeControllerTest extends BaseControllerTest {
         emp.setStatus(1);
         emp.setSex("1");
         emp.setRole(0);
-        emp.setTenantId(1L);
+        emp.setTenantId(999L);
         emp.setJobNumber(jobNumber);
         employeeService.save(emp);
     }
@@ -195,10 +197,10 @@ public class EmployeeControllerTest extends BaseControllerTest {
 
         // 同租户再建同工号员工，应被应用层唯一校验拦截
         MockHttpServletRequestBuilder duplicate = post("/employee")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L)
                 .with(request -> {
-                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("employeeId", 990001L);
                     request.setAttribute("roleKey", "SUPER_ADMIN");
                     return request;
                 })
@@ -211,10 +213,10 @@ public class EmployeeControllerTest extends BaseControllerTest {
 
         // 不同工号应正常新增
         MockHttpServletRequestBuilder ok = post("/employee")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L)
                 .with(request -> {
-                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("employeeId", 990001L);
                     request.setAttribute("roleKey", "SUPER_ADMIN");
                     return request;
                 })
@@ -228,19 +230,19 @@ public class EmployeeControllerTest extends BaseControllerTest {
     @Test
     void testUpdateAvatarPositionAndJobNumber() throws Exception {
         mockMvc.perform(withCsrfToken(mockMvc, put("/employee")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L)
                 .with(request -> {
-                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("employeeId", 990001L);
                     request.setAttribute("roleKey", "SUPER_ADMIN");
                     return request;
                 })
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":1,\"name\":\"管理员\",\"avatar\":\"images/avatar/a1.png\",\"position\":\"店长\",\"jobNumber\":\"EMP009\"}")))
+                .content("{\"id\":990001,\"name\":\"管理员\",\"avatar\":\"images/avatar/a1.png\",\"position\":\"店长\",\"jobNumber\":\"EMP009\"}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        Employee updated = employeeService.getById(1L);
+        Employee updated = employeeService.getById(990001L);
         org.junit.jupiter.api.Assertions.assertEquals("images/avatar/a1.png", updated.getAvatar());
         org.junit.jupiter.api.Assertions.assertEquals("店长", updated.getPosition());
         org.junit.jupiter.api.Assertions.assertEquals("EMP009", updated.getJobNumber());
@@ -250,17 +252,17 @@ public class EmployeeControllerTest extends BaseControllerTest {
     void testUpdateDuplicateJobNumberRejected() throws Exception {
         prepareEmployeeWithJobNumber(2L, "emp1", "EMP001");
 
-        // 把 admin 工号改成已被占用的 EMP001，应失败
+        // 把 test_admin 工号改成已被占用的 EMP001，应失败
         mockMvc.perform(withCsrfToken(mockMvc, put("/employee")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L)
                 .with(request -> {
-                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("employeeId", 990001L);
                     request.setAttribute("roleKey", "SUPER_ADMIN");
                     return request;
                 })
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":1,\"name\":\"管理员\",\"phone\":\"13800138000\",\"jobNumber\":\"EMP001\"}")))
+                .content("{\"id\":990001,\"name\":\"管理员\",\"phone\":\"13800138000\",\"jobNumber\":\"EMP001\"}")))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("已存在")));
@@ -270,29 +272,29 @@ public class EmployeeControllerTest extends BaseControllerTest {
     void testGetCurrentEmployee() throws Exception {
         // /employee/me 仅需登录，回填当前员工含新增头像/工号/岗位字段
         mockMvc.perform(get("/employee/me")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data.username").value("admin"))
+                .andExpect(jsonPath("$.data.username").value("test_admin"))
                 .andExpect(jsonPath("$.data.password").doesNotExist());
     }
 
     @Test
     void testGetById() throws Exception {
-        mockMvc.perform(get("/employee/1")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+        mockMvc.perform(get("/employee/990001")
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data.username").value("admin"));
+                .andExpect(jsonPath("$.data.username").value("test_admin"));
     }
 
     @Test
     void testGetByIdNotFound() throws Exception {
         mockMvc.perform(get("/employee/999")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -318,10 +320,10 @@ public class EmployeeControllerTest extends BaseControllerTest {
     @Test
     void testBadgeQrcodeCrossTenantRejected() throws Exception {
         prepareOtherTenantEmployee();
-        // 当前租户为 1，访问租户 2 员工工牌应被拒绝，且措辞与"不存在"一致（无枚举 oracle）
+        // 当前租户为 999，访问租户 2 员工工牌应被拒绝，且措辞与"不存在"一致（无枚举 oracle）
         mockMvc.perform(get("/employee/badge-qrcode/50")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("员工不存在"));
@@ -331,8 +333,8 @@ public class EmployeeControllerTest extends BaseControllerTest {
     void testBadgeQrcodeSameTenantAllowed() throws Exception {
         prepareEmployeeWithJobNumber(2L, "emp1", "EMP001");
         mockMvc.perform(get("/employee/badge-qrcode/2")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value(
@@ -342,10 +344,10 @@ public class EmployeeControllerTest extends BaseControllerTest {
     @Test
     void testSaveBlankJobNumberNormalizedToNull() throws Exception {
         MockHttpServletRequestBuilder builder = post("/employee")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L)
                 .with(request -> {
-                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("employeeId", 990001L);
                     request.setAttribute("roleKey", "SUPER_ADMIN");
                     return request;
                 })
@@ -361,37 +363,37 @@ public class EmployeeControllerTest extends BaseControllerTest {
 
     @Test
     void testUpdateWithOwnJobNumberAllowed() throws Exception {
-        // 先给 admin 设工号 EMP010
+        // 先给 test_admin 设工号 EMP010
         mockMvc.perform(withCsrfToken(mockMvc, put("/employee")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L)
                 .with(request -> {
-                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("employeeId", 990001L);
                     request.setAttribute("roleKey", "SUPER_ADMIN");
                     return request;
                 })
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":1,\"name\":\"管理员\",\"jobNumber\":\"EMP010\"}")))
+                .content("{\"id\":990001,\"name\":\"管理员\",\"jobNumber\":\"EMP010\"}")))
                 .andExpect(jsonPath("$.code").value(1));
 
         // 再次提交自己原工号，excludeId 排除自身不应误报冲突
         mockMvc.perform(withCsrfToken(mockMvc, put("/employee")
-                .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("employee", 990001L)
+                .sessionAttr("tenantId", 999L)
                 .with(request -> {
-                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("employeeId", 990001L);
                     request.setAttribute("roleKey", "SUPER_ADMIN");
                     return request;
                 })
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":1,\"name\":\"管理员\",\"jobNumber\":\"EMP010\"}")))
+                .content("{\"id\":990001,\"name\":\"管理员\",\"jobNumber\":\"EMP010\"}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }
 
     @Test
     void testSameJobNumberAllowedAcrossTenants() throws Exception {
-        // 直接落库：租户1与租户2各有一个工号 EMP020，复合唯一域为租户内，应共存不冲突
+        // 直接落库：租户999与租户2各有一个工号 EMP020，复合唯一域为租户内，应共存不冲突
         prepareEmployeeWithJobNumber(2L, "empA", "EMP020");
         Employee other = new Employee();
         other.setId(60L);

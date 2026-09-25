@@ -54,8 +54,8 @@ public class RiderOrderFlowTest extends com.reggie.controller.BaseControllerTest
             "INSERT INTO orders (id, number, status, user_id, address_book_id, order_time, amount, delivery_fee, "
             + "remark, phone, address, consignee, dining_type, rider_id, create_time, update_time, "
             + "is_deleted, tenant_id, version) "
-            + "VALUES (:id, :number, :status, 9001, 3001, NOW(), 127.00, 8.00, '测试备注', '13900000001', "
-            + "'北京市朝阳区三里屯幸福里3栋2单元1503室', '测试用户', 'OUTSIDE', :rider, NOW(), NOW(), 0, 1, 0)";
+            + "VALUES (:id, :number, :status, 9001, 3001, NOW(), 127.00, 8.00, '测试备注', '13900139001', "
+            + "'北京市朝阳区三里屯幸福里3栋2单元1503室', '测试用户', 'OUTSIDE', :rider, NOW(), NOW(), 0, 999, 0)";
 
     @Autowired
     private MockMvc mockMvc;
@@ -68,19 +68,28 @@ public class RiderOrderFlowTest extends com.reggie.controller.BaseControllerTest
     @BeforeEach
     void setUp() {
         named = new NamedParameterJdbcTemplate(jdbc);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
-        jdbc.update("INSERT INTO tenant (id, name, phone, address, contact, status, create_time, update_time) "
-                + "VALUES (1, '测试餐厅总部', '13800138001', '北京市朝阳区建国路88号', '联系人', 1, NOW(), NOW())");
+        // 先按固定主键清理上轮残留（只删测试专用 id，非全表删），保证可重复执行
+        jdbc.update("DELETE FROM delivery_time_record WHERE order_id BETWEEN 5001 AND 5010");
+        jdbc.update("DELETE FROM orders WHERE id BETWEEN 5001 AND 5010");
+        jdbc.update("DELETE FROM rider_location_record WHERE tenant_id = 999");
+        jdbc.update("DELETE FROM rider WHERE id IN (2001, 2002, 2003)");
+        jdbc.update("DELETE FROM address_book WHERE id = 3001");
+        jdbc.update("DELETE FROM user WHERE id = 9001");
+        jdbc.update("DELETE FROM store_info WHERE id = 4001");
+
+        jdbc.update("INSERT IGNORE INTO tenant (id, name, phone, address, contact, status, create_time, update_time) "
+                + "VALUES (999, '自动化测试租户', '13800138099', '测试', '联系人', 1, NOW(), NOW())");
         jdbc.update("INSERT INTO store_info (id, tenant_id, store_code, contact_phone, longitude, latitude, "
                 + "delivery_radius, is_delivery_enabled, create_time, update_time, is_deleted) "
-                + "VALUES (4001, 1, 'BJ001', '13800138001', 116.466042, 39.911042, 3000, 1, NOW(), NOW(), 0)");
+                + "VALUES (4001, 999, 'BJ001', '13800138001', 116.466042, 39.911042, 3000, 1, NOW(), NOW(), 0)");
         jdbc.update("INSERT INTO user (id, name, phone, status, create_time, update_time, tenant_id) "
-                + "VALUES (9001, '测试用户', '13900000001', 1, NOW(), NOW(), 1)");
+                + "VALUES (9001, '测试用户', '13900000001', 1, NOW(), NOW(), 999)");
         jdbc.update("INSERT INTO address_book (id, user_id, consignee, phone, detail, longitude, latitude, "
                 + "is_default, create_time, update_time, create_user, update_user, is_deleted, tenant_id) "
                 + "VALUES (3001, 9001, '测试用户', '13900000001', '北京市朝阳区三里屯幸福里3栋2单元1503室', "
-                + "116.447219, 39.937610, 1, NOW(), NOW(), 9001, 9001, 0, 1)");
+                + "116.447219, 39.937610, 1, NOW(), NOW(), 9001, 9001, 0, 999)");
         insertRider(RIDER_A, "张骑手", 1);
         insertRider(RIDER_B, "王骑手", 1);
         insertRider(RIDER_C, "李骑手", 0);
@@ -88,7 +97,7 @@ public class RiderOrderFlowTest extends com.reggie.controller.BaseControllerTest
 
     private void insertRider(long id, String name, int status) {
         jdbc.update("INSERT INTO rider (id, name, phone, status, current_order_count, total_order_count, "
-                + "tenant_id, create_time, update_time) VALUES (?, ?, ?, ?, 0, 0, 1, NOW(), NOW())",
+                + "tenant_id, create_time, update_time) VALUES (?, ?, ?, ?, 0, 0, 999, NOW(), NOW())",
                 id, name, "1380000000" + (id - 2000), status);
     }
 
@@ -104,21 +113,21 @@ public class RiderOrderFlowTest extends com.reggie.controller.BaseControllerTest
     private MockHttpSession employeeSession() {
         MockHttpSession s = new MockHttpSession();
         s.setAttribute("employee", 1L);
-        s.setAttribute("tenantId", 1L);
+        s.setAttribute("tenantId", 999L);
         return s;
     }
 
     private MockHttpSession riderSession(long riderId) {
         MockHttpSession s = new MockHttpSession();
         s.setAttribute("rider", riderId);
-        s.setAttribute("tenantId", 1L);
+        s.setAttribute("tenantId", 999L);
         return s;
     }
 
     private MockHttpSession userSession(long userId) {
         MockHttpSession s = new MockHttpSession();
         s.setAttribute("user", userId);
-        s.setAttribute("tenantId", 1L);
+        s.setAttribute("tenantId", 999L);
         return s;
     }
 
@@ -275,7 +284,7 @@ public class RiderOrderFlowTest extends com.reggie.controller.BaseControllerTest
         // 配送时效记录：接单 + 取餐时间齐全
         jdbc.update("INSERT INTO delivery_time_record (order_id, order_number, rider_id, rider_name, order_time, "
                 + "accept_time, pickup_time, status, tenant_id, create_time, update_time) "
-                + "VALUES (5008, 'TEST-5008', 2001, '张骑手', NOW(), NOW(), NOW(), 3, 1, NOW(), NOW())");
+                + "VALUES (5008, 'TEST-5008', 2001, '张骑手', NOW(), NOW(), NOW(), 3, 999, NOW(), NOW())");
         // 订单明细（dishSummary 数据源）
         jdbc.update("INSERT INTO order_detail (id, order_id, name, dish_id, number, amount, "
                 + "tenant_id, create_time, update_time) "

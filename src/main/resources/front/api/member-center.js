@@ -44,6 +44,12 @@ function createRechargeApi(data) {
 }
 
 // 查询本人充值单状态（门店确认到账后轮询）
+// 轮询请求静默：失败由页面连续失败计数统一处理，避免每 3 秒弹一次错误提示造成告警轰炸
 function getRechargeStatusApi(rechargeNo) {
-  return $axios({ url: '/api/member/portal/recharge/status/' + rechargeNo, method: 'get' })
+  return $axios({
+    url: '/api/member/portal/recharge/status/' + rechargeNo,
+    method: 'get',
+    skipNoWifiRedirect: true,
+    silent: true
+  })
 }

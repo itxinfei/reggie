@@ -75,7 +75,7 @@
             <template v-if="filteredItems.length > 0">
                 <div class="group-title">按点餐频率排序</div>
                 <div class="dish-card" v-for="item in filteredItems" :key="item.key">
-                    <img v-if="item.image" :src="imgPath(item.image)" loading="lazy" class="dish-img" :alt="item.name || '菜品图片'" @error="$event.target.src='./../images/noImg.png'"/>
+                    <img v-if="item.image" :src="imgPath(item.image)" loading="lazy" class="dish-img" :alt="item.name || '菜品图片'" @error="imgFallback($event)"/>
                     <div v-else class="dish-img-placeholder">
                         <i class="ri-restaurant-line"></i>
                     </div>
@@ -118,6 +118,12 @@
                 <i class="ri-shopping-bag-line"></i>
                 <p class="empty-text">暂无常购菜品</p>
                 <p class="empty-sub">去点餐后，这里会展示您的常购清单</p>
+            </div>
+
+            <!-- 筛选分类无结果：items 非空但当前分类为空，给独立反馈而非空白 -->
+            <div class="empty-state" v-else-if="!pageLoading">
+                <i class="ri-inbox-line"></i>
+                <p class="empty-text">该分类下暂无常购菜品</p>
             </div>
         </div>
         </van-pull-refresh>
@@ -205,8 +211,11 @@
                         for (const order of records) {
                             if (order.orderDetails) {
                                 for (const detail of order.orderDetails) {
-                                    // 按「菜品/套餐 + 规格」聚合：setmealId 优先，否则 dishId，否则详情 id
-                                    const key = detail.setmealId || detail.dishId || detail.id;
+                                    // 按「菜品/套餐 + 规格」聚合。必须带类型前缀：
+                                    // 菜品与套餐 ID 可能同值（如都为雪花 1001），裸 id 会把两类误合并
+                                    const key = detail.setmealId != null ? ('s_' + detail.setmealId)
+                                        : (detail.dishId != null ? ('d_' + detail.dishId)
+                                        : ('x_' + detail.id));
                                     const cat = detail.setmealId ? '套餐' : '菜品';
                                     categorySet.add(cat);
                                     if (itemMap.has(key)) {

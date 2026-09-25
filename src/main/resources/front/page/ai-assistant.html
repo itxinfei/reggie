@@ -682,6 +682,12 @@
 
                 // ==================== 对话管理 ====================
                 newConversation: function(silent) {
+                    // 用户主动新建（非 silent）时若 AI 仍在流式回复，阻止切换：
+                    // 否则后续 SSE 片段会 push 到新会话造成串台
+                    if (!silent && this.loading) {
+                        vant.Toast('AI 正在回复，请先停止当前生成');
+                        return;
+                    }
                     var conv = {
                         id: window.AiChatCore.genId('local'),
                         title: '',
@@ -958,6 +964,8 @@
                 loadCartContext: function() {
                     var self = this;
                     try {
+                        // 未登录不预取：请求会被过滤器判为 NOTLOGIN 并重定向登录页，游客打开 AI 页会被强行跳走
+                        if (!sessionStorage.getItem('userId')) return;
                         // 从购物车接口拉取最新数据（sessionStorage 里的 cartData 可能过期，导致 AI 上下文把空车当有货）
                         $axios({ url: '/shopping-cart/list', method: 'get' })
                             .then(function(res) {
@@ -999,9 +1007,13 @@
                     }
                     if (this.addressData) {
                         var addr = this.addressData;
+                        // 结构化地址：省/市/区名称 + 后端规范化的 detail 拼接；旧数据无 districtName 时回退 district
+                        var addrParts = [addr.provinceName, addr.cityName,
+                                         addr.districtName || addr.district, addr.detail];
+                        var addrDetail = addrParts.filter(function(p) { return !!p; }).join('');
                         context.address = {
                             consignee: addr.consignee || '',
-                            detail: ((addr.provinceCode ? '' : '') + (addr.district || '') + (addr.detail || '')).trim()
+                            detail: addrDetail
                         };
                     }
                     return context;
@@ -1021,17 +1033,27 @@
                 sendMessage: function(overrideText, overrideAttachments) {
                     if (this.loading) return;
                     // 修改点(P2-13)：未登录不发起 AI 对话，引导登录（否则无效调用，也无法关联购物车/地址上下文）
-                    if (!sessionStorage.getItem('userId') && !sessionStorage.getItem('userPhone')) {
-                        vant.Dialog.confirm({
-                            title: '未登录',
-                            message: '请先登录后再与助手对话',
-                            confirmButtonText: '去登录'
-                        }).then(function(){
-                            redirectToLogin();
-                        }).catch(function(e){ console.warn('[ai-assistant.html] 用户取消登录跳转:', e); });
-                        return;
-                    }
-                    var hasOverride = arguments.length > 0;
+                    // 修复：新标签页本地登录态丢失但 cookie 会话可能仍有效，先静默恢复（userId/userPhone 都会回填）
+                    var self = this;
+                    var sendArgs = arguments;
+                    restoreUserSession().then(function(ok) {
+                        if (!ok) {
+                            vant.Dialog.confirm({
+                                title: '未登录',
+                                message: '请先登录后再与助手对话',
+                                confirmButtonText: '去登录'
+                            }).then(function(){
+                                redirectToLogin();
+                            }).catch(function(e){ console.warn('[ai-assistant.html] 用户取消登录跳转:', e); });
+                            return;
+                        }
+                        self.doSendMessage(sendArgs);
+                    });
+                },
+                doSendMessage: function(sendArgs) {
+                    var hasOverride = sendArgs.length > 0;
+                    var overrideText = sendArgs[0];
+                    var overrideAttachments = sendArgs[1];
                     var text;
                     var views;
                     if (hasOverride) {

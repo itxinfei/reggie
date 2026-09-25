@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS order_detail (
 );
 
 -- 清理并插入数据（生产 schema 已存在）
-DELETE FROM print_task WHERE tenant_id = 1;
-DELETE FROM print_terminal WHERE tenant_id = 1;
-DELETE FROM printer_log WHERE tenant_id = 1;
-DELETE FROM printer_config WHERE tenant_id = 1;
+DELETE FROM print_task WHERE tenant_id = 999;
+DELETE FROM print_terminal WHERE tenant_id = 999;
+DELETE FROM printer_log WHERE tenant_id = 999;
+DELETE FROM printer_config WHERE tenant_id = 999;

@@ -35,11 +35,11 @@ public class TableAreaControllerTest {
 
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         TableArea area = new TableArea();
         area.setId(1L);
-        area.setTenantId(1L);
+        area.setTenantId(999L);
         area.setName("大厅");
         area.setSort(1);
         area.setCreatedTime(LocalDateTime.now());
@@ -52,7 +52,7 @@ public class TableAreaControllerTest {
                 .param("page", "1")
                 .param("pageSize", "10")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.records[0].name").value("大厅"));
@@ -62,7 +62,7 @@ public class TableAreaControllerTest {
     void testSave() throws Exception {
         mockMvc.perform(post("/api/dining/area")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"包间\",\"sort\":2}"))
                 .andExpect(status().isOk())
@@ -74,7 +74,7 @@ public class TableAreaControllerTest {
     void testUpdate() throws Exception {
         mockMvc.perform(put("/api/dining/area")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":1,\"name\":\"修改后大厅\",\"sort\":2}"))
                 .andExpect(status().isOk())
@@ -86,7 +86,7 @@ public class TableAreaControllerTest {
     void testDelete() throws Exception {
         mockMvc.perform(delete("/api/dining/area/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("删除区域成功"));
@@ -96,7 +96,7 @@ public class TableAreaControllerTest {
     void testList() throws Exception {
         mockMvc.perform(get("/api/dining/area/list")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data[0].name").value("大厅"));
@@ -106,7 +106,7 @@ public class TableAreaControllerTest {
     void testGetById() throws Exception {
         mockMvc.perform(get("/api/dining/area/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.name").value("大厅"));
@@ -116,7 +116,7 @@ public class TableAreaControllerTest {
     void testGetByIdNotFound() throws Exception {
         mockMvc.perform(get("/api/dining/area/999")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }

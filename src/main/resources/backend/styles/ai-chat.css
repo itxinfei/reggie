@@ -422,7 +422,7 @@
 }
 .chat-bubble .md-code-block {
   margin: 8px 0; padding: 12px 14px;
-  background: #1f2937; color: #e5e7eb;
+  background: var(--text-primary); color: var(--border-default);
   border-radius: var(--radius-sm);
   overflow-x: auto;
   font-family: Consolas, Monaco, 'Courier New', monospace; font-size: 12.5px; line-height: 1.6;
@@ -524,7 +524,7 @@
 .stop-btn {
   width: 38px; height: 38px; padding: 0;
   border: none; border-radius: 50%;
-  background: #1f2937; color: #fff;
+  background: var(--text-primary); color: var(--bg-surface);
   font-size: 16px; line-height: 1; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
   transition: opacity var(--transition-fast), transform var(--transition-fast);
@@ -630,14 +630,14 @@
   position: absolute; inset: 0;
   background: rgba(0, 0, 0, 0.35);
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 20px;
+  color: var(--bg-surface); font-size: 20px;
 }
 .attach-spin { animation: ai-attach-spin 1s linear infinite; }
 @keyframes ai-attach-spin { to { transform: rotate(360deg); } }
 .attach-remove {
   position: absolute; top: 2px; right: 2px;
   width: 18px; height: 18px; padding: 0; border: none; border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 12px; line-height: 18px;
+  background: rgba(0, 0, 0, 0.55); color: var(--bg-surface); font-size: 12px; line-height: 18px;
   text-align: center; cursor: pointer;
 }
 .attach-remove:hover { background: var(--color-danger); }
@@ -669,7 +669,7 @@
 .lightbox-close {
   position: absolute; top: 20px; right: 24px;
   width: 40px; height: 40px; border: none; border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15); color: #fff; font-size: 22px;
+  background: rgba(255, 255, 255, 0.15); color: var(--bg-surface); font-size: 22px;
   cursor: pointer; transition: background var(--transition-fast);
 }
 .lightbox-close:hover { background: rgba(255, 255, 255, 0.3); }

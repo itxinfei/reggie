@@ -37,13 +37,13 @@ public class AddressBookControllerTest extends BaseControllerTest {
     void setUp() {
         cleaner.cleanTables("address_book");
         BaseContext.setCurrentId(1L);
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
     }
 
     @Test
     void testSave() throws Exception {
         mockMvc.perform(withCsrfToken(mockMvc, post("/address-book")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"userId\":1,\"consignee\":\"新地址联系人\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"streetName\":\"粤海街道\",\"community\":\"科技园小区\",\"building\":\"3栋\",\"unit\":\"2单元\",\"floor\":\"15层\",\"roomNo\":\"1503室\",\"label\":\"公司\"}")))
                 .andExpect(status().isOk())
@@ -59,7 +59,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
     void testSaveWithoutDetailRejected() throws Exception {
         // 只选省市区、不填任何结构化详细信息：应被拦截
         mockMvc.perform(withCsrfToken(mockMvc, post("/address-book")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"userId\":1,\"consignee\":\"张三\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"label\":\"家\"}")))
                 .andExpect(status().isOk())
@@ -71,7 +71,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
     void testSaveNumericAutoSuffix() throws Exception {
         // 楼栋/单元/层/门牌只填纯数字：后端补标准后缀，detail 规范化拼接
         mockMvc.perform(withCsrfToken(mockMvc, post("/address-book")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"userId\":1,\"consignee\":\"张三\",\"phone\":\"13500135000\",\"sex\":\"1\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"community\":\"科技园小区\",\"building\":\"3\",\"unit\":\"2\",\"floor\":\"15\",\"roomNo\":\"1503\",\"label\":\"家\"}")))
                 .andExpect(status().isOk())
@@ -87,7 +87,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
         // 切换为同租户的用户2：不得读取用户1 的地址（PII）
         BaseContext.setCurrentId(2L);
         mockMvc.perform(get("/address-book/" + id)
-                .sessionAttr("user", 2L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 2L).sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("没有查询到")));
@@ -101,7 +101,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
         // 用户2 尝试篡改用户1 的地址：拒绝且数据不变
         BaseContext.setCurrentId(2L);
         mockMvc.perform(withCsrfToken(mockMvc, put("/address-book")
-                .sessionAttr("user", 2L).sessionAttr("tenantId", 1L)
+                .sessionAttr("user", 2L).sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":" + id + ",\"consignee\":\"李四\",\"phone\":\"13900139000\","
                         + "\"provinceCode\":\"440000\",\"provinceName\":\"广东省\","
@@ -119,7 +119,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
     void testTextBuildingNoAutoSuffix() throws Exception {
         // 楼栋填文本"东门"：不应被补成"东门栋"
         mockMvc.perform(withCsrfToken(mockMvc, post("/address-book")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"consignee\":\"张三\",\"phone\":\"13800138000\",\"sex\":\"1\","
                         + "\"provinceCode\":\"440000\",\"provinceName\":\"广东省\","
@@ -136,7 +136,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
         // 旧格式地址（六结构化列空、只有完整 detail）
         AddressBook legacy = new AddressBook();
         legacy.setUserId(1L);
-        legacy.setTenantId(1L);
+        legacy.setTenantId(999L);
         legacy.setConsignee("张三");
         legacy.setPhone("13800138000");
         legacy.setProvinceCode("440000");
@@ -150,7 +150,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
         long id = legacy.getId();
         // 仅补一个零碎门牌（无小区、无栋）：阻断，不得用"1503室"覆盖原完整地址
         mockMvc.perform(withCsrfToken(mockMvc, put("/address-book")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":" + id + ",\"consignee\":\"张三\",\"phone\":\"13800138000\","
                         + "\"provinceCode\":\"440000\",\"provinceName\":\"广东省\","
@@ -170,7 +170,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
         String community = repeatChars('幸', 100);
         String street = repeatChars('街', 50);
         mockMvc.perform(withCsrfToken(mockMvc, post("/address-book")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"consignee\":\"张三\",\"phone\":\"13800138000\",\"sex\":\"1\","
                         + "\"provinceCode\":\"440000\",\"provinceName\":\"广东省\","
@@ -191,7 +191,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
     private AddressBook buildUserAddress(long userId, String community) {
         AddressBook addr = new AddressBook();
         addr.setUserId(userId);
-        addr.setTenantId(1L);
+        addr.setTenantId(999L);
         addr.setConsignee("张三");
         addr.setPhone("13800138000");
         addr.setProvinceCode("440000");
@@ -232,7 +232,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
         long generatedId = address.getId();
 
         mockMvc.perform(withCsrfToken(mockMvc, put("/address-book")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":" + generatedId + ",\"userId\":1,\"consignee\":\"李四\",\"phone\":\"13900139000\",\"provinceCode\":\"440000\",\"provinceName\":\"广东省\",\"cityCode\":\"440300\",\"cityName\":\"深圳市\",\"districtCode\":\"440305\",\"districtName\":\"南山区\",\"detail\":\"新地址\",\"label\":\"公司\"}")))
                 .andExpect(status().isOk())
@@ -253,7 +253,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
 
         mockMvc.perform(withCsrfToken(mockMvc, delete("/address-book")
                 .param("ids", String.valueOf(generatedId))
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -270,7 +270,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
         addressBookService.save(address);
 
         mockMvc.perform(get("/address-book/lastUpdate")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.consignee").value("赵六"));
@@ -297,7 +297,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
         long id2 = addr2.getId();
 
         mockMvc.perform(withCsrfToken(mockMvc, put("/address-book/default")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L)
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":" + id2 + "}")))
                 .andExpect(status().isOk())
@@ -318,7 +318,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
         long generatedId = address.getId();
 
         mockMvc.perform(get("/address-book/" + generatedId)
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.consignee").value("查询联系人"));
@@ -327,7 +327,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
     @Test
     void testGetByIdNotFound() throws Exception {
         mockMvc.perform(get("/address-book/999")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -343,7 +343,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
         addressBookService.save(address);
 
         mockMvc.perform(get("/address-book/default")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.consignee").value("默认地址"));
@@ -352,7 +352,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
     @Test
     void testGetDefaultNotFound() throws Exception {
         mockMvc.perform(get("/address-book/default")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -374,7 +374,7 @@ public class AddressBookControllerTest extends BaseControllerTest {
         addressBookService.save(addr2);
 
         mockMvc.perform(get("/address-book/list")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 1L))
+                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.length()").value(2));

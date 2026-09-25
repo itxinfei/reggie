@@ -43,11 +43,11 @@ public class DiningTableControllerTest {
 
     @BeforeEach
     void setUp() {
-        BaseContext.setCurrentTenantId(1L);
+        BaseContext.setCurrentTenantId(999L);
 
         DiningTable table = new DiningTable();
         table.setId(1L);
-        table.setTenantId(1L);
+        table.setTenantId(999L);
         table.setAreaId(1L);
         table.setName("桌台1");
         table.setSeatCount(4);
@@ -64,7 +64,7 @@ public class DiningTableControllerTest {
                 .param("page", "1")
                 .param("pageSize", "10")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.records[0].name").value("桌台1"));
@@ -74,7 +74,7 @@ public class DiningTableControllerTest {
     void testSave() throws Exception {
         mockMvc.perform(post("/api/dining/table")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"新桌台\",\"seatCount\":2,\"areaId\":1,\"minAmount\":\"50.00\"}"))
                 .andExpect(status().isOk())
@@ -86,7 +86,7 @@ public class DiningTableControllerTest {
     void testUpdate() throws Exception {
         mockMvc.perform(put("/api/dining/table")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":1,\"name\":\"修改后桌台\",\"seatCount\":6}"))
                 .andExpect(status().isOk())
@@ -98,7 +98,7 @@ public class DiningTableControllerTest {
     void testDelete() throws Exception {
         mockMvc.perform(delete("/api/dining/table/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("删除桌台成功"));
@@ -108,7 +108,7 @@ public class DiningTableControllerTest {
     void testGetById() throws Exception {
         mockMvc.perform(get("/api/dining/table/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.name").value("桌台1"));
@@ -118,7 +118,7 @@ public class DiningTableControllerTest {
     void testGetByIdNotFound() throws Exception {
         mockMvc.perform(get("/api/dining/table/999")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -128,7 +128,7 @@ public class DiningTableControllerTest {
         // FREE → RESERVED 为合法流转，且不触发「禁止裸占用」拦截（仅 OCCUPIED 受限）
         mockMvc.perform(put("/api/dining/table/status")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":1,\"status\":\"RESERVED\"}"))
                 .andExpect(status().isOk())
@@ -142,7 +142,7 @@ public class DiningTableControllerTest {
         // 必须走「开台」自动建单；本测试锁定该保护不被回退
         mockMvc.perform(put("/api/dining/table/status")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"id\":1,\"status\":\"OCCUPIED\"}"))
                 .andExpect(status().isOk())
@@ -154,7 +154,7 @@ public class DiningTableControllerTest {
     void testQrcode() throws Exception {
         mockMvc.perform(get("/api/dining/table/qrcode/1")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isString());
@@ -164,7 +164,7 @@ public class DiningTableControllerTest {
     void testQrcodeNotFound() throws Exception {
         mockMvc.perform(get("/api/dining/table/qrcode/999")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -176,7 +176,7 @@ public class DiningTableControllerTest {
                 .param("tableId", "1")
                 .param("siteUrl", "http://localhost:8080")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value(
@@ -188,7 +188,7 @@ public class DiningTableControllerTest {
         mockMvc.perform(get("/api/dining/table/qrcode/poster")
                 .param("tableId", "999")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L))
+                .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("桌台不存在"));
@@ -203,14 +203,14 @@ public class DiningTableControllerTest {
         master.setNumber("ORD-LIMIT-TEST");
         master.setStatus(OrderStatus.ORDERED.getValue());
         master.setAmount(new BigDecimal("200.00"));
-        master.setTenantId(1L);
+        master.setTenantId(999L);
         master.setTableId(1L);
         master.setOrderTime(LocalDateTime.now());
         orderService.save(master);
 
         mockMvc.perform(post("/api/dining/table/splitBill")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"orderId\":2001,\"parts\":21}"))
                 .andExpect(status().isUnprocessableEntity())
@@ -226,14 +226,14 @@ public class DiningTableControllerTest {
         master.setNumber("ORD-TEST-001");
         master.setStatus(OrderStatus.ORDERED.getValue());
         master.setAmount(new BigDecimal("100.00"));
-        master.setTenantId(1L);
+        master.setTenantId(999L);
         master.setTableId(1L);
         master.setOrderTime(LocalDateTime.now());
         orderService.save(master);
 
         mockMvc.perform(post("/api/dining/table/splitBill")
                 .sessionAttr("employee", 1L)
-                .sessionAttr("tenantId", 1L)
+                .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"orderId\":1001,\"parts\":3}"))
                 .andExpect(status().isOk())
