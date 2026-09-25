@@ -366,20 +366,18 @@
     </crud-dialog>
 
     <!-- 修改点(2026-09-16)：结账改为页内弹窗（iframe 嵌入收银台），不再 window.open 新窗口 -->
-    <el-dialog title="收银结账" :visible.sync="checkoutDialogVisible" width="92%" top="4vh"
-               :close-on-click-modal="false" append-to-body destroy-on-close
-               @close="checkoutDialogVisible = false">
+    <crud-dialog title="收银结账" :visible.sync="checkoutDialogVisible" size="fullscreen"
+                 :close-on-click-modal="false" :show-submit="false" :show-cancel="false">
       <iframe v-if="checkoutDialogVisible" :src="cashierFrameUrl"
               style="width:100%;height:78vh;border:0;display:block;"></iframe>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- 桌贴打印弹窗（iframe 承载原打印中心；iframe 内 window.print 只打印海报，不卷入主页） -->
-    <el-dialog title="桌贴二维码打印" :visible.sync="posterDialogVisible" width="92%" top="4vh"
-               :close-on-click-modal="false" append-to-body destroy-on-close
-               @close="posterDialogVisible = false">
+    <crud-dialog title="桌贴二维码打印" :visible.sync="posterDialogVisible" size="fullscreen"
+                 :close-on-click-modal="false" :show-submit="false" :show-cancel="false">
       <iframe v-if="posterDialogVisible" :src="posterFrameUrl"
               style="width:100%;height:80vh;border:0;display:block;"></iframe>
-    </el-dialog>
+    </crud-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>

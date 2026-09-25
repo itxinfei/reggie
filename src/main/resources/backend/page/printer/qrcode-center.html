@@ -138,14 +138,13 @@
       <el-progress v-if="generating" :percentage="progressPct" :stroke-width="10" style="margin-bottom:10px;"></el-progress>
     </div>
 
-    <!-- 预览弹窗：生成完自动打开，看效果 → 打印 / 下载 -->
-    <el-dialog
+    <!-- 预览弹窗：生成完自动打开，看效果 → 打印 / 下载（统一 crud-dialog，xl=840px） -->
+    <crud-dialog
       :title="'桌贴预览 · ' + posters.length + ' 张桌贴 · ' + posterPages.length + ' 张 A4'"
       :visible.sync="previewVisible"
+      size="xl"
       custom-class="qr-preview-dialog"
-      width="840px"
-      :close-on-click-modal="false"
-      append-to-body>
+      :close-on-click-modal="false">
       <div class="pv-toolbar">
         <el-radio-group v-model="layout" size="small" @change="onLayoutChange">
           <span style="color:#606266;font-size:13px;margin-right:8px;">每张纸</span>
@@ -184,7 +183,7 @@
         <el-button @click="previewVisible = false">关闭</el-button>
         <el-button type="primary" icon="el-icon-printer" @click="doPrint">打 印</el-button>
       </span>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- 打印专用：全部拼版页（屏幕隐藏，打印时输出） -->
     <div id="printRoot">
@@ -200,6 +199,7 @@
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/components.js?v=20260924"></script>
   <script>
     // 每页数 → 网格列×行（按竖版海报 800×1040，保证不溢出 A4）
     var LAYOUT_GRID = { 1: [1, 1], 2: [1, 2], 4: [2, 2], 6: [2, 3], 9: [3, 3] };
@@ -289,13 +289,13 @@
         generate: function () {
           var vm = this;
           if (!vm.selected.length) {
-            vm.$message.warning('请先勾选要生成海报的桌台');
+            ReggieUI.warning('请先勾选要生成海报的桌台');
             return;
           }
           var url = (vm.siteUrl || '').replace(/\/+$/, '');
           var run = function () { vm.runGenerate(url); };
           if (/^https?:\/\/(localhost|127\.|0\.0\.0\.0)/i.test(url)) {
-            vm.$confirm('当前站点地址像是本机地址（' + url + '），手机扫码可能无法访问。是否仍要生成？',
+            ReggieUI.confirm('当前站点地址像是本机地址（' + url + '），手机扫码可能无法访问。是否仍要生成？',
                         '地址提醒', { confirmButtonText: '仍要生成', cancelButtonText: '取消', type: 'warning' })
               .then(run).catch(function () { });
           } else {
@@ -333,16 +333,16 @@
             vm.posters = ordered.filter(function (x) { return !!x; });
             vm.generating = false;
             if (!vm.posters.length) {
-              vm.$message.error('海报全部生成失败，请稍后重试');
+              ReggieUI.error('海报全部生成失败，请稍后重试');
               return;
             }
-            vm.$message.success('已生成 ' + vm.posters.length + ' 张，排成 ' + vm.posterPages.length + ' 张 A4');
+            ReggieUI.success('已生成 ' + vm.posters.length + ' 张，排成 ' + vm.posterPages.length + ' 张 A4');
             vm.openPreview();   // 生成完成立即弹窗看效果
           });
         },
         doPrint: function () {
           if (!this.posters.length) {
-            this.$message.warning('请先生成海报');
+            ReggieUI.warning('请先生成海报');
             return;
           }
           window.print();

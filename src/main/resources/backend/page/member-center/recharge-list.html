@@ -427,7 +427,7 @@
         confirmRecharge: function(row) {
           if (!row || !row.rechargeNo) { ReggieUI.warning('该记录无充值单号，无法确认'); return }
           const self = this
-          this.$confirm('确认为会员「' + (row.memberName || '') + '」的 ¥' + self.formatMoney(row.amount)
+          ReggieUI.confirm('确认为会员「' + (row.memberName || '') + '」的 ¥' + self.formatMoney(row.amount)
             + ' 充值已收款到账？确认后余额将立即计入会员账户。', '确认到账', {
             confirmButtonText: '确认到账', cancelButtonText: '取消', type: 'warning'
           }).then(function() {

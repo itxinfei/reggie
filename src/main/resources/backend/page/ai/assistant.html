@@ -323,13 +323,13 @@
                     </button>
                 </div>
 
-                <!-- 模型配置弹窗：iframe 承载供应商配置页，配置逻辑与样式独立于聊天页 -->
-                <el-dialog title="模型配置" :visible.sync="providerDialogVisible" width="92%" top="4vh"
-                           :close-on-click-modal="false" append-to-body destroy-on-close
-                           @close="providerDialogVisible = false; checkStatus()">
+                <!-- 模型配置弹窗：iframe 承载供应商配置页，统一走 crud-dialog 全屏壳；关闭后刷新状态 -->
+                <crud-dialog title="模型配置" :visible.sync="providerDialogVisible" size="fullscreen"
+                             :close-on-click-modal="false" :show-submit="false" :show-cancel="false"
+                             @close="checkStatus">
                     <iframe v-if="providerDialogVisible" :src="providerFrameUrl"
                             style="width:100%;height:80vh;border:0;display:block;"></iframe>
-                </el-dialog>
+                </crud-dialog>
             </div>
         </main>
     </div>

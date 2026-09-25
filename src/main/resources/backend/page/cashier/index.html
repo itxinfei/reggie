@@ -713,8 +713,8 @@
       </div>
     </div>
 
-    <!-- 加菜弹窗 -->
-    <el-dialog title="加菜" :visible.sync="addItemsVisible" width="720px" custom-class="el-dialog--lg" :close-on-click-modal="false">
+    <!-- 加菜弹窗：自定义菜品选择网格放默认插槽，统一走 crud-dialog -->
+    <crud-dialog title="加菜" :visible.sync="addItemsVisible" size="lg" :close-on-click-modal="false">
       <div v-if="addItemsLoading" style="text-align:center;padding:var(--space-10);">
         <i class="el-icon-loading" style="font-size:24px;color:var(--el-color-primary);"></i>
       </div>
@@ -745,7 +745,7 @@
         <el-button type="primary" :loading="addItemsSubmitting" :disabled="Object.keys(addItemsSelection).length===0"
           @click="submitAddItems">确认加菜</el-button>
       </div>
-    </el-dialog>
+    </crud-dialog>
 
     <!-- 转台弹窗：标准小表单，统一走 crud-dialog（footer 插槽保留未选桌台时禁用确认） -->
     <crud-dialog title="转台" :visible.sync="showTransferDialog" size="sm">

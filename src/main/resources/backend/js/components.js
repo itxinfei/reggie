@@ -984,10 +984,8 @@ Vue.component('crud-dialog', {
     dialogClass: function () {
       var cls = 'unified-dialog'
       if (!this.width) {
+        // size=fullscreen 时上面的别名已生成 el-dialog--fullscreen，不再重复追加
         cls += ' el-dialog--' + (this.size || 'md')
-      }
-      if (this.isFullscreen) {
-        cls += ' el-dialog--fullscreen'
       }
       if (this.customClass) {
         cls += ' ' + this.customClass
