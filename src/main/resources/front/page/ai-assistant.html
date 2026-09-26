@@ -17,16 +17,12 @@
 </head>
 <body>
     <div id="ai-app" class="ai-container" :class="{ 'dark-mode': darkModeEnabled }">
-        <!-- 修改点(2026-09-17)：头部结构改用标准 .divHead 布局，左侧返回 + 标题 + 右侧功能按钮 -->
-        <div class="divHead ai-header--custom">
-            <div class="divTitle">
-                <i class="ri-close-line" @click="close"></i>AI 智能点餐助手
-            </div>
-            <div class="ai-header-actions">
-                <span class="ai-header-btn" @click="toggleDarkMode" aria-label="切换暗色模式"><i class="ri-moon-line" aria-hidden="true"></i></span>
-                <span class="ai-header-btn" @click="toggleSidebar" aria-label="对话历史"><i class="ri-menu-line" aria-hidden="true"></i></span>
-            </div>
-        </div>
+        <!-- 2026-09-26 头部收敛到 cend-shell：白底轻导航，右侧保留暗色/历史，返回走 close -->
+        <cend-shell title="AI 智能点餐助手" light :show-back="true">
+          <template #right>
+            <span class="ai-header-btn" @click="toggleDarkMode" aria-label="切换暗色模式"><i class="ri-moon-line" aria-hidden="true"></i></span>
+            <span class="ai-header-btn" @click="toggleSidebar" aria-label="对话历史"><i class="ri-menu-line" aria-hidden="true"></i></span>
+          </template>
 
         <!-- 网络状态提示条 -->
         <div class="network-banner" :class="{ visible: !isOnline }">
@@ -277,6 +273,7 @@
                 <i class="ri-close-line" aria-hidden="true"></i>
             </button>
         </div>
+        </cend-shell>
     </div>
 
     <!-- Scripts -->
@@ -292,6 +289,7 @@
     <!-- 修复(2026-09-23 P2-3/P2-4)：引入 common.js 提供 goLogin()/imgPath()；
          须在 vue.js 之后、new Vue 之前，installReggieVueHelpers 才能把 imgPath 注入实例 -->
     <script src="../js/common.js?v=20260924"></script>
+    <script src="../js/components-cend.js?v=20260922"></script>
     <script>
     (function() {
         'use strict';
@@ -435,6 +433,9 @@
                 window.addEventListener('offline', function() { self.isOnline = false; });
             },
             mounted: function() {
+                // 返回按钮（cend-shell）走 close：先保存会话再回首页
+                var self = this;
+                window.goBack = function(){ self.close(); };
                 this.initVoice();
                 this.scrollToBottom();
                 this._handleEscKey = function(e) {

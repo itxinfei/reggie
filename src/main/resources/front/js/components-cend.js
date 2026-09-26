@@ -16,13 +16,13 @@
 (function () {
   'use strict';
 
-  // ─── 校验 Vue/Vant 已加载 ───
-  if (typeof Vue === 'function' && typeof vant === 'object') {
+  // ─── 校验 Vue 已加载（导航/空态本身不依赖 Vant；van-tabbar 仅在 showTabbar 时才渲染）───
+  if (typeof Vue === 'function') {
     initComponents();
   } else {
-    // head 中 components-cend.js 在 vant 之前引入时延迟注册
+    // head 中 components-cend.js 在 vue 之前引入时延迟注册
     window.addEventListener('DOMContentLoaded', function () {
-      if (typeof Vue === 'function' && typeof vant === 'object') initComponents();
+      if (typeof Vue === 'function') initComponents();
     });
   }
 
