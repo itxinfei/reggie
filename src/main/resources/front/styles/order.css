@@ -34,7 +34,7 @@
   display: flex;
   height: 46rem;
   background: var(--surface-white-85);
-  padding: 0 16rem;
+  padding: 0 4rem;
   border-bottom: 1px solid var(--border-light);
   position: sticky;
   top: 0;
@@ -55,8 +55,8 @@
 }
 
 #order .status-tabs .status-tab {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 0 0 auto;
+  min-width: auto;
   text-align: center;
   line-height: 46rem;
   font-size: var(--font-size-md);
@@ -64,7 +64,7 @@
   color: var(--color-text-secondary);
   cursor: pointer;
   position: relative;
-  padding: 0 2rem;
+  padding: 0 12rem;
   white-space: nowrap;
   transition: color var(--transition-fast);
 }
