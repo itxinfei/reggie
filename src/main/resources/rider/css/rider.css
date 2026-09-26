@@ -1,23 +1,20 @@
-/* 骑手端样式：户外骑行/强光场景，采用较大字号、高对比、全宽主按钮，
-   保证骑手在路上能快速看清并一键操作。颜色仅用品牌金与中性色。 */
+/* ================================================================
+   骑手端样式（消费 shared/styles/tokens.css 跨端令牌）
 
-:root {
-  --rider-brand: #ffc200;
-  --rider-text: #1f2937;
-  --rider-sub: #6b7280;
-  --rider-border: #ebedf0;
-  --rider-bg: #f5f6fa;
-}
+   - 配色 / 字号阶 / 圆角 / 阴影 全面对齐 C端，保证跨端视觉统一、易维护；
+   - 保留骑手工作台的布局骨架：全宽主按钮、大触控高度、卡片外边距不改动；
+   - 新增按钮按压态与过渡，户外操作反馈更明确。
+   ================================================================ */
 
 * { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--rider-bg);
-  color: var(--rider-text);
-  font-size: 15px;
-  font-family: -apple-system, "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: var(--bg-page);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
+  font-family: var(--font-family-base);
 }
 
 .rider-page {
@@ -27,16 +24,17 @@ html, body {
 
 /* ---- 卡片 ---- */
 .rider-card {
-  background: #fff;
+  background: var(--bg-card);
   margin: 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 14px 12px;
+  box-shadow: var(--shadow-card);
 }
 
 .card-title {
   display: flex;
   align-items: center;
-  font-size: 17px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   margin: 0 0 10px;
 }
@@ -46,11 +44,11 @@ html, body {
   width: 4px;
   height: 18px;
   border-radius: 2px;
-  background: var(--rider-brand);
+  background: var(--color-primary);
   margin-right: 8px;
 }
 
-.card-title.deliver .bar { background: var(--rider-text); }
+.card-title.deliver .bar { background: var(--color-text-primary); }
 
 /* ---- 信息行 ---- */
 .info-row {
@@ -62,7 +60,7 @@ html, body {
 
 .info-row .label {
   flex: 0 0 64px;
-  color: var(--rider-sub);
+  color: var(--color-text-secondary);
 }
 
 .info-row .val {
@@ -71,7 +69,7 @@ html, body {
 }
 
 .info-row .val.strong {
-  font-size: 17px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
 }
 
@@ -86,18 +84,20 @@ html, body {
   height: 40px;
   line-height: 40px;
   text-align: center;
-  border: 1px solid var(--rider-border);
-  border-radius: 8px;
-  background: #fff;
-  color: var(--rider-text);
-  font-size: 15px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
   padding: 0;
+  text-decoration: none;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
 }
 
 .tool-btn.primary {
-  border-color: var(--rider-brand);
-  background: var(--rider-brand);
-  color: #1f2937;
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 
@@ -110,30 +110,41 @@ html, body {
   width: 100%;
   height: 50px;
   border: none;
-  border-radius: 8px;
-  font-size: 17px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-lg);
   font-weight: 700;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
 }
 
 .rider-btn.primary {
-  background: var(--rider-brand);
-  color: #1f2937;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
 }
 
 .rider-btn.ghost {
-  background: #fff;
-  color: var(--rider-text);
-  border: 1px solid var(--rider-border);
+  background: var(--bg-card);
+  color: var(--color-text-primary);
+  border: 1px solid var(--border-light);
 }
 
 .rider-btn + .rider-btn { margin-top: 10px; }
 
+/* 按压反馈 + 禁用态：户外戴手套也能感知是否点中 */
+.rider-btn:active,
+.tool-btn:active { transform: scale(0.97); }
+
+.rider-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ---- 列表卡片 ---- */
 .task-card {
-  background: #fff;
+  background: var(--bg-card);
   margin: 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 12px;
+  box-shadow: var(--shadow-card);
 }
 
 .task-head {
@@ -143,37 +154,38 @@ html, body {
   margin-bottom: 8px;
 }
 
-.task-number { font-weight: 700; font-size: 16px; }
+.task-number { font-weight: 700; font-size: var(--font-size-lg); }
 
 .task-amount {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
 }
 
 .task-line {
-  color: var(--rider-sub);
+  color: var(--color-text-secondary);
   margin: 4px 0;
   line-height: 1.5;
 }
 
-.task-line .addr { color: var(--rider-text); }
+.task-line .addr { color: var(--color-text-primary); }
 
 .task-foot {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 10px;
-  border-top: 1px solid var(--rider-border);
+  border-top: 1px solid var(--border-light);
   padding-top: 10px;
 }
 
-.task-time { color: var(--rider-sub); font-size: 13px; }
+.task-time { color: var(--color-text-hint); font-size: var(--font-size-sm); }
 
 /* ---- 空态 ---- */
 .rider-empty {
   text-align: center;
-  color: var(--rider-sub);
+  color: var(--color-text-hint);
   padding: 60px 20px;
 }
 
@@ -183,20 +195,20 @@ html, body {
 }
 
 .login-title {
-  font-size: 22px;
+  font-size: var(--font-size-3xl);
   font-weight: 700;
   margin: 10px 0 4px;
 }
 
 .login-sub {
-  color: var(--rider-sub);
+  color: var(--color-text-secondary);
   margin-bottom: 24px;
 }
 
 .login-tip {
   margin-top: 16px;
-  color: var(--rider-sub);
-  font-size: 13px;
+  color: var(--color-text-hint);
+  font-size: var(--font-size-sm);
   text-align: center;
 }
 
@@ -205,13 +217,13 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
+  background: var(--bg-card);
   padding: 10px 14px;
-  border-bottom: 1px solid var(--rider-border);
+  border-bottom: 1px solid var(--border-light);
 }
 
 .rider-statusbar .who { font-weight: 600; }
-.rider-statusbar .who small { color: var(--rider-sub); font-weight: 400; margin-left: 6px; }
+.rider-statusbar .who small { color: var(--color-text-secondary); font-weight: 400; margin-left: 6px; }
 
 /* 底部固定「抢单大厅」入口 */
 .hall-entry {
@@ -220,8 +232,9 @@ html, body {
   right: 0;
   bottom: 0;
   padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-  background: #fff;
-  border-top: 1px solid var(--rider-border);
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-light);
+  box-shadow: var(--shadow-bar-top);
 }
 
 .rider-page.has-bar { padding-bottom: 84px; }
@@ -232,16 +245,32 @@ html, body {
   height: 36px;
   line-height: 36px;
   text-align: center;
-  border-radius: 8px;
-  border: 1px solid var(--rider-border);
-  background: #fff;
-  font-size: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: var(--bg-card);
+  font-size: var(--font-size-sm);
   padding: 0 12px;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
 }
 
 .mini-btn.primary {
-  border-color: var(--rider-brand);
-  background: var(--rider-brand);
-  color: #1f2937;
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
   font-weight: 600;
+}
+
+.mini-btn:active { transform: scale(0.97); }
+
+/* 联系门店/顾客的 RemixIcon 与文字对齐 */
+.tool-btn .ri-phone-line,
+.tool-btn i {
+  vertical-align: -1px;
+  margin-right: 2px;
+}
+
+/* 尊重系统“减少动态”设置：关闭按压缩放 */
+@media (prefers-reduced-motion: reduce) {
+  .rider-btn, .tool-btn, .mini-btn { transition: none; }
+  .rider-btn:active, .tool-btn:active, .mini-btn:active { transform: none; }
 }

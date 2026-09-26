@@ -1,0 +1,84 @@
+/* ================================================================
+   跨端共享设计令牌 — 瑞吉外卖（C端 front / 骑手端 rider 单一真源）
+
+   约定：
+   - 颜色 / 渐变 / 阴影 / 字体族 / 动画时长：与单位无关，两端直接消费；
+   - 尺寸（间距 / 圆角 / 字号 / 高度）：以 375 设计稿 px 为数值基准。
+     C端用 rem 表示（base.js：375 视口下 1rem = 1px），骑手端直接用 px，
+     两端在标准手机视口下视觉一致。
+   - 新增/调整品牌视觉只改本文件，禁止在各页面再硬编码颜色与尺寸。
+   ================================================================ */
+:root {
+  /* ---- 品牌色 ---- */
+  --color-primary: #ffc200;
+  --color-primary-dark: #ff9a00;
+  --color-primary-light: #ffd54f;
+  /* 金底按钮上的深色文字 */
+  --color-primary-text: #4a3500;
+  --color-primary-gradient: linear-gradient(135deg, #ffc200 0%, #ff9a00 100%);
+  /* 品牌金低透明底（标签 / 激活态） */
+  --color-primary-tint: rgba(255, 194, 0, 0.10);
+
+  /* ---- 文字色 ---- */
+  --color-text-primary: #333333;
+  --color-text-secondary: #666666;
+  --color-text-hint: #999999;
+  --color-text-disabled: #cccccc;
+  --color-text-white: #ffffff;
+
+  /* ---- 功能色 ---- */
+  --color-danger: #e94e3c;
+  --color-success: #07c160;
+  --color-warning: #ffb300;
+  --color-price: #ff4a26;
+
+  /* ---- 背景色 ---- */
+  --bg-page: #f3f2f7;
+  --bg-card: #ffffff;
+  --bg-input: #f8f9fa;
+  --bg-hover: #f5f5f5;
+
+  /* ---- 边框色 ---- */
+  --border-light: #eeeeee;   /* 浅分割线 */
+  --border-medium: #dddddd;  /* 输入框 / 卡片边框 */
+
+  /* ---- 圆角（375 px 基准） ---- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-round: 50%;
+
+  /* ---- 间距 ---- */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
+
+  /* ---- 字号 ---- */
+  --font-size-xs: 10px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 24px;
+  --font-size-display: 28px;
+
+  /* ---- 阴影 ---- */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+  /* 固定在底部的操作条：向上投影 */
+  --shadow-bar-top: 0 -2px 8px rgba(0, 0, 0, 0.08);
+
+  /* ---- 字体族 ---- */
+  --font-family-base: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft Yahei", sans-serif;
+
+  /* ---- 动画 ---- */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
