@@ -726,6 +726,9 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
+  /* 修改点(2026-09-25)：补 overflow:hidden —— 缺它时 line-clamp 只限盒子高度不裁剪内容，
+     第三行文本会溢出渲染，被后绘制的金额行遮挡 */
+  overflow: hidden;
   margin-bottom: 4rem;
 }
 
@@ -2062,6 +2065,37 @@
   color: var(--color-text-hint);
   margin-left: 8rem;
 }
+/* 修改点(2026-09-26)：推荐区关闭按钮（header 右侧）与关闭态细条 */
+.recommend-close {
+  margin-left: auto;
+  width: 24rem;
+  height: 24rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--color-text-hint);
+  font-size: 16rem;
+}
+.recommend-close:active {
+  background: var(--bg-input);
+}
+.recommend-collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6rem 12rem;
+}
+.recommend-collapsed__label {
+  font-size: 13rem;
+  color: var(--color-text-hint);
+}
+.recommend-collapsed__show {
+  font-size: 13rem;
+  color: var(--color-primary-dark);
+  display: flex;
+  align-items: center;
+}
 .recommend-scroll {
   display: flex;
   overflow-x: auto;
@@ -2085,7 +2119,7 @@
   background: var(--bg-page);
   transform: scale(0.96);
 }
-.ri-image {
+.rec-image {
   width: 80rem;
   height: 80rem;
   margin: 0 auto;
@@ -2093,36 +2127,37 @@
   overflow: hidden;
   background: var(--bg-input);
 }
-.ri-image img {
+.rec-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.ri-info {
+.rec-info {
   margin-top: 6rem;
 }
-.ri-name {
+.rec-name {
   font-size: 12rem;
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ri-price-row {
+.rec-price-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: 2rem;
 }
-.ri-price {
+.rec-price {
   font-size: 14rem;
   font-weight: 700;
   color: var(--color-price);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
-/* 价格行右下角小号金色圆形直达加购钮（视觉 22rem，透明命中区 40rem） */
-.ri-add {
+/* 价格行右下角小号金色圆形直达加购钮（视觉 22rem，透明命中区 40rem）。
+   用 rec- 前缀，避免与 RemixIcon 的 ri- 字体类命名混淆 */
+.rec-add {
   position: relative;
   flex-shrink: 0;
   width: 22rem;
@@ -2135,13 +2170,13 @@
   box-shadow: 0 2rem 5rem var(--color-primary-shadow);
   cursor: pointer;
 }
-.ri-add i {
+.rec-add i {
   font-family: remixicon;
   font-size: 14rem;
   line-height: 1;
   color: var(--color-text-white);
 }
-.ri-add::after {
+.rec-add::after {
   content: '';
   position: absolute;
   top: 50%;
@@ -2150,7 +2185,7 @@
   height: 44rem;
   transform: translate(-50%, -50%);
 }
-.ri-add:active {
+.rec-add:active {
   transform: scale(0.9);
 }
 
@@ -2167,8 +2202,8 @@
 .coupon-bar,
 .notice-bar,
 .recommend-item,
-.ri-image,
-.ri-info,
+.rec-image,
+.rec-info,
 .di-image,
 .di-info,
 .di-spec,

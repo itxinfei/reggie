@@ -197,14 +197,14 @@
         <div class="recommend-scroll">
           <div class="recommend-item" v-for="(dish, idx) in recommendDishes.slice(0, 8)" :key="'r'+idx"
                @click="recommendDishClick(dish)">
-            <div class="ri-image">
+            <div class="rec-image">
               <img :src="imgPath(dish.image)" @error="imgFallback($event)" loading="lazy" :alt="dish.name || '菜品图片'"/>
             </div>
-            <div class="ri-info">
-              <div class="ri-name">{{ dish.name }}</div>
-              <div class="ri-price-row">
-                <span class="ri-price">¥{{ Number(dish.price || 0).toFixed(2) }}</span>
-                <span class="ri-add" @click.stop="recommendQuickAdd(dish, $event)" role="button" aria-label="加入购物车">
+            <div class="rec-info">
+              <div class="rec-name">{{ dish.name }}</div>
+              <div class="rec-price-row">
+                <span class="rec-price">¥{{ Number(dish.price || 0).toFixed(2) }}</span>
+                <span class="rec-add" @click.stop="recommendQuickAdd(dish, $event)" role="button" aria-label="加入购物车">
                   <i class="ri-add-line"></i>
                 </span>
               </div>
