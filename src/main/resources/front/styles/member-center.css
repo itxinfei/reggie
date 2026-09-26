@@ -336,3 +336,6 @@
   .mc-benefit-name,
   .mc-benefit-desc { font-size: 11rem; }
 }
+
+/* 满级进度条满宽（原内联 width:100% 收口） */
+.mc-prog-fill.is-full { width: 100%; }

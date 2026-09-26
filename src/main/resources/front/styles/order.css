@@ -649,3 +649,6 @@
   color: var(--color-text-hint);
   margin-top: 6rem;
 }
+
+/* 骨架屏容器内边距（原内联 padding 收口） */
+.skeleton-page { padding: 16rem 12rem; }

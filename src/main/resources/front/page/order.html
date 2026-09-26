@@ -39,7 +39,7 @@
             <!-- 修改点(2026-09-25)：切 tab 也会清空列表并置 loading=true，此时 firstLoading 已是 false，
                  若骨架屏只认 firstLoading 就是切 tab 全程白屏。故骨架屏条件补上 loading，与下方空态的
                  !loading 条件互斥：加载中空列表显示骨架，加载完仍空才落到空态 -->
-            <div v-if="showListSkeleton" class="has-tabbar" style="padding: 16rem 12rem;">
+            <div v-if="showListSkeleton" class="has-tabbar skeleton-page">
                 <van-skeleton :row="5" title :avatar="true"></van-skeleton>
             </div>
             <div class="divBody has-tabbar" v-if="!firstLoading && orderList.length > 0">

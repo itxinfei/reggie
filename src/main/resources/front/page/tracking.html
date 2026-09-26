@@ -158,8 +158,8 @@
         <div class="empty-state" v-else-if="!pageLoading && !trackingData">
             <i :class="missingOrder ? 'ri-error-warning-line' : 'ri-map-pin-time-line'"></i>
             <p class="empty-text">{{ missingOrder ? '订单信息缺失，请返回订单列表' : '暂无配送信息' }}</p>
-            <van-button v-if="missingOrder" size="small" round style="margin-top: 12rem;" @click="goToOrders">去订单列表</van-button>
-            <van-button v-else size="small" round style="margin-top: 12rem;" @click="loadTracking">重新加载</van-button>
+            <van-button v-if="missingOrder" size="small" round @click="goToOrders">去订单列表</van-button>
+            <van-button v-else size="small" round @click="loadTracking">重新加载</van-button>
         </div>
         </cend-shell>
     </div>

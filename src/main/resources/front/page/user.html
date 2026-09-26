@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="../styles/tabbar.css?v=20260917" />
 </head>
 <body>
-    <div id="user" class="app" style="position:relative;">
+    <div id="user" class="app relative">
         <!-- 修改点：骨架屏替代 loading 遮罩 -->
         <div v-if="pageLoading" class="skeleton-container">
             <!-- 用户信息骨架 -->
@@ -189,7 +189,7 @@
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
-                <div class="item" @click="toMessagePage" style="position:relative">
+                <div class="item relative" @click="toMessagePage">
                     <i class="ri-notification-2-line link-icon li-message" aria-hidden="true"></i>
                     <span>消息中心</span>
                     <span v-if="unreadCount > 0" class="msg-badge">{{ unreadCount }}</span>

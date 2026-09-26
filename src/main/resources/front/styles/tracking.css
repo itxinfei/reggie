@@ -377,3 +377,6 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-hint);
 }
+
+/* 空态操作按钮顶间距（原内联 margin-top 收口） */
+.empty-state .van-button { margin-top: 12rem; }
