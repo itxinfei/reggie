@@ -93,7 +93,7 @@
             </div>
             <!-- ETA也无但有距离：静态距离卡占位，避免纯时间轴单薄 -->
             <div class="distance-card" v-if="isDelivering && !mapEnabled && etaMinutes() === null && distanceText()">
-                <i class="ri-distance-line"></i>
+                <i class="ri-map-pin-line"></i>
                 <span>骑手距您 {{ distanceText() }}</span>
             </div>
 

@@ -167,7 +167,7 @@
                             </button>
                             <button class="copy-btn" v-if="msg.content" @click="copyMessage(msg)" :title="msg.copied ? '已复制' : '复制'" aria-label="复制">
                                 <span v-if="msg.copied"><i class="ri-check-line" aria-hidden="true"></i></span>
-                                <span v-else><i class="ri-copy-line" aria-hidden="true"></i></span>
+                                <span v-else><i class="ri-file-copy-line" aria-hidden="true"></i></span>
                             </button>
                         </div>
                         <!-- 推荐菜品卡片 -->
@@ -265,7 +265,7 @@
         <div class="msg-context-menu" :class="{visible: menuVisible}"
              :style="{top: menuY + 'px', left: menuX + 'px'}"
              v-if="menuTarget">
-            <div class="menu-item" @click="copyMenuTarget"><i class="ri-copy-line" aria-hidden="true"></i> 复制</div>
+            <div class="menu-item" @click="copyMenuTarget"><i class="ri-file-copy-line" aria-hidden="true"></i> 复制</div>
             <div class="menu-item" @click="deleteMenuTarget" v-if="menuTarget.role === 'user'"><i class="ri-delete-bin-6-line" aria-hidden="true"></i> 删除</div>
             <div class="menu-item menu-cancel" @click="menuVisible = false">取消</div>
         </div>
