@@ -297,3 +297,51 @@ html, body {
   .rider-btn, .tool-btn, .mini-btn { transition: none; }
   .rider-btn:active, .tool-btn:active, .mini-btn:active { transform: none; }
 }
+
+/* ================================================================
+   视觉美化增强（2026-09-26）：品牌金主题 / 按钮渐变 / 卡片层次
+   —— 纯视觉装饰，不改动任何布局结构与内容尺寸
+   ================================================================ */
+
+/* Vant Tabs：选中下划线与文字由默认红改为品牌金 */
+.van-tabs__line { background: var(--color-primary); }
+.van-tab.van-tab--active { color: var(--color-primary-dark); font-weight: 600; }
+
+/* 主按钮：金色渐变 + 柔和投影；沿用深色文字保持户外强光下可读 */
+.rider-btn.primary {
+  background: var(--color-primary-gradient);
+  color: var(--color-primary-text);
+  border: none;
+  box-shadow: 0 4px 12px var(--color-primary-shadow);
+}
+.mini-btn.primary,
+.tool-btn.primary {
+  background: var(--color-primary-gradient);
+  color: var(--color-primary-text);
+  box-shadow: 0 2px 8px var(--color-primary-shadow);
+}
+
+/* 任务卡：左侧金色状态竖条（绝对定位装饰，不占内容、不引起位移） */
+.task-card { position: relative; }
+.task-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 12px; bottom: 12px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--color-primary-gradient);
+}
+
+/* 桌面端 hover：卡片轻微抬升（移动端无 hover，不影响） */
+@media (hover: hover) {
+  .rider-card, .task-card { transition: box-shadow 0.2s ease, transform 0.2s ease; }
+  .rider-card:hover, .task-card:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-1px);
+  }
+}
+
+/* 导航标题更明确、底部大厅条顶部投影 */
+.van-nav-bar__title { font-weight: 600; }
+.hall-entry { box-shadow: var(--shadow-bar-top); }
+.hall-entry .rider-btn { border-radius: var(--radius-md); }
