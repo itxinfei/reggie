@@ -407,8 +407,11 @@ public class RefundServiceImpl implements RefundService {
      */
     private void updateOrderOnFullRefund(Orders order, PaymentOrder latest) {
         Integer curStatus = order.getStatus();
+        // 允许已取消(5)流转：支付回调晚于取消到达时，订单此前已被置5（库存/权益在取消时已处理），
+        // 退款成功后同样应转为已退款6，避免"订单已取消 + 支付已退款"的状态矛盾
         if (curStatus != null && Arrays.asList(
-                Orders.STATUS_ORDERED, Orders.STATUS_DELIVERING, Orders.STATUS_COMPLETED).contains(curStatus)) {
+                Orders.STATUS_ORDERED, Orders.STATUS_DELIVERING, Orders.STATUS_COMPLETED,
+                Orders.STATUS_CANCELLED).contains(curStatus)) {
             LambdaUpdateWrapper<Orders> orderUpdateWrapper = new LambdaUpdateWrapper<>();
             orderUpdateWrapper.eq(Orders::getId, order.getId()).eq(Orders::getStatus, curStatus);
             Orders updateEntity = new Orders();

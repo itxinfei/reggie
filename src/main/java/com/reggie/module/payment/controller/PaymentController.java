@@ -672,9 +672,9 @@ public class PaymentController {
     private R<String> persistUserRefund(PaymentOrder paymentOrder, Orders order, RefundRecord record,
             BigDecimal refundAmount, BigDecimal alreadyRefunded, BigDecimal paymentAmount) {
         try {
-            refundRecordService.createRefund(paymentOrder.getId(), refundAmount,
-                    "[售后退款]" + record.getReason(), record.getRefundNo());
-            refundRecordService.markRefundSuccess(record.getRefundNo());
+            // 售后单本身即退款凭证（refund_type=1，落库于 applyUserRefund）：渠道退款成功后直接把这条
+            // 售后单 processing→SUCCESS，不再 createRefund 插同号财务记录
+            // （曾撞 uk_refund_no，导致渠道已退款而本地售后卡 processing、零落账）
             refundRecordService.markUserRefundSuccess(record.getRefundNo());
             boolean isFull = alreadyRefunded.add(refundAmount).compareTo(paymentAmount) == 0;
             if (isFull) {

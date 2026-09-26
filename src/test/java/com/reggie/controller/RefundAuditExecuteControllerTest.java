@@ -35,9 +35,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>审核/执行均为员工操作（@RequireEmployee，由 EmployeeGuardAspect 切面校验，
  * MockMvc 下 AOP 生效，故带 employee 会话）。用户申请用 Service 直调以拿到售后记录 ID。</p>
  *
- * <p>【已确认缺陷】execute 在当前 MySQL（refund_record.uk_refund_no）下：渠道退款已成功，
- * 但本地用售后单同号再插财务记录撞唯一键，售后单卡 processing、订单停 4、支付单仍 SUCCESS，
- * 仅留一条 [对账待办] 痕迹。见 testExecuteProcessingHitsDefect。</p>
+ * <p>execute：渠道成功后直接把售后单本身置 SUCCESS（不再插同号财务记录），全额联动
+ * 支付单 REFUND、订单 4→6、回补库存。见 testExecuteProcessingSuccess。</p>
  */
 @SpringBootTest(classes = com.reggie.ReggieApplication.class)
 @AutoConfigureMockMvc
@@ -233,34 +232,34 @@ public class RefundAuditExecuteControllerTest extends BaseControllerTest {
     // ==================== 执行退款 ====================
 
     @Test
-    void testExecuteProcessingHitsDefect() throws Exception {
+    void testExecuteProcessingSuccess() throws Exception {
         seedCompletedOrder();
         long refundId = applyAsUser().getId();
         asEmployee();
         // 审核通过 → processing
         refundRecordService.auditUserRefund(refundId, true, null);
 
-        // execute：渠道退款（mock）已成功，但本地落库撞 uk_refund_no → 告警性成功返回
+        // execute：渠道退款（mock）成功，售后单本身置 SUCCESS，全额 → 支付单 REFUND、订单已退款
         mockMvc.perform(withCsrfToken(mockMvc, post("/api/payment/refund/user/execute")
                 .param("refundId", String.valueOf(refundId))
                 .sessionAttr("employee", EMP_ID).sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
-                .andExpect(jsonPath("$.data").value("退款已提交（渠道已处理），请核对退款记录"));
+                .andExpect(jsonPath("$.data").value("退款成功"));
 
-        // 【缺陷后果】售后单仍 processing、订单仍 4、支付单仍 SUCCESS，
-        // 且不存在任何 SUCCESS 退款财务记录——渠道已退款、本地零落账，资金账实不符，需人工对账
-        assertEquals("processing", refundStatus(refundId));
+        // 售后单 processing→SUCCESS、订单 4→6、支付单 SUCCESS→REFUND
+        assertEquals("SUCCESS", refundStatus(refundId));
         Integer orderStatus = jdbcTemplate.queryForObject(
                 "SELECT status FROM orders WHERE id = ?", Integer.class, ORDER_ID);
-        assertEquals(4, orderStatus == null ? -1 : orderStatus.intValue());
+        assertEquals(6, orderStatus == null ? -1 : orderStatus.intValue());
         String poStatus = jdbcTemplate.queryForObject(
                 "SELECT status FROM payment_order WHERE order_id = ?", String.class, ORDER_ID);
-        assertEquals("SUCCESS", poStatus);
+        assertEquals("REFUND", poStatus);
+        // 售后单本身即 SUCCESS 退款记录（按 payment_order_id 关联查）
         Integer successFinancing = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM refund_record rr WHERE rr.status = 'SUCCESS' AND rr.payment_order_id IN "
                         + "(SELECT id FROM payment_order WHERE order_id = ?)", Integer.class, ORDER_ID);
-        assertEquals(0, successFinancing == null ? 0 : successFinancing.intValue());
+        assertEquals(1, successFinancing == null ? 0 : successFinancing.intValue());
     }
 
     @Test

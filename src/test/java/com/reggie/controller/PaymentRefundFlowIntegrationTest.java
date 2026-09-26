@@ -279,11 +279,9 @@ public class PaymentRefundFlowIntegrationTest extends BaseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        // 【缺陷·按当前真实行为断言】支付单 PENDING→SUCCESS（回调）→ afterCommit 自动全额退款 → REFUND，
-        // 产生 1 条 SUCCESS 退款记录；但订单 status=5 不在退款联动允许的[2,3,4]，
-        // RefundServiceImpl.updateOrderOnFullRefund 落入 else 跳过，订单保持 5
-        // （资金已退，语义上订单应为已退款6）。疑似状态机缺陷。
-        assertEquals(Orders.STATUS_CANCELLED, orderStatus(990608L));
+        // 支付单 PENDING→SUCCESS（回调）→ afterCommit 自动全额退款 → REFUND，产生 1 条 SUCCESS 退款记录；
+        // 修复后订单 status=5 允许流转 → 已退款6
+        assertEquals(Orders.STATUS_REFUNDED, orderStatus(990608L));
         assertEquals("REFUND", paymentStatus(990608L));
         Integer refundCnt = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM refund_record rr WHERE rr.status = 'SUCCESS' "
