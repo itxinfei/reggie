@@ -46,10 +46,11 @@
       template: [
         '<div class="cend-page">',
         '  <!-- 导航栏：独立 .cend-navbar，不复用各页 .divHead 金色作用域样式 -->',
-        '  <div v-if="title || showBack || showHome" class="cend-navbar" :class="light ? \'is-light\' : \'is-brand\'">',
+        '  <div v-if="title || showBack || showHome || $slots.right" class="cend-navbar" :class="light ? \'is-light\' : \'is-brand\'">',
         '    <i v-if="showBack" class="cend-navbar__btn cend-navbar__back ri-arrow-left-s-line" @click="onBack"></i>',
         '    <span class="cend-navbar__title">{{ title }}</span>',
-        '    <i v-if="showHome" class="cend-navbar__btn cend-navbar__home ri-home-4-line" @click="onHome"></i>',
+        '    <i v-if="showHome && !$slots.right" class="cend-navbar__btn cend-navbar__home ri-home-4-line" @click="onHome"></i>',
+        '    <span v-if="$slots.right" class="cend-navbar__right"><slot name="right"></slot></span>',
         '  </div>',
         '  <!-- 主内容（页面自行控制滚动和间距） -->',
         '  <slot></slot>',

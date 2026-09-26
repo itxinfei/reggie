@@ -16,15 +16,13 @@
 </head>
 <body>
     <div id="csPage" class="app">
-        <div class="divHead">
-            <div class="divTitle">
-                <i class="ri-arrow-left-s-line" role="button" tabindex="0" aria-label="返回" @click="goBack" @keydown.enter="goBack"></i>{{ view === 'chat' ? '在线客服' : '我要投诉' }}
-            </div>
-            <i v-if="view==='chat'" class="ri-error-warning-line head-home-btn" @click="switchView('complaint')"
-               aria-label="我要投诉" title="我要投诉"></i>
-            <i v-else class="ri-customer-service-2-line head-home-btn" @click="switchView('chat')"
-               aria-label="返回客服" title="返回客服"></i>
-        </div>
+      <cend-shell :title="view === 'chat' ? '在线客服' : '我要投诉'" light :show-back="true">
+        <template #right>
+          <i v-if="view==='chat'" class="cend-navbar__btn ri-error-warning-line"
+             @click="switchView('complaint')" aria-label="我要投诉" title="我要投诉"></i>
+          <i v-else class="cend-navbar__btn ri-customer-service-2-line"
+             @click="switchView('chat')" aria-label="返回客服" title="返回客服"></i>
+        </template>
 
         <div class="cs-body">
             <!-- ================= 聊天视图 ================= -->
@@ -222,6 +220,7 @@
                         @click="submitRate">{{ rating ? '提交中…' : '提交评价' }}</button>
             </div>
         </van-popup>
+      </cend-shell>
     </div>
 
     <script src="../../backend/plugins/vue/vue.js"></script>
@@ -229,6 +228,7 @@
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="./../js/request.js?v=20260917"></script>
     <script src="./../js/common.js?v=20260924"></script>
+    <script src="./../js/components-cend.js?v=20260922"></script>
     <script src="./../api/order.js?v=20260917"></script>
     <script src="./../api/cs.js?v=20260921"></script>
     <script>

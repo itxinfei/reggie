@@ -17,6 +17,7 @@
 </head>
 <body>
     <div id="eval-app" class="app">
+      <cend-shell title="我的评价" light :show-back="true" :show-home="true">
         <!-- 修改点：骨架屏替代 loading 遮罩 -->
         <div v-if="loading" class="skeleton-container">
             <!-- 评价卡片骨架 -->
@@ -32,14 +33,7 @@
                 <div class="skeleton-line skeleton-w60"></div>
             </div>
         </div>
-        <!-- 修改点(2026-09-17)：二级页补「回首页」入口（底部 Tab 仅覆盖一级页，深层路径易迷路） -->
-        <div class="divHead">
-            <div class="divTitle">
-                <i class="ri-arrow-left-s-line" role="button" tabindex="0" aria-label="返回" @click="goBack" @keydown.enter="goBack"></i>我的评价
-            </div>
-            <i class="ri-home-5-line head-home-btn" @click="goHome"
-               aria-label="回到首页" title="回到首页"></i>
-        </div>
+        <!-- 修改点(2026-09-26)：头部收敛到 cend-shell，旧 .divHead 已移除 -->
 
         <!-- 写评价入口 -->
         <div class="write-eval-bar" v-if="canEvaluate && !submitVisible">
@@ -190,6 +184,7 @@
         <!-- 图片预览 -->
         <!-- 修改点(2026-09-01)：v-model:show 是 Vue3 语法（Vue2 无效）；van-* 禁自闭合 -->
         <van-image-preview :show.sync="previewShow" :images="previewImages" :start-position="previewIndex"></van-image-preview>
+      </cend-shell>
     </div>
 
     <script src="../../backend/plugins/vue/vue.js"></script>
@@ -199,6 +194,7 @@
     <script src="./../js/common.js?v=20260924"></script>
     <script src="../api/evaluation.js?v=20260917"></script>
     <script src="./../api/order.js?v=20260917"></script>
+    <script src="./../js/components-cend.js?v=20260922"></script>
     <script>
         new Vue({
             el: '#eval-app',

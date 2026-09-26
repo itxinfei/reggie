@@ -21,14 +21,8 @@
 </head>
 <body>
   <div id="dine-app">
-    <!-- 修改点(2026-09-17)：头部统一为 .divHead > .divTitle（对齐全站标准）-->
-    <div class="divHead">
-      <div class="divTitle">
-        <i class="ri-store-2-line"></i>{{ storeInfo.name || '瑞吉外卖' }}
-      </div>
-      <!-- 无效二维码/任意情况下的返回首页出口，避免落地页成为死胡同 -->
-      <a class="qr-home-btn" href="/front/index.html" aria-label="返回首页"><i class="ri-home-4-line"></i></a>
-    </div>
+    <cend-shell :title="storeInfo.name || '瑞吉外卖'" light :show-back="false" show-home>
+    <!-- 2026-09-26 头部收敛到 cend-shell，旧 .divHead 已移除 -->
 
     <!-- 桌台凭据条：让顾客确认在哪个区域/哪桌下单；桌台信息弱网拉取失败时兜底桌台ID -->
     <div class="table-info-bar" v-if="!loading && !invalidTable">
@@ -196,6 +190,7 @@
         <p>订单已提交，请留意商家叫号或到收银台付款</p>
       </div>
     </van-dialog>
+    </cend-shell>
   </div>
 
   <script src="../../backend/plugins/vue/vue.js"></script>
@@ -208,6 +203,7 @@
   <script src="../api/dining.js?v=20260917"></script>
   <script src="../api/payment.js?v=20260917"></script>
   <script src="../api/order.js?v=20260917"></script>
+  <script src="../js/components-cend.js?v=20260922"></script>
   <script>
     new Vue({
       el: '#dine-app',

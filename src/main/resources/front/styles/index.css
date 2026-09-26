@@ -496,6 +496,25 @@ select {
    图标会停在 flex 居中布局的假设位置、与标题重叠（2026-09-24 实测故障） */
 .cend-navbar__back { left: 4rem; right: auto; }
 .cend-navbar__home { right: 4rem; left: auto; }
+/* 右侧自定义区（具名插槽 #right：视图切换/全部已读等），绝对定位于导航右侧 */
+.cend-navbar__right {
+  position: absolute;
+  right: 8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8rem;
+}
+/* 插槽内的导航图标按钮：取消绝对定位，由右侧容器统一布局 */
+.cend-navbar__right .cend-navbar__btn {
+  position: static;
+  top: auto;
+  height: auto;
+  width: auto;
+  font-size: 22rem;
+}
+.cend-navbar__right .cend-navbar__btn:active { opacity: 0.6; }
 
 /* 白底轻导航（对标美团二级页） */
 .cend-navbar.is-light {

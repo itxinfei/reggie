@@ -50,12 +50,8 @@
   transform: translateY(-50%) scale(0.85);
 }
 
-/* ---- 全部已读按钮 ---- */
-#messageApp .divHead .divTitle .mark-all-btn {
-  position: absolute;
-  right: var(--spacing-lg);
-  top: 50%;
-  transform: translateY(-50%);
+/* ---- 全部已读按钮（收敛到 cend-shell 的 #right 插槽，由 .cend-navbar__right 定位） ---- */
+#messageApp .cend-navbar__right .mark-all-btn {
   font-size: 13rem;
   font-weight: 500;
   font-family: var(--font-family-body);
@@ -64,7 +60,7 @@
   cursor: pointer;
   transition: opacity var(--transition-fast);
 }
-#messageApp .divHead .divTitle .mark-all-btn:active {
+#messageApp .cend-navbar__right .mark-all-btn:active {
   opacity: 1;
 }
 

@@ -16,6 +16,7 @@
 </head>
 <body class="scrollable-page">
   <div id="invoice-list-app">
+    <cend-shell title="我的发票" light :show-back="true">
     <!-- 修改点：骨架屏替代 loading 遮罩 -->
     <div v-if="loading" class="skeleton-container">
       <!-- 发票卡片骨架 -->
@@ -39,11 +40,7 @@
       </div>
     </div>
 
-    <div class="divHead">
-      <div class="divTitle">
-        <i class="ri-arrow-left-s-line" role="button" tabindex="0" aria-label="返回" @click="goBack" @keydown.enter="goBack"></i>我的发票
-      </div>
-    </div>
+    <!-- 2026-09-26 头部收敛到 cend-shell，旧 .divHead 已移除 -->
 
     <!-- 发票记录列表 -->
     <!-- 修改点：van-pull-refresh 包裹列表实现下拉刷新 -->
@@ -94,6 +91,7 @@
         @change="onPageChange"
         class="pagination-wrap"
     ></van-pagination>
+    </cend-shell>
   </div>
 
   <script src="../../backend/plugins/vue/vue.js"></script>
@@ -102,6 +100,7 @@
   <script src="./../js/request.js?v=20260917"></script>
   <script src="./../api/main.js?v=20260917"></script>
   <script src="./../js/common.js?v=20260924"></script>
+  <script src="./../js/components-cend.js?v=20260922"></script>
   <script src="./../api/invoice.js?v=20260917"></script>
   <script>
     new Vue({
