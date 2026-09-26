@@ -13,12 +13,13 @@
     <!-- 修改点：加载 remixicon 图标库，菜单位图 png → ri-* 矢量图标 -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
-    <link rel="stylesheet" href="./../styles/user.css?v=20260922" />
+    <link rel="stylesheet" href="./../styles/user.css?v=20260926" />
     <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
     <link rel="stylesheet" href="../styles/tabbar.css?v=20260917" />
 </head>
 <body>
     <div id="user" class="app relative">
+      <cend-shell :show-back="false">
         <!-- 修改点：骨架屏替代 loading 遮罩 -->
         <div v-if="pageLoading" class="skeleton-container">
             <!-- 用户信息骨架 -->
@@ -46,47 +47,42 @@
                 </div>
             </div>
         </div>
-        <div class="divHead">
-            <div class="divTitle">
-                <i class="ri-arrow-left-s-line" role="button" tabindex="0" aria-label="返回" @click="goBack" @keydown.enter="goBack"></i>个人中心
+        <!-- 用户信息 hero（对标美团/饿了么一级页：无返回、无标题，头像昵称独立成区，右上角编辑） -->
+        <div class="user-hero">
+            <i class="ri-pencil-line hero-edit-icon" @click.stop="openEditProfile" aria-label="编辑资料" role="button"></i>
+            <!-- 头像支持点击选择 / 拖拽上传，本地即时预览，上传中显示遮罩 -->
+            <div class="avatar-wrap"
+                 :class="{ dragging: avatarDragging, uploading: avatarUploading }"
+                 role="button" tabindex="0" aria-label="点击或拖拽图片以更换头像"
+                 @click="triggerAvatarInput"
+                 @keydown.enter.prevent="triggerAvatarInput"
+                 @dragover.prevent="onAvatarDragOver"
+                 @dragleave.prevent="onAvatarDragLeave"
+                 @drop.prevent="onAvatarDrop">
+                <img class="avatar-img" :src="userAvatar ? imgPath(userAvatar) : '/front/images/headPage.png'" alt="用户头像"/>
+                <div v-if="avatarUploading" class="avatar-mask">
+                    <i class="ri-loader-4-line rotating"></i>
+                </div>
+                <input ref="avatarInput" class="avatar-input" type="file"
+                       accept="image/jpeg,image/png,image/gif" @change="onAvatarChange"/>
             </div>
-            <div class="divUser">
-                <!-- 修改点(2026-09-16)：头像支持点击选择 / 拖拽上传，本地即时预览，上传中显示遮罩 -->
-                <div class="avatar-wrap"
-                     :class="{ dragging: avatarDragging, uploading: avatarUploading }"
-                     role="button" tabindex="0" aria-label="点击或拖拽图片以更换头像"
-                     @click="triggerAvatarInput"
-                     @keydown.enter.prevent="triggerAvatarInput"
-                     @dragover.prevent="onAvatarDragOver"
-                     @dragleave.prevent="onAvatarDragLeave"
-                     @drop.prevent="onAvatarDrop">
-                    <img class="avatar-img" :src="userAvatar || './../images/headPage.png'" alt="用户头像" @error="imgError"/>
-                    <div v-if="avatarUploading" class="avatar-mask">
-                        <i class="ri-loader-4-line rotating"></i>
-                    </div>
-                    <input ref="avatarInput" class="avatar-input" type="file"
-                           accept="image/jpeg,image/png,image/gif" @change="onAvatarChange"/>
+            <div class="desc">
+                <div class="divName">
+                    {{ userName || '用户' }}
+                    <!-- User.sex 为 String("0"/"1")，宽松比较兼容 Number/String -->
+                    <span v-if="userGender == '1'" class="gender-icon">
+                        <i class="ri-men-line"></i>
+                    </span>
+                    <span v-else-if="userGender == '0'" class="gender-icon">
+                        <i class="ri-women-line"></i>
+                    </span>
+                    <span v-if="memberInfo && memberInfo.isMember" class="member-tag"><i class="ri-vip-crown-2-fill"></i>会员</span>
                 </div>
-                <div class="desc">
-                    <div class="divName">
-                        {{ userName || '用户' }}
-                        <!-- 修改点：User.sex 为 String("0"/"1")，用宽松比较兼容 Number/String；male/female 用不同 Material 图标 path，视觉可区分 -->
-                        <span v-if="userGender == '1'" class="gender-icon">
-                            <i class="ri-men-line"></i>
-                        </span>
-                        <span v-else-if="userGender == '0'" class="gender-icon">
-                            <i class="ri-women-line"></i>
-                        </span>
-                        <span v-if="memberInfo && memberInfo.isMember" class="member-tag"><i class="ri-vip-crown-2-fill"></i>会员</span>
-                        <!-- 修改点(2026-09-16)：编辑资料入口 -->
-                        <i class="ri-pencil-line edit-profile-icon" @click.stop="openEditProfile" aria-label="编辑资料" role="button"></i>
-                    </div>
-                    <div class="divPhone">{{ maskedPhone }}</div>
-                </div>
+                <div class="divPhone">{{ maskedPhone }}</div>
             </div>
         </div>
         <!-- 修改点：van-pull-refresh 包裹内容实现下拉刷新 -->
-        <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
+        <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功" class="user-scroll">
         <div class="divContent has-tabbar">
             <!-- 会员卡片 -->
             <div class="member-card" @click="goMemberCenter" v-if="memberInfo">
@@ -306,6 +302,7 @@
                 <i slot="icon" class="ri-user-3-line"></i>
             </van-tabbar-item>
         </van-tabbar>
+      </cend-shell>
     </div>
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
@@ -313,6 +310,7 @@
     <script src="./../js/request.js?v=20260917"></script>
     <script src="./../api/main.js?v=20260917"></script>
     <script src="./../js/common.js?v=20260924"></script>
+    <script src="./../js/components-cend.js?v=20260922"></script>
     <script src="./../api/order.js?v=20260917"></script>
     <script src="./../api/login.js?v=20260917"></script>
     <script src="./../api/member-center.js?v=20260917"></script>

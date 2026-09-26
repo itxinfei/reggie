@@ -80,11 +80,10 @@
   color: rgba(51, 51, 51, 0.75);
 }
 
-/* 2026-09-21：divContent 高度与头部精确匹配 —— 头部高度 140rem */
+/* 滚动交给外层 .user-scroll（cend-shell flex 布局），不再按旧固定头高 140rem 计算 */
+/* 底部留白必须 ≥ Tab 栏高度（50rem + 安全区），否则最后一条内容被 fixed 的 .app-tabbar 遮挡 */
 #user .divContent {
-  height: calc(100% - 140rem);
-  overflow-y: auto;
-  padding-bottom: var(--spacing-xl);
+  padding-bottom: calc(50rem + var(--spacing-xl) + env(safe-area-inset-bottom, 0px));
 }
 
 /* ---- 修改点：移除固定高度，防止菜单溢出 ---- */
@@ -721,4 +720,44 @@
 #user .ep-gender-opt.active {
   background: var(--color-primary); color: var(--color-text-primary);
   border-color: var(--color-primary); font-weight: 600;
+}
+
+/* ================================================================
+   用户信息 hero（2026-09-26 对标美团/饿了么一级页，由 .divHead 收敛而来）
+   —— 一级页无返回/无标题，头像昵称独立金色区，右上角编辑
+   ================================================================ */
+#user .user-hero {
+  position: relative;
+  box-sizing: border-box;
+  background: var(--color-primary-gradient);
+  display: flex;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 26rem) var(--spacing-lg) var(--spacing-lg);
+}
+#user .user-hero .hero-edit-icon {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 10rem);
+  right: var(--spacing-lg);
+  font-size: 18rem;
+  color: var(--gold-text);
+  cursor: pointer;
+}
+#user .user-hero .desc { display: flex; flex-direction: column; justify-content: center; }
+#user .user-hero .divName {
+  font-size: 18rem; font-family: var(--font-family-title); font-weight: 600;
+  color: var(--color-text-primary); margin-bottom: 4rem;
+  display: flex; align-items: center; gap: 8rem;
+}
+#user .user-hero .gender-icon { width: 18rem; height: 18rem; opacity: 0.85; }
+#user .user-hero .divPhone {
+  font-size: 13rem; font-family: var(--font-family-body); font-weight: 400;
+  text-align: left; color: rgba(51,51,51,0.75);
+}
+
+/* 内容滚动区：cend-shell flex 列内占满剩余高度（min-height:0 保证可滚动） */
+#user .user-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
