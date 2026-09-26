@@ -599,21 +599,21 @@ public class PaymentControllerTest {
         insertTestRefund(912L, "2026-09-10T10:00:00", "200.00", "原因二");
 
         // 全区间：2 笔合计 300
-        Map<String, Object> all = refundRecordService.sumRefundBetween(1L,
+        Map<String, Object> all = refundRecordService.sumRefundBetween(999L,
                 LocalDateTime.parse("2026-09-01T00:00:00"),
                 LocalDateTime.parse("2026-09-30T23:59:59"));
         assertThat(((BigDecimal) all.get("amount")).compareTo(new BigDecimal("300.00"))).isEqualTo(0);
         assertThat(all.get("count")).isEqualTo(2);
 
         // 子区间 9-05~9-15：仅命中 200
-        Map<String, Object> part = refundRecordService.sumRefundBetween(1L,
+        Map<String, Object> part = refundRecordService.sumRefundBetween(999L,
                 LocalDateTime.parse("2026-09-05T00:00:00"),
                 LocalDateTime.parse("2026-09-15T23:59:59"));
         assertThat(((BigDecimal) part.get("amount")).compareTo(new BigDecimal("200.00"))).isEqualTo(0);
         assertThat(part.get("count")).isEqualTo(1);
 
         // 不匹配区间：0 笔
-        Map<String, Object> none = refundRecordService.sumRefundBetween(1L,
+        Map<String, Object> none = refundRecordService.sumRefundBetween(999L,
                 LocalDateTime.parse("2026-10-01T00:00:00"),
                 LocalDateTime.parse("2026-10-31T23:59:59"));
         assertThat(((BigDecimal) none.get("amount")).compareTo(BigDecimal.ZERO)).isEqualTo(0);
