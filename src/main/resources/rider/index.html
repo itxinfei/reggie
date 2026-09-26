@@ -13,14 +13,14 @@
   <div id="app">
     <van-nav-bar title="骑手工作台">
       <template #right>
-        <span @click="onLogout" style="font-size:15px;">退出</span>
+        <span class="nav-logout" @click="onLogout">退出</span>
       </template>
     </van-nav-bar>
 
     <div class="rider-statusbar">
       <span class="who">{{ me.name || '骑手' }}<small>{{ riderStatusText }}</small></span>
       <div>
-        <span style="margin-right:8px;font-size:14px;">接单中</span>
+        <span class="online-label">接单中</span>
         <van-switch v-model="online" :loading="statusLoading" @change="onToggleOnline"></van-switch>
       </div>
     </div>
@@ -46,7 +46,7 @@
               <button v-if="active === 'todo'" class="mini-btn primary" :disabled="acceptingId === t.id"
                       @click.stop="onAccept(t)">确认接单</button>
               <button v-else-if="active === 'delivering'" class="mini-btn" @click.stop="openDetail(t)">继续配送</button>
-              <span v-else style="font-size:var(--font-size-sm);color:var(--color-text-hint);">{{ RiderUtil.statusText(t.status) }}</span>
+              <span v-else class="history-status">{{ RiderUtil.statusText(t.status) }}</span>
             </div>
           </div>
         </div>

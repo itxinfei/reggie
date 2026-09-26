@@ -27,7 +27,7 @@
             <div class="task-foot">
               <span class="task-time">{{ RiderUtil.formatTime(t.orderTime) }} 下单</span>
             </div>
-            <div class="rider-actions" style="margin:10px 0 0;">
+            <div class="rider-actions">
               <button class="rider-btn primary" :disabled="grabbingId === t.id" @click="onGrab(t)">立即抢单</button>
             </div>
           </div>
@@ -36,7 +36,7 @@
           <template v-if="refreshing"><div>加载中…</div></template>
           <template v-else>
             <div>暂无可抢订单</div>
-            <div style="font-size:13px;margin-top:8px;">下拉刷新，或等待新订单进入大厅</div>
+            <div class="empty-sub">下拉刷新，或等待新订单进入大厅</div>
           </template>
         </div>
       </van-pull-refresh>

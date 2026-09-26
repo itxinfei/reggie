@@ -17,13 +17,13 @@
 
       <!-- 订单概览 -->
       <div class="rider-card">
-        <div class="task-head" style="margin-bottom:4px;">
+        <div class="task-head">
           <span class="task-number">{{ t.number }}</span>
           <van-tag plain type="warning">{{ RiderUtil.statusText(t.status) }}</van-tag>
         </div>
         <div class="info-row"><span class="label">订单金额</span>
-          <span class="val" style="text-align:right;font-weight:700;">¥{{ RiderUtil.money(t.amount) }}
-            <small style="color:var(--color-text-secondary);font-weight:400;">（含配送费 ¥{{ RiderUtil.money(t.deliveryFee) }}）</small>
+          <span class="val amount-val">¥{{ RiderUtil.money(t.amount) }}
+            <small>（含配送费 ¥{{ RiderUtil.money(t.deliveryFee) }}）</small>
           </span>
         </div>
         <div class="info-row"><span class="label">下单时间</span><span class="val">{{ RiderUtil.formatTime(t.orderTime) }}</span></div>
@@ -39,7 +39,7 @@
           <a v-if="t.storePhone" class="tool-btn" :href="'tel:' + t.storePhone"><i class="ri-phone-line"></i> 联系门店</a>
           <a v-if="storeNav" class="tool-btn primary" :href="storeNav" target="_blank" rel="noopener">取餐导航</a>
         </div>
-        <div class="rider-actions" style="margin:12px 0 0;" v-if="showPickup">
+        <div class="rider-actions" v-if="showPickup">
           <button class="rider-btn primary" :disabled="busy !== ''" @click="onPickup">确认取餐</button>
         </div>
       </div>
@@ -54,10 +54,10 @@
           <a v-if="t.phone" class="tool-btn" :href="'tel:' + t.phone"><i class="ri-phone-line"></i> 联系顾客</a>
           <a v-if="destNav" class="tool-btn primary" :href="destNav" target="_blank" rel="noopener">送餐导航</a>
         </div>
-        <div class="rider-actions" style="margin:12px 0 0;" v-if="showDeliver">
+        <div class="rider-actions" v-if="showDeliver">
           <button class="rider-btn primary" :disabled="busy !== ''" @click="onDeliver">确认送达</button>
         </div>
-        <div v-if="t.status === 4 && t.deliverTime" style="margin-top:12px;color:var(--color-text-secondary);text-align:center;">
+        <div class="delivered-note" v-if="t.status === 4 && t.deliverTime">
           已于 {{ RiderUtil.formatTime(t.deliverTime) }} 送达完成
         </div>
       </div>

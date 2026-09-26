@@ -21,7 +21,7 @@
         <van-field v-model="password" name="password" label="密码" placeholder="请输入密码"
                    type="password" @keyup.enter="onLogin"></van-field>
       </van-cell-group>
-      <div class="rider-actions" style="margin-left:0;margin-right:0;">
+      <div class="rider-actions">
         <button class="rider-btn primary" :disabled="loading" @click="onLogin">
           {{ loading ? '登录中…' : '登 录' }}
         </button>

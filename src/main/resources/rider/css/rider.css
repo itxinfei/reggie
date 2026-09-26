@@ -269,6 +269,29 @@ html, body {
   margin-right: 2px;
 }
 
+/* ================================================================
+   内联 style 收口（由各 HTML 的 style 属性迁入，视觉保持不变）
+   ================================================================ */
+/* 订单概览卡：紧凑任务头 */
+.rider-card .task-head { margin-bottom: 4px; }
+/* 金额行右对齐加粗 + 内含配送费说明 */
+.amount-val { text-align: right; font-weight: 700; }
+.amount-val small { color: var(--color-text-secondary); font-weight: 400; }
+/* 卡片内操作按钮区：仅顶间距 */
+.rider-card .rider-actions { margin: 12px 0 0; }
+/* 已送达时间提示 */
+.delivered-note { margin-top: 12px; color: var(--color-text-secondary); text-align: center; }
+/* 抢单卡片内按钮区 */
+.task-card .rider-actions { margin: 10px 0 0; }
+/* 空态次级提示 */
+.empty-sub { font-size: var(--font-size-sm); margin-top: 8px; }
+/* 导航/状态条文字 */
+.nav-logout { font-size: 15px; }
+.online-label { margin-right: 8px; font-size: var(--font-size-md); }
+.history-status { font-size: var(--font-size-sm); color: var(--color-text-hint); }
+/* 登录页：主按钮贴左右、无侧间距 */
+.login-wrap .rider-actions { margin-left: 0; margin-right: 0; }
+
 /* 尊重系统“减少动态”设置：关闭按压缩放 */
 @media (prefers-reduced-motion: reduce) {
   .rider-btn, .tool-btn, .mini-btn { transition: none; }
