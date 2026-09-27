@@ -129,7 +129,8 @@ public class CashierController {
                     "1") Integer payType,
             @Parameter(description = "使用的优惠券ID（会员权益核销）") @RequestParam(required = false) Long usedCouponId,
             @Parameter(description = "会员关联用户ID（会员识别后传入，用于发放积分）") @RequestParam(required = false) Long memberUserId,
-            @Parameter(description = "备注") @RequestParam(required = false) String remark) {
+            @Parameter(description = "备注") @RequestParam(required = false) String remark,
+            @Parameter(description = "付款凭证图片相对路径（选填）") @RequestParam(required = false) String voucherUrl) {
         Long tenantId = BaseContext.getCurrentTenantId();
         Long userId = BaseContext.getCurrentId();
 
@@ -148,7 +149,7 @@ public class CashierController {
 
         try {
             CashierRecord record = cashierService.cashPayment(orderId, orderNumber, amount, actualAmount,
-                    payType, userId, cashierName, usedCouponId, memberUserId, remark);
+                    payType, userId, cashierName, usedCouponId, memberUserId, remark, voucherUrl);
             return R.success(record);
         } catch (CustomException e) {
             log.warn("收银收款业务错误：{}", e.getMessage(), e);
@@ -212,12 +213,13 @@ public class CashierController {
             @Parameter(description = "支付方式 1现金 2微信 3支付宝 4银行卡 5会员储值") @RequestParam(required = false, defaultValue = "1") Integer payType,
             @Parameter(description = "使用的优惠券ID") @RequestParam(required = false) Long usedCouponId,
             @Parameter(description = "会员关联用户ID") @RequestParam(required = false) Long memberUserId,
-            @Parameter(description = "备注") @RequestParam(required = false) String remark) {
+            @Parameter(description = "备注") @RequestParam(required = false) String remark,
+            @Parameter(description = "付款凭证图片相对路径（选填）") @RequestParam(required = false) String voucherUrl) {
         Long userId = BaseContext.getCurrentId();
         String cashierName = resolveCashierName(userId);
         try {
             CashierRecord record = cashierService.cashPaymentByTable(tableId, actualAmount, payType,
-                    userId, cashierName, usedCouponId, memberUserId, remark);
+                    userId, cashierName, usedCouponId, memberUserId, remark, voucherUrl);
             return R.success(record);
         } catch (CustomException e) {
             log.warn("按桌台结账业务错误：{}", e.getMessage(), e);

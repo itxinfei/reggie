@@ -5,8 +5,8 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>收银台 - 瑞吉外卖管理端</title>
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <style>
     html, body {
       height: 100%;
@@ -126,7 +126,7 @@
       display: inline-block;
       padding: 1px 6px;
       background: var(--el-color-success-lighter);
-      color: var(--el-color-success);
+      color: var(--color-success-text);
       border-radius: var(--radius-sm);
       font-size: var(--font-size-xs);
       font-weight: 500;
@@ -247,7 +247,7 @@
     .change-value {
       font-size: var(--font-size-3xl);
       font-weight: 700;
-      color: var(--el-color-success);
+      color: var(--color-success-text);
     }
     .member-section {
       margin-bottom: 20px;
@@ -364,13 +364,15 @@
     .table-card:hover { border-color: var(--el-color-primary); box-shadow: var(--shadow-sm); }
     .table-card.active { border-color: var(--el-color-primary); background: var(--el-color-primary-lighter); }
     .table-card.status-FREE { border-color: var(--el-border-lighter); }
-    .table-card.status-OCCUPIED { border-color: var(--el-color-success); }
-    .table-card.status-OCCUPIED .table-name { color: var(--el-color-success); font-weight: 700; }
+    .table-card.status-OCCUPIED { border-color: var(--color-success-text); }
+    .table-card.status-OCCUPIED .table-name { color: var(--color-success-text); font-weight: 700; }
     .table-card.status-RESERVED { border-color: var(--el-color-info); }
     .table-card .table-name { font-size: var(--font-size-xl); font-weight: 600; margin-bottom: 4px; }
-    .table-card .table-meta { font-size: var(--font-size-xs); color: var(--el-text-muted); }
+    /* P0/P1 对比度修复(2026-09-27)：--el-text-muted 压白底仅 3.74:1（30 处桌台信息），
+       占桌金额 #f56c6c 压白底仅 2.90:1。统一改用已达标文字变体。 */
+    .table-card .table-meta { font-size: var(--font-size-xs); color: var(--color-info-text); }
     .table-card .table-amount {
-      font-size: var(--font-size-lg); font-weight: 700; color: var(--el-color-danger);
+      font-size: var(--font-size-lg); font-weight: 700; color: var(--color-danger-text);
       margin-top: 6px;
     }
     .table-filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -444,7 +446,7 @@
               <div v-if="t.status==='OCCUPIED'" class="table-amount">
                 {{ tableAmountMap[t.id] != null ? '¥'+formatMoney(tableAmountMap[t.id]) : '...' }}
               </div>
-              <div v-else-if="t.status==='FREE'" class="table-meta" style="color:var(--el-color-success);">空闲</div>
+              <div v-else-if="t.status==='FREE'" class="table-meta" style="color:var(--color-success-text);">空闲</div>
               <div v-else class="table-meta">{{ t.status }}</div>
             </div>
           </div>
@@ -460,7 +462,7 @@
                 {{ selectedTable.areaName || '' }} · {{ selectedTable.seatCount }}人
               </span>
             </h3>
-            <el-button type="primary" size="small" @click="openAddItemsDialog" :disabled="!selectedTable.orders||selectedTable.orders.length===0">
+            <el-button type="primary" size="small" @click="openAddItemsDialog" :disabled="pendingTableOrders.length===0">
               <i class="ri-add-line"></i> 加菜
             </el-button>
           </div>
@@ -475,7 +477,7 @@
             <div v-for="order in selectedTable.orders" :key="order.orderId" class="detail-order">
               <div class="order-title">
                 <span>{{ order.orderNumber }}</span>
-                <el-tag size="mini" :type="order.status===1?'warning':'success'">{{ order.status===1?'待付款':'已下单' }}</el-tag>
+                <el-tag size="mini" :type="order.status===1?'warning':(order.status===3?'info':'success')">{{ orderStatusText(order.status) }}</el-tag>
                 <span style="margin-left:auto;font-weight:700;color:var(--el-color-danger);">¥{{ formatMoney(order.amount) }}</span>
               </div>
               <div class="detail-items">
@@ -490,13 +492,17 @@
           </div>
 
           <div class="table-actions">
-            <el-button size="small" @click="showTransferDialog=true" :disabled="!selectedTable.orders||selectedTable.orders.length===0">
+            <el-button size="small" @click="showTransferDialog=true" :disabled="pendingTableOrders.length===0">
               <i class="ri-arrow-left-right-line"></i> 转台
             </el-button>
-            <el-button size="small" @click="handleCheckout" :disabled="!selectedTable.orders||selectedTable.orders.length===0"
+            <el-button size="small" @click="handleCheckout" :disabled="pendingTableOrders.length===0"
               type="primary">
               <i class="ri-money-cny-circle-line"></i> 结账（¥{{ formatMoney(tableTotalAmount) }}）
             </el-button>
+            <div v-if="(selectedTable.orders||[]).length>0 && pendingTableOrders.length===0"
+                 style="font-size:var(--font-size-xs);color:var(--el-text-muted);margin-top:6px;">
+              本桌订单均已下单/制作中，无待付款订单
+            </div>
           </div>
         </div>
       </div>
@@ -527,13 +533,17 @@
           </div>
           <div class="summary-row">
             <span class="summary-label">订单金额</span>
-            <span class="summary-value total">¥{{ formatMoney(selectedOrder.amount) }}</span>
+            <span class="summary-value">¥{{ formatMoney(grossAmount) }}</span>
           </div>
           <div class="summary-row" v-if="discountAmount > 0">
             <span class="summary-label">优惠券抵扣</span>
-            <span class="summary-value" style="color: var(--el-color-success);">-¥{{ formatMoney(discountAmount) }}</span>
+            <span class="summary-value" style="color: var(--color-success-text);">-¥{{ formatMoney(discountAmount) }}</span>
           </div>
-          <div class="summary-row" v-if="discountAmount > 0">
+          <div class="summary-row" v-if="levelDiscountAmount > 0">
+            <span class="summary-label">会员等级折扣</span>
+            <span class="summary-value" style="color: var(--color-success-text);">-¥{{ formatMoney(levelDiscountAmount) }}</span>
+          </div>
+          <div class="summary-row">
             <span class="summary-label">应付金额</span>
             <span class="summary-value total">¥{{ formatMoney(payableAmount) }}</span>
           </div>
@@ -625,14 +635,14 @@
               class="payment-method"
               :class="{ active: payType === 1 }"
               @click="selectPayType(1)">
-              <i class="ri-money-cny-circle-line" style="color: var(--el-color-success);"></i>
+              <i class="ri-money-cny-circle-line" style="color: var(--color-success-text);"></i>
               <span>现金</span>
             </div>
             <div
               class="payment-method"
               :class="{ active: payType === 2 }"
               @click="selectPayType(2)">
-              <i class="ri-chat-3-line" style="color: var(--el-color-success);"></i>
+              <i class="ri-chat-3-line" style="color: var(--color-success-text);"></i>
               <span>微信</span>
             </div>
             <div
@@ -670,15 +680,16 @@
               :min="payableAmount"
               :step="10"
               placeholder="请输入实收金额"
-              id="inp-actual-amount">
+              id="inp-actual-amount"
+              @change="onActualAmountChange">
             </el-input-number>
             <div class="quick-amounts">
               <span class="quick-label">快捷：</span>
-              <el-button size="mini" plain @click="actualAmount = payableAmount">{{ Math.ceil(payableAmount) }}元</el-button>
-              <el-button size="mini" plain @click="actualAmount = Math.max(payableAmount, 50)">50元</el-button>
-              <el-button size="mini" plain @click="actualAmount = Math.max(payableAmount, 100)">100元</el-button>
-              <el-button size="mini" plain @click="actualAmount = Math.max(payableAmount, 200)">200元</el-button>
-              <el-button size="mini" plain @click="actualAmount = Math.max(payableAmount, 500)">500元</el-button>
+              <el-button size="mini" plain @click="setActualAmount(Math.ceil(payableAmount))">凑整 ¥{{ Math.ceil(payableAmount) }}</el-button>
+              <el-button size="mini" plain :disabled="payableAmount > 50" @click="setActualAmount(50)">50元</el-button>
+              <el-button size="mini" plain :disabled="payableAmount > 100" @click="setActualAmount(100)">100元</el-button>
+              <el-button size="mini" plain :disabled="payableAmount > 200" @click="setActualAmount(200)">200元</el-button>
+              <el-button size="mini" plain :disabled="payableAmount > 500" @click="setActualAmount(500)">500元</el-button>
             </div>
           </div>
 
@@ -689,9 +700,15 @@
           </div>
 
           <!-- 非现金支付说明：如实记录所选渠道，实收默认等于应付金额 -->
-          <div v-if="payType !== 1" class="pay-hint">
+          <div v-if="payType !== 1 && payType !== 5" class="pay-hint">
             <i class="ri-information-line"></i>
-            已选择「{{ payTypeText }}」收款，系统将按该渠道记录本次收款（在线支付网关接入后以实际到账为准）。
+            「{{ payTypeText }}」为门店线下收款（扫顾客付款码或顾客扫门店码），请确认款项到账后再点击收款；顾客在手机端发起的在线支付无需在此操作。
+          </div>
+
+          <!-- 付款凭证：微信/支付宝/银行卡线下收款可上传到账截图，便于交接班对账与纠纷核查（选填，不阻断收款） -->
+          <div v-if="payType === 2 || payType === 3 || payType === 4" style="margin-bottom: var(--space-5);">
+            <div style="margin-bottom: var(--space-2); font-weight: 500;">付款凭证（选填）</div>
+            <rg-image-uploader v-model="voucherImage" biz-type="payvoucher" :single="true" :max="1"></rg-image-uploader>
           </div>
 
           <!-- 备注 -->
@@ -769,7 +786,7 @@
       <span class="settle-bar__item">应收 <b>¥{{ formatMoney(todayStats.totalAmount) }}</b></span>
       <span class="settle-bar__item">已结 <b>¥{{ formatMoney(settledAmount) }}</b></span>
       <span class="settle-bar__item">差异 <b :class="{ 'settle-bar__diff--warn': diffAmount > 0 }">¥{{ formatMoney(diffAmount) }}</b></span>
-      <span class="settle-bar__item">待结订单 <b>{{ pendingOrders.length }}</b> 笔 / <b>¥{{ formatMoney(pendingAmount) }}</b></span>
+      <span class="settle-bar__item">堂食待结 <b>{{ pendingOrders.length }}</b> 笔 / <b>¥{{ formatMoney(pendingAmount) }}</b></span>
       <el-button
         type="primary"
         size="small"
@@ -787,16 +804,16 @@
   <!-- 修改点：补引 axios —— request.js 首行即使用全局 axios，缺失会抛错导致
        $axios 永不挂载，本页所有接口请求全部失效 -->
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../js/common.js?v=20260915c"></script>
-  <script src="../../api/cashier.js?v=20260915c"></script>
-  <script src="../../api/order.js?v=20260915c"></script>
-  <script src="../../api/member-center.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/common.js?v=20260926"></script>
+  <script src="../../api/cashier.js?v=20260926"></script>
+  <script src="../../api/order.js?v=20260926"></script>
+  <script src="../../api/member-center.js?v=20260926"></script>
   <script src="../../api/dining.js?v=20260918b"></script>
-  <script src="../../api/food.js?v=20260915c"></script>
+  <script src="../../api/food.js?v=20260926"></script>
   <script>
     new Vue({
       el: '#main-content',
@@ -813,6 +830,8 @@
           payType: 1,
           actualAmount: 0,
           remark: '',
+          // 付款凭证截图相对路径（仅微信/支付宝/银行卡线下收款时上传，选填）
+          voucherImage: '',
           submitLoading: false,
           timeTimer: null,
           memberPhone: '',
@@ -830,6 +849,12 @@
           // 修改点(2026-09-18)：按桌台合并结账提示（本桌未结订单笔数 / 是否多笔合并）
           previewOrderCount: 1,
           previewMerged: false,
+          // 服务端预览下发的金额构成（订单总额/券抵扣/等级折扣），展示以服务端为准
+          previewOrderAmount: null,
+          previewCouponDiscount: 0,
+          previewLevelDiscount: 0,
+          // 实收金额是否被收银员手动改动（手动改动后不被预览刷新覆盖）
+          actualAmountTouched: false,
           // ====== 桌台视图 ======
           tables: [],
           tableFilter: '',
@@ -858,9 +883,19 @@
       },
       computed: {
         discountAmount() {
-          if (!this.selectedCouponId || !this.availableCoupons.length) return 0
-          const coupon = this.availableCoupons.find(c => c.id === this.selectedCouponId)
-          return coupon ? Number(coupon.currentDiscount) || 0 : 0
+          // 以服务端预览重算的券抵扣为准（合并结账/会员场景下券面展示值可能与之不同）
+          return this.previewCouponDiscount != null ? Number(this.previewCouponDiscount) || 0 : 0
+        },
+        // 订单总额（服务端预览值；未就绪时回退本地选中金额）
+        grossAmount() {
+          if (this.previewOrderAmount != null) return Number(this.previewOrderAmount)
+          return this.selectedOrder ? Number(this.selectedOrder.amount) || 0 : 0
+        },
+        // 会员等级折扣金额 = 折前 - 券抵扣 - 应付
+        levelDiscountAmount() {
+          if (!this.selectedOrder || this.previewPayable == null) return 0
+          const v = this.grossAmount - this.discountAmount - Number(this.previewPayable)
+          return v > 0 ? Math.round(v * 100) / 100 : 0
         },
         payableAmount() {
           // 修改点(2026-09-18)：优先使用服务端结算预览的应付金额（已含券抵扣 + 会员等级折扣），
@@ -906,9 +941,14 @@
         freeTables() {
           return this.tables.filter(function(t) { return t.status === 'FREE' })
         },
+        // 仅「待付款(1)」订单计入可结账金额——后端合并结账只结 PENDING_PAY 订单，
+        // 已下单/配送中的订单已在别的链路处理，不能计入收银合计
+        pendingTableOrders() {
+          if (!this.selectedTable || !this.selectedTable.orders) return []
+          return this.selectedTable.orders.filter(function(o) { return o.status === 1 })
+        },
         tableTotalAmount() {
-          if (!this.selectedTable || !this.selectedTable.orders) return 0
-          return this.selectedTable.orders.reduce(function(sum, o) { return sum + (Number(o.amount) || 0) }, 0)
+          return this.pendingTableOrders.reduce(function(sum, o) { return sum + (Number(o.amount) || 0) }, 0)
         },
         filteredDishes() {
           var q = (this.dishSearch || '').toLowerCase()
@@ -1013,8 +1053,16 @@
         selectOrder(order) {
           this.selectedOrder = order
           this.actualAmount = order.amount
+          // 切换订单视为新收银会话：清掉预览构成与手动实收标记，
+          // 由 loadPreview 返回后把实收回填为应付（默认恰好收齐，不产生虚假找零）
+          this.actualAmountTouched = false
+          this.previewOrderAmount = null
+          this.previewCouponDiscount = 0
+          this.previewLevelDiscount = 0
+          this.previewPayable = null
           this.payType = 1
           this.remark = ''
+          this.voucherImage = ''
           this.memberPhone = ''
           this.currentMember = null
           this.availableCoupons = []
@@ -1037,12 +1085,21 @@
             })
             if (res && res.code === 1 && res.data) {
               this.previewPayable = Number(res.data.payable)
+              this.previewOrderAmount = res.data.orderAmount != null ? Number(res.data.orderAmount) : null
+              this.previewCouponDiscount = Number(res.data.couponDiscount) || 0
+              this.previewLevelDiscount = Number(res.data.levelDiscount) || 0
               this.previewOrderCount = Number(res.data.orderCount) || 1
               this.previewMerged = !!res.data.merged
-              // 非现金支付：实收默认等于服务端下发的应付金额
-              if (this.payType !== 1) this.actualAmount = this.previewPayable
+              // 实收回填：非现金永远等于应付；现金在收银员未手动录入时也回到应付
+              // （默认恰好收齐），否则会员/券折扣后输入框仍停留在折前总额，
+              // 页面会凭空显示一笔找零
+              if (this.payType !== 1 || !this.actualAmountTouched) {
+                this.actualAmount = this.previewPayable
+              }
             } else {
               this.previewPayable = null
+              this.previewOrderAmount = null
+              this.previewCouponDiscount = 0
             }
           } catch (e) {
             console.warn('[cashier] 结算预览失败，回退本地计算:', e)
@@ -1053,10 +1110,23 @@
         },
         selectPayType(value) {
           this.payType = value
-          // 非现金支付：实收金额默认等于应付金额（无找零输入）
-          if (value !== 1) {
-            this.actualAmount = this.payableAmount
-          }
+          this.actualAmountTouched = false
+          // 切换支付方式后清空付款凭证（不同方式的凭证不能混用），实收回到应付
+          this.voucherImage = ''
+          // 切换支付方式后实收统一回到应付金额；现金若收整钞再由收银员手动改
+          this.actualAmount = this.payableAmount
+        },
+        // 收银员手动录入实收（现金）：此后预览刷新不再覆盖
+        onActualAmountChange() {
+          if (this.payType === 1) this.actualAmountTouched = true
+        },
+        // 快捷金额按钮统一入口（同步手动标记，避免预览把整钞金额覆盖回应付价）
+        setActualAmount(val) {
+          this.actualAmount = val
+          this.actualAmountTouched = true
+        },
+        orderStatusText(status) {
+          return status === 1 ? '待付款' : (status === 3 ? '制作/配送中' : '已下单')
         },
         /* ── 会员识别与优惠券 ── */
         async identifyMember() {
@@ -1154,7 +1224,8 @@
                 payType: this.payType,
                 usedCouponId: this.selectedCouponId,
                 memberUserId: this.currentMember ? this.currentMember.userId : null,
-                remark: this.remark
+                remark: this.remark,
+                voucherUrl: this.voucherImage
               }
               const tableRes = await tablePayment(tableParams)
               if (tableRes.code === 1) {
@@ -1162,9 +1233,7 @@
                 if (window.parent !== window) {
                   window.parent.postMessage({ type: 'cashier-success', orderId: this.selectedOrder ? this.selectedOrder.id : null }, '*')
                 }
-                this.selectedOrder = null
-                this.actualAmount = 0
-                this.remark = ''
+                this.resetPaymentSession()
                 this.fetchData()
                 // 修改点(2026-09-22)：桌台已释放，重新拉取桌台列表/金额并清空当前选中桌台，
                 // 避免已支付订单残留、「结账」按钮仍可点击而重复结账
@@ -1184,7 +1253,8 @@
               payType: this.payType,
               usedCouponId: this.selectedCouponId,
               memberUserId: this.currentMember ? this.currentMember.userId : null,
-              remark: this.remark
+              remark: this.remark,
+              voucherUrl: this.voucherImage
             }
 
             const res = await cashPayment(params)
@@ -1194,9 +1264,7 @@
               if (window.parent !== window) {
                 window.parent.postMessage({ type: 'cashier-success', orderId: this.selectedOrder ? this.selectedOrder.id : null }, '*')
               }
-              this.selectedOrder = null
-              this.actualAmount = 0
-              this.remark = ''
+              this.resetPaymentSession()
               this.fetchData()
             } else {
               ReggieUI.error(res.msg || '收款失败')
@@ -1246,7 +1314,10 @@
             try {
               var res = await getTableDetail(occupied[i].id)
               if (res.code === 1 && res.data && res.data.orders) {
-                var total = res.data.orders.reduce(function(s, o) { return s + (Number(o.amount) || 0) }, 0)
+                // 只统计待付款订单，与合并结账口径一致（已下单/配送中的不计入待收）
+                var total = res.data.orders
+                  .filter(function(o) { return o.status === 1 })
+                  .reduce(function(sum, o) { return sum + (Number(o.amount) || 0) }, 0)
                 self.$set(self.tableAmountMap, occupied[i].id, total)
               }
             } catch (e) { /* 忽略单桌加载失败 */ }
@@ -1259,10 +1330,14 @@
             var res = await getTableDetail(table.id)
             if (res.code === 1 && res.data) {
               this.selectedTable = res.data
-              // 自动选中该桌第一个订单（供支付面板使用）
-              if (this.selectedTable.orders && this.selectedTable.orders.length > 0) {
-                var firstOrder = this.selectedTable.orders[0]
-                // 构造兼容 selectOrder 的对象
+              // 自动选中该桌「最早一笔待付款订单」（详情接口按时间倒序，待付款单在数组前部不保证；
+              // 后端合并结账以最早待付款单为主单，这里口径保持一致）
+              var pending = (this.selectedTable.orders || [])
+                .filter(function(o) { return o.status === 1 })
+                .sort(function(a, b) { return new Date(a.orderTime) - new Date(b.orderTime) })
+              if (pending.length > 0) {
+                var firstOrder = pending[0]
+                // 构造兼容 selectOrder 的对象；amount 取该桌全部待付款单合计（合并结账口径）
                 this.selectOrder({
                   id: firstOrder.orderId,
                   number: firstOrder.orderNumber,
@@ -1286,9 +1361,15 @@
           this.loadTables()
         },
         handleCheckout() {
-          // 将桌台总金额作为应付金额，选中桌台所有订单中第一个进行结账
-          if (!this.selectedTable || !this.selectedTable.orders || this.selectedTable.orders.length === 0) return
-          var firstOrder = this.selectedTable.orders[0]
+          // 仅待付款订单可结账；选中最早一笔作为主单，金额取该桌待付款合计（后端合并结账）
+          var pending = (this.pendingTableOrders || [])
+            .slice()
+            .sort(function(a, b) { return new Date(a.orderTime) - new Date(b.orderTime) })
+          if (pending.length === 0) {
+            ReggieUI.warning('该桌台没有待付款订单')
+            return
+          }
+          var firstOrder = pending[0]
           this.selectOrder({
             id: firstOrder.orderId,
             number: firstOrder.orderNumber,
@@ -1296,7 +1377,6 @@
             tableId: this.selectedTable.tableId,
             orderTime: firstOrder.orderTime
           })
-          // 支付面板会自动显示，用户确认支付即可
         },
         // ====== 加菜相关 ======
         async openAddItemsDialog() {
@@ -1353,8 +1433,16 @@
           }
           this.addItemsSubmitting = true
           try {
-            // 为桌台第一个订单加菜
-            var orderId = this.selectedTable.orders[0].orderId
+            // 为最早一笔待付款订单加菜（orders 为倒序且可能含非待付款单，不能直接取 [0]）
+            var pendingForAdd = (this.selectedTable.orders || [])
+              .filter(function(o) { return o.status === 1 })
+              .sort(function(a, b) { return new Date(a.orderTime) - new Date(b.orderTime) })
+            if (pendingForAdd.length === 0) {
+              ReggieUI.warning('该桌台没有待付款订单，无法加菜')
+              this.addItemsSubmitting = false
+              return
+            }
+            var orderId = pendingForAdd[0].orderId
             var res = await addItemsToTable({ orderId: orderId, items: items })
             if (res.code === 1) {
               ReggieUI.success('加菜成功')
@@ -1394,6 +1482,23 @@
           } finally {
             this.transferLoading = false
           }
+        },
+        // 收款成功后重置整个支付会话（订单/会员/券/支付方式/实收）
+        resetPaymentSession() {
+          this.selectedOrder = null
+          this.actualAmount = 0
+          this.actualAmountTouched = false
+          this.remark = ''
+          this.voucherImage = ''
+          this.payType = 1
+          this.memberPhone = ''
+          this.currentMember = null
+          this.availableCoupons = []
+          this.selectedCouponId = null
+          this.previewPayable = null
+          this.previewOrderAmount = null
+          this.previewCouponDiscount = 0
+          this.previewLevelDiscount = 0
         },
         // C.1：快捷键 Enter=收款（避开输入框/按钮聚焦）
         onGlobalKeydown(e) {

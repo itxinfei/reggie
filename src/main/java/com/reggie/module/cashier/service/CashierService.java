@@ -62,11 +62,12 @@ public interface CashierService extends IService<CashierRecord> {
      * @param usedCouponId 使用的优惠券ID
      * @param memberUserId 会员用户ID
      * @param remark       备注
+     * @param voucherUrl   付款凭证图片相对路径（选填）
      * @return 收银记录
      */
     CashierRecord cashPayment(Long orderId, String orderNumber, BigDecimal amount, BigDecimal actualAmount,
                               Integer payType, Long cashierId, String cashierName,
-                              Long usedCouponId, Long memberUserId, String remark);
+                              Long usedCouponId, Long memberUserId, String remark, String voucherUrl);
 
     /**
      * 修改点(2026-09-18)：按桌台合并结账——一桌可能存在多张待付款堂食订单
@@ -82,11 +83,12 @@ public interface CashierService extends IService<CashierRecord> {
      * @param usedCouponId 使用的优惠券ID
      * @param memberUserId 会员用户ID
      * @param remark       备注
+     * @param voucherUrl   付款凭证图片相对路径（选填）
      * @return 收银记录（以最早一张订单为主单）
      */
     CashierRecord cashPaymentByTable(Long tableId, BigDecimal actualAmount, Integer payType,
                                      Long cashierId, String cashierName,
-                                     Long usedCouponId, Long memberUserId, String remark);
+                                     Long usedCouponId, Long memberUserId, String remark, String voucherUrl);
 
     /**
      * 修改点(2026-09-18)：结算预览——服务端权威计算「订单金额 / 券抵扣 / 会员等级折扣 / 应付金额」。

@@ -34,7 +34,7 @@ public final class ImageStoragePathResolver {
     private static final Map<String, String> BIZ_DIRS = new HashMap<String, String>();
     private static final Map<String, String> BIZ_VISIBILITY = new HashMap<String, String>();
     private static final Set<String> PRIVATE_BIZ_DIRS = new HashSet<String>(Arrays.asList(
-            "purchase", "stockcheck", "stockrecord", "supplier", "tenant"));
+            "purchase", "stockcheck", "stockrecord", "supplier", "tenant", "payvoucher"));
 
     static {
         BIZ_DIRS.put("dish", "dishes");
@@ -47,6 +47,7 @@ public final class ImageStoragePathResolver {
         BIZ_DIRS.put("tenant", "tenant");
         BIZ_DIRS.put("avatar", "avatar");
         BIZ_DIRS.put("chat", "chat");
+        BIZ_DIRS.put("payvoucher", "payvoucher");
 
         BIZ_VISIBILITY.put("dish", "public");
         BIZ_VISIBILITY.put("setmeal", "public");
@@ -58,6 +59,8 @@ public final class ImageStoragePathResolver {
         BIZ_VISIBILITY.put("tenant", "private");
         BIZ_VISIBILITY.put("avatar", "private");
         BIZ_VISIBILITY.put("chat", "private");
+        // 付款凭证含收款截图等敏感信息，落 private 目录（仅登录后经 /common/download 访问）
+        BIZ_VISIBILITY.put("payvoucher", "private");
     }
 
     private ImageStoragePathResolver() {

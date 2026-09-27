@@ -59,6 +59,9 @@ public class CashierRecord implements Serializable {
     @Schema(description = "备注")
     private String remark;
 
+    @Schema(description = "付款凭证图片相对路径（微信/支付宝/银行卡线下收款截图，选填）")
+    private String voucherUrl;
+
     @Schema(description = "租户ID")
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;

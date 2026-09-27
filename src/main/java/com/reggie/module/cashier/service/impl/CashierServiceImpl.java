@@ -206,7 +206,7 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
     @Transactional(rollbackFor = Exception.class)
     public CashierRecord cashPayment(Long orderId, String orderNumber, BigDecimal amount, BigDecimal actualAmount,
                                      Integer payType, Long cashierId, String cashierName,
-                                     Long usedCouponId, Long memberUserId, String remark) {
+                                     Long usedCouponId, Long memberUserId, String remark, String voucherUrl) {
         payType = (payType == null || payType < 1 || payType > 5) ? 1 : payType;
         // 支付方式 → 支付渠道标识（账目如实记录，避免“选微信却记现金”的对账错误）
         String channel;
@@ -233,7 +233,7 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         }
         try {
             return doCashPayment(orderId, orderNumber, amount, actualAmount,
-                    payType, cashierId, cashierName, usedCouponId, memberUserId, remark, channel);
+                    payType, cashierId, cashierName, usedCouponId, memberUserId, remark, voucherUrl, channel);
         } finally {
             // 释放幂等锁：事务提交/回滚后均删除。TTL 3600s 仅作异常兜底（进程崩溃/GC 停顿
             // 时锁自然过期），正常路径由这里立即释放，避免同订单误报"处理中"。
@@ -248,7 +248,8 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
      */
     private CashierRecord doCashPayment(Long orderId, String orderNumber, BigDecimal amount, BigDecimal actualAmount,
                                         Integer payType, Long cashierId, String cashierName,
-                                        Long usedCouponId, Long memberUserId, String remark, String channel) {
+                                        Long usedCouponId, Long memberUserId, String remark, String voucherUrl,
+                                        String channel) {
 
         // 幂等返回：已存在收银记录则直接返回（覆盖并发场景下先插记录后落锁的顺序差）
         // 修改点(2026-09-18)：幂等命中已收银记录时改为抛出明确业务异常。
@@ -290,7 +291,7 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
 
         // 6-7. 创建并保存收银记录（金额以服务端计算为准）
         CashierRecord cashierRecord = buildCashierRecord(orderId, orderNumber, payType, orderAmount,
-                actualAmount, changeAmount, cashierId, cashierName, remark);
+                actualAmount, changeAmount, cashierId, cashierName, remark, voucherUrl);
         cashierRecordMapper.insert(cashierRecord);
 
         // 8. 更新订单状态为已支付（待接单），支付方式按真实选择记录；amount 回写为折后实收
@@ -330,7 +331,7 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
     @Transactional(rollbackFor = Exception.class)
     public CashierRecord cashPaymentByTable(Long tableId, BigDecimal actualAmount, Integer payType,
                                             Long cashierId, String cashierName,
-                                            Long usedCouponId, Long memberUserId, String remark) {
+                                            Long usedCouponId, Long memberUserId, String remark, String voucherUrl) {
         if (tableId == null) {
             throw new CustomException("桌台ID不能为空");
         }
@@ -394,7 +395,7 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         String mergedRemark = (remark == null ? "" : remark)
                 + "【按桌台合并结账，共" + orders.size() + "笔订单】";
         CashierRecord record = buildCashierRecord(main.getId(), main.getNumber(), payType, orderAmount,
-                actualAmount, changeAmount, cashierId, cashierName, mergedRemark);
+                actualAmount, changeAmount, cashierId, cashierName, mergedRemark, voucherUrl);
         cashierRecordMapper.insert(record);
 
         // 8. 所有订单统一置「已完成(4)」，amount 回写为各单分摊实收，并写支付记录
@@ -540,7 +541,11 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         if (order == null) {
             throw new CustomException("订单不存在或已失效");
         }
-        if (order.getAmount() == null || order.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+        // 纯堂食收银台：预览也只接受堂食订单，与收款接口口径一致
+        if (!OrderSource.EAT_IN.getValue().equals(order.getSource())) {
+            throw new CustomException("收银台仅支持堂食订单结账");
+        }
+                if (order.getAmount() == null || order.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             BigDecimal detailSum = computeOrderDetailTotal(orderId);
             if (detailSum == null || detailSum.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new CustomException("该桌台尚未点单，请先加菜后再结账");
@@ -562,7 +567,11 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         if (order == null) {
             throw new IllegalArgumentException("收银失败：订单不存在或已失效");
         }
-        BigDecimal originalDbAmount = order.getAmount();
+        // 纯堂食收银台：拒绝线上外卖(H5)等非堂食订单走线下收银，防止绕过在线支付、错记账目
+        if (!OrderSource.EAT_IN.getValue().equals(order.getSource())) {
+            throw new CustomException("收银台仅支持堂食订单结账，外卖订单请在用户端在线支付");
+        }
+                BigDecimal originalDbAmount = order.getAmount();
         BigDecimal orderAmount = originalDbAmount;
         // 修改点(2026-09-16)：桌台/挂账占位订单 amount 初始为 0 且加菜/结账流程未回写，
         // 从订单明细实时汇总应收金额兜底，使此类订单可正常收银（根治"订单金额异常"）
@@ -726,7 +735,7 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
      */
     private CashierRecord buildCashierRecord(Long orderId, String orderNumber, Integer payType, BigDecimal orderAmount,
                                              BigDecimal actualAmount, BigDecimal changeAmount, Long cashierId,
-                                             String cashierName, String remark) {
+                                             String cashierName, String remark, String voucherUrl) {
         CashierRecord cashierRecord = new CashierRecord();
         cashierRecord.setOrderId(orderId);
         cashierRecord.setOrderNumber(orderNumber);
@@ -738,6 +747,7 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         cashierRecord.setCashierId(cashierId);
         cashierRecord.setCashierName(cashierName);
         cashierRecord.setRemark(remark);
+        cashierRecord.setVoucherUrl(voucherUrl);
         cashierRecord.setTenantId(BaseContext.getCurrentTenantId());
         cashierRecord.setCreateTime(LocalDateTime.now());
         cashierRecord.setCreateUser(cashierId);

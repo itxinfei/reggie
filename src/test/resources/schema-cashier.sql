@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS cashier_record (
   cashier_id bigint NULL DEFAULT NULL COMMENT '收银员ID',
   cashier_name varchar(50) NULL DEFAULT NULL COMMENT '收银员',
   remark varchar(200) NULL DEFAULT NULL COMMENT '备注',
+  voucher_url varchar(255) NULL DEFAULT NULL COMMENT '付款凭证图片相对路径',
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
   create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   create_user bigint NULL DEFAULT NULL COMMENT '创建人ID',
