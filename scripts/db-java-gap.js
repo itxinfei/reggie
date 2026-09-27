@@ -193,13 +193,9 @@ if (caseTables.length) {
   console.log('');
 }
 
-console.log('---------------- 真实差距明细（已剔除高频框架列噪音）----------------');
-const commonCols = new Set(common.map(([c]) => c));
+console.log('---------------- 实体缺字段完整明细（DB有列、实体待补）----------------');
 fieldGaps.sort((a, b) => a.table.localeCompare(b.table));
 for (const g of fieldGaps) {
-  const mj = g.missingInJava.filter((c) => !commonCols.has(c.toLowerCase()));
-  if (!mj.length && !g.missingInDb.length) continue;
-  console.log('■ ' + g.table);
-  if (mj.length) console.log('   实体缺字段(DB有): ' + mj.join(', '));
-  if (g.missingInDb.length) console.log('   数据库缺列(实体有,查询会报错): ' + g.missingInDb.join(', '));
+  if (!g.missingInJava.length) continue;
+  console.log(g.table + '|' + g.files.join(',') + '|' + g.missingInJava.join(','));
 }

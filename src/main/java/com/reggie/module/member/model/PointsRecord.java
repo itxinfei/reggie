@@ -60,4 +60,16 @@ public class PointsRecord implements Serializable {
     /** 逻辑删除标识 0:未删除 1:已删除 */
     @TableLogic(value = "0", delval = "1")
     private Integer isDeleted;
+
+    /** 创建人 */
+    @TableField(fill = FieldFill.INSERT)
+    private Long createUser;
+
+    /** 修改人 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateUser;
+
+    /** 更新时间 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updateTime;
 }

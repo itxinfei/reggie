@@ -54,4 +54,12 @@ public class MaterialCategory implements Serializable {
     @Schema(description = "该分类下的食材数量（非库字段，列表统计回填）", example = "0")
     @TableField(exist = false)
     private Integer materialCount;
+
+    /** 创建人 */
+    @TableField(fill = FieldFill.INSERT)
+    private Long createUser;
+
+    /** 修改人 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateUser;
 }

@@ -69,4 +69,12 @@ public class Supplier implements Serializable {
     /** 采购单笔数（排除已取消单，关联聚合填充，数据库无此列） */
     @TableField(exist = false)
     private Integer purchaseCount;
+
+    /** 创建人 */
+    @TableField(fill = FieldFill.INSERT)
+    private Long createUser;
+
+    /** 修改人 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateUser;
 }

@@ -67,4 +67,12 @@ public class RefundRecord implements Serializable {
     /** 乐观锁版本号 */
     @Version
     private Integer version;
+
+    /** 创建人 */
+    @TableField(fill = FieldFill.INSERT)
+    private Long createUser;
+
+    /** 修改人 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private Long updateUser;
 }
