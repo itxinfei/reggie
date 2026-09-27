@@ -47,4 +47,8 @@ public class WithdrawalRecord implements Serializable {
 
     @Schema(description = "银行流水号", example = "BN20260901001")
     private String bankTraceNo;
+
+    @Schema(description = "创建时间")
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
 }

@@ -89,8 +89,8 @@ public class StoreSyncLog implements Serializable {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime endTime;
 
-    /** 创建时间（数据库无此列，逻辑字段） */
-    @TableField(exist = false)
+    /** 创建时间（库中列 create_time，插入时自动填充） */
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
     /** 更新时间（数据库无此列，逻辑字段） */

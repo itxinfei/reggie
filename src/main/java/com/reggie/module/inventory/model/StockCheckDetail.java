@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  * 库存盘点明细
@@ -57,6 +58,10 @@ public class StockCheckDetail implements Serializable {
 
     @Schema(description = "备注", example = "损耗2斤")
     private String remark;
+
+    @Schema(description = "创建时间")
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createTime;
 
     /** 逻辑删除标识 0:未删除 1:已删除 */
     @TableLogic(value = "0", delval = "1")
