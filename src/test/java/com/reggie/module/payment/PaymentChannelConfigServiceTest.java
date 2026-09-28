@@ -89,7 +89,7 @@ public class PaymentChannelConfigServiceTest {
         assertEquals("test-api-v3-key-12345678901234567890123456",
                 PaymentCredentialEncryptor.decrypt(raw.getWxApiV3Key()));
         assertEquals("wx1234567890abcdef", raw.getWxAppId());
-        assertEquals(1L, raw.getTenantId().longValue());
+        assertEquals(999L, raw.getTenantId().longValue());
     }
 
     @Test
@@ -172,11 +172,12 @@ public class PaymentChannelConfigServiceTest {
     void testFindActiveByTenantAndEnabled() {
         PaymentChannelConfig saved = configService.addConfig(buildWechat());
 
-        assertNotNull(configService.findActive(1L, "WECHAT"));
+        // 配置由租户插件按 BaseContext（本类 setUp = 999）落库，按实际落库租户查而非写死 1
+        assertNotNull(configService.findActive(saved.getTenantId(), "WECHAT"));
         // 不同租户隔离
         assertNull(configService.findActive(2L, "WECHAT"));
         // 停用后查不到
         assertTrue(configService.setEnabled(saved.getId(), 0));
-        assertNull(configService.findActive(1L, "WECHAT"));
+        assertNull(configService.findActive(saved.getTenantId(), "WECHAT"));
     }
 }

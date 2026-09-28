@@ -51,7 +51,8 @@ public class PaymentServiceTest {
         assertEquals("ALIPAY", po.getChannel());
         assertEquals(0, po.getAmount().compareTo(new BigDecimal("99.99")));
         assertEquals("PENDING", po.getStatus());
-        assertEquals(1L, po.getTenantId().longValue());
+        // 租户插件按 BaseContext 落 tenant_id，setUp 设的是测试租户 999
+        assertEquals(999L, po.getTenantId().longValue());
     }
 
     @Test

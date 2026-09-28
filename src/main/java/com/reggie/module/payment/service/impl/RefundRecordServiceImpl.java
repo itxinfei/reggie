@@ -559,25 +559,63 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
             log.warn("[售后退款] 售后记录不存在: refundNo={}", refundNo);
             return;
         }
-        record.setStatus(RefundStatus.SUCCESS.getCode());
-        record.setRefundTime(LocalDateTime.now());
-        this.updateById(record);
-        // 将关联订单状态置为已退款
-        if (record.getOrderId() != null) {
-            try {
-                Orders order = orderService.getById(record.getOrderId());
-                if (order != null && !Objects.equals(order.getStatus(), Orders.STATUS_REFUNDED)) {
-                    orderService.lambdaUpdate()
-                            .eq(Orders::getId, order.getId())
-                            .eq(Orders::getTenantId, record.getTenantId())
-                            .set(Orders::getStatus, Orders.STATUS_REFUNDED)
-                            .update();
-                    log.info("[售后退款] 订单已标记退款: orderId={}, refundNo={}", order.getId(), refundNo);
-                }
-            } catch (Exception e) {
-                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                log.error("[售后退款] 标记订单退款失败: refundNo={}, error={}", refundNo, e.getMessage(), e);
+
+        // 1) 退款单 CAS 置成功：仅当当前状态仍是可推进态才落账，
+        //    避免并发下覆盖其他路径（回调/自动退款）已写入的终态，也保证重复调用幂等
+        String curRefundStatus = record.getStatus();
+        if (RefundStatus.SUCCESS.getCode().equals(curRefundStatus)) {
+            return; // 已是成功终态，幂等跳过
+        }
+        RefundRecord refundUpdate = new RefundRecord();
+        refundUpdate.setId(record.getId());
+        refundUpdate.setStatus(RefundStatus.SUCCESS.getCode());
+        refundUpdate.setRefundTime(LocalDateTime.now());
+        boolean refundOk = this.lambdaUpdate()
+                .eq(RefundRecord::getId, record.getId())
+                .eq(RefundRecord::getStatus, curRefundStatus)
+                .update(refundUpdate);
+        if (!refundOk) {
+            log.warn("[售后退款] 退款单状态已被其他路径变更，跳过落账: refundNo={}", refundNo);
+            return;
+        }
+
+        // 2) 订单置已退款：CAS + 状态白名单，与 RefundServiceImpl.updateOrderOnFullRefund 同口径。
+        //    已取消(5) 允许流转——取消时库存/权益已回退，退款成功后应转 6，
+        //    否则会留下"订单已取消 + 退款成功"的状态矛盾
+        if (record.getOrderId() == null) {
+            return;
+        }
+        try {
+            Orders order = orderService.getById(record.getOrderId());
+            if (order == null) {
+                return;
             }
+            Integer curOrderStatus = order.getStatus();
+            if (Objects.equals(curOrderStatus, Orders.STATUS_REFUNDED)) {
+                return; // 幂等
+            }
+            boolean allowed = Arrays.asList(
+                    Orders.STATUS_ORDERED, Orders.STATUS_DELIVERING,
+                    Orders.STATUS_COMPLETED, Orders.STATUS_CANCELLED).contains(curOrderStatus);
+            if (!allowed) {
+                log.warn("[售后退款] 订单当前状态({})不允许置已退款，跳过: orderId={}",
+                        curOrderStatus, record.getOrderId());
+                return;
+            }
+            boolean orderOk = orderService.lambdaUpdate()
+                    .eq(Orders::getId, record.getOrderId())
+                    .eq(Orders::getStatus, curOrderStatus)
+                    .set(Orders::getStatus, Orders.STATUS_REFUNDED)
+                    .update();
+            if (!orderOk) {
+                log.warn("[售后退款] 订单状态已变更，跳过标记: orderId={}, refundNo={}",
+                        record.getOrderId(), refundNo);
+                return;
+            }
+            log.info("[售后退款] 订单已标记退款: orderId={}, refundNo={}", record.getOrderId(), refundNo);
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            log.error("[售后退款] 标记订单退款失败: refundNo={}, error={}", refundNo, e.getMessage(), e);
         }
     }
 }
