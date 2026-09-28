@@ -38,14 +38,17 @@ public class MybatisPlusConfig {
      * - permission: 全局权限目录表，无 tenant_id 列
      * - role_permission: 角色-权限关联表，无 tenant_id 列
      * - region: 行政区划字典表（省/市/区），全局共享，无 tenant_id 列，通过 level 关联隔离
+     * - store_sync_log: 门店同步日志表，无 tenant_id 列，用 source_tenant_id/target_tenant_id 表达跨店语义
      * 修改点：permission/role_permission 两个表均无 tenant_id 列，若不加入忽略表，
      * TenantLineInnerInterceptor 会对其追加 WHERE tenant_id = ? 导致 Unknown column 异常。
      * 修改点：region 为全局行政区划字典表，无 tenant_id 列，加入白名单避免 Unknown column 异常。
+     * 修改点：store_sync_log 记录"总部→目标门店"的跨店同步，表本身无 tenant_id 列，
+     * 单租户过滤既会丢 target 侧视角又会报 Unknown column 异常，故加入白名单。
      * 修改点（2026-09-14）：billing 模块已删除（假需求：默认MOCK模拟开通），billing_plan 白名单项一并移除。
      */
     private static final Set<String> IGNORE_TABLES = new HashSet<>(Arrays.asList(
         "tenant", "employee", "shopping_cart", "ai_provider_config", "ai_prompt_template",
-        "dish_evaluation", "permission", "role_permission", "region"
+        "dish_evaluation", "permission", "role_permission", "region", "store_sync_log"
     ));
 
     /**

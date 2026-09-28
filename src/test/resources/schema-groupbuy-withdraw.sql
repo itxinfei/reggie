@@ -74,3 +74,9 @@ CREATE TABLE IF NOT EXISTS withdrawal_record (
   PRIMARY KEY (ID)
 );
 
+
+-- 修改点(2026-09-26)：每方法执行前清空模块表，消除跨方法残留导致的计数/主键冲突
+DELETE FROM group_buy_campaign;
+DELETE FROM group_buy_participation;
+DELETE FROM withdrawal_request;
+DELETE FROM withdrawal_record;

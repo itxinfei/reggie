@@ -75,3 +75,9 @@ CREATE TABLE IF NOT EXISTS dining_reservation (
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (id)
 );
+
+-- 修改点(2026-09-26)：每方法执行前清空模块表，消除跨方法残留导致的计数/主键冲突
+DELETE FROM dining_area;
+DELETE FROM dining_table;
+DELETE FROM dining_queue;
+DELETE FROM dining_reservation;

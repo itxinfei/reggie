@@ -54,6 +54,8 @@ public class TestDatabaseCleaner {
                 "role_id IN (SELECT id FROM role WHERE tenant_id = 999 OR role_key LIKE 'TEST\\_%')");
         // tenant 表只允许删测试租户行，绝不删主租户
         NO_TENANT_WHERE.put("tenant", "id = 999");
+        // store_sync_log 无 tenant_id，跨店语义用 source/target 两列表达，按来源门店隔离
+        NO_TENANT_WHERE.put("store_sync_log", "source_tenant_id = 999");
     }
 
     @Autowired

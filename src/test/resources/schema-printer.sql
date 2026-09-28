@@ -109,6 +109,8 @@ CREATE TABLE IF NOT EXISTS orders (
   idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等键',
   stock_refunded int NULL DEFAULT 0 COMMENT '已退库存数量',
   used_coupon_id bigint NULL DEFAULT NULL COMMENT '优惠券ID',
+  rider_id bigint NULL DEFAULT NULL COMMENT '配送骑手ID（店长派单/骑手抢单后写入）',
+  dispatch_time datetime NULL DEFAULT NULL COMMENT '派单/抢单时间（超时回流判断）',
   platform_type varchar(32) NULL DEFAULT NULL COMMENT '平台来源',
   platform_order_id varchar(128) NULL DEFAULT NULL COMMENT '平台订单号',
   platform_shop_id varchar(128) NULL DEFAULT NULL COMMENT '平台门店ID',

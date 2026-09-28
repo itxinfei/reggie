@@ -117,3 +117,11 @@ CREATE TABLE IF NOT EXISTS recharge_record (
   PRIMARY KEY (id)
 );
 -- 充值单号唯一索引（NULL 不冲突，兼容历史无单号数据）
+
+-- 修改点(2026-09-26)：每方法执行前清空模块表，消除跨方法残留导致的计数/主键冲突
+DELETE FROM member_level;
+DELETE FROM member;
+DELETE FROM coupon_template;
+DELETE FROM coupon_user;
+DELETE FROM points_record;
+DELETE FROM recharge_record;

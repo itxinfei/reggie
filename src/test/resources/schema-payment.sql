@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS orders (
   idempotency_key varchar(128) NULL DEFAULT NULL COMMENT '幂等键',
   stock_refunded int NULL DEFAULT 0 COMMENT '已退库存数量',
   used_coupon_id bigint NULL DEFAULT NULL COMMENT '优惠券ID',
+  rider_id bigint NULL DEFAULT NULL COMMENT '配送骑手ID（店长派单/骑手抢单后写入）',
+  dispatch_time datetime NULL DEFAULT NULL COMMENT '派单/抢单时间（超时回流判断）',
   platform_type varchar(32) NULL DEFAULT NULL COMMENT '平台来源',
   platform_order_id varchar(128) NULL DEFAULT NULL COMMENT '平台订单号',
   platform_shop_id varchar(128) NULL DEFAULT NULL COMMENT '平台门店ID',
@@ -148,6 +150,12 @@ DELETE FROM orders WHERE id IN (100, 101, 102);
 DELETE FROM order_detail WHERE order_id IN (100, 101, 102);
 
 -- 测试支付单需要的业务订单（orderId=100/101/102）
+-- 修改点(2026-09-26)：先清空再插种子，保证每方法状态确定
+DELETE FROM order_detail;
+DELETE FROM orders;
+DELETE FROM payment_order;
+DELETE FROM refund_record;
+DELETE FROM payment_channel_config;
 INSERT INTO orders (id, number, status, user_id, address_book_id, order_time, amount, user_name, phone, address, consignee, dining_type, create_time, update_time, tenant_id, is_deleted)
 VALUES
   (100, 'PAY001', 1, 1, 1, CURRENT_TIMESTAMP, 99.99, '测试用户', '13800000001', '测试地址', '张三', 'OUTSIDE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 999, 0),

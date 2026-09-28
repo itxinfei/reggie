@@ -376,7 +376,7 @@ CREATE TABLE IF NOT EXISTS ai_provider_config (
   provider_name varchar(100) NOT NULL COMMENT '供应商名称',
   base_url varchar(500) NULL DEFAULT NULL COMMENT 'API基础URL',
   model_name varchar(100) NULL DEFAULT NULL COMMENT '模型名称',
-  api_key varchar(500) NULL DEFAULT NULL COMMENT 'APIԿܴ洢',
+  api_key varchar(500) NULL DEFAULT NULL COMMENT 'API密钥（加密存储）',
   timeout int NULL DEFAULT 30 COMMENT '请求超时时间（秒）',
   max_tokens int NULL DEFAULT 2048 COMMENT '最大Token数',
   temperature double NULL DEFAULT 0.7 COMMENT '温度参数',
@@ -396,6 +396,8 @@ CREATE TABLE IF NOT EXISTS ai_provider_config (
   create_user bigint NULL DEFAULT NULL COMMENT '创建人',
   update_user bigint NULL DEFAULT NULL COMMENT '修改人',
   is_deleted int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+  capabilities text NULL DEFAULT NULL COMMENT '模型能力声明（JSON 数组：chat/embedding/vision/tool_call 等）',
+  embedding_dimensions int NULL DEFAULT NULL COMMENT '向量维度（embedding 模型专用）',
   PRIMARY KEY (id)
 );
 
@@ -830,5 +832,484 @@ CREATE TABLE IF NOT EXISTS complaint (
   tenant_id bigint NULL DEFAULT NULL COMMENT '租户ID',
   create_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (id)
+);
+
+-- ==================== 实体表补齐（由 .review/test-schema-backfill.js 依据 db/reggie.sql 生成）
+-- 实体与物理表对账见 DatabaseSchemaHealthCheckTest；新增表请同步登记。
+
+-- ai_attachment
+CREATE TABLE IF NOT EXISTS ai_attachment (
+  id bigint NOT NULL,
+  tenant_id bigint DEFAULT NULL,
+  actor_type varchar(16) NOT NULL,
+  owner_id bigint NOT NULL,
+  scene varchar(50) DEFAULT NULL,
+  file_name varchar(200) NOT NULL,
+  original_name varchar(200) DEFAULT NULL,
+  content_type varchar(100) NOT NULL,
+  file_size bigint NOT NULL DEFAULT 0,
+  width int DEFAULT NULL,
+  height int DEFAULT NULL,
+  sha256 varchar(64) NOT NULL,
+  storage_path varchar(500) NOT NULL,
+  is_deleted int NOT NULL DEFAULT 0,
+  create_time datetime NOT NULL,
+  update_time datetime NOT NULL,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- ai_conversation
+CREATE TABLE IF NOT EXISTS ai_conversation (
+  id bigint NOT NULL,
+  conversation_id varchar(64) NOT NULL,
+  user_id bigint DEFAULT NULL,
+  actor_type varchar(16) NOT NULL DEFAULT 'UNKNOWN',
+  title varchar(200) DEFAULT NULL,
+  scene varchar(50) DEFAULT NULL,
+  message_count int DEFAULT 0,
+  is_deleted int NOT NULL DEFAULT 0,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  create_time datetime NOT NULL,
+  update_time datetime NOT NULL,
+  tenant_id bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- ai_knowledge_chunk
+CREATE TABLE IF NOT EXISTS ai_knowledge_chunk (
+  id bigint NOT NULL,
+  tenant_id bigint NOT NULL,
+  doc_id bigint NOT NULL,
+  chunk_index int NOT NULL,
+  content varchar(1000) NOT NULL,
+  embedding mediumtext NULL,
+  embed_model varchar(100) DEFAULT NULL,
+  create_time datetime NOT NULL,
+  update_time datetime NOT NULL,
+  PRIMARY KEY (id)
+);
+
+-- ai_knowledge_doc
+CREATE TABLE IF NOT EXISTS ai_knowledge_doc (
+  id bigint NOT NULL,
+  tenant_id bigint NOT NULL,
+  title varchar(200) NOT NULL,
+  doc_type varchar(16) NOT NULL DEFAULT 'TEXT',
+  audience varchar(16) NOT NULL DEFAULT 'BOTH',
+  content mediumtext NOT NULL,
+  status varchar(16) NOT NULL DEFAULT 'DRAFT',
+  chunk_count int NOT NULL DEFAULT 0,
+  error_msg varchar(500) DEFAULT NULL,
+  create_time datetime NOT NULL,
+  update_time datetime NOT NULL,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  is_deleted int NOT NULL DEFAULT 0,
+  PRIMARY KEY (id)
+);
+
+-- ai_message
+CREATE TABLE IF NOT EXISTS ai_message (
+  id bigint NOT NULL,
+  conversation_id varchar(64) NOT NULL,
+  user_id bigint DEFAULT NULL,
+  role varchar(20) NOT NULL,
+  content text NULL,
+  attachments varchar(1000) DEFAULT NULL,
+  message_type varchar(20) DEFAULT 'text',
+  status varchar(20) NOT NULL DEFAULT 'completed',
+  client_msg_id varchar(64) DEFAULT NULL,
+  feedback varchar(10) DEFAULT NULL,
+  dish_ids varchar(500) DEFAULT NULL,
+  tokens_used int DEFAULT 0,
+  is_deleted int NOT NULL DEFAULT 0,
+  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  create_time datetime NOT NULL,
+  tenant_id bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- ai_prompt_template
+CREATE TABLE IF NOT EXISTS ai_prompt_template (
+  id bigint NOT NULL,
+  code varchar(64) NOT NULL,
+  scene varchar(50) NOT NULL,
+  type varchar(16) NOT NULL,
+  title varchar(100) NOT NULL,
+  content text NULL,
+  quick_questions varchar(1000) DEFAULT NULL,
+  builtin tinyint(1) NOT NULL DEFAULT 0,
+  enabled tinyint(1) NOT NULL DEFAULT 1,
+  sort int NOT NULL DEFAULT 0,
+  version int NOT NULL DEFAULT 1,
+  create_time datetime NOT NULL,
+  update_time datetime NOT NULL,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  is_deleted int NOT NULL DEFAULT 0,
+  PRIMARY KEY (id)
+);
+
+-- ai_user_profile
+CREATE TABLE IF NOT EXISTS ai_user_profile (
+  id bigint NOT NULL AUTO_INCREMENT,
+  user_id bigint DEFAULT NULL,
+  tenant_id bigint DEFAULT NULL,
+  taste_tags varchar(500) DEFAULT NULL,
+  category_tags varchar(500) DEFAULT NULL,
+  disliked_tags varchar(500) DEFAULT NULL,
+  allergies varchar(500) DEFAULT NULL,
+  price_preference varchar(20) DEFAULT NULL,
+  avg_order_amount int DEFAULT NULL,
+  usual_diners int DEFAULT NULL,
+  user_tags varchar(500) DEFAULT NULL,
+  frequent_dish_ids varchar(500) DEFAULT NULL,
+  preferred_dining_type varchar(20) DEFAULT NULL,
+  preferred_time_slot varchar(20) DEFAULT NULL,
+  delivery_fee_sensitive tinyint(1) DEFAULT 1,
+  confidence decimal(5, 2) DEFAULT 0.00,
+  last_analyzed_time datetime DEFAULT NULL,
+  total_conversations int DEFAULT 0,
+  total_feedbacks int DEFAULT 0,
+  create_time datetime NOT NULL,
+  update_time datetime NOT NULL,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  is_deleted int NOT NULL DEFAULT 0,
+  PRIMARY KEY (id)
+);
+
+-- attendance
+CREATE TABLE IF NOT EXISTS attendance (
+  id bigint NOT NULL AUTO_INCREMENT,
+  employee_id bigint NOT NULL,
+  employee_name varchar(50) DEFAULT NULL,
+  date date NOT NULL,
+  check_in_time datetime DEFAULT NULL,
+  check_out_time datetime DEFAULT NULL,
+  status tinyint NOT NULL DEFAULT 0,
+  work_hours decimal(5, 2) DEFAULT 0.00,
+  remark varchar(500) DEFAULT NULL,
+  tenant_id bigint DEFAULT NULL,
+  create_time datetime DEFAULT CURRENT_TIMESTAMP,
+  update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+);
+
+-- delivery_fee_step
+CREATE TABLE IF NOT EXISTS delivery_fee_step (
+  id bigint NOT NULL AUTO_INCREMENT,
+  rule_id bigint NOT NULL,
+  start_distance decimal(10, 2) NOT NULL,
+  end_distance decimal(10, 2) NOT NULL,
+  fee decimal(10, 2) NOT NULL,
+  increment_distance decimal(10, 2) DEFAULT NULL,
+  increment_fee decimal(10, 2) DEFAULT NULL,
+  sort_order int DEFAULT 0,
+  tenant_id bigint DEFAULT NULL,
+  create_time datetime DEFAULT CURRENT_TIMESTAMP,
+  update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id)
+);
+
+-- delivery_range_rule
+CREATE TABLE IF NOT EXISTS delivery_range_rule (
+  id bigint NOT NULL AUTO_INCREMENT,
+  rule_name varchar(100) NOT NULL,
+  range_type tinyint NOT NULL,
+  center_longitude decimal(12, 8) DEFAULT NULL,
+  center_latitude decimal(12, 8) DEFAULT NULL,
+  radius decimal(10, 2) DEFAULT NULL,
+  polygon_points text NULL,
+  fee_type tinyint DEFAULT 1,
+  base_fee decimal(10, 2) DEFAULT 0.00,
+  fee_per_km decimal(10, 2) DEFAULT NULL,
+  min_fee decimal(10, 2) DEFAULT NULL,
+  max_fee decimal(10, 2) DEFAULT NULL,
+  free_threshold decimal(10, 2) DEFAULT NULL,
+  status tinyint DEFAULT 1,
+  sort_order int DEFAULT 0,
+  remark varchar(500) DEFAULT NULL,
+  tenant_id bigint DEFAULT NULL,
+  create_time datetime DEFAULT CURRENT_TIMESTAMP,
+  update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- discount_rule
+CREATE TABLE IF NOT EXISTS discount_rule (
+  id bigint NOT NULL AUTO_INCREMENT,
+  campaign_id bigint NOT NULL,
+  rule_name varchar(100) DEFAULT NULL,
+  scope tinyint NOT NULL,
+  discount_rate decimal(5, 4) NOT NULL,
+  max_discount_amount decimal(10, 2) DEFAULT NULL,
+  min_consumption decimal(10, 2) DEFAULT NULL,
+  category_id bigint DEFAULT NULL,
+  dish_id bigint DEFAULT NULL,
+  setmeal_id bigint DEFAULT NULL,
+  daily_limit int DEFAULT NULL,
+  per_user_limit int DEFAULT NULL,
+  sort_order int DEFAULT 0,
+  status tinyint DEFAULT 1,
+  tenant_id bigint DEFAULT NULL,
+  create_time datetime DEFAULT CURRENT_TIMESTAMP,
+  update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- dish_spec_group
+CREATE TABLE IF NOT EXISTS dish_spec_group (
+  id bigint NOT NULL AUTO_INCREMENT,
+  name varchar(50) NOT NULL,
+  type tinyint DEFAULT 1,
+  required tinyint DEFAULT 0,
+  max_select int DEFAULT NULL,
+  sort_order int DEFAULT 0,
+  status tinyint DEFAULT 1,
+  remark varchar(500) DEFAULT NULL,
+  tenant_id bigint DEFAULT NULL,
+  create_time datetime DEFAULT CURRENT_TIMESTAMP,
+  update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- dish_spec_option
+CREATE TABLE IF NOT EXISTS dish_spec_option (
+  id bigint NOT NULL AUTO_INCREMENT,
+  group_id bigint NOT NULL,
+  name varchar(50) NOT NULL,
+  price_adjust decimal(10, 2) DEFAULT 0.00,
+  sort_order int DEFAULT 0,
+  status tinyint DEFAULT 1,
+  remark varchar(500) DEFAULT NULL,
+  tenant_id bigint DEFAULT NULL,
+  create_time datetime DEFAULT CURRENT_TIMESTAMP,
+  update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- dish_spec_relation
+CREATE TABLE IF NOT EXISTS dish_spec_relation (
+  id bigint NOT NULL AUTO_INCREMENT,
+  dish_id bigint NOT NULL,
+  group_id bigint NOT NULL,
+  sort_order int DEFAULT 0,
+  tenant_id bigint DEFAULT NULL,
+  create_time datetime DEFAULT CURRENT_TIMESTAMP,
+  create_user bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- marketing_message
+CREATE TABLE IF NOT EXISTS marketing_message (
+  id bigint NOT NULL AUTO_INCREMENT,
+  tenant_id bigint NOT NULL,
+  campaign_id bigint NOT NULL,
+  user_id bigint NOT NULL,
+  push_type tinyint NOT NULL,
+  title varchar(200) NOT NULL,
+  content varchar(1000) NOT NULL,
+  status tinyint NOT NULL DEFAULT 0,
+  read_time datetime DEFAULT NULL,
+  use_time datetime DEFAULT NULL,
+  create_time datetime NOT NULL,
+  is_deleted int NOT NULL DEFAULT 0,
+  create_user bigint DEFAULT NULL,
+  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  update_user bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- member_tag
+CREATE TABLE IF NOT EXISTS member_tag (
+  id bigint NOT NULL AUTO_INCREMENT,
+  tenant_id bigint NOT NULL,
+  member_id bigint NOT NULL,
+  tag_name varchar(50) NOT NULL,
+  tag_type tinyint DEFAULT 1,
+  biz_tag varchar(50) DEFAULT NULL,
+  tag_color varchar(20) DEFAULT '#409EFF',
+  created_time datetime NOT NULL,
+  is_deleted int NOT NULL DEFAULT 0,
+  create_user bigint DEFAULT NULL,
+  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  update_user bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- notification_record
+CREATE TABLE IF NOT EXISTS notification_record (
+  id bigint NOT NULL AUTO_INCREMENT,
+  tenant_id bigint DEFAULT NULL,
+  template_id bigint DEFAULT NULL,
+  biz_type varchar(50) NOT NULL,
+  channel tinyint NOT NULL,
+  target_type tinyint NOT NULL DEFAULT 1,
+  target_value text NOT NULL,
+  target_count int NOT NULL DEFAULT 0,
+  content text NOT NULL,
+  send_time datetime DEFAULT NULL,
+  status tinyint NOT NULL DEFAULT 0,
+  success_count int NOT NULL DEFAULT 0,
+  fail_count int NOT NULL DEFAULT 0,
+  fail_reason text NULL,
+  ext_data varchar(500) DEFAULT NULL,
+  create_time datetime NOT NULL,
+  update_time datetime NOT NULL,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  is_deleted int NOT NULL DEFAULT 0,
+  PRIMARY KEY (id)
+);
+
+-- notification_template
+CREATE TABLE IF NOT EXISTS notification_template (
+  id bigint NOT NULL AUTO_INCREMENT,
+  tenant_id bigint DEFAULT NULL,
+  template_name varchar(100) NOT NULL,
+  template_code varchar(64) DEFAULT NULL,
+  channel tinyint NOT NULL DEFAULT 1,
+  biz_type varchar(50) NOT NULL,
+  title varchar(200) DEFAULT NULL,
+  content text NULL,
+  param_list varchar(500) DEFAULT NULL,
+  sign_name varchar(50) DEFAULT NULL,
+  status tinyint NOT NULL DEFAULT 1,
+  remark varchar(200) DEFAULT NULL,
+  create_time datetime NOT NULL,
+  update_time datetime NOT NULL,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  is_deleted tinyint NOT NULL DEFAULT 0,
+  PRIMARY KEY (id)
+);
+
+-- recommendation_cache
+CREATE TABLE IF NOT EXISTS recommendation_cache (
+  id bigint NOT NULL AUTO_INCREMENT,
+  user_id bigint NOT NULL,
+  tenant_id bigint DEFAULT NULL,
+  recommend_type tinyint NOT NULL,
+  dish_ids text NOT NULL,
+  algo_name varchar(32) NOT NULL,
+  score decimal(3, 2) NOT NULL DEFAULT 0.00,
+  expire_time datetime NOT NULL,
+  create_time datetime NOT NULL,
+  update_time datetime NOT NULL,
+  is_deleted int NOT NULL DEFAULT 0,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- recommendation_feedback
+CREATE TABLE IF NOT EXISTS recommendation_feedback (
+  id bigint NOT NULL AUTO_INCREMENT,
+  user_id bigint NOT NULL,
+  tenant_id bigint DEFAULT NULL,
+  recommend_cache_id bigint DEFAULT NULL,
+  dish_id bigint NOT NULL,
+  feedback_type tinyint NOT NULL,
+  create_time datetime NOT NULL,
+  is_deleted int NOT NULL DEFAULT 0,
+  create_user bigint DEFAULT NULL,
+  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  update_user bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- urgency_record
+CREATE TABLE IF NOT EXISTS urgency_record (
+  id bigint NOT NULL AUTO_INCREMENT,
+  order_id bigint NOT NULL,
+  member_id bigint NOT NULL,
+  order_no varchar(32) NOT NULL,
+  times int NOT NULL DEFAULT 1,
+  status varchar(16) NOT NULL DEFAULT 'SENT',
+  tenant_id bigint NOT NULL,
+  create_time datetime NOT NULL,
+  update_time datetime DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- user_browse_history
+CREATE TABLE IF NOT EXISTS user_browse_history (
+  id bigint NOT NULL AUTO_INCREMENT,
+  user_id bigint NOT NULL,
+  tenant_id bigint DEFAULT NULL,
+  target_type tinyint NOT NULL,
+  target_id bigint NOT NULL,
+  target_name varchar(128) DEFAULT NULL,
+  duration_seconds int NOT NULL DEFAULT 0,
+  action_type tinyint NOT NULL DEFAULT 1,
+  create_time datetime NOT NULL,
+  is_deleted int NOT NULL DEFAULT 0,
+  PRIMARY KEY (id)
+);
+
+-- user_device
+CREATE TABLE IF NOT EXISTS user_device (
+  id bigint NOT NULL AUTO_INCREMENT,
+  tenant_id bigint DEFAULT NULL,
+  user_id bigint NOT NULL,
+  platform varchar(20) NOT NULL,
+  device_token varchar(255) DEFAULT NULL,
+  app_version varchar(20) DEFAULT NULL,
+  push_enabled tinyint NOT NULL DEFAULT 1,
+  last_active_time datetime DEFAULT NULL,
+  create_time datetime NOT NULL,
+  update_time datetime NOT NULL,
+  is_deleted int NOT NULL DEFAULT 0,
+  create_user bigint DEFAULT NULL,
+  update_user bigint DEFAULT NULL,
+  PRIMARY KEY (id)
+);
+
+-- user_preference_tag
+CREATE TABLE IF NOT EXISTS user_preference_tag (
+  id bigint NOT NULL AUTO_INCREMENT,
+  user_id bigint NOT NULL,
+  tenant_id bigint DEFAULT NULL,
+  tag_type tinyint NOT NULL,
+  tag_name varchar(64) NOT NULL,
+  tag_value decimal(5, 2) NOT NULL DEFAULT 1.00,
+  source varchar(20) NOT NULL DEFAULT 'ORDER',
+  create_time datetime NOT NULL,
+  update_time datetime NOT NULL,
+  create_user bigint NOT NULL,
+  update_user bigint NOT NULL,
+  is_deleted int NOT NULL DEFAULT 0,
+  PRIMARY KEY (id)
+);
+
+-- work_schedule
+CREATE TABLE IF NOT EXISTS work_schedule (
+  id bigint NOT NULL AUTO_INCREMENT,
+  employee_id bigint NOT NULL,
+  employee_name varchar(50) DEFAULT NULL,
+  schedule_date date NOT NULL,
+  shift tinyint DEFAULT 3,
+  shift_start time DEFAULT NULL,
+  shift_end time DEFAULT NULL,
+  work_date_str varchar(20) DEFAULT NULL,
+  remark varchar(500) DEFAULT NULL,
+  tenant_id bigint DEFAULT NULL,
+  create_time datetime DEFAULT CURRENT_TIMESTAMP,
+  update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
 );

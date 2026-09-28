@@ -190,3 +190,16 @@ CREATE TABLE IF NOT EXISTS supplier_settlement (
   IS_DELETED int NOT NULL DEFAULT 0 COMMENT '逻辑删除',
   PRIMARY KEY (ID)
 );
+
+-- 修改点(2026-09-26)：每方法执行前清空模块表，消除跨方法残留导致的计数/主键冲突
+DELETE FROM material_category;
+DELETE FROM supplier;
+DELETE FROM material;
+DELETE FROM purchase_order;
+DELETE FROM stock_check;
+DELETE FROM purchase_order_detail;
+DELETE FROM stock_check_detail;
+DELETE FROM dish_material;
+DELETE FROM stock_record;
+DELETE FROM price_history;
+DELETE FROM supplier_settlement;

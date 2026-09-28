@@ -29,3 +29,6 @@ CREATE TABLE IF NOT EXISTS delivery_order (
   PRIMARY KEY (id)
 );
 
+
+-- 修改点(2026-09-26)：每方法执行前清空模块表，消除跨方法残留导致的计数/主键冲突
+DELETE FROM delivery_order;

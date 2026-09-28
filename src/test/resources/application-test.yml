@@ -1,11 +1,13 @@
-# 测试环境配置：连接本地 MySQL（localhost:3306/reggie），与开发共用本地测试库。
+# 测试环境配置：连接本地 MySQL 独立测试库 reggie_test（一次性初始化见 AGENTS.md「测试库」）。
+# 与开发库 reggie 隔离：reggie 内的真实业务种子数据（user id 1-25 等）会与
+# 测试硬编码主键/空表断言冲突，导致 148 个用例间歇性失败。
 # 红线：schema*.sql 含 DROP TABLE 会重建表、清空数据，严禁把这里指向公网/生产数据库。
 server:
   port: 8080
 spring:
   datasource:
     druid:
-      url: jdbc:mysql://localhost:3306/reggie?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      url: jdbc:mysql://localhost:3306/reggie_test?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
       username: root
       password: 123456
       driver-class-name: com.mysql.cj.jdbc.Driver
