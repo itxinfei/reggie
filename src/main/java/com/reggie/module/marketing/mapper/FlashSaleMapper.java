@@ -2,6 +2,7 @@ package com.reggie.module.marketing.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.reggie.module.marketing.model.FlashSale;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -27,6 +28,41 @@ public interface FlashSaleMapper extends BaseMapper<FlashSale> {
     @Update("UPDATE flash_sale SET sold_quantity = sold_quantity + #{qty} " +
             "WHERE id = #{flashSaleId} AND (total_quantity - sold_quantity) >= #{qty}")
     int deductStock(@Param("flashSaleId") Long flashSaleId, @Param("qty") int qty);
+
+    /**
+     * 原子回退秒杀库存（订单取消/退款时释放名额）。
+     * <p>
+     * 与 deductStock 对称，但<b>额外要求 sold_quantity &gt;= qty</b>：
+     * 回退量不应超过已售量，否则会把 sold_quantity 压成负数，导致
+     * (total_quantity - sold_quantity) &gt; total_quantity，库存凭空变多。
+     * </p>
+     * <p>返回值：1=回退成功，0=无需回退（额度不足/记录不存在）。调用方按 0 视为"未回退"并记录日志。</p>
+     *
+     * @param flashSaleId 秒杀活动ID
+     * @param qty         回退数量
+     * @return 受影响行数
+     */
+    @Update("UPDATE flash_sale SET sold_quantity = sold_quantity - #{qty} " +
+            "WHERE id = #{flashSaleId} AND sold_quantity >= #{qty}")
+    int revertStock(@Param("flashSaleId") Long flashSaleId, @Param("qty") int qty);
+
+    /**
+     * 删除用户在某秒杀活动上的限购占用记录（订单取消/退款时释放限购额度）。
+     * <p>
+     * 与 sumPurchasedQuantity 保持同一口径（rule_type = 3 即秒杀活动），
+     * 保证"释放后重新购买不受限购拦截"。
+     * </p>
+     *
+     * @param flashSaleId 秒杀活动ID
+     * @param userId      用户ID
+     * @param tenantId    租户ID
+     * @return 删除行数
+     */
+    @Delete("DELETE FROM campaign_usage_record " +
+            "WHERE campaign_id = #{flashSaleId} AND rule_type = 3 " +
+            "AND user_id = #{userId} AND tenant_id = #{tenantId}")
+    int deleteUsageRecord(@Param("flashSaleId") Long flashSaleId, @Param("userId") Long userId,
+            @Param("tenantId") Long tenantId);
 
     /**
      * 统计用户在某秒杀活动上已占用限购的购买件数。

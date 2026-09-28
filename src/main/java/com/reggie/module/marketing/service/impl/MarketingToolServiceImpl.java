@@ -43,6 +43,9 @@ import java.util.Map;
 public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMapper, NewCustomerDiscount> 
         implements MarketingToolService {
 
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(MarketingToolServiceImpl.class);
+
     @Autowired
     private NewCustomerDiscountMapper newCustomerDiscountMapper;
 
@@ -724,6 +727,35 @@ public class MarketingToolServiceImpl extends ServiceImpl<NewCustomerDiscountMap
         rec.setDiscountAmount(discountAmount);
         rec.setActualAmount(actualAmount);
         campaignUsageRecordMapper.insert(rec);
+    }
+
+    @Override
+    public void releaseFlashSaleUsage(Long orderId, Long tenantId) {
+        if (orderId == null) {
+            return;
+        }
+        LambdaQueryWrapper<CampaignUsageRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CampaignUsageRecord::getOrderId, orderId)
+                .eq(CampaignUsageRecord::getRuleType, 3);
+        List<CampaignUsageRecord> records = campaignUsageRecordMapper.selectList(wrapper);
+        if (records == null || records.isEmpty()) {
+            return; // 幂等：非秒杀订单直接返回
+        }
+        for (CampaignUsageRecord rec : records) {
+            Long campaignId = rec.getCampaignId();
+            int qty = rec.getQuantity() != null ? rec.getQuantity() : 1;
+            Long userId = rec.getUserId();
+            // 1) 回退活动库存。revertStock 带 sold_quantity >= qty 的条件，杜绝回退为负
+            int rows = flashSaleMapper.revertStock(campaignId, qty);
+            if (rows <= 0) {
+                log.warn("[秒杀] 订单{}取消后名额回退未生效，补偿任务将重试: campaignId={}, qty={}",
+                        orderId, campaignId, qty);
+            }
+            // 2) 释放限购额度。删除口径与 sumPurchasedQuantity（rule_type=3）保持一致
+            if (tenantId != null) {
+                flashSaleMapper.deleteUsageRecord(campaignId, userId, tenantId);
+            }
+        }
     }
 
     @Override

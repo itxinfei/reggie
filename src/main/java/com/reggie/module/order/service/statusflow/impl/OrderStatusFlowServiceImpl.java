@@ -94,6 +94,9 @@ public class OrderStatusFlowServiceImpl
     @Autowired(required = false)
     private MaterialStockService materialStockService;
 
+    @Autowired(required = false)
+    private com.reggie.module.marketing.service.MarketingToolService marketingToolService;
+
     /** 配送跟踪服务（骑手信息、负载计数、接单/取餐/送达时间戳） */
     @Autowired
     private DeliveryTrackingService deliveryTrackingService;
@@ -254,7 +257,7 @@ public class OrderStatusFlowServiceImpl
         if (reason != null && !reason.trim().isEmpty()) {
             wrapper.set(Orders::getRemark, reason);
         }
-        boolean rows = this.update(null, wrapper);
+        boolean rows = this.update(versionGuardEntity(order.getVersion()), wrapper);
         if (!rows) {
             throw new CustomException("订单状态已变更，无法取消，请刷新后重试");
         }
@@ -274,6 +277,18 @@ public class OrderStatusFlowServiceImpl
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[会员权益] 订单{}取消后权益回退失败，需人工核查: {}", id, e.getMessage(), e);
+        }
+
+        // 取消订单时释放秒杀名额（活动库存 + 限购额度）。
+        // 与 recordFlashSaleUsage 严格对称：下单同时占用两者，只回退库存会让"下单→取消"
+        // 永久占用名额、限购永远拦住后续购买。失败不影响主流程，交由补偿任务重试。
+        try {
+            if (marketingToolService != null) {
+                marketingToolService.releaseFlashSaleUsage(id, order.getTenantId());
+            }
+        } catch (Exception e) {
+            // 宽异常兜底：与会员权益回退同口径，避免单个失败阻断取消主流程
+            log.error("[秒杀] 订单{}取消后名额回退失败，需人工核查: {}", id, e.getMessage(), e);
         }
 
         // 堂食订单取消 → 释放桌台（主事务内同步执行，失败不阻塞主流程）
@@ -556,6 +571,14 @@ public class OrderStatusFlowServiceImpl
                         // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                         log.error("订单自动退款成功但库存回退异常，需人工核查: orderId={}", id, e);
                     }
+                    // 退款成功后释放秒杀名额（活动库存 + 限购额度），与库存回退同口径
+                    try {
+                        if (marketingToolService != null) {
+                            marketingToolService.releaseFlashSaleUsage(id, tenantId);
+                        }
+                    } catch (Exception e) {
+                        log.error("订单{}自动退款后秒杀名额回退异常，需人工核查: {}", id, e.getMessage(), e);
+                    }
                 }
             }
         });
@@ -573,6 +596,23 @@ public class OrderStatusFlowServiceImpl
     }
 
     // ==================== 原子状态更新（行级条件更新，防并发竞态） ====================
+
+    /**
+     * 版本守卫：仅当加载到的 {@code version} 非空时返回携带版本号的更新实体，
+     * 使 MyBatis-Plus 注入乐观锁条件（WHERE version=? 且 SET version=version+1）；
+     * 若版本为 null（历史数据），返回 null 以回退到无版本更新，避免 {@code WHERE version=null} 全不匹配。
+     * <p>
+     * 修复(缺口5/FOCUS_REVIEW)：{@code Orders} 标注了 {@code @Version} 但全仓更新均传 {@code entity=null}，
+     * 导致乐观锁形同虚设；本方法让状态机热路径在常态下真正生效乐观锁，且不破坏历史 null 行。
+     */
+    private Orders versionGuardEntity(Integer version) {
+        if (version == null) {
+            return null;
+        }
+        Orders entity = new Orders();
+        entity.setVersion(version);
+        return entity;
+    }
 
     /**
      * 原子更新订单状态：WHERE id=? AND status=expectedStatus → SET status=targetStatus。
@@ -601,7 +641,7 @@ public class OrderStatusFlowServiceImpl
         wrapper.eq(Orders::getId, id)
                 .eq(Orders::getStatus, expectedStatus)
                 .set(Orders::getStatus, targetStatus);
-        boolean rows = this.update(null, wrapper);
+        boolean rows = this.update(versionGuardEntity(existing.getVersion()), wrapper);
         if (!rows) {
             throw new CustomException("订单状态已变更，请刷新后重试");
         }
@@ -634,7 +674,7 @@ public class OrderStatusFlowServiceImpl
                 .eq(Orders::getStatus, Orders.STATUS_DELIVERING)
                 .set(Orders::getStatus, Orders.STATUS_COMPLETED)
                 .set(Orders::getCheckoutTime, LocalDateTime.now());
-        boolean rows = this.update(null, wrapper);
+        boolean rows = this.update(versionGuardEntity(existing.getVersion()), wrapper);
         if (!rows) {
             throw new CustomException("订单状态已变更，无法完成，请刷新后重试");
         }

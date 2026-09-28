@@ -77,6 +77,9 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     @Autowired
     private SetmealDishService setmealDishService;
 
+    @Autowired(required = false)
+    private com.reggie.module.marketing.service.MarketingToolService marketingToolService;
+
     /** 原料库存联动（支付失败按 BOM 恢复原料），可选注入避免循环依赖 */
     @Autowired(required = false)
     private MaterialStockService materialStockService;
@@ -345,6 +348,15 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
                 return;
             }
             log.warn("支付失败联动取消订单: orderId={}, reason={}", po.getOrderId(), errorMsg);
+            // 释放秒杀名额（活动库存 + 限购额度）：该路径不经过 OrderStatusFlowServiceImpl.cancelOrder，
+            // 不补这里的话，用户用秒杀商品下单后支付失败即被永久占用限购额度
+            try {
+                if (marketingToolService != null) {
+                    marketingToolService.releaseFlashSaleUsage(order.getId(), order.getTenantId());
+                }
+            } catch (Exception e) {
+                log.error("[秒杀] 订单{}支付失败后名额回退异常，需人工核查: {}", order.getId(), e.getMessage(), e);
+            }
             // P0-3 修复：支付失败已扣库存必须回退，防止库存泄漏
             boolean refundOk = refundStockByOrderId(order.getId());
             if (refundOk) {
@@ -399,13 +411,19 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     }
 
     /**
-     * 标记库存已回退（与 OrderStatusFlowServiceImpl.markStockRefunded 一致）
+     * 标记库存已回退（与 OrderStatusFlowServiceImpl.markStockRefunded 同口径）
+     * <p>
+     * 原实现只匹配 {@code status = CANCELLED(5)}，在"订单已退款(6) 时支付失败回调到达"
+     * 的场景下置位失败 → {@code stock_refunded} 永远为 0 →
+     * StockRefundCompensationTask 每轮都会把这笔订单的库存再回退一次（库存膨胀）。
+     * 现已与 OrderStatusFlowServiceImpl 一致地匹配 5/6 两种终态，并保留 ne(1) 幂等保护。
+     * </p>
      */
     private void markStockRefunded(Long orderId, Long tenantId) {
         orderService.lambdaUpdate()
                 .eq(Orders::getId, orderId)
-                .eq(Orders::getStatus, Orders.STATUS_CANCELLED)
-                .eq(Orders::getStockRefunded, 0)
+                .in(Orders::getStatus, Orders.STATUS_CANCELLED, Orders.STATUS_REFUNDED)
+                .ne(Orders::getStockRefunded, 1)
                 .set(Orders::getStockRefunded, 1)
                 .update();
     }

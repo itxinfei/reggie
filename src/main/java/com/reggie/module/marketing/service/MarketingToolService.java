@@ -224,6 +224,23 @@ public interface MarketingToolService extends IService<NewCustomerDiscount> {
             BigDecimal actualAmount, Long tenantId);
 
     /**
+     * 订单作废时释放秒杀名额（与 {@link #recordFlashSaleUsage} 严格对称）。
+     * <p>
+     * 必须成对调用：下单时 {@code deductStock} 同时占用"活动库存"与"限购额度"，
+     * 若只在订单取消时回退库存而不释放额度，用户下单→立即取消即可永久占用名额、
+     * 并让限购校验永远拦住后续购买（可反复薅）。
+     * </p>
+     * <p>
+     * 本方法为幂等设计：订单无秒杀参与记录时直接返回，可安全重复调用。
+     * 单条记录回退失败不抛异常（返回受影响行数），交由上游补偿任务重试。
+     * </p>
+     *
+     * @param orderId   订单ID（定位 rule_type=3 的参与记录）
+     * @param tenantId  租户ID，用于限购记录删除时的归属过滤（为 null 时不做过滤）
+     */
+    void releaseFlashSaleUsage(Long orderId, Long tenantId);
+
+    /**
      * 落库后写新客立减核销记录（rule_type=4）。
      */
     void recordNewCustomerUsage(Long userId, NewCustomerEvaluation hit, Long orderId,
