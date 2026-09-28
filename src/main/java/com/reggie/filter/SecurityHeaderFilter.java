@@ -102,6 +102,14 @@ public class SecurityHeaderFilter extends OncePerRequestFilter {
         response.setHeader("X-XSS-Protection", "1; mode=block");
         response.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
 
+        // HTML 页面禁止强缓存（仅协商缓存），CSS/JS 已靠 ?v= 版本号失效，
+        // 但 HTML 本身无版本号，浏览器强缓存旧 HTML 会连带引用旧版 CSS，
+        // 导致改版后用户须手动 Ctrl+F5 才见新样式（2026-09-26 客服气泡案例）。
+        String uri = request.getRequestURI();
+        if (uri.endsWith(".html") || uri.endsWith("/")) {
+            response.setHeader("Cache-Control", "no-cache");
+        }
+
         // HSTS: 仅在【非开发环境】且【请求本身已是 HTTPS】时下发。
         // 双重条件的原因：
         // - 非 dev：开发环境本地多为 HTTP，下发 HSTS 会让浏览器记忆 HTTPS 策略，干扰调试。

@@ -276,13 +276,49 @@ public class CommonController {
             applyContentType(response, decodedName);
             streamFile(targetFile, response);
         } catch (Exception e) {
+            // 修改点(2026-09-26)：浏览器取消图片/下载请求（滚动出可视区、切页、关 tab、切 src）
+            // 是常态，容器会抛 ClientAbortException。原实现一律 log.error 打全堆栈，
+            // 且继续 sendError()——此时响应已提交，必然再抛 IllegalStateException 并冒泡到
+            // 全局异常处理器，一次取消刷出 3 条 ERROR（Controller + Aspect + GlobalExceptionHandler）。
+            if (isClientAbort(e)) {
+                log.warn("客户端取消下载（正常现象，忽略）: {}", filePath);
+                return;
+            }
             log.error("文件下载失败: {}", filePath, e);
+            if (response.isCommitted()) {
+                log.warn("响应已提交，不再回写错误状态: {}", filePath);
+                return;
+            }
             try {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "文件不存在");
             } catch (IOException ex) {
                 log.error("发送错误响应失败", ex);
             }
         }
+    }
+
+    /**
+     * 判定异常是否为「客户端主动断开连接」。
+     * 用类名匹配而非 instanceof，避免强依赖具体容器实现（Tomcat / Jetty / Undertow 类名不同），
+     * 同时规避 maven 无 tomcat 显式依赖时的编译耦合。
+     *
+     * @param e 异常（含 cause 链）
+     * @return true 表示客户端取消，属正常现象
+     */
+    private boolean isClientAbort(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            String name = t.getClass().getName();
+            if (name.indexOf("ClientAbortException") >= 0
+                    || name.indexOf("ClientAbortedException") >= 0
+                    || name.indexOf("EofException") >= 0
+                    || name.indexOf("ConnectionClosedException") >= 0) {
+                return true;
+            }
+            if (t.getCause() == t) {
+                break;
+            }
+        }
+        return false;
     }
 
     /**

@@ -146,6 +146,16 @@ public class CustomerServiceController {
                     "1") Integer messageType,
             @Parameter(description = "消息内容", required = true) @RequestParam String content,
             @Parameter(description = "图片URL（可选）") @RequestParam(required = false) String imageUrl) {
+        // 修改点(2026-09-26)：禁止向已结束会话（status >= 2）追加消息。
+        // 原实现直接落库，会在"已结束"的会话里静默产生用户永远看不到的僵尸消息，
+        // 表现为后台显示发送成功、C 端却收不到。这里显式拒绝并给出明确提示。
+        CsSession session = customerService.getSessionById(sessionId);
+        if (session == null) {
+            return R.error("会话不存在，请刷新后重试");
+        }
+        if (session.getStatus() != null && session.getStatus() >= CsSession.STATUS_CLOSED) {
+            return R.error("该会话已结束，无法继续发送消息");
+        }
         Long senderId = BaseContext.getCurrentId();
         String senderName = senderType == 1 ? "User" : "Agent";
         Long tenantId = BaseContext.getCurrentTenantId();
