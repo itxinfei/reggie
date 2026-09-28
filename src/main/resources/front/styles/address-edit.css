@@ -14,24 +14,7 @@
   /* 已选区域渐变结束色（金色浅） */
   --addr-region-filled-end: #fff3cc;
 
-  /* 标签四色（品牌金/家橙/学校绿/无灰）— 公司标签改为品牌金色，避免蓝色违反品牌色 */
-  --addr-tag-company-gradient: linear-gradient(135deg, var(--color-primary-light), var(--color-primary-light));
-  --addr-tag-company-border: var(--color-primary);
-  --addr-tag-company-shadow: var(--color-primary-dark-tint);
-  --addr-tag-company-fg: var(--color-primary-dark);
-
-  /* 修改点(2026-09-18)：家标签原与公司标签同为品牌金（无区分度），对齐 address.css 列表页的橙色系，
-     保证同一地址标签在列表页与编辑页颜色一致 */
-  --addr-tag-home-gradient: linear-gradient(135deg, #fff3e0, #ffe0b2);
-  --addr-tag-home-border: #ff9800;
-  --addr-tag-home-shadow: rgba(255, 152, 0, 0.12);
-  --addr-tag-home-fg: #e65100;
-
-  --addr-tag-school-gradient: linear-gradient(135deg, #e6faf3, #ccf0e2);
-  --addr-tag-school-border: #7fd4b0;
-  --addr-tag-school-shadow: var(--color-success-tint);
-
-  --addr-tag-none-gradient-end: var(--border-light);
+  /* 标签四色（--addr-tag-*）自 2026-09-28 收口到 styles/index.css，本页直接引用，不再重复声明 */
 
   /* 禁用保存按钮渐变结束色 + 阴影 */
   --addr-save-disabled-end: #d5cc90;
@@ -114,7 +97,7 @@ body.scrollable-page {
   font-size: 16rem;
   margin-right: 6rem;
   flex-shrink: 0;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
 
 /* ---- 表单行 ---- */
@@ -161,7 +144,7 @@ body.scrollable-page {
   line-height: 22rem;
   box-sizing: border-box;
 }
-#address_edit .divContent .formGroup .nativeInput::placeholder { color: var(--color-text-disabled); }
+#address_edit .divContent .formGroup .nativeInput::placeholder { color: var(--color-text-placeholder); }
 #address_edit .divContent .formGroup .nativeInput:disabled { background: transparent; -webkit-text-fill-color: var(--color-text-primary); }
 
 /* ---- 原生文本域 ---- */
@@ -178,7 +161,7 @@ body.scrollable-page {
   line-height: 22rem;
   box-sizing: border-box;
 }
-#address_edit .divContent .formGroup .nativeTextarea::placeholder { color: var(--color-text-disabled); }
+#address_edit .divContent .formGroup .nativeTextarea::placeholder { color: var(--color-text-placeholder); }
 
 /* 字数统计 */
 #address_edit .divContent .formGroup .charCount {
@@ -186,7 +169,7 @@ body.scrollable-page {
   right: 12rem;
   bottom: 6rem;
   font-size: 11rem;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   pointer-events: none;
 }
 
@@ -278,7 +261,7 @@ body.scrollable-page {
   text-align: center;
   font-size: 12rem;
   font-weight: 400;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   background: var(--bg-input);
   border-radius: var(--radius-md);
   border: 1.5rem solid transparent;
@@ -309,7 +292,7 @@ body.scrollable-page {
   background: linear-gradient(135deg, var(--color-primary-light), var(--addr-region-filled-end));
   border-color: var(--color-primary);
 }
-#address_edit .divContent .formGroup .regionSlot.regionFilled .regionArrow { color: var(--color-primary-dark); }
+#address_edit .divContent .formGroup .regionSlot.regionFilled .regionArrow { color: var(--color-primary-text); }
 /* 禁用/占位 */
 #address_edit .divContent .formGroup .regionSlot.regionDisabled {
   color: var(--color-text-disabled);
@@ -357,13 +340,13 @@ body.scrollable-page {
 /* 家 - 橙色 */
 #address_edit .divContent .formGroup .tagBtn.tagHome {
   background: var(--addr-tag-home-gradient);
-  border-color: var(--addr-tag-home-border); color: var(--color-primary-dark); font-weight: 600;
+  border-color: var(--addr-tag-home-border); color: var(--addr-tag-home-fg); font-weight: 600;
   box-shadow: 0 2rem 8rem var(--addr-tag-home-shadow);
 }
 /* 学校 - 绿色 */
 #address_edit .divContent .formGroup .tagBtn.tagSchool {
   background: var(--addr-tag-school-gradient);
-  border-color: var(--addr-tag-school-border); color: var(--color-success); font-weight: 600;
+  border-color: var(--addr-tag-school-border); color: var(--color-success-text); font-weight: 600;
   box-shadow: 0 2rem 8rem var(--addr-tag-school-shadow);
 }
 /* 无 - 灰色 */
@@ -433,7 +416,7 @@ body.scrollable-page {
   line-height: 44rem;
   font-size: 14rem;
   font-weight: 400;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   cursor: pointer;
   user-select: none;
   border-radius: var(--radius-xl);
@@ -494,7 +477,7 @@ body.scrollable-page {
   user-select: none;
   transition: color 0.2s;
 }
-#address_edit .pickerHeader .pickerBack:active { color: var(--color-primary-dark); }
+#address_edit .pickerHeader .pickerBack:active { color: var(--color-primary-text); }
 #address_edit .pickerHeader .pickerTitle {
   font-size: 17rem;
   font-weight: 700;
@@ -504,7 +487,7 @@ body.scrollable-page {
 }
 #address_edit .pickerHeader .pickerClose {
   font-size: 20rem;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   cursor: pointer;
   min-width: 56rem;
   text-align: right;
@@ -527,7 +510,7 @@ body.scrollable-page {
 #address_edit .pickerLoading {
   text-align: center;
   padding: 40rem 0;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   font-size: 15rem;
 }
 /* 列表项 */
@@ -545,7 +528,7 @@ body.scrollable-page {
 }
 #address_edit .pickerItem:active { background: var(--bg-hover); }
 #address_edit .pickerItem.pickerItemActive {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   font-weight: 600;
   background: linear-gradient(90deg, var(--color-primary-light), var(--bg-card) 60%);
   border-left-color: var(--color-primary);
@@ -561,7 +544,7 @@ body.scrollable-page {
 #address_edit .pickerEmpty {
   text-align: center;
   padding: 50rem 0;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   font-size: 15rem;
 }
 

@@ -40,7 +40,7 @@
 
 /* 修改点：选中态用深金而非亮金（亮金白底对比度不足） */
 .app-tabbar .van-tabbar-item--active {
-  color: var(--color-primary-dark) !important;
+  color: var(--color-primary-text) !important;
   font-weight: 600;
 }
 

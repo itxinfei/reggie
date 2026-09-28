@@ -123,10 +123,11 @@
 .dish-card-page .dish-card .dish-meta .freq-badge {
   display: inline-block;
   background: var(--color-primary-tint-strong);
-  color: var(--color-primary-dark);
+  /* 修改点(2026-09-26)：#ff9a00 文字 on 12% 金底仅约 2.2:1，改用金底专用深棕文字令牌 */
+  color: var(--color-primary-text);
   padding: 1rem 6rem;
   border-radius: var(--radius-sm);
-  font-size: 10rem;
+  font-size: 11rem;
   margin-right: 6rem;
 }
 .dish-card-page .dish-card .dish-price-row {
@@ -175,6 +176,38 @@
   border-radius: var(--radius-round);
 }
 .dish-card-page .dish-card .add-circle-btn:active {
+  transform: scale(0.88);
+}
+/* 修改点(2026-09-26)：收藏卡操作组 + 取消收藏心形钮（透明 ::after 扩命中区至 44，与加购钮同构） */
+.dish-card-page .dish-card .fav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10rem;
+  flex-shrink: 0;
+}
+.dish-card-page .dish-card .fav-heart-btn {
+  width: 32rem;
+  height: 32rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-price);
+  font-size: 20rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dish-card-page .dish-card .fav-heart-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6rem;
+  border-radius: var(--radius-round);
+}
+.dish-card-page .dish-card .fav-heart-btn:active {
   transform: scale(0.88);
 }
 .dish-card-page .dish-card .add-circle-btn.is-loading i {

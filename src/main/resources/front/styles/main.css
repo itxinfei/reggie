@@ -118,7 +118,7 @@
 /* 修改点(2026-09-24)：地址栏空态引导 —— 未选地址时弱提示样式（金色文字 + 下拉箭头），
    已选地址时保持原样式不受影响 */
 .top-bar .location-empty span {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
 
 /* 定位下拉箭头常驻：已选态弱化为金底弱文字，空态保留金色高亮 */
@@ -129,7 +129,7 @@
   flex-shrink: 0;
 }
 .top-bar .location-empty .location-guide-arrow {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
 
 .top-bar .search-box i {
@@ -144,7 +144,7 @@
    放在真实输入框右侧更符合直觉，也不用再挤压首页搜索框。 */
 .search-input-wrap .so-voice {
   font-size: 18rem;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   margin-left: 8rem;
   flex-shrink: 0;
   cursor: pointer;
@@ -328,7 +328,7 @@
 }
 
 .restaurant-card .rc-divider {
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   margin: 0 5rem;
 }
 
@@ -394,7 +394,7 @@
 }
 
 .coupon-bar .coupon-arrow {
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   font-size: 14rem;
   flex-shrink: 0;
   font-weight: 600;
@@ -421,7 +421,7 @@
   margin-right: 6rem;
   flex-shrink: 0;
   /* 修改点(2026-09-17)：图标用深金提层次 */
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
 
 .notice-bar .notice-text {
@@ -531,7 +531,7 @@
 }
 
 .category-sidebar .cat-item.active .cat-icon {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
 
 .category-sidebar .cat-item .cat-text {
@@ -553,7 +553,7 @@
   /* 修改点(2026-09-17)：去掉字号跳变(12→14rem 会使相邻项视觉抖动)，改用字重+主色区分 */
   font-size: 12rem;
   font-weight: 600;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
 
 .category-sidebar .cat-item.active::before {
@@ -823,7 +823,7 @@
   justify-content: center;
   font-size: 15rem;
   line-height: 1;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   background: var(--color-text-white);
   border: 1px solid var(--color-primary);
   box-sizing: border-box;
@@ -1028,7 +1028,8 @@
 
 .cart-bar .cart-submit-disabled {
   background: var(--color-text-disabled);
-  color: var(--text-on-dark-60);
+  /* 修改点(2026-09-26)：半透白字 on #ccc 仅 1.6:1，起送门槛文案须可读 */
+  color: var(--color-text-secondary);
   cursor: not-allowed;
 }
 
@@ -1326,7 +1327,7 @@
   border: 1px solid var(--color-primary);
   box-sizing: border-box;
   font-size: 15rem;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
 
 #main .dialogCart .divCartContent .divCartItem .divNum i:active {
@@ -1504,7 +1505,7 @@
 #main .detailsDialog .dd-sub i,
 #main .setMealDetailsDialog .dd-sub i {
   font-size: 15rem;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
 
 #main .detailsDialog .dd-add:active,
@@ -1580,7 +1581,7 @@
 
 #main .detailsDialog .eval-stars .star {
   font-size: 16rem;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
 }
 
 #main .detailsDialog .eval-stars .star.filled {
@@ -1625,7 +1626,7 @@
 
 #main .detailsDialog .eval-review-stars .star {
   font-size: 12rem;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
 }
 
 #main .detailsDialog .eval-review-stars .star.filled {
@@ -1641,7 +1642,7 @@
 
 #main .detailsDialog .eval-review-time {
   font-size: 12rem;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
 }
 
 /* ================================================================
@@ -1848,12 +1849,13 @@
 }
 
 .search-input-wrap .search-input::placeholder {
-  color: var(--color-text-disabled);
+  /* 修改点(2026-09-27 审查P1对比度族)：disabled(#ccc) 1.6:1 → 占位符专用档 */
+  color: var(--color-text-placeholder);
 }
 
 .search-input-wrap .so-clear {
   font-size: 17rem;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   margin-left: 4rem;
   flex-shrink: 0;
   cursor: pointer;
@@ -1891,13 +1893,13 @@
 
 .search-section-title .icon-delete {
   font-size: 16rem;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   cursor: pointer;
 }
 
 .search-section-title .search-section-title-clear {
   font-size: 16rem;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   cursor: pointer;
   line-height: 1;
   transition: color 0.2s;
@@ -1934,7 +1936,7 @@
 .search-empty-state {
   text-align: center;
   padding: 60rem 0;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   font-size: 14rem;
 }
 
@@ -1962,7 +1964,7 @@
 .search-empty-result {
   text-align: center;
   padding: 80rem 0;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
 }
 
 .search-empty-result img {
@@ -1974,12 +1976,12 @@
 
 .search-empty-result p {
   font-size: 14rem;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
 }
 
 .search-empty-result p.sub {
   font-size: 12rem;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   margin-top: 4rem;
 }
 
@@ -2030,7 +2032,7 @@
 
 .search-suggestions .suggestion-item .suggestion-type {
   font-size: 12rem;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   flex-shrink: 0;
   margin-left: 8rem;
   background: var(--bg-page);
@@ -2092,7 +2094,7 @@
 }
 .recommend-collapsed__show {
   font-size: 13rem;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   display: flex;
   align-items: center;
 }
@@ -2275,7 +2277,7 @@
   flex: none;
   font-size: 24rem;
   line-height: 1;
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   padding: 10rem;
   margin: -10rem -2rem;
 }

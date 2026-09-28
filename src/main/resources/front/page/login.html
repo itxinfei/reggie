@@ -12,9 +12,9 @@
         <!-- 修改点：加载 RemixIcon 真字体（emoji 兜底改由 js/icon-fallback.js 按需注入） -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js?v=20260917"></script>
-        <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260928" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-        <link rel="stylesheet" href="./../styles/login.css?v=20260924" />
+        <link rel="stylesheet" href="./../styles/login.css?v=20260928" />
     </head>
     <body class="login-page">
         <div id="login">
@@ -25,8 +25,18 @@
             <!-- 修改点(2026-09-24)：完全参考美团 H5 登录页布局重构 —— 白底极简、顶部小 logo、
                  大标题左对齐、无边框大号输入行（底部细分割线）、金色胶囊登录按钮。
                  颜色不变（品牌金体系），仅调整布局与样式结构；全部 Vue 逻辑与协议弹窗保留 -->
-            <div class="brandArea">
-                <div class="brandIcon">
+            <!-- 修改点(2026-09-26)：金色渐变氛围头图改版 —— 上半屏品牌金 hero（logo+品牌名+标语），
+                 下半屏白色圆角卡片浮起承载表单；Vue 逻辑、校验、协议弹窗全部不变 -->
+            <div class="loginHero">
+                <!-- 修改点(2026-09-26 二轮·方案A)：装饰层——漂浮光环 + 金色星点 + 底部波浪过渡（均为纯装饰，aria-hidden） -->
+                <span class="hero-ring ring-a" aria-hidden="true"></span>
+                <span class="hero-ring ring-b" aria-hidden="true"></span>
+                <i class="hero-spark sp1" aria-hidden="true"></i>
+                <i class="hero-spark sp2" aria-hidden="true"></i>
+                <i class="hero-spark sp3" aria-hidden="true"></i>
+                <i class="hero-spark sp4" aria-hidden="true"></i>
+                <div class="brandArea">
+                    <div class="brandIcon">
                     <!-- 修改点(2026-09-24 四轮)：删除硬编码 width/height（尺寸统一由 CSS 控制），
                          补充 role="img" + aria-label 供屏幕阅读器识别 -->
                     <svg viewBox="0 0 72 72" role="img" aria-label="瑞吉外卖 logo">
@@ -43,8 +53,15 @@
                     </svg>
                 </div>
                 <div class="brandName">瑞吉外卖</div>
+                <div class="brandSlogan">美味，如期而至</div>
+                </div>
+                <!-- 底部波浪：金色头图向白色表单卡片的柔和过渡（纯装饰） -->
+                <svg class="hero-wave" viewBox="0 0 375 36" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M0,22 C80,36 160,36 230,24 C290,14 340,16 375,8 L375,36 L0,36 Z" fill="#ffffff"/>
+                </svg>
             </div>
 
+            <div class="loginFormCard">
             <!-- 美团式大标题：左对齐、大字号、无卡片包裹 -->
             <div class="loginHeading">手机号登录</div>
             <div class="loginSubHeading">未注册的手机号验证后将自动创建账号</div>
@@ -105,6 +122,7 @@
                     <span class="agreementLink" role="button" @click.stop="showAgreement('privacy')">《隐私政策》</span>
                 </span>
             </div>
+            </div><!-- /loginFormCard -->
 
             <!-- 修改点：用户协议弹窗——el-dialog 替换为纯CSS模态框 -->
             <!-- 修改点(2026-09-17)：可访问性——自定义协议弹窗补充 dialog 语义与 ESC 关闭 -->
@@ -226,7 +244,7 @@
         <script src="../../backend/plugins/vue/vue.js"></script>
         <script src="./../js/vant.min.js"></script>
         <script src="../../backend/plugins/axios/axios.min.js"></script>
-        <script src="./../js/request.js?v=20260917"></script>
+        <script src="./../js/request.js?v=20260927"></script>
         <script src="./../api/login.js?v=20260917"></script>
         <script>
         new Vue({

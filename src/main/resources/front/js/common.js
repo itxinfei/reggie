@@ -8,9 +8,10 @@ function cssVar(name){
 }
 
 // 跳登录页并携带回跳地址（当前路径含查询串），登录成功后由 login.html 跳回原页面，保留操作意图
+// 2026-09-26：去掉"先提示再延迟1.2s跳转"，未登录立即跳转（打开页面必须是登录态）
 function goLogin(){
-    window.location.href = '/front/page/login.html?redirect='
-        + encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.replace('/front/page/login.html?redirect='
+        + encodeURIComponent(window.location.pathname + window.location.search));
 }
 
 // 全站加载的是开发版 vue.js：模板编译为 with(_renderProxy){…}，而 vm 的 has 拦截器对
@@ -54,6 +55,32 @@ function imgFallback(e) {
     el.src = '/front/images/noImg.png';
 }
 
+// 地址统一拼接：省/市/区去重（直辖市省市同名）+ 剥离 detail 中已自带的行政区划前缀。
+// 存量数据 detail 含"北京市东城区…"前缀，直接再拼省市区会出现"北京市北京市东城区北京市东城区…"重复。
+function composeAddressText(a){
+    if(!a) return '';
+    var tokens = [];
+    var region = [a.provinceName, a.cityName, a.districtName];
+    for (var i = 0; i < region.length; i++) {
+        var n = (region[i] || '').trim();
+        if (n && tokens[tokens.length - 1] !== n) tokens.push(n);
+    }
+    var detail = (a.detail || '').trim();
+    var changed = true;
+    while (changed) {
+        changed = false;
+        for (var j = 0; j < tokens.length; j++) {
+            var t = tokens[j];
+            if (detail.length > t.length && detail.indexOf(t) === 0) {
+                detail = detail.slice(t.length);
+                changed = true;
+                break;
+            }
+        }
+    }
+    return tokens.join('') + detail;
+}
+
 // 静默恢复用户会话：sessionStorage 按 tab 隔离，新标签页/复制链接打开时本地登录态会丢失，
 // 但服务端 cookie 会话可能仍有效。以 /user/info?full=1 探测并回填本地缓存。
 // 返回 Promise<boolean>：true=已具备有效登录态（原有或恢复成功）；false=真实未登录。
@@ -88,6 +115,7 @@ function installReggieVueHelpers(){
         imgPath: function (p) { return imgPath(p); },
         imgFallback: imgFallback,
         cssVar: cssVar,
+        composeAddressText: function (a) { return composeAddressText(a); },
         // 订单是否还有未评价商品；依赖实例数据 evalKeys（页面 created 用 loadEvalKeys 装配）
         canEvaluateOrder: function (order) {
             if (!order || !order.orderDetails || !this.evalKeys) return false;

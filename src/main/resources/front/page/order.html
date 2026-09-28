@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
     <head>
         <meta charset="UTF-8">
@@ -11,12 +11,12 @@
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <!--本页面内容的样式-->
-        <link rel="stylesheet" href="./../styles/order.css?v=20260926" />
+        <link rel="stylesheet" href="./../styles/order.css?v=20260927d" />
         <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
-        <link rel="stylesheet" href="../styles/tabbar.css?v=20260917" />
+        <link rel="stylesheet" href="../styles/tabbar.css?v=20260926" />
         <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="./../js/icon-fallback.js?v=20260917"></script>
@@ -64,7 +64,7 @@
                                     </span>
                                 </div>
                             </div>
-                            <span class="order-status" :class="getStatusClass(order.status)">{{getStatus(order.status)}}</span>
+                            <span class="order-status" :class="getStatusClass(order.status)">{{ (order.tableId && order.status === 3) ? '制作中' : getStatus(order.status) }}</span>
                         </div>
                         <!-- 外卖：待接单(status=2)/配送中(3)迷你进度条。
                              注意 status=2 是"待接单"，首步只 active 不 done -->
@@ -95,12 +95,12 @@
                                 <span class="dish-price">¥{{Number(item.amount || 0).toFixed(2)}}</span>
                             </div>
                             <div v-if="(order.orderDetails || []).length > 3" class="dish-more">
-                                等共{{order.orderDetails.length}}件商品
+                                等共{{order.orderDetails.length}}种商品
                             </div>
                         </div>
                         <!-- 合计行 -->
                         <div class="order-total">
-                            <span>共{{order.sumNum}}件  实付</span>
+                            <span>共{{order.sumNum}}件商品  实付</span>
                             <span class="price">¥{{ Number(order.amount || 0).toFixed(2) }}</span>
                         </div>
                         <!-- 操作按钮：按订单状态平铺 2~4 个，窄屏自动换行（见 .order-actions） -->
@@ -112,14 +112,14 @@
                             </template>
                             <!-- 待接单 -->
                             <template v-if="order.status === 2">
-                                <div class="act-btn act-outline" @click="urgeOrder(order)">催单</div>
+                                <div class="act-btn act-outline" @click="urgeOrder(order)">{{ order.tableId ? '催菜' : '催单' }}</div>
                                 <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking(order)">查看配送</div>
                             </template>
-                            <!-- 配送中 -->
+                            <!-- 配送中：外卖可确认收货；堂食由员工上菜完成并释放桌台，顾客无"确认收货" -->
                             <template v-if="order.status === 3">
-                                <div class="act-btn act-outline" @click="urgeOrder(order)">催单</div>
+                                <div class="act-btn act-outline" @click="urgeOrder(order)">{{ order.tableId ? '催菜' : '催单' }}</div>
                                 <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking(order)">查看配送</div>
-                                <div class="act-btn act-primary" @click="confirmReceipt(order)">确认收货</div>
+                                <div class="act-btn act-primary" v-if="!order.tableId" @click="confirmReceipt(order)">确认收货</div>
                             </template>
                             <!-- 已完成 -->
                             <template v-if="order.status === 4">
@@ -154,9 +154,9 @@
         <script src="./../js/vant.min.js"></script>    
         <!-- 引入axios -->
         <script src="../../backend/plugins/axios/axios.min.js"></script>
-        <script src="./../js/request.js?v=20260917"></script>
+        <script src="./../js/request.js?v=20260927"></script>
         <script src="./../api/main.js?v=20260917"></script>
-        <script src="./../js/common.js?v=20260924"></script>
+        <script src="./../js/common.js?v=20260927"></script>
         <script src="./../api/order.js?v=20260917"></script>
         <!-- C 端跨页面复用组件（必须在 new Vue 之前加载） -->
         <script src="./../js/components-cend.js?v=20260922"></script>
@@ -202,6 +202,10 @@
                 showListSkeleton:function(){ return (this.firstLoading || this.loading || this.refreshing) && this.orderList.length === 0 }
             },
             created(){
+                // 非响应式运行态：请求序号（丢弃过期响应）、列表请求在途标志、续拉定时器
+                this._reqSeq = 0
+                this._listInFlight = false
+                this._continueTimer = null
                 // 修改点：先加载后端枚举字典，使列表状态文案与后端保持一致
                 // （字典加载失败时 getStatus 自动回退到 common.js 的兜底常量）
                 var self = this
@@ -216,22 +220,38 @@
             },
             mounted(){
                 // 修改点(2026-09-17)：状态Tab滚动粘滞阴影
+                // 修改点(2026-09-28)：scroll 处理具名化挂到实例，beforeDestroy 解绑
                 var self = this
                 this.$nextTick(function(){
                     var tabs = document.querySelector('#order .status-tabs')
                     var body = document.querySelector('#order .divBody')
                     if (tabs && body) {
-                        body.addEventListener('scroll', function(){
-                            if (body.scrollTop > 5) {
-                                tabs.classList.add('is-scrolled')
-                            } else {
-                                tabs.classList.remove('is-scrolled')
-                            }
-                        }, { passive: true })
+                        self._tabsEl = tabs
+                        self._scrollBody = body
+                        body.addEventListener('scroll', self.handleTabsScroll, { passive: true })
                     }
                 })
             },
+            beforeDestroy(){
+                if(this._scrollBody){
+                    this._scrollBody.removeEventListener('scroll', this.handleTabsScroll)
+                    this._scrollBody = null
+                }
+                if(this._continueTimer){
+                    clearTimeout(this._continueTimer)
+                    this._continueTimer = null
+                }
+            },
             methods:{
+                // 状态 Tab 粘滞阴影的滚动处理（具名，便于 beforeDestroy 解绑）
+                handleTabsScroll(){
+                    if(!this._tabsEl || !this._scrollBody) return
+                    if(this._scrollBody.scrollTop > 5){
+                        this._tabsEl.classList.add('is-scrolled')
+                    }else{
+                        this._tabsEl.classList.remove('is-scrolled')
+                    }
+                },
                 // 修改点(2026-09-22)：goBack 已统一由 cend-shell 组件处理，页面不再重复定义
                 goHome(){
                     window.requestAnimationFrame(()=>{
@@ -251,9 +271,7 @@
                 },
                 // 修改点：下拉刷新处理（await getList 后复位，避免固定延时与实际加载不同步）
                 async onRefresh(){
-                    this.paging.page = 1;
-                    this.orderList = [];
-                    this.finished = false;
+                    this.beginReload();
                     try {
                         await this.getList()
                     } finally {
@@ -264,17 +282,32 @@
                 switchTab(status){
                     if(this.activeStatus === status) return;
                     this.activeStatus = status;
+                    this.beginReload();
+                    this.getList();
+                },
+                // 新一轮列表加载：重置分页/列表，并使在途旧请求失效
+                // （旧响应回来后按序号丢弃，修复切 tab 闪显错数据与页码重复自增跳页）
+                beginReload(){
+                    if(this._continueTimer){
+                        clearTimeout(this._continueTimer)
+                        this._continueTimer = null
+                    }
+                    this._listInFlight = false;
+                    this._reqSeq++;
                     this.paging.page = 1;
                     this.orderList = [];
                     this.finished = false;
                     this.loading = true;
-                    this.getList();
                 },
                 async getList(){
                     if(this.finished){
                         this.loading = false;
                         return
                     }
+                    // in-flight 守卫：van-list @load 与 needEval 续拉隔着 loading 空窗可能并发，去重
+                    if(this._listInFlight){ return }
+                    this._listInFlight = true
+                    var seq = ++this._reqSeq
                     // 修改点：仅在有状态筛选时传递status参数
                     // 「待评价」后端无对应状态：取已完成(status=4)单后前端本地过滤未评价的
                     const params = { ...this.paging }
@@ -284,6 +317,8 @@
                     }
                     try {
                         const res = await orderPagingApi(params)
+                        // 过期响应（期间已切 tab / 重新加载）：整段结果丢弃，不碰列表与页码
+                        if(seq !== this._reqSeq) return
                         if(res.code === 1){
                             // 第一页时重置列表，防止重复累加
                             if(this.paging.page === 1){
@@ -323,7 +358,10 @@
                             // 不空等 van-list 的 check，避免中间露出"暂无订单"空态
                             if(isNeedEval && this.orderList.length === 0 && !this.finished){
                                 var selfContinue = this
-                                setTimeout(function(){
+                                this._continueTimer = setTimeout(function(){
+                                    selfContinue._continueTimer = null
+                                    // 有在途请求（van-list @load 抢先）时不续拉，避免并发重复 push
+                                    if(selfContinue._listInFlight) return
                                     selfContinue.loading = true
                                     selfContinue.getList()
                                 }, 0)
@@ -332,12 +370,17 @@
                             vant.Toast.fail(res.msg || '加载订单失败');
                         }
                     } catch (err) {
-                        // 异常兜底：网络错误/接口异常时给出提示，loading 由 finally 复位，避免永卡加载
+                        // 过期请求异常静默；其余网络错误/接口异常给出提示，避免永卡加载
+                        if(seq !== this._reqSeq) return
                         console.error('加载订单列表失败:', err)
                         vant.Toast.fail('加载订单失败，请稍后重试');
                     } finally {
-                        this.loading = false;
-                        this.firstLoading = false;
+                        // 过期请求不清在途标志（新一轮请求可能已在途），不复位 loading
+                        if(seq === this._reqSeq){
+                            this._listInFlight = false
+                            this.loading = false;
+                            this.firstLoading = false;
+                        }
                     }
                 },
                 getStatus(status){

@@ -135,10 +135,10 @@
 #messageApp .tag-notification {
   /* 改为品牌金 tint：与瑞吉品牌主色一致，不引入蓝色功能色 */
   background: var(--color-primary-tint);
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
-#messageApp .tag-popup { background: var(--color-primary-dark-tint); color: var(--color-warning); }
-#messageApp .tag-sms { background: var(--color-success-tint); color: var(--color-success); }
+#messageApp .tag-popup { background: var(--color-primary-dark-tint); color: var(--color-warning-text); }
+#messageApp .tag-sms { background: var(--color-success-tint); color: var(--color-success-text); }
 /* 2026-09-22：红包标签红底收敛到价格红 tint 令牌（色值由 rgba(243,69,70,.1) 微调到令牌值） */
 #messageApp .tag-coupon { background: var(--color-price-tint); color: var(--color-price); }
 
@@ -174,7 +174,7 @@
 }
 
 #messageApp .load-more:active {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
 
 /* ---- 详情弹窗 ---- */
@@ -272,4 +272,46 @@
 
 #messageApp .detail-close:active {
   background: var(--color-text-disabled);
+}
+
+/* ---- 客服会话置顶卡片（2026-09-27 审查P0-4：消息中心补客服消息落点） ---- */
+#messageApp .cs-msg-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 12rem var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  transition: background-color var(--transition-normal);
+}
+
+#messageApp .cs-msg-card:active { background: var(--surface-white-85); }
+
+#messageApp .cs-msg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6rem;
+}
+
+#messageApp .cs-msg-name {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+/* 修改点(2026-09-27 审查P1对比度族)：橙色客服图标 → 深金 strong，与文字档一致 */
+#messageApp .cs-msg-name i { vertical-align: -2rem; margin-right: 4rem; color: var(--color-primary-text-strong); }
+
+#messageApp .cs-msg-time {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-hint);
+}
+
+#messageApp .cs-msg-content {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

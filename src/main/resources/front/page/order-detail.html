@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
     <head>
         <meta charset="UTF-8">
@@ -11,10 +11,10 @@
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <!--订单域样式（含本详情页 .od-* 与复用的 .dish-*/.act-btn 等）-->
-        <link rel="stylesheet" href="./../styles/order.css?v=20260925" />
+        <link rel="stylesheet" href="./../styles/order.css?v=20260927d" />
         <!-- 加载 remixicon 图标库 -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="./../js/icon-fallback.js?v=20260917"></script>
@@ -32,7 +32,7 @@
                     <div :class="['od-card od-hero', 's-' + order.status]">
                         <i :class="['od-hero-icon', statusIcon]"></i>
                         <div class="od-hero-main">
-                            <span class="od-hero-title">{{ getStatus(order.status) }}</span>
+                            <span class="od-hero-title">{{ (isEatIn && order.status === 3) ? '制作中' : getStatus(order.status) }}</span>
                             <span class="od-hero-desc" v-if="!isDeliveringLive">{{ statusDesc }}</span>
                             <!-- 待接单/配送中：预计送达时间加粗高亮 -->
                             <span class="od-hero-desc od-eta-live" v-if="isDeliveringLive">
@@ -102,6 +102,10 @@
                             <div class="od-row" v-if="Number(order.deliveryFee || 0) > 0">
                                 <span class="od-label">配送费</span>
                                 <span class="od-value">¥{{ Number(order.deliveryFee || 0).toFixed(2) }}</span>
+                            </div>
+                            <div class="od-row" v-if="packFee > 0">
+                                <span class="od-label">打包费</span>
+                                <span class="od-value">¥{{ packFee.toFixed(2) }}</span>
                             </div>
                             <div class="od-row" v-if="discount > 0">
                                 <span class="od-label">优惠</span>
@@ -189,13 +193,14 @@
                     <div class="act-btn act-primary" @click="goToPay">去支付</div>
                 </template>
                 <template v-if="order.status === 2">
-                    <div class="act-btn act-outline" @click="urgeOrder">催单</div>
+                    <div class="act-btn act-outline" @click="urgeOrder">{{ isEatIn ? '催菜' : '催单' }}</div>
                     <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking">查看配送</div>
                 </template>
                 <template v-if="order.status === 3">
-                    <div class="act-btn act-outline" @click="urgeOrder">催单</div>
+                    <div class="act-btn act-outline" @click="urgeOrder">{{ isEatIn ? '催菜' : '催单' }}</div>
                     <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking">查看配送</div>
-                    <div class="act-btn act-primary" @click="confirmReceipt">确认收货</div>
+                    <!-- 堂食由员工上菜完成并释放桌台，顾客无确认收货入口 -->
+                    <div class="act-btn act-primary" v-if="!isEatIn" @click="confirmReceipt">确认收货</div>
                 </template>
                 <template v-if="order.status === 4">
                     <div class="act-btn act-outline" @click="applyRefund">申请售后</div>
@@ -213,9 +218,9 @@
         <script src="../../backend/plugins/vue/vue.js"></script>
         <script src="./../js/vant.min.js"></script>
         <script src="../../backend/plugins/axios/axios.min.js"></script>
-        <script src="./../js/request.js?v=20260917"></script>
+        <script src="./../js/request.js?v=20260927"></script>
         <script src="./../api/main.js?v=20260921"></script>
-        <script src="./../js/common.js?v=20260924"></script>
+        <script src="./../js/common.js?v=20260927"></script>
         <script src="./../api/order.js?v=20260917"></script>
         <!-- C 端跨页面复用组件（必须在 new Vue 之前加载） -->
         <script src="./../js/components-cend.js?v=20260922"></script>
@@ -248,10 +253,19 @@
                     for (var i = 0; i < list.length; i++) { sum += Number(list[i].amount || 0) }
                     return Math.round(sum * 100) / 100
                 },
-                // 优惠金额 = 小计 + 配送费 - 实付（>0 才有优惠，无需后端额外字段）
+                // 优惠总额 = 满减 + 新客立减（旧数据无这两个字段时回退为小计+配送-实付倒推）
                 discount: function() {
-                    var d = this.goodsAmount + Number(this.order.deliveryFee || 0) - Number(this.order.amount || 0)
-                    return d > 0 ? Math.round(d * 100) / 100 : 0
+                    var o = this.order
+                    if (o.fullReductionAmount == null && o.newCustomerDiscountAmount == null) {
+                        var d = this.goodsAmount + Number(o.deliveryFee || 0) - Number(o.amount || 0)
+                        return d > 0 ? Math.round(d * 100) / 100 : 0
+                    }
+                    return Math.round((Number(o.fullReductionAmount || 0) + Number(o.newCustomerDiscountAmount || 0)) * 100) / 100
+                },
+                // 打包费等附加费 = 实付 - 小计 - 配送费 + 优惠（实付为权威口径，差额单列成行，避免出现无解释的账目差）
+                packFee: function() {
+                    var p = Number(this.order.amount || 0) - this.goodsAmount - Number(this.order.deliveryFee || 0) + this.discount
+                    return p > 0.005 ? Math.round(p * 100) / 100 : 0
                 },
                 payMethodText: function() {
                     // 口径对齐后端：1现金 2微信 3支付宝 4银行卡 5会员储值 6货到付款
@@ -270,6 +284,17 @@
                     return map[this.order.status] || 'ri-file-list-line'
                 },
                 statusDesc: function() {
+                    if (this.isEatIn) {
+                        var eatInMap = {
+                            1: '请尽快完成支付，超时订单将自动取消',
+                            2: '门店已接单，后厨正在为您制作',
+                            3: '菜品正在加急制作，上齐后请慢用',
+                            4: '感谢您的惠顾，欢迎再次光临',
+                            5: '订单已取消',
+                            6: '退款将按原支付路径返回'
+                        }
+                        return eatInMap[this.order.status] || ''
+                    }
                     var map = {
                         1: '请尽快完成支付，超时订单将自动取消',
                         2: '商家已接单，正在为您准备',

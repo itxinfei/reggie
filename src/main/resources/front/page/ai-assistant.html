@@ -1,18 +1,18 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-rem-flat>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>AI智能点餐助手</title>
     <!-- 修改点：base.js 前置，确保 rem 基准正确计算 -->
-    <script src="../js/base.js?v=20260917"></script>
+    <script src="../js/base.js?v=20260928"></script>
     <link rel="stylesheet" href="../styles/vant.min.css">
-    <link rel="stylesheet" href="../styles/index.css?v=20260924">
+    <link rel="stylesheet" href="../styles/index.css?v=20260928">
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
     <!-- 修改点：补充加载完整 remixicon.css（此前仅加载 fallback，ri-moon-line/ri-menu-line/ri-close-line 等 header 图标不渲染） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css">
     <script src="../js/icon-fallback.js?v=20260917"></script>
-    <link rel="stylesheet" href="../styles/ai-assistant.css?v=20260924">
+    <link rel="stylesheet" href="../styles/ai-assistant.css?v=20260928">
 
 </head>
 <body>
@@ -282,13 +282,13 @@
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
     <script src="../js/vant.min.js"></script>
-    <script src="../js/request.js?v=20260917"></script>
+    <script src="../js/request.js?v=20260927"></script>
     <!-- 公共聊天内核：POST+SSE 客户端 / 安全 Markdown / 消息工厂（与管理后台同一份） -->
     <script src="../../backend/js/ai/ai-chat-core.js?v=20260922"></script>
     <script src="../api/ai.js?v=20260921"></script>
     <!-- 修复(2026-09-23 P2-3/P2-4)：引入 common.js 提供 goLogin()/imgPath()；
          须在 vue.js 之后、new Vue 之前，installReggieVueHelpers 才能把 imgPath 注入实例 -->
-    <script src="../js/common.js?v=20260924"></script>
+    <script src="../js/common.js?v=20260927"></script>
     <script src="../js/components-cend.js?v=20260922"></script>
     <script>
     (function() {
@@ -306,11 +306,14 @@
             return (date.getMonth() + 1) + '月' + date.getDate() + '日';
         }
 
-        /** 未登录跳转（fetch 链路无法走 axios 拦截器，与 front/js/request.js 行为对齐） */
+        /** 未登录跳转（fetch 链路无法走 axios 拦截器）：立即跳登录页，不提示不延迟（2026-09-26） */
+        var notLoginHandled = false;
         function redirectToLogin() {
             try { sessionStorage.removeItem('csrfToken'); } catch (e) { /* noop */ }
+            if (notLoginHandled) { return; }
+            notLoginHandled = true;
             var back = window.location.pathname + window.location.search;
-            window.location.href = '/front/page/login.html?redirect=' + encodeURIComponent(back);
+            window.location.replace('/front/page/login.html?redirect=' + encodeURIComponent(back));
         }
 
         // ==================== Vue App ====================
@@ -1008,10 +1011,13 @@
                     }
                     if (this.addressData) {
                         var addr = this.addressData;
-                        // 结构化地址：省/市/区名称 + 后端规范化的 detail 拼接；旧数据无 districtName 时回退 district
-                        var addrParts = [addr.provinceName, addr.cityName,
-                                         addr.districtName || addr.district, addr.detail];
-                        var addrDetail = addrParts.filter(function(p) { return !!p; }).join('');
+                        // 结构化地址：统一走 composeAddressText（省市区去重 + 剥离 detail 自带前缀）；旧数据无 districtName 时回退 district
+                        var addrDetail = composeAddressText({
+                            provinceName: addr.provinceName,
+                            cityName: addr.cityName,
+                            districtName: addr.districtName || addr.district,
+                            detail: addr.detail
+                        });
                         context.address = {
                             consignee: addr.consignee || '',
                             detail: addrDetail

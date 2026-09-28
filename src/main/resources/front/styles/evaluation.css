@@ -64,7 +64,8 @@
 
 .eval-stars .star {
   font-size: 22rem;
-  color: var(--color-text-disabled);
+  /* 修改点(2026-09-26)：#ccc 空星 1.6:1，提深至 hint */
+  color: var(--color-text-hint);
 }
 
 .eval-stars .star.filled {
@@ -87,12 +88,12 @@
 
 .status-tag.pending {
   background: var(--color-primary-dark-tint);
-  color: var(--color-warning);
+  color: var(--color-warning-text);
 }
 
 .status-tag.approved {
   background: var(--color-success-tint);
-  color: var(--color-success);
+  color: var(--color-success-text);
 }
 
 .status-tag.rejected {
@@ -178,7 +179,7 @@
 .submitted-flag {
   margin-left: 8rem;
   font-size: var(--font-size-sm);
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 
@@ -191,7 +192,8 @@
 }
 .star-rating .star-item {
   font-size: 22rem;
-  color: var(--color-text-disabled);
+  /* 修改点(2026-09-26)：#ccc 空星 on 卡片底仅 1.5:1，作可点组件不达 3:1，提深一档 */
+  color: var(--color-text-hint);
   cursor: pointer;
   transition: color 0.15s, transform 0.15s;
 }
@@ -208,7 +210,8 @@
   background: none;
   border: none;
   font-size: 13rem;
-  color: var(--color-primary);
+  /* 修改点(2026-09-26)：#ffc200 亮金文字 1.6:1 不可读，换金底深棕令牌 */
+  color: var(--color-primary-text);
   padding: 4rem 8rem;
   cursor: pointer;
 }
@@ -266,6 +269,10 @@
   overflow: hidden;
   /* 2026-09-21：大投影 → 轻量弹窗阴影 */
   box-shadow: var(--shadow-md);
+  /* 修改点(2026-09-26)：根字号 1rem=1px，弹窗此前未设基准字号，
+     订单号/菜名等未显式指定字号的文字全部继承成 1px 隐形字 */
+  font-size: 14rem;
+  color: var(--color-text-primary);
 }
 .submit-modal-header {
   position: relative;
@@ -316,7 +323,8 @@
 }
 .submit-modal-footer .btn-submit {
   background: var(--color-primary-gradient);
-  color: var(--color-text-primary);
+  /* 修改点(2026-09-26)：金底按钮文字钉深棕，不随暗色模式翻白（同会员卡问题族） */
+  color: var(--color-primary-text);
   border: none;
 }
 .submit-modal-footer .btn-submit:disabled {
@@ -370,7 +378,8 @@
 .quick-tag.active {
   border-color: var(--color-primary);
   background: var(--color-primary-tint);
-  color: var(--color-primary-dark);
+  /* 修改点(2026-09-26)：#ff9a00 橙字 on 10% 金底约 2:1，换金底深棕文字令牌 */
+  color: var(--color-primary-text);
 }
 
 .quick-tag:active {
@@ -424,13 +433,13 @@
 }
 .write-eval-bar .write-eval-info i {
   font-size: 18rem;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
 /* 入口按钮：描边态（白底 + 金边 + 深金文字） */
 .write-eval-bar .van-button--primary.van-button--plain {
   background-color: var(--color-text-white) !important;
   border-color: var(--color-primary) !important;
-  color: var(--color-primary-dark) !important;
+  color: var(--color-primary-text) !important;
   font-weight: 600;
 }
 
@@ -493,7 +502,7 @@
 /* 我的评价列表中的“匿名”小标记 */
 .eval-anony-flag {
   font-size: 11rem;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   background: var(--color-primary-tint);
   border-radius: var(--radius-sm);
   padding: 1rem 6rem;

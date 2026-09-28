@@ -252,6 +252,10 @@
   bottom: 0;
   left: 0;
   right: 0;
+  /* 修改点(2026-09-27 审查P2桌面居中族)：桌面宽屏下 fixed 相对视口定位，
+     会逃逸 index.css 的 750px 居中列；max-width+auto 边距收敛回列内（移动无影响） */
+  max-width: 750px;
+  margin: 0 auto;
   z-index: var(--z-modal, 3000);
   height: 56rem;
   background: var(--bg-cart-bar);
@@ -279,7 +283,7 @@
   align-items: center;
   justify-content: center;
   background: var(--bg-cart-icon-idle);
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   cursor: pointer;
 }
 #add_order .divCart .cart-entry i { font-size: 24rem; line-height: 1; }
@@ -318,7 +322,8 @@
 }
 
 #add_order .divCart .btnSubmit {
-  color: white;
+  /* 修改点(2026-09-26)：白字 on #ccc 仅 1.6:1，"暂不可下单"是关键状态文案必须可读 */
+  color: var(--color-text-secondary);
   background: var(--color-text-disabled);
   cursor: not-allowed;
 }
@@ -424,7 +429,7 @@
 /* 微信：浅绿底 + 品牌绿图标（美团式色块，纯色无背景偏单薄） */
 #add_order .pay-wechat-icon {
   background: rgba(7, 193, 96, 0.12);
-  color: var(--color-success);
+  color: var(--color-success-text);
 }
 
 /* 支付宝：浅蓝底 + 品牌蓝图标 */
@@ -446,7 +451,8 @@
 }
 
 #add_order .divContent .pay-method .pay-check {
-  color: var(--color-primary);
+  /* 修改点(2026-09-26)：#ffc200 亮金 on 白 1.6:1，选中态勾选换金底深棕令牌 */
+  color: var(--color-primary-text);
   font-size: 18rem;
   font-weight: bold;
 }
@@ -485,7 +491,7 @@
 #add_order .utensils-btn.active {
   border-color: var(--color-primary);
   background: var(--color-primary-tint);
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   font-weight: 500;
 }
 
@@ -496,7 +502,7 @@
 #add_order .utensils-tip {
   margin-top: 8rem;
   font-size: var(--font-size-xs);
-  color: var(--color-success);
+  color: var(--color-success-text);
   display: flex;
   align-items: center;
   gap: 4rem;
@@ -868,7 +874,7 @@
   position: relative;
 }
 #add_order .delivery-mode .mode-tab.active {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   font-weight: 600;
   /* 修改点(2026-09-17)：补浅金面反馈，选中态从「仅下划线」升级为「面+线」 */
   background: var(--color-primary-tint);
@@ -1011,4 +1017,18 @@
 #add_order .divContent .order .itemList .gift-item .gift-num {
   font-family: DIN, DIN-Medium;
   color: var(--color-text-secondary);
+}
+
+/* 下单阻断提示（超配送范围/未达起送价/无地址）：警告底色，替换无法兑现的送达时间承诺 */
+#add_order .divAddress .divFinishTime.finish-time--blocked {
+  cursor: default;
+  color: var(--color-warning-text);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+}
+#add_order .divFinishTime.finish-time--blocked i {
+  font-size: 15rem;
+  color: var(--color-warning);
 }

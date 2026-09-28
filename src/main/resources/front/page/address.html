@@ -11,13 +11,13 @@
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260928" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <!-- 修改点：补充加载 remixicon.css + fallback —— 本页新增 ri-edit-line / ri-checkbox-* 图标字体，此前仅位图未加载字体 -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js?v=20260917"></script>
         <!--本页面内容的样式-->
-        <link rel="stylesheet" href="./../styles/address.css?v=20260924" />
+        <link rel="stylesheet" href="./../styles/address.css?v=20260928" />
     </head>
     <body class="scrollable-page">
         <!-- 修改点：移除ElementUI v-loading，改用CSS加载遮罩 -->
@@ -95,8 +95,8 @@
             <script src="./../api/address.js?v=20260917"></script>
             <!-- 引入axios -->
             <script src="../../backend/plugins/axios/axios.min.js"></script>
-            <script src="./../js/request.js?v=20260917"></script>
-            <script src="./../js/common.js?v=20260924"></script>
+            <script src="./../js/request.js?v=20260927"></script>
+            <script src="./../js/common.js?v=20260927"></script>
             <script>
             new Vue({
                 el:"#address",
@@ -126,14 +126,9 @@
                     async onRefresh(){
                         try { await this.initData() } finally { this.refreshing = false }
                     },
-                    // 修改点：拼接完整省市区地址
+                    // 修改点：拼接完整省市区地址（统一走 composeAddressText，去重存量 detail 前缀）
                     fullAddress(item){
-                        let parts = []
-                        if(item.provinceName) parts.push(item.provinceName)
-                        if(item.cityName) parts.push(item.cityName)
-                        if(item.districtName) parts.push(item.districtName)
-                        if(item.detail) parts.push(item.detail)
-                        return parts.join(' ')
+                        return composeAddressText(item)
                     },
                     // 修改点(2026-09-22)：goBack 已统一由 cend-shell 组件处理，页面不再重复定义
                     toAddressEditPage(item){

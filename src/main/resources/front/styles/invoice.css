@@ -86,18 +86,43 @@ body { background: var(--bg-page); }
   font-size: 12rem;
   color: var(--color-text-hint);
 }
+/* 修改点(2026-09-26)：抬头名与税号同排会互相挤压（名称被压没），改为上下两行、名称单行省略 */
+#invoice-app .title-item .van-radio {
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+  align-items: flex-start;
+}
+#invoice-app .title-item .van-radio__label {
+  display: block;
+  min-width: 0;
+}
+#invoice-app .title-item .van-radio__label > span:first-child {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* 根字号为 1rem=1px 约定，必须显式给字号，否则继承 html 的 1px 成隐形字 */
+  font-size: 14rem;
+  color: var(--color-text-primary);
+}
+#invoice-app .title-item .tax {
+  display: block;
+  margin-top: 2rem;
+}
 #invoice-app .title-item .ops {
   display: flex;
   align-items: center;
   gap: 16rem;
+  flex-shrink: 0;
 }
 #invoice-app .title-item .icon-btn {
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   font-size: 18rem;
   padding: 4rem;
 }
 /* 编辑图标：白底用深金更清晰（原亮金对比偏弱） */
-#invoice-app .title-item .icon-btn.edit { color: var(--color-primary-dark); }
+#invoice-app .title-item .icon-btn.edit { color: var(--color-primary-text); }
 #invoice-app .new-title-title {
   font-size: 14rem;
   font-weight: 600;

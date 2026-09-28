@@ -8,14 +8,14 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
     <!-- 修改点：加载 remixicon 图标库，菜单位图 png → ri-* 矢量图标 -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
-    <link rel="stylesheet" href="./../styles/user.css?v=20260926" />
+    <link rel="stylesheet" href="./../styles/user.css?v=20260927e" />
     <!-- 全局底部 Tab 导航（点餐/订单/我的） -->
-    <link rel="stylesheet" href="../styles/tabbar.css?v=20260917" />
+    <link rel="stylesheet" href="../styles/tabbar.css?v=20260926" />
 </head>
 <body>
     <div id="user" class="app relative">
@@ -232,7 +232,7 @@
                 </div>
                 <div class="dishList">
                     <!-- 修改点：对齐美团订单卡片——菜品小图+名称+x数量，点击小图可全屏放大预览（van-image-preview） -->
-                    <div v-for="(item,index) in order[0].orderDetails" :key="index" class="item" @click="previewDishImage(imgPath(item.image), index)">
+                    <div v-for="(item,index) in (order[0].orderDetails || [])" :key="index" class="item" @click="previewDishImage(imgPath(item.image), index)">
                         <img v-if="item.image" :src="imgPath(item.image)" loading="lazy" :alt="item.name || '菜品'" @error="imgError" class="dish-thumb" />
                         <span class="dish-name">{{item.name}}</span>
                         <span class="dish-count">x{{item.number}}</span>
@@ -240,7 +240,7 @@
                 </div>
                 <div class="result">
                     <span>共{{order[0].sumNum}} 件商品,实付</span>
-                    <span class="price">¥{{ Number(order[0].amount).toFixed(2) }}</span>
+                    <span class="price">¥{{ Number(order[0].amount || 0).toFixed(2) }}</span>
                 </div>
                 <div class="btn" v-if="order[0].status === 4">
                     <div class="btnAgain"
@@ -307,9 +307,9 @@
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
-    <script src="./../js/request.js?v=20260917"></script>
+    <script src="./../js/request.js?v=20260927"></script>
     <script src="./../api/main.js?v=20260917"></script>
-    <script src="./../js/common.js?v=20260924"></script>
+    <script src="./../js/common.js?v=20260927"></script>
     <script src="./../js/components-cend.js?v=20260922"></script>
     <script src="./../api/order.js?v=20260917"></script>
     <script src="./../api/login.js?v=20260917"></script>
@@ -339,6 +339,11 @@
                 }
             },
             computed:{
+                // 用户头像：有头像走 imgPath 鉴权地址，无头像用默认头像
+                // 修改点(2026-09-26)：与首页 user-btn 统一同一头像源，原直接绑定相对路径导致真实头像显示不出
+                avatarSrc: function(){
+                    return this.userAvatar ? imgPath(this.userAvatar) : '/front/images/headPage.png';
+                },
                 maskedPhone: function(){
                     var phone = this.userPhone
                     if(!phone || phone.length < 7) return phone || ''
@@ -350,6 +355,11 @@
                 this.loadData()
             },
             methods:{
+                // 头像加载失败兜底默认头像（保持「人头」语义，不用 noImg 占位图）
+                onAvatarError: function(e){
+                    if (e.target.src.indexOf('headPage.png') >= 0) return
+                    e.target.src = '/front/images/headPage.png'
+                },
                 // 修改点：下拉刷新
                 onRefresh(){
                     var self = this
@@ -415,11 +425,6 @@
                         }
                     } catch(e) { console.warn('[user] fetchPendingCount 失败:', e) }
                 },
-                goBack: function(){
-                    // 修改点：直接访问时 history 无前序页面，兜底回首页（与 my-invoice/invoice 一致）
-                    if (window.history.length > 1) history.go(-1)
-                    else window.location.href = '/front/index.html'
-                },
                 // 修改点：底部 Tab 切换（0=点餐 1=订单 2=我的）
                 onTabChange: function(active){
                     if(active === 2){
@@ -480,10 +485,6 @@
                     window.requestAnimationFrame(function(){
                         window.location.href = '/front/page/customer-service.html'
                     })
-                },
-                // 设置页（暂用 toast 提示）
-                toSettings: function(){
-                    vant.Toast('设置功能开发中');
                 },
                 toMessagePage: function(){
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/message.html' })

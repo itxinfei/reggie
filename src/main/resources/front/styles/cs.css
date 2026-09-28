@@ -83,13 +83,31 @@
   color: var(--color-primary);
   font-weight: 600;
 }
+.msg-item {
+  margin-bottom: 14rem;
+}
+/* 聊天时间分隔：居中灰色小字，仅在与上条间隔≥5分钟或跨天时出现 */
+.msg-time-divider {
+  margin: 4rem 0 10rem;
+  font-size: 12rem;
+  line-height: 1;
+  color: var(--color-text-hint);
+  text-align: center;
+}
 .msg-row {
   display: flex;
   align-items: flex-start;
   margin-bottom: 14rem;
 }
+.msg-item > .msg-row:last-child {
+  margin-bottom: 0;
+}
 .msg-row.is-system {
   justify-content: center;
+}
+/* 修改点(2026-09-26)：用户消息此前与客服同侧（左），按聊天惯例右对齐 */
+.msg-row:not(.is-agent):not(.is-system) {
+  justify-content: flex-end;
 }
 .sys-msg {
   padding: 3rem 12rem;
@@ -464,7 +482,7 @@
   height: 38rem;
   margin-top: 10rem;
   font-size: 14rem;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   background: var(--color-primary-light);
   border: none;
   border-radius: 19rem;

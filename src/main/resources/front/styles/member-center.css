@@ -88,7 +88,7 @@
        与个人中心订单入口、首页加购按钮保持同一套视觉语言 */
     .mc-benefit-icon--gold,
     .mc-benefit-icon--green,
-    .mc-benefit-icon--purple { background: var(--color-primary-tint-strong); color: var(--color-primary-dark); }
+    .mc-benefit-icon--purple { background: var(--color-primary-tint-strong); color: var(--color-primary-text); }
     .mc-benefit-name { font-size: 12rem; color: var(--color-text-primary); font-weight: 500; }
     .mc-benefit-desc { font-size: 12rem; color: var(--color-text-hint); margin-top: 2rem; }
 
@@ -117,14 +117,14 @@
       display: flex; align-items: center; justify-content: center; font-size: 16rem;
       flex-shrink: 0; margin-right: 12rem; }
     /* 修改点：绿/黄为积分增减语义 tint（增=成功绿，减=警告黄），无对应令牌，保留局部 rgba 并注明语义；箭头色与右侧数值色一致 */
-    .mc-point-icon.in { background: var(--color-success-tint); color: var(--color-success); }
-    .mc-point-icon.out { background: var(--color-warning-tint); color: var(--color-warning); }
+    .mc-point-icon.in { background: var(--color-success-tint); color: var(--color-success-text); }
+    .mc-point-icon.out { background: var(--color-warning-tint); color: var(--color-warning-text); }
     .mc-point-info { flex: 1; }
     .mc-point-info .p-title { font-size: 14rem; color: var(--color-text-primary); }
     .mc-point-info .p-time { font-size: 12rem; color: var(--color-text-hint); margin-top: 2rem; }
     .mc-point-val { font-size: 15rem; font-weight: 600; }
-    .mc-point-val.in { color: var(--color-success); }
-    .mc-point-val.out { color: var(--color-warning); }
+    .mc-point-val.in { color: var(--color-success-text); }
+    .mc-point-val.out { color: var(--color-warning-text); }
 
     /* ---- 优惠券 ----
        修改点(2026-09-01)：移除 max-height + overflow-y 截断，全量展示所有优惠券。 */
@@ -140,13 +140,13 @@
       border-radius: 50%; background: var(--bg-page); }
     .mc-coupon-left::before { top: -5rem; }
     .mc-coupon-left::after { bottom: -5rem; }
-    .mc-coupon-left .c-amount { font-size: 20rem; font-weight: 700; color: var(--color-primary-dark); }
+    .mc-coupon-left .c-amount { font-size: 20rem; font-weight: 700; color: var(--color-primary-text); }
     .mc-coupon-left .c-type { font-size: 12rem; color: var(--color-text-hint); margin-top: 2rem; }
     .mc-coupon-right { flex: 1; padding: 12rem 14rem; display: flex;
       flex-direction: column; justify-content: center; }
     .mc-coupon-right .c-name { font-size: 14rem; font-weight: 600; color: var(--color-text-primary); }
     .mc-coupon-right .c-cond { font-size: 12rem; color: var(--color-text-hint); margin-top: 4rem; }
-    .mc-coupon-right .c-expire { font-size: 12rem; color: var(--color-warning); margin-top: 2rem; }
+    .mc-coupon-right .c-expire { font-size: 12rem; color: var(--color-warning-text); margin-top: 2rem; }
     /* 修改点(2026-09-17)：点击热区对齐全站次要按钮规范（height 32rem，与 order .act-btn 一致），
        原 padding:6rem 实际高度不足 30px，移动端误触率高 */
     .mc-claim-btn { background: var(--color-primary-gradient); border: none;
@@ -162,14 +162,14 @@
     .mc-recharge-item { display: flex; align-items: center; padding: 12rem 0;
       border-bottom: 1px solid var(--bg-hover); }
     .mc-recharge-item:last-child { border-bottom: none; }
-    .mc-recharge-amount { font-size: 16rem; font-weight: 600; color: var(--color-primary-dark);
+    .mc-recharge-amount { font-size: 16rem; font-weight: 600; color: var(--color-primary-text);
       margin-right: 12rem; min-width: 80rem; }
     /* 待确认 / 已取消：金额置灰、不带 +，避免被误认为已到账 */
     .mc-recharge-amount.is-muted { color: var(--color-text-secondary); font-weight: 500; }
     .mc-recharge-status { margin-top: 2rem; }
     .mc-recharge-info { flex: 1; }
     .mc-recharge-info .r-time { font-size: 13rem; color: var(--color-text-primary); }
-    .mc-recharge-info .r-gift { font-size: 12rem; color: var(--color-success); margin-top: 2rem; }
+    .mc-recharge-info .r-gift { font-size: 12rem; color: var(--color-success-text); margin-top: 2rem; }
     /* 内联样式抽离为类 */
     #member-center { min-height: 100vh; }
     .mc-loading-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }

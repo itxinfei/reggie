@@ -24,7 +24,7 @@
   line-height: 22rem;
 }
 #tracking .order-info-card .info-row .ri-map-pin-line {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   font-size: 16rem;
   flex-shrink: 0;
 }
@@ -313,7 +313,7 @@
 .eta-card .eta-num {
   font-size: 32rem;
   font-weight: 700;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   line-height: 1;
 }
 .eta-card .eta-unit { font-size: var(--font-size-md); color: var(--color-text-primary); }
@@ -346,7 +346,7 @@
 }
 .distance-card i {
   font-size: 18rem;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
 
 /* 修改点(2026-09-17)：配送地图卡片——未配置地图 Key 时该块不渲染，样式不影响既有布局 */

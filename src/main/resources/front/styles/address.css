@@ -1,8 +1,8 @@
 /* ---- 地址管理页面样式 v5 ---- */
 /* 修改点：卡片重构为三区块布局（标签+地址 / 收货人 / 操作栏），
-   移除绝对定位编辑图标与裸 divSplit，改用文档流操作栏；
-   --addr-tag-* 令牌自包含定义于 #address 作用域 —— 修复此前仅编辑页
-   加载 address-edit.css 才存在这些变量、列表页标签无背景的隐性 bug。 */
+   移除绝对定位编辑图标与裸 divSplit，改用文档流操作栏。
+   修改点(2026-09-28)：--addr-tag-* 标签色板收口到 styles/index.css，
+   列表页与编辑页统一引用，不再在 #address 作用域重复声明。 */
 
 /* 页面全局覆盖 */
 body.scrollable-page {
@@ -10,26 +10,6 @@ body.scrollable-page {
   background: transparent;
   max-width: none;
   height: auto;
-}
-
-/* ========== 地址页令牌（自包含，与 address-edit.css :root 同值） ========== */
-#address {
-  /* 标签四色（品牌金/家橙/学校绿/无灰）— 公司标签为品牌金色，避免蓝色违反品牌色 */
-  --addr-tag-company-gradient: linear-gradient(135deg, var(--color-primary-light), var(--color-primary-light));
-  --addr-tag-company-border: var(--color-primary);
-  --addr-tag-company-shadow: var(--color-primary-dark-tint);
-  --addr-tag-company-fg: var(--color-primary-dark);
-
-  --addr-tag-home-gradient: linear-gradient(135deg, #fff3e0, #ffe0b2);
-  --addr-tag-home-border: #ff9800;
-  --addr-tag-home-shadow: rgba(255, 152, 0, 0.12);
-  --addr-tag-home-fg: #e65100;
-
-  --addr-tag-school-gradient: linear-gradient(135deg, #e6faf3, #ccf0e2);
-  --addr-tag-school-border: #7fd4b0;
-  --addr-tag-school-shadow: var(--color-success-tint);
-
-  --addr-tag-none-gradient-end: var(--border-light);
 }
 
 /* ========== 顶部标题栏（2026-09-22 起由 cend-shell light 导航接管，本页头部规则已删除） ========== */
@@ -120,7 +100,7 @@ body.scrollable-page {
   -webkit-box-orient: vertical;
 }
 
-/* 标签颜色 — 与编辑页统一（令牌自包含于 #address 作用域，见文件头） */
+/* 标签颜色 — 与编辑页统一（--addr-tag-* 令牌收口于 styles/index.css） */
 #address .divContent .divItem .addrTag.spanCompany {
   background: var(--addr-tag-company-gradient);
   color: var(--addr-tag-company-fg);
@@ -131,11 +111,12 @@ body.scrollable-page {
 }
 #address .divContent .divItem .addrTag.spanSchool {
   background: var(--addr-tag-school-gradient);
-  color: var(--color-success);
+  color: var(--color-success-text);
 }
 #address .divContent .divItem .addrTag.spanNone {
   background: linear-gradient(135deg, var(--bg-hover), var(--addr-tag-none-gradient-end));
-  color: var(--color-text-disabled);
+  /* 修改点(2026-09-27 审查P1对比度族)：disabled(#ccc) 1.6:1 近乎不可见 → hint */
+  color: var(--color-text-hint);
 }
 
 /* ---- 中部：收货人信息 ---- */
@@ -216,7 +197,7 @@ body.scrollable-page {
   color: var(--color-primary);
 }
 #address .divContent .divItem .divDefault .ri-checkbox-blank-circle-line {
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
 }
 
 /* ---- 编辑按钮 ---- */
@@ -322,7 +303,8 @@ body.scrollable-page {
   line-height: 16rem;
   border-radius: var(--radius-sm);
   background: var(--color-primary-tint);
-  color: var(--color-primary-dark);
+  /* 修改点(2026-09-26)：#ff9a00 on 10% 金底约 2:1，换金底深棕文字令牌 */
+  color: var(--color-primary-text);
   margin-left: 6rem;
   flex-shrink: 0;
   letter-spacing: 0.5rem;
@@ -359,7 +341,7 @@ body.scrollable-page {
 }
 
 #address .divContent .divItem .divActionBar .actionBtn:active {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   background: var(--color-primary-tint);
 }
 

@@ -33,8 +33,11 @@
   /* ---- 文字色 ---- */
   --color-text-primary: #333333;
   --color-text-secondary: #666666;
-  --color-text-hint: #999999;
+  /* 修改点(2026-09-26)：#999 on 白仅 2.85:1，hint 被大量用于正文说明，加深至 AA 全表面达标（白5.10/页面灰底4.61/输入灰底4.86） */
+  --color-text-hint: #6e6e6e;
   --color-text-disabled: #cccccc;
+  /* 修改点(2026-09-27 审查P1对比度族)：占位符专用档（Vant 默认 #c8c9cc 仅 1.5:1） */
+  --color-text-placeholder: #6e6e6e;
   --color-text-white: #ffffff;
 
   /* ---- 外部平台品牌色（支付/配送单平台标签，语义化收敛硬编码 hex） ---- */
@@ -44,6 +47,11 @@
   --color-danger: #e94e3c;
   --color-success: #07c160;
   --color-warning: #ffb300;
+  /* 修改点(2026-09-26)：功能色作正文/图标色时不达 AA（#07c160 2.4:1 / #ffb300 1.8:1），补深档文字令牌 */
+  --color-success-text: #0a7d43;
+  --color-warning-text: #955f00;
+  /* 修改点(2026-09-27 审查P1对比度族)：品牌橙作浅底文字仅 2.13:1，文字场景统一用此深棕金档（on 白 5.36:1） */
+  --color-primary-text-strong: #955f00;
   --color-warning-tint: rgba(255, 179, 0, 0.12);
   /* info：历史遗留语义——为防全站蓝主色回退，覆盖为品牌金。
      若需第三方平台真实蓝，请使用 --platform-xxx 令牌而非 --color-info */
@@ -75,7 +83,8 @@
   --status-refunding-bg: rgba(233, 78, 60, 0.10);
 
   /* ---- 星级（评价/评分统一） ---- */
-  --color-star: #f7ba2a;
+  /* 修改点(2026-09-26)：#f7ba2a 实心星 on 白 1.75:1，深金化后达大图形 3:1（同渐变深金档） */
+  --color-star: #b87d00;
   --color-star-tint: rgba(247, 186, 42, 0.14);
 
   /* ---- 购物车底部栏（深色） ---- */
@@ -169,6 +178,24 @@
   /* 成功绿 / 危险红的不透明浅底（标签、提示条幅） */
   --color-success-bg: #f6ffed;
   --color-danger-bg:  #fff2f0;
+
+  /* ---- 地址标签色板（address 列表页与 address-edit 编辑页共用，2026-09-28 收口） ---- */
+  /* 公司标签：品牌金 */
+  --addr-tag-company-gradient: linear-gradient(135deg, var(--color-primary-light), var(--color-primary-light));
+  --addr-tag-company-border: var(--color-primary);
+  --addr-tag-company-shadow: var(--color-primary-dark-tint);
+  --addr-tag-company-fg: var(--color-primary-text);
+  /* 家标签：橙色系 */
+  --addr-tag-home-gradient: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  --addr-tag-home-border: #ff9800;
+  --addr-tag-home-shadow: rgba(255, 152, 0, 0.12);
+  --addr-tag-home-fg: #9a4400;
+  /* 学校标签：绿色系 */
+  --addr-tag-school-gradient: linear-gradient(135deg, #e6faf3, #ccf0e2);
+  --addr-tag-school-border: #7fd4b0;
+  --addr-tag-school-shadow: var(--color-success-tint);
+  /* 无标签：中性灰渐变结束色 */
+  --addr-tag-none-gradient-end: var(--border-light);
   /* 白色表面更浅的两档（深底上的次级白面） */
   --surface-white-50: rgba(255, 255, 255, 0.5);
   --surface-white-25: rgba(255, 255, 255, 0.25);
@@ -813,6 +840,26 @@ select {
     margin: 0 auto;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.12);
   }
+  /* 修改点(2026-09-27 审查P2桌面居中族)：fixed 元素相对视口定位，桌面会逃逸
+     750px 居中列。Vant 底部弹层/通知条统一收敛回列内（left+right+auto 边距
+     居中法，不用 translateX 以免破坏 Vant 位移动画）。 */
+  .van-popup--bottom,
+  .van-popup--top {
+    left: 0 !important;
+    right: 0 !important;
+    width: auto !important;
+    max-width: 750px;
+    margin: 0 auto;
+  }
+  .van-notify {
+    max-width: 750px;
+    margin: 0 auto;
+  }
+  /* 全屏搜索浮层：随列收敛，避免桌面盖满浏览器窗口 */
+  .search-overlay {
+    max-width: 750px;
+    margin: 0 auto;
+  }
 }
 
 /* ================================================================
@@ -841,7 +888,7 @@ select {
 .van-button--primary.van-button--plain {
   background-color: var(--color-text-white) !important;
   border-color: var(--color-primary) !important;
-  color: var(--color-primary-dark) !important;
+  color: var(--color-primary-text) !important;
 }
 /* 禁用态 */
 .van-button--primary.van-button--disabled,
@@ -849,6 +896,37 @@ select {
   background-color: var(--color-text-disabled) !important;
   border-color: var(--color-text-disabled) !important;
   color: var(--color-text-white) !important;
+}
+
+/* ================================================================
+   Vant 输入框占位符对比度修正（2026-09-27 审查P1对比度族）
+   ----------------------------------------------------------------
+   vant.min.css 默认 .van-field__control::placeholder{color:#c8c9cc}
+   在白底仅 1.61:1，近乎不可见 → 统一为 --color-text-placeholder。
+   index.css 与 vant.min.css 加载顺序因页面而异，故用 !important。
+   ================================================================ */
+.van-field__control::placeholder {
+  color: var(--color-text-placeholder) !important;
+}
+
+/* ================================================================
+   Vant 蓝→品牌金统一（2026-09-27 审查P1蓝金混用族）
+   ----------------------------------------------------------------
+   Vant 默认交互蓝 #1989fa 与品牌金冲突，全站收敛：
+   - .van-notify--primary：全局新消息/客服通知条（request.js type:'primary'）
+     金底配深金字（金底必须深金字，白字 on #ffc200 仅 1.6:1）；
+   - .van-radio__icon--checked：发票抬头选中对勾。
+   豁免保留：--tag-processing（客服工单"处理中"状态语义橙/蓝/绿三色之一，
+   非品牌装饰蓝）；微信绿/支付宝蓝仅限支付渠道品牌图标。
+   ================================================================ */
+.van-notify--primary {
+  background-color: var(--color-primary) !important;
+  color: var(--color-primary-text) !important;
+}
+.van-radio__icon--checked .van-icon {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary-dark) !important;
+  color: var(--color-primary-text) !important;
 }
 
 /* ================================================================
@@ -903,7 +981,8 @@ select:focus-visible,
   line-height: 22rem;
 }
 .empty-state .empty-sub {
-  color: var(--color-text-disabled);
+  /* 修改点(2026-09-26)：disabled(#ccc) on 页面底仅 1.4:1 近乎不可见，辅助说明须可读 */
+  color: var(--color-text-hint);
   font-size: 12rem;
   margin-top: 6rem;
 }
@@ -983,7 +1062,15 @@ select:focus-visible,
     --color-text-primary: #f5f5f5;
     --color-text-secondary: #b0b0b0;
     --color-text-hint: #8c8c8c;
+    /* 占位符随暗色底翻浅（#6e6e6e on #1e1e1e 仅 3.0:1） */
+    --color-text-placeholder: #9e9e9e;
+    /* 修改点(2026-09-27 审查P1对比度族)：深金文字档随暗色底翻浅（#955f00 on #1e1e1e 仅 2.6:1） */
+    --color-primary-text-strong: #ffd54f;
+    --color-warning-text: #ffd54f;
+    --color-success-text: #4ade80;
     --border-light: #2f2f2f;
+    /* 修改点(2026-09-26)：白透胶囊面(公告条/搜索框/状态Tab等)在暗色下配浅色文字=白字白底不可读，随令牌翻深 */
+    --surface-white-85: rgba(30, 30, 30, 0.85);
   }
 }
 

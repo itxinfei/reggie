@@ -8,10 +8,10 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
     <!-- 修改点：提取内联样式到独立CSS文件 -->
-    <link rel="stylesheet" href="./../styles/message.css?v=20260924" />
+    <link rel="stylesheet" href="./../styles/message.css?v=20260927" />
     <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="./../js/icon-fallback.js?v=20260917"></script>
@@ -24,6 +24,17 @@
         </template>
 
         <div class="divContent">
+            <!-- 修复(2026-09-27 审查P0-4)：客服会话消息落点。全局通知条提示"客服发来N条新消息"
+                 但本页只有营销/系统消息，两个数据源不一致；现把进行中会话的最新客服回复
+                 置顶展示，点击进入在线客服会话 -->
+            <div class="cs-msg-card" v-if="csSession" @click="goCsSession()">
+                <div class="cs-msg-head">
+                    <span class="cs-msg-name"><i class="ri-customer-service-2-line"></i> 在线客服</span>
+                    <span class="cs-msg-time">{{ formatTime(csSession.lastTime) }}</span>
+                </div>
+                <div class="cs-msg-content">{{ csSession.lastContent }}</div>
+            </div>
+
             <!-- 修改点：骨架屏 -->
             <!-- skeleton.css 无行布局工具类，header 行级 flex 以内联样式保留，视觉等价；
                  原 .skeleton-line-sm(10高) 统一收敛为标准 .skeleton-line(14高) -->
@@ -97,9 +108,10 @@
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
-    <script src="./../js/request.js?v=20260917"></script>
+    <script src="./../js/request.js?v=20260927"></script>
     <script src="./../api/recommend.js?v=20260917"></script>
-    <script src="./../js/common.js?v=20260924"></script>
+    <script src="./../api/cs.js?v=20260921"></script>
+    <script src="./../js/common.js?v=20260927"></script>
     <script src="./../js/components-cend.js?v=20260922"></script>
     <script>
         // 修改点：用户消息中心页面 - 允许用户查看、阅读营销消息
@@ -116,6 +128,8 @@
                     // 修改点(2026-09-18)：区分「真的无消息」与「首屏加载失败」，避免失败误显示空状态
                     loadError: false,
                     unreadCount: 0,
+                    // 客服会话置顶卡片数据 { lastContent, lastTime }
+                    csSession: null,
                     detail: {
                         show: false,
                         title: '',
@@ -128,6 +142,7 @@
             created: function() {
                 this.loadMessages();
                 this.fetchUnreadCount();
+                this.fetchCsSession();
                 // 修改点：注册 ESC 键监听，支持关闭消息详情弹窗
                 this._handleEscKey = function(e) {
                     if ((e.key === 'Escape' || e.key === 'Esc') && this.detail.show) {
@@ -135,11 +150,21 @@
                     }
                 }.bind(this);
                 document.addEventListener('keydown', this._handleEscKey);
+                // SSE 新消息到达：刷新未读数与第一页列表
+                this._onSseNewMessage = function() {
+                    this.fetchUnreadCount();
+                    if (this.page === 1) { this.loadMessages(); }
+                }.bind(this);
+                window.addEventListener('reggie:new-message', this._onSseNewMessage);
             },
             beforeDestroy: function() {
                 // 修改点：移除 ESC 键监听
                 if (this._handleEscKey) {
                     document.removeEventListener('keydown', this._handleEscKey);
+                }
+                // 移除 SSE 新消息监听
+                if (this._onSseNewMessage) {
+                    window.removeEventListener('reggie:new-message', this._onSseNewMessage);
                 }
             },
             methods: {
@@ -251,6 +276,33 @@
                             self.unreadCount = res.data;
                         }
                     }).catch(function() {});
+                },
+
+                // 拉取进行中客服会话的最新一条消息，置顶展示（失败静默，不影响消息列表）
+                fetchCsSession: function() {
+                    var self = this;
+                    csMySessions().then(function(res) {
+                        if (!res || res.code !== 1 || !res.data || !res.data.length) { return; }
+                        var sid = null;
+                        for (var i = 0; i < res.data.length; i++) {
+                            var st = Number(res.data[i].status);
+                            if (st === 0 || st === 1) { sid = res.data[i].id; break; }
+                        }
+                        if (!sid) { return; }
+                        return csListMessages(sid, { silent: true }).then(function(r) {
+                            if (!r || r.code !== 1 || !r.data || !r.data.length) { return; }
+                            var last = r.data[r.data.length - 1];
+                            var prefix = last.senderType === 2 ? '' : '我：';
+                            self.csSession = {
+                                lastContent: last.messageType === 2 ? '[图片]' : (prefix + (last.content || '')),
+                                lastTime: last.createTime
+                            };
+                        });
+                    }).catch(function() {});
+                },
+
+                goCsSession: function() {
+                    window.location.href = '/front/page/customer-service.html';
                 },
 
                 markAllRead: function() {

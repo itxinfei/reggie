@@ -165,7 +165,7 @@
 }
 #order .divBody .item .copy-btn:hover,
 #order .divBody .item .copy-btn:active {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
 }
 #order .divBody .item .copy-btn::after {
   content: '';
@@ -208,17 +208,17 @@
 
 #order .progress-step {
   font-size: var(--font-size-xs);
-  color: var(--color-text-disabled);
+  color: var(--color-text-hint);
   white-space: nowrap;
   position: relative;
 }
 
 #order .progress-step.done {
-  color: var(--color-success);
+  color: var(--color-success-text);
 }
 
 #order .progress-step.active {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   font-weight: 600;
 }
 
@@ -416,10 +416,11 @@
   align-items: center;
   gap: var(--spacing-md);
   background: var(--color-primary-gradient);
-  color: var(--color-text-primary);
+  /* 修改点(2026-09-26)：金渐变底文字钉深棕，暗色模式不随 text-primary 翻白 */
+  color: var(--color-primary-text);
 }
 
-#order .od-hero.s-4 { background: var(--color-success); color: #fff; }
+#order .od-hero.s-4 { background: var(--color-success-text); color: #fff; }
 #order .od-hero.s-5 { background: var(--bg-hover); color: var(--color-text-secondary); }
 #order .od-hero.s-6 { background: var(--color-danger); color: #fff; }
 
@@ -445,7 +446,7 @@
   padding: 12rem var(--spacing-lg);
   font-size: 14rem;
   font-weight: 600;
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text);
   cursor: pointer;
 }
 #order .od-tracking-entry .ri-motorbike-line { font-size: 18rem; }
@@ -469,7 +470,7 @@
   align-self: center;
   cursor: pointer;
 }
-#order .od-mini-btn i { font-size: 16rem; color: var(--color-primary-dark); }
+#order .od-mini-btn i { font-size: 16rem; color: var(--color-primary-text); }
 #order .od-mini-btn:active { background: var(--bg-hover); }
 
 /* 信息 / 价格行 */
@@ -575,6 +576,9 @@
   left: 0;
   right: 0;
   bottom: 0;
+  /* 修改点(2026-09-27 审查P2桌面居中族)：收敛到 750px 居中列（同 .divCart 手法） */
+  max-width: 750px;
+  margin: 0 auto;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -621,11 +625,11 @@
 }
 #order .od-rr-status.st-pending,
 #order .od-rr-status.st-processing {
-  color: var(--color-warning);
+  color: var(--color-warning-text);
   background: var(--color-warning-tint);
 }
 #order .od-rr-status.st-SUCCESS {
-  color: var(--color-success);
+  color: var(--color-success-text);
   background: var(--color-success-tint);
 }
 #order .od-rr-status.st-fail,

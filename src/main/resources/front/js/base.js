@@ -7,6 +7,13 @@
         var clientWidth = docEl.clientWidth;
         var clientHeight = win.innerHeight || docEl.clientHeight;
         if (!clientWidth) return;
+        // 桌面 1:1 口径 opt-in：页面在 <html> 标注 data-rem-flat 后，
+        // 宽屏（>=751）时 1rem=1px。收口原页内 @media(min-width:751px)
+        // font-size:1px !important 覆盖；未标注页面维持原有封顶口径，不受影响。
+        if (docEl.hasAttribute('data-rem-flat') && clientWidth >= 751) {
+            docEl.style.fontSize = '1px';
+            return;
+        }
         // 横屏（宽 > 高）按短边（高）参照，避免手机旋转后宽边参与把字体整屏放大；
         // 竖屏按宽度。桌面宽屏短边通常仍大于 750，封顶行为与原方案一致。
         var refSize = clientHeight && clientWidth > clientHeight ? clientHeight : clientWidth;

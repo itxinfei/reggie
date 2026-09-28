@@ -4,11 +4,11 @@
         <meta charset="UTF-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-        <title>收银台 - 瑞吉外卖</title>
+        <title>在线支付 - 瑞吉外卖</title>
         <link rel="icon" href="./../images/favico.ico">
         <script src="./../js/base.js?v=20260917"></script>
         <link rel="stylesheet" href="../styles/vant.min.css" />
-        <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js?v=20260917"></script>
@@ -52,14 +52,17 @@
             .pay-item .pay-check { font-size: 20rem; color: var(--color-primary); }
             .pay-item .pay-check:not([class*="fill"]) { color: var(--border-light); }
             .pay-item:active { background: var(--bg-hover); }
+            /* 修改点(2026-09-27 审查P1对比度族)：金底#ffd54f上橙字仅1.51:1 → 深金字#4a3500 8.27:1 */
             .mock-tip {
                 margin: 4rem 12rem 0; padding: 12rem; border-radius: var(--radius-md);
-                background: var(--color-primary-light); color: var(--color-primary-dark);
+                background: var(--color-primary-light); color: var(--color-primary-text);
                 font-size: 12rem; line-height: 1.6; display: flex; align-items: flex-start;
             }
             .mock-tip i { margin-right: 6rem; font-size: 15rem; line-height: 1.5; }
             .pay-bar {
                 position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+                /* 修改点(2026-09-27 审查P2桌面居中族)：桌面收敛到 750px 居中列，防 fixed 底栏逃逸 */
+                max-width: 750px; margin: 0 auto;
                 padding: 10rem 16rem calc(10rem + env(safe-area-inset-bottom));
                 background: var(--bg-card); border-top: var(--separator);
                 display: flex; align-items: center; gap: 12rem;
@@ -94,7 +97,7 @@
                 margin-top: 8rem; line-height: 1.6; }
             .qr-pay-cancel { margin-top: 16rem; width: 100%; height: 44rem; border: none;
                 border-radius: 22rem; background: var(--color-primary-light);
-                color: var(--color-primary-dark); font-size: 15rem; }
+                color: var(--color-primary-text); font-size: 15rem; }
         </style>
     </head>
     <body>
@@ -102,7 +105,7 @@
             <div class="cashier-wrap" v-if="loaded">
                 <div class="cashier-head">
                     <a class="back" href="javascript:;" @click="goBack" aria-label="返回"><i class="ri-arrow-left-s-line"></i></a>
-                    <span class="title">收银台</span>
+                    <span class="title">在线支付</span>
                     <a class="home" href="/front/index.html" aria-label="返回首页"><i class="ri-home-4-line"></i></a>
                 </div>
 
@@ -173,8 +176,8 @@
 
         <script src="../../backend/plugins/vue/vue.js"></script>
         <script src="../../backend/plugins/axios/axios.min.js"></script>
-        <script src="./../js/request.js?v=20260917"></script>
-        <script src="./../js/common.js?v=20260924"></script>
+        <script src="./../js/request.js?v=20260927"></script>
+        <script src="./../js/common.js?v=20260927"></script>
         <script src="../js/vant.min.js"></script>
         <script src="./../api/payment.js?v=20260918"></script>
         <script src="./../api/order.js?v=20260917"></script>
@@ -214,7 +217,10 @@
                 this.orderId = q.orderId || '';
                 this.channel = (q.channel === 'ALIPAY') ? 'ALIPAY' : 'WECHAT';
                 this.tradeNo = q.tradeNo || '';
-                if (!this.orderId || !this.tradeNo) {
+                // 修复(2026-09-27 审查P0-3)：仅 orderId 是硬门槛。tradeNo 缺失/过期/被构造
+                // 不再判死——「确认支付」调 /pay 幂等重建支付单并回填权威 tradeNo，
+                // 此前整页死胡同（"请返回重新下单"但重新下单也回不来）
+                if (!this.orderId) {
                     this.loadError = '支付参数缺失，请返回重新下单';
                     return;
                 }
@@ -284,6 +290,12 @@
                             // 以 /pay 回填的权威 tradeNo 为准（URL 上的可能被构造成本人另一订单的单号）
                             if (d.tradeNo) {
                                 self.tradeNo = d.tradeNo;
+                            }
+                            if (!self.tradeNo) {
+                                // 兜底：无单号无法发起回调/轮询（0元单直接确认支付到达此处），停止并提示
+                                self.paying = false;
+                                vant.Toast.fail('支付单创建异常，请刷新后重试');
+                                return;
                             }
                             if (d.mockMode) {
                                 self.mockNotifyPay();
@@ -434,6 +446,8 @@
                 // 进入收银台时校验支付单：归属/模式/已支付补跳
                 checkPaymentState: function () {
                     var self = this;
+                    // 无 tradeNo 视为无在途支付单，跳过校验直接进收银台（确认支付时 /pay 会重建）
+                    if (!this.tradeNo) { this.isMock = false; return; }
                     paymentQueryApi(this.tradeNo).then(function (res) {
                         if (res && res.code === 1 && res.data) {
                             self.isMock = !!res.data.mockMode;
@@ -441,8 +455,9 @@
                                 window.location.replace('/front/page/pay-success.html?reorderId=' + self.orderId);
                             }
                         } else {
-                            self.loaded = false;
-                            self.loadError = (res && res.msg) || '支付单校验失败，请返回重新下单';
+                            // 修复(2026-09-27 审查P0-3)：支付单查不到（过期/被构造）不再整页判死，
+                            // 忽略该单号继续进收银台，「确认支付」会通过 /pay 重建支付单
+                            self.tradeNo = '';
                         }
                     }).catch(function () {
                         // 网络抖动不阻断收银台展示，确认支付时仍会重新校验

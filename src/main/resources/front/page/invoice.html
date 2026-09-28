@@ -7,13 +7,13 @@
   <link rel="icon" href="./../images/favico.ico">
   <script src="./../js/base.js?v=20260917"></script>
   <link rel="stylesheet" href="../styles/vant.min.css"/>
-  <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+  <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
   <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
   <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
   <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
   <!-- 修改点(2026-09-17)：补引 icon-fallback.js（其余页均成对引入），字体加载失败时图标降级而非空白 -->
   <script src="./../js/icon-fallback.js?v=20260917"></script>
-  <link rel="stylesheet" href="../styles/invoice.css?v=20260924" />
+  <link rel="stylesheet" href="../styles/invoice.css?v=20260927" />
 </head>
 <body>
   <div id="invoice-app">
@@ -111,11 +111,12 @@
   <script src="../../backend/plugins/vue/vue.js"></script>
   <script src="./../js/vant.min.js"></script>
   <script src="../../backend/plugins/axios/axios.min.js"></script>
-  <script src="./../js/request.js?v=20260917"></script>
+  <script src="./../js/request.js?v=20260927"></script>
   <script src="./../api/main.js?v=20260917"></script>
-  <script src="./../js/common.js?v=20260924"></script>
+  <script src="./../js/common.js?v=20260927"></script>
   <script src="./../js/components-cend.js?v=20260922"></script>
   <script src="./../api/invoice.js?v=20260917"></script>
+  <script src="./../api/order.js?v=20260926"></script>
   <script>
     new Vue({
       el: '#invoice-app',
@@ -211,8 +212,23 @@
             vant.Notify({ type: 'warning', message: '参数错误，请从订单页进入' })
             return
           }
+          // 订单号/金额以接口回查为准：order-detail 入口只传 orderId，URL 参数仅作兜底
+          if (!this.orderNo || !q.amount) {
+            this.fillOrderInfo()
+          }
           this.loadInvoice()
           this.loadTitles()
+        },
+        fillOrderInfo: function() {
+          var self = this
+          getOrderDetailApi(this.orderId).then(function(res) {
+            if (res.code === 1 && res.data) {
+              self.orderNo = res.data.number || self.orderNo
+              self.amountText = Number(res.data.amount || 0).toFixed(2)
+            }
+          }).catch(function(err) {
+            if (err.message !== 'NOTLOGIN') console.warn('[invoice.html] 回查订单信息失败:', err)
+          })
         },
         parseQuery: function() {
           var q = {}

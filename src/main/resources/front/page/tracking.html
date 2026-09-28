@@ -7,9 +7,9 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-    <link rel="stylesheet" href="../styles/tracking.css?v=20260925" />
+    <link rel="stylesheet" href="../styles/tracking.css?v=20260926" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
     <!-- 修改点(2026-09-17)：配送地图配置——申请到「高德 Web 端(JS API)」Key 后填入 amapKey 并将 enabled 改为 true 即可生效。
@@ -155,10 +155,11 @@
 
         <!-- 空状态 / 加载失败 -->
         <!-- 修改点(2026-09-17 UX)：加载失败/无数据空态补充"重新加载"入口（原失败后只能干等 30s 轮询） -->
+        <!-- 修改点(2026-09-27 文案)：堂食/自取单误入追踪页时给出明确原因，而非笼统"暂无配送信息" -->
         <div class="empty-state" v-else-if="!pageLoading && !trackingData">
-            <i :class="missingOrder ? 'ri-error-warning-line' : 'ri-map-pin-time-line'"></i>
-            <p class="empty-text">{{ missingOrder ? '订单信息缺失，请返回订单列表' : '暂无配送信息' }}</p>
-            <van-button v-if="missingOrder" size="small" round @click="goToOrders">去订单列表</van-button>
+            <i :class="emptyIcon"></i>
+            <p class="empty-text">{{ emptyText }}</p>
+            <van-button v-if="missingOrder || noDeliveryReason" size="small" round @click="goToOrders">去订单列表</van-button>
             <van-button v-else size="small" round @click="loadTracking">重新加载</van-button>
         </div>
         </cend-shell>
@@ -169,8 +170,8 @@
     <!-- C 端跨页面复用组件（必须在 vant 之后、new Vue 之前加载） -->
     <script src="./../js/components-cend.js?v=20260922"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
-    <script src="./../js/request.js?v=20260917"></script>
-    <script src="./../js/common.js?v=20260924"></script>
+    <script src="./../js/request.js?v=20260927"></script>
+    <script src="./../js/common.js?v=20260927"></script>
     <script src="./../api/tracking.js?v=20260917"></script>
     <script>
         new Vue({
@@ -182,6 +183,8 @@
                     orderId: null,
                     // URL 未带 orderId：空态据此引导回订单列表，而非提供无效的"重新加载"
                     missingOrder: false,
+                    // 后端透出的"无需配送"原因：EAT_IN=堂食 / NO_DELIVERY=自取或无地址
+                    noDeliveryReason: '',
                     // 修改点(2026-09-17)：配送地图相关状态（未配置 Key 时 mapEnabled 恒为 false）
                     mapEnabled: false,
                     mapReady: false,
@@ -191,6 +194,17 @@
                 };
             },
             computed: {
+                // 空态文案：堂食/自取单给出明确原因（本单无需配送），缺订单号提示返回列表，其余为无配送信息
+                emptyText() {
+                    if(this.noDeliveryReason === 'EAT_IN') return '堂食订单，无需配送追踪'
+                    if(this.noDeliveryReason === 'NO_DELIVERY') return '该订单为自取，无需配送追踪'
+                    if(this.missingOrder) return '订单信息缺失，请返回订单列表'
+                    return '暂无配送信息'
+                },
+                emptyIcon() {
+                    if(this.noDeliveryReason) return 'ri-store-2-line'
+                    return this.missingOrder ? 'ri-error-warning-line' : 'ri-map-pin-time-line'
+                },
                 platformName() {
                     if (!this.trackingData || !this.trackingData.platform) return '';
                     const map = { MEITUAN: '美团', ELEME: '饿了么', DOUYIN: '抖音' };
@@ -400,8 +414,15 @@
                                 self.updateRiderMarker();
                             });
                         } else if (!silent) {
-                            // 后台静默轮询的业务失败不打扰用户，下次轮询自动恢复
-                            vant.Toast.fail(res.msg || '加载配送信息失败');
+                            // 堂食/自取等"本单无需配送"不是加载失败：透出原因、停轮询、不弹失败 Toast
+                            var reason = res.data && res.data.reason
+                            if(reason === 'EAT_IN' || reason === 'NO_DELIVERY'){
+                                this.noDeliveryReason = reason
+                                if(this._pollTimer){ clearInterval(this._pollTimer); this._pollTimer = null }
+                            } else {
+                                // 后台静默轮询的业务失败不打扰用户，下次轮询自动恢复
+                                vant.Toast.fail(res.msg || '加载配送信息失败');
+                            }
                         }
                     } catch (e) {
                         if (!silent) {

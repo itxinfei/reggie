@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
     <head>
         <meta charset="UTF-8">
@@ -11,14 +11,14 @@
         <!--引入vant样式-->
         <link rel="stylesheet" href="../styles/vant.min.css"/>
         <!-- 引入样式  -->
-        <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+        <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
         <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
         <!--本页面内容的样式-->
         <!-- 修改点：加载 RemixIcon 真字体（emoji 兜底改由 js/icon-fallback.js 按需注入） -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="../js/icon-fallback.js?v=20260917"></script>
-        <link rel="stylesheet" href="./../styles/add-order.css?v=20260925b" />
-        <link rel="stylesheet" href="./../styles/add-order-pay.css?v=20260917" />
+        <link rel="stylesheet" href="./../styles/add-order.css?v=20260927d" />
+        <link rel="stylesheet" href="./../styles/add-order-pay.css?v=20260926" />
     </head>
     <body>
         <!-- 修改点：移除ElementUI v-loading，改用CSS加载遮罩 -->
@@ -50,14 +50,19 @@
                                 <i class="ri-calendar-line"></i> 预约配送
                             </div>
                         </div>
+                        <!-- 不可下单（超配送范围/未达起送价/无地址）：就地明示原因，不再承诺无法兑现的送达时间 -->
+                        <div class="divFinishTime finish-time--blocked" v-if="blockedReason">
+                            <i class="ri-error-warning-line"></i>
+                            <span>{{ blockedReason }}</span>
+                        </div>
                         <!-- 立即配送：选择时段 -->
-                        <div class="divFinishTime" v-if="deliveryMode === 0" @click="showTimePicker = true">
+                        <div class="divFinishTime" v-else-if="deliveryMode === 0" @click="showTimePicker = true">
                             <!-- "预计"由 selectedTimeLabel 自带，模板不再重复拼接（曾出现"预计预计"） -->
                             {{ selectedTimeLabel }}
                             <i class="ri-arrow-right-s-line finish-time-arrow"></i>
                         </div>
                         <!-- 预约配送：选择日期时间 -->
-                        <div class="divFinishTime" v-if="deliveryMode === 1" @click="showSchedulePicker = true">
+                        <div class="divFinishTime" v-else-if="deliveryMode === 1" @click="showSchedulePicker = true">
                             {{ scheduleLabel }}
                             <i class="ri-arrow-right-s-line finish-time-arrow"></i>
                         </div>
@@ -137,9 +142,9 @@
                                 </div>
                             </div>
                     </div>
-                    <!-- 超过 3 件折叠：展开全部 / 收起 -->
+                    <!-- 明细按商品种类计行，单位用"种"；"件"专指数量合计 -->
                     <div class="items-toggle" v-if="detailView.length > 3" @click="itemsExpanded = !itemsExpanded">
-                        {{ itemsExpanded ? '收起' : ('展开全部 ' + detailView.length + ' 件') }}
+                        {{ itemsExpanded ? '收起' : ('展开全部 ' + detailView.length + ' 种') }}
                         <i :class="itemsExpanded ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"></i>
                     </div>
                     <!-- 赠品明细（0 元，买赠活动命中） -->
@@ -303,7 +308,7 @@
                 </div>
                 <div class="divPrice"></div>
                 <!-- 修改点(2026-09-17 UX)：提交中按钮文案变为"支付中…"，配合 isLoading 样式给出明确提交反馈 -->
-                <div :class="{btnSubmitActive: !feeBlocked && (reorderId || (cartData && cartData.length > 0)), btnSubmit: feeBlocked || (!reorderId && (!cartData || cartData.length < 1)), isLoading: loading}" @click="goToPaySuccess">{{ loading ? '支付中…' : (previewLoading && !reorderId ? '金额核算中…' : (feeBlocked ? '暂不可下单' : (reorderId ? '继续支付' : '去支付'))) }}</div>
+                <div :class="{btnSubmitActive: !feeBlocked && (reorderId || (cartData && cartData.length > 0)), btnSubmit: feeBlocked || (!reorderId && (!cartData || cartData.length < 1)), isLoading: loading}" @click="goToPaySuccess">{{ submitBtnText }}</div>
               </div>
         </div>
             </cend-shell>
@@ -315,8 +320,8 @@
         <script src="./../api/address.js?v=20260917"></script>
         <!-- 引入axios -->
         <script src="../../backend/plugins/axios/axios.min.js"></script>
-        <script src="./../js/request.js?v=20260917"></script>
-        <script src="./../js/common.js?v=20260924"></script>
+        <script src="./../js/request.js?v=20260927"></script>
+        <script src="./../js/common.js?v=20260927"></script>
         <script src="./../api/main.js?v=20260917"></script>
         <script src="./../api/order.js?v=20260925"></script>
         <script src="./../api/coupon.js?v=20260917"></script>
@@ -465,6 +470,14 @@
                         return (this.pricing && this.pricing.coupon)
                                 ? (Number(this.pricing.coupon.amount) || 0) : 0
                     },
+                    // 起送差价（服务端同源：minOrderAmount - goodsAmount，与首页购物车条"还差¥X起送"一致）
+                    minOrderGap(){
+                        if(!this.pricing){ return 0 }
+                        const min = Number(this.pricing.minOrderAmount) || 0
+                        if(min <= 0) return 0
+                        const gap = min - (Number(this.goodsPrice) || 0)
+                        return gap > 0 ? gap : 0
+                    },
                     // 是否阻断下单（不可用原因/未达起送价/超出配送范围）
                     feeBlocked(){
                         if(this.reorderId){ return false }
@@ -481,9 +494,38 @@
                         if(this.previewLoading || !this.pricing){ return '金额核算中，请稍候' }
                         const p = this.pricing
                         if(p.unavailableReason){ return p.unavailableReason }
-                        if(p.belowMinOrder){ return '未达到起送价' }
+                        if(p.belowMinOrder){
+                            return this.minOrderGap > 0 ? '还差 ¥' + this.minOrderGap.toFixed(2) + ' 起送' : '未达到起送价'
+                        }
                         if(p.rangeChecked && !p.inRange){ return '收货地址不在配送范围内' }
                         return ''
+                    },
+                    // 阻断下单的常驻可见原因（与 feeBlocked 同源但不含"核算中"瞬态，
+                    // 供页面就地展示——避免只在点击置灰按钮时才 toast、且仍展示无法兑现的送达时间）
+                    blockedReason(){
+                        if(this.reorderId){ return '' }
+                        if(!this.address || !this.address.id) return '请先选择收货地址'
+                        if(this.previewLoading || !this.pricing){ return '' }
+                        const p = this.pricing
+                        if(p.unavailableReason){ return p.unavailableReason }
+                        if(p.belowMinOrder){
+                            return this.minOrderGap > 0 ? '还差 ¥' + this.minOrderGap.toFixed(2) + ' 起送' : '未达到起送价'
+                        }
+                        if(p.rangeChecked && !p.inRange){ return '收货地址不在配送范围内' }
+                        return ''
+                    },
+                    // 提交按钮文案：阻断时直接透出原因（如"还差¥X起送"），不再只显示"暂不可下单"；
+                    // 长文案压缩为按钮可容纳的短形式，完整原因由页面 blockedReason 常驻展示
+                    submitBtnText(){
+                        if(this.loading){ return '支付中…' }
+                        if(this.previewLoading && !this.reorderId){ return '金额核算中…' }
+                        if(this.reorderId){ return '继续支付' }
+                        if(!this.feeBlocked){ return '去支付' }
+                        const r = this.blockedReason
+                        if(!r) return '暂不可下单'
+                        if(r.indexOf('还差') === 0) return r.replace(/\s/g, '')
+                        if(r.indexOf('配送范围') > -1) return '不在配送范围'
+                        return r.length > 8 ? r.substring(0, 8) + '…' : r
                     },
                     // 预计送达时间
                     expectDeliveryTime(){
@@ -535,11 +577,10 @@
                         const slotText = slot ? slot.label : ''
                         return month + '月' + day + '日 ' + slotText
                     },
-                    // 修改点：完整地址拼接
+                    // 修改点：完整地址拼接（统一走 composeAddressText，去重存量 detail 前缀）
                     addressFull(){
                         const a = this.address
-                        const parts = [a.provinceName, a.cityName, a.districtName, a.detail].filter(Boolean)
-                        return parts.join('') || a.detail || '请选择收货地址'
+                        return composeAddressText(a) || a.detail || '请选择收货地址'
                     }
                 },
                 created(){
@@ -550,6 +591,9 @@
                         if(!ok){ goLogin(); return }
                         self.startAfterLogin()
                     })
+                },
+                beforeDestroy(){
+                    window.removeEventListener('pageshow', this.onPageShow)
                 },
                 methods:{
                     // 会话确认有效后再启动：原 created 主体（reorderId 续付分支 / 常规初始化）
@@ -566,10 +610,12 @@
                         }
                         this.initData()
                         // bfcache 兜底：从地址页用浏览器"返回"恢复时，重新加载地址并重试配送费
-                        var self = this
-                        window.addEventListener('pageshow', function(e){
-                            if(e.persisted){ self.defaultAddress() }
-                        })
+                        // 修改点(2026-09-28)：具名函数挂实例，beforeDestroy 解绑
+                        window.addEventListener('pageshow', this.onPageShow)
+                    },
+                    // bfcache 恢复（pageshow）处理
+                    onPageShow(e){
+                        if(e.persisted){ this.defaultAddress() }
                     },
                     // 修改点：图片加载失败兜底
                     imgError(e){

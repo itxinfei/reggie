@@ -14,17 +14,20 @@
 
 /* 修改点：全局 * 重置太粗暴会破坏 Vant 组件内部间距，改为仅作用于 .ai-container */
 
-/* ---- 桌面端修复（min-width:751px） ---- */
-/* 修改点：base.js 按 designWidth=min(clientWidth,750) 计算根字号（桌面 750px 时 1rem=2px），
-   本页桌面端重置为 1px，让 rem ≈ 设计稿 px，避免聊天区按 2 倍缩放撑爆 500px 容器。
-   注意：其余前端页面未做此重置（桌面端 1rem=2px），如需全站桌面端统一，应在本页外统一处理（2026-09-01 注释修正）。 */
+/* ---- 桌面端（min-width:751px） ---- */
+/* 修改点(2026-09-28)：桌面 1:1 口径（1rem=1px）收口到 js/base.js，
+   本页通过 <html data-rem-flat> opt-in，已删除页级 font-size:1px !important 覆盖；
+   其余未标注页面仍为 750 封顶（桌面 1rem=2px），行为不变。 */
 @media screen and (min-width: 751px) {
-    html {
-        font-size: 1px !important;
-    }
     body {
         margin-left: auto;
         margin-right: auto;
+    }
+    /* 修改点(2026-09-27 审查P2桌面居中族)：会话抽屉 fixed 相对视口，
+       需贴住 500px 居中容器左缘（视口中心-250px）而非屏幕左缘 */
+    .conversation-sidebar {
+        left: 50%;
+        margin-left: -250px;
     }
 }
 
@@ -195,8 +198,8 @@
     background: var(--color-warning);
     color: var(--ai-network-banner-text);
     text-align: center;
-    padding: 6px 12px;
-    font-size: 12px;
+    padding: 6rem 12rem;
+    font-size: var(--font-size-sm);
     display: none;
     flex-shrink: 0;
 }
@@ -285,7 +288,7 @@
     text-align: center; padding: 40px 20px; color: var(--color-text-hint); font-size: 13px;
 }
 .empty-sidebar {
-    text-align: center; padding: 40px 20px; color: var(--color-text-disabled);
+    text-align: center; padding: 40px 20px; color: var(--color-text-hint);
 }
 .empty-sidebar .empty-icon { font-size: 48px; margin-bottom: var(--spacing-md); }
 .empty-sidebar p { font-size: 13px; }
@@ -311,8 +314,8 @@
     color: var(--color-text-hint); cursor: pointer; border-bottom: 2px solid transparent;
     white-space: nowrap; transition: color 0.2s, border-bottom-color 0.2s;
 }
-.scene-tab:hover { color: var(--color-primary-dark); }
-.scene-tab.active { color: var(--color-primary-dark); border-bottom-color: var(--color-primary-dark); }
+.scene-tab:hover { color: var(--color-primary-text); }
+.scene-tab.active { color: var(--color-primary-text); border-bottom-color: var(--color-primary-text); }
 
 /* ========== 快捷提示 ========== */
 .quick-tips {
@@ -322,12 +325,12 @@
 }
 .quick-tip {
     font-size: var(--font-size-sm); padding: 6px 14px; border-radius: var(--radius-lg);
-    background: var(--bg-card); border: 1px solid var(--color-primary-dark); color: var(--color-primary-dark);
+    background: var(--bg-card); border: 1px solid var(--color-primary-dark); color: var(--color-primary-text);
     cursor: pointer; white-space: nowrap; transition: background-color 0.2s, color 0.2s;
 }
-.quick-tip:active { background: var(--color-primary); color: var(--color-text-primary); }
+.quick-tip:active { background: var(--color-primary); color: var(--color-primary-text); }
 .quick-tip.profile-tag {
-    background: var(--color-primary-tint); border-color: var(--color-primary-dark); color: var(--color-primary-dark);
+    background: var(--color-primary-tint); border-color: var(--color-primary-dark); color: var(--color-primary-text);
 }
 
 /* ========== 聊天区域 ========== */
@@ -342,7 +345,7 @@
 .chat-area::-webkit-scrollbar-track { background: transparent; }
 
 /* 欢迎气泡里的灯泡提示图标：金色点睛 */
-.chat-bubble .tip-icon { color: var(--color-primary-dark); }
+.chat-bubble .tip-icon { color: var(--color-primary-text); }
 .chat-msg {
     display: flex; gap: var(--spacing-sm); max-width: 85%;
     animation: slideUp 0.3s ease;
@@ -391,7 +394,8 @@
     border: 1px solid var(--ai-border-medium); background: var(--bg-card); color: var(--color-text-secondary);
     cursor: pointer; transition: border-color 0.2s, color 0.2s;
 }
-.copy-btn:hover { border-color: var(--color-primary-dark); color: var(--color-primary-dark); }
+/* 修改点(2026-09-27 审查P1对比度族)：hover 橙字 2.13:1 → 深金 strong */
+.copy-btn:hover { border-color: var(--color-primary-dark); color: var(--color-primary-text-strong); }
 
 /* 富文本格式 */
 .chat-bubble .msg-bold { font-weight: 600; }
@@ -404,7 +408,7 @@
 .chat-bubble .msg-list ul ul { list-style: circle; }
 .chat-bubble .msg-list ul ul ul { list-style: square; }
 .chat-bubble .msg-highlight {
-    background: var(--color-primary-tint); color: var(--color-primary-dark); padding: 2px 6px;
+    background: var(--color-primary-tint); color: var(--color-primary-text); padding: 2px 6px;
     border-radius: var(--radius-sm); font-weight: 500;
 }
 
@@ -455,13 +459,14 @@
 .ai-tool-item .ai-tool-summary {
     color: var(--color-text-hint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* 修改点(2026-09-27 审查P1对比度族)：橙字 2.1:1 → 深金 strong */
 .ai-tool-item.is-running {
-    background: var(--color-primary-tint); border-color: var(--color-primary); color: var(--color-primary-dark);
+    background: var(--color-primary-tint); border-color: var(--color-primary); color: var(--color-primary-text-strong);
 }
-.ai-tool-item.is-running .ai-tool-icon { color: var(--color-primary-dark); }
+.ai-tool-item.is-running .ai-tool-icon { color: var(--color-primary-text); }
 /* 完成态：弱化底色仅留绿勾，历史工具条不抢眼（暗色下 bg-hover 同样适配） */
 .ai-tool-item.is-done { background: var(--bg-hover); }
-.ai-tool-item.is-done .ai-tool-icon { color: var(--color-success); }
+.ai-tool-item.is-done .ai-tool-icon { color: var(--color-success-text); }
 .ai-tool-item.is-error { border-color: var(--color-danger); color: var(--color-danger); }
 .ai-tool-item.is-error .ai-tool-icon { color: var(--color-danger); }
 .ai-tool-spin { animation: ai-tool-spin 1s linear infinite; }
@@ -476,7 +481,8 @@
     border: 1px solid var(--bg-hover); background: var(--bg-card); color: var(--color-text-secondary);
     cursor: pointer; transition: background-color 0.2s, border-color 0.2s, color 0.2s; display: flex; align-items: center; gap: 3px;
 }
-.feedback-btn:hover { border-color: var(--color-primary-dark); color: var(--color-primary-dark); }
+/* 修改点(2026-09-27 审查P1对比度族)：hover 橙字 2.13:1 → 深金 strong */
+.feedback-btn:hover { border-color: var(--color-primary-dark); color: var(--color-primary-text-strong); }
 .feedback-btn.active-good { border-color: var(--color-success); color: var(--color-success); background: var(--color-success-tint); }
 .feedback-btn.active-bad { border-color: var(--color-danger); color: var(--color-danger); background: rgba(233, 78, 60, 0.08); }
 
@@ -501,7 +507,7 @@
 }
 .retry-btn {
     padding: 4px 12px; border-radius: var(--radius-md); font-size: var(--font-size-sm);
-    border: 1px solid var(--color-primary-dark); color: var(--color-primary-dark); background: var(--bg-card);
+    border: 1px solid var(--color-primary-dark); color: var(--color-primary-text); background: var(--bg-card);
     cursor: pointer;
 }
 .retry-btn:hover { background: var(--color-primary-tint); }
@@ -563,7 +569,7 @@
 
 /* ========== 流式光标 ========== */
 .streaming-cursor::after {
-    content: '\25CB'; color: var(--color-primary-dark); animation: blink 0.8s infinite;
+    content: '\25CB'; color: var(--color-primary-text); animation: blink 0.8s infinite;
     margin-left: 2px;
 }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
@@ -691,7 +697,7 @@
 .md-body ol { list-style: decimal; }
 .md-body li { margin: 4px 0; }
 .md-body li > ul, .md-body li > ol { margin: 4px 0; }
-.md-body a { color: var(--color-primary-dark); text-decoration: underline; word-break: break-all; }
+.md-body a { color: var(--color-primary-text); text-decoration: underline; word-break: break-all; }
 .md-body strong { font-weight: 600; color: var(--color-text-primary); }
 .md-body em { font-style: italic; }
 .md-body hr { border: none; border-top: 1px solid var(--ai-border-light); margin: 12px 0; }

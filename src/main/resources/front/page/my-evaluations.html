@@ -8,12 +8,12 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
     <!-- 修改点：加载 RemixIcon 真字体（emoji 兜底改由 js/icon-fallback.js 按需注入） -->
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="./../js/icon-fallback.js?v=20260917"></script>
-    <link rel="stylesheet" href="./../styles/evaluation.css?v=20260921" />
+    <link rel="stylesheet" href="./../styles/evaluation.css?v=20260926" />
 </head>
 <body>
     <div id="eval-app" class="app">
@@ -57,7 +57,7 @@
                         <div class="dish-text">
                             <div class="dish-name">{{ item.dishName || '未知菜品' }}</div>
                             <div class="eval-meta">
-                                <span class="eval-stars">
+                                <span class="eval-stars" role="img" :aria-label="'评分 ' + (item.starRating || 0) + ' 星'">
                                     <i v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (item.starRating || 0) }">★</i>
                                 </span>
                                 <span class="eval-date">{{ formatDate(item.createTime) }}</span>
@@ -122,7 +122,7 @@
                 <div class="submit-modal-body">
                     <div v-if="submitData.orderId">
                         <div class="submit-order-info">
-                            <div class="submit-order-id">订单 #{{ submitData.orderId }}</div>
+                            <div class="submit-order-id">订单 {{ submitData.orderNo || submitData.orderId }}</div>
                             <div class="submit-order-tip">请为您购买的菜品评分</div>
                         </div>
                         <!-- 修改点(2026-09-18)：已成功提交的菜标记 is-submitted，部分失败重试时跳过，避免重复提交 -->
@@ -130,16 +130,21 @@
                             <div class="submit-dish-row">
                                 <span class="submit-dish-name">{{ dish.dishName }}<span class="submitted-flag" v-if="dish._submitted">已评价 ✓</span></span>
                                 <!-- 修改点：el-rate 替换为自定义星级评分组件 -->
-                                <span class="star-rating">
+                                <span class="star-rating" role="radiogroup" :aria-label="dish.dishName + ' 评分'">
                                     <span v-for="s in 5" :key="s"
                                           :class="['star-item', { active: s <= dish.starRating }]"
-                                          @click="!dish._submitted && (dish.starRating = s)">★</span>
+                                          role="radio" :aria-checked="s === dish.starRating"
+                                          :aria-label="s + ' 星'" tabindex="0"
+                                          @click="!dish._submitted && (dish.starRating = s)"
+                                          @keydown.enter.prevent="!dish._submitted && (dish.starRating = s)">★</span>
                                 </span>
                             </div>
                             <!-- 快捷评价标签（对齐美团） -->
                             <div class="quick-tags">
                                 <span class="quick-tag" v-for="tag in quickTags" :key="tag"
                                       :class="{active: dish.content && dish.content.includes(tag)}"
+                                      role="button" :aria-pressed="!!(dish.content && dish.content.includes(tag))"
+                                      tabindex="0" @keydown.enter.prevent="toggleQuickTag(dish, tag)"
                                       @click="toggleQuickTag(dish, tag)">{{tag}}</span>
                             </div>
                             <!-- 修改点：el-input textarea 替换为原生textarea -->
@@ -190,8 +195,8 @@
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
-    <script src="./../js/request.js?v=20260917"></script>
-    <script src="./../js/common.js?v=20260924"></script>
+    <script src="./../js/request.js?v=20260927"></script>
+    <script src="./../js/common.js?v=20260927"></script>
     <script src="../api/evaluation.js?v=20260917"></script>
     <script src="./../api/order.js?v=20260917"></script>
     <script src="./../js/components-cend.js?v=20260922"></script>
@@ -577,16 +582,19 @@
                     await this.ensureEvaluatedSet()
                     const orderId = this.getUrlParam('orderId') || ''
                     let dishes = []
+                    let orderNo = ''
                     if (orderId) {
                         const order = await this.findOrderById(orderId)
                         if (order && this.hasEvaluableDishes(order)) {
                             dishes = this.extractEvaluableDishes(order)
+                            orderNo = order.number || ''
                         } else {
                             vant.Toast.fail('该订单暂无可评价的菜品')
                             return
                         }
                     } else if (this.pendingOrder) {
                         dishes = this.extractEvaluableDishes(this.pendingOrder)
+                        orderNo = this.pendingOrder.number || ''
                     } else {
                         // 兜底：实时拉最近一条已完成订单
                         try {
@@ -594,6 +602,7 @@
                             const latest = res && res.code === 1 && res.data && res.data.records ? res.data.records[0] : null
                             if (latest && this.hasEvaluableDishes(latest)) {
                                 dishes = this.extractEvaluableDishes(latest)
+                                orderNo = latest.number || ''
                             }
                         } catch (e) { /* 保持空 dishes，由 doSubmit 提示 */ }
                     }
@@ -601,7 +610,7 @@
                         vant.Toast.fail('暂无可评价的菜品')
                         return
                     }
-                    this.submitData = { orderId: orderId || this.pendingOrder.id || '', dishes: dishes, anonymous: false }
+                    this.submitData = { orderId: orderId || this.pendingOrder.id || '', orderNo: orderNo, dishes: dishes, anonymous: false }
                     this.submitVisible = true
                 },
                 // 在用户已完成订单列表中定位指定订单

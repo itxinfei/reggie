@@ -8,9 +8,9 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-    <link rel="stylesheet" href="../styles/cs.css?v=20260925" />
+    <link rel="stylesheet" href="../styles/cs.css?v=20260927e" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
 </head>
@@ -43,28 +43,31 @@
                         客服加载失败
                         <span class="retry-link" @click="initChat">点击重试</span>
                     </div>
-                    <div class="msg-row" v-for="m in messages" :key="m.id"
-                         :class="{ 'is-agent': m.senderType===2, 'is-system': m.senderType===3 }">
-                        <div v-if="m.senderType===3" class="sys-msg">{{ m.content }}</div>
-                        <template v-else-if="m.senderType===2">
-                            <div class="avatar agent-avatar"><i class="ri-customer-service-2-line"></i></div>
-                            <div class="bubble agent-bubble">
-                                <img v-if="m.messageType===2" class="bubble-img" :src="imgPath(m.imageUrl)"
-                                     @click="previewImage(m.imageUrl)" alt="客服图片">
-                                <span v-else>{{ m.content }}</span>
-                            </div>
-                        </template>
-                        <template v-else>
-                            <div class="bubble user-bubble">
-                                <img v-if="m.messageType===2" class="bubble-img" :src="imgPath(m.imageUrl)"
-                                     @click="previewImage(m.imageUrl)" alt="我发送的图片">
-                                <span v-else>{{ m.content }}</span>
-                            </div>
-                            <div class="avatar user-avatar">
-                                <img v-if="userAvatar" :src="imgPath(userAvatar)" alt="用户头像">
-                                <i v-else class="ri-user-3-line"></i>
-                            </div>
-                        </template>
+                    <div class="msg-item" v-for="(m,index) in messages" :key="m.id">
+                        <div v-if="msgTimeDivider(index)" class="msg-time-divider">{{ msgTimeDivider(index) }}</div>
+                        <div class="msg-row"
+                             :class="{ 'is-agent': m.senderType===2, 'is-system': m.senderType===3 }">
+                            <div v-if="m.senderType===3" class="sys-msg">{{ m.content }}</div>
+                            <template v-else-if="m.senderType===2">
+                                <div class="avatar agent-avatar"><i class="ri-customer-service-2-line"></i></div>
+                                <div class="bubble agent-bubble">
+                                    <img v-if="m.messageType===2" class="bubble-img" :src="imgPath(m.imageUrl)"
+                                         @click="previewImage(m.imageUrl)" alt="客服图片">
+                                    <span v-else>{{ m.content }}</span>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <div class="bubble user-bubble">
+                                    <img v-if="m.messageType===2" class="bubble-img" :src="imgPath(m.imageUrl)"
+                                         @click="previewImage(m.imageUrl)" alt="我发送的图片">
+                                    <span v-else>{{ m.content }}</span>
+                                </div>
+                                <div class="avatar user-avatar">
+                                    <img v-if="userAvatar" :src="imgPath(userAvatar)" alt="用户头像">
+                                    <i v-else class="ri-user-3-line"></i>
+                                </div>
+                            </template>
+                        </div>
                     </div>
                     <div v-if="sessionClosed" class="session-end">
                         — 会话已结束 —
@@ -226,8 +229,8 @@
     <script src="../../backend/plugins/vue/vue.js"></script>
     <script src="./../js/vant.min.js"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
-    <script src="./../js/request.js?v=20260917"></script>
-    <script src="./../js/common.js?v=20260924"></script>
+    <script src="./../js/request.js?v=20260927"></script>
+    <script src="./../js/common.js?v=20260927"></script>
     <script src="./../js/components-cend.js?v=20260922"></script>
     <script src="./../api/order.js?v=20260917"></script>
     <script src="./../api/cs.js?v=20260921"></script>
@@ -275,8 +278,11 @@
                 canSend: function () {
                     return (this.draft || '').trim().length > 0 && !!this.activeSession;
                 },
+                // 与后台 statusTextSession 对齐：0=待分配 1=进行中 2/3=已结束。
+                // 旧数据里存在 status=3 的脏会话，若仍按 ===2 判断会导致"已结束"的会话
+                // 既不能重开也不显示「重新咨询」，用户被永久钉在死会话里。
                 sessionClosed: function () {
-                    return this.activeSession && this.activeSession.status === 2;
+                    return !!this.activeSession && Number(this.activeSession.status) >= 2;
                 }
             },
             created: function () {
@@ -334,16 +340,31 @@
                         var res = await csMySessions();
                         if (res && res.code === 1) {
                             var list = res.data || [];
-                            var active = null;
-                            for (var i = 0; i < list.length; i++) {
-                                if (list[i].status !== 2) {
+                            // 只有「待分配(0) / 进行中(1)」的会话可以接着聊；
+                            // 已结束(2/3)一律忽略，否则用户会被钉在死会话里且永远不新建会话。
+                            var resumable = function (s) {
+                                var st = Number(s.status);
+                                return st === 0 || st === 1;
+                            };
+                            var pick = function (arr) {
+                                for (var i = 0; i < arr.length; i++) {
+                                    if (!resumable(arr[i])) { continue; }
                                     if (presetOrderId) {
-                                        if (list[i].orderId != null && String(list[i].orderId) === presetOrderId) { active = list[i]; break; }
+                                        if (arr[i].orderId != null && String(arr[i].orderId) === presetOrderId) { return arr[i]; }
                                     } else {
-                                        active = list[i]; break;
+                                        return arr[i];
                                     }
                                 }
+                                return null;
+                            };
+                            var active = pick(list);
+                            if (presetOrderId && !active) {
+                                // 指定订单未找到可复用会话，回退到第一个可复用会话
+                                var rest = [];
+                                for (var k = 0; k < list.length; k++) { if (resumable(list[k])) { rest.push(list[k]); } }
+                                active = pick(rest);
                             }
+                            // 归属由后端 getOwnedSession 强制校验，这里直接采用
                             if (active) {
                                 this.activeSession = active;
                             } else {
@@ -404,9 +425,14 @@
                         var res = await csListMessages(this.activeSession.id, { silent: true });
                         if (res && res.code === 1) {
                             var list = res.data || [];
-                            if (list.length !== this.messages.length) {
+                            // 按末条消息 id（缺失时回退更新时间）判断变化，
+                            // 修复仅比 length 时同长度更新（已读/编辑）不同步
+                            var last = list.length ? list[list.length - 1] : null;
+                            var cur = this.messages.length ? this.messages[this.messages.length - 1] : null;
+                            var lastKey = last ? (last.id != null ? last.id : (last.updateTime || '')) : null;
+                            var curKey = cur ? (cur.id != null ? cur.id : (cur.updateTime || '')) : null;
+                            if (lastKey !== curKey || list.length !== this.messages.length) {
                                 this.messages = list;
-                                var last = list[list.length - 1];
                                 this.scrollBottom();
                                 if (last && last.senderType === 2 && last.isRead === 0) {
                                     csMarkRead(this.activeSession.id);
@@ -660,6 +686,43 @@
                     var out = '';
                     for (var i = 0; i < n; i++) { out += '★'; }
                     return out;
+                },
+
+                // ---------- 聊天气泡时间分隔 ----------
+                // 解析消息时间为 Date（兼容 LocalDateTime 字符串 / 时间戳 / Jackson 数组），无效返回 null
+                parseMsgDate: function (t) {
+                    if (t == null || t === '') return null;
+                    var d = null;
+                    if (Array.isArray(t) && t.length >= 3) {
+                        d = new Date(t[0], t[1] - 1, t[2], t[3] || 0, t[4] || 0, t[5] || 0);
+                    } else if (typeof t === 'number') {
+                        d = new Date(t);
+                    } else {
+                        d = new Date(String(t).replace(/-/g, '/').replace('T', ' '));
+                    }
+                    return isNaN(d.getTime()) ? null : d;
+                },
+                // 仿微信：首条、或与上一条间隔≥5分钟、或跨天时插入时间戳；返回显示文案，无需分隔则返回 ''
+                msgTimeDivider: function (index) {
+                    var cur = this.parseMsgDate(this.messages[index] && this.messages[index].createTime);
+                    if (!cur) return '';
+                    var prev = index > 0 ? this.parseMsgDate(this.messages[index - 1].createTime) : null;
+                    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+                    var sameDay = prev && prev.getFullYear() === cur.getFullYear()
+                        && prev.getMonth() === cur.getMonth() && prev.getDate() === cur.getDate();
+                    var needGap = !prev || (cur.getTime() - prev.getTime()) >= 5 * 60 * 1000;
+                    if (!needGap && sameDay) return '';
+                    var hm = p(cur.getHours()) + ':' + p(cur.getMinutes());
+                    if (!prev || !sameDay) {
+                        // 跨天/首条：带日期（今年省略年份）
+                        var today = new Date();
+                        var md = p(cur.getMonth() + 1) + '-' + p(cur.getDate());
+                        if (cur.getFullYear() !== today.getFullYear()) {
+                            return cur.getFullYear() + '-' + md + ' ' + hm;
+                        }
+                        return md + ' ' + hm;
+                    }
+                    return hm;
                 },
 
                 // ---------- 满意度评价 ----------

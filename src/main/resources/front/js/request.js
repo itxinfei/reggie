@@ -28,6 +28,17 @@
     return '/front/page/login.html?redirect=' + encodeURIComponent(back);
   }
 
+  // 未登录统一处理：立即跳登录页（2026-09-26：去掉"先提示再延迟1.2s跳转"，
+  // 打开页面必须是登录态，未登录直接进登录页；防重入，并发请求同时 401 只跳一次）
+  var notLoginHandled = false;
+  function redirectToLogin() {
+    clearCsrfToken();
+    if (window.location.pathname.indexOf('login') !== -1) { return; }
+    if (notLoginHandled) { return; }
+    notLoginHandled = true;
+    window.location.replace(buildLoginUrl());
+  }
+
   /**
    * 获取CSRF Token
    */
@@ -88,9 +99,8 @@
         if (res.config && res.config.skipAuthRedirect) {
           return Promise.reject(new Error('NOTLOGIN'))
         }
-        // 修改点：本项目不使用iframe，直接用window.location
-        clearCsrfToken();
-        window.location.href = buildLoginUrl()
+        // 修改点：本项目不使用iframe，直接用window.location；提示后跳转
+        redirectToLogin()
         return Promise.reject(new Error('NOTLOGIN'))
       } else if (res && res.data) {
         return res.data
@@ -112,11 +122,7 @@
           if (error.config && error.config.skipAuthRedirect) {
             return Promise.reject(error);
           }
-          clearCsrfToken();
-          var curPage = window.location.pathname;
-          if (!curPage.includes('login')) {
-            window.location.href = buildLoginUrl();
-          }
+          redirectToLogin();
           return Promise.reject(error);
         }
       }
@@ -164,6 +170,129 @@
     }
   )
   win.$axios = service
+
+  // ===== C端 SSE 实时消息通道（2026-09-26）=====
+  // 登录后建立一条同源 EventSource（自动带 JSESSIONID，无需 CSRF 头）。
+  // 后台推送到达时：弹 Vant 提醒 → 拉最新未读数 → 广播 reggie:new-message 事件，
+  // 供当前页面的 Vue（首页/消息中心）刷新角标与列表。
+  function initSseChannel() {
+    if (win.__reggieSSE || typeof win.EventSource === 'undefined') { return; }
+    var es;
+    try {
+      es = new win.EventSource('/notification/sse/subscribe');
+    } catch (e) { return; }
+    win.__reggieSSE = es;
+
+    es.addEventListener('message', function (ev) {
+      var msg = null;
+      try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      // 实时提醒，点击进入消息中心
+      if (win.vant && win.vant.Notify) {
+        win.vant.Notify({
+          message: msg.title || msg.content || '您有一条新消息',
+          type: 'primary',
+          duration: 5000,
+          onClick: function () { win.location.href = '/front/page/message.html'; }
+        });
+      }
+      // 广播事件，让当前页 Vue 刷新（无论拉未读数成败都广播，页面自行兜底）
+      var notifyPages = function () {
+        try { win.dispatchEvent(new win.CustomEvent('reggie:new-message', { detail: msg })); } catch (e) {}
+      };
+      win.$axios({ url: '/recommend/messages/unread-count', method: 'get',
+                   silent: true, skipAuthRedirect: true })
+        .then(notifyPages, notifyPages);
+    });
+
+    es.onerror = function () {
+      // 浏览器会自动重连；仅当本地登录态已清除（会话失效）时关闭，跳转交给登录守卫
+      var phone = null;
+      try { phone = sessionStorage.getItem('userPhone'); } catch (e) {}
+      if (!phone) {
+        try { es.close(); } catch (e) {}
+        win.__reggieSSE = null;
+      }
+    };
+  }
+
+  // ===== 页面登录守卫（2026-09-26）：打开页面必须是用户登录状态 =====
+  // 页面加载时立即探测服务端会话（/user/info），未登录立即跳登录页，无提示、无延迟。
+  // 仅「确认未登录」（NOTLOGIN / 401）才跳转；断网、5xx 不跳，交给 no-wifi 页 / 错误提示兜底。
+  function isNotLoginErr(err) {
+    if (!err) { return false; }
+    if (err.message === 'NOTLOGIN') { return true; }
+    return !!(err.response && err.response.status === 401);
+  }
+  (function guardLoginOnPageOpen() {
+    var path = win.location.pathname;
+    // 登录页自身不守卫（否则死循环）；断网兜底页不守卫（探测必然失败，会误跳）
+    if (path.indexOf('/front/page/login.html') !== -1 || path.indexOf('no-wifi') !== -1) { return; }
+    win.$axios({ url: '/user/info', method: 'get', params: { full: 1 },
+                 skipAuthRedirect: true, silent: true })
+      .then(function (r) {
+        var u = r && r.data;
+        var ok = r && r.code === 1 && u && /^1\d{10}$/.test(u.phone);
+        if (!ok) {
+          try { sessionStorage.removeItem('userPhone'); } catch (e) {}
+          win.location.replace(buildLoginUrl());
+          return;
+        }
+        // 已登录：建立 SSE 实时消息通道（函数内部防重复）+ 客服未读守护
+        initSseChannel();
+        startCsUnreadGuard();
+      })
+      .catch(function (err) {
+        if (isNotLoginErr(err)) { win.location.replace(buildLoginUrl()); }
+      });
+  })();
+
+  // ===== 客服未读守护（2026-09-26）=====
+  // 背景：C 端只会在「在线客服」页轮询消息，后台客服发完消息后，
+  // 只要用户不打开该页就完全无感知 —— 表现为"后台显示发送成功，C 端收不到"。
+  // 这里在任意已登录页面低频轮询客服未读数，有未读就弹提醒并可点击直达会话。
+  function startCsUnreadGuard() {
+    if (win.__csUnreadTimer) { return; }
+    var lastNotified = 0;                 // 已提醒过的未读数，避免重复弹
+    var notifiedSession = 0;
+    var tick = function () {
+      try {
+        // 会话页自身已在轮询并会自动标记已读，无需重复提醒；
+        // 修复(2026-09-27 审查P0-4)：消息中心页同样展示客服消息卡片，停留期间跳过轮询，
+        // 避免用户正在看消息时通知条每 15s 盖顶、且离开后 unread 已清零不再骚扰
+        if (win.location.pathname.indexOf('customer-service') !== -1
+            || win.location.pathname.indexOf('message.html') !== -1) { return; }
+        win.$axios({ url: '/cs/portal/session/list', method: 'get',
+                     silent: true, skipAuthRedirect: true, skipNoWifiRedirect: true })
+          .then(function (r) {
+            if (!r || r.code !== 1 || !r.data || !r.data.length) { return; }
+            var sid = null;
+            for (var i = 0; i < r.data.length; i++) {
+              var st = Number(r.data[i].status);
+              if (st === 0 || st === 1) { sid = r.data[i].id; break; }   // 待分配 / 进行中
+            }
+            if (!sid) { lastNotified = 0; return; }
+            return win.$axios({ url: '/cs/portal/message/unread/' + sid, method: 'get',
+                                silent: true, skipAuthRedirect: true, skipNoWifiRedirect: true })
+              .then(function (u) {
+                var n = u && u.code === 1 ? Number(u.data) : 0;
+                if (!n) { lastNotified = 0; notifiedSession = 0; return; }
+                if (notifiedSession === sid && n <= lastNotified) { return; }
+                notifiedSession = sid; lastNotified = n;
+                if (!win.vant || !win.vant.Notify) { return; }
+                win.vant.Notify({
+                  message: '客服发来 ' + n + ' 条新消息',
+                  type: 'primary',
+                  duration: 5000,
+                  onClick: function () { win.location.href = '/front/page/customer-service.html'; }
+                });
+              });
+          })
+          .catch(function () { /* 轮询失败静默，下次重试 */ });
+      } catch (e) { /* 守护异常不得影响主流程 */ }
+    };
+    tick();
+    win.__csUnreadTimer = win.setInterval(tick, 15000);
+  }
 
   // 全局错误捕获，防止STATUS_ACCESS_VIOLATION等浏览器底层崩溃
   window.addEventListener('unhandledrejection', function(event) {

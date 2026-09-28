@@ -8,9 +8,9 @@
     <link rel="icon" href="./../images/favico.ico">
     <script src="./../js/base.js?v=20260917"></script>
     <link rel="stylesheet" href="../styles/vant.min.css"/>
-    <link rel="stylesheet" href="../styles/index.css?v=20260924" />
+    <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
     <link rel="stylesheet" href="../styles/skeleton.css?v=20260922" />
-    <link rel="stylesheet" href="../styles/frequent-orders.css?v=20260924" />
+    <link rel="stylesheet" href="../styles/frequent-orders.css?v=20260926" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
 </head>
@@ -49,6 +49,12 @@
                         </div>
                         <div class="dish-price-row">
                             <div v-if="item.available" class="dish-price">{{ Number(item.price || 0).toFixed(2) }}</div>
+                            <div class="fav-actions">
+                            <!-- 修改点(2026-09-26)：在售收藏此前无取消入口（仅停售/失效可移除），补心形按钮 -->
+                            <button v-if="item.available" class="fav-heart-btn" aria-label="取消收藏"
+                                    @click="removeFav(item)">
+                                <i class="ri-heart-fill" aria-hidden="true"></i>
+                            </button>
                             <button v-if="item.available && item.onSale"
                                     class="add-circle-btn"
                                     :class="{ 'is-loading': submitting === item.targetId }"
@@ -59,10 +65,11 @@
                                 <i v-else class="ri-add-line" aria-hidden="true"></i>
                             </button>
                             <span v-else class="fav-remove-btn" @click="removeFav(item)">取消收藏</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="bottom-hint">停售或失效的菜品可取消收藏</div>
+                <div class="bottom-hint">点击心形可取消收藏</div>
             </template>
 
             <!-- 加载失败态（区别于真空态） -->
@@ -90,8 +97,8 @@
     <!-- C 端跨页面复用组件（必须在 vant 之后、new Vue 之前加载） -->
     <script src="./../js/components-cend.js?v=20260922"></script>
     <script src="../../backend/plugins/axios/axios.min.js"></script>
-    <script src="./../js/request.js?v=20260917"></script>
-    <script src="./../js/common.js?v=20260924"></script>
+    <script src="./../js/request.js?v=20260927"></script>
+    <script src="./../js/common.js?v=20260927"></script>
     <script src="./../api/main.js?v=20260918"></script>
     <script src="./../api/favorite.js?v=20260921"></script>
     <script>
