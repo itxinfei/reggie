@@ -101,12 +101,13 @@ public class CostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        List<DishCost> list = costService.getDishCostList(1L);
+        // 落库 tenant_id 由租户插件按上下文（setUp/会话均为 999）写入，查询须同租户号，写死 1 会与插件条件互斥
+        List<DishCost> list = costService.getDishCostList(999L);
         assertThat(list).hasSize(1);
         DishCost saved = list.get(0);
         assertThat(saved.getDishName()).isEqualTo("宫保鸡丁");
         assertThat(saved.getTotalCost()).isEqualByComparingTo(new BigDecimal("12.00"));
-        assertThat(saved.getTenantId()).isEqualTo(1L);
+        assertThat(saved.getTenantId()).isEqualTo(999L);
     }
 
     @Test
@@ -117,7 +118,7 @@ public class CostControllerTest {
                 new BigDecimal("1.50"), new BigDecimal("30.00"));
         costService.saveOrUpdateDishCost(dishCost);
 
-        DishCost saved = costService.getDishCostByDishId(101L, 1L);
+        DishCost saved = costService.getDishCostByDishId(101L, 999L);
         assertThat(saved).isNotNull();
         Long id = saved.getId();
 
@@ -132,7 +133,7 @@ public class CostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        DishCost updated = costService.getDishCostByDishId(101L, 1L);
+        DishCost updated = costService.getDishCostByDishId(101L, 999L);
         assertThat(updated).isNotNull();
         assertThat(updated.getId()).isEqualTo(id);
         assertThat(updated.getSalePrice()).isEqualByComparingTo(new BigDecimal("35.00"));
@@ -146,7 +147,7 @@ public class CostControllerTest {
                 new BigDecimal("8.50"), new BigDecimal("2.00"),
                 new BigDecimal("1.50"), new BigDecimal("30.00"));
         costService.saveOrUpdateDishCost(dishCost);
-        DishCost saved = costService.getDishCostByDishId(101L, 1L);
+        DishCost saved = costService.getDishCostByDishId(101L, 999L);
         assertThat(saved).isNotNull();
 
         mockMvc.perform(withCsrfToken(delete("/cost/dish/{id}", saved.getId())
@@ -155,7 +156,7 @@ public class CostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        DishCost deleted = costService.getDishCostByDishId(101L, 1L);
+        DishCost deleted = costService.getDishCostByDishId(101L, 999L);
         assertThat(deleted).isNull();
     }
 
@@ -177,7 +178,7 @@ public class CostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        List<DishCost> list = costService.getDishCostList(1L);
+        List<DishCost> list = costService.getDishCostList(999L);
         assertThat(list).hasSize(2);
     }
 
@@ -202,7 +203,7 @@ public class CostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        List<CostRecord> list = costService.getCostRecordList(null, null, null, 1L);
+        List<CostRecord> list = costService.getCostRecordList(null, null, null, 999L);
         assertThat(list).hasSize(1);
         assertThat(list.get(0).getCostType()).isEqualTo(1);
         assertThat(list.get(0).getAmount()).isEqualByComparingTo(new BigDecimal("25.00"));
@@ -245,7 +246,7 @@ public class CostControllerTest {
         record.setCostDate(LocalDateTime.now());
         costService.saveCostRecord(record);
 
-        List<CostRecord> list = costService.getCostRecordList(null, null, null, 1L);
+        List<CostRecord> list = costService.getCostRecordList(null, null, null, 999L);
         Long id = list.get(0).getId();
 
         mockMvc.perform(withCsrfToken(delete("/cost/record/{id}", id)
@@ -254,7 +255,7 @@ public class CostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        List<CostRecord> after = costService.getCostRecordList(null, null, null, 1L);
+        List<CostRecord> after = costService.getCostRecordList(null, null, null, 999L);
         assertThat(after).isEmpty();
     }
 
@@ -280,7 +281,7 @@ public class CostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        List<LaborCost> list = costService.getLaborCostList(null, 1L);
+        List<LaborCost> list = costService.getLaborCostList(null, 999L);
         assertThat(list).hasSize(1);
         assertThat(list.get(0).getTotalCost()).isEqualByComparingTo(new BigDecimal("6000.00"));
         assertThat(list.get(0).getEmployeeName()).isEqualTo("张师傅");
@@ -311,7 +312,7 @@ public class CostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        List<LaborCost> list = costService.getLaborCostList(null, 1L);
+        List<LaborCost> list = costService.getLaborCostList(null, 999L);
         assertThat(list).hasSize(2);
     }
 
@@ -335,7 +336,7 @@ public class CostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        List<OtherCost> list = costService.getOtherCostList(null, null, null, 1L);
+        List<OtherCost> list = costService.getOtherCostList(null, null, null, 999L);
         assertThat(list).hasSize(1);
         assertThat(list.get(0).getName()).isEqualTo("店面租金");
         assertThat(list.get(0).getCostType()).isEqualTo(1);

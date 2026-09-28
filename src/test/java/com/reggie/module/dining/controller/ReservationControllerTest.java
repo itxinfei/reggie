@@ -32,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 // 组合 payment-controller schema：到店联动开台会写 orders 表
-@Sql(scripts = {"classpath:schema-dining.sql", "classpath:schema-payment-controller.sql"},
+@Sql(scripts = "classpath:schema-dining.sql",
         executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class ReservationControllerTest {
 

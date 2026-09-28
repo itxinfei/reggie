@@ -113,13 +113,13 @@ public class FinanceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 1L);
+        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 999L);
         assertThat(list).hasSize(1);
         WithdrawalApplication saved = list.get(0);
         assertThat(saved.getApplicationNo()).startsWith("WD");
         assertThat(saved.getStatus()).isEqualTo(WithdrawalApplication.STATUS_PENDING);
         assertThat(saved.getAmount()).isEqualByComparingTo(new BigDecimal("500.00"));
-        assertThat(saved.getTenantId()).isEqualTo(1L);
+        assertThat(saved.getTenantId()).isEqualTo(999L);
     }
 
     @Test
@@ -129,7 +129,7 @@ public class FinanceControllerTest {
                 new BigDecimal("500.00"), 1, "6222021234567890", "张三");
         financeService.createWithdrawal(application);
 
-        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 1L);
+        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 999L);
         Long id = list.get(0).getId();
 
         mockMvc.perform(withCsrfToken(post("/finance/withdrawal/{id}/review", id)
@@ -153,7 +153,7 @@ public class FinanceControllerTest {
                 new BigDecimal("500.00"), 1, "6222021234567890", "张三");
         financeService.createWithdrawal(application);
 
-        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 1L);
+        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 999L);
         Long id = list.get(0).getId();
 
         mockMvc.perform(withCsrfToken(post("/finance/withdrawal/{id}/review", id)
@@ -176,7 +176,7 @@ public class FinanceControllerTest {
                 new BigDecimal("300.00"), 2, "alipay_account", "张三");
         financeService.createWithdrawal(application);
 
-        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 1L);
+        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 999L);
         Long id = list.get(0).getId();
 
         // 先审批通过
@@ -204,7 +204,7 @@ public class FinanceControllerTest {
                 new BigDecimal("200.00"), 3, "wechat_account", "张三");
         financeService.createWithdrawal(application);
 
-        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 1L);
+        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 999L);
         Long id = list.get(0).getId();
 
         mockMvc.perform(withCsrfToken(post("/finance/withdrawal/{id}/cancel", id)
@@ -225,7 +225,7 @@ public class FinanceControllerTest {
                 new BigDecimal("100.00"), 1, "6222021234567890", "张三");
         financeService.createWithdrawal(application);
 
-        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 1L);
+        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 999L);
         Long id = list.get(0).getId();
 
         mockMvc.perform(withCsrfToken(delete("/finance/withdrawal/{id}", id)
@@ -245,7 +245,7 @@ public class FinanceControllerTest {
                 new BigDecimal("800.00"), 1, "6222021234567890", "张三");
         financeService.createWithdrawal(application);
 
-        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 1L);
+        List<WithdrawalApplication> list = financeService.getWithdrawalList(null, null, null, 999L);
         Long id = list.get(0).getId();
 
         mockMvc.perform(get("/finance/withdrawal/{id}", id)
@@ -307,7 +307,7 @@ public class FinanceControllerTest {
                 .andExpect(jsonPath("$.data.statementDate").value(date.toString()));
 
         List<ReconciliationStatement> list = financeService.getReconciliationList(
-                null, null, null, 1L);
+                null, null, null, 999L);
         assertThat(list).hasSize(1);
         assertThat(list.get(0).getPlatform()).isEqualTo("all");
         assertThat(list.get(0).getStatus()).isEqualTo(ReconciliationStatement.STATUS_UNRECONCILED);
@@ -329,7 +329,7 @@ public class FinanceControllerTest {
         reconciliationMapper.insert(statement);
 
         List<ReconciliationStatement> list = financeService.getReconciliationList(
-                null, null, null, 1L);
+                null, null, null, 999L);
         Long id = list.get(0).getId();
 
         mockMvc.perform(withCsrfToken(post("/finance/reconciliation/{id}/confirm", id)
@@ -360,7 +360,7 @@ public class FinanceControllerTest {
         reconciliationMapper.insert(statement);
 
         List<ReconciliationStatement> list = financeService.getReconciliationList(
-                null, null, null, 1L);
+                null, null, null, 999L);
         Long id = list.get(0).getId();
 
         mockMvc.perform(withCsrfToken(post("/finance/reconciliation/{id}/confirm", id)
@@ -391,7 +391,7 @@ public class FinanceControllerTest {
         reconciliationMapper.insert(statement);
 
         List<ReconciliationStatement> list = financeService.getReconciliationList(
-                null, null, null, 1L);
+                null, null, null, 999L);
         Long id = list.get(0).getId();
 
         mockMvc.perform(withCsrfToken(delete("/finance/reconciliation/{id}", id)
@@ -420,7 +420,7 @@ public class FinanceControllerTest {
         reconciliationMapper.insert(statement);
 
         List<ReconciliationStatement> list = financeService.getReconciliationList(
-                null, null, null, 1L);
+                null, null, null, 999L);
         Long id = list.get(0).getId();
 
         mockMvc.perform(get("/finance/reconciliation/{id}", id)
@@ -460,10 +460,10 @@ public class FinanceControllerTest {
                 .andExpect(jsonPath("$.data.analysisDate").value(date.toString()))
                 .andExpect(jsonPath("$.data.totalRevenue").isNumber());
 
-        ProfitAnalysis analysis = financeService.getProfitAnalysisByDate(date, 1L);
+        ProfitAnalysis analysis = financeService.getProfitAnalysisByDate(date, 999L);
         assertThat(analysis).isNotNull();
         assertThat(analysis.getAnalysisDate()).isEqualTo(date);
-        assertThat(analysis.getTenantId()).isEqualTo(1L);
+        assertThat(analysis.getTenantId()).isEqualTo(999L);
     }
 
     @Test

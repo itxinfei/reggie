@@ -94,7 +94,7 @@ class CustomerUrgencyTest {
     @Test
     void trigger_ownPendingOrder_succeedsAndNotifiesManager() {
         when(orderMapper.selectById(100L)).thenReturn(order(100L, 1L, Orders.STATUS_ORDERED));
-        when(urgencyMapper.countTodayByMember(eq(1L), eq(1L), any())).thenReturn(0);
+        when(urgencyMapper.countTodayByMember(eq(1L), eq(999L), any())).thenReturn(0);
         when(urgencyMapper.selectOne(any())).thenReturn(null);
         mockManager();
 
@@ -110,7 +110,7 @@ class CustomerUrgencyTest {
     @Test
     void trigger_deliveringOrder_succeeds() {
         when(orderMapper.selectById(101L)).thenReturn(order(101L, 1L, Orders.STATUS_DELIVERING));
-        when(urgencyMapper.countTodayByMember(eq(1L), eq(1L), any())).thenReturn(0);
+        when(urgencyMapper.countTodayByMember(eq(1L), eq(999L), any())).thenReturn(0);
         when(urgencyMapper.selectOne(any())).thenReturn(null);
         mockManager();
 
@@ -153,7 +153,7 @@ class CustomerUrgencyTest {
     void trigger_overDailyLimit_notNotifies() {
         when(orderMapper.selectById(105L)).thenReturn(order(105L, 1L, Orders.STATUS_ORDERED));
         // 今日已催 3 次，达上限
-        when(urgencyMapper.countTodayByMember(eq(1L), eq(1L), any())).thenReturn(3);
+        when(urgencyMapper.countTodayByMember(eq(1L), eq(999L), any())).thenReturn(3);
 
         R<Map<String, Object>> result = urgencyService.customerTrigger(105L, 1L);
 

@@ -92,11 +92,11 @@ class CustomerPortalControllerTest {
     void createSession_loggedIn_usesRealUserName() {
         when(userService.getById(1L)).thenReturn(user(1L, "张三", "13800138000"));
         CsSession created = session(10, 1, CsSession.STATUS_WAITING);
-        when(customerService.createSession(1L, "张三", 1, null, 1L)).thenReturn(created);
+        when(customerService.createSession(1L, "张三", 1, null, 999L)).thenReturn(created);
 
         R<CsSession> r = controller.createSession(1, null);
 
-        verify(customerService).createSession(eq(1L), eq("张三"), eq(1), eq(null), eq(1L));
+        verify(customerService).createSession(eq(1L), eq("张三"), eq(1), eq(null), eq(999L));
         assertEquals(created, r.getData());
     }
 
@@ -109,7 +109,7 @@ class CustomerPortalControllerTest {
 
     @Test
     void listMySessions_filtersByCurrentUser() {
-        when(customerService.getSessionList(null, 1L)).thenReturn(Arrays.asList(
+        when(customerService.getSessionList(null, 999L)).thenReturn(Arrays.asList(
                 session(1, 1, CsSession.STATUS_IN_PROGRESS),
                 session(2, 999, CsSession.STATUS_IN_PROGRESS),
                 session(3, 1, CsSession.STATUS_CLOSED)));
@@ -152,7 +152,7 @@ class CustomerPortalControllerTest {
         controller.sendMessage(body("sessionId", 5, "content", "你好"));
 
         verify(customerService).sendMessage(eq(5L), eq(CsMessage.SENDER_USER), eq(1L), eq("张三"),
-                eq(CsMessage.TYPE_TEXT), eq("你好"), eq(null), eq(1L));
+                eq(CsMessage.TYPE_TEXT), eq("你好"), eq(null), eq(999L));
     }
 
     @Test
@@ -245,7 +245,7 @@ class CustomerPortalControllerTest {
         Complaint other = new Complaint();
         other.setId(2L);
         other.setUserId(999L);
-        when(customerService.getComplaintList(null, null, 1L)).thenReturn(Arrays.asList(mine, other));
+        when(customerService.getComplaintList(null, null, 999L)).thenReturn(Arrays.asList(mine, other));
 
         R<List<Complaint>> r = controller.listMyComplaints(null, null);
 

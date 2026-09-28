@@ -1,5 +1,6 @@
 package com.reggie.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
 import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.tenant.service.TenantService;
@@ -39,7 +40,11 @@ public class TenantManageControllerTest extends BaseControllerTest {
     // 专属测试租户固定高 id，递增分配，永不为 1，与方法执行顺序彻底解耦
     private static final AtomicLong TENANT_SEQ = new AtomicLong(900000L);
 
-    // 本类各用例专属租户（不清理 tenant 表，避免影响依赖租户的其他测试）
+    // 本类保留 id 段：AtomicLong 每次类加载都从 900000 重启，故须先清上轮残留才能跨运行幂等
+    private static final long TENANT_RANGE_MIN = 900001L;
+    private static final long TENANT_RANGE_MAX = 900999L;
+
+    // 本类各用例专属租户（只清 900001~900999 本类保留段，绝不触碰其他租户，避免影响依赖租户的测试）
     private Long tenantId;
     private String uniqueName;
 
@@ -56,6 +61,9 @@ public class TenantManageControllerTest extends BaseControllerTest {
             anchor.setStatus(1);
             tenantService.save(anchor);
         }
+
+        tenantService.remove(new LambdaQueryWrapper<Tenant>()
+                .between(Tenant::getId, TENANT_RANGE_MIN, TENANT_RANGE_MAX));
 
         uniqueName = "平台管理测试租户-" + System.nanoTime();
         Tenant tenant = new Tenant();
@@ -136,15 +144,23 @@ public class TenantManageControllerTest extends BaseControllerTest {
 
     @Test
     void testCannotDisableCurrentTenant() throws Exception {
-        // 尝试禁用当前登录账号所属租户（锚点 1L），应被拒绝，并断言命中目标分支
-        mockMvc.perform(withCsrfToken(mockMvc, put("/tenant/status")
-                .requestAttr("roleKey", "SUPER_ADMIN")
-                .sessionAttr("employee", 1L)
-                .param("id", "1")
-                .param("status", "0")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.msg").value(
-                        org.hamcrest.Matchers.containsString("当前登录账号所属租户")));
+        // 该分支比对的是 BaseContext.getCurrentTenantId()，故须把当前租户切到锚点 1L；
+        // setUp 统一设的是 999，不覆盖则守卫判定"不是自己的租户"而放行（code=1）
+        BaseContext.setCurrentTenantId(1L);
+        try {
+            // 尝试禁用当前登录账号所属租户（锚点 1L），应被拒绝，并断言命中目标分支
+            mockMvc.perform(withCsrfToken(mockMvc, put("/tenant/status")
+                    .requestAttr("roleKey", "SUPER_ADMIN")
+                    .sessionAttr("employee", 1L)
+                    .param("id", "1")
+                    .param("status", "0")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.msg").value(
+                            org.hamcrest.Matchers.containsString("当前登录账号所属租户")));
+        } finally {
+            // 复用 fork 的 JVM 会带着 ThreadLocal 进入下一个测试类，须还原
+            BaseContext.setCurrentTenantId(999L);
+        }
     }
 }

@@ -61,6 +61,12 @@ public class RoleControllerTest extends BaseControllerTest {
     @BeforeEach
     void setUp() {
         cleaner.cleanTables("role", "permission", "role_permission", "system_config", "employee_role");
+        // cleanTables 只删 tenant_id=999；本类用到的 test_* role_key 可能与其它测试类
+        // （RoleMapperTest 会把 TEST_* 挂在租户 1/2/NULL）在 idx_role_key 上大小写不敏感地撞车，
+        // 这里按前缀把整段命名空间连根清掉，保证与执行顺序无关。
+        cleaner.cleanByCondition("role_permission",
+                "role_id IN (SELECT id FROM role WHERE role_key LIKE ?)", "TEST\\_%");
+        cleaner.cleanByCondition("role", "role_key LIKE ?", "TEST\\_%");
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(999L);
 

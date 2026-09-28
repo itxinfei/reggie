@@ -2,6 +2,7 @@ package com.reggie.module.sys.mapper;
 
 import com.reggie.module.sys.model.Role;
 import com.reggie.test.TestDatabaseCleaner;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,11 +42,7 @@ public class RoleMapperTest {
 
     @BeforeEach
     void setUp() {
-        // 幂等清理：仅清 TEST_ 前缀角色，绝不碰真实 role_key（role_key 为全局唯一索引）。
-        // 必须先清 role_permission（其子查询依赖 role 行仍存在），再清 role 本身。
-        cleaner.cleanByCondition("role_permission",
-                "role_id IN (SELECT id FROM role WHERE role_key LIKE ?)", "TEST\\_%");
-        cleaner.cleanByCondition("role", "role_key LIKE ?", "TEST\\_%");
+        deleteTestRoles();
         // 模拟 seed：全局角色挂在 tenant_id=1（idx_role_key 全局唯一，各租户共享）
         insertRole("超级管理员", "TEST_SUPER_ADMIN", 1L, 1);
         insertRole("店长", "TEST_STORE_MANAGER", 1L, 1);
@@ -53,6 +50,25 @@ public class RoleMapperTest {
         insertRole("公共收银员", "TEST_CASHIER", null, 1);
         // 租户2私有角色
         insertRole("门店厨师", "TEST_CHEF", 2L, 1);
+    }
+
+    /**
+     * 本类夹具挂在租户 1 / 2 / NULL 上（正是被测兜底逻辑的前提），
+     * 而 {@link TestDatabaseCleaner#cleanTables} 只删 tenant_id=999，够不着这些行；
+     * role.idx_role_key 又是全局唯一且大小写不敏感，残留会让后跑的
+     * RoleControllerTest 插 test_cashier 直接 Duplicate entry。故跑完必须自己带走。
+     */
+    @AfterEach
+    void tearDown() {
+        deleteTestRoles();
+    }
+
+    private void deleteTestRoles() {
+        // 幂等清理：仅清 TEST_ 前缀角色，绝不碰真实 role_key。
+        // 必须先清 role_permission（其子查询依赖 role 行仍存在），再清 role 本身。
+        cleaner.cleanByCondition("role_permission",
+                "role_id IN (SELECT id FROM role WHERE role_key LIKE ?)", "TEST\\_%");
+        cleaner.cleanByCondition("role", "role_key LIKE ?", "TEST\\_%");
     }
 
     private void insertRole(String name, String key, Long tenantId, Integer status) {

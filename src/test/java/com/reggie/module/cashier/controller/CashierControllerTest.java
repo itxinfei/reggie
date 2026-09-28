@@ -105,7 +105,7 @@ public class CashierControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        List<CashierRecord> list = cashierService.getCashierRecordList(null, null, null, 1L);
+        List<CashierRecord> list = cashierService.getCashierRecordList(null, null, null, 999L);
         assertThat(list).hasSize(1);
         assertThat(list.get(0).getOrderNumber()).isEqualTo("ORD001");
         assertThat(list.get(0).getAmount()).isEqualByComparingTo(new BigDecimal("50.00"));
@@ -142,7 +142,7 @@ public class CashierControllerTest {
                 .andExpect(jsonPath("$.code").value(0));
 
         // 收银记录不应被创建
-        List<CashierRecord> list = cashierService.getCashierRecordList(null, null, null, 1L);
+        List<CashierRecord> list = cashierService.getCashierRecordList(null, null, null, 999L);
         assertThat(list).isEmpty();
     }
 
@@ -153,7 +153,7 @@ public class CashierControllerTest {
                 new BigDecimal("200.00"), new BigDecimal("200.00"));
         cashierService.saveCashierRecord(record);
 
-        List<CashierRecord> list = cashierService.getCashierRecordList(null, null, null, 1L);
+        List<CashierRecord> list = cashierService.getCashierRecordList(null, null, null, 999L);
         Long id = list.get(0).getId();
 
         mockMvc.perform(withCsrfToken(delete("/cashier/record/{id}", id)
@@ -162,7 +162,7 @@ public class CashierControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        List<CashierRecord> after = cashierService.getCashierRecordList(null, null, null, 1L);
+        List<CashierRecord> after = cashierService.getCashierRecordList(null, null, null, 999L);
         assertThat(after).isEmpty();
     }
 
@@ -197,7 +197,7 @@ public class CashierControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        DailySettlement settlement = cashierService.getDailySettlementByDate(settlementDate, 1L);
+        DailySettlement settlement = cashierService.getDailySettlementByDate(settlementDate, 999L);
         assertThat(settlement).isNotNull();
         assertThat(settlement.getStatus()).isEqualTo(1);
     }
@@ -246,7 +246,7 @@ public class CashierControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        DailySettlement cancelled = cashierService.getDailySettlementByDate(settlementDate, 1L);
+        DailySettlement cancelled = cashierService.getDailySettlementByDate(settlementDate, 999L);
         assertThat(cancelled).isNotNull();
         assertThat(cancelled.getStatus()).isEqualTo(0);
     }
@@ -264,7 +264,7 @@ public class CashierControllerTest {
         settlement.setTenantId(999L);
         settlementMapper.insert(settlement);
 
-        DailySettlement saved = cashierService.getDailySettlementByDate(LocalDate.of(2026, 8, 22), 1L);
+        DailySettlement saved = cashierService.getDailySettlementByDate(LocalDate.of(2026, 8, 22), 999L);
         assertThat(saved).isNotNull();
         Long id = saved.getId();
 
@@ -274,7 +274,7 @@ public class CashierControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        DailySettlement deleted = cashierService.getDailySettlementByDate(LocalDate.of(2026, 8, 22), 1L);
+        DailySettlement deleted = cashierService.getDailySettlementByDate(LocalDate.of(2026, 8, 22), 999L);
         assertThat(deleted).isNull();
     }
 

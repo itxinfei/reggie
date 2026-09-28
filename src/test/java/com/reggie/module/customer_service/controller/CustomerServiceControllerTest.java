@@ -126,7 +126,7 @@ public class CustomerServiceControllerTest {
     @Test
     @DisplayName("4. 获取会话列表 - 按状态筛选")
     void testGetSessionList_byStatus() throws Exception {
-        CsSession session = createSession(1001L, "UserA", CsSession.STATUS_WAITING, 1L);
+        CsSession session = createSession(1001L, "UserA", CsSession.STATUS_WAITING, 999L);
         sessionMapper.insert(session);
 
         mockMvc.perform(get("/cs/session/list")
@@ -142,7 +142,7 @@ public class CustomerServiceControllerTest {
     @Test
     @DisplayName("5. 获取会话详情 - 按ID查询")
     void testGetSessionById() throws Exception {
-        CsSession session = createSession(2001L, "UserB", CsSession.STATUS_WAITING, 1L);
+        CsSession session = createSession(2001L, "UserB", CsSession.STATUS_WAITING, 999L);
         sessionMapper.insert(session);
         Long id = session.getId();
 
@@ -157,7 +157,7 @@ public class CustomerServiceControllerTest {
     @Test
     @DisplayName("6. 分配客服 - 成功")
     void testAssignAgent_success() throws Exception {
-        CsSession session = createSession(3001L, "UserC", CsSession.STATUS_WAITING, 1L);
+        CsSession session = createSession(3001L, "UserC", CsSession.STATUS_WAITING, 999L);
         sessionMapper.insert(session);
         Long id = session.getId();
 
@@ -192,7 +192,7 @@ public class CustomerServiceControllerTest {
     @Test
     @DisplayName("8. 关闭会话 - 成功")
     void testCloseSession_success() throws Exception {
-        CsSession session = createSession(4001L, "UserD", CsSession.STATUS_IN_PROGRESS, 1L);
+        CsSession session = createSession(4001L, "UserD", CsSession.STATUS_IN_PROGRESS, 999L);
         session.setAgentId(100L);
         session.setAgentName("客服小张");
         sessionMapper.insert(session);
@@ -229,7 +229,7 @@ public class CustomerServiceControllerTest {
     @Test
     @DisplayName("10. 发送消息 - 成功")
     void testSendMessage_success() throws Exception {
-        CsSession session = createSession(5001L, "UserE", CsSession.STATUS_IN_PROGRESS, 1L);
+        CsSession session = createSession(5001L, "UserE", CsSession.STATUS_IN_PROGRESS, 999L);
         sessionMapper.insert(session);
         Long sessionId = session.getId();
 
@@ -250,7 +250,7 @@ public class CustomerServiceControllerTest {
     @Test
     @DisplayName("11. 获取会话消息列表")
     void testGetSessionMessages() throws Exception {
-        CsSession session = createSession(6001L, "UserF", CsSession.STATUS_IN_PROGRESS, 1L);
+        CsSession session = createSession(6001L, "UserF", CsSession.STATUS_IN_PROGRESS, 999L);
         sessionMapper.insert(session);
         Long sessionId = session.getId();
 
@@ -274,7 +274,7 @@ public class CustomerServiceControllerTest {
     @Test
     @DisplayName("12. 获取未读消息数量")
     void testGetUnreadMessageCount() throws Exception {
-        CsSession session = createSession(7001L, "UserG", CsSession.STATUS_IN_PROGRESS, 1L);
+        CsSession session = createSession(7001L, "UserG", CsSession.STATUS_IN_PROGRESS, 999L);
         sessionMapper.insert(session);
         Long sessionId = session.getId();
 
@@ -301,7 +301,7 @@ public class CustomerServiceControllerTest {
     @Test
     @DisplayName("13. 标记消息已读")
     void testMarkMessagesAsRead() throws Exception {
-        CsSession session = createSession(8001L, "UserH", CsSession.STATUS_IN_PROGRESS, 1L);
+        CsSession session = createSession(8001L, "UserH", CsSession.STATUS_IN_PROGRESS, 999L);
         sessionMapper.insert(session);
         Long sessionId = session.getId();
 
@@ -456,7 +456,7 @@ public class CustomerServiceControllerTest {
     @Test
     @DisplayName("21. 获取客服统计数据")
     void testGetCustomerServiceStatistics() throws Exception {
-        CsSession session = createSession(1501L, "UserO", CsSession.STATUS_IN_PROGRESS, 1L);
+        CsSession session = createSession(1501L, "UserO", CsSession.STATUS_IN_PROGRESS, 999L);
         session.setCreateTime(LocalDateTime.of(2026, 8, 28, 10, 0, 0));
         session.setFirstResponseTime(LocalDateTime.of(2026, 8, 28, 10, 5, 0));
         sessionMapper.insert(session);
@@ -497,7 +497,7 @@ public class CustomerServiceControllerTest {
     @Test
     @DisplayName("23. 获取客服工作量统计")
     void testGetAgentWorkload() throws Exception {
-        CsSession session = createSession(1701L, "UserQ", CsSession.STATUS_CLOSED, 1L);
+        CsSession session = createSession(1701L, "UserQ", CsSession.STATUS_CLOSED, 999L);
         session.setAgentId(100L);
         session.setAgentName("客服小王");
         session.setCreateTime(LocalDateTime.of(2026, 8, 28, 9, 0, 0));

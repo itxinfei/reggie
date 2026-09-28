@@ -128,12 +128,13 @@ public class PlatformConfigServiceTest {
     void testTenantIsolation() {
         BaseContext.setCurrentTenantId(999L);
         platformConfigService.addConfig(buildConfig("MEITUAN", "A1", "k", "s", "t"));
-        // 切到租户2，新建设置 tenant_id=2
-        BaseContext.setCurrentTenantId(2L);
+        // 切到租户998，新建设置 tenant_id=998（998 是 schema-platform.sql 清理名单里的保留测试租户；
+        // 若用未登记的业务租户号，残留不会被清，跨运行累积会让 size 断言失真）
+        BaseContext.setCurrentTenantId(998L);
         platformConfigService.addConfig(buildConfig("MEITUAN", "A2", "k", "s", "t"));
 
-        // 当前线程 tenant=2，仅应看到 A2
-        BaseContext.setCurrentTenantId(2L);
+        // 当前线程 tenant=998，仅应看到 A2
+        BaseContext.setCurrentTenantId(998L);
         IPage<PlatformConfig> page = platformConfigService.pageMasked(
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 10));
         assertEquals(1, page.getRecords().size());
