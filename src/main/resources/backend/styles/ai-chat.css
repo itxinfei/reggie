@@ -580,7 +580,8 @@
 }
 .conv-item:hover .conv-actions { opacity: 1; }
 .conv-action-btn {
-  width: 22px; height: 22px; border-radius: 50%;
+  /* WCAG 2.5.8 Target Size(AA) 要求点击区不小于 24x24，原 22px 不达标 */
+  width: 24px; height: 24px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 13px; color: var(--text-muted); cursor: pointer;
   border: none; background: transparent; transition: all var(--transition-fast);

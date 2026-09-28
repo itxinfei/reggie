@@ -48,8 +48,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>列表页模板 - 瑞吉外卖管理端</title>
 
-    <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+    <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -127,7 +127,7 @@
       <el-form ref="form" :model="form" :rules="formRules" label-width="100px">
         <!-- 替换为你的表单字段 -->
         <el-form-item label="名称：" prop="name">
-          <el-input v-model="form.name" placeholder="请输入名称" />
+          <el-input v-model="form.name" placeholder="请输入名称" ></el-input>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -136,10 +136,10 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <!-- <script src="../../api/xxx.js?v=20260915c"></script>  接入你的 API -->
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <!-- <script src="../../api/xxx.js?v=20260926"></script>  接入你的 API -->
   <script src="../../js/components.js?v=20260924"></script>
 <script>
     // ⑤ 状态枚举注册（消除各页重复定义 statusMap/typeMap）

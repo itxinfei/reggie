@@ -18,9 +18,13 @@
 
 /* ========== 1. 无障碍（a11y）基础设施 ========== */
 
-/* 键盘聚焦可见环（WCAG 2.4.7）：键盘用户可见，鼠标点击不显示 */
+/* 键盘聚焦可见环（WCAG 2.4.7）：键盘用户可见，鼠标点击不显示。
+   必须用 !important：组件库里大量 `.el-input__inner { outline: 0 }`、
+   `.el-submenu__title:focus { outline: 0 }` 之类的规则特异性不低于本选择器，
+   且部分在样式表引入顺序上更靠后，只靠特异性会被静默压掉——实测内容页的
+   el-input 与侧边栏菜单此前聚焦时都完全没有焦点环。 */
 :focus-visible {
-  outline: 2px solid var(--color-brand-600);
+  outline: 2px solid var(--color-brand-600) !important;
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
@@ -220,7 +224,9 @@ a.breadcrumb__item:hover,
 /* 分隔符 */
 .crumb-sep,
 .breadcrumb__sep {
-  color: var(--color-gray-300);
+  /* 修改点：原 gray-300 (#d1d5db) 白底对比度 1.47，视觉上等于没有。
+     改用 gray-500，可见性达标（装饰性文本同时用 aria-hidden 对读屏隐藏）。*/
+  color: var(--color-gray-500);
   font-size: var(--font-size-xs);
   margin: 0 2px;
   user-select: none;
@@ -234,23 +240,23 @@ a.breadcrumb__item:hover,
   padding: var(--space-1) var(--space-2);
   border: none;
   background: transparent;
-  color: var(--color-brand-700);
+  color: var(--color-brand-text); /* P0 对比度修复：brand-700 白底仅 2.76:1 */
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
-.ds-link:hover { background: var(--color-brand-50); color: var(--color-brand-800); }
+.ds-link:hover { background: var(--color-brand-50); color: var(--color-brand-text-hover); }
 .ds-link:disabled, .ds-link.is-disabled { color: var(--color-gray-300); cursor: not-allowed; }
-.ds-link--danger { color: var(--color-danger-dark); }
-.ds-link--danger:hover { background: var(--color-danger-light); color: var(--color-danger-dark); }
+.ds-link--danger { color: var(--color-danger-text); }
+.ds-link--danger:hover { background: var(--color-danger-light); color: var(--color-danger-text-hover); }
 
 /* Element UI text-button 语义色工具类（替代 style="color:var(--xxx)"） */
-.btn-brand-text { color: var(--color-brand-700) !important; }
-.btn-brand-text:hover { color: var(--color-brand-800) !important; }
-.btn-warning-text { color: var(--color-warning) !important; }
-.btn-warning-text:hover { color: var(--color-warning-dark) !important; }
+.btn-brand-text { color: var(--color-brand-text) !important; }
+.btn-brand-text:hover { color: var(--color-brand-text-hover) !important; }
+.btn-warning-text { color: var(--color-warning-text) !important; }
+.btn-warning-text:hover { color: var(--color-warning-text-hover) !important; }
 
 /* ========== 7. 品牌色按钮对齐（Element UI → token，主色=金） ========== */
 /* 主按钮：金色底 + 深色字（满足金色背景上 WCAG AA 对比度）
@@ -438,12 +444,14 @@ a.breadcrumb__item:hover,
 
 /* 金额语义色工具类（替代页面内联 color/font-weight，单一来源） */
 .ds-money--gold {
-  color: var(--legacy-f59e0b);
+  /* 修改点：#f59e0b 白底仅 2.36:1，金额是核心数字必须清晰。改用已备好的 warning-text(#a16207, 4.92:1)。 */
+  color: var(--color-warning-text);
   font-weight: 700;
   font-size: 15px;
 }
 .ds-money--danger {
-  color: var(--color-danger);
+  /* 修改点：#f56c6c 白底仅 2.90:1，金额不可读。改用 danger-text(#c0392b, 5.44:1)。 */
+  color: var(--color-danger-text);
   font-weight: 600;
 }
 .ds-money--success {
@@ -654,7 +662,8 @@ a.breadcrumb__item:hover,
 
 .el-pagination .el-pager li.active {
   background: var(--color-brand-500);
-  color: white;
+  /* 修改点：白字压 #ffc200 金底对比度仅 1.62，页码数字读不出来。改用 text-on-brand 深色。 */
+  color: var(--text-on-brand);
 }
 
 /* ========== 标签样式增强 ========== */

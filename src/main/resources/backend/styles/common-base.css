@@ -1216,7 +1216,8 @@ input[type="number"] {
 }
 .el-pagination.is-background .el-pager li:not(.disabled).active {
   background-color: var(--color-brand-500);
-  color: var(--color-white);
+  /* 修改点：白字压 #ffc200 金底对比度仅 1.62，页码数字看不清。改用 text-on-brand（深色）。*/
+  color: var(--text-on-brand);
 }
 .el-dialog,
 .el-pager li {

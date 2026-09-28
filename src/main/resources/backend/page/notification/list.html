@@ -7,8 +7,8 @@
 
     <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
     <!-- main.css 已 @import tokens/element 样式/各组件样式，仅额外引 stat-cards 独立产物 -->
-    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
-    <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260926" />
     <style>
         body { font-family: var(--font-family-base);
                background: var(--bg-page); color: var(--text-primary); }
@@ -20,7 +20,7 @@
         .mock-banner { background: var(--color-warning-light); border: 1px solid var(--color-warning);
                        border-radius: var(--radius-md); padding: var(--space-2) var(--space-4);
                        margin-bottom: var(--space-4); font-size: var(--font-size-sm);
-                       color: var(--color-warning-dark); display: flex; align-items: center; gap: var(--space-2); }
+                       color: var(--color-warning-text); display: flex; align-items: center; gap: var(--space-2); }
 
         /* ===== 双栏穿梭选择（短信/APP推送） ===== */
         .user-select-panel { display: flex; gap: var(--space-4); min-height: 400px; }
@@ -90,12 +90,12 @@
         /* 用户状态小徽标（穿梭表内） */
         .status-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm);
                         font-size: var(--font-size-xs); }
-        .status-on { background: var(--color-success-light); color: var(--color-success);
+        .status-on { background: var(--color-success-light); color: var(--color-success-text);
                      border: 1px solid var(--color-success); }
         .status-off { background: var(--color-danger-light); color: var(--color-danger);
                       border: 1px solid var(--color-danger); }
 
-        .col-success { color: var(--color-success); font-weight: 600; }
+        .col-success { color: var(--color-success-text); font-weight: 600; }
         .col-fail { color: var(--color-danger); font-weight: 600; }
 
         .empty-inline { text-align: center; padding: var(--space-6); color: var(--text-muted); }
@@ -522,12 +522,12 @@
     <!-- 补入 element-ui（原页漏引导致 el-* 不渲染） -->
     <script src="../../plugins/element-ui/index.js?v=20260915"></script>
     <script src="../../plugins/axios/axios.min.js"></script>
-    <script src="../../js/request.js?v=20260915c"></script>
-    <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-    <script src="../../js/performance-utils.js?v=20260915c"></script>
-    <script src="../../api/user.js?v=20260915c"></script>
+    <script src="../../js/request.js?v=20260926"></script>
+    <script src="../../js/accessibility-utils.js?v=20260927"></script>
+    <script src="../../js/performance-utils.js?v=20260926"></script>
+    <script src="../../api/user.js?v=20260926"></script>
     <script src="../../js/components.js?v=20260924"></script>
-    <script src="../../api/notification.js?v=20260915c"></script>
+    <script src="../../api/notification.js?v=20260926"></script>
     <script>
         new Vue({
             el: '#app',

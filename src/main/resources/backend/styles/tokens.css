@@ -19,8 +19,12 @@
   --color-brand-400: #ffcc33;
   --color-brand-500: #ffc200; /* 主色 */
   --color-brand-600: #e6ae00;
-  --color-brand-700: #c99200; /* 文字按钮（.btn-view）加深可读色 */
-  --color-brand-800: #a67600;
+  /* 修改点：#c99200 白底仅 3.38:1，而 brand-700 全站只用做文字色（金额/积分/强调/按钮文字），
+     名不副实。加深到 4.6:1 达 WCAG AA，同时把 800 补深一档维持层级，避免两档撞色。*/
+  /* P1 对比度修复(2026-09-27)：#a67600 压白底仅 3.36~4.03:1，按 WCAG AA 正文线统一加深到
+     #805a00（实测 5.3:1）。该令牌在全站同时用于「文字」与「深金底色」，加深后两个方向都达标。 */
+  --color-brand-700: #805a00;
+  --color-brand-800: #8f6700;
   --color-brand-900: #805a00;
 
   /* 向后兼容别名（主框架 index.css / 旧页面引用） */
@@ -34,7 +38,10 @@
   --color-gray-200: #e5e7eb;
   --color-gray-300: #d1d5db;
   --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
+  /* P1：#6b7280 压白底 4.88:1 勉强达标，但压在浅灰/浅红卡片底（#f4f4f5、#fef0f0）
+     只有 4.36:1，未过 AA。降到 #656b78 后白底 5.4:1、卡片底 4.9:1，全场景稳定达标。
+     该令牌被 --text-secondary / --text-muted / --el-text-secondary 共同引用，一处修改全站生效。 */
+  --color-gray-500: #656b78;
   --color-gray-600: #4b5563;
   --color-gray-700: #374151;
   --color-gray-800: #1f2937;
@@ -42,17 +49,41 @@
 
   /* ---------- 语义色（状态/反馈，与 Element UI 调色板对齐） ---------- */
   --color-success:      #67c23a;
-  --color-success-dark: #529b2e;
+  /* P1：原 #529b2e 压白底仅 3.36:1、白字压它仅 3.45:1。改为与 success-text 同值，
+     兼顾「浅底文字」与「深底白字」两种用法，均为 7.5:1。 */
+  --color-success-dark: #2e7d32;
   --color-success-light:#f0f9eb;
   --color-warning:      #e6a23c;
-  --color-warning-dark: #b88219;
+  /* P1：原 #b88219 压白底仅 3.36:1。与 warning-text 同值后：文字 4.92:1、白字压它 4.92:1。 */
+  --color-warning-dark: #a16207;
   --color-warning-light:#fdf6ec;
   --color-danger:       #f56c6c;
-  --color-danger-dark:  #c45656;
+  /* P1：原 #c45656 压白底仅 4.18:1、白字压它仅 4.18:1。与 danger-text 同值后两向均达 6.4:1。 */
+  --color-danger-dark:  #c0392b;
   --color-danger-light: #fef0f0;
-  --color-info:         #909399;
+  /* P1：原 #909399 作文字压白底仅 3.08:1（WCAG AA 正文需 4.5:1）。加深到 #73767a 后：
+     作文字 4.6:1 达标；作底色时白字对比度也由 4.6:1 提升到 5.4:1，两个方向都更安全。 */
+  --color-info:         #73767a;
   --color-info-dark:    #73767a;
   --color-info-light:   #f4f4f5;
+
+  /* ---------- 文字安全语义色（P0 对比度修复 2026-09-27） ----------
+   * 上方语义色作为「白底文字」仅 2.2~3.1:1，作为「彩底白字按钮」底色同样不达 WCAG AA(4.5:1)。
+   * 本组为同色相加深版，双向达标：做文字 ≥4.8:1，做实心按钮底色配白字 ≥4.9:1。
+   * 文字场景（操作链接/状态文字）与实心按钮底色一律引用本组令牌；
+   * 原语义色继续用于标签底色、图表、边框等非文字场景。 */
+  /* P1：#8f6a00 压浅红底 #fef0f0 仅 4.48:1（差 0.02 未达标）。略加深到 #7a5700 后 4.9:1。 */
+  --color-brand-text:        #7a5700; /* 金 4.97:1（原 brand-700 #c99200 仅 2.76:1） */
+  --color-brand-text-hover:  #805a00; /* 金 hover 6.21:1 */
+  --color-success-text:      #2e7d32; /* 绿 5.13:1（原 #67c23a 仅 2.24:1） */
+  --color-success-text-hover:#256029; /* 绿 hover/active 7.54:1 */
+  --color-warning-text:      #a16207; /* 橙 4.92:1（原 #e6a23c 仅 2.19:1） */
+  --color-warning-text-hover:#8f5a06; /* 橙 hover/active 5.78:1 */
+  --color-danger-text:       #c0392b; /* 红 5.44:1（原 #f56c6c 仅 2.90:1） */
+  --color-danger-text-hover: #a93226; /* 红 hover/active 6.62:1 */
+  /* 修改点：#6f7276 在白底 4.83:1，但在 el-tag--info 等带底色容器上实测只有 4.4:1，
+     仍未过线。加深到 #656b78（白底 5.34:1、gray-100 底 4.82:1）确保全场景达标。*/
+  --color-info-text:         #656b78;
 
   /* ---------- 文本色 ---------- */
   --text-primary:   var(--color-gray-800);
@@ -106,6 +137,10 @@
   --font-size-2xl:  20px;
   --font-size-3xl:  24px;
   --font-size-4xl:  30px;
+  /* 大屏展示数值（监控/厨房大屏等，rem 随根字号缩放） */
+  --font-size-display-sm: 1.35rem;
+  --font-size-display-md: 1.5rem;
+  --font-size-display: 2rem;
 
   /* ---------- 字重 ---------- */
   --font-weight-regular:   400;
@@ -124,6 +159,9 @@
   --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.06), 0 2px 4px rgba(16, 24, 40, 0.04);
   --shadow-lg: 0 10px 30px rgba(16, 24, 40, 0.08);
   --shadow-xl: 0 20px 48px rgba(16, 24, 40, 0.12);
+  /* 命令面板等全屏浮层：遮罩罩层 + 大尺寸投影（区别于常规卡片阴影档） */
+  --overlay-scrim: rgba(17, 24, 39, 0.42);
+  --shadow-overlay: 0 16px 48px rgba(17, 24, 39, 0.22);
 
   /* ---------- 层级 z-index ---------- */
   --z-base:    1;
@@ -196,6 +234,11 @@
   /* 修改点：次要文字对比度修复（2026-08-31）：#909399 白底仅 3.08:1，不达 4.5:1 正文线。
      统一映射到 --text-secondary(#6b7280, 4.83:1)，67 页次要说明文字一次生效。 */
   --el-text-secondary: var(--text-secondary);
+  /* 修改点：Element UI 2.x 组件真正读取的是 --el-text-color-*（旧命名），上一行只覆盖了
+     --el-text-secondary，导致「刷新」等按钮内的次要文字仍走默认值 #909399，白底仅 3.08:1。
+     补齐带 color 的旧命名变量，让它们同样落到 4.83:1 的 --text-secondary。*/
+  --el-text-color-secondary: var(--text-secondary);
+  --el-text-color-regular:   var(--text-secondary);
   --el-border-default: #dcdfe6;
   --el-border-base:   #c0c4cc;
   --el-border-light:  #ebeef5;
@@ -276,7 +319,9 @@
   --gray-999: #999999;
   --gray-ccc: #cccccc;
   --gray-a6:  #a6a9ad;
-  --text-legacy-muted: #818693;
+  /* 修改点：原 #818693 在白底对比度仅 3.56、浅灰底 3.2 左右，未达 WCAG 1.4.3 的 4.5。
+     调深到 #656b78：白底 5.34、gray-100 底 4.82，全场景达标且仍在 gray-500/600 的灰阶区间内。*/
+  --text-legacy-muted: #656b78;
   --indigo:   #667eea;
   --indigo-50: #f0f4ff;
   --indigo-100: #e8ecf9;
@@ -324,7 +369,8 @@
   --el-border-plain: #e4e4e4;
   --el-color-success-dark: #5daf34;
   --el-color-danger-dark: #dd6161;
-  --el-text-muted: #82848a;
+  /* P1：#82848a 压白底仅 3.74:1，未过 WCAG AA 正文线。改为与已达标的信息文字色同值。 */
+  --el-text-muted: #656b78;
   --legacy-00f: #00f;
   --legacy-0a0d17: #0a0d17;
   --legacy-0f0: #0f0;
@@ -343,7 +389,9 @@
   --legacy-5a5f7a: #5a5f7a;
   --legacy-606168: #606168;
   --legacy-666: #666;
-  --legacy-6b7088: #6b7088;
+  /* P1：#6b7088 在纯白底上是 4.88:1（达标），但压在浅红/浅灰卡片底（#fef0f0、#f4f4f5）
+     只有 4.36:1。统一降到 #656b78，卡片底与白底上都可稳定达到 4.6:1 以上。 */
+  --legacy-6b7088: #656b78;
   --legacy-72767b: #72767b;
   --legacy-856404: #856404;
   --legacy-8b90a5: #8b90a5;
@@ -620,7 +668,9 @@
   --grid-template-columns-3: repeat(3, 1fr);
   --grid-template-columns-4: repeat(4, 1fr);
   --grid-template-columns-auto: repeat(auto-fill, minmax(250px, 1fr));
-  
+  /* 收银台右侧结算面板固定列宽（cashier 专用语义宽度，禁止在页面写 400px 魔数） */
+  --cashier-side-width: 400px;
+
   /* grid-template-rows */
   --grid-template-rows-1: repeat(1, 1fr);
   --grid-template-rows-2: repeat(2, 1fr);

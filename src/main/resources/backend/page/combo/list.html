@@ -9,8 +9,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <style>
     /* 提取的内联样式类 */
     .combo-img-btn { width: 36px; height: 36px; object-fit: cover; border: none; cursor: pointer; border-radius: var(--radius-sm); flex-shrink: 0; }
@@ -238,19 +238,19 @@
       <el-row :gutter="20">
         <el-col :xs="24" :sm="12">
           <el-form-item label="套餐名称:" prop="name">
-            <el-input v-model="comboForm.name" placeholder="请填写套餐名称" maxlength="20" />
+            <el-input v-model="comboForm.name" placeholder="请填写套餐名称" maxlength="20" ></el-input>
           </el-form-item>
         </el-col>
         <el-col :xs="24" :sm="12">
           <el-form-item label="套餐分类:" prop="categoryId">
             <el-select v-model="comboForm.categoryId" placeholder="请选择套餐分类" style="width: 100%;">
-              <el-option v-for="item in comboCategoryList" :key="item.id" :label="item.name" :value="item.id" />
+              <el-option v-for="item in comboCategoryList" :key="item.id" :label="item.name" :value="item.id" ></el-option>
             </el-select>
           </el-form-item>
         </el-col>
       </el-row>
       <el-form-item label="套餐价格:" prop="price">
-        <el-input v-model="comboForm.price" placeholder="请设置套餐价格" />
+        <el-input v-model="comboForm.price" placeholder="请设置套餐价格" ></el-input>
       </el-form-item>
       <!-- 修改点：8.2.3 套餐价格自动试算（选择菜品后实时联动，辅助定价） -->
       <el-form-item v-if="comboDishTable.length > 0" label="定价试算">
@@ -285,7 +285,7 @@
                 </el-table-column>
                 <el-table-column prop="copies" label="份数" width="100" align="center">
                   <template slot-scope="scope">
-                    <el-input-number v-model="scope.row.copies" size="small" :min="1" :max="99" controls-position="right" />
+                    <el-input-number v-model="scope.row.copies" size="small" :min="1" :max="99" controls-position="right" ></el-input-number>
                   </template>
                 </el-table-column>
                 <el-table-column label="操作" width="120" align="center" fixed="right">
@@ -315,7 +315,7 @@
         </el-upload>
       </el-form-item>
       <el-form-item label="套餐描述:">
-        <el-input v-model="comboForm.description" type="textarea" :rows="3" placeholder="套餐描述，最长200字" maxlength="200" />
+        <el-input v-model="comboForm.description" type="textarea" :rows="3" placeholder="套餐描述，最长200字" maxlength="200" ></el-input>
       </el-form-item>
     </el-form>
     <template #footer>
@@ -410,11 +410,11 @@
 <script src="../../plugins/vue/vue.js"></script>
 <script src="../../plugins/element-ui/index.js?v=20260915"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
-<script src="../../js/request.js?v=20260915c"></script>
-<script src="../../js/accessibility-utils.js?v=20260915c"></script>
-<script src="../../js/performance-utils.js?v=20260915c"></script>
-<script src="../../api/combo.js?v=20260915c"></script>
-<script src="../../api/food.js?v=20260915c"></script>
+<script src="../../js/request.js?v=20260926"></script>
+<script src="../../js/accessibility-utils.js?v=20260927"></script>
+<script src="../../js/performance-utils.js?v=20260926"></script>
+<script src="../../api/combo.js?v=20260926"></script>
+<script src="../../api/food.js?v=20260926"></script>
 <script src="../../js/components.js?v=20260924"></script>
 
 <script>

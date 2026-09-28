@@ -8,8 +8,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <style>
     /* 8.4.2 三 Tab 合并：券模板（卡片式）/ 发放记录 / 即将到期 —— 全部引用 tokens.css 设计令牌 */
     .coupon-tabs { margin-top: var(--space-4) }
@@ -21,12 +21,15 @@
     .coupon-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12) }
     .coupon-card__head { display: flex; align-items: center; gap: 6px }
     .coupon-card__name { font-size: var(--font-size-md); font-weight: 600; color: var(--text-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
-    .coupon-card__face { font-size: var(--font-size-3xl); font-weight: 600; color: var(--color-brand-500); line-height: 1.2 }
+    .coupon-card .el-button--default { color: var(--el-text-regular); }
+    .coupon-card .el-button--default:hover { color: var(--color-brand-text); border-color: var(--color-brand-200); background: var(--color-brand-50); }
+    .coupon-card__face { font-size: var(--font-size-3xl); font-weight: 600; color: var(--color-brand-text); line-height: 1.2 }
     .coupon-card__meta { display: flex; flex-direction: column; gap: 4px; font-size: var(--font-size-xs); color: var(--text-secondary) }
     .coupon-card__meta span b { color: var(--text-primary); font-weight: 500 }
     .coupon-card__usage { font-size: var(--font-size-xs); color: var(--text-secondary); display: flex; align-items: center; gap: var(--space-2) }
     .coupon-card__usage .el-progress { flex: 1 }
-    .coupon-card__remain { color: var(--color-warning-dark); white-space: nowrap }
+    /* P1: #b88219 压白底仅 3.36:1，改用已达标的深橙文字色 */
+    .coupon-card__remain { color: var(--color-warning-text); white-space: nowrap }
     .coupon-card__ops { display: flex; gap: 6px; flex-wrap: nowrap; border-top: 1px dashed var(--border-default); padding-top: var(--space-3) }
     /* 修改点：四个操作按钮（发放/效果/修改/删除）强制一行展示——等分宽度并取消 el-button 默认外边距，避免换行 */
     .coupon-card__ops .el-button { flex: 1; margin-left: 0; padding-left: 0; padding-right: 0 }
@@ -243,9 +246,11 @@
           </div>
 
           <!-- 子 Tab：即将到期 / 已过期 -->
+          <!-- 改 name 前缀：与外层 tab 的 pane name 重名会让 Element 生成重复的
+               id(tab-xxx / pane-xxx)，破坏 aria-controls 关联 -->
           <el-tabs v-model="expiringTab" @tab-click="onExpiringTabClick">
-            <el-tab-pane label="即将到期" name="expiring"></el-tab-pane>
-            <el-tab-pane label="已过期" name="expired"></el-tab-pane>
+            <el-tab-pane label="即将到期" name="sub-expiring"></el-tab-pane>
+            <el-tab-pane label="已过期" name="sub-expired"></el-tab-pane>
           </el-tabs>
 
           <!-- 批量延期按钮行 -->
@@ -482,11 +487,11 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
-  <script src="../../api/member-center.js?v=20260915c"></script>
+  <script src="../../api/member-center.js?v=20260926"></script>
   <script>
     // 8.4.2 优惠券三 Tab 合并：券模板（卡片式）/ 发放记录 / 即将到期，发券在模板卡内完成不跳页
     new Vue({

@@ -8,8 +8,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
   <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <style>
     /* 功能样式（非美化）：配置区 + A4 预览弹窗 + 打印分页。 */
 
@@ -108,11 +108,23 @@
       </div>
 
       <el-table :data="filteredTables" ref="table" border stripe max-height="380"
+                v-loading="tablesLoading"
+                element-loading-text="桌台加载中"
                 @selection-change="onSelectionChange" style="margin-bottom:10px;">
         <el-table-column type="selection" width="48" align="center"></el-table-column>
         <el-table-column prop="name" label="桌台名" width="160"></el-table-column>
         <el-table-column prop="areaName" label="区域"></el-table-column>
         <el-table-column prop="sort" label="排序" width="100"></el-table-column>
+        <!-- 空态复用全站统一 .ds-table-empty（styles/components.css），
+             此前走 Element 默认文案：仅一行"暂无数据"、无图标无引导，
+             高度 60px，与统一空态 299px 严重不一致 -->
+        <template slot="empty">
+          <div class="ds-table-empty">
+            <i class="el-icon-document" aria-hidden="true"></i>
+            <p>暂无桌台数据</p>
+            <p class="ds-table-empty__hint">试试切换上方的区域筛选</p>
+          </div>
+        </template>
       </el-table>
 
       <div class="sel-bar">
@@ -198,7 +210,7 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script>
     // 每页数 → 网格列×行（按竖版海报 800×1040，保证不溢出 A4）
@@ -213,6 +225,9 @@
           siteUrl: '',
           areas: [],
           tables: [],
+          // 桌台列表加载标志：缺口在于首屏拉数据时表格区域为空，
+          // 与"确实没有桌台"在视觉上无法区分，需要 v-loading 区分两种状态
+          tablesLoading: false,
           filterAreaId: null,
           selected: [],
           layout: 6,
@@ -264,9 +279,12 @@
         $axios.get('/api/dining/area/list').then(function (res) {
           vm.areas = res.data || [];
         }).catch(function () { });
+        vm.tablesLoading = true;
         $axios.get('/api/dining/table/list').then(function (res) {
           vm.tables = res.data || [];
-        }).catch(function () { });
+        }).catch(function () { }).then(function () {
+          vm.tablesLoading = false;
+        });
       },
       methods: {
         onSelectionChange: function (sel) { this.selected = sel; },
@@ -439,5 +457,6 @@
       }
     }).$mount('#app');
   </script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
 </body>
 </html>

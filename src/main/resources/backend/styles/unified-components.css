@@ -760,7 +760,8 @@
 
 .el-pagination .el-pager li.active {
   background: var(--color-brand-500);
-  color: white;
+  /* 修改点：同 design-system.css —— 白字压金底 1.62，改深色文字达 WCAG AA。 */
+  color: var(--text-on-brand);
   box-shadow: var(--shadow-sm);
 }
 

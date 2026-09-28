@@ -107,23 +107,51 @@
   margin-bottom: 12px;
 }
 
-/* ========== 空状态（友好提示，引导用户操作） ========== */
-.crud-table-wrapper .ds-table-empty {
+/* ========== 空状态（友好提示，引导用户操作） ==========
+   选择器不再限定 .crud-table-wrapper 祖先：统一组件（59 页 crud-table）与
+   手写裸 el-table（如 printer/qrcode-center.html）都复用 .ds-table-empty，
+   避免后者掉进 Element 默认空态（仅一行"暂无数据"、无图标无引导，高度 60px
+   对照统一空态 299px）。去掉祖先限定后两边表现完全一致。 */
+.ds-table-empty {
   padding: 48px 0 40px;
   text-align: center;
   color: var(--text-muted);
 }
-.crud-table-wrapper .ds-table-empty i {
+.ds-table-empty i {
   font-size: 52px;
   color: var(--color-gray-300);
   display: block;
 }
-.crud-table-wrapper .ds-table-empty p {
+.ds-table-empty p {
   margin-top: 12px;
   font-size: var(--font-size-base);
   color: var(--text-muted);
 }
-.crud-table-wrapper .ds-table-empty .ds-table-empty__hint {
+.ds-table-empty .ds-table-empty__hint {
+  margin-top: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+/* 失败态：列表请求失败时替代空态，避免把后端故障误导成"本来就没数据"。
+   复用 .ds-table-empty 的间距口径，仅图标换成警示色。 */
+.ds-table-error {
+  padding: 48px 0 40px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.ds-table-error i {
+  font-size: 52px;
+  /* 用 --color-danger-text(#c0392b, 5.44:1) 而非 --color-danger(#f56c6c)，后者在这块背景上偏浅 */
+  color: var(--color-danger-text, #c0392b);
+  display: block;
+}
+.ds-table-error p {
+  margin-top: 12px;
+  font-size: var(--font-size-base);
+  color: var(--text-muted);
+}
+.ds-table-error .ds-table-empty__hint {
   margin-top: 4px;
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
@@ -251,7 +279,7 @@
   width: 220px;
 }
 
-/* 操作列按钮颜色变体（统一为品牌金 var(--color-brand-500) 的加深可读版本，保证白底对比度） */
+/* 操作列按钮颜色变体（P0 对比度修复 2026-09-27：统一改用文字安全令牌，白底 ≥4.8:1） */
 /* 通用：文字按钮过渡与 hover 背景反馈统一 */
 .crud-table-wrapper .tableBox .el-button--text {
   transition: color var(--transition-fast), background-color var(--transition-fast);
@@ -260,26 +288,26 @@
   margin: 0 2px;
 }
 .el-button--text.btn-view {
-  color: var(--color-brand-700);
+  color: var(--color-brand-text);
 }
 .el-button--text.btn-view:hover {
-  color: var(--legacy-a9780a);
+  color: var(--color-brand-text-hover);
   background: var(--color-brand-50);
 }
 
 .el-button--text.btn-delete {
-  color: var(--color-danger);
+  color: var(--color-danger-text);
 }
 .el-button--text.btn-delete:hover {
-  color: var(--color-danger-dark);
+  color: var(--color-danger-text-hover);
   background: var(--color-danger-light);
 }
 
 .el-button--text.btn-warning {
-  color: var(--color-warning);
+  color: var(--color-warning-text);
 }
 .el-button--text.btn-warning:hover {
-  color: var(--color-warning-dark);
+  color: var(--color-warning-text-hover);
   background: var(--color-warning-light);
 }
 
@@ -409,5 +437,54 @@
 .crud-view-value { flex: 1; min-width: 0; color: var(--el-text-primary, #303133); line-height: 1.5; word-break: break-all; white-space: pre-wrap; }
 .crud-view-dialog .dialog-footer { text-align: right; }
 
+/* ========== P0 对比度修复（2026-09-27）：彩底白字按钮改用文字安全令牌 ==========
+ * 白字在原语义色底（#67c23a/#e6a23c/#f56c6c）上仅 2.1~2.5:1，不达 WCAG AA。
+ * 本文件为页面样式链最后加载（tokens→design-system→common→page→components），
+ * 以 0-2-0 特异性覆盖 common-el.css 的 Element 默认色；hover/active 同步加深，
+ * 避免回退到浅色失效。is-plain 例外：保持浅底彩字，文字色单独用 -text 令牌。 */
+.el-button.el-button--success:not(.is-plain) { background-color: var(--color-success-text); border-color: var(--color-success-text); color: var(--color-white); }
+.el-button.el-button--success:not(.is-plain):hover,
+.el-button.el-button--success:not(.is-plain):focus,
+.el-button.el-button--success:not(.is-plain):active { background-color: var(--color-success-text-hover); border-color: var(--color-success-text-hover); color: var(--color-white); }
+.el-button.el-button--danger:not(.is-plain) { background-color: var(--color-danger-text); border-color: var(--color-danger-text); color: var(--color-white); }
+.el-button.el-button--danger:not(.is-plain):hover,
+.el-button.el-button--danger:not(.is-plain):focus,
+.el-button.el-button--danger:not(.is-plain):active { background-color: var(--color-danger-text-hover); border-color: var(--color-danger-text-hover); color: var(--color-white); }
+.el-button.el-button--warning:not(.is-plain) { background-color: var(--color-warning-text); border-color: var(--color-warning-text); color: var(--color-white); }
+.el-button.el-button--warning:not(.is-plain):hover,
+.el-button.el-button--warning:not(.is-plain):focus,
+.el-button.el-button--warning:not(.is-plain):active { background-color: var(--color-warning-text-hover); border-color: var(--color-warning-text-hover); color: var(--color-white); }
+/* plain（浅底彩字）变体：文字色升级为文字安全令牌 */
+.el-button--success.is-plain { color: var(--color-success-text); }
+.el-button--danger.is-plain { color: var(--color-danger-text); }
+.el-button--warning.is-plain { color: var(--color-warning-text); }
+
+/* ========== P0 对比度修复·二轮（2026-09-27） ========== */
+/* 1) el-tag 浅底彩字：info/warning/danger/success 标签文字均 <3:1，改文字安全色（dark 实底标签除外） */
+.el-tag.el-tag--info:not(.el-tag--dark)    { color: var(--color-info-text); }
+.el-tag.el-tag--success:not(.el-tag--dark) { color: var(--color-success-text); }
+.el-tag.el-tag--warning:not(.el-tag--dark) { color: var(--color-warning-text); }
+.el-tag.el-tag--danger:not(.el-tag--dark)  { color: var(--color-danger-text); }
+.el-tag:not([class*="el-tag--success"]):not([class*="el-tag--info"]):not([class*="el-tag--warning"]):not([class*="el-tag--danger"]):not(.el-tag--dark) { color: var(--color-info-text); }
+/* 2) el-button--text 默认色：主题后 --el-color-primary=#c99200 白底仅 2.76:1 */
+.el-button--text { color: var(--color-brand-text); }
+.el-button--text:hover { color: var(--color-brand-text-hover); }
+/* 3) radio 选中态：白字叠品牌金底仅 1.62:1，改深字金底（与主按钮规范一致） */
+.el-radio-button__orig-radio:checked + .el-radio-button__inner {
+  color: var(--text-on-brand);
+}
 
 
+
+
+/* ============================================================
+ * P0 对比度收尾（2026-09-27 二轮）：选中态/实色标签白字达标
+ * ============================================================ */
+/* el-tabs 选中态：主题金 #ffc200 白底仅 1.62:1 → 文字安全金 4.97:1 */
+.el-tabs__item.is-active { color: var(--color-brand-text) !important; }
+/* el-tag--dark 实色彩底 + 白字：底色加深至白字≥4.5:1 */
+.el-tag--dark.el-tag--primary { background: #8f6a00; border-color: #8f6a00; }
+.el-tag--dark.el-tag--success { background: #2e7d32; border-color: #2e7d32; }
+.el-tag--dark.el-tag--warning { background: #a16207; border-color: #a16207; }
+.el-tag--dark.el-tag--danger  { background: #c0392b; border-color: #c0392b; }
+.el-tag--dark.el-tag--info    { background: #6f7276; border-color: #6f7276; }

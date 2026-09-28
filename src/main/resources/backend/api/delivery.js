@@ -27,3 +27,20 @@ const deliverySyncStock = (data) => $axios({ url: '/api/delivery/sync/stock', me
 
 /** 骑手列表（status 可选：1空闲 2配送中；不传返回全部） */
 const getRiderListApi = (params) => $axios({ url: '/delivery/tracking/rider/list', method: 'get', params })
+
+// ==================== 骑手账号管理（后台 /api/delivery/rider） ====================
+
+/** 骑手分页（page/pageSize 上限 100，name/phone 模糊，status：0-离线 1-在线 2-忙碌） */
+const riderPage = (params) => $axios({ url: '/api/delivery/rider/page', method: 'get', params })
+
+/** 新增骑手（name/phone/password，密码 BCrypt 加密入库） */
+const addRider = (data) => $axios({ url: '/api/delivery/rider', method: 'post', data })
+
+/** 编辑骑手资料（id/name/phone/avatar，不含密码） */
+const updateRider = (data) => $axios({ url: '/api/delivery/rider', method: 'put', data })
+
+/** 重置骑手密码（id + 新密码，6-20 位） */
+const resetRiderPassword = (id, password) => $axios({ url: '/api/delivery/rider/' + id + '/password', method: 'put', data: { password: password } })
+
+/** 删除骑手 */
+const deleteRiderApi = (id) => $axios({ url: '/api/delivery/rider/' + id, method: 'delete' })

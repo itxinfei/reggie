@@ -8,8 +8,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
     /* ========== 采购管理专用样式 ========== */
@@ -247,7 +247,7 @@
           </el-autocomplete>
         </el-form-item>
         <el-form-item label="备注：">
-          <el-input v-model="formData.remark" placeholder="采购备注（可选）" />
+          <el-input v-model="formData.remark" placeholder="采购备注（可选）" ></el-input>
         </el-form-item>
         <el-form-item label="凭证图片：">
           <rg-image-uploader v-model="formData.voucherImages" biz-type="purchase" :max="5"></rg-image-uploader>
@@ -292,7 +292,7 @@
           </el-autocomplete>
         </el-form-item>
         <el-form-item label="备注：">
-          <el-input v-model="editForm.remark" placeholder="采购备注（可选）" />
+          <el-input v-model="editForm.remark" placeholder="采购备注（可选）" ></el-input>
         </el-form-item>
         <el-form-item label="凭证图片：">
           <rg-image-uploader v-model="editForm.voucherImages" biz-type="purchase" :max="5"></rg-image-uploader>
@@ -351,6 +351,7 @@
           v-for="(url, i) in detailVoucherList"
           :key="i"
           :src="url"
+          :alt="(detailDialog.data && detailDialog.data.supplierName ? detailDialog.data.supplierName + ' 的' : '') + '收货凭证'"
           :preview-src-list="detailVoucherList"
           style="width:80px;height:80px;object-fit:cover;margin-right:8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);cursor:pointer;">
         </el-image>
@@ -438,7 +439,7 @@
           </el-table-column>
           <el-table-column label="本次收货" width="168" align="center" :header-align="'center'">
             <template slot-scope="scope">
-              <el-input-number v-model="rxForm[scope.row.id]" :min="0" :max="scope.row.remainQty" :step="1" size="small" controls-position="right" style="width:138px;" />
+              <el-input-number v-model="rxForm[scope.row.id]" :min="0" :max="scope.row.remainQty" :step="1" size="small" controls-position="right" style="width:138px;" ></el-input-number>
             </template>
           </el-table-column>
         </el-table>
@@ -468,10 +469,10 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../api/inventory.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/inventory.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script src="../../js/inventory-helper.js?v=20260922"></script>
   <script>

@@ -8,9 +8,9 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260926" />
   <style>
     /* ========== 页面基础布局 ========== */
     html, body { height: 100%; margin: 0; padding: 0;
@@ -38,11 +38,12 @@
       background: var(--bg-surface); cursor: pointer; font-size:var(--font-size-sm); font-weight: 500;
       transition: all 0.2s; color: var(--el-text-regular); outline: none; }
     .eval-app-wrap .star-btn:hover { border-color: var(--el-color-primary); color: var(--el-color-primary); }
-    .eval-app-wrap .star-btn.active { background: var(--el-color-primary); border-color: var(--el-color-primary); color: var(--bg-surface); }
+    .eval-app-wrap .star-btn.active { background: var(--color-brand-text); border-color: var(--color-brand-text); color: #fff; }
     /* ========== 评价内容展示 ========== */
     .eval-app-wrap .eval-stars { display: inline-flex; gap: 2px; }
     .eval-app-wrap .eval-stars .star { font-size:var(--font-size-lg); color: var(--el-border-lighter2); }
-    .eval-app-wrap .eval-stars .star.filled { color: var(--color-warning); }
+    /* P0: #e6a23c 压白底仅 2.09:1（全站 47 处星级评分），改用深橙文字色 4.92:1 */
+    .eval-app-wrap .eval-stars .star.filled { color: var(--color-warning-text); }
     /* 修改点(2026-09-01)：评价内容移除 -webkit-line-clamp:2 截断，改为自然换行完整展示 ——
        与 crud-table 默认 showOverflowTooltip=false 的"完整展示数据"策略一致（行高自适应），
        避免评价正文被省略号遮挡；`:title` 悬停提示保留作为补充。 */
@@ -185,10 +186,10 @@
           </div>
         </template>
         <template #col-stars="{ row }">
-          <div class="eval-stars">
+          <div class="eval-stars" aria-hidden="true">
             <span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (row.starRating || 0) }">★</span>
           </div>
-          <span style="font-size:var(--font-size-xs);color:var(--color-info);margin-left:4px;">{{ row.starRating }}分</span>
+          <span style="font-size:var(--font-size-xs);color:var(--color-info-text);margin-left:4px;">{{ row.starRating }}分</span>
         </template>
         <template #col-content="{ row }">
           <div class="eval-content" :title="row.content">{{ row.content || '无文字评价' }}</div>
@@ -236,7 +237,7 @@
           <div class="detail-row"><span class="dlabel">评价ID</span><span class="dvalue">{{ detailData.id }}</span></div>
           <div class="detail-row"><span class="dlabel">菜品</span><span class="dvalue">{{ detailData.dishName }}</span></div>
           <div class="detail-row"><span class="dlabel">评分</span>
-            <span class="dvalue"><div class="eval-stars" style="display:inline-flex;"><span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (detailData.starRating || 0) }">★</span></div> {{ detailData.starRating }} 分</span></div>
+            <span class="dvalue"><div class="eval-stars" style="display:inline-flex;" role="img" aria-label="评分 {{ detailData.starRating }} 分"><span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (detailData.starRating || 0) }">★</span></div> {{ detailData.starRating }} 分</span></div>
           <div class="detail-row"><span class="dlabel">评价人</span><span class="dvalue">{{ detailData.userName || ('用户#' + detailData.userId) }}</span></div>
           <div class="detail-row"><span class="dlabel">评价时间</span><span class="dvalue">{{ formatDate(detailData.createTime) }}</span></div>
           <div class="detail-row"><span class="dlabel">审核状态</span>
@@ -280,11 +281,11 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../api/evaluation.js?v=20260915c"></script>
-  <script src="../../js/chart-panel.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/evaluation.js?v=20260926"></script>
+  <script src="../../js/chart-panel.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script>
     // 修改点：使用 IIFE 避免全局变量污染，重命名 Vue 方法避免与JS API函数名冲突

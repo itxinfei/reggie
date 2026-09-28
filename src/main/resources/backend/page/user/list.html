@@ -9,8 +9,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <style>
     /* 详情字段两列栅格：本构建未注册 el-descriptions（2.13+ 组件），手写栅格替代 */
     .usr-detail { display: flex; flex-wrap: wrap; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; }
@@ -153,7 +153,7 @@
         <div class="usr-detail__item usr-detail__item--full">
           <span class="usr-detail__label">头像</span>
           <span class="usr-detail__value">
-            <el-image v-if="detailDialog.data.avatar" :src="detailDialog.data.avatar" fit="cover" class="usr-detail__avatar"></el-image>
+            <el-image v-if="detailDialog.data.avatar" :src="detailDialog.data.avatar" fit="cover" :alt="(detailDialog.data.nickName || detailDialog.data.username || '用户') + ' 的头像'" class="usr-detail__avatar"></el-image>
             <span v-else>-</span>
           </span>
         </div>
@@ -169,11 +169,11 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../api/user.js?v=20260915c"></script>
-  <script src="../../api/export.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/user.js?v=20260926"></script>
+  <script src="../../api/export.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script>
     new Vue({

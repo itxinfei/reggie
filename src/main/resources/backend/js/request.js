@@ -80,19 +80,52 @@
    * 未登录统一处理：清理本地登录态，并跳转登录页。
    * iframe 内发 postMessage 通知顶层窗口跳转（index.html 已有 handleChildNotLogin 监听），
    * 非 iframe 时直接当前窗口跳转。
-   * 修改点(2026-09-14)：从 success 拦截器抽取为独立函数，供 error 拦截器复用，
-   * 修复"后端未登录返回 HTTP 401 时 axios 走 error 分支，NOTLOGIN 跳转逻辑不生效"的缺陷。
+   * 2026-09-26：去掉"先提示再延迟1.2s跳转"，未登录立即跳转（打开页面必须是登录态）。
    */
+  // 防重入：并发请求同时返回未登录时只跳转一次
+  var notLoginHandled = false;
   function handleNotLogin() {
     try { localStorage.removeItem('userInfo'); } catch (_) {}
     clearCsrfToken();
+    if (notLoginHandled) { return; }
+    notLoginHandled = true;
     if (window.self !== window.top) {
       try {
         window.parent.postMessage({ type: 'REGGIE_NOTLOGIN' }, '*');
       } catch (_) {}
     } else {
-      window.location.href = '/backend/page/login/login.html';
+      window.location.replace('/backend/page/login/login.html');
     }
+  }
+
+  /* ===== 列表请求失败信号（2026-09-27） =====
+     背景：主列表接口失败时，页面 catch 通常只打日志、tableData 保持 []，
+     表格于是渲染成"暂无数据 / 试试调整筛选条件"，把后端故障误导成"本来就没数据"。
+     这里在拦截器层统一记录信号，供 crud-table 渲染失败态，
+     避免逐页改 59 个列表页。
+     口径：
+       - 仅 /xxx/page 与 /xxx/list 视为列表请求（统计类 /stats 不参与，避免误判）
+       - 401 未登录不置位（会跳登录页，与"列表加载失败"无关）
+       - 只在该次请求成功时才清除，统计类成功后不会误清
+     用事件而非时间窗口传递，避免时序抖动导致的误判。 */
+  function isListRequest (cfg) {
+    if (!cfg) { return false }
+    var url = String(cfg.url || '')
+    if (/\/(page|list)(\?|$)/.test(url)) { return true }
+    var p = cfg.params
+    if (p && typeof p === 'object') {
+      for (var k in p) {
+        if (k === 'page' || k === 'current') { return true }
+      }
+    }
+    return false
+  }
+
+  function emitListState (failed) {
+    try {
+      win.__reggieListFailed = failed
+      win.dispatchEvent(new win.CustomEvent(failed ? 'reggie:list-fail' : 'reggie:list-ok'))
+    } catch (e) { /* noop */ }
   }
 
   // 响应拦截器
@@ -127,6 +160,8 @@
         } else {
           payload = {};
         }
+        // 列表请求成功 → 清除失败标志（统计类成功不清除，避免误清）
+        if (isListRequest(res.config)) { emitListState(false) }
         return payload
       }
     },
@@ -142,6 +177,8 @@
           return Promise.reject(new Error('NOTLOGIN'));
         }
       }
+      // 列表类请求失败 → 置位，供 crud-table 渲染失败态（401 已提前返回，不会走到这里）
+      if (isListRequest(error.config)) { emitListState(true) }
       let { message } = error;
       // 修改点：尝试从响应体中提取详细的错误信息
       if (error.response && error.response.data) {
@@ -183,6 +220,17 @@
     }
   )
   win.$axios = service;
+
+  /* ===== 页面登录守卫（2026-09-26）：打开页面必须是登录状态 =====
+     页面加载时立即探测 /employee/me，未登录由响应拦截器 handleNotLogin 统一处理：
+     顶层窗口立即跳登录页；iframe 子页面 postMessage 通知顶层立即跳转。
+     登录页自身不守卫（否则死循环）。探测失败若是断网/5xx 不会触发跳转（handleNotLogin 仅由
+     401/NOTLOGIN 触发），不影响异常场景。 */
+  (function guardLoginOnPageOpen() {
+    var path = win.location.pathname;
+    if (path.indexOf('/backend/page/login/') !== -1) { return; }
+    win.$axios({ url: '/employee/me', method: 'get', silent: true }).catch(function () {});
+  })();
 
   /* ===== ReggieUI 统一交互反馈（挂载于 window.ReggieUI） =====
      规范（前端二次审查 2026-07-17）：所有页面的 toast / loading / confirm /

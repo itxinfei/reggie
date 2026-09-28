@@ -7,8 +7,8 @@
   <title>会员等级 - 瑞吉外卖管理端</title>
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <style>
     /* ========== 等级进阶阶梯 ========== */
     .progression-section { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 20px;
@@ -16,17 +16,28 @@
     .progression-title { font-size:var(--font-size-md); font-weight: 600; color: var(--el-text-primary); margin-bottom: 16px;
       display: flex; align-items: center; gap: 8px; }
     .progression-bar { display: flex; align-items: flex-end; gap: 10px; padding: 10px 0; }
-    .prog-item { flex: 1; text-align: center; position: relative; }
+    /* min-width:0 必需：flex 项默认 min-width:auto 会被 nowrap 内容顶开，窄屏必然横向溢出 */
+    .prog-item { flex: 1 1 0; min-width: 0; text-align: center; position: relative; }
     .prog-icon { font-size:var(--font-size-xl); margin-bottom: 6px; }
     .prog-bar-wrap { height: 8px; background: var(--el-bg-lighter); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 6px; }
     .prog-bar-fill { height: 100%; border-radius: var(--radius-sm); transition: width 0.6s ease; }
-    .prog-name { font-size:var(--font-size-xs); color: var(--el-text-regular); font-weight: 500; white-space: nowrap; }
-    .prog-pts { font-size: var(--font-size-xs); color: var(--color-info); }
-    .prog-discount { font-size: var(--font-size-xs); color: var(--emerald); font-weight: 600; }
+    .prog-name { font-size:var(--font-size-xs); color: var(--el-text-regular); font-weight: 500; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; }
+    /* P0: #909399 压白底仅 3.08:1，改用达标的信息文字色 */
+    .prog-pts { font-size: var(--font-size-xs); color: var(--color-info-text); }
+    .prog-discount { font-size: var(--font-size-xs); color: var(--color-success-text); font-weight: 600; }
 
     /* ========== 响应式适配 ========== */
     @media (max-width: 900px) {
+      .progression-section { padding: 16px 14px; }
       .prog-name { font-size: var(--font-size-xs); }
+      /* 窄屏阶梯改纵向堆叠：横向均分 + nowrap 在窄视口下无解，直接堆叠最稳 */
+      .progression-bar { flex-direction: column; align-items: stretch; gap: 12px; padding: 4px 0; }
+      .prog-item { display: flex; align-items: center; gap: 10px; text-align: left; min-width: 0; }
+      .prog-icon { flex: 0 0 auto; margin-bottom: 0; }
+      .prog-name { flex: 0 1 auto; white-space: normal; overflow: visible; }
+      .prog-bar-wrap { flex: 1 1 auto; margin-bottom: 0; }
+      .prog-pts, .prog-discount { flex: 0 0 auto; }
     }
   </style>
 </head>
@@ -118,10 +129,10 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../api/member-center.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/member-center.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script>
     new Vue({

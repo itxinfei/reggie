@@ -30,24 +30,24 @@
     .cashier-header {
       background: var(--bg-surface);
       border-radius: var(--radius-lg);
-      padding: 20px;
-      margin-bottom: 20px;
+      padding: var(--space-5);
+      margin-bottom: var(--space-5);
       box-shadow: var(--shadow-sm);
     }
     .cashier-title {
       font-size: var(--font-size-3xl);
       font-weight: 600;
       color: var(--el-text-primary);
-      margin-bottom: 16px;
+      margin-bottom: var(--space-4);
     }
     /* C.1：页内日结条 */
     .settle-bar {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 16px;
-      margin-top: 20px;
-      padding: 12px 20px;
+      gap: var(--space-4);
+      margin-top: var(--space-5);
+      padding: var(--space-3) var(--space-5);
       background: var(--bg-surface);
       border: 1px solid var(--el-border-color);
       border-radius: var(--radius-lg);
@@ -62,8 +62,8 @@
     .settle-bar__btn { margin-left: auto; }
     .cashier-main {
       display: grid;
-      grid-template-columns: 1fr 400px;
-      gap: 20px;
+      grid-template-columns: 1fr var(--cashier-side-width);
+      gap: var(--space-5);
     }
     /* 响应式：小屏切换单列，避免 400px 支付面板溢出 375px 视口 */
     @media (max-width: 900px) {
@@ -73,15 +73,15 @@
     .order-panel {
       background: var(--bg-surface);
       border-radius: var(--radius-lg);
-      padding: 20px;
+      padding: var(--space-5);
       box-shadow: var(--shadow-sm);
     }
     .panel-title {
       font-size:var(--font-size-lg);
       font-weight: 600;
       color: var(--el-text-primary);
-      margin-bottom: 16px;
-      padding-bottom: 12px;
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-3);
       border-bottom: 1px solid var(--el-border-lighter);
     }
     .order-list {
@@ -91,8 +91,8 @@
     .order-item {
       display: flex;
       align-items: center;
-      padding: 12px;
-      margin-bottom: 8px;
+      padding: var(--space-3);
+      margin-bottom: var(--space-2);
       background: var(--el-bg-page);
       border-radius: var(--radius-md);
     }
@@ -527,7 +527,7 @@
           <!-- 修改点(2026-09-18)：按桌台合并结账提示——本桌存在多笔未结订单时明确告知，
                避免店员以为只收当前这一单的钱（后端已按桌台合并收款） -->
           <div class="summary-row" v-if="previewMerged"
-               style="margin-bottom: 8px; padding: 8px; border-radius: 4px; background: var(--el-color-primary-light-9, #fdf6e3);">
+               style="margin-bottom: var(--space-2); padding: var(--space-2); border-radius: var(--radius-sm); background: var(--color-brand-50);">
             <span class="summary-label">本桌共 {{ previewOrderCount }} 笔未结订单</span>
             <span class="summary-value" style="color: var(--el-color-primary, #ffc200);">将合并结账</span>
           </div>

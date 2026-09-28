@@ -7,10 +7,10 @@
   <title>数据概览 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260926" />
   <!-- 性能优化：ECharts(~1MB)改为 preload 提前并行下载，运行时动态注入，不再阻塞首屏渲染 -->
   <link rel="preload" as="script" href="../../plugins/echarts/echarts.min.js" />
   <style>
@@ -67,9 +67,10 @@
       padding: var(--space-3) var(--space-5);
       flex-wrap: wrap;
     }
+    /* P0: #e6a23c 压 #fdf6ec 仅 2.04:1，改用已达标的深橙文字色 4.92:1 */
     .inventory-alert__title {
       font-weight: var(--font-weight-bold);
-      color: var(--color-warning);
+      color: var(--color-warning-text);
       font-size: var(--font-size-md);
     }
     .inventory-alert__desc {
@@ -168,9 +169,10 @@
       flex-shrink: 0;
       transition: all 0.2s;
     }
-    .hot-dish-rank.top-1 { background: var(--color-danger); color: var(--bg-surface); }
+    /* P0: 原「浅色底 + 白字」仅 2.90:1 / 2.19:1，改用深文字色作底 */
+    .hot-dish-rank.top-1 { background: var(--color-danger-text); color: var(--bg-surface); }
     .hot-dish-rank.top-2 { background: var(--color-brand-500); color: var(--text-on-brand); }
-    .hot-dish-rank.top-3 { background: var(--color-warning); color: var(--bg-surface); }
+    .hot-dish-rank.top-3 { background: var(--color-warning-text); color: var(--bg-surface); }
     .hot-dish-rank.normal { background: var(--el-bg-lighter); color: var(--gray-666); }
 
     .hot-dish-list .hot-dish-item:hover .hot-dish-rank {
@@ -191,7 +193,7 @@
     .hot-dish-count {
       font-size:var(--font-size-base);
       font-weight: 600;
-      color: var(--color-brand-600);
+      color: var(--color-brand-text); /* P0 对比度修复：brand-600 白底仅 2.02:1 */
       margin-left: 12px;
       flex-shrink: 0;
     }
@@ -396,7 +398,7 @@
       text-align: center;
     }
     .todo-item__count--hot {
-      color: var(--color-danger);
+      color: var(--color-danger-text);
     }
     .todo-empty {
       display: flex;
@@ -453,8 +455,8 @@
         <stat-cards :cards="kpiCards" :loading="loading" @card-click="onKpiClick"></stat-cards>
         <!-- 修改点：营收目标设置入口 -->
         <el-tooltip content="设置营收目标" placement="top">
-          <el-button size="small" circle style="position:absolute;top:8px;right:8px;" @click="openTargetDialog">
-            <i class="ri-settings-3-line"></i>
+          <el-button size="small" circle aria-label="设置营收目标" style="position:absolute;top:8px;right:8px;" @click="openTargetDialog">
+            <i class="ri-settings-3-line" aria-hidden="true"></i>
           </el-button>
         </el-tooltip>
       </div>
@@ -632,11 +634,11 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../api/inventory.js?v=20260915c"></script>
-  <script src="../../api/dashboard.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/inventory.js?v=20260926"></script>
+  <script src="../../api/dashboard.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
 
   <script>

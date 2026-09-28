@@ -8,8 +8,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <style>
     /* ---- 图表区 ---- */
     .chart-panels { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -88,7 +88,7 @@
           </el-tag>
         </template>
         <template #col-points="{ row }">
-          <span :style="{color: row.type==='IN'?'var(--color-success)':'var(--color-danger)', fontWeight:600}">
+          <span :style="{color: row.type==='IN'?'var(--color-success-text)':'var(--color-danger-text)', fontWeight:600}">
             {{ row.type === 'IN' ? '+' : '-' }}{{ row.points }}
           </span>
         </template>
@@ -142,10 +142,10 @@
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../plugins/echarts/echarts.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../api/member-center.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/member-center.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script>
     new Vue({

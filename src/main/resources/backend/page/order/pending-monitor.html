@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>未接单监控大屏 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <style>
     /* ========== 页面基础布局 ========== */
     body { background: var(--bg-page); margin: 0; }
@@ -16,22 +16,16 @@
     .top-bar__title { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); color: var(--text-primary); }
     .top-bar__title i { color: var(--color-danger-dark); margin-right: var(--space-2); }
     .top-bar__tools { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-    .meta-chip { font-size: var(--font-size-sm); color: var(--text-secondary); background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 999px; padding: 4px 14px; }
+    .meta-chip { font-size: var(--font-size-sm); color: var(--text-secondary); background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-full); padding: var(--space-1) 14px; }
     .meta-chip b { color: var(--text-primary); }
-    .sound-btn { cursor: pointer; border: none; border-radius: 999px; padding: 8px 18px; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
+    .sound-btn { cursor: pointer; border: none; border-radius: var(--radius-full); padding: var(--space-2) 18px; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); }
     .sound-btn.on { background: var(--color-success-dark); color: var(--text-inverse); }
-    .sound-btn.off { background: var(--border-default); color: var(--text-secondary); }
+    /* P1：--text-secondary(#656b78) 压浅灰底 #e3e7eb 只有 4.32:1，改用更深的灰阶文字 */
+    .sound-btn.off { background: var(--border-default); color: var(--color-gray-600); }
 
-    /* ========== 统计卡片 ========== */
-    .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6); }
-    @media (max-width: 1100px) { .stat-row { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 640px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
-    .stat-card { background: var(--bg-surface); border-radius: var(--radius-md, 10px); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.08)); padding: var(--space-4) var(--space-5); }
-    .stat-card__label { font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: var(--space-2); }
-    .stat-card__value { font-size: 2rem; font-weight: var(--font-weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
-    .stat-card.alarm .stat-card__value { color: var(--color-danger-dark); }
-    .stat-card.missed .stat-card__value { color: var(--color-danger-dark); animation: blink 1s infinite; }
-    .stat-card.warning .stat-card__value { color: var(--color-warning-dark); }
+    /* 统计卡片统一使用 <stat-cards> 组件默认样式（原本页 .stat-row 死规则与
+       .stat-card / .stat-card__* 页级覆盖层已删除：BEM 名与组件实际 class 不匹配，
+       紧凑 padding 回归组件标准，保证与全站统计卡一致） */
 
     /* ========== 订单卡片网格 ========== */
     .order-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: var(--space-4); }
@@ -46,12 +40,12 @@
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
     .order-card__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-2); }
     .order-card__no { font-size: var(--font-size-base); font-weight: var(--font-weight-semibold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
-    .order-card__level { font-size: var(--font-size-xs); padding: 2px 10px; border-radius: 999px; font-weight: var(--font-weight-medium); }
+    .order-card__level { font-size: var(--font-size-xs); padding: 2px 10px; border-radius: var(--radius-full); font-weight: var(--font-weight-medium); }
     .order-card__level.ALARM { background: var(--color-danger-light); color: var(--color-danger-dark); }
     .order-card__level.MISSED { background: var(--color-danger-dark); color: var(--bg-surface); animation: blink 1s infinite; }
     .order-card__level.WARNING { background: var(--color-warning-light); color: var(--color-warning-dark); }
     .order-card__level.NORMAL { background: var(--color-success-light); color: var(--color-success-dark); }
-    .order-card__wait { font-size: 2rem; font-weight: var(--font-weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
+    .order-card__wait { font-size: var(--font-size-display); font-weight: var(--font-weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
     .order-card__wait small { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-secondary); }
     .order-card__row { font-size: var(--font-size-sm); color: var(--text-secondary); margin-top: var(--space-1); }
     .order-card__dishes { font-size: var(--font-size-sm); color: var(--text-primary); margin-top: var(--space-2); }
@@ -130,12 +124,12 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
-  <script src="../../api/urgency.js?v=20260915c"></script>
-  <script src="../../api/order.js?v=20260915c"></script>
+  <script src="../../api/urgency.js?v=20260926"></script>
+  <script src="../../api/order.js?v=20260926"></script>
   <script>
     new Vue({
       el: '#app',
@@ -148,6 +142,7 @@
           lastUpdate: '',
           loadError: false,
           pollTimer: null,
+          reqSeq: 0,
           spokenIds: {}
         }
       },
@@ -175,8 +170,11 @@
         /* ========== 数据加载与轮询 ========== */
         loadData: function () {
           var self = this
+          // 请求序号守卫：每次加载递增，响应回来时只采纳最新一次，过期响应丢弃（慢网络防竞态）
+          var seq = ++this.reqSeq
           getUnacceptedMonitor()
             .then(function (res) {
+              if (seq !== self.reqSeq) return
               self.loadError = false
               var d = (res && res.data) || {}
               self.stats = d.stats || {}
@@ -186,6 +184,7 @@
               self.speakAlarms()
             })
             .catch(function (err) {
+              if (seq !== self.reqSeq) return
               console.warn('[order-monitor] 加载监控数据失败:', err)
               self.loadError = true
             })
@@ -263,13 +262,13 @@
           this.$set(o, '_confirming', true)
           confirmOrder({ id: o.id }).then(function (res) {
             if (res && res.code === 1) {
-              self.$message && self.$message.success('接单成功')
+              ReggieUI.success('接单成功')
               self.loadData()
             } else {
-              self.$message && self.$message.error((res && res.msg) || '接单失败')
+              ReggieUI.error((res && res.msg) || '接单失败')
             }
           }).catch(function (err) {
-            self.$message && self.$message.error('接单请求失败')
+            ReggieUI.error('接单请求失败')
             console.warn('[order-monitor] 接单失败:', err)
           }).finally(function () { self.$set(o, '_confirming', false) })
         },
@@ -282,13 +281,13 @@
             self.$set(o, '_rejecting', true)
             rejectOrder({ id: o.id }).then(function (res) {
               if (res && res.code === 1) {
-                self.$message && self.$message.success('已拒绝')
+                ReggieUI.success('已拒绝')
                 self.loadData()
               } else {
-                self.$message && self.$message.error((res && res.msg) || '拒绝失败')
+                ReggieUI.error((res && res.msg) || '拒绝失败')
               }
             }).catch(function (err) {
-              self.$message && self.$message.error('拒绝请求失败')
+              ReggieUI.error('拒绝请求失败')
               console.warn('[order-monitor] 拒绝失败:', err)
             }).finally(function () { self.$set(o, '_rejecting', false) })
           }).catch(function () { /* 用户取消 */ })

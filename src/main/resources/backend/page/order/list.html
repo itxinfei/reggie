@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -8,8 +8,15 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
   <link rel="stylesheet" href="../../styles/main.css?v=20260921" />
+  <style>
+    /* 内部备注编辑行（原详情弹窗内联样式收口；间距走令牌） */
+    .od-kv--top { align-items: flex-start; }
+    .od-note-field { flex: 1; display: flex; gap: var(--space-2); align-items: flex-start; }
+    .od-note-input { flex: 1; }
+    .od-note-btn { flex-shrink: 0; margin-top: 2px; }
+  </style>
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -72,9 +79,12 @@
         <template #actions="{ row }">
           <el-button type="text" size="small" @click="goDetail(row)" class="btn-view">查看</el-button>
           <el-button type="text" size="small" @click="printReceipt(row)" class="btn-view">打印</el-button>
-          <el-button v-if="row.status === 2 && !row.riderId" type="text" size="small" @click="openDispatch(row)" class="btn-success">派单</el-button>
-          <el-button v-if="row.status === 2" type="text" size="small" @click="cancelOrDeliveryOrComplete(3, row.id)" class="btn-success">派送</el-button>
-          <el-button v-if="row.status === 3" type="text" size="small" @click="cancelOrDeliveryOrComplete(4, row.id)" class="btn-success">完成</el-button>
+          <!-- 派单（指派骑手）仅外卖单；堂食单无骑手配送环节 -->
+          <el-button v-if="row.status === 2 && !row.riderId && !isEatInOrder(row)" type="text" size="small" @click="openDispatch(row)" class="btn-success">派单</el-button>
+          <!-- 堂食：待接单→开始制作；外卖：待接单→派送 -->
+          <el-button v-if="row.status === 2" type="text" size="small" @click="advanceStatus(row)" class="btn-success">{{ isEatInOrder(row) ? '开始制作' : '派送' }}</el-button>
+          <!-- 堂食：制作中→上菜完成(释放桌台)；外卖：配送中→确认送达 -->
+          <el-button v-if="row.status === 3" type="text" size="small" @click="advanceStatus(row)" class="btn-success">{{ isEatInOrder(row) ? '上菜完成' : '完成' }}</el-button>
           <el-button v-if="row.status === 4" type="text" size="small" class="btn-delete" @click="openRefund(row)">退款</el-button>
           <el-button v-if="row.status === 2 || row.status === 3" type="text" size="small" class="btn-warning" @click="cancelOrder(row)">取消</el-button>
         </template>
@@ -130,7 +140,7 @@
                     <span class="od-item-qty">x {{ item.number }}</span>
                   </div>
                 </div>
-                <div class="od-item-amount">¥{{ Number(item.amount).toFixed(2) }}</div>
+                <div class="od-item-amount">¥{{ (Number(item.amount) || 0).toFixed(2) }}</div>
               </div>
             </div>
             <div v-else class="od-empty">暂无菜品明细</div>
@@ -171,11 +181,11 @@
               <div class="od-kv" v-if="diaForm.checkoutTime"><span>结账时间</span><span>{{ diaForm.checkoutTime }}</span></div>
               <div class="od-kv" v-if="diaForm.remark"><span>备注</span><span>{{ diaForm.remark }}</span></div>
               <!-- 修改点：内部备注可编辑，店员可补充运营信息（如"少辣""骑手已联系"） -->
-              <div class="od-kv" style="align-items:flex-start">
+              <div class="od-kv od-kv--top">
                 <span>内部备注</span>
-                <div style="flex:1;display:flex;gap:8px;align-items:flex-start">
-                  <el-input v-model="internalNote" type="textarea" :rows="2" size="small" placeholder="仅后台可见，用于记录运营信息" style="flex:1"></el-input>
-                  <el-button type="primary" size="small" @click="saveNote" :loading="noteSaving" style="flex-shrink:0;margin-top:2px">保存</el-button>
+                <div class="od-note-field">
+                  <el-input v-model="internalNote" type="textarea" :rows="2" size="small" placeholder="仅后台可见，用于记录运营信息" class="od-note-input"></el-input>
+                  <el-button type="primary" size="small" @click="saveNote" :loading="noteSaving" class="od-note-btn">保存</el-button>
                 </div>
               </div>
             </div>
@@ -194,36 +204,26 @@
       @submit="submitRefund"
       @close="refundVisible = false"
     >
-      <div class="refund-form">
-        <div class="item-box">
-          <span class="label">订单号：</span><span class="des">{{ refundForm.number }}</span>
-        </div>
-        <div class="item-box">
-          <span class="label">订单金额：</span><span class="des des-danger">¥{{ refundForm.orderAmount }}</span>
-        </div>
-        <div class="item-box">
-          <span class="label">退款金额：</span>
-          <el-input-number v-model="refundForm.amount" size="small" :max="refundForm.maxAmount" :min="0.01" :step="0.01" :precision="2" controls-position="right" style="width:180px"></el-input-number>
-        </div>
-        <div class="item-box">
-          <span class="label">可退上限：</span>
-          <span class="des des-danger">¥{{ refundForm.maxAmount }}</span>
-        </div>
-        <div class="item-box">
-          <span class="label">退款原因：</span>
-          <el-select v-model="refundForm.reasonType" size="small">
+      <el-form :model="refundForm" :rules="refundRules" ref="refundFormRef" label-width="80px" size="small" class="refund-form">
+        <el-form-item label="订单号"><span>{{ refundForm.number }}</span></el-form-item>
+        <el-form-item label="订单金额"><span class="des-danger">¥{{ refundForm.orderAmount }}</span></el-form-item>
+        <el-form-item prop="amount" label="退款金额">
+          <el-input-number v-model="refundForm.amount" :max="refundForm.maxAmount" :min="0.01" :step="0.01" :precision="2" controls-position="right"></el-input-number>
+        </el-form-item>
+        <el-form-item label="可退上限"><span class="des-danger">¥{{ refundForm.maxAmount }}</span></el-form-item>
+        <el-form-item prop="reasonType" label="退款原因">
+          <el-select v-model="refundForm.reasonType" placeholder="请选择退款原因">
             <el-option label="口味问题" value="口味问题"></el-option>
             <el-option label="配送超时" value="配送超时"></el-option>
             <el-option label="商品不符" value="商品不符"></el-option>
             <el-option label="用户取消" value="用户取消"></el-option>
             <el-option label="其他原因" value="其他原因"></el-option>
           </el-select>
-        </div>
-        <div class="item-box" v-if="refundForm.reasonType === '其他原因'">
-          <span class="label">详细说明：</span>
-          <el-input v-model="refundForm.reasonDetail" type="textarea" :rows="2" size="small" placeholder="请填写退款原因"></el-input>
-        </div>
-      </div>
+        </el-form-item>
+        <el-form-item v-if="refundForm.reasonType === '其他原因'" prop="reasonDetail" label="详细说明">
+          <el-input v-model="refundForm.reasonDetail" type="textarea" :rows="2" placeholder="请填写退款原因"></el-input>
+        </el-form-item>
+      </el-form>
     </crud-dialog>
 
     <!-- 店长派单弹窗：选择骑手 -->
@@ -261,17 +261,17 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script src="../../js/print-util.js?v=20260921"></script>
-  <script src="../../api/order.js?v=20260915c"></script>
+  <script src="../../api/order.js?v=20260926"></script>
   <script src="../../api/delivery.js?v=20260924"></script>
   <script src="../../api/printer.js?v=20260921"></script>
-  <script src="../../api/payment.js?v=20260915c"></script>
-  <script src="../../api/export.js?v=20260915c"></script>
-  <script src="../../api/meta.js?v=20260915c"></script>
+  <script src="../../api/payment.js?v=20260926"></script>
+  <script src="../../api/export.js?v=20260926"></script>
+  <script src="../../api/meta.js?v=20260926"></script>
   <script>
     // 订单状态兜底常量（与后端 com.reggie.enums.OrderStatus 严格一致，1 基）
     // 仅在 /api/meta/enums 不可用时使用，保证任何情况下显示都不会出错
@@ -309,7 +309,7 @@
             { prop: 'status', label: '状态', slot: true, width: 70, align: 'center' },
             { prop: 'userName', label: '用户', width: 80, align: 'center' },
             { prop: 'phone', label: '手机号', width: 110, align: 'center' },
-            { prop: 'amount', label: '金额', slot: true, width: 110, align: 'center', type: 'money' },
+            { prop: 'amount', label: '金额', slot: true, width: 110, type: 'money' },
             { prop: 'payMethod', label: '支付', width: 70, align: 'center', slot: true },
             { prop: 'source', label: '就餐', width: 70, align: 'center', slot: true },
             { prop: 'tableName', label: '桌台', width: 60, align: 'center' },
@@ -353,14 +353,16 @@
           const s = this.diaForm && this.diaForm.status
           if (s === 5) return [{ label: '已取消' }]
           if (s === 6) return [{ label: '已退款' }]
+          // 堂食单无配送环节：第3步为"后厨制作"；外卖单为"配送中"
+          const eatIn = this.diaForm && this.diaForm.source === 'EAT_IN'
           const flow = [
             { key: 1, label: '待付款' },
             { key: 2, label: '待接单' },
-            { key: 3, label: '配送中' },
+            { key: 3, label: eatIn ? '后厨制作' : '配送中' },
             { key: 4, label: '已完成' }
           ]
           return flow.map(function(step) {
-            return { label: step.label, done: s > step.key, current: s === step.key, pending: s < step.key }
+            return { key: step.key, label: step.label, done: s > step.key, current: s === step.key, pending: s < step.key }
           })
         },
         // 修改点：商品明细金额合计（用于金额明细分区展示）
@@ -368,6 +370,26 @@
           const list = this.diaForm && this.diaForm.orderDetails
           if (!list || !list.length) return 0
           return list.reduce(function(sum, it) { return sum + (Number(it.amount) || 0) }, 0)
+        },
+        // 退款弹窗校验规则（computed 使 validator 闭包可读取动态可退上限；错误 inline 显示）
+        refundRules: function() {
+          var self = this
+          return {
+            amount: [
+              { required: true, validator: function(rule, value, cb) {
+                  var v = parseFloat(value)
+                  if (isNaN(v) || v <= 0) return cb(new Error('请输入有效的退款金额'))
+                  if (v > parseFloat(self.refundForm.maxAmount)) return cb(new Error('退款金额不能超过可退上限 ¥' + self.refundForm.maxAmount))
+                  cb()
+                }, trigger: 'change' }
+            ],
+            reasonType: [
+              { required: true, message: '请选择退款原因', trigger: 'change' }
+            ],
+            reasonDetail: [
+              { required: true, message: '请填写详细退款原因', trigger: 'blur' }
+            ]
+          }
         }
       },
       created: function() {
@@ -411,7 +433,7 @@
           try {
             const results = await Promise.all(requests)
             const orderRes = results[0]
-            if (orderRes && String(orderRes.code) === '1') { self.tableData = orderRes.data.records || []; self.counts = orderRes.data.total }
+            if (orderRes && String(orderRes.code) === '1') { var orderPage = orderRes.data || {}; self.tableData = orderPage.records || []; self.counts = orderPage.total }
             if (reloadStats) {
               const statsRes = results[1]
               if (statsRes && String(statsRes.code) === '1') { self.stats = statsRes.data || self.stats }
@@ -482,6 +504,8 @@
         // 导致 status=1（待付款）被显示成"待接单"、status=2（待接单）显示成"待配送"，两个状态显示错误。
         // 现改为优先取后端枚举字典，失败时用下方 1 基兜底常量。
         getOrderType: function(row) {
+          // 堂食单 status=3 为后厨制作环节，全局字典的"配送中"不适用
+          if (row.status === 3 && row.source === 'EAT_IN') return '制作中'
           const dict = this.enums.orderStatusMap || {}
           const val = dict[String(row.status)]
           if (val) return val
@@ -503,14 +527,6 @@
           if (val == null || val === '') return '-'
           const map = { 1: '现金', 2: '微信支付', 3: '支付宝', 4: '银行卡', 5: '会员储值', 6: '货到付款' }
           return map[val] || '-'
-        },
-        // 订单详情表格：表头样式（背景/文字走令牌，与全局表头规范一致）
-        tableHeaderStyle: function() {
-          return { background: 'var(--el-bg-subtle)', color: 'var(--el-text-regular)', fontWeight: '600', fontSize: '12px' }
-        },
-        // 订单详情表格：单元格样式
-        tableCellStyle: function() {
-          return { fontSize: '13px' }
         },
         // 手动打印小票：后端渲染文本并落一条打印记录，返回文本后由浏览器调本地打印机
         printReceipt: function(row) {
@@ -559,7 +575,7 @@
         },
         cancelOrder: function(row) {
           const self = this
-          ReggieUI.confirm('确认取消该订单？', '提示', { confirmButtonText: '确定', cancelButtonText: '再想想', type: 'warning' })
+          ReggieUI.confirm('确认取消该订单？已支付订单将自动按原路径退款。', '提示', { confirmButtonText: '确定', cancelButtonText: '再想想', type: 'warning' })
             .then(function() {
               editOrderDetail({ id: row.id, status: 5 }).then(function(res) {
                 if (res && res.code === 1) { ReggieUI.success('订单已取消'); self.init() }
@@ -567,12 +583,25 @@
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
         },
-        cancelOrDeliveryOrComplete: function(status, id) {
+        // 堂食单判定：以订单来源 EAT_IN 为准（桌台扫码/开台），与桌台结账/释放逻辑同口径
+        isEatInOrder: function(row) {
+          return !!row && row.source === 'EAT_IN'
+        },
+        // 状态推进（2→3→4），文案随堂食/外卖切换
+        advanceStatus: function(row) {
           const self = this
-          ReggieUI.confirm('确认更改该订单状态?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          const eatIn = this.isEatInOrder(row)
+          const target = row.status === 2 ? 3 : 4
+          const tip = row.status === 2
+            ? (eatIn ? '确认后厨已接单并开始制作？' : '确认已安排骑手派送？')
+            : (eatIn ? '确认上菜完成？完成后桌台将自动释放为空闲。' : '确认订单已送达并完成？')
+          const okMsg = row.status === 2
+            ? (eatIn ? '已开始制作' : '订单已派送')
+            : (eatIn ? '已上菜完成，桌台已释放' : '订单已完成')
+          ReggieUI.confirm(tip, '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
-              editOrderDetail({ status: status, id: id }).then(function(res) {
-                if (res.code === 1) { ReggieUI.success(status === 3 ? '订单已派送' : '订单已完成'); self.init() }
+              editOrderDetail({ status: target, id: row.id }).then(function(res) {
+                if (res.code === 1) { ReggieUI.success(okMsg); self.init() }
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
@@ -619,18 +648,14 @@
           const self = this
           // 修改点：防重保护（原无守卫，快速双击可并发退款）
           if (self.refundLoading) return
-          if (!self.refundForm.amount || parseFloat(self.refundForm.amount) <= 0) { ReggieUI.warning('请输入有效的退款金额'); return }
-          // 修改点：前端硬限制退款金额不超过可退上限，避免用户误输入超限金额
-          if (parseFloat(self.refundForm.amount) > parseFloat(self.refundForm.maxAmount)) {
-            ReggieUI.warning('退款金额不能超过可退上限 ¥' + self.refundForm.maxAmount)
+          // 表单校验：错误 inline 显示在字段下方（el-form rules + validate），替代 toast 逐个拦截
+          try {
+            await self.$refs.refundFormRef.validate()
+          } catch (e) {
             return
           }
           let reason = self.refundForm.reasonType
-          if (!reason) { ReggieUI.warning('请选择退款原因'); return }
-          if (reason === '其他原因') {
-            if (!self.refundForm.reasonDetail) { ReggieUI.warning('请填写详细退款原因'); return }
-            reason = self.refundForm.reasonDetail
-          }
+          if (reason === '其他原因') reason = self.refundForm.reasonDetail
           // 修改点：退款为资金敏感操作，ReggieUI.confirm 二次确认
           try {
             await ReggieUI.confirm('确认向用户退款 ¥' + self.refundForm.amount + '？退款后不可撤销。', '订单退款确认', { confirmButtonText: '确认退款', cancelButtonText: '再想想', type: 'warning' })

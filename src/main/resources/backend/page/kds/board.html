@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>后厨出餐大屏 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <!-- a11y 工具上移到 head：仅依赖原生 API，需先于页面内容与业务脚本加载 -->
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <!-- ==================== 后厨出餐大屏 ==================== -->
   <!-- 功能说明：KDS厨房显示系统，三栏看板（待制作/制作中/待取餐），支持自动刷新/语音叫号/加急/全屏 -->
   <style>
@@ -18,36 +20,32 @@
     .top-bar__title { font-size: var(--font-size-xl); font-weight: var(--font-weight-semibold); color: var(--text-primary); display:flex; align-items:center; gap:8px; }
     .top-bar__title i { color: var(--el-color-primary); }
     .top-bar__tools { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
-    .meta-chip { font-size: var(--font-size-sm); color: var(--text-secondary); background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 999px; padding: 4px 14px; font-variant-numeric: tabular-nums; }
+    .meta-chip { font-size: var(--font-size-sm); color: var(--text-secondary); background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-full); padding: var(--space-1) 14px; font-variant-numeric: tabular-nums; }
     .meta-chip b { color: var(--text-primary); }
-    .tool-btn { cursor: pointer; border: 1px solid var(--border-default); background: var(--bg-surface); border-radius: 999px; padding: 7px 16px; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-regular); }
+    .tool-btn { cursor: pointer; border: 1px solid var(--border-default); background: var(--bg-surface); border-radius: var(--radius-full); padding: 7px 16px; font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-regular); }
     .tool-btn.on { background: var(--color-success-dark); color: var(--text-inverse); border-color: var(--color-success-dark); }
     .tool-btn:active { opacity: .8; }
 
-    /* ===== 统计卡片行：待制作/制作中/待取餐/今日完成/加急/平均出餐 ===== */
-    .stat-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-3); margin-bottom: var(--space-4); }
-    @media (max-width: 1100px) { .stat-row { grid-template-columns: repeat(3, 1fr); } }
-    .stat-card { background: var(--bg-surface); border-radius: var(--radius-md, 10px); box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,.08)); padding: var(--space-3) var(--space-4); }
-    .stat-card__label { font-size: var(--font-size-sm); color: var(--text-secondary); margin-bottom: 4px; }
-    .stat-card__value { font-size: 1.8rem; font-weight: var(--font-weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
-    .stat-card__value small { font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); color: var(--text-secondary); }
-    .stat-card.pending .stat-card__value { color: var(--color-danger-dark); }
-    .stat-card.cooking .stat-card__value { color: var(--el-color-primary); }
-    .stat-card.ready .stat-card__value { color: var(--color-success-dark); }
-    .stat-card.urgent .stat-card__value { color: var(--color-danger-dark); }
+    /* 统计卡片统一使用 <stat-cards> 组件默认样式（原 .stat-row 死规则与 .stat-card /
+       .stat-card__* 页级覆盖层已删除：BEM 名与组件实际 class 不匹配，紧凑 padding 与
+       自定义字色回归组件标准，颜色由 statsCards 的 color 字段经组件主题类提供） */
 
     /* ===== 三栏看板布局（待制作/制作中/待取餐） ===== */
     .board-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); align-items: start; }
     @media (max-width: 1000px) { .board-columns { grid-template-columns: 1fr; } }
     .kds-col { background: var(--bg-subtle, #f7f8fa); border-radius: var(--radius-md, 10px); padding: var(--space-3); min-height: 200px; }
     .kds-col__head { display: flex; align-items: center; justify-content: space-between; padding: 2px var(--space-2) var(--space-3); font-weight: var(--font-weight-semibold); font-size: var(--font-size-lg); }
-    .kds-col__head .badge { min-width: 26px; text-align: center; border-radius: 999px; padding: 2px 10px; font-size: var(--font-size-sm); color: #fff; }
-    .kds-col.pending .kds-col__head { color: var(--color-danger-dark); }
-    .kds-col.pending .badge { background: var(--color-danger); }
-    .kds-col.cooking .kds-col__head { color: var(--el-color-primary); }
-    .kds-col.cooking .badge { background: var(--el-color-primary); }
-    .kds-col.ready .kds-col__head { color: var(--color-success-dark); }
-    .kds-col.ready .badge { background: var(--color-success); }
+    .kds-col__head .badge { min-width: 26px; text-align: center; border-radius: var(--radius-full); padding: 2px 10px; font-size: var(--font-size-sm); color: var(--text-inverse); }
+    /* P0 对比度修复(2026-09-27)：徽章是「浅语义色底 + 白字」，#f56c6c 上白字仅 2.90:1、
+       #67c23a 上白字仅 2.24:1。改用同名深文字色作底，白字可达 6.4:1 / 7.5:1，语义不变。
+       同理，列标题文字由 -dark（4.18:1 / 3.30:1）升级到已达标的 -text 变体。 */
+    .kds-col.pending .kds-col__head { color: var(--color-danger-text); }
+    .kds-col.pending .badge { background: var(--color-danger-text); }
+    .kds-col.cooking .kds-col__head { color: var(--color-brand-900); }
+    /* #c99200 底上白字仅 2.76:1，改用品牌深金底 + 深色文字（项目统一的 on-brand 文字色） */
+    .kds-col.cooking .badge { background: var(--color-brand-600); color: var(--text-on-brand); }
+    .kds-col.ready .kds-col__head { color: var(--color-success-text); }
+    .kds-col.ready .badge { background: var(--color-success-text); }
     .col-body { display: flex; flex-direction: column; gap: var(--space-3); max-height: calc(100vh - 300px); overflow-y: auto; padding-right: 4px; }
 
     /* ===== 工单卡片样式（含加急/警告/告警状态） ===== */
@@ -57,12 +55,12 @@
     .ticket.s-alarm { border-left-color: var(--color-danger); animation: pulse 1.2s infinite; }
     @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(245,108,108,.45); } 70% { box-shadow: 0 0 0 10px rgba(245,108,108,0); } 100% { box-shadow: 0 0 0 0 rgba(245,108,108,0); } }
     .ticket__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .ticket__no { font-size: 1.35rem; font-weight: var(--font-weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+    .ticket__no { font-size: var(--font-size-display-sm); font-weight: var(--font-weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
     .ticket__tags { display: flex; gap: 6px; align-items: center; }
-    .tag-mini { font-size: var(--font-size-xs); padding: 1px 8px; border-radius: 999px; background: var(--el-color-info-lighter, #f4f4f5); color: var(--text-secondary); }
+    .tag-mini { font-size: var(--font-size-xs); padding: 1px 8px; border-radius: var(--radius-full); background: var(--el-color-info-lighter, #f4f4f5); color: var(--text-secondary); }
     .tag-mini.type-eat { background: var(--el-color-primary-lighter, #fffbeb); color: var(--el-color-primary); }
-    .tag-urgent { font-size: var(--font-size-xs); padding: 1px 8px; border-radius: 999px; background: var(--color-danger); color: #fff; font-weight: var(--font-weight-semibold); }
-    .ticket__time { font-size: 1.5rem; font-weight: var(--font-weight-bold); font-variant-numeric: tabular-nums; margin: 6px 0 4px; color: var(--text-primary); }
+    .tag-urgent { font-size: var(--font-size-xs); padding: 1px 8px; border-radius: var(--radius-full); background: var(--color-danger-text); color: var(--text-inverse); font-weight: var(--font-weight-semibold); }
+    .ticket__time { font-size: var(--font-size-display-md); font-weight: var(--font-weight-bold); font-variant-numeric: tabular-nums; margin: 6px 0 4px; color: var(--text-primary); }
     .ticket__time.warn { color: var(--color-warning-dark); }
     .ticket__time.alarm { color: var(--color-danger-dark); }
     .ticket__time small { font-size: var(--font-size-xs); color: var(--text-secondary); font-weight: var(--font-weight-medium); }
@@ -194,9 +192,9 @@
 <script src="../../plugins/vue/vue.js"></script>
 <script src="../../plugins/element-ui/index.js?v=20260915"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
-<script src="../../js/request.js?v=20260915c"></script>
+<script src="../../js/request.js?v=20260926"></script>
 <script src="../../js/components.js?v=20260924"></script>
-<script src="../../api/kds.js?v=20260915c"></script>
+<script src="../../api/kds.js?v=20260926"></script>
 <script>
   new Vue({
     el: '#app',
@@ -212,6 +210,7 @@
         stationFilter: '',
         pollTimer: null,
         clockTimer: null,
+        reqSeq: 0,
         spokenReady: {}
       }
     },
@@ -250,7 +249,10 @@
       // ========== 数据加载 ==========
       loadData: function (autoPull) {
         var self = this
+        // 请求序号守卫：每次加载递增，响应回来时只采纳最新一次，过期响应丢弃（手动刷新与轮询防竞态）
+        var seq = ++this.reqSeq
         window.kdsApi.board(autoPull !== false, self.stationFilter || undefined).then(function (res) {
+          if (seq !== self.reqSeq) return
           self.loadError = false
           if (res && String(res.code) === '1' && res.data) {
             self.board = res.data
@@ -258,6 +260,7 @@
             self.announceReady(res.data.ready || [])
           }
         }).catch(function (err) {
+          if (seq !== self.reqSeq) return
           if (err && err.message !== 'NOTLOGIN') {
             console.warn('[KDS] 看板加载失败', err)
             self.loadError = true
@@ -347,8 +350,15 @@
       ticketClass: function (t) {
         return { urgent: t.urgent === 1, 's-warn': this.timeClass(t) === 'warn', 's-alarm': this.timeClass(t) === 'alarm' }
       },
+      /**
+       * 时长格式化（mm:ss）
+       * 脏数据防御：种子/历史工单的 receiveTime 可能是很久以前，算出的秒数会达到数百万级，
+       * 显示成 "46182:33" 既失真也误导出餐员。超过 24 小时的工单按「非本班次」处理，直接不展示。
+       */
       fmtMMSS: function (sec) {
         sec = Number(sec) || 0
+        if (!isFinite(sec) || sec < 0) return '--:--'
+        if (sec >= 86400) return '--'
         var m = Math.floor(sec / 60), s = sec % 60
         return (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s)
       },

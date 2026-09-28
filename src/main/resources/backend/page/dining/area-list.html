@@ -7,8 +7,8 @@
   <title>区域管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <style>
   </style>
 </head>
@@ -78,10 +78,10 @@
       <!-- 修改点：补全 :rules，启用 Element 校验（原仅手写 if 判断，属"假必填"） -->
       <el-form ref="form" :model="form" :rules="areaRules" label-width="100px" size="small">
         <el-form-item label="区域名称：" prop="name">
-          <el-input v-model="form.name" placeholder="请输入区域名称" maxlength="14" />
+          <el-input v-model="form.name" placeholder="请输入区域名称" maxlength="14" ></el-input>
         </el-form-item>
         <el-form-item label="排序：" prop="sort">
-          <el-input v-model="form.sort" type="number" placeholder="请输入排序" />
+          <el-input v-model="form.sort" type="number" placeholder="请输入排序" ></el-input>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -89,9 +89,9 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../api/dining.js?v=20260918b"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script>

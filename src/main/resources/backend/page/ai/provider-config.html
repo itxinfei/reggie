@@ -6,8 +6,8 @@
     <title>AI模型配置 - 瑞吉外卖管理端</title>
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
     <link rel="stylesheet" href="../../styles/ai-provider.css?v=20260923b" />
 </head>
 <body>
@@ -19,8 +19,18 @@
     <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
       <h1 class="sr-only" id="page-title">AI 模型配置</h1>
 
+        <!-- 全供应商不可用：顶部红色告警横幅 -->
+        <el-alert
+            v-if="statusData.allExhausted"
+            title="全部 AI 供应商均不可用"
+            type="error" :closable="false" show-icon class="exhausted-alert">
+            <template slot="default">
+                所有候选均已故障或处于熔断冷却中，新对话将收到兜底提示。请检查各供应商额度/密钥，或将其他可用供应商设为首选。
+                <span v-if="statusData.lastExhaustedTime">最近发生：{{ statusData.lastExhaustedTime }}</span>
+            </template>
+        </el-alert>
 
-        <!-- 当前激活供应商 -->
+        <!-- 当前首选供应商 -->
         <div class="active-provider-card" v-if="activeProvider">
             <div class="active-provider-info">
                 <div class="provider-icon-large" :class="getIconClass(activeProvider.providerCode)">
@@ -28,7 +38,7 @@
                 </div>
                 <div class="provider-detail">
                     <div class="name">{{ activeProvider.providerName }}
-                        <el-tag size="small" type="success" class="current-tag">当前使用</el-tag>
+                        <el-tag size="small" type="success" class="current-tag">首选</el-tag>
                     </div>
                     <div class="model">模型：{{ activeProvider.modelName }}</div>
                     <div class="url">接口地址：{{ activeProvider.baseUrl }}</div>
@@ -40,10 +50,10 @@
                 </div>
             </div>
         </div>
-        <!-- 无激活模型：空态卡片（样式收口为 --empty 修饰类） -->
+        <!-- 无可用首选：空态卡片（样式收口为 --empty 修饰类） -->
         <div class="active-provider-card active-provider-card--empty" v-else>
             <p>
-                暂无激活的 AI 模型，请在下方选择一个供应商并点击「激活」
+                暂无可用的首选 AI 模型，请在下方选择一个已启用的供应商并点击「设为首选」
             </p>
             <el-button type="primary" size="small" @click="initPresets">
                 一键初始化预设模型
@@ -80,9 +90,9 @@
                         <div class="name">{{ provider.providerName }}</div>
                         <div class="model-name">{{ provider.modelName }}</div>
                     </div>
-                    <span :class="['card-status', provider.isActive ? 'active' : 'inactive']">
-                        {{ provider.isActive ? '使用中' : (provider.enabled ? '已启用' : '已停用') }}
-                    </span>
+                    <el-tag size="small" :type="statusTagType(provider)" effect="plain">
+                        {{ statusTagText(provider) }}
+                    </el-tag>
                 </div>
                 <div class="card-desc">{{ provider.remark || '暂无备注信息' }}</div>
                 <div class="card-meta">
@@ -100,8 +110,8 @@
                 </div>
                 <div class="card-actions">
                     <el-button v-if="!provider.isActive" type="success" size="small"
-                               @click="activateProvider(provider.id)">激活</el-button>
-                    <el-button v-else type="info" size="small" disabled>已激活</el-button>
+                               @click="activateProvider(provider.id)">设为首选</el-button>
+                    <el-button v-else type="info" size="small" disabled>首选</el-button>
                     <el-button type="primary" size="small" @click="testProvider(provider.id)">测试</el-button>
                     <el-button size="small" @click="openEditDialog(provider)">编辑</el-button>
                     <el-button type="text" size="small" class="btn-delete" @click="deleteProvider(provider.id)"
@@ -251,9 +261,9 @@
 <script src="../../plugins/vue/vue.js"></script>
 <script src="../../plugins/element-ui/index.js?v=20260915"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
-<script src="../../js/request.js?v=20260915c"></script>
-<script src="../../js/accessibility-utils.js?v=20260915c"></script>
-<script src="../../js/performance-utils.js?v=20260915c"></script>
+<script src="../../js/request.js?v=20260926"></script>
+<script src="../../js/accessibility-utils.js?v=20260927"></script>
+<script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
 <script src="../../api/ai.js?v=20260921"></script>
 <script>
@@ -280,6 +290,8 @@
         data: {
             providers: [],
             activeProvider: null,
+            // AI 服务健康状态（loadStatus 轮询更新，默认 configured 避免初始误报横幅）
+            statusData: { configured: true, allExhausted: false },
             dialogVisible: false,
             dialogTitle: '添加模型',
             submitting: false,
@@ -311,6 +323,13 @@
 
         // 校验规则随 form.id 动态生成：apiKey 新增必填、编辑时留空表示沿用原密钥（错误内联，不用 toast）
         computed: {
+            // 候选状态映射 code → statusData 候选项（含实时熔断状态）
+            breakerMap: function() {
+                var map = {};
+                var candidates = (this.statusData && this.statusData.candidates) || [];
+                candidates.forEach(function(c) { map[c.code] = c; });
+                return map;
+            },
             providerRules: function() {
                 return {
                     providerName: [{ required: true, whitespace: true, message: '请输入供应商名称', trigger: 'blur' }],
@@ -341,6 +360,14 @@
 
         created: function() {
             this.loadData();
+            // 健康状态：立即加载 + 每 15 秒轮询（熔断/全耗尽实时反映）
+            this.loadStatus();
+            this.statusTimer = setInterval(this.loadStatus, 15000);
+        },
+
+        beforeDestroy: function() {
+            if (this.statusTimer) { clearInterval(this.statusTimer);
+            }
         },
 
         watch: {
@@ -396,6 +423,38 @@
                 });
             },
 
+            /* ── 健康状态加载/展示 ── */
+            loadStatus: function() {
+                const self = this;
+                window.aiBackendApi.getStatus().then(function(res) {
+                    if (res.code === 1 && res.data) {
+                        self.statusData = res.data;
+                    }
+                }).catch(function() { /* 状态轮询失败静默，不打扰操作 */ });
+            },
+
+            // 卡片状态标签类型：按实时熔断状态 + 启用/首选标记
+            statusTagType: function(provider) {
+                var c = this.breakerMap[provider.providerCode];
+                var state = c && c.breaker ? c.breaker.state : 'closed';
+                if (!provider.enabled) return 'info';
+                if (state === 'open') return 'danger';
+                if (state === 'half-open') return 'warning';
+                if (provider.isActive) return 'success';
+                return '';
+            },
+
+            // 卡片状态标签文案
+            statusTagText: function(provider) {
+                var c = this.breakerMap[provider.providerCode];
+                var state = c && c.breaker ? c.breaker.state : 'closed';
+                if (!provider.enabled) return '已停用';
+                if (state === 'open') return '故障冷却中';
+                if (state === 'half-open') return '恢复探测中';
+                if (provider.isActive) return '首选';
+                return '备用就绪';
+            },
+
             /** 获取供应商图标 RemixIcon 类名（用在 <i :class="...">） */
             getProviderIcon: function(code) {
                 return PROVIDER_ICON[code] || 'ri-robot-2-line';
@@ -408,21 +467,22 @@
             /* ── 供应商操作（激活/测试/删除） ── */
             activateProvider: function(id) {
                 const self = this;
-                ReggieUI.confirm('切换模型后，AI 将立即使用新模型。确定继续吗？', '切换确认', {
-                    confirmButtonText: '确定切换',
+                ReggieUI.confirm('设为首选后，新的对话请求优先使用该供应商；当其故障（限流/额度不足/超时/密钥失效/5xx）时自动切换到其他已启用供应商，恢复后自动回切。确定继续吗？', '设为首选确认', {
+                    confirmButtonText: '确定',
                     type: 'warning'
                 }).then(function() {
                     window.aiBackendApi.providerActivate(id).then(function(res) {
                         if (res.code === 1) {
-                            ReggieUI.success('切换成功');
+                            ReggieUI.success('已设为首选');
                             self.loadData();
+                            self.loadStatus();
                         } else {
-                            ReggieUI.error(res.msg || '切换失败');
+                            ReggieUI.error(res.msg || '设置失败');
                         }
                     }).catch(function(err) {
-                        ReggieUI.error('切换失败：' + (err.message || err));
+                        ReggieUI.error('设置失败：' + (err.message || err));
                     });
-                }).catch(function(err) { console.warn('[provider-config] 切换供应商操作取消或失败:', err) });
+                }).catch(function(err) { console.warn('[provider-config] 设为首选操作取消或失败:', err) });
             },
 
             testProvider: function(id) {

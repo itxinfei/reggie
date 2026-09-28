@@ -9,8 +9,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
 </head>
 <body>
 <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -78,6 +78,7 @@
         <el-image
           v-if="firstImage(row.licenseImages)"
           :src="firstImage(row.licenseImages)"
+          :alt="(row.name ? row.name + ' 的' : '') + '营业执照'"
           :preview-src-list="imageList(row.licenseImages)"
           style="width:44px;height:44px;object-fit:cover;border:1px solid var(--border-default);border-radius:var(--radius-sm);cursor:pointer;">
         </el-image>
@@ -113,16 +114,16 @@
   >
     <el-form ref="supplierForm" :model="formData" :rules="formRules" label-width="100px">
       <el-form-item label="供应商名称：" prop="name">
-        <el-input v-model="formData.name" placeholder="请输入供应商名称" maxlength="50" />
+        <el-input v-model="formData.name" placeholder="请输入供应商名称" maxlength="50" ></el-input>
       </el-form-item>
       <el-form-item label="联系人：">
-        <el-input v-model="formData.contact" placeholder="请输入联系人" maxlength="20" />
+        <el-input v-model="formData.contact" placeholder="请输入联系人" maxlength="20" ></el-input>
       </el-form-item>
       <el-form-item label="联系电话：" prop="phone">
-        <el-input v-model="formData.phone" placeholder="请输入联系电话" maxlength="20" />
+        <el-input v-model="formData.phone" placeholder="请输入联系电话" maxlength="20" ></el-input>
       </el-form-item>
       <el-form-item label="地址：">
-        <el-input v-model="formData.address" placeholder="请输入地址" maxlength="100" />
+        <el-input v-model="formData.address" placeholder="请输入地址" maxlength="100" ></el-input>
       </el-form-item>
       <el-form-item label="资质图片：">
         <rg-image-uploader v-model="formData.licenseImages" biz-type="supplier" :max="5"></rg-image-uploader>
@@ -181,11 +182,11 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
-  <script src="../../api/inventory.js?v=20260915c"></script>
+  <script src="../../api/inventory.js?v=20260926"></script>
   <script>
     new Vue({
       el: '#supplier-app',

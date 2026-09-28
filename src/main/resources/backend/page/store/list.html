@@ -7,8 +7,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
     <style>
         /* 布局/容器/工具栏/分页全部走公共样式（consistency.css + table-bar/crud-table），
            本页仅保留表格插槽与弹窗用到的局部类 */
@@ -151,12 +151,12 @@
             <el-row :gutter="16">
                 <el-col :span="12">
                     <el-form-item label="门店名称" prop="storeName">
-                        <el-input v-model="form.storeName" placeholder="如：瑞吉外卖-朝阳店" maxlength="100" />
+                        <el-input v-model="form.storeName" placeholder="如：瑞吉外卖-朝阳店" maxlength="100" ></el-input>
                     </el-form-item>
                 </el-col>
                 <el-col :span="12">
                     <el-form-item label="门店编码" prop="storeCode">
-                        <el-input v-model="form.storeCode" placeholder="如：BJ001" maxlength="32" />
+                        <el-input v-model="form.storeCode" placeholder="如：BJ001" maxlength="32" ></el-input>
                     </el-form-item>
                 </el-col>
             </el-row>
@@ -164,9 +164,9 @@
                 <el-col :span="12">
                     <el-form-item label="门店类型" prop="storeType">
                         <el-select v-model="form.storeType" style="width:100%">
-                            <el-option label="直营总店" :value="1" />
-                            <el-option label="直营分店" :value="2" />
-                            <el-option label="加盟店" :value="3" />
+                            <el-option label="直营总店" :value="1" ></el-option>
+                            <el-option label="直营分店" :value="2" ></el-option>
+                            <el-option label="加盟店" :value="3" ></el-option>
                         </el-select>
                     </el-form-item>
                 </el-col>
@@ -191,34 +191,34 @@
             <el-row :gutter="16">
                 <el-col :span="12">
                     <el-form-item label="联系人" prop="contactPerson">
-                        <el-input v-model="form.contactPerson" placeholder="门店联系人" maxlength="64" />
+                        <el-input v-model="form.contactPerson" placeholder="门店联系人" maxlength="64" ></el-input>
                     </el-form-item>
                 </el-col>
                 <el-col :span="12">
                     <el-form-item label="联系电话" prop="contactPhone">
-                        <el-input v-model="form.contactPhone" placeholder="联系电话" maxlength="20" />
+                        <el-input v-model="form.contactPhone" placeholder="联系电话" maxlength="20" ></el-input>
                     </el-form-item>
                 </el-col>
             </el-row>
             <el-form-item label="门店地址" prop="address">
-                <el-input v-model="form.address" placeholder="门店详细地址" maxlength="200" />
+                <el-input v-model="form.address" placeholder="门店详细地址" maxlength="200" ></el-input>
             </el-form-item>
 
             <div class="form-section-title">运营设置</div>
             <el-row :gutter="16">
                 <el-col :span="8">
                     <el-form-item label="配送半径(m)">
-                        <el-input-number v-model="form.deliveryRadius" :min="500" :max="20000" :step="500" controls-position="right" style="width:100%" />
+                        <el-input-number v-model="form.deliveryRadius" :min="500" :max="20000" :step="500" controls-position="right" style="width:100%" ></el-input-number>
                     </el-form-item>
                 </el-col>
                 <el-col :span="8">
                     <el-form-item label="起送金额">
-                        <el-input-number v-model="form.minDeliveryAmount" :min="0" :max="200" :precision="2" :step="1" controls-position="right" style="width:100%" />
+                        <el-input-number v-model="form.minDeliveryAmount" :min="0" :max="200" :precision="2" :step="1" controls-position="right" style="width:100%" ></el-input-number>
                     </el-form-item>
                 </el-col>
                 <el-col :span="8">
                     <el-form-item label="配送费">
-                        <el-input-number v-model="form.deliveryFee" :min="0" :max="50" :precision="2" :step="0.5" controls-position="right" style="width:100%" />
+                        <el-input-number v-model="form.deliveryFee" :min="0" :max="50" :precision="2" :step="0.5" controls-position="right" style="width:100%" ></el-input-number>
                     </el-form-item>
                 </el-col>
             </el-row>
@@ -246,12 +246,12 @@
                 <el-row :gutter="16">
                     <el-col :span="12">
                         <el-form-item label="管理员账号" prop="adminUsername">
-                            <el-input v-model="form.adminUsername" placeholder="门店管理员登录账号" maxlength="32" />
+                            <el-input v-model="form.adminUsername" placeholder="门店管理员登录账号" maxlength="32" ></el-input>
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
                         <el-form-item label="管理员密码" prop="adminPassword">
-                            <el-input v-model="form.adminPassword" type="password" placeholder="初始密码，至少6位" maxlength="32" show-password />
+                            <el-input v-model="form.adminPassword" type="password" placeholder="初始密码，至少6位" maxlength="32" show-password ></el-input>
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -363,10 +363,10 @@
 <script src="../../plugins/vue/vue.js"></script>
 <script src="../../plugins/element-ui/index.js?v=20260915"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
-<script src="../../js/request.js?v=20260915c"></script>
-<script src="../../js/accessibility-utils.js?v=20260915c"></script>
-<script src="../../js/performance-utils.js?v=20260915c"></script>
-<script src="../../api/store.js?v=20260915c"></script>
+<script src="../../js/request.js?v=20260926"></script>
+<script src="../../js/accessibility-utils.js?v=20260927"></script>
+<script src="../../js/performance-utils.js?v=20260926"></script>
+<script src="../../api/store.js?v=20260926"></script>
 <script src="../../js/components.js?v=20260924"></script>
 <script>
   new Vue({

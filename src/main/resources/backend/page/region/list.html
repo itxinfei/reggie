@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>行政区划管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
-    <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/components-stats-card.css?v=20260926" />
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -84,10 +84,10 @@
       <!-- 修改点：补全 ref/:model/:rules，启用 Element 校验（原仅手写 if 判断，属"假必填"不校验） -->
       <el-form ref="regionForm" :model="formData" :rules="regionRules" label-width="100px" size="small">
         <el-form-item label="地区名称：" prop="name">
-          <el-input v-model="formData.name" placeholder="请输入地区名称" maxlength="50" />
+          <el-input v-model="formData.name" placeholder="请输入地区名称" maxlength="50" ></el-input>
         </el-form-item>
         <el-form-item label="区划代码：">
-          <el-input v-model="formData.code" placeholder="请输入区划代码，如110000" maxlength="20" />
+          <el-input v-model="formData.code" placeholder="请输入区划代码，如110000" maxlength="20" ></el-input>
         </el-form-item>
         <el-form-item label="层级：">
           <el-select v-model="formData.level" placeholder="请选择层级" style="width: 100%">
@@ -102,7 +102,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="排序：">
-          <el-input-number v-model="formData.sort" :min="0" :max="9999" placeholder="排序值" style="width: 100%" />
+          <el-input-number v-model="formData.sort" :min="0" :max="9999" placeholder="排序值" style="width: 100%" ></el-input-number>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -111,10 +111,10 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../api/region.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/region.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
 <script>
     new Vue({

@@ -29,6 +29,12 @@ document.write('<script src="/shared/js/img-path.js?v=20260924"><\/script>');
  */
 
 // ============================================================
+// 弹窗标准尺寸档（crud-dialog 与 crud-table 内置查看弹窗共用的单一事实源）
+// 禁止在组件内另写 560px 等魔数；新增尺寸统一在此收口
+// ============================================================
+var DIALOG_SIZE = { sm: '420px', md: '560px', lg: '720px', xl: '840px', fullscreen: '92%' }
+
+// ============================================================
 // 组件1：stat-cards — 数据统计卡片组
 // ============================================================
 Vue.component('stat-cards', {
@@ -99,7 +105,7 @@ Vue.component('stat-cards', {
             '<div class="stat-label">{{ card.label }}</div>' +
             '<div class="stat-value">' +
               '{{ card.value != null ? card.value : 0 }}' +
-              '<small v-if="card.unit" style="font-size:14px;font-weight:400;margin-left:2px;">{{ card.unit }}</small>' +
+              '<small v-if="card.unit" class="stat-unit">{{ card.unit }}</small>' +
             '</div>' +
           '</div>' +
         '</template>' +
@@ -113,11 +119,11 @@ Vue.component('stat-cards', {
           // error 态：统计接口失败（如数据库未连接），提示点击重试，而非静默显示 0
           '<div v-if="card.error" class="stat-value stat-value--error" aria-label="统计加载失败，点击重试">' +
             '<i class="ri-error-warning-line"></i> 加载失败' +
-            '<div style="font-size:12px;font-weight:400;">点击重试</div>' +
+            '<div class="stat-retry-hint">点击重试</div>' +
           '</div>' +
           '<div v-else class="stat-value">' +
             '{{ card.value != null ? card.value : 0 }}' +
-            '<small v-if="card.unit" style="font-size:14px;font-weight:400;margin-left:2px;">{{ card.unit }}</small>' +
+            '<small v-if="card.unit" class="stat-unit">{{ card.unit }}</small>' +
           '</div>' +
           '<div v-if="card.subText" class="sub">' +
             '<span>{{ card.subText }}</span>' +
@@ -452,7 +458,7 @@ Vue.component('crud-table', {
      *   - label:    列头文字
      *   - width:    列宽（如 180 或 '180px'）
      *   - minWidth: 最小列宽
-     *   - align:    对齐方式（默认 'left'）
+     *   - align:    对齐方式（默认居中；type='money'|'number' 默认右对齐；显式设置可覆盖默认）
      *   - fixed:    固定列 'left' | 'right'
      *   - sortable: 是否可排序
      *   - slot:     是否使用插槽渲染（true 时通过 #col-{prop} 自定义）
@@ -626,6 +632,16 @@ Vue.component('crud-table', {
     defaultSort: {
       type: Object,
       default: null
+    },
+    /** 失败态主文案（列表请求失败时替代 emptyText） */
+    errorText: {
+      type: String,
+      default: '数据加载失败'
+    },
+    /** 失败态引导文案 */
+    errorHint: {
+      type: String,
+      default: '请检查网络后刷新页面重试'
     }
   },
   template:
@@ -658,7 +674,7 @@ Vue.component('crud-table', {
       '<el-table-column v-if="expand" type="expand" :width="expandWidth">' +
         '<template slot-scope="props">' +
           '<slot name="expand" :row="props.row" :$index="props.$index">' +
-            '<div style="padding:16px;color:var(--text-muted);">暂无展开内容</div>' +
+            '<div style="padding:var(--space-4);color:var(--text-muted);">暂无展开内容</div>' +
           '</slot>' +
         '</template>' +
       '</el-table-column>' +
@@ -721,11 +737,13 @@ Vue.component('crud-table', {
         '</template>' +
       '</el-table-column>' +
       // 空状态提示（样式收敛在 components.css 的 .ds-table-empty，禁止内联硬编码色）
+      // 失败态：列表请求失败时改显"数据加载失败"，不能让用户以为"本来就没数据"
       '<template slot="empty">' +
-        '<div class="ds-table-empty">' +
-          '<i class="el-icon-document"></i>' +
-          '<p>{{ emptyText }}</p>' +
-          '<p v-if="emptyHint" class="ds-table-empty__hint">{{ emptyHint }}</p>' +
+        '<div :class="listFailed ? \'ds-table-error\' : \'ds-table-empty\'" :role="listFailed ? \'alert\' : \'\'">' +
+          '<i :class="listFailed ? \'el-icon-warning-triangle\' : \'el-icon-document\'" aria-hidden="true"></i>' +
+          '<p>{{ listFailed ? errorText : emptyText }}</p>' +
+          '<p v-if="listFailed" class="ds-table-empty__hint">{{ errorHint }}</p>' +
+          '<p v-else-if="emptyHint" class="ds-table-empty__hint">{{ emptyHint }}</p>' +
         '</div>' +
       '</template>' +
     '</el-table>' +
@@ -741,7 +759,7 @@ Vue.component('crud-table', {
     '  @current-change="onPageChange"' +
     '></el-pagination>' +
     // ===== 内置只读查看弹窗（viewable 开启时渲染） =====
-    '<el-dialog :title="viewTitle" :visible.sync="viewVisible" width="560px" :close-on-click-modal="false" append-to-body class="crud-view-dialog">' +
+    '<el-dialog :title="viewTitle" :visible.sync="viewVisible" :width="viewDialogWidth" :close-on-click-modal="false" append-to-body custom-class="crud-view-dialog">' +
       '<div v-if="viewRow" class="crud-view-body">' +
         '<div v-for="col in viewColumns" :key="col.prop" class="crud-view-row">' +
           '<div class="crud-view-label">{{ col.label }}</div>' +
@@ -758,8 +776,22 @@ Vue.component('crud-table', {
       currentPage: this.page,
       selectedRows: [],
       viewVisible: false,
-      viewRow: null
+      viewRow: null,
+      /** 最近一次列表请求是否失败。由 request.js 响应拦截器经事件驱动更新（非轮询，避免时序抖动） */
+      listFailed: false
     }
+  },
+  mounted: function () {
+    var self = this
+    // 监听请求层发出的列表状态事件：失败时改显失败态，避免"本来就没数据"的误导
+    this._onListFail = function () { self.listFailed = true }
+    this._onListOk = function () { self.listFailed = false }
+    window.addEventListener('reggie:list-fail', this._onListFail)
+    window.addEventListener('reggie:list-ok', this._onListOk)
+  },
+  beforeDestroy: function () {
+    window.removeEventListener('reggie:list-fail', this._onListFail)
+    window.removeEventListener('reggie:list-ok', this._onListOk)
   },
   watch: {
     page: function (val) {
@@ -785,6 +817,10 @@ Vue.component('crud-table', {
       return cols.filter(function (c) {
         return c && c.prop && c.label && c.type !== 'selection' && c.type !== 'index' && c.type !== 'expand'
       })
+    },
+    /** 内置查看弹窗宽度：统一走 md 标准尺寸档（DIALOG_SIZE 单一事实源，禁止魔数） */
+    viewDialogWidth: function () {
+      return DIALOG_SIZE.md
     }
   },
   methods: {
@@ -800,12 +836,15 @@ Vue.component('crud-table', {
     },
     /**
      * 列对齐解析：
-     *  - 全站表格统一居中（修改点 2026-09-01：用户要求"表头与内容必须居中"，
-     *    金额/数字列不再默认右对齐，与文本列一致居中展示）
-     *  - 页面显式 align 仍可覆盖默认
+     *  - 页面显式 align 优先（可覆盖一切默认）
+     *  - 金额/数字语义列（type='money'|'number'）默认右对齐，符合 CLAUDE.md 7.2
+     *    "金额/数字列右对齐"与 columns props 文档（自动右对齐 + tabular-nums）
+     *  - 其余列默认居中
      */
     resolveColAlign: function (col) {
-      return col.align || 'center'
+      if (col.align) return col.align
+      if (col.type === 'money' || col.type === 'number') return 'right'
+      return 'center'
     },
     /** 列宽解析（内容驱动策略）：
      *  - 优先 minWidth（页面显式下限）
@@ -968,9 +1007,8 @@ Vue.component('crud-dialog', {
   computed: {
     /** 尺寸别名 → 标准像素宽度（当自定义 width 时优先使用 width） */
     resolvedWidth: function () {
-      var sizeMap = { sm: '420px', md: '560px', lg: '720px', xl: '840px', fullscreen: '92%' }
       var s = (this.size || '').toLowerCase()
-      return this.width || sizeMap[s] || '560px'
+      return this.width || DIALOG_SIZE[s] || DIALOG_SIZE.md
     },
     /** 是否全屏模式（fullscreen 时调整 top 和内边距） */
     isFullscreen: function () {

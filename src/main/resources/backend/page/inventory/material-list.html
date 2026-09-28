@@ -8,8 +8,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -119,19 +119,19 @@
           </el-col>
           <el-col :xs="24" :sm="12">
             <el-form-item label="库存数量：" prop="stockQty">
-              <el-input v-model.number="formData.stockQty" type="number" placeholder="请输入库存数量" />
+              <el-input v-model.number="formData.stockQty" type="number" placeholder="请输入库存数量" ></el-input>
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :xs="24" :sm="12">
             <el-form-item label="最低库存：" prop="minStock">
-              <el-input v-model.number="formData.minStock" type="number" placeholder="请输入最低库存预警值" />
+              <el-input v-model.number="formData.minStock" type="number" placeholder="请输入最低库存预警值" ></el-input>
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12">
             <el-form-item label="单价：" prop="unitPrice">
-              <el-input v-model.number="formData.unitPrice" type="number" placeholder="请输入单价" />
+              <el-input v-model.number="formData.unitPrice" type="number" placeholder="请输入单价" ></el-input>
             </el-form-item>
           </el-col>
         </el-row>
@@ -145,7 +145,7 @@
           </el-col>
           <el-col :xs="24" :sm="12">
             <el-form-item label="条码：">
-              <el-input v-model="formData.barcode" placeholder="请输入条码" />
+              <el-input v-model="formData.barcode" placeholder="请输入条码" ></el-input>
             </el-form-item>
           </el-col>
         </el-row>
@@ -181,10 +181,10 @@
     <script src="../../plugins/vue/vue.js"></script>
     <script src="../../plugins/element-ui/index.js?v=20260915"></script>
     <script src="../../plugins/axios/axios.min.js"></script>
-    <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-    <script src="../../api/inventory.js?v=20260915c"></script>
+    <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+    <script src="../../api/inventory.js?v=20260926"></script>
     <script src="../../js/components.js?v=20260924"></script>
     <script src="../../js/inventory-helper.js?v=20260922"></script>
     <script>

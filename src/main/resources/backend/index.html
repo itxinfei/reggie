@@ -9,9 +9,9 @@
     <!-- 引入样式 -->
     <!-- 修改点(2026-09-01)：移除 plugins/element-ui/index.css 官方样式表 ——
          与 common.css（→common-el.css，token 化副本）重复加载，统一由后者单源提供 -->
-    <link rel="stylesheet" href="styles/common.css?v=20260915c" />
-    <link rel="stylesheet" href="styles/index.css?v=20260915c" />
-    <link rel="stylesheet" href="styles/design-system.css?v=20260915c" />
+    <link rel="stylesheet" href="styles/common.css?v=20260926" />
+    <link rel="stylesheet" href="styles/index.css?v=20260926" />
+    <link rel="stylesheet" href="styles/design-system.css?v=20260926" />
     <!-- Remix Icon v4.6 — 2700+ 免费商用图标，替代原 iconfont（仅7个图标） -->
     <link href="plugins/remixicon/remixicon.css" rel="stylesheet" />
     <style>
@@ -20,8 +20,8 @@
     .palette-trigger:hover { border-color: var(--color-brand-500, #ffc200); }
     .palette-trigger-text { color: var(--text-muted, #9ca3af); }
     .palette-trigger-kbd { font-family: inherit; font-size: 11px; color: var(--text-muted, #9ca3af); background: var(--bg-subtle, #f5f6fa); border: 1px solid var(--border-default, #e5e7eb); border-radius: 4px; padding: 1px 5px; }
-    .palette-overlay { position: fixed; inset: 0; z-index: 2200; background: rgba(17,24,39,.42); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }
-    .palette { width: 600px; max-width: calc(100vw - 32px); background: var(--bg-surface, #fff); border-radius: 12px; box-shadow: 0 16px 48px rgba(17,24,39,.22); overflow: hidden; }
+    .palette-overlay { position: fixed; inset: 0; z-index: 2200; background: var(--overlay-scrim); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; }
+    .palette { width: 600px; max-width: calc(100vw - 32px); background: var(--bg-surface, #fff); border-radius: 12px; box-shadow: var(--shadow-overlay); overflow: hidden; }
     .palette-search { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border-default, #e5e7eb); }
     .palette-search-icon { color: var(--text-muted, #9ca3af); flex-shrink: 0; }
     .palette-input { flex: 1; border: none; outline: none; font-size: 15px; color: var(--text-primary, #1f2937); background: transparent; }
@@ -122,7 +122,8 @@
               <!-- 面包屑导航（同时作为页面标题，最后一级不再重复显示） -->
               <div class="breadcrumb" v-if="breadcrumbs.length > 0">
                 <template v-for="(crumb, index) in breadcrumbs">
-                  <span v-if="index > 0" class="crumb-sep">/</span>
+                  <!-- 分隔符 "/" 纯装饰：对读屏隐藏，避免读屏念出无意义的斜杠；同时提升其可见性（见 styles/index.css） -->
+                  <span v-if="index > 0" class="crumb-sep" aria-hidden="true">/</span>
                   <span :class="['crumb-item', { clickable: index < breadcrumbs.length - 1, 'crumb-current': index === breadcrumbs.length - 1 }]"
                         @click="index < breadcrumbs.length - 1 && navigateToBreadcrumb(index)">
                     {{ crumb }}
@@ -156,28 +157,25 @@
           <div class="app-main" v-loading="loading">
             <div class="divTmp" v-show="loading"></div>
             <!-- 修改点：移除 height="auto"（浏览器不识别），添加 scrolling="yes" 让 iframe 内部页面自行滚动；高度由 JS 控制为 window.innerHeight - 56（视口 - 顶栏） -->
-            <!-- 修改点：添加 sandbox 属性限制iframe权限，防止恶意页面执行敏感操作
-                 allow-same-origin: 允许同域访问（因为iframe加载的是同域页面）
-                 allow-scripts: 允许执行脚本（页面需要Vue等JS运行）
-                 allow-forms: 允许提交表单
-                 allow-popups: 允许弹出窗口（window.open）
-                 allow-downloads: 允许下载文件（★必需，缺失则导出功能不可用★）
-                   说明：iframe 一旦带 sandbox 属性，从该框架发起的下载会被浏览器阻止，
-                   Chrome 控制台报 "Download was blocked because the frame initiating
-                   it is sandboxed and does not have the 'allow-downloads' flag set."。
-                   注意 allow-popups 只管 window.open 弹窗，管不了 <a download> /
-                   createObjectURL 下载 —— 此前误以为它能覆盖下载，导致导出接口后端
-                   已正常生成文件（日志可见"文件下载响应构建完成"）但浏览器就是不下载。
-                 注意：不添加 allow-top-navigation，防止iframe内页面跳转顶层窗口绕过登录校验 -->
+            <!-- 修改点（2026-09-27 P0 修复）：移除 sandbox 属性。
+                 原因：sandbox 同时含 allow-scripts + allow-same-origin 时，iframe 内脚本
+                 可直接访问 parent.document 操作顶层窗口，浏览器明示"可逃逸沙箱"
+                 （控制台每次进页告警，全站 71 次），等于没有隔离，却额外引入了
+                 下载被拦（曾为此打 allow-downloads 补丁）等限制。
+                 同域后台要做真隔离须拆分跨域部署（内容域 ≠ 外壳域）；
+                 在拆分前移除 sandbox，恢复普通 iframe 行为：功能不受影响，安全告警清零。
+                 登录态防护不依赖 sandbox：由后端会话校验 + 子页面未登录信号上报顶层跳转兜底。 -->
+            <!-- 修改点(2026-09-27)：补 title。iframe 是读屏用户进入内容区的唯一入口，
+                 缺 title 时会被念作"未命名框架"，用户无法判断里面是什么。 -->
             <iframe
               id="cIframe"
               class="c_iframe"
               name="cIframe"
+              title="主要内容区域"
               :src="iframeUrl"
               width="100%"
               scrolling="yes"
               frameborder="0"
-              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads"
               v-show="!loading"
             ></iframe>
           </div>
@@ -213,9 +211,9 @@
     <script src="plugins/element-ui/index.js?v=20260915"></script>
     <!-- 引入axios -->
     <script src="plugins/axios/axios.min.js"></script>
-    <script src="js/request.js?v=20260915c"></script>
+    <script src="js/request.js?v=20260926"></script>
     <script src="js/components.js?v=20260924"></script>
-    <script src="./api/login.js?v=20260915c"></script>
+    <script src="./api/login.js?v=20260926"></script>
     <script src="./api/employee.js?v=20260922"></script>
     <script>
 
@@ -272,7 +270,7 @@
               { id: '5', name: '履约配送', icon: 'ri-truck-line', children: [
                 { id: '5-1', name: '配送订单', url: 'page/delivery/order-list.html', icon: 'ri-map-pin-line' },
                 { id: '5-2', name: '配送范围', url: 'page/delivery/range-management.html', icon: 'ri-road-map-line' },
-                { id: '5-3', name: '骑手管理', url: 'page/delivery/rider-list.html', icon: 'ri-motorcycle-line' },
+                { id: '5-3', name: '骑手管理', url: 'page/delivery/rider-list.html', icon: 'ri-motorbike-line' },
               ]},
 
               /* ──12. 外卖平台对接（3 项，原「配送平台」拆分）── */
@@ -428,10 +426,18 @@
           // 从根上避免「未登录直接打开 index.html 时右侧 iframe 嵌套出登录页」的问题
           const userInfo = window.localStorage.getItem('userInfo')
           if (!userInfo) {
+            // 未登录立即跳转登录页，不提示不延迟（2026-09-26）
             window.location.replace('/backend/page/login/login.html')
             return
           }
-          this.userInfo = JSON.parse(userInfo)
+          try {
+            this.userInfo = JSON.parse(userInfo)
+          } catch (e) {
+            // 本地登录态损坏（脏缓存）：清除并回登录页，避免后续渲染异常
+            window.localStorage.removeItem('userInfo')
+            window.location.replace('/backend/page/login/login.html')
+            return
+          }
           this.loadCurrentEmployee()
           this.showLoading()
         },
@@ -446,6 +452,8 @@
           window.addEventListener('keydown', this.handleGlobalKeydown)
           // 修改点：监听窗口尺寸变化与 iframe 内容加载完成事件，动态调整 iframe 高度避免内容被裁剪
           this.initIframeAutoHeight()
+          // 修改点：让侧边栏菜单可被键盘操作（详见 initMenuKeyboard 注释）
+          this.initMenuKeyboard()
         },
         methods: {
           imgUrl(name) {
@@ -514,12 +522,19 @@
               if(res.code === 1){
                 localStorage.removeItem('userInfo')
                 window.location.href = '/backend/page/login/login.html'
+              } else {
+                ReggieUI.error((res && res.msg) || '退出失败，请稍后重试')
               }
+            }).catch(function () {
+              ReggieUI.error('退出请求失败，请检查网络后重试')
             })
           },
           // 修改点(2026-08-12)：接收子页面（iframe）发来的未登录信号，由顶层窗口统一跳转登录页
           handleChildNotLogin(event) {
             if (event && event.data && event.data.type === 'REGGIE_NOTLOGIN') {
+              if (this.notLoginJumping) return  // 防重入：并发 401 只跳转一次
+              this.notLoginJumping = true
+              // 未登录立即跳转登录页，不提示不延迟（2026-09-26）
               window.location.replace('/backend/page/login/login.html')
             }
           },
@@ -654,6 +669,37 @@
             this.sidebarOpen = false
           },
           // ========== iframe 高度自适应（修改点：iframe 高度 = 视口高 - 顶栏，由 iframe 自身滚动） ==========
+          /* 修改点(2026-09-27)：Element UI 2.x 把 el-menu-item / el-submenu__title 渲染成
+             不带 tabindex 的 <li>，整个侧边栏因此不在 Tab 序列里——键盘用户无法进入后台任何
+             一个页面（此前 60 次 Tab 从未停靠到任何菜单项）。这里补 tabindex，并让 Enter /
+             空格触发与鼠标点击等价的行为；菜单是异步渲染的，用 MutationObserver 兜住后到的节点。 */
+          initMenuKeyboard() {
+            var scope = document.querySelector('.sidebar-container') || document
+            var apply = function () {
+              scope.querySelectorAll('.el-menu-item, .el-submenu__title').forEach(function (el) {
+                if (el.tabIndex < 0) el.tabIndex = 0
+                if (el.__kbMenuBound) return
+                el.__kbMenuBound = true
+                el.addEventListener('keydown', function (e) {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    el.click()
+                  }
+                })
+              })
+            }
+            apply()
+            if (!window.__menuKbObserver) {
+              window.__menuKbObserver = new MutationObserver(function () {
+                if (window.__menuKbTimer) clearTimeout(window.__menuKbTimer)
+                window.__menuKbTimer = setTimeout(apply, 200)
+              })
+              window.__menuKbObserver.observe(
+                document.querySelector('.sidebar-container') || document.body,
+                { childList: true, subtree: true }
+              )
+            }
+          },
           initIframeAutoHeight() {
             const iframe = document.getElementById('cIframe')
             if (!iframe) return
@@ -669,9 +715,7 @@
               }
             } catch (e) { /* 跨域文档不可读时忽略，等待 load 事件 */ }
             // 监听窗口大小变化，重新计算
-            window.addEventListener('resize', () => {
-              this.resizeIframe()
-            })
+            window.addEventListener('resize', this.handleWindowResize)
             // 初始计算一次
             this.resizeIframe()
           },
@@ -681,11 +725,17 @@
             // 修改点：iframe 高度固定为视口高 - 顶栏(56px)，内部页面自身 body 负责滚动
             // 不再取内容 scrollHeight（那会导致 iframe 撑高超高但被外层 overflow:hidden 裁剪）
             iframe.style.height = (window.innerHeight - 56) + 'px'
+          },
+          // 窗口尺寸变化处理（具名注册，便于 beforeDestroy 精确移除监听）
+          handleWindowResize() {
+            this.resizeIframe()
           }
         },
         beforeDestroy() {
           this.clearLoadingTimer()
+          window.removeEventListener('message', this.handleChildNotLogin)
           window.removeEventListener('keydown', this.handleGlobalKeydown)
+          window.removeEventListener('resize', this.handleWindowResize)
         }
       })
     </script>

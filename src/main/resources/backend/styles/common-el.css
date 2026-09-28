@@ -908,7 +908,10 @@
   background-color: var(--el-bg-soft);
 }
 .el-select-dropdown__item.selected {
-  color: var(--color-brand-500);
+  /* 修改点：原用 brand-500 (#ffc200) 作文字色压在 brand-50 底上，对比度仅 1.56，选中态几乎不可读。
+     改为「深色文字 + 浅品牌底」，既满足 WCAG 1.4.3，选中反馈也比纯色字更明确。*/
+  color: var(--text-primary);
+  background-color: var(--color-brand-50);
   font-weight: 700;
 }
 .el-select-group {
@@ -4065,6 +4068,10 @@
   color: var(--text-legacy-muted);
   cursor: pointer;
   font-size: 13px;
+  /* WCAG 2.5.8 Target Size(AA) 要求点击区不小于 24x24。size="small" 时按钮会被
+     压到 24px 以下，这里兜一个下限，避免误触。 */
+  min-width: 24px;
+  min-height: 24px;
 }
 .el-input-number__decrease:hover,
 .el-input-number__increase:hover {

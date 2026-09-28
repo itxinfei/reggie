@@ -8,9 +8,9 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-    <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/chart-panel.css?v=20260926" />
   <script src="../../plugins/echarts/echarts.min.js"></script>
   <style>
     html, body { height: 100%; margin: 0; padding: 0;
@@ -33,9 +33,10 @@
       padding: 8px 12px; background: var(--bg-page); border-radius: var(--radius-md);
     }
     .refund-summary__value { font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary); }
-    .refund-summary__value.is-danger { color: var(--color-danger); }
-    .refund-summary__value.is-success { color: var(--color-success); }
-    .refund-summary__value.is-warning { color: var(--color-warning); }
+    /* P0: 浅语义色压浅灰底仅 2.68~3.75:1，统一改用已达标文字变体 */
+    .refund-summary__value.is-danger { color: var(--color-danger-text); }
+    .refund-summary__value.is-success { color: var(--color-success-text); }
+    .refund-summary__value.is-warning { color: var(--color-warning-text); }
     .refund-summary__label { font-size: var(--font-size-xs); color: var(--text-muted); }
     @media (max-width: 1200px) { .payment-page .charts-row { grid-template-columns: 1fr; } }
     @media (max-width: 768px) { .payment-page .container { padding: var(--space-2); }
@@ -122,13 +123,13 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../api/report.js?v=20260915c"></script>
-  <script src="../../api/payment.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/report.js?v=20260926"></script>
+  <script src="../../api/payment.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
-  <script src="../../js/chart-panel.js?v=20260915c"></script>
+  <script src="../../js/chart-panel.js?v=20260926"></script>
   <script>
     const CHANNEL_LABEL = { wechat: '微信支付', alipay: '支付宝', balance: '线下/其他', other: '其他渠道' };
     // 支付渠道配色：统一走 RgPalette（微信绿/支付宝蓝已收录为调色板字段），canvas 中禁止写 hex

@@ -7,8 +7,8 @@
   <title>考勤管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
 </head>
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
@@ -28,11 +28,14 @@
       </div>
 
       <!-- 今日考勤 + 本周异常 -->
-      <el-row :gutter="24" class="content-row">
+      <!-- 修改点：gutter 24 → 20。el-row 的负 margin = gutter/2 = 12px，而外层 .container
+           的内边距是 10px（设计系统四边统一 10px），两者不匹配会把行撑出 2px 造成页面横向溢出。
+           gutter=20 → 负 margin 正好 10px 与容器内边距抵消，栅格贴边效果与原来一致。-->
+      <el-row :gutter="20" class="content-row">
         <el-col :xs="24" :sm="12" :span="12">
           <el-card shadow="never" class="section-card">
             <div class="section-header">
-              <h3>今日考勤</h3>
+              <h2>今日考勤</h2>
               <span class="section-date">{{ todayDate }}</span>
             </div>
             <div v-if="loading" class="today-list">
@@ -60,7 +63,7 @@
         <el-col :xs="24" :sm="12" :span="12">
           <el-card shadow="never" class="section-card">
             <div class="section-header">
-              <h3>本周异常考勤</h3>
+              <h2>本周异常考勤</h2>
               <el-tag type="info" size="small">共 {{ abnormalList.length }} 条</el-tag>
             </div>
             <div v-if="loading" class="abnormal-list">
@@ -91,7 +94,7 @@
       <!-- 考勤日历 -->
       <el-card shadow="never" class="calendar-card">
         <div class="section-header">
-          <h3>考勤日历</h3>
+          <h2>考勤日历</h2>
           <div class="calendar-controls">
             <el-select v-model="calendarEmployee" placeholder="选择员工" size="small" @change="fetchCalendar">
               <el-option v-for="emp in employeeOptions" :key="emp.id" :label="emp.name" :value="emp.id"></el-option>
@@ -133,11 +136,11 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
-  <script src="../../api/attendance.js?v=20260915c"></script>
+  <script src="../../api/attendance.js?v=20260926"></script>
   <script>
     new Vue({
       el: '#attendance-app',
@@ -443,7 +446,7 @@
       padding-bottom: var(--space-2);
       border-bottom: 1px solid var(--border-subtle);
     }
-    .section-header h3 {
+    .section-header h2 {
       font-size: var(--font-size-lg);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
@@ -544,9 +547,13 @@
     }
 
     .calendar-grid { min-height: 280px; }
+    /* 修改点：原 repeat(7, 1fr) —— 1fr 的最小内容宽度会被日期数字/状态点顶开，
+       窄屏（390px）下表格整体被撑出约 20px，并传导到文档级产生横向滚动。
+       改用 minmax(0,1fr) 允许列收缩到 0，配合单元格 min-width:0 彻底消除溢出。*/
     .calendar-weekdays {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      min-width: 0;
       text-align: center;
       font-size: var(--font-size-xs);
       color: var(--text-muted);
@@ -555,8 +562,9 @@
     }
     .calendar-week {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       gap: 1px;
+      min-width: 0;
       background: var(--border-subtle);
       border-radius: var(--radius-sm);
       overflow: hidden;
@@ -572,7 +580,11 @@
       position: relative;
       transition: background-color var(--transition-base);
       min-height: 44px;
+      /* 修改点：flex 项默认 min-width:auto，会被状态徽标顶开，导致 7 列 grid 撑破容器 */
+      min-width: 0;
+      overflow: hidden;
     }
+    .calendar-cell > * { min-width: 0; max-width: 100%; }
     .calendar-cell.is-today {
       background: var(--color-brand-50);
     }
@@ -585,7 +597,8 @@
       color: var(--text-secondary);
     }
     .day-num.is-inactive { color: var(--text-muted); opacity: 0.4; }
-    .is-sunday .day-num, .is-saturday .day-num { color: var(--color-danger); }
+    /* P0: #f56c6c 压白底仅 2.90:1（7 处周末日期），改深红文字色 */
+    .is-sunday .day-num, .is-saturday .day-num { color: var(--color-danger-text); }
 
     /* 状态圆点 */
     .dot {
@@ -609,6 +622,8 @@
       /* 小屏下日历筛选控件占满整行，避免 591px 横向溢出 */
       .calendar-controls .el-select,
       .calendar-controls .el-date-editor { width: 100% !important; margin-right: 0 !important; }
+      /* 小屏下列已是 100% 满宽、不再并排，负 margin 无意义，直接归零（!important 压过 Vue 内联样式）*/
+      .content-row.el-row { margin-left: 0 !important; margin-right: 0 !important; max-width: 100%; }
     }
   </style>
 </body>

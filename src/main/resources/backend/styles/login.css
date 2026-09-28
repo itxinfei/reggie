@@ -13,7 +13,9 @@
   --c-shadow: 0 8px 40px rgba(0,0,0,.08);
   --c-t1:  var(--legacy-1a1d2e);
   --c-t2:  var(--legacy-5a5f7a);
-  --c-t3:  var(--legacy-8b90a5);
+  /* 修改点：原 #8b90a5 白底仅 3.17:1（页脚版权等三级文字不达 AA）。
+     改用与深色主题同值的 #6b7088，实测 4.88:1，且更贴合整体灰蓝调。 */
+  --c-t3:  var(--legacy-6b7088);
   --c-inp-bg: var(--color-white);
   --c-inp-bd: var(--color-gray-300);
   --c-focus: var(--color-brand-500);

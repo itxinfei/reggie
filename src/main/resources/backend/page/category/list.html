@@ -8,8 +8,8 @@
   <!-- 引入样式 -->
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <!-- 对齐规范单一来源：styles/consistency.css（.is-left/.is-center/.is-right），页面禁止写 text-align 覆盖 -->
 </head>
 <body>
@@ -100,7 +100,7 @@
             v-model="classData.name"
             placeholder="请输入分类名称"
             maxlength="14"
-          />
+          ></el-input>
         </el-form-item>
         <el-form-item label="排序：" prop="sort">
           <el-input-number
@@ -132,12 +132,12 @@
     <script src="../../plugins/element-ui/index.js?v=20260915"></script>
     <!-- 引入axios -->
     <script src="../../plugins/axios/axios.min.js"></script>
-    <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-    <script src="../../api/category.js?v=20260915c"></script>
-    <script src="../../api/food.js?v=20260915c"></script>
-    <script src="../../api/combo.js?v=20260915c"></script>
+    <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+    <script src="../../api/category.js?v=20260926"></script>
+    <script src="../../api/food.js?v=20260926"></script>
+    <script src="../../api/combo.js?v=20260926"></script>
     <script src="../../js/components.js?v=20260924"></script>
     <script>
       new Vue({
@@ -215,8 +215,6 @@
         created() {
           this.loadFilterOptions()
           this.fetchData(true)
-        },
-        mounted() {
         },
         methods: {
           /* ========== 数据加载 ========== */
@@ -355,15 +353,11 @@
               this.$refs.categoryForm && this.$refs.categoryForm.clearValidate()
             })
           },
-          // 关闭弹窗
-          handleClose(st) {
-            this.classData.dialogVisible = false
-          },
           // 修改点：删除保护（8.2.2）——删除前先查该分类下的菜品/套餐引用数并明确提示，避免误删
           deleteHandle(row) {
             const self = this
-            const typeLabel = row.type === '1' ? '菜品' : '套餐'
-            const refApi = row.type === '1' ? getDishPage : getSetmealPage
+            const typeLabel = row.type == '1' ? '菜品' : '套餐'
+            const refApi = row.type == '1' ? getDishPage : getSetmealPage
             refApi({ categoryId: row.id, page: 1, pageSize: 1 }).then(res => {
               const refCount = String(res.code) === '1' ? (Number(res.data && res.data.total) || 0) : 0
               const msg = refCount > 0

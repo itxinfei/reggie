@@ -7,8 +7,8 @@
   <title>租户管理 - 瑞吉外卖管理端</title>
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
 </head>
 <body>
 <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -46,6 +46,7 @@
         <el-image
           v-if="row.logo"
           :src="imgUrl(row.logo)"
+          :alt="(row.tenantName || row.name ? (row.tenantName || row.name) + ' 的' : '') + 'Logo'"
           :preview-src-list="[imgUrl(row.logo)]"
           style="width:40px;height:40px;object-fit:cover;border-radius:50%;border:1px solid var(--border-default);cursor:pointer;">
         </el-image>
@@ -132,9 +133,9 @@
 <script src="../../plugins/vue/vue.js"></script>
 <script src="../../plugins/element-ui/index.js?v=20260915"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
-<script src="../../js/request.js?v=20260915c"></script>
-<script src="../../js/accessibility-utils.js?v=20260915c"></script>
-<script src="../../js/performance-utils.js?v=20260915c"></script>
+<script src="../../js/request.js?v=20260926"></script>
+<script src="../../js/accessibility-utils.js?v=20260927"></script>
+<script src="../../js/performance-utils.js?v=20260926"></script>
 <script src="../../js/components.js?v=20260924"></script>
 <script src="../../api/tenant.js?v=20260922"></script>
 <script>

@@ -8,8 +8,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <style>
     /* 卡片视图切换 */
     .table-grid-toggle { display: flex; align-items: center; gap: 8px; }
@@ -18,8 +18,8 @@
       background: var(--bg-surface); cursor: pointer; font-size:var(--font-size-base); color: var(--el-text-regular);
       transition: all 0.2s; display: flex; align-items: center; gap: 4px;
     }
-    .table-grid-toggle .toggle-btn.active { border-color: var(--color-brand-500); color: var(--color-brand-500); background: var(--color-brand-50); }
-    .table-grid-toggle .toggle-btn:hover { border-color: var(--color-brand-500); color: var(--color-brand-500); }
+    .table-grid-toggle .toggle-btn.active { border-color: var(--color-brand-text); color: var(--color-brand-text); background: var(--color-brand-50); }
+    .table-grid-toggle .toggle-btn:hover { border-color: var(--color-brand-text); color: var(--color-brand-text); }
     /* 卡片模式 */
     .table-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
     .table-card {
@@ -289,7 +289,7 @@
     >
       <el-form ref="tableForm" :model="form" :rules="formRules" label-width="100px" size="small">
         <el-form-item label="桌台名称" prop="name">
-          <el-input v-model="form.name" placeholder="如：A1、VIP包间" maxlength="14" show-word-limit />
+          <el-input v-model="form.name" placeholder="如：A1、VIP包间" maxlength="14" show-word-limit ></el-input>
         </el-form-item>
         <el-form-item label="所属区域" prop="areaId">
           <el-select v-model="form.areaId" placeholder="请选择区域" style="width: 100%">
@@ -297,10 +297,10 @@
           </el-select>
         </el-form-item>
         <el-form-item label="座位数" prop="seatCount">
-          <el-input-number v-model="form.seatCount" :min="1" :max="50" placeholder="座位数" style="width:100%;" />
+          <el-input-number v-model="form.seatCount" :min="1" :max="50" placeholder="座位数" style="width:100%;" ></el-input-number>
         </el-form-item>
         <el-form-item label="最低消费" prop="minAmount">
-          <el-input-number v-model="form.minAmount" :min="0" :precision="2" placeholder="0=无最低消费" style="width:100%;" />
+          <el-input-number v-model="form.minAmount" :min="0" :precision="2" placeholder="0=无最低消费" style="width:100%;" ></el-input-number>
         </el-form-item>
         <el-form-item label="状态" prop="status">
           <el-select v-model="form.status" placeholder="请选择状态" style="width: 100%">
@@ -311,7 +311,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="排序" prop="sort">
-          <el-input-number v-model="form.sort" :min="0" :max="999" style="width:100%;" />
+          <el-input-number v-model="form.sort" :min="0" :max="999" style="width:100%;" ></el-input-number>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -340,13 +340,13 @@
     <crud-dialog title="开台" :visible.sync="openDialog.visible" size="sm" show-close :show-submit="true" :show-cancel="true" :submit-loading="openDialog.loading" @submit="submitOpen">
       <el-form :model="openForm" label-width="100px" size="small">
         <el-form-item label="桌台">
-          <el-input :value="openDialog.tableName" disabled />
+          <el-input :value="openDialog.tableName" disabled ></el-input>
         </el-form-item>
         <el-form-item label="用餐人数">
-          <el-input-number v-model="openForm.customerCount" :min="1" :max="50" style="width:100%;" />
+          <el-input-number v-model="openForm.customerCount" :min="1" :max="50" style="width:100%;" ></el-input-number>
         </el-form-item>
         <el-form-item label="备注">
-          <el-input v-model="openForm.remark" type="textarea" :rows="2" maxlength="200" placeholder="如：生日宴、少辣" />
+          <el-input v-model="openForm.remark" type="textarea" :rows="2" maxlength="200" placeholder="如：生日宴、少辣" ></el-input>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -355,11 +355,11 @@
     <crud-dialog title="转台" :visible.sync="transferDialog.visible" size="sm" show-close :show-submit="true" :show-cancel="true" :submit-loading="transferDialog.loading" @submit="submitTransfer">
       <el-form :model="transferForm" label-width="100px" size="small">
         <el-form-item label="原桌台">
-          <el-input :value="transferDialog.fromName" disabled />
+          <el-input :value="transferDialog.fromName" disabled ></el-input>
         </el-form-item>
         <el-form-item label="目标桌台" prop="toTableId" required>
           <el-select v-model="transferForm.toTableId" placeholder="选择空闲桌台" style="width:100%;" filterable>
-            <el-option v-for="t in freeTables" :key="t.id" :label="t.name + (t.areaName ? '（' + t.areaName + '）' : '')" :value="t.id" :disabled="t.id === transferDialog.fromId" />
+            <el-option v-for="t in freeTables" :key="t.id" :label="t.name + (t.areaName ? '（' + t.areaName + '）' : '')" :value="t.id" :disabled="t.id === transferDialog.fromId" ></el-option>
           </el-select>
         </el-form-item>
       </el-form>
@@ -383,9 +383,9 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script src="../../api/dining.js?v=20260918b"></script>
   <script>

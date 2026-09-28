@@ -8,8 +8,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <style>
     body { overflow-x: visible; }
     /* ========== C.5 菜品管理（行内编辑） ========== */
@@ -26,6 +26,11 @@
     .inline-value:hover { border-color: var(--el-border-color); background: var(--bg-subtle); }
     .inline-status { cursor: pointer; }
     .inline-status:hover { opacity: 0.85; }
+    /* 库存低警示（原 #col-stock 内联 :style 收口；颜色/字重走令牌） */
+    .inline-value--low { color: var(--color-danger); font-weight: var(--font-weight-semibold); }
+    .inline-low-tag { margin-left: var(--space-1); }
+    /* 批量移动分类的勾选数量（原内联字重/颜色收口） */
+    .batch-count { font-weight: var(--font-weight-semibold); color: var(--color-brand-500); }
   </style>
 </head>
 <body>
@@ -111,7 +116,7 @@
               </el-tag>
             </template>
             <!-- 库存列（C.5 行内编辑：低库存/售罄警示保留） -->
-            <template #col-stock="{ row }">
+            <template #col-stockQty="{ row }">
               <el-input
                 v-if="isEditing('stock', row.id)"
                 v-model="row._stockEdit"
@@ -121,10 +126,10 @@
                 @keyup.enter.native="commitInline('stock', row)"
                 @blur="commitInline('stock', row)"
               ></el-input>
-              <span v-else class="inline-value" title="点击编辑库存" tabindex="0" @click="startInline('stock', row)" @keydown.enter.prevent="startInline('stock', row)" :style="{ color: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? 'var(--color-danger)' : 'var(--el-text-primary)', fontWeight: row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock ? '600' : '400' }">
+              <span v-else class="inline-value" :class="{ 'inline-value--low': isLowStock(row) }" title="点击编辑库存" tabindex="0" @click="startInline('stock', row)" @keydown.enter.prevent="startInline('stock', row)">
                 {{ row.stockQty != null ? row.stockQty : '-' }}
               </span>
-              <el-tag v-if="row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock && row.stockQty > 0" type="danger" size="small" effect="plain" style="margin-left:4px;">低</el-tag>
+              <el-tag v-if="isLowStock(row) && row.stockQty > 0" type="danger" size="small" effect="plain" class="inline-low-tag">低</el-tag>
               <el-tag v-if="row.stockQty != null && row.stockQty == 0" type="danger" size="small">售罄</el-tag>
             </template>
             <!-- 操作按钮 -->
@@ -161,12 +166,12 @@
         <el-row :gutter="20">
           <el-col :xs="24" :sm="12">
             <el-form-item label="菜品名称:" prop="name">
-              <el-input v-model="dishForm.name" placeholder="请填写菜品名称" maxlength="20" />
+              <el-input v-model="dishForm.name" placeholder="请填写菜品名称" maxlength="20" ></el-input>
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12">
             <el-form-item label="商品码:" prop="code">
-              <el-input v-model="dishForm.code" placeholder="请输入商品码（如条形码）" maxlength="64" />
+              <el-input v-model="dishForm.code" placeholder="请输入商品码（如条形码）" maxlength="64" ></el-input>
             </el-form-item>
           </el-col>
         </el-row>
@@ -174,30 +179,30 @@
           <el-col :xs="24" :sm="12">
             <el-form-item label="菜品分类:" prop="categoryId">
               <el-select v-model="dishForm.categoryId" placeholder="请选择菜品分类" style="width: 100%;">
-                <el-option v-for="item in dishList" :key="item.id" :label="item.name" :value="item.id" />
+                <el-option v-for="item in dishList" :key="item.id" :label="item.name" :value="item.id" ></el-option>
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12">
             <el-form-item label="菜品价格:" prop="price" size="small">
-              <el-input v-model="dishForm.price" placeholder="请设置菜品价格" />
+              <el-input v-model="dishForm.price" placeholder="请设置菜品价格" ></el-input>
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :xs="24" :sm="12">
             <el-form-item label="排序:" prop="sort">
-              <el-input-number v-model="dishForm.sort" :min="0" :max="999" placeholder="排序值，越小越靠前" style="width: 100%;" />
+              <el-input-number v-model="dishForm.sort" :min="0" :max="999" placeholder="排序值，越小越靠前" style="width: 100%;" ></el-input-number>
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12">
             <el-form-item label="当前库存:">
-              <el-input-number v-model="dishForm.stockQty" :min="0" :precision="0" placeholder="不限库存则不填" style="width: 100%;" />
+              <el-input-number v-model="dishForm.stockQty" :min="0" :precision="0" placeholder="不限库存则不填" style="width: 100%;" ></el-input-number>
             </el-form-item>
           </el-col>
         </el-row>
         <el-form-item label="最低库存预警:">
-          <el-input-number v-model="dishForm.minStock" :min="0" :precision="0" placeholder="库存低于此值时预警" style="width: 100%;" />
+          <el-input-number v-model="dishForm.minStock" :min="0" :precision="0" placeholder="库存低于此值时预警" style="width: 100%;" ></el-input-number>
         </el-form-item>
         <el-form-item label="菜品图片:" prop="image" class="uploadImg">
           <el-upload
@@ -216,7 +221,7 @@
           </el-upload>
         </el-form-item>
         <el-form-item label="菜品描述:">
-          <el-input v-model="dishForm.description" type="textarea" :rows="3" placeholder="菜品描述，最长200字" maxlength="200" />
+          <el-input v-model="dishForm.description" type="textarea" :rows="3" placeholder="菜品描述，最长200字" maxlength="200" ></el-input>
         </el-form-item>
         <el-form-item label="口味做法:">
           <div class="flavorBox-dialog">
@@ -257,11 +262,11 @@
       <el-form label-width="80px" size="small">
         <el-form-item label="目标分类">
           <el-select v-model="categoryForm.categoryId" placeholder="请选择目标分类" style="width: 100%;">
-            <el-option v-for="c in categoryOptions" :key="c.id" :label="c.name" :value="c.id" />
+            <el-option v-for="c in categoryOptions" :key="c.id" :label="c.name" :value="c.id" ></el-option>
           </el-select>
         </el-form-item>
         <div class="ds-text-secondary ds-text-xs" style="line-height: 1.6">
-          将把已勾选的 <span style="font-weight: 600; color: var(--color-brand-500);">{{ checkList.length }}</span> 个菜品移动到该分类（逐条保存，失败项会单独提示）。
+          将把已勾选的 <span class="batch-count">{{ checkList.length }}</span> 个菜品移动到该分类（逐条保存，失败项会单独提示）。
         </div>
       </el-form>
     </crud-dialog>
@@ -283,10 +288,10 @@
           <span>{{ stockForm.stockQty }}</span>
         </el-form-item>
         <el-form-item label="库存数量" prop="newStockQty">
-          <el-input v-model="stockForm.newStockQty" type="number" placeholder="请输入库存数量" />
+          <el-input v-model="stockForm.newStockQty" type="number" placeholder="请输入库存数量" ></el-input>
         </el-form-item>
         <el-form-item label="最低库存预警" prop="newMinStock">
-          <el-input v-model="stockForm.newMinStock" type="number" placeholder="请输入最低库存预警值" />
+          <el-input v-model="stockForm.newMinStock" type="number" placeholder="请输入最低库存预警值" ></el-input>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -299,15 +304,15 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <!-- 修改点(2026-09-24)：配方编辑弹窗独立组件（须在 Vue 实例创建前引入） -->
   <script src="../../js/food-bom-dialog.js?v=20260924"></script>
-  <script src="../../api/food.js?v=20260915c"></script>
-  <script src="../../api/inventory.js?v=20260915c"></script>
-  <script src="../../api/export.js?v=20260915c"></script>
+  <script src="../../api/food.js?v=20260926"></script>
+  <script src="../../api/inventory.js?v=20260926"></script>
+  <script src="../../api/export.js?v=20260926"></script>
   <script>
     new Vue({
       el: '#food-app',
@@ -351,7 +356,7 @@
             { prop: 'categoryName', label: '分类', width: 100, align: 'center' },
             { prop: 'price', label: '售价', slot: true, width: 110, type: 'money' },
             { prop: 'status', label: '状态', slot: true, width: 76, align: 'center' },
-            { prop: 'stock', label: '库存', slot: true, width: 70, type: 'number' },
+            { prop: 'stockQty', label: '库存', slot: true, width: 70, type: 'number' },
             { prop: 'sort', label: '排序', width: 60, type: 'number' },
             { prop: 'description', label: '描述', minWidth: 180 },
             { prop: 'updateTime', label: '更新时间', width: 180 }
@@ -496,6 +501,10 @@
         },
         // ========== C.5 行内编辑 ==========
         isEditing: function(key, id) { return !!this.editingCells[key + '-' + id] },
+        // 低库存判定（库存列警示色与"低"标签共用，替代模板内重复的长条件）
+        isLowStock: function(row) {
+          return row.stockQty != null && row.minStock != null && row.stockQty <= row.minStock
+        },
         startInline: function(key, row) {
           if (key === 'price') { row._priceEdit = row.price != null ? String(row.price) : ''; row._priceConfirming = false }
           if (key === 'stock') { row._stockEdit = row.stockQty != null ? String(row.stockQty) : '' }
@@ -509,8 +518,11 @@
         },
         cancelEdit: function(row) {
           var self = this
+          var suffix = '-' + row.id
           Object.keys(this.editingCells).forEach(function(k) {
-            if (k.indexOf(String(row.id)) > -1) { self.$delete(self.editingCells, k) }
+            // 完整 key 精确匹配（key 形如 price-1 / stock-11）：按后缀 '-id' 判断，
+            // 避免 indexOf 模糊命中（如 id=1 误删 price-11）
+            if (k.endsWith(suffix)) { self.$delete(self.editingCells, k) }
           })
         },
         buildDishParams: function(row) {
@@ -776,7 +788,7 @@
           if (typeof row === 'string') {
             if (self.checkList.length === 0) { ReggieUI.error('批量操作，请先勾选操作菜品！'); return false }
             params.id = self.checkList.join(','); params.status = row
-          } else { params.id = row.id; params.status = row.status ? '0' : '1' }
+          } else { params.id = row.id; params.status = (row.status == '1') ? '0' : '1' }
           self.dishState = params
           ReggieUI.confirm('确认更改该菜品状态?', '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {

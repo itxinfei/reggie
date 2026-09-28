@@ -94,12 +94,12 @@
         <el-row :gutter="20">
           <el-col :xs="24" :sm="12">
             <el-form-item label="客户姓名：" prop="customerName">
-              <el-input v-model="form.customerName" placeholder="请输入客户姓名" maxlength="50" />
+              <el-input v-model="form.customerName" placeholder="请输入客户姓名" maxlength="50" ></el-input>
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12">
             <el-form-item label="手机号：" prop="phone">
-              <el-input v-model="form.phone" placeholder="请输入手机号" maxlength="11" />
+              <el-input v-model="form.phone" placeholder="请输入手机号" maxlength="11" ></el-input>
             </el-form-item>
           </el-col>
         </el-row>
@@ -118,7 +118,7 @@
           </el-col>
           <el-col :xs="24" :sm="12">
             <el-form-item label="人数：" prop="seatCount">
-              <el-input-number v-model="form.seatCount" :min="1" :max="100" placeholder="就餐人数" style="width:100%" />
+              <el-input-number v-model="form.seatCount" :min="1" :max="100" placeholder="就餐人数" style="width:100%" ></el-input-number>
             </el-form-item>
           </el-col>
         </el-row>
@@ -128,13 +128,13 @@
               <el-select v-model="form.tableId" placeholder="选择桌台（可留空）" clearable filterable style="width:100%">
                 <el-option v-for="t in freeTableOptions" :key="t.id"
                   :label="t.name + '（' + t.seatCount + '人，' + (t.areaName || '未分区') + '）'"
-                  :value="t.id" />
+                  :value="t.id" ></el-option>
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12">
             <el-form-item label="备注：">
-              <el-input v-model="form.remark" placeholder="如：靠窗、生日宴等" maxlength="200" />
+              <el-input v-model="form.remark" placeholder="如：靠窗、生日宴等" maxlength="200" ></el-input>
             </el-form-item>
           </el-col>
         </el-row>
@@ -196,7 +196,7 @@
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js?v=20260916"></script>
-  <script src="../../js/accessibility-utils.js?v=20260916"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260916"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script src="../../api/dining.js?v=20260918b"></script>

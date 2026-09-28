@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>食材分类管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -70,10 +70,10 @@
       <!-- 修改点：补全 ref/:model/:rules，启用 Element 校验；弹窗内 100% 自适应 -->
       <el-form ref="categoryForm" :model="formData" :rules="categoryRules" label-width="100px" size="small">
         <el-form-item label="分类名称：" prop="name">
-          <el-input v-model="formData.name" placeholder="请输入分类名称" maxlength="14" />
+          <el-input v-model="formData.name" placeholder="请输入分类名称" maxlength="14" ></el-input>
         </el-form-item>
         <el-form-item label="排序：" prop="sort">
-          <el-input v-model="formData.sort" type="number" placeholder="数值越小越靠前" />
+          <el-input v-model="formData.sort" type="number" placeholder="数值越小越靠前" ></el-input>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -82,10 +82,10 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../api/inventory.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/inventory.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script>
     new Vue({

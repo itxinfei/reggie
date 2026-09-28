@@ -298,9 +298,22 @@
   max-width: 200px;
 }
 
+/* 修改点：统一数字输入框高度（视觉一致性）。
+   Element 的 .el-input-number 自带 line-height:38px，这个行高会以「行盒支柱」的形式
+   撑起内部的 .el-input 行盒，使控件实体只有 32px 时外框仍高 38px；
+   而同一表单里的 el-input / el-select 是标准 32px，于是数字输入框凭空高出 6px、
+   表单行参差不齐（实测 delivery/range-management、food/spec-management 的弹窗表单）。
+   此处把容器行高压回控件本身高度，与下方增减按钮的 32px 口径保持一致。 */
+.el-input-number {
+  line-height: 32px;
+}
+
 .el-input-number .el-input__inner {
   text-align: center;
   padding: 0 30px;
+  height: 32px;
+  /* 消除行盒基线对齐留下的 1px 余量，使外框精确落在标准 32px。 */
+  vertical-align: top;
 }
 
 .el-input-number .el-input-number__decrease,

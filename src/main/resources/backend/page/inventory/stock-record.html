@@ -8,8 +8,8 @@
 
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
 </head>
 <body>
   <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -74,6 +74,7 @@
           <el-image
             v-if="firstVoucher(row.voucherImages)"
             :src="firstVoucher(row.voucherImages)"
+            :alt="(row.name ? row.name + ' 的' : '') + '出入库凭证'"
             :preview-src-list="imageList(row.voucherImages)"
             style="width:44px;height:44px;object-fit:cover;border:1px solid var(--border-default);border-radius:var(--radius-sm);cursor:pointer;">
           </el-image>
@@ -121,10 +122,10 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../api/inventory.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/inventory.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script>
     new Vue({

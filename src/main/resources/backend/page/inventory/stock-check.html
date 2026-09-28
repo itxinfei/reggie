@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>库存盘点 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
   <style>
     /* ── 展开行摘要条 ── */
     .expand-summary {
@@ -166,6 +166,7 @@
                 v-for="(url, i) in imageList(row.voucherImages)"
                 :key="i"
                 :src="url"
+                :alt="(row.name ? row.name + ' 的' : '') + '盘点凭证'"
                 :preview-src-list="imageList(row.voucherImages)"
                 style="width:64px;height:64px;object-fit:cover;margin-right:8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);cursor:pointer;vertical-align:middle;">
               </el-image>
@@ -260,7 +261,7 @@
           </el-autocomplete>
         </el-form-item>
         <el-form-item label="备注：">
-          <el-input v-model="createForm.remark" type="textarea" :rows="2" placeholder="盘点备注（可选）" />
+          <el-input v-model="createForm.remark" type="textarea" :rows="2" placeholder="盘点备注（可选）" ></el-input>
         </el-form-item>
         <el-form-item label="凭证图片：">
           <rg-image-uploader v-model="createForm.voucherImages" biz-type="stockcheck" :max="5"></rg-image-uploader>
@@ -320,7 +321,7 @@
             <span class="mat-name">{{ item.materialName || '食材#'+item.materialId }}</span>
             <span class="book-qty">账面：{{ item.bookQty }}</span>
             <el-input-number v-model="item.actualStock" placeholder="实际库存"
-              :min="0" :controls="false" size="small" />
+              :min="0" :controls="false" size="small" ></el-input-number>
           </div>
         </div>
         <div class="record-footer">
@@ -334,10 +335,10 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../api/inventory.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../api/inventory.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
   <script src="../../js/inventory-helper.js?v=20260922"></script>
   <script>

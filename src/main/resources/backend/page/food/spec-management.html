@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>规格管理 - 瑞吉外卖</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css">
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c">
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c">
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926">
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926">
   <style>
     /* ===== 规格管理页专有样式（前缀 spec- 避免污染全局） ===== */
 
@@ -184,7 +184,7 @@
     }
 
     /* 价格调整语义色 */
-    .spec-price-up { color: var(--color-danger); font-variant-numeric: tabular-nums; }
+    .spec-price-up { color: var(--color-danger-text); font-variant-numeric: tabular-nums; }
     .spec-price-down { color: var(--color-success); font-variant-numeric: tabular-nums; }
     .spec-price-flat { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 
@@ -229,9 +229,10 @@
     .spec-toolbar { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); flex-wrap: wrap; }
 
     /* 删除文字按钮：红色语义（与全站 btn-delete 一致），hover 保持红色可辨 */
-    .el-button--text.btn-danger-text { color: var(--color-danger); }
+    /* P0 对比度修复（2026-09-27）：原 #f56c6c 白底仅 2.9:1，改文字安全红 */
+    .el-button--text.btn-danger-text { color: var(--color-danger-text); }
     .el-button--text.btn-danger-text:hover,
-    .el-button--text.btn-danger-text:focus { color: var(--color-danger); }
+    .el-button--text.btn-danger-text:focus { color: var(--color-danger-text-hover); }
 
     @media (max-width: 1200px) {
       .spec-search { width: 150px; }
@@ -549,12 +550,12 @@
   <!-- 修改点：补引 axios —— request.js 首行即使用全局 axios，缺失会抛错导致
        $axios 永不挂载，本页所有接口请求全部失效 -->
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
-  <script src="../../js/common.js?v=20260915c"></script>
-  <script src="../../api/dish-spec.js?v=20260915c"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
+  <script src="../../js/common.js?v=20260926"></script>
+  <script src="../../api/dish-spec.js?v=20260926"></script>
   <script>
     new Vue({
       el: '#main-content',

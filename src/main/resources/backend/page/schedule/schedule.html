@@ -7,8 +7,8 @@
   <title>排班管理 - 瑞吉外卖管理端</title>
   <link rel="stylesheet" href="../../plugins/remixicon/remixicon.css" />
 
-  <link rel="stylesheet" href="../../styles/tokens.css?v=20260915c" />
-  <link rel="stylesheet" href="../../styles/main.css?v=20260915c" />
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
 </head>
 <body>
   <a href="#main-content" class="skip-link">跳转到主内容</a>
@@ -25,7 +25,7 @@
       <!-- 排班设置 -->
       <el-card shadow="never" class="section-card">
         <div class="section-header">
-          <h3>排班设置</h3>
+          <h2>排班设置</h2>
           <div class="header-actions">
             <el-date-picker
               v-model="scheduleMonth"
@@ -88,11 +88,12 @@
       </el-card>
 
       <!-- 本周汇总 -->
-      <el-row :gutter="24" class="content-row">
+      <!-- 修改点：同考勤页 —— gutter 24 → 20，负 margin(12px) 与容器内边距(10px) 不匹配会撑出 2px 横向溢出 -->
+      <el-row :gutter="20" class="content-row">
         <el-col :span="16">
           <el-card shadow="never" class="section-card">
             <div class="section-header">
-              <h3>本周时段人数分布</h3>
+              <h2>本周时段人数分布</h2>
               <span class="section-date">周一至周日</span>
             </div>
             <div class="shift-bars">
@@ -100,6 +101,7 @@
                 <span class="bar-label">{{ item.day }}</span>
                 <div class="bar-track">
                   <div v-for="s in item.shifts" :key="s.key" class="bar-segment"
+                       :class="'k-' + s.key"
                        :style="{ width: s.pct + '%', background: s.color }"
                        :title="s.label + '：' + s.value + '人'">
                     <span class="bar-text">{{ s.value > 0 ? s.value : '' }}</span>
@@ -112,7 +114,7 @@
         <el-col :span="8">
           <el-card shadow="never" class="section-card">
             <div class="section-header">
-              <h3>排班统计</h3>
+              <h2>排班统计</h2>
             </div>
             <div class="shift-summary">
               <div class="summary-item" v-for="s in shiftSummary" :key="s.key">
@@ -161,11 +163,11 @@
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260915c"></script>
-  <script src="../../js/accessibility-utils.js?v=20260915c"></script>
-  <script src="../../js/performance-utils.js?v=20260915c"></script>
+  <script src="../../js/request.js?v=20260926"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../js/components.js?v=20260924"></script>
-  <script src="../../api/attendance.js?v=20260915c"></script>
+  <script src="../../api/attendance.js?v=20260926"></script>
   <script>
     // ===== 班次元信息（全页唯一配色/文案来源，与图例保持一致）=====
     const SHIFT_META = { morning: { label: '早班', tag: 'success' }, noon: { label: '中班', tag: 'info' }, night: { label: '晚班', tag: 'info' }, full: { label: '全天', tag: 'danger' }, rest: { label: '休息', tag: '' } }
@@ -483,7 +485,7 @@
       padding-bottom: var(--space-2);
       border-bottom: 1px solid var(--border-subtle);
     }
-    .section-header h3 {
+    .section-header h2 {
       font-size: var(--font-size-lg);
       font-weight: var(--font-weight-medium);
       color: var(--text-primary);
@@ -493,9 +495,13 @@
       font-size: var(--font-size-xs);
       color: var(--text-muted);
     }
-    .header-actions { display: flex; align-items: center; }
+    /* 修改点：允许换行 + min-width:0，避免窄屏下 flex 子项被内容顶出视口 1px */
+    .header-actions { display: flex; align-items: center; flex-wrap: wrap; min-width: 0; }
     /* 修改点：月份选择器宽度令牌化 —— 原先 220px 硬编码，改弹性基准保持与输入框一致节奏 */
-    .header-actions .schedule-month-picker { flex: 0 1 220px; min-width: 180px; margin-right: 12px; }
+    .header-actions .schedule-month-picker { flex: 0 1 220px; min-width: 0; margin-right: 12px; }
+    @media (max-width: 900px) {
+      .header-actions .schedule-month-picker { flex: 1 1 100%; min-width: 0; margin-right: 0; margin-bottom: 8px; }
+    }
 
     /* 排班图例 */
     .schedule-legend {
@@ -507,13 +513,23 @@
     .legend-item { display: flex; align-items: center; }
 
     /* 排班表格 */
-    .schedule-table-wrap { overflow-x: auto; }
+    /* 修改点：窄屏（390px）下 7 列出勤列被 table-layout:fixed 均分到 ~7px，
+       单元格内容（早班/晚班/全天）直接溢出 48px 压到相邻列，既看不清也把文档撑宽。
+       改为：容器自己横向滚动，表格给一个可读的最小宽度，让列宽恢复正常。*/
+    .schedule-table-wrap {
+      overflow-x: auto;
+      min-width: 0;
+      max-width: 100%;
+      -webkit-overflow-scrolling: touch;
+    }
     .schedule-table {
       width: 100%;
+      min-width: 900px;
       border-collapse: collapse;
       font-size: var(--font-size-sm);
       table-layout: fixed;
     }
+    .schedule-table td.col-day { overflow: hidden; }
     .schedule-table thead th {
       background: var(--bg-subtle);
       color: var(--text-secondary);
@@ -592,9 +608,18 @@
     .bar-segment:hover { opacity: 0.85; }
     .bar-text {
       font-size: var(--font-size-xs);
+      /* P1 对比度修复(2026-09-27)：四种班次底色亮度差异很大 —— 金色底(#c99200)上白字只有
+         2.76:1，深灰底(#73767a)上深色字只有 3.09:1，单一字色无法兼顾。这里按班次分别取字色，
+         四档实测分别为 7.5 / 8.2 / 4.7 / 6.4:1，全部达到 WCAG AA。 */
       color: var(--text-inverse);
       font-weight: var(--font-weight-medium);
     }
+    /* 四档底色亮度不同，单一字色无法兼顾（白字压绿底 2.24:1、压金底 2.76:1）；
+       高亮度底（早班绿、中班金）用深色字，中低亮度底（晚班灰、全天红）保留白字。
+       注意：字色规则必须命中 .bar-text 本身——.bar-segment 上的 color 不会覆盖子元素
+       显式声明的颜色，只有写在后代选择器上才生效。 */
+    .bar-segment.k-morning .bar-text,
+    .bar-segment.k-noon .bar-text { color: var(--text-primary); }
 
     /* 排班汇总 */
     .shift-summary { min-height: 200px; }
@@ -621,6 +646,8 @@
     @media (max-width: 768px) {
       .ds-page { padding-left: var(--space-3); padding-right: var(--space-3); }
       .el-col { margin-bottom: var(--space-4); }
+      /* 小屏下列已是 100% 满宽、不再并排，负 margin 无意义，直接归零，避免任何舍入溢出 */
+      .content-row.el-row { margin-left: 0 !important; margin-right: 0 !important; max-width: 100%; }
     }
   </style>
 </body>
