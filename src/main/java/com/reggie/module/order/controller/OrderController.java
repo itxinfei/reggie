@@ -560,6 +560,10 @@ public class OrderController {
         if (!Objects.equals(existing.getStatus(), Orders.STATUS_DELIVERING)) {
             return R.error("当前订单状态不支持确认收货");
         }
+        // 堂食订单由门店员工在上菜完成时完结并释放桌台，顾客端不允许确认收货
+        if (existing.getTableId() != null) {
+            return R.error("堂食订单请由门店确认上菜");
+        }
         statusFlowService.completeOrder(id);
         clearDashboardCache();
         return R.success("确认收货成功");

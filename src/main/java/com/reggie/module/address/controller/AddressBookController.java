@@ -54,15 +54,13 @@ public class AddressBookController {
     private static final int DETAIL_MAX_LENGTH = 255;
 
     /**
-     * 拼接完整地址用于地理编码（省+市+区+详细）
+     * 拼接完整地址用于地理编码（省+市+区+详细）。
+     * 修复(2026-09-27 审查P0-1)：统一走 AddressTextUtils，直辖市去重 + 剥离存量 detail 自带区划前缀
      */
     private String buildFullAddress(AddressBook addressBook) {
-        StringBuilder sb = new StringBuilder();
-        if (addressBook.getProvinceName() != null) sb.append(addressBook.getProvinceName());
-        if (addressBook.getCityName() != null) sb.append(addressBook.getCityName());
-        if (addressBook.getDistrictName() != null) sb.append(addressBook.getDistrictName());
-        if (addressBook.getDetail() != null) sb.append(addressBook.getDetail());
-        return sb.toString();
+        return com.reggie.utils.AddressTextUtils.compose(
+                addressBook.getProvinceName(), addressBook.getCityName(),
+                addressBook.getDistrictName(), addressBook.getDetail());
     }
 
     /**

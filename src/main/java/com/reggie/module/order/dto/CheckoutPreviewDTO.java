@@ -56,6 +56,9 @@ public class CheckoutPreviewDTO implements Serializable {
     @Schema(description = "是否未达起送价")
     private boolean belowMinOrder;
 
+    @Schema(description = "起送价（门店未配置时为 null，表示不限）")
+    private BigDecimal minOrderAmount;
+
     @Schema(description = "是否已做配送范围校验（门店或地址坐标缺失为 false）")
     private boolean rangeChecked;
 

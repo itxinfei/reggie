@@ -486,6 +486,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         // 2) 配送费（基数 goodsAmount；只读评估不抛异常，起送/范围硬拦截仍由 submit 落单前决定）
         BigDecimal deliveryFee = BigDecimal.ZERO;
         boolean belowMinOrder = false;
+        BigDecimal minOrderAmount = storeInfo != null ? storeInfo.getMinDeliveryAmount() : null;
         boolean rangeChecked = false;
         boolean inRange = false;
         if (deliveryCheckEnabled) {
@@ -579,6 +580,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         view.setTotalDiscount(scale2(totalDiscount));
         view.setPayAmount(scale2(payAmount));
         view.setBelowMinOrder(belowMinOrder);
+        view.setMinOrderAmount(minOrderAmount != null ? scale2(minOrderAmount) : null);
         view.setRangeChecked(rangeChecked);
         view.setInRange(inRange);
         view.setUnavailableReason(null);
@@ -912,11 +914,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      * 拼接收货地址各段：跳过空段及与上一已拼段重复的段。
      * 修复(2026-09-23 P2-1)：直辖市 provinceName 与 cityName 相同（如“北京市”+“北京市”），
      * 直接拼接会产生“北京市北京市…”；相邻重复段只保留一个。
+     * 修复(2026-09-27 审查P0-1)：存量数据 detail 自带省市区前缀，统一走
+     * {@link com.reggie.utils.AddressTextUtils#compose} 剥离后再拼，杜绝“北京市东城区北京市东城区…”。
      *
      * @param parts 地址各段（省/市/区/明细）
      * @return 去重拼接后的地址
      */
     private static String joinAddressParts(String... parts) {
+        if (parts != null && parts.length == 4) {
+            return com.reggie.utils.AddressTextUtils.compose(parts[0], parts[1], parts[2], parts[3]);
+        }
         StringBuilder sb = new StringBuilder();
         String prev = null;
         if (parts != null) {
@@ -1528,16 +1535,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      */
     @Override
     public List<Orders> listPendingCheckout(Long tenantId) {
-        // 查本租户下所有待收银订单，两类场景都要覆盖：
-        // 1. STATUS_PENDING_PAY 且 source=EAT_IN（堂食扫码/开台订单，待线上支付或线下收银）
+        // 收银台为纯堂食场景，仅返回 source=EAT_IN 的待收银订单，两类状态都要覆盖：
+        // 1. STATUS_PENDING_PAY（堂食扫码/开台订单，待线上支付或线下收银）
         // 2. STATUS_ORDERED 且 payMethod 为空（历史堂食下单，尚未完成收款）
+        // 注意：source=EAT_IN 必须提到 OR 外层，否则第 2 分支会把外卖/自取等
+        // 非堂食的历史订单也带进收银台「待结订单」
         LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
         qw.eq(Orders::getTenantId, tenantId)
+                .eq(Orders::getSource, "EAT_IN")
                 .and(w -> w.eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
-                                  .eq(Orders::getSource, "EAT_IN")
-                        .or()
-                        .eq(Orders::getStatus, Orders.STATUS_ORDERED)
-                                  .isNull(Orders::getPayMethod))
+                        .or(n -> n.eq(Orders::getStatus, Orders.STATUS_ORDERED)
+                                   .isNull(Orders::getPayMethod)))
                 // 修改点(2026-09-18)：排除「一键开台」产生的占位单（amount=0 且无订单明细）。
                 // 此前这类 ¥0.00 幽灵单会永久滞留在待结账列表，点进去结账还会报「订单金额异常」。
                 .gt(Orders::getAmount, BigDecimal.ZERO)

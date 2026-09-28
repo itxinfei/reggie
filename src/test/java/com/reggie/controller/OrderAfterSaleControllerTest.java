@@ -215,6 +215,25 @@ public class OrderAfterSaleControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.msg").value("当前订单状态不支持确认收货"));
     }
 
+    @Test
+    void testConfirmReceiptEatInRejected() throws Exception {
+        // 堂食订单（带桌台）由门店员工上菜完成，顾客端不允许确认收货
+        Orders eatIn = buildOrder(1L, Orders.STATUS_DELIVERING, "99.00");
+        eatIn.setTableId(1001L);
+        orderService.save(eatIn);
+
+        mockMvc.perform(withCsrfToken(mockMvc, put("/order/userConfirmReceipt")
+                .param("id", String.valueOf(ORDER_ID))
+                .sessionAttr("user", 1L)
+                .sessionAttr("tenantId", 999L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("堂食订单请由门店确认上菜"));
+
+        // 状态保持配送中，未被提前完结/释放桌台
+        assertEquals(Orders.STATUS_DELIVERING, orderService.getById(ORDER_ID).getStatus());
+    }
+
     // ==================== 申请售后 ====================
 
     @Test

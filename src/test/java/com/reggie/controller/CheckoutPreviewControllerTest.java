@@ -63,7 +63,7 @@ public class CheckoutPreviewControllerTest extends BaseControllerTest {
 
     @BeforeEach
     void setUp() {
-        cleaner.cleanTables("address_book", "dish", "category", "shopping_cart", "user");
+        cleaner.cleanTables("address_book", "dish", "category", "shopping_cart", "user", "store_info");
         BaseContext.setCurrentId(USER_ID);
         BaseContext.setCurrentTenantId(999L);
 
@@ -118,7 +118,28 @@ public class CheckoutPreviewControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.data.details[0].name").value("测试菜品"))
                 // 服务端按菜品价重核：10 × 2 = 20
                 .andExpect(jsonPath("$.data.goodsAmount").value(20.00))
-                .andExpect(jsonPath("$.data.originalGoodsAmount").value(20.00));
+                .andExpect(jsonPath("$.data.originalGoodsAmount").value(20.00))
+                // 无门店配置 → 起送价不下发（null=不限），前端据此不显示"还差¥X起送"
+                .andExpect(jsonPath("$.data.minOrderAmount").doesNotExist())
+                .andExpect(jsonPath("$.data.belowMinOrder").value(false));
+    }
+
+    @Test
+    void testPreviewBelowMinOrderExposesThreshold() throws Exception {
+        // 门店起送价 30 > 车内金额 20 → belowMinOrder=true 且透出起送价供前端算"还差¥X起送"
+        jdbcTemplate.update("INSERT INTO store_info (tenant_id, min_delivery_amount, is_delivery_enabled," +
+                " create_time, update_time) VALUES (?, ?, ?, ?, ?)",
+                999L, new BigDecimal("30.00"), 1, LocalDateTime.now(), LocalDateTime.now());
+
+        mockMvc.perform(withCsrfToken(mockMvc, post("/api/order/preview")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"addressBookId\":" + ADDRESS_ID + "}")
+                .sessionAttr("user", USER_ID)
+                .sessionAttr("tenantId", 999L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.belowMinOrder").value(true))
+                .andExpect(jsonPath("$.data.minOrderAmount").value(30.00));
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.tenant.model.Tenant;
+import com.reggie.enums.OrderSource;
 import com.reggie.module.inventory.mapper.MaterialMapper;
 import com.reggie.module.inventory.model.Material;
 import com.reggie.module.report.service.ReportService;
@@ -116,7 +117,12 @@ public class OrderTimeoutTask {
      */
     private int autoCompleteDeliveredOrdersForTenant(LocalDateTime threshold) {
         LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
+        // 修复(缺口5/FOCUS_REVIEW)：24h 自动确认收货只应作用于外卖配送单。
+        // 堂食(EAT_IN)/排队(QUEUE)/预订(RESERVATION) 为到店消费，由门店员工完结并释放桌台，
+        // 不应被"确认收货"，否则会错误完结堂食单、误触发订单完成事件与积分。
+        // 兼容历史 source 为 null 的订单（一并纳入自动确认），仅排除明确的到店消费类型。
         wrapper.eq(Orders::getStatus, Orders.STATUS_DELIVERING)
+               .and(w -> w.eq(Orders::getSource, OrderSource.TAKEOUT.getValue()).or().isNull(Orders::getSource))
                .lt(Orders::getOrderTime, threshold)
                .eq(Orders::getTenantId, BaseContext.getCurrentTenantId());
         List<Orders> deliveringOrders = orderService.list(wrapper);
