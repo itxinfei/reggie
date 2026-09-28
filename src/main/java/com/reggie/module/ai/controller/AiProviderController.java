@@ -7,7 +7,6 @@ import com.reggie.common.RateLimitType;
 import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.provider.AiProviderManager;
 import com.reggie.module.ai.service.AiProviderConfigService;
-import com.reggie.module.ai.util.AiKeyEncryptor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -134,19 +133,13 @@ public class AiProviderController {
             return R.error("供应商配置不存在");
         }
         config.setIsActive(existing.getIsActive());
-        // 修改点(2026-09-18)：空值或含掩码 **** 的值均视为「不修改密钥」，保留库中加密密钥。
-        // 原实现：前端编辑时回填脱敏值（sk-1****abcd），提交后非空即加密入库，导致真实 Key 被脱敏串覆盖损坏
+        // 修改点(2026-09-18)：空值或含掩码 **** 的值均视为「不修改密钥」，保留库中原密钥。
+        // 原实现：前端编辑时回填脱敏值（sk-1****abcd），提交后非空即覆盖，导致真实 Key 被脱敏串覆盖损坏
         if (config.getApiKey() == null || config.getApiKey().trim().isEmpty()
                 || config.getApiKey().contains("****")) {
             config.setApiKey(existing.getApiKey());
-        } else {
-            // 修复 P0-6：存入数据库前加密 apiKey
-            String encrypted = AiKeyEncryptor.encrypt(config.getApiKey());
-            if (encrypted == null) {
-                return R.error("API密钥加密失败，请检查 REGGIE_AI_KEY 环境变量");
-            }
-            config.setApiKey(encrypted);
         }
+        // 非掩码新值明文直接入库（2026-09-26 起厂家 key 统一明文管理）
         providerConfigService.updateById(config);
 
         if (Boolean.TRUE.equals(existing.getIsActive())) {
@@ -220,7 +213,7 @@ public class AiProviderController {
             return R.error("供应商配置不存在");
         }
         if (reveal) {
-            AiKeyEncryptor.decryptApiKeyInPlace(config);
+            // 库中即为明文（2026-09-26 起），直接返回，保留查看行为审计
             log.info("[审计] 管理员查看AI供应商明文API密钥: id={}, code={}", config.getId(), config.getProviderCode());
         } else {
             maskSensitiveFields(config);

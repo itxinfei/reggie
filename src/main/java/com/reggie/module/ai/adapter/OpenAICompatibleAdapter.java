@@ -1,6 +1,8 @@
 package com.reggie.module.ai.adapter;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.reggie.module.ai.failover.AiFailureType;
+import com.reggie.module.ai.failover.AiProviderException;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
@@ -107,12 +109,13 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                 log.error("AI请求[{} / {}]失败: url={}, code={}, error={}",
                         config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(apiUrl), responseCode,
                         truncate(errorBody, 200));
-                String userMsg = buildUserFriendlyError(config.getProviderName(), errorBody);
-                return errorResponse(userMsg, config);
+                // 修改点(2026-09-26)：抛异常而非吞成错误响应，供故障转移分类/切换
+                throw AiProviderException.upstream(config, responseCode, errorBody);
             }
+        } catch (AiProviderException e) {
+            // 已分类异常直接透传
+            throw e;
         } catch (Exception e) {
-            // 基类 chat() 方法已处理 SocketTimeout 和 ConnectException
-            // 这里捕获其他检查型异常
             // 修改点(2026-09-15)：外网不可达属运行环境问题，降为 WARN 且不打全量堆栈，避免刷屏
             if (AiNetworkFailureUtils.isNetworkFailure(e)) {
                 log.warn("AI请求[{} / {}]外部服务不可达（网络环境问题，非应用缺陷）：{}",
@@ -120,7 +123,7 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             } else {
                 log.error("AI请求[{} / {}]未预期异常", config.getProviderCode(), FORMAT_ID, e);
             }
-            return errorResponse("AI服务连接失败（" + config.getProviderName() + "）：" + e.getMessage(), config);
+            throw AiProviderException.local(config, e);
         } finally {
             if (conn != null) {
                 conn.disconnect();
@@ -239,18 +242,23 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             // 修改点：rawBody 截断 300→50 字，防止响应体泄露
             log.warn("AI响应[{} / {}]无法解析: bodyPreview={}", config.getProviderCode(), FORMAT_ID,
                     truncate(rawBody, 50));
-            return errorResponse(config.getProviderName() + "返回了无法识别的响应格式", config);
+            // 修改点(2026-09-26)：抛异常而非吞成错误响应，供故障转移切换
+            throw new AiProviderException(AiFailureType.SERVER_ERROR, 200,
+                    "供应商「" + config.getProviderName() + "」返回了无法识别的响应格式");
 
         } catch (com.fasterxml.jackson.core.JsonParseException e) {
             log.error("AI接口[{} / {}]返回了非JSON响应: bodyPreview={}",
                     config.getProviderCode(), FORMAT_ID, truncate(e.getMessage(), 200));
-            return errorResponse("AI接口地址配置错误（" + config.getProviderName()
-                    + "）：服务器返回了非 JSON 格式的响应。请检查「" + config.getBaseUrl()
-                    + "」是否为正确的 API 基础地址。", config);
+            // 地址配错返回 HTML 等非 JSON 内容：按服务端错误处理，切换其他厂家
+            throw new AiProviderException(AiFailureType.SERVER_ERROR, 200,
+                    "供应商「" + config.getProviderName() + "」返回非 JSON 响应，请检查 API 基础地址", e);
+        } catch (AiProviderException e) {
+            throw e;
         } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+            // 宽异常兜底：有意捕获 Exception，避免解析失败影响主流程
             log.error("AI响应[{} / {}]解析异常", config.getProviderCode(), FORMAT_ID, e);
-            return errorResponse("AI服务返回异常（" + config.getProviderName() + "）：" + e.getMessage(), config);
+            throw new AiProviderException(AiFailureType.SERVER_ERROR, 200,
+                    "供应商「" + config.getProviderName() + "」响应解析异常: " + e.getMessage(), e);
         }
     }
 
@@ -323,8 +331,8 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             if (responseCode != 200) {
                 String errorBody = readErrorBody(conn);
                 log.error("AI流式请求失败: code={}, error={}", responseCode, truncate(errorBody, 200));
-                callback.onToken("AI服务请求失败：" + responseCode, true);
-                return null;
+                // 修改点(2026-09-26)：抛异常而非推送错误 token，首 token 前失败可切换供应商
+                throw AiProviderException.upstream(config, responseCode, errorBody);
             }
 
             // 逐行读取 SSE 流（JDK 1.8 兼容：分开 try-with-resources）
@@ -349,6 +357,9 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             log.warn("AI流式响应[{} / {}]为空，将降级为非流式重试: url={}, model={}",
                     config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(apiUrl), config.getModelName());
             return null;
+        } catch (AiProviderException e) {
+            // 已分类异常直接透传
+            throw e;
         } catch (Exception e) {
             // 用户主动停止：disconnect 打断 readLine 会抛 SocketException，安静返回，
             // 不推送错误 token（服务层负责把已生成片段以 stopped 状态落库）
@@ -357,16 +368,15 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                         config.getProviderCode(), fullContent.length());
                 return null;
             }
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            // 修改点(2026-09-15)：外网不可达属运行环境问题，降为 WARN 且不打全量堆栈，避免刷屏
+            // 修改点(2026-09-26)：抛异常而非推送错误 token；
+            // 是否首 token 已发（可切换/不可切换）由 Manager 结合 FirstTokenGuard 判断
             if (AiNetworkFailureUtils.isNetworkFailure(e)) {
                 log.warn("AI流式请求[{}]外部服务不可达（网络环境问题，非应用缺陷）：{}",
                         config.getProviderCode(), e.getMessage());
             } else {
                 log.error("AI流式请求[{}]异常", config.getProviderCode(), e);
             }
-            callback.onToken("流式输出异常：" + e.getMessage(), true);
-            return null;
+            throw AiProviderException.local(config, e);
         } finally {
             if (conn != null) {
                 conn.disconnect();
@@ -640,7 +650,8 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
             if (responseCode != 200) {
                 String errorBody = readErrorBody(conn);
                 log.error("AI工具轮请求失败: code={}, error={}", responseCode, truncate(errorBody, 200));
-                return ModelTurn.error(buildUserFriendlyError(config.getProviderName(), errorBody));
+                // 修改点(2026-09-26)：抛异常而非返回错误轮，供故障转移切换
+                throw AiProviderException.upstream(config, responseCode, errorBody);
             }
 
             String contentType = conn.getContentType();
@@ -666,6 +677,9 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                     .toolCalls(calls.isEmpty() ? null : calls)
                     .finishReason(finishReason)
                     .build();
+        } catch (AiProviderException e) {
+            // 已分类异常直接透传
+            throw e;
         } catch (Exception e) {
             // 用户中止触发的 SocketException：安静返回空 turn，交由服务层按 stopped 收尾
             if (abort != null && abort.isAborted()) {
@@ -673,7 +687,13 @@ public class OpenAICompatibleAdapter extends BaseModelAdapter {
                         config.getProviderCode(), fullContent.length());
                 return ModelTurn.builder().finishReason(ModelTurn.FINISH_STOP).build();
             }
-            throw e;
+            // 修改点(2026-09-26)：统一分类抛出；首 token 是否发出由 Manager 结合 Guard 判断
+            if (AiNetworkFailureUtils.isNetworkFailure(e)) {
+                log.warn("AI工具轮[{}]网络异常：{}", config.getProviderCode(), e.getMessage());
+            } else {
+                log.error("AI工具轮[{}]异常", config.getProviderCode(), e);
+            }
+            throw AiProviderException.local(config, e);
         } finally {
             if (conn != null) {
                 conn.disconnect();

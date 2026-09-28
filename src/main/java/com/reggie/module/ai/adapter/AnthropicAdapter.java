@@ -1,6 +1,7 @@
 package com.reggie.module.ai.adapter;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.reggie.module.ai.failover.AiProviderException;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
@@ -122,12 +123,14 @@ public class AnthropicAdapter extends BaseModelAdapter {
                 log.error("AI请求[{} / {}]失败: url={}, code={}, error={}",
                         config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(apiUrl), responseCode,
                         truncate(errorBody, 200));
-                String userMsg = buildUserFriendlyError(config.getProviderName(),
+                // 修改点(2026-09-26)：抛异常而非吞成错误响应，供故障转移分类/切换
+                throw AiProviderException.upstream(config, responseCode,
                         parseAnthropicErrorMessage(errorBody));
-                return errorResponse(userMsg, config);
             }
+        } catch (AiProviderException e) {
+            // 已分类异常直接透传
+            throw e;
         } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             // 修改点(2026-09-15)：外网不可达属运行环境问题，降为 WARN 且不打全量堆栈，避免刷屏
             if (AiNetworkFailureUtils.isNetworkFailure(e)) {
                 log.warn("AI请求[{} / {}]外部服务不可达（网络环境问题，非应用缺陷）：{}",
@@ -135,8 +138,7 @@ public class AnthropicAdapter extends BaseModelAdapter {
             } else {
                 log.error("AI请求[{} / {}]未预期异常", config.getProviderCode(), FORMAT_ID, e);
             }
-            return errorResponse("Anthropic AI服务连接失败（" + config.getProviderName() + "）："
-                    + e.getMessage(), config);
+            throw AiProviderException.local(config, e);
         } finally {
             if (conn != null) {
                 conn.disconnect();
@@ -230,7 +232,8 @@ public class AnthropicAdapter extends BaseModelAdapter {
                     root.path("model").asText(config.getModelName()), totalTokens);
         }
 
-        return errorResponse(config.getProviderName() + "返回了空响应，请检查模型是否可用", config);
+        // 修改点(2026-09-26)：抛空响应异常而非吞成错误响应，供故障转移切换
+        throw AiProviderException.empty(config);
     }
 
     /**
@@ -331,8 +334,9 @@ public class AnthropicAdapter extends BaseModelAdapter {
             if (responseCode != 200) {
                 String errorBody = readErrorBody(conn);
                 log.error("AI工具轮请求失败: code={}, error={}", responseCode, truncate(errorBody, 200));
-                return ModelTurn.error(buildUserFriendlyError(config.getProviderName(),
-                        parseAnthropicErrorMessage(errorBody)));
+                // 修改点(2026-09-26)：抛异常而非返回错误轮，供故障转移切换
+                throw AiProviderException.upstream(config, responseCode,
+                        parseAnthropicErrorMessage(errorBody));
             }
 
             String rawBody = readResponseBody(conn);

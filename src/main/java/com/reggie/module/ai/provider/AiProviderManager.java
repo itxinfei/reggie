@@ -1,6 +1,7 @@
 package com.reggie.module.ai.provider;
 
 import cn.hutool.core.util.StrUtil;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.module.ai.adapter.AiModelAdapter.StreamCallback;
@@ -9,6 +10,13 @@ import com.reggie.module.ai.adapter.AiModelAdapter;
 import com.reggie.module.ai.adapter.AnthropicAdapter;
 import com.reggie.module.ai.adapter.BaiduAdapter;
 import com.reggie.module.ai.adapter.OpenAICompatibleAdapter;
+import com.reggie.module.ai.failover.AiCallAction;
+import com.reggie.module.ai.failover.AiFailoverExecutor;
+import com.reggie.module.ai.failover.AiFailureType;
+import com.reggie.module.ai.failover.AiProviderException;
+import com.reggie.module.ai.failover.FailoverAttempt;
+import com.reggie.module.ai.failover.FailoverResult;
+import com.reggie.module.ai.failover.FirstTokenGuard;
 import com.reggie.module.ai.service.CircuitBreakerService;
 import com.reggie.module.ai.config.AIConfigProperties;
 import com.reggie.module.ai.mapper.AiProviderConfigMapper;
@@ -17,12 +25,12 @@ import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.model.ModelTurn;
 import com.reggie.module.ai.tool.ToolDefinition;
-import com.reggie.module.ai.util.AiKeyEncryptor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -51,6 +59,10 @@ public class AiProviderManager {
     /** 熔断降级服务 */
     @Resource
     private CircuitBreakerService circuitBreakerService;
+
+    /** 多供应商故障转移执行器 */
+    @Resource
+    private AiFailoverExecutor failoverExecutor;
 
     // ==================== 适配器注册表 ====================
 
@@ -100,8 +112,8 @@ public class AiProviderManager {
 
     // ==================== 配置管理 ====================
 
-    /** 缓存当前激活的供应商配置（volatile 保证可见性） */
-    private volatile AiProviderConfig activeConfig;
+    /** 候选供应商列表（已校验，按 is_active DESC、sort ASC），volatile 保证可见性 */
+    private volatile List<AiProviderConfig> candidateConfigs = Collections.emptyList();
 
     /** reInit 锁对象，防止并发重新加载时多次查库 */
     private final Object reloadLock = new Object();
@@ -119,54 +131,54 @@ public class AiProviderManager {
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.warn("AI供应商配置加载失败（可能是测试环境缺少数据表），已跳过。错误", e);
-            this.activeConfig = null;
+            this.candidateConfigs = Collections.emptyList();
         }
-        log.info("AI供应商管理器初始化完成，当前供应商: {}",
-                activeConfig != null ? activeConfig.getProviderCode() : "application.yml 配置");
+        List<AiProviderConfig> ready = resolveCandidates();
+        log.info("AI供应商管理器初始化完成，候选供应商 {} 个，首选: {}",
+                ready.size(), ready.isEmpty() ? "无（AI不可用）" : ready.get(0).getProviderCode());
     }
 
     /**
-     * 从数据库重新加载激活的供应商配置（线程安全）
+     * 从数据库重新加载候选供应商（线程安全）。
+     * <p>查全部 enabled 行，按 is_active DESC、sort ASC 排序；逐行校验，
+     * 单行配置不完整不影响其他候选。</p>
      */
     public void reloadConfig() {
         // 防抖动：2秒内不重复加载
         long now = System.currentTimeMillis();
-        if (now - lastReloadTime < 2000 && activeConfig != null) {
+        if (now - lastReloadTime < 2000 && !candidateConfigs.isEmpty()) {
             return;
         }
 
         synchronized (reloadLock) {
             // 双重检查，防止在等待锁时已被其他线程加载
-            if (now - lastReloadTime < 2000 && activeConfig != null) {
+            if (now - lastReloadTime < 2000 && !candidateConfigs.isEmpty()) {
                 return;
             }
 
-            AiProviderConfig config = providerConfigMapper.selectOne(
+            List<AiProviderConfig> rows = providerConfigMapper.selectList(
                     new LambdaQueryWrapper<AiProviderConfig>()
                             .eq(AiProviderConfig::getEnabled, true)
-                            .eq(AiProviderConfig::getIsActive, true)
                             .eq(AiProviderConfig::getIsDeleted, 0)
-                            .last("LIMIT 1")
+                            .orderByDesc(AiProviderConfig::getIsActive)
+                            .orderByAsc(AiProviderConfig::getSort)
             );
 
-            if (config != null) {
-                // 修复 P0-6：解密数据库中加密存储的 apiKey
-                AiKeyEncryptor.decryptApiKeyInPlace(config);
-                // 配置校验
-                String validationError = validateConfig(config);
+            List<AiProviderConfig> usable = new ArrayList<AiProviderConfig>();
+            for (AiProviderConfig row : rows) {
+                // 配置校验：不完整的行跳过，不拖垮其他候选
+                String validationError = validateConfig(row);
                 if (validationError != null) {
-                    log.error("AI供应商配置校验失败: provider={}, error={}",
-                            config.getProviderCode(), validationError);
-                    this.activeConfig = null;
-                } else {
-                    this.activeConfig = config;
-                    log.info("AI供应商已切换: provider={}, model={}, format={}",
-                            config.getProviderCode(), config.getModelName(), config.getApiFormat());
+                    log.warn("AI供应商配置校验失败，已跳过该候选: provider={}, error={}",
+                            row.getProviderCode(), validationError);
+                    continue;
                 }
-            } else {
-                this.activeConfig = null;
-                log.warn("未找到激活的AI供应商配置，将使用 application.yml 默认配置");
+                usable.add(row);
             }
+            this.candidateConfigs = Collections.unmodifiableList(usable);
+            log.info("AI候选供应商已加载: {} 个{}", usable.size(),
+                    usable.isEmpty() ? "（将使用 application.yml 兜底配置）"
+                            : "，首选=" + usable.get(0).getProviderCode());
 
             lastReloadTime = System.currentTimeMillis();
         }
@@ -199,186 +211,275 @@ public class AiProviderManager {
      * @return 返回结果
      */
     public AIChatResponse chat(List<AIMessage> messages, int maxTokens, double temperature) {
-        AiProviderConfig config = getActiveConfig();
-
-        // 参数校验
         if (messages == null || messages.isEmpty()) {
             return AIChatResponse.builder()
                     .content("消息列表为空，无法发起对话")
-                    .model(config != null ? config.getModelName() : aiConfig.getModel())
+                    .model(aiConfig.getModel())
                     .build();
         }
 
-        // 配置校验
-        if (config == null) {
+        List<AiProviderConfig> candidates = resolveCandidates();
+        if (candidates.isEmpty()) {
             return AIChatResponse.builder()
-                    .content("AI功能未配置：没有激活的AI供应商。请前往后台管理 → AI供应商配置 中设置API密钥并激活供应商。")
+                    .content("AI功能未配置：没有启用的AI供应商。请前往后台管理 → AI供应商配置 中设置API密钥并启用供应商。")
                     .model("none")
                     .build();
         }
 
-        String apiKey = config.getApiKey();
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            return AIChatResponse.builder()
-                    .content("AI功能未就绪：供应商「" + config.getProviderName()
-                            + "」未配置API密钥，请前往后台管理页面设置。")
-                    .model(config.getModelName())
-                    .build();
+        // 多候选故障转移：单个供应商失败自动切换下一家
+        FailoverResult<AIChatResponse> result = failoverExecutor.execute(candidates,
+                new AiCallAction<AIChatResponse>() {
+                    @Override
+                    public AIChatResponse invoke(AiProviderConfig candidate) {
+                        AiModelAdapter adapter = resolveAdapter(candidate);
+                        if (adapter == null) {
+                            // 未知 API 格式：按服务端错误抛出，跳过该候选
+                            throw new AiProviderException(AiFailureType.SERVER_ERROR, 0,
+                                    "供应商「" + candidate.getProviderName() + "」API格式不受支持: "
+                                            + candidate.getApiFormat());
+                        }
+                        return adapter.chat(messages, maxTokens, temperature, candidate);
+                    }
+                });
+
+        if (result.getOutcome() == FailoverResult.Outcome.SUCCESS) {
+            return result.getValue();
         }
-
-        // 从适配器注册表中查找对应格式的适配器
-        String apiFormat = config.getApiFormat();
-        if (apiFormat == null || apiFormat.isEmpty()) {
-            apiFormat = OpenAICompatibleAdapter.FORMAT_ID;
-        }
-        apiFormat = apiFormat.toLowerCase();
-
-        AiModelAdapter adapter = adapterRegistry.get(apiFormat);
-        if (adapter == null) {
-            log.error("不支持的API格式: provider={}, format={}, 已注册: {}",
-                    config.getProviderCode(), apiFormat, adapterRegistry.keySet());
-            return AIChatResponse.builder()
-                    .content("不支持的API格式「" + apiFormat
-                            + "」，支持的格式: " + StrUtil.join(", ", adapterRegistry.keySet()))
-                    .model(config.getModelName())
-                    .build();
-        }
-
-        log.info("使用适配器 [{}] 处理请求: provider={}, model={}",
-                adapter.getFormatId(), config.getProviderCode(), config.getModelName());
-
-        // 委托给对应适配器（带熔断保护）
-        String providerCode = config.getProviderCode();
-        return circuitBreakerService.execute(providerCode,
-                () -> adapter.chat(messages, maxTokens, temperature, config),
-                (code, reason) -> AIChatResponse.builder()
-                        .content("【AI服务暂时不可用】" + reason + "（" + config.getProviderName() + "），请稍后重试。")
-                        .model(config.getModelName())
-                        .build()
-        );
+        // EXHAUSTED / NON_RETRYABLE：返回兜底错误体（POST_START 在非流式不会发生）
+        return AIChatResponse.builder()
+                .content(buildFailMessage(result))
+                .model(resolveTerminalModel(result, candidates))
+                .build();
     }
 
     /**
-     * SSE 流式对话：优先使用适配器的流式能力，降级为非流式
-     * <p>带熔断保护，熔断时直接降级。</p>
+     * SSE 流式对话：多候选故障转移，首选流式建连失败自动切换下一家；
+     * 首 token 发出后失败只终止，不切换。
      */
     public String streamChat(List<AIMessage> messages, int maxTokens, double temperature,
                              StreamCallback callback) {
-        AiProviderConfig config = getActiveConfig();
-
         if (messages == null || messages.isEmpty()) {
             callback.onToken("消息列表为空，无法发起对话", true);
             return null;
         }
-        if (config == null) {
-            callback.onToken("AI功能未配置，请前往后台管理设置", true);
+        List<AiProviderConfig> candidates = resolveCandidates();
+        if (candidates.isEmpty()) {
+            callback.onToken("AI功能未配置，请前往后台管理启用供应商", true);
             return null;
         }
 
-        String apiFormat = config.getApiFormat();
-        if (apiFormat == null || apiFormat.isEmpty()) {
-            apiFormat = OpenAICompatibleAdapter.FORMAT_ID;
-        }
-        apiFormat = apiFormat.toLowerCase();
+        // 首 token 哨兵：内容开始前失败可切换，开始后失败只终止
+        final FirstTokenGuard guard = new FirstTokenGuard(callback);
+        FailoverResult<String> result = failoverExecutor.execute(candidates,
+                new AiCallAction<String>() {
+                    @Override
+                    public String invoke(AiProviderConfig candidate) throws Exception {
+                        AiModelAdapter adapter = resolveAdapter(candidate);
+                        if (adapter == null) {
+                            throw new AiProviderException(AiFailureType.SERVER_ERROR, 0,
+                                    "供应商「" + candidate.getProviderName() + "」API格式不受支持: "
+                                            + candidate.getApiFormat());
+                        }
+                        return doStreamCandidate(messages, maxTokens, temperature,
+                                candidate, adapter, guard);
+                    }
+                });
 
-        AiModelAdapter adapter = adapterRegistry.get(apiFormat);
-        if (adapter == null) {
-            callback.onToken("不支持的API格式：" + apiFormat, true);
+        if (result.getOutcome() == FailoverResult.Outcome.SUCCESS) {
+            return result.getValue();
+        }
+        if (guard.isAborted()) {
+            // 用户中止：片段落库由服务层按 stopped 负责，不补发
             return null;
         }
-
-        String providerCode = config.getProviderCode();
-        return circuitBreakerService.execute(providerCode,
-                () -> doStream(messages, maxTokens, temperature, config, adapter, callback),
-                (code, reason) -> {
-                    callback.onToken("【服务暂时不可用】" + reason, true);
-                    return null;
-                }
-        );
+        if (result.getOutcome() == FailoverResult.Outcome.POST_START_ERROR) {
+            // 首 token 后中断：内容已部分推送，不补发末帧（服务层收尾）
+            return null;
+        }
+        // EXHAUSTED / NON_RETRYABLE：首 token 从未发出，安全发末帧错误
+        callback.onToken(buildFailMessage(result), true);
+        return null;
     }
 
     /**
      * P4 工具感知单轮对话：由 {@code AiToolOrchestrator} 驱动多轮循环。
-     * <p>配置/格式/能力校验与 {@link #streamChat} 同口径，错误以 {@link ModelTurn#error} 返回；
-     * 文本增量经 textSink 推送，工具调用由适配器在 ModelTurn 中结构化返回。</p>
+     * <p>仅在「capabilities 勾选 tools 且适配器协议层支持工具调用」的候选间故障转移；
+     * 文本增量经 textSink 推送（首 token 边界受哨兵保护），工具调用由适配器结构化返回。</p>
      */
     public ModelTurn chatTurn(List<AIMessage> messages, int maxTokens, double temperature,
                               List<ToolDefinition> tools, AbortableStreamCallback abort,
                               StreamCallback textSink) {
-        AiProviderConfig config = getActiveConfig();
         if (messages == null || messages.isEmpty()) {
             return ModelTurn.error("消息列表为空，无法发起对话");
         }
-        if (config == null) {
-            return ModelTurn.error("AI功能未配置：没有激活的AI供应商。请前往后台管理 → AI供应商配置 中设置API密钥并激活供应商。");
-        }
-        String apiFormat = config.getApiFormat();
-        if (apiFormat == null || apiFormat.isEmpty()) {
-            apiFormat = OpenAICompatibleAdapter.FORMAT_ID;
-        }
-        apiFormat = apiFormat.toLowerCase();
-
-        AiModelAdapter adapter = adapterRegistry.get(apiFormat);
-        if (adapter == null) {
-            return ModelTurn.error("不支持的API格式：" + apiFormat);
-        }
-        if (!adapter.supportsToolCalling()) {
-            return ModelTurn.error("当前模型不支持工具调用");
+        List<AiProviderConfig> candidates = resolveCandidates();
+        if (candidates.isEmpty()) {
+            return ModelTurn.error("AI功能未配置：没有启用的AI供应商，请在后台管理设置。");
         }
 
-        String providerCode = config.getProviderCode();
-        return circuitBreakerService.execute(providerCode,
-                () -> adapter.chatTurn(messages, maxTokens, temperature, config, tools, abort, textSink),
-                (code, reason) -> ModelTurn.error("【AI服务暂时不可用】" + reason + "（" + config.getProviderName() + "），请稍后重试。")
-        );
+        // 工具候选过滤：勾选 tools 能力且适配器支持 function calling（Baidu 压平协议会被排除）
+        List<AiProviderConfig> toolCandidates = new ArrayList<AiProviderConfig>();
+        for (AiProviderConfig candidate : candidates) {
+            AiModelAdapter adapter = resolveAdapter(candidate);
+            if (adapter != null && adapter.supportsToolCalling()
+                    && capEnabled(candidate, CAP_TOOLS)) {
+                toolCandidates.add(candidate);
+            }
+        }
+        if (toolCandidates.isEmpty()) {
+            return ModelTurn.error("当前没有启用且支持工具调用的供应商，请在后台为供应商勾选「工具调用」能力。");
+        }
+
+        // textSink 首 token 哨兵
+        final FirstTokenGuard sinkGuard = new FirstTokenGuard(textSink);
+        FailoverResult<ModelTurn> result = failoverExecutor.execute(toolCandidates,
+                new AiCallAction<ModelTurn>() {
+                    @Override
+                    public ModelTurn invoke(AiProviderConfig candidate) throws Exception {
+                        AiModelAdapter adapter = resolveAdapter(candidate);
+                        return adapter.chatTurn(messages, maxTokens, temperature,
+                                candidate, tools, abort, sinkGuard);
+                    }
+                });
+
+        if (result.getOutcome() == FailoverResult.Outcome.SUCCESS) {
+            return result.getValue();
+        }
+        if (abort != null && abort.isAborted()) {
+            return ModelTurn.builder().finishReason(ModelTurn.FINISH_STOP).build();
+        }
+        if (result.getOutcome() == FailoverResult.Outcome.POST_START_ERROR) {
+            return ModelTurn.error("AI回答生成中断，请稍后重试。");
+        }
+        // NON_RETRYABLE / EXHAUSTED
+        return ModelTurn.error(buildFailMessage(result));
     }
 
     /**
-     * 执行实际流式逻辑（被熔断保护包裹）
+     * 针对单个候选执行流式逻辑。
+     * <p>真流式建连/读取失败：首 token 前抛异常给执行器切换，首 token 后抛终止性异常；
+     * 流式返回空内容（网关协议错配）时，同候选转一次非流式（协议纠错，非失败重试）。</p>
      */
-    private String doStream(List<AIMessage> messages, int maxTokens, double temperature,
-                            AiProviderConfig config, AiModelAdapter adapter, StreamCallback callback)
-            throws Exception {
+    private String doStreamCandidate(List<AIMessage> messages, int maxTokens, double temperature,
+                                     AiProviderConfig config, AiModelAdapter adapter,
+                                     FirstTokenGuard guard) throws Exception {
         if (adapter.supportsStreaming()) {
+            String content;
             try {
-                String content = adapter.chatStream(messages, maxTokens, temperature, config, callback);
-                // 用户中止：安静返回，不降级、不补发错误事件（片段落库由服务层负责）
-                if (callback instanceof AbortableStreamCallback && ((AbortableStreamCallback) callback).isAborted()) {
-                    return null;
-                }
-                if (content != null && !content.isEmpty()) {
-                    return content;
-                }
-                // 修改点(2026-09-18)：流式返回空内容（如网关路由到 Claude 等非标上游），
-                // 不直接报「模型返回了空响应」，降级为非流式重试
-                log.warn("AI流式返回空内容，降级为非流式重试: provider={}", config.getProviderCode());
+                content = adapter.chatStream(messages, maxTokens, temperature, config, guard);
             } catch (Exception e) {
-                // 用户主动中止导致的 IO 异常不降级
-                if (callback instanceof AbortableStreamCallback && ((AbortableStreamCallback) callback).isAborted()) {
-                    log.info("流式被用户中止，跳过分块降级: provider={}", config.getProviderCode());
+                // 用户主动中止：安静返回，不切换
+                if (guard.isAborted()) {
+                    log.info("流式被用户中止: provider={}", config.getProviderCode());
                     return null;
                 }
-                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-                log.warn("真流式失败，降级为分块流式: provider={}", config.getProviderCode(), e);
+                // 首 token 已发出：终止性异常，不切换
+                if (guard.isStarted()) {
+                    throw AiProviderException.afterStarted(e);
+                }
+                // 首 token 前硬失败（429/5xx/网络/非200）：抛给执行器切下一家，
+                // 不在同家做非流式重试，避免延迟翻倍
+                throw AiProviderException.local(config, e);
             }
+
+            // 用户中止：安静返回
+            if (guard.isAborted()) {
+                return null;
+            }
+            if (content != null && !content.isEmpty()) {
+                return content;
+            }
+            // 流式 200 但无内容：网关协议错配（历史场景），同候选转非流式做协议纠错
+            log.warn("流式返回空内容，同候选转非流式: provider={}", config.getProviderCode());
         }
 
-        // 降级：非流式 + 分块发送
+        // 非流式 + 分块推送（adapter.chat 失败/空会抛异常 → 执行器切下一家）
         AIChatResponse response = adapter.chat(messages, maxTokens, temperature, config);
-        if (response != null && response.getContent() != null) {
-            String content = response.getContent();
-            String[] chunks = splitIntoChunks(content, 20);
-            for (int i = 0; i < chunks.length; i++) {
-                // 中止链路：分块降级期间用户停止则立即退出（不发 isLast，由服务层落 stopped）
-                if (callback instanceof AbortableStreamCallback && ((AbortableStreamCallback) callback).isAborted()) {
-                    return null;
-                }
-                callback.onToken(chunks[i], i == chunks.length - 1);
-                try { Thread.sleep(30); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+        String content = response.getContent();
+        String[] chunks = splitIntoChunks(content, 20);
+        for (int i = 0; i < chunks.length; i++) {
+            if (guard.isAborted()) {
+                return null;
             }
-            return content;
+            guard.onToken(chunks[i], i == chunks.length - 1);
+            try {
+                Thread.sleep(30);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
+            }
         }
-        return null;
+        return content;
+    }
+
+    /**
+     * 解析候选对应适配器；apiFormat 缺失按 openai 处理，未知格式返回 null。
+     */
+    private AiModelAdapter resolveAdapter(AiProviderConfig candidate) {
+        String apiFormat = candidate.getApiFormat();
+        if (apiFormat == null || apiFormat.isEmpty()) {
+            apiFormat = OpenAICompatibleAdapter.FORMAT_ID;
+        }
+        return adapterRegistry.get(apiFormat.toLowerCase());
+    }
+
+    /**
+     * 判断候选是否勾选某能力。兼容 capabilities 的对象形式 {"tools":true}
+     * 与数组形式 ["chat","tools"]；解析失败或未声明返回 false。
+     */
+    private boolean capEnabled(AiProviderConfig candidate, String cap) {
+        String json = candidate.getCapabilities();
+        if (StrUtil.isBlank(json)) {
+            return false;
+        }
+        try {
+            JsonNode node = CAPS_MAPPER.readTree(json);
+            if (node.isObject()) {
+                return node.path(cap).asBoolean(false);
+            }
+            if (node.isArray()) {
+                for (JsonNode item : node) {
+                    if (cap.equals(item.asText())) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("能力JSON解析失败，按未勾选处理: capabilities={}", json);
+        }
+        return false;
+    }
+
+    /**
+     * 构造失败兜底文案：NON_RETRYABLE 直接返回厂家原始错误（含厂家名）；
+     * EXHAUSTED 提示全部供应商不可用。
+     */
+    private String buildFailMessage(FailoverResult<?> result) {
+        List<FailoverAttempt> attempts = result.getAttempts();
+        FailoverAttempt last = attempts.isEmpty() ? null : attempts.get(attempts.size() - 1);
+        if (result.getOutcome() == FailoverResult.Outcome.NON_RETRYABLE && last != null) {
+            return last.getDetail();
+        }
+        if (result.getOutcome() == FailoverResult.Outcome.EXHAUSTED) {
+            return "【AI服务暂时不可用】所有供应商均无法响应，请稍后重试。";
+        }
+        return last != null ? last.getDetail() : "AI服务暂时不可用，请稍后重试。";
+    }
+
+    /**
+     * 解析最终尝试候选的模型名（兜底响应用）。
+     */
+    private String resolveTerminalModel(FailoverResult<?> result, List<AiProviderConfig> candidates) {
+        List<FailoverAttempt> attempts = result.getAttempts();
+        if (!attempts.isEmpty()) {
+            String lastCode = attempts.get(attempts.size() - 1).getProviderCode();
+            for (AiProviderConfig candidate : candidates) {
+                if (candidate.getProviderCode().equals(lastCode)) {
+                    return candidate.getModelName();
+                }
+            }
+        }
+        return aiConfig.getModel();
     }
 
     private String[] splitIntoChunks(String text, int chunkSize) {
@@ -397,29 +498,32 @@ public class AiProviderManager {
     // ==================== 配置获取 ====================
 
     /**
-     * 获取当前激活的供应商配置（带缓存，线程安全）
+     * 获取候选供应商快照。DB 有可用行返回其副本；无可用行时退化为 yml 单候选；
+     * 无任何配置返回空列表。
      */
-    public AiProviderConfig getActiveConfig() {
-        // 先读取 volatile 本地副本
-        AiProviderConfig cached = activeConfig;
-
-        // 如果缓存不为空但标记为禁用，重新加载
-        if (cached != null && cached.getEnabled() != null && !cached.getEnabled()) {
-            reloadConfig();
-            cached = activeConfig;
+    public List<AiProviderConfig> resolveCandidates() {
+        List<AiProviderConfig> rows = candidateConfigs;
+        if (!rows.isEmpty()) {
+            return new ArrayList<AiProviderConfig>(rows);
         }
-
-        if (cached != null) {
-            return cached;
+        AiProviderConfig yml = buildYmlCandidate();
+        if (yml == null) {
+            return Collections.emptyList();
         }
+        List<AiProviderConfig> one = new ArrayList<AiProviderConfig>(1);
+        one.add(yml);
+        return one;
+    }
 
-        // 无数据库配置，使用 application.yml 兜底
+    /**
+     * 构建 application.yml 兜底候选（仅 DB 无可用行时使用）。
+     */
+    private AiProviderConfig buildYmlCandidate() {
         String ymlApiKey = aiConfig.getApiKey();
         if (ymlApiKey == null || ymlApiKey.trim().isEmpty()) {
-            log.warn("application.yml 中未配置 reggie.ai.api-key，AI功能将无法使用");
+            log.warn("application.yml 中未配置 reggie.ai.api-key，且无启用的DB供应商，AI功能不可用");
             return null;
         }
-
         AiProviderConfig fallback = new AiProviderConfig();
         fallback.setProviderCode(aiConfig.getProvider());
         fallback.setProviderName(aiConfig.getProvider());
@@ -432,6 +536,14 @@ public class AiProviderManager {
         fallback.setApiFormat(OpenAICompatibleAdapter.FORMAT_ID);
         fallback.setEnabled(true);
         return fallback;
+    }
+
+    /**
+     * 获取首选供应商（候选列表首位，带缓存，线程安全）。
+     */
+    public AiProviderConfig getActiveConfig() {
+        List<AiProviderConfig> all = resolveCandidates();
+        return all.isEmpty() ? null : all.get(0);
     }
 
     /**
@@ -527,5 +639,70 @@ public class AiProviderManager {
      */
     public Map<String, Object> getCircuitBreakerStats() {
         return circuitBreakerService.getStats();
+    }
+
+    /** 健康状态时间格式 */
+    private static final java.time.format.DateTimeFormatter HEALTH_TIME_FMT =
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /**
+     * 构建 AI 服务完整健康状态（供 /api/ai/status 使用）。
+     * <p>含首选供应商、全部候选实时状态（启用/首选标记/上次测试/熔断视图）与全耗尽标记。</p>
+     */
+    public Map<String, Object> buildHealthStatus() {
+        Map<String, Object> status = new LinkedHashMap<String, Object>();
+        List<AiProviderConfig> candidates = resolveCandidates();
+        boolean configured = !candidates.isEmpty();
+
+        AiProviderConfig preferred = configured ? candidates.get(0) : null;
+        if (preferred != null) {
+            status.put("provider", preferred.getProviderName());
+            status.put("model", preferred.getModelName());
+            status.put("format", preferred.getApiFormat());
+        } else {
+            status.put("provider", "未配置");
+            status.put("model", "N/A");
+        }
+
+        status.put("configured", configured);
+        status.put("allExhausted", failoverExecutor.isLastOutcomeExhausted());
+        status.put("lastExhaustedTime", formatEpochMillis(failoverExecutor.getLastExhaustedTime()));
+
+        List<Map<String, Object>> candidateList = new ArrayList<Map<String, Object>>();
+        for (AiProviderConfig candidate : candidates) {
+            Map<String, Object> item = new LinkedHashMap<String, Object>();
+            item.put("code", candidate.getProviderCode());
+            item.put("name", candidate.getProviderName());
+            item.put("sort", candidate.getSort());
+            item.put("enabled", candidate.getEnabled());
+            item.put("isActive", candidate.getIsActive());
+            item.put("lastTestResult", candidate.getLastTestResult());
+            java.time.LocalDateTime testTime = candidate.getLastTestTime();
+            item.put("lastTestTime", testTime == null ? null : testTime.format(HEALTH_TIME_FMT));
+            item.put("breaker", buildBreakerView(candidate.getProviderCode()));
+            candidateList.add(item);
+        }
+        status.put("candidates", candidateList);
+        status.put("circuitBreaker", getCircuitBreakerStats());
+        return status;
+    }
+
+    /** 单个候选的熔断状态视图（state/errorRate/冷却剩余） */
+    private Map<String, Object> buildBreakerView(String code) {
+        CircuitBreakerService.BreakerSnapshot snapshot = circuitBreakerService.describe(code);
+        Map<String, Object> view = new LinkedHashMap<String, Object>();
+        view.put("state", snapshot.getState());
+        view.put("errorRate", Math.round(snapshot.getErrorRate() * 100) / 100.0);
+        view.put("cooldownRemainingMs", snapshot.getCooldownRemainingMs());
+        return view;
+    }
+
+    /** 毫秒时间戳格式化（<=0 无记录返回 null） */
+    private String formatEpochMillis(long epochMillis) {
+        if (epochMillis <= 0L) {
+            return null;
+        }
+        return new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                .format(new java.util.Date(epochMillis));
     }
 }

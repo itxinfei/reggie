@@ -2,6 +2,7 @@ package com.reggie.module.ai.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.ObjectMapperHolder;
+import com.reggie.module.ai.failover.AiProviderException;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AiProviderConfig;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +49,8 @@ public abstract class BaseModelAdapter implements AiModelAdapter {
 
     /**
      * 处理 chat。
+     * <p>修改点(2026-09-26)：失败不再吞成错误 AIChatResponse，而是分类抛出
+     * {@link AiProviderException}，由上层故障转移执行器决定是否切换供应商。</p>
      * @param messages 参数 messages
      * @param maxTokens 参数 maxTokens
      * @param temperature 参数 temperature
@@ -57,24 +60,26 @@ public abstract class BaseModelAdapter implements AiModelAdapter {
     @Override
     public AIChatResponse chat(java.util.List<com.reggie.module.ai.model.AIMessage> messages,
                                 int maxTokens, double temperature, AiProviderConfig config) {
+        AIChatResponse resp;
         try {
-            return doChat(messages, maxTokens, temperature, config);
+            resp = doChat(messages, maxTokens, temperature, config);
+        } catch (AiProviderException e) {
+            // 子类已分类的异常直接透传
+            throw e;
         } catch (Exception e) {
-            // 修改点：由于 doChat() 的实现类内部可能已捕获异常，
-            // 这里使用 instanceof 分发以支持子类向外抛出网络异常的场景
-            // 修改点(2026-09-15)：外部网络不可达/超时属运行环境问题（离线、防火墙、供应商域名不通），
-            // 统一降为 WARN 且不打印全量堆栈，避免 ERROR 刷屏淹没真实程序缺陷
-            if (e instanceof java.net.SocketTimeoutException) {
-                log.warn("AI请求[{}]响应超时（网络环境问题，非应用缺陷）：{}", config.getProviderCode(), e.getMessage());
-                return errorResponse("AI服务响应超时（" + config.getProviderName() + "），请稍后重试", config);
+            // 沿用日志分级口径：网络/超时类 WARN 无堆栈，其余 ERROR 保留堆栈
+            if (e instanceof java.net.SocketTimeoutException || AiNetworkFailureUtils.isNetworkFailure(e)) {
+                log.warn("AI请求[{}]网络异常：{}", config.getProviderCode(), e.getMessage());
+            } else {
+                log.error("AI请求[{}]异常", config.getProviderCode(), e);
             }
-            if (AiNetworkFailureUtils.isNetworkFailure(e)) {
-                log.warn("AI请求[{}]外部服务不可达（网络环境问题，非应用缺陷）：{}", config.getProviderCode(), e.getMessage());
-                return errorResponse("无法连接到AI服务（" + config.getProviderName() + "），请检查网络和API地址", config);
-            }
-            log.error("AI请求[{}]异常", config.getProviderCode(), e);
-            return errorResponse("AI服务连接失败（" + config.getProviderName() + "）：" + e.getMessage(), config);
+            throw AiProviderException.local(config, e);
         }
+        if (resp == null || resp.getContent() == null || resp.getContent().isEmpty()) {
+            log.warn("AI请求[{}]返回空内容", config.getProviderCode());
+            throw AiProviderException.empty(config);
+        }
+        return resp;
     }
 
     // ==================== HTTP 连接工具 ====================
@@ -212,55 +217,6 @@ public abstract class BaseModelAdapter implements AiModelAdapter {
                 .model(model)
                 .tokensUsed(tokensUsed)
                 .build();
-    }
-
-    /**
-     * 构建错误响应
-     */
-    protected AIChatResponse errorResponse(String message, AiProviderConfig config) {
-        return AIChatResponse.builder()
-                .content(message)
-                .model(config.getModelName())
-                .build();
-    }
-
-    // ==================== 错误诊断 ====================
-
-    /**
-     * 根据 API 返回的错误类型，构建用户友好的错误提示
-     * <p>特别针对 Go 反序列化错误（常见于 New API / One API 网关代理）</p>
-     */
-    protected String buildUserFriendlyError(String providerName, String rawError) {
-        if (rawError == null) {
-            return "AI服务暂时不可用（" + providerName + "）";
-        }
-        if (rawError.contains("unmarshal") || rawError.contains("Unmarshal")) {
-            if (rawError.contains(".messages") && rawError.contains("string")) {
-                return "AI网关响应解析失败（" + providerName + "）\n\n"
-                        + "错误原因：上游模型返回的响应中「messages」字段是字符串，"
-                        + "但 api.iamhc.cn 网关期望的是对象格式（Go 泛型反序列化失败）。\n\n"
-                        + "这是 api.iamhc.cn 渠道/上游模型的配置问题，不是本系统的 Bug。\n\n"
-                        + "排查步骤（登录 api.iamhc.cn 管理后台）：\n"
-                        + "1. 进入「渠道」→ 找到当前使用的渠道 → 点击编辑\n"
-                        + "2. 重点检查「类型」下拉框是否正确：\n"
-                        + "   - 如果上游是 OpenAI / DeepSeek / 通义千问等对话模型 → 类型选择对应选项\n"
-                        + "   - 如果上游是文本补全模型（非 chat 模型）→ 类型不要选 OpenAI\n"
-                        + "3. 确认「模型」名称与上游实际模型名一致（含版本后缀）\n"
-                        + "4. 在渠道页面点击「测试」按钮验证连通性\n"
-                        + "5. 如果测试失败，尝试更换渠道类型或上游模型\n\n"
-                        + "原始错误：" + rawError;
-            }
-            return "AI网关响应解析失败（" + providerName + "）\n\n"
-                    + "原因：上游 AI 模型返回的响应格式与网关（api.iamhc.cn）期望不匹配，"
-                    + "JSON 字段类型不一致（Go 反序列化错误）。\n\n"
-                    + "这不是本系统的 Bug，请检查以下配置：\n"
-                    + "1. 登录 api.iamhc.cn 管理后台\n"
-                    + "2. 检查对应渠道（Channel）的「模型」和「类型」配置是否正确\n"
-                    + "3. 确认上游模型 API 是否正常运行\n"
-                    + "4. 尝试切换渠道类型或更换模型\n\n"
-                    + "原始错误：" + rawError;
-        }
-        return "AI服务暂时不可用（" + providerName + "）：" + rawError;
     }
 
     /**

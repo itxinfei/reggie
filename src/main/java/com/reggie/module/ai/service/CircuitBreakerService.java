@@ -3,21 +3,20 @@ package com.reggie.module.ai.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * AI 服务熔断与降级管理
+ * AI 服务熔断管理。
  *
  * <p>核心能力：
  * <ul>
  *   <li>滑动窗口熔断器：统计错误率，错误率超阈值自动熔断</li>
- *   <li>熔断恢复：冷却期后逐步放行探测</li>
- *   <li>降级策略：熔断时返回友好提示，引导用户重试</li>
- *   <li>追问机制：服务异常时引导用户提供更多信息便于恢复后重试</li>
+ *   <li>熔断恢复：冷却期后进入半开，放少量探测请求，一次探测成功即恢复关闭</li>
+ *   <li>细粒度门禁 API（{@link #beforeCall} / {@link #recordSuccess} /
+ *       {@link #recordFailure}），供多厂家故障转移执行器逐个候选协作</li>
  * </ul>
  *
  * @author reggie
@@ -27,17 +26,51 @@ import java.util.concurrent.atomic.AtomicLong;
 @Service
 public class CircuitBreakerService {
 
-    /** 统计窗口大小（请求数） */
-    private static final int WINDOW_SIZE = 10;
+    /** 默认统计窗口大小（请求数） */
+    static final int DEFAULT_WINDOW_SIZE = 10;
 
-    /** 错误率阈值（超过此比例触发熔断） */
-    private static final float ERROR_THRESHOLD = 0.5f;
+    /** 默认错误率阈值（超过此比例触发熔断） */
+    static final float DEFAULT_ERROR_THRESHOLD = 0.5f;
 
-    /** 熔断冷却期（毫秒） */
-    private static final long COOLDOWN_MS = 30_000L;
+    /** 默认熔断冷却期（毫秒） */
+    static final long DEFAULT_COOLDOWN_MS = 30_000L;
 
-    /** 探测期每次放行数量 */
-    private static final int PROBE_COUNT = 3;
+    /** 默认半开并发探测上限 */
+    static final int DEFAULT_PROBE_LIMIT = 3;
+
+    /** 调用前门禁决策 */
+    public enum BreakerDecision {
+        /** CLOSED 正常放行 */
+        ALLOW,
+        /** HALF_OPEN 探测放行 */
+        ALLOW_PROBE,
+        /** OPEN 冷却未到，拒绝 */
+        REJECT_OPEN,
+        /** HALF_OPEN 探测槽占满，拒绝 */
+        REJECT_HALF_BUSY
+    }
+
+    /** 熔断状态快照（后台状态展示） */
+    public static class BreakerSnapshot {
+        private final String state;
+        private final float errorRate;
+        private final long cooldownRemainingMs;
+
+        BreakerSnapshot(String state, float errorRate, long cooldownRemainingMs) {
+            this.state = state;
+            this.errorRate = errorRate;
+            this.cooldownRemainingMs = cooldownRemainingMs;
+        }
+
+        public String getState() { return state; }
+        public float getErrorRate() { return errorRate; }
+        public long getCooldownRemainingMs() { return cooldownRemainingMs; }
+    }
+
+    private final int windowSize;
+    private final float errorThreshold;
+    private final long cooldownMs;
+    private final int probeLimit;
 
     /** 按供应商分组的熔断状态 */
     private final Map<String, BreakerState> states = new ConcurrentHashMap<>();
@@ -46,65 +79,61 @@ public class CircuitBreakerService {
     private final AtomicLong totalSuccess = new AtomicLong(0);
     private final AtomicLong totalFailure = new AtomicLong(0);
 
-    // ==================== 公共 API ====================
+    /** 生产环境使用默认参数 */
+    public CircuitBreakerService() {
+        this(DEFAULT_WINDOW_SIZE, DEFAULT_ERROR_THRESHOLD, DEFAULT_COOLDOWN_MS, DEFAULT_PROBE_LIMIT);
+    }
+
+    /** 测试可定制参数（如缩短冷却期验证恢复） */
+    CircuitBreakerService(int windowSize, float errorThreshold, long cooldownMs, int probeLimit) {
+        this.windowSize = windowSize;
+        this.errorThreshold = errorThreshold;
+        this.cooldownMs = cooldownMs;
+        this.probeLimit = probeLimit;
+    }
+
+    // ==================== 细粒度 API ====================
 
     /**
-     * 执行 AI 请求（带熔断保护）
-     *
-     * @param providerCode 供应商编码
-     * @param supplier     实际执行的逻辑
-     * @param fallback     降级逻辑（熔断时执行）
-     * @return 执行结果
+     * 调用前门禁。OPEN 冷却到期时在此原子地转 HALF_OPEN。
      */
-    public <T> T execute(String providerCode, SupplierWithException<T> supplier, Fallback<T> fallback) {
-        if (providerCode == null || providerCode.isEmpty()) {
-            providerCode = "default";
-        }
-        BreakerState state = states.computeIfAbsent(providerCode, k -> new BreakerState());
+    public BreakerDecision beforeCall(String providerCode) {
+        return state(providerCode).admit();
+    }
 
-        // 熔断开启状态
-        if (state.isOpen()) {
-            // 检查是否进入冷却期
-            if (System.currentTimeMillis() - state.openTime > COOLDOWN_MS) {
-                state.transitionToHalfOpen();
-                log.info("熔断器进入半开探测期: provider={}", providerCode);
-            } else {
-                log.debug("请求被熔断拒绝: provider={}, 剩余冷却: {}s",
-                        providerCode, (COOLDOWN_MS - (System.currentTimeMillis() - state.openTime)) / 1000);
-                return fallback.apply(providerCode, "服务暂时不可用，请稍后重试");
-            }
-        }
+    /**
+     * 记录一次调用成功。HALF_OPEN 时一次成功即恢复 CLOSED。
+     */
+    public void recordSuccess(String providerCode) {
+        totalSuccess.incrementAndGet();
+        state(providerCode).recordSuccess();
+    }
 
-        // 半开状态：限制探测数量
-        if (state.isHalfOpen()) {
-            if (state.probeCount.getAndIncrement() >= PROBE_COUNT) {
-                log.debug("半开探测排队: provider={}", providerCode);
-                return fallback.apply(providerCode, "服务恢复中，请稍后重试");
-            }
-        }
+    /**
+     * 记录一次调用失败。HALF_OPEN 时一次失败即重新 OPEN；CLOSED 时按错误率判断。
+     */
+    public void recordFailure(String providerCode) {
+        totalFailure.incrementAndGet();
+        state(providerCode).recordFailure();
+    }
 
-        // 执行请求
-        try {
-            T result = supplier.get();
-            onSuccess(providerCode, state);
-            return result;
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            onFailure(providerCode, state);
-            return fallback.apply(providerCode, e.getMessage());
-        }
+    /**
+     * 获取供应商熔断状态快照（state / errorRate / 冷却剩余）。
+     */
+    public BreakerSnapshot describe(String providerCode) {
+        BreakerState s = providerCode == null ? null : states.get(providerCode);
+        return s == null ? new BreakerSnapshot("closed", 0f, 0L) : s.snapshot();
     }
 
     /**
      * 获取供应商熔断状态
      */
     public String getStatus(String providerCode) {
-        if (providerCode == null) return "unknown";
-        BreakerState state = states.get(providerCode);
-        if (state == null) return "closed";
-        if (state.isOpen()) return "open (cooldown)";
-        if (state.isHalfOpen()) return "half-open (probing)";
-        return "closed";
+        if (providerCode == null) {
+            return "unknown";
+        }
+        BreakerState s = states.get(providerCode);
+        return s == null ? "closed" : s.snapshot().getState();
     }
 
     /**
@@ -114,7 +143,7 @@ public class CircuitBreakerService {
         Map<String, Object> stats = new java.util.LinkedHashMap<>();
         stats.put("totalSuccess", totalSuccess.get());
         stats.put("totalFailure", totalFailure.get());
-        stats.put("providers", states.keySet().size());
+        stats.put("providers", states.size());
         return stats;
     }
 
@@ -128,144 +157,143 @@ public class CircuitBreakerService {
         }
     }
 
-    // ==================== 内部状态流转 ====================
-
-    private void onSuccess(String providerCode, BreakerState state) {
-        totalSuccess.incrementAndGet();
-        state.recordSuccess();
-        if (state.isHalfOpen() && state.successCount >= PROBE_COUNT) {
-            state.transitionToClosed();
-            log.info("熔断器恢复关闭: provider={}", providerCode);
-        }
-    }
-
-    private void onFailure(String providerCode, BreakerState state) {
-        totalFailure.incrementAndGet();
-        state.recordFailure();
-        if (state.shouldOpen()) {
-            state.transitionToOpen();
-            log.warn("熔断器触发开启: provider={}, errorRate={}",
-                    providerCode, state.getErrorRate());
-        }
+    private BreakerState state(String providerCode) {
+        String key = (providerCode == null || providerCode.isEmpty()) ? "default" : providerCode;
+        return states.computeIfAbsent(key,
+                k -> new BreakerState(windowSize, errorThreshold, cooldownMs, probeLimit));
     }
 
     // ==================== 内部类 ====================
 
     /**
-     * 单个供应商的熔断状态
+     * 单个供应商的熔断状态。非静态内部类，直接持有外部熔断参数。
      */
     private static class BreakerState {
-        /** 滑动窗口（最近 WINDOW_SIZE 次结果） */
-        private final AtomicInteger[] window = new AtomicInteger[WINDOW_SIZE];
+        /** 熔断参数（由外部服务通过构造器传入） */
+        private final int windowSize;
+        private final float errorThreshold;
+        private final long cooldownMs;
+        private final int probeLimit;
+
+        /** 滑动窗口（0=未使用, 1=成功, -1=失败） */
+        private final int[] window;
         private int windowIndex = 0;
         private int totalInWindow = 0;
         private int failureInWindow = 0;
 
-        /** 熔断状态 */
-        enum Status { CLOSED, OPEN, HALF_OPEN }
-        private volatile Status status = Status.CLOSED;
+        private Status status = Status.CLOSED;
+        private long openTime = 0L;
 
-        /** 熔断开启时间 */
-        private volatile long openTime = 0L;
+        /** 在途半开探测数 */
+        int probeInFlight = 0;
 
-        /** 半开探测计数 */
-        private final AtomicInteger probeCount = new AtomicInteger(0);
+        BreakerState(int windowSize, float errorThreshold, long cooldownMs, int probeLimit) {
+            this.windowSize = windowSize;
+            this.errorThreshold = errorThreshold;
+            this.cooldownMs = cooldownMs;
+            this.probeLimit = probeLimit;
+            this.window = new int[windowSize];
+        }
 
-        /** 连续成功计数 */
-        private int successCount = 0;
-
-        BreakerState() {
-            for (int i = 0; i < WINDOW_SIZE; i++) {
-                window[i] = new AtomicInteger(0); // 0 = 未使用, 1 = 成功, -1 = 失败
+        /**
+         * 门禁判定。状态迁移与探测槽占用在同一 synchronized 临界区完成，
+         * 防止并发请求同时触发 OPEN→HALF_OPEN 或超额放行。
+         */
+        synchronized BreakerDecision admit() {
+            if (status == Status.CLOSED) {
+                return BreakerDecision.ALLOW;
             }
+            if (status == Status.OPEN) {
+                if (System.currentTimeMillis() - openTime >= cooldownMs) {
+                    status = Status.HALF_OPEN;
+                    probeInFlight = 1;
+                    log.info("熔断器进入半开探测期");
+                    return BreakerDecision.ALLOW_PROBE;
+                }
+                return BreakerDecision.REJECT_OPEN;
+            }
+            // HALF_OPEN
+            if (probeInFlight < probeLimit) {
+                probeInFlight++;
+                return BreakerDecision.ALLOW_PROBE;
+            }
+            return BreakerDecision.REJECT_HALF_BUSY;
         }
 
         synchronized void recordSuccess() {
-            pushResult(1);
-            failureInWindow = Math.max(0, failureInWindow - 1);
             if (status == Status.HALF_OPEN) {
-                successCount++;
+                transitionToClosed();
+                log.info("探测成功，熔断器恢复关闭");
+                return;
             }
+            pushResult(1);
         }
 
         synchronized void recordFailure() {
-            pushResult(-1);
-            failureInWindow++;
             if (status == Status.HALF_OPEN) {
-                successCount = 0;
+                transitionToOpen();
+                log.warn("探测失败，熔断器重新开启");
+                return;
+            }
+            pushResult(-1);
+            if (shouldOpen()) {
+                transitionToOpen();
+                log.warn("熔断器触发开启，errorRate={}", getErrorRate());
             }
         }
 
-        synchronized boolean shouldOpen() {
-            if (totalInWindow < WINDOW_SIZE) return false;
-            return (float) failureInWindow / totalInWindow > ERROR_THRESHOLD;
+        private boolean shouldOpen() {
+            if (totalInWindow < windowSize) {
+                return false;
+            }
+            return (float) failureInWindow / totalInWindow > errorThreshold;
         }
 
-        synchronized float getErrorRate() {
-            if (totalInWindow == 0) return 0f;
-            return (float) failureInWindow / totalInWindow;
+        private float getErrorRate() {
+            return totalInWindow == 0 ? 0f : (float) failureInWindow / totalInWindow;
         }
 
-        boolean isOpen() { return status == Status.OPEN; }
-        boolean isHalfOpen() { return status == Status.HALF_OPEN; }
+        /** 推入一次结果并更新滑动窗口统计 */
+        private void pushResult(int result) {
+            int old = window[windowIndex];
+            if (old == -1) {
+                failureInWindow--;
+            }
+            if (old != 0) {
+                totalInWindow--;
+            }
+            window[windowIndex] = result;
+            if (result == -1) {
+                failureInWindow++;
+            }
+            totalInWindow++;
+            windowIndex = (windowIndex + 1) % windowSize;
+        }
 
-        void transitionToOpen() {
+        private void transitionToOpen() {
             status = Status.OPEN;
             openTime = System.currentTimeMillis();
-            probeCount.set(0);
+            probeInFlight = 0;
         }
 
-        void transitionToHalfOpen() {
-            status = Status.HALF_OPEN;
-            probeCount.set(0);
-            successCount = 0;
-        }
-
-        void transitionToClosed() {
+        private void transitionToClosed() {
             status = Status.CLOSED;
+            Arrays.fill(window, 0);
             windowIndex = 0;
             totalInWindow = 0;
             failureInWindow = 0;
+            probeInFlight = 0;
         }
 
-        private void pushResult(int result) {
-            int old = window[windowIndex].getAndSet(result);
-            if (old == -1) failureInWindow = Math.max(0, failureInWindow - 1);
-            if (old == 1) totalInWindow = Math.max(0, totalInWindow - 1);
-
-            if (result == -1) failureInWindow++;
-            totalInWindow = Math.min(WINDOW_SIZE, totalInWindow + 1);
-
-            windowIndex = (windowIndex + 1) % WINDOW_SIZE;
+        synchronized BreakerSnapshot snapshot() {
+            long remaining = 0L;
+            if (status == Status.OPEN) {
+                remaining = Math.max(0L, cooldownMs - (System.currentTimeMillis() - openTime));
+            }
+            return new BreakerSnapshot(status.name().toLowerCase().replace('_', '-'),
+                    getErrorRate(), remaining);
         }
-    }
 
-    // ==================== 函数式接口 ====================
-
-    /**
-     * SupplierWithException。
-     */
-    @FunctionalInterface
-    public interface SupplierWithException<T> {
-        T get() throws Exception;
-    }
-
-    /**
-     * Fallback。
-     */
-    @FunctionalInterface
-    public interface Fallback<T> {
-        T apply(String providerCode, String reason);
-    }
-
-    // ==================== 生命周期 ====================
-
-    /**
-     * 初始化。
-     */
-    @PostConstruct
-    public void init() {
-        log.info("熔断降级服务初始化完成: windowSize={}, errorThreshold={}, cooldown={}s",
-                WINDOW_SIZE, ERROR_THRESHOLD, COOLDOWN_MS / 1000);
+        enum Status { CLOSED, OPEN, HALF_OPEN }
     }
 }

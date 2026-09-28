@@ -11,7 +11,6 @@ import com.reggie.module.ai.mapper.AiProviderConfigMapper;
 import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.provider.AiProviderManager;
 import com.reggie.module.ai.service.AiProviderConfigService;
-import com.reggie.module.ai.util.AiKeyEncryptor;
 import com.reggie.module.ai.util.AiSecretMaskUtils;
 import com.reggie.module.ai.util.AiUrlUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -73,9 +72,6 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                 .orderByDesc(AiProviderConfig::getSort)
                 .last("LIMIT 1");
         AiProviderConfig config = this.getOne(wrapper);
-        if (config != null) {
-            decryptApiKeyInPlace(config);
-        }
         return config;
     }
 
@@ -90,19 +86,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
                 .eq(AiProviderConfig::getIsDeleted, 0)
                 .orderByAsc(AiProviderConfig::getSort);
         List<AiProviderConfig> list = this.list(wrapper);
-        for (AiProviderConfig config : list) {
-            decryptApiKeyInPlace(config);
-        }
         return list;
-    }
-
-    /**
-     * 解密实体中的 apiKey 字段（原地修改）
-     */
-    private void decryptApiKeyInPlace(AiProviderConfig config) {
-        if (config.getApiKey() != null && !config.getApiKey().isEmpty()) {
-            AiKeyEncryptor.decryptApiKeyInPlace(config);
-        }
     }
 
     // ==================== 切换 ====================
@@ -165,8 +149,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             return "FAIL: 供应商配置不存在";
         }
 
-        // 解密数据库中的加密 apiKey
-        decryptApiKeyInPlace(config);
+        // 库中 apiKey 即明文（2026-09-26 起）
         String apiKey = config.getApiKey();
         String apiFormat = config.getApiFormat();
 
@@ -414,14 +397,8 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             if (config.getApiKey() == null || config.getApiKey().trim().isEmpty()
                     || config.getApiKey().contains("****")) {
                 config.setApiKey(existing.getApiKey());
-            } else {
-                // 修复 P0-6：存入数据库前加密 apiKey
-                String encrypted = AiKeyEncryptor.encrypt(config.getApiKey());
-                if (encrypted == null) {
-                    throw new CustomException("API密钥加密失败，请检查 REGGIE_AI_KEY 环境变量");
-                }
-                config.setApiKey(encrypted);
             }
+            // 非掩码新值明文直接入库（2026-09-26 起厂家 key 统一明文管理）
             this.updateById(config);
             log.info("供应商已更新（upsert）: code={}, id={}, name={}", providerCode, existing.getId(), config
                     .getProviderName());
@@ -430,15 +407,7 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
             config.setProviderCode(providerCode);
             config.setIsActive(config.getIsActive() != null ? config.getIsActive() : false);
             config.setIsDeleted(0);
-            // 修复 P0-6：新增时也加密 apiKey（掩码值不是合法密钥，忽略）
-            if (config.getApiKey() != null && !config.getApiKey().trim().isEmpty()
-                    && !config.getApiKey().contains("****")) {
-                String encrypted = AiKeyEncryptor.encrypt(config.getApiKey());
-                if (encrypted == null) {
-                    throw new CustomException("API密钥加密失败，请检查 REGGIE_AI_KEY 环境变量");
-                }
-                config.setApiKey(encrypted);
-            }
+            // 掩码值不是合法密钥，忽略；其余新值明文直接入库（2026-09-26 起）
             this.save(config);
             log.info("供应商已新增（upsert）: code={}, name={}", providerCode, config.getProviderName());
         }
@@ -500,16 +469,6 @@ public class AiProviderConfigServiceImpl extends ServiceImpl<AiProviderConfigMap
     // ==================== 修改点：拉取模型列表 ====================
 
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
-
-    /**
-     * 处理 encrypt api key。
-     * @param plainApiKey 参数 plainApiKey
-     * @return 返回结果
-     */
-    @Override
-    public String encryptApiKey(String plainApiKey) {
-        return AiKeyEncryptor.encrypt(plainApiKey);
-    }
 
     /**
      * 处理 fetch model list。

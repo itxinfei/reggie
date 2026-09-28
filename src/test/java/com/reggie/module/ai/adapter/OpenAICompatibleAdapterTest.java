@@ -3,6 +3,8 @@ package com.reggie.module.ai.adapter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reggie.common.ObjectMapperHolder;
+import com.reggie.module.ai.failover.AiFailureType;
+import com.reggie.module.ai.failover.AiProviderException;
 import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
 import com.reggie.module.ai.model.ModelTurn;
@@ -29,6 +31,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -183,12 +186,15 @@ class OpenAICompatibleAdapterTest {
     }
 
     @Test
-    void chatStreamNon200PushesErrorToken() throws Exception {
+    void chatStreamNon200ThrowsException() throws Exception {
         currentHandler = jsonErrorHandler(401, "{\"error\":{\"message\":\"bad key\"}}");
         CollectingCallback callback = new CollectingCallback();
-        String result = adapter.chatStream(singleUser("hi"), 0, -1, config, callback);
-        assertNull(result);
-        assertTrue(callback.tokens.get(callback.tokens.size() - 1).contains("401"));
+        // 契约变更(2026-09-26)：非200 抛分类异常（AUTH_INVALID），不再推送错误 token
+        AiProviderException ex = assertThrows(AiProviderException.class,
+                () -> adapter.chatStream(singleUser("hi"), 0, -1, config, callback));
+        assertEquals(AiFailureType.AUTH_INVALID, ex.getType());
+        assertEquals(401, ex.getHttpStatus());
+        assertTrue(callback.tokens.isEmpty());
     }
 
     @Test
@@ -328,12 +334,13 @@ class OpenAICompatibleAdapterTest {
     }
 
     @Test
-    void chatTurnNon200ReturnsErrorTurn() throws Exception {
+    void chatTurnNon200ThrowsException() throws Exception {
         currentHandler = jsonErrorHandler(500, "upstream exploded");
-        ModelTurn turn = adapter.chatTurn(singleUser("hi"), 0, -1, config,
-                Arrays.asList(sampleTool()), new NeverAbort(), null);
-        assertTrue(turn.isError());
-        assertTrue(turn.getErrorMessage().contains("upstream exploded"));
+        // 契约变更(2026-09-26)：非200 抛分类异常（SERVER_ERROR），不再返回错误轮
+        AiProviderException ex = assertThrows(AiProviderException.class, () -> adapter.chatTurn(
+                singleUser("hi"), 0, -1, config,
+                Arrays.asList(sampleTool()), new NeverAbort(), null));
+        assertEquals(AiFailureType.SERVER_ERROR, ex.getType());
     }
 
     @Test

@@ -504,13 +504,13 @@ public class AIChatController {
             if (summary != null) {
                 String[] lines = summary.split("\n");
                 for (String line : lines) {
-                    if (line.startsWith("口味偏好：")) {
-                        tags.addAll(Arrays.asList(line.substring(5).split("[,，]")));
-                    } else if (line.startsWith("喜欢品类：")) {
-                        tags.addAll(Arrays.asList(line.substring(5).split("[,，]")));
-                    } else if (line.startsWith("常点菜品：")) {
-                        tags.addAll(Arrays.asList(line.substring(5).split("[,，]")));
+                    // taste/category 字段以 JSON 数组字符串存储（如 ["咸","清淡"]），
+                    // 须先剥掉 [ ] " 再按逗号切，否则标签渲染出 ["咸" 之类碎片
+                    if (line.startsWith("口味偏好：") || line.startsWith("喜欢品类：")) {
+                        String values = line.substring(5).replaceAll("[\\[\\]\"]", "");
+                        tags.addAll(Arrays.asList(values.split("[,，]")));
                     }
+                    // 常点菜品值为纯 ID 数组（如 [35,41,28]），对用户无展示意义，不作为标签
                 }
             }
 
@@ -594,18 +594,8 @@ public class AIChatController {
     @GetMapping("/status")
     @Operation(summary = "AI服务状态", description = "返回当前供应商、熔断器状态等")
     public R<Map<String, Object>> getStatus() {
-        Map<String, Object> status = new HashMap<>();
-        AiProviderConfig activeConfig = aiProviderManager.getActiveConfig();
-        if (activeConfig != null) {
-            status.put("provider", activeConfig.getProviderName());
-            status.put("model", activeConfig.getModelName());
-            status.put("format", activeConfig.getApiFormat());
-        } else {
-            status.put("provider", "未配置");
-            status.put("model", "N/A");
-        }
-        status.put("circuitBreaker", aiProviderManager.getCircuitBreakerStats());
-        return R.success(status);
+        // 完整健康状态：首选/全部候选实时熔断状态/全耗尽标记
+        return R.success(aiProviderManager.buildHealthStatus());
     }
 
     // ==================== 场景前端配置（P3 起由 ai_prompt_template 下发，静态 Map 仅作库异常降级） ====================

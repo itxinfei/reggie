@@ -1,6 +1,8 @@
 package com.reggie.module.ai.adapter;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.reggie.module.ai.failover.AiFailureType;
+import com.reggie.module.ai.failover.AiProviderException;
 import com.reggie.module.ai.model.AIChatResponse;
 import com.reggie.module.ai.model.AIMessage;
 import com.reggie.module.ai.model.AiProviderConfig;
@@ -108,22 +110,25 @@ public class BaiduAdapter extends BaseModelAdapter {
                 log.error("AI请求[{} / {}]失败: code={}, error={}",
                         config.getProviderCode(), FORMAT_ID, responseCode,
                         truncate(errorBody, 200));
-                return errorResponse("百度AI服务错误（" + config.getProviderName()
-                        + "）：HTTP " + responseCode + " - " + errorBody, config);
+                // 修改点(2026-09-26)：抛异常而非吞成错误响应，供故障转移分类/切换
+                throw AiProviderException.upstream(config, responseCode, errorBody);
             }
+        } catch (AiProviderException e) {
+            // 已分类异常直接透传
+            throw e;
         } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             // 修改点(2026-09-15)：外网不可达属运行环境问题，降为 WARN 且不打全量堆栈，避免刷屏
+            // 异常消息可能携带含 access_token 的完整 URL，日志/回显前脱敏
+            String safeMsg = AiSecretMaskUtils.maskUrl(e.getMessage());
             if (AiNetworkFailureUtils.isNetworkFailure(e)) {
-                // 异常消息可能携带含 access_token 的完整 URL，日志前脱敏
                 log.warn("AI请求[{} / {}]外部服务不可达（网络环境问题，非应用缺陷）：{}",
-                        config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(e.getMessage()));
-            } else {
-                log.error("AI请求[{} / {}]未预期异常", config.getProviderCode(), FORMAT_ID, e);
+                        config.getProviderCode(), FORMAT_ID, safeMsg);
+                throw new AiProviderException(AiFailureType.NETWORK, 0,
+                        "百度网络异常: " + safeMsg, e);
             }
-            // 异常消息可能携带完整 URL（含 access_token 查询参数），回显前脱敏
-            return errorResponse("百度AI连接失败（" + config.getProviderName() + "）："
-                    + AiSecretMaskUtils.maskUrl(e.getMessage()), config);
+            log.error("AI请求[{} / {}]未预期异常", config.getProviderCode(), FORMAT_ID, e);
+            throw new AiProviderException(AiFailureType.SERVER_ERROR, 0,
+                    "百度调用异常: " + safeMsg, e);
         } finally {
             if (conn != null) {
                 conn.disconnect();
@@ -132,8 +137,10 @@ public class BaiduAdapter extends BaseModelAdapter {
     }
 
     /**
-     * 解析百度 ERNIE Bot 成功响应
-     * <pre>{ result: "..." }</pre>
+     * 解析百度 ERNIE 成功响应。
+     * <p>注意：百度常把限流/鉴权/计费错误以 HTTP 200 + error_code/error_msg 返回，
+     * 需按错误码分类抛出，供故障转移切换。</p>
+     * <pre>{ result: "..." } 或 { error_code, error_msg }</pre>
      */
     private AIChatResponse parseResponse(HttpURLConnection conn, AiProviderConfig config) throws Exception {
         String rawBody = readResponseBody(conn);
@@ -144,12 +151,35 @@ public class BaiduAdapter extends BaseModelAdapter {
             return successResponse(content, config.getModelName(), 0);
         }
 
-        // 新版百度 API 也支持 errorMsg 字段
+        // 200 body 内错误：按错误码 + 错误文案分类（拿不准的归 SERVER_ERROR，绝不误判 BAD_REQUEST）
         String errorMsg = root.path("error_msg").asText("");
         if (!errorMsg.isEmpty()) {
-            return errorResponse("百度AI返回错误：" + errorMsg, config);
+            int errorCode = root.path("error_code").asInt(-1);
+            throw new AiProviderException(classifyBaidu(errorCode, errorMsg), 200,
+                    "百度返回错误（code=" + errorCode + "）: " + errorMsg);
         }
 
-        return errorResponse(config.getProviderName() + "返回了空响应", config);
+        // 修改点(2026-09-26)：抛空响应异常而非吞成错误响应
+        throw AiProviderException.empty(config);
+    }
+
+    /**
+     * 按百度错误码 / 错误文案分类。
+     * <p>常见：17=日总量限流, 18=QPS限流, 19/4=总配额限流；
+     * 110/111=access_token 失效；336xxx 多为服务/计费类。</p>
+     */
+    private AiFailureType classifyBaidu(int errorCode, String errorMsg) {
+        if (errorCode == 110 || errorCode == 111) {
+            return AiFailureType.AUTH_INVALID;
+        }
+        if (errorCode == 17 || errorCode == 18) {
+            return AiFailureType.RATE_LIMIT;
+        }
+        String msg = errorMsg == null ? "" : errorMsg.toLowerCase();
+        if (msg.contains("额度") || msg.contains("余额") || msg.contains("欠费")
+                || msg.contains("quota") || msg.contains("balance") || errorCode == 19 || errorCode == 4) {
+            return AiFailureType.QUOTA;
+        }
+        return AiFailureType.SERVER_ERROR;
     }
 }
