@@ -72,6 +72,7 @@ public class RiderOrderFlowTest extends com.reggie.controller.BaseControllerTest
 
         // 先按固定主键清理上轮残留（只删测试专用 id，非全表删），保证可重复执行
         jdbc.update("DELETE FROM delivery_time_record WHERE order_id BETWEEN 5001 AND 5010");
+        jdbc.update("DELETE FROM order_detail WHERE id = 8001");
         jdbc.update("DELETE FROM orders WHERE id BETWEEN 5001 AND 5010");
         jdbc.update("DELETE FROM rider_location_record WHERE tenant_id = 999");
         jdbc.update("DELETE FROM rider WHERE id IN (2001, 2002, 2003)");
@@ -288,7 +289,7 @@ public class RiderOrderFlowTest extends com.reggie.controller.BaseControllerTest
         // 订单明细（dishSummary 数据源）
         jdbc.update("INSERT INTO order_detail (id, order_id, name, dish_id, number, amount, "
                 + "tenant_id, create_time, update_time) "
-                + "VALUES (8001, 5008, '鱼香肉丝', 7001, 2, 20.00, 1, NOW(), NOW())");
+                + "VALUES (8001, 5008, '鱼香肉丝', 7001, 2, 20.00, 999, NOW(), NOW())");
 
         try {
             // MockMvc 不经过 LoginCheckFilter（@WebFilter 未进入 MockMvc 链），
@@ -343,6 +344,52 @@ public class RiderOrderFlowTest extends com.reggie.controller.BaseControllerTest
                     .andExpect(jsonPath("$.data.status").value("PENDING"))
                     .andExpect(jsonPath("$.data.riderName").doesNotExist())
                     .andExpect(jsonPath("$.data.distance").doesNotExist());
+        } finally {
+            BaseContext.remove();
+        }
+    }
+
+    @Test
+    void eatInOrderTrackingReturnsDedicatedReason() throws Exception {
+        insertOrder(5010L, "TEST-5010", 2, null);
+        jdbc.update("UPDATE orders SET table_id = 7001 WHERE id = 5010");
+        try {
+            BaseContext.setCurrentId(9001L);
+            mockMvc.perform(get("/api/delivery/tracking/5010").session(userSession(9001)))
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.msg").value("堂食订单无需配送追踪"))
+                    .andExpect(jsonPath("$.data.reason").value("EAT_IN"));
+        } finally {
+            BaseContext.remove();
+        }
+    }
+
+    @Test
+    void selfPickupOrderTrackingReturnsDedicatedReason() throws Exception {
+        insertOrder(5010L, "TEST-5010", 2, null);
+        jdbc.update("UPDATE orders SET address_book_id = NULL WHERE id = 5010");
+        try {
+            BaseContext.setCurrentId(9001L);
+            mockMvc.perform(get("/api/delivery/tracking/5010").session(userSession(9001)))
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.msg").value("该订单无需配送"))
+                    .andExpect(jsonPath("$.data.reason").value("NO_DELIVERY"));
+        } finally {
+            BaseContext.remove();
+        }
+    }
+
+    @Test
+    void eatInOrderOfOtherUserLeaksNoOrderType() throws Exception {
+        // 归属校验必须先于堂食/自取原因返回：他人只能得到泛化的"无权查看该订单"
+        insertOrder(5010L, "TEST-5010", 2, null);
+        jdbc.update("UPDATE orders SET table_id = 7001 WHERE id = 5010");
+        try {
+            BaseContext.setCurrentId(9002L);
+            mockMvc.perform(get("/api/delivery/tracking/5010").session(userSession(9002)))
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.msg").value("无权查看该订单"))
+                    .andExpect(jsonPath("$.data").doesNotExist());
         } finally {
             BaseContext.remove();
         }

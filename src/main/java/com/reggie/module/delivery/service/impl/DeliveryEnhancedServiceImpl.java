@@ -463,6 +463,12 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
      */
     private boolean isPointInCircle(BigDecimal pointLon, BigDecimal pointLat,
                                      BigDecimal centerLon, BigDecimal centerLat, BigDecimal radius) {
+        // 规则配置不完整（圆心/半径缺失）或地址无坐标：按不匹配处理，
+        // 跳过该规则继续匹配下一条，避免 compareTo(null) 抛 NPE 导致结算 500
+        if (pointLon == null || pointLat == null
+                || centerLon == null || centerLat == null || radius == null) {
+            return false;
+        }
         BigDecimal distance = calculateDistance(pointLon, pointLat, centerLon, centerLat);
         return distance.compareTo(radius) <= 0;
     }

@@ -44,6 +44,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.Max;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -251,14 +252,24 @@ public class DeliveryController {
             return R.error("配送订单不存在");
         }
         Orders localOrder = orderService.getById(localId);
-        // 堂食单（tableId != null）或无收货地址的订单不属于配送追踪范围
-        if (localOrder == null || localOrder.getTableId() != null
-                || localOrder.getAddressBookId() == null) {
+        if (localOrder == null) {
             return R.error("配送订单不存在");
         }
-        // IDOR 归属校验：仅下单用户本人可查自己的配送单
+        // IDOR 归属校验前置：先确认是本人才继续透出堂食/自取等原因，避免向他人泄露订单存在性与类型
         if (!Objects.equals(localOrder.getUserId(), BaseContext.getCurrentId())) {
             return R.error("无权查看该订单");
+        }
+        // 堂食单不属于配送追踪范围：透出专用原因码，追踪页据此显示"堂食订单无需配送追踪"而非泛化报错
+        if (localOrder.getTableId() != null) {
+            R<Map<String, Object>> eatIn = R.error("堂食订单无需配送追踪");
+            eatIn.setData(Collections.<String, Object>singletonMap("reason", "EAT_IN"));
+            return eatIn;
+        }
+        // 自取/无收货地址的订单同样没有配送信息
+        if (localOrder.getAddressBookId() == null) {
+            R<Map<String, Object>> noDelivery = R.error("该订单无需配送");
+            noDelivery.setData(Collections.<String, Object>singletonMap("reason", "NO_DELIVERY"));
+            return noDelivery;
         }
         return R.success(buildLocalTracking(localOrder));
     }

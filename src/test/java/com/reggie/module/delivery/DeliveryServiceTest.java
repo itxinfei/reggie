@@ -71,7 +71,7 @@ public class DeliveryServiceTest extends BaseControllerTest {
         params.put("userName", "张三");
         params.put("phone", "13800138000");
         params.put("address", "北京市朝阳区xxx");
-        params.put("tenantId", "1");
+        params.put("tenantId", "999");
         deliveryService.handleCallback("MEITUAN", params);
 
         // handleCallback 的 finally 块会清理 BaseContext，后续服务调用需重新设置租户上下文
@@ -126,7 +126,7 @@ public class DeliveryServiceTest extends BaseControllerTest {
         params.put("userName", "李四");
         params.put("phone", "13700139000");
         params.put("address", "北京市海淀区xxx");
-        params.put("tenantId", "1");
+        params.put("tenantId", "999");
         deliveryService.handleCallback("MEITUAN", params);
 
         // handleCallback 的 finally 块会清理 BaseContext，后续服务调用需重新设置租户上下文
@@ -145,7 +145,7 @@ public class DeliveryServiceTest extends BaseControllerTest {
      */
     @Test
     void testControllerAcceptOrder() throws Exception {
-        String createParams = "{\"type\":\"new_order\",\"platformOrderId\":\"MT123456\",\"dishSummary\":\"测试\",\"amount\":\"10.00\",\"userName\":\"王五\",\"phone\":\"13600136000\",\"address\":\"测试地址\",\"tenantId\":\"1\"}";
+        String createParams = "{\"type\":\"new_order\",\"platformOrderId\":\"MT123456\",\"dishSummary\":\"测试\",\"amount\":\"10.00\",\"userName\":\"王五\",\"phone\":\"13600136000\",\"address\":\"测试地址\",\"tenantId\":\"999\"}";
         mockMvc.perform(withCsrfToken(mockMvc, post("/api/delivery/callback/MEITUAN")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createParams)
@@ -176,7 +176,7 @@ public class DeliveryServiceTest extends BaseControllerTest {
      */
     @Test
     void testTrackingByOrderId() throws Exception {
-        String createParams = "{\"type\":\"new_order\",\"platformOrderId\":\"MT_TRACK_001\",\"dishSummary\":\"麻婆豆腐\",\"amount\":\"18.00\",\"userName\":\"赵六\",\"phone\":\"13500135000\",\"address\":\"北京市西城区xxx\",\"tenantId\":\"1\"}";
+        String createParams = "{\"type\":\"new_order\",\"platformOrderId\":\"MT_TRACK_001\",\"dishSummary\":\"麻婆豆腐\",\"amount\":\"18.00\",\"userName\":\"赵六\",\"phone\":\"13500135000\",\"address\":\"北京市西城区xxx\",\"tenantId\":\"999\"}";
         mockMvc.perform(withCsrfToken(mockMvc, post("/api/delivery/callback/MEITUAN")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createParams)

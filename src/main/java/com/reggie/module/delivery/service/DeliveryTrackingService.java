@@ -1,5 +1,6 @@
 package com.reggie.module.delivery.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.reggie.module.delivery.model.Rider;
 import com.reggie.module.delivery.model.RiderLocationRecord;
@@ -44,6 +45,49 @@ public interface DeliveryTrackingService extends IService<Rider> {
      * @return Success or not
      */
     boolean saveOrUpdateRider(Rider rider);
+
+    /**
+     * 后台骑手分页查询（姓名/手机号模糊、状态精确，租户隔离）。
+     *
+     * @param page     页码
+     * @param pageSize 每页条数
+     * @param name     姓名（可选）
+     * @param phone    手机号（可选）
+     * @param status   状态（可选）：0-离线 1-在线 2-忙碌
+     * @param tenantId 租户ID
+     * @return 骑手分页
+     */
+    Page<Rider> pageRiders(int page, int pageSize, String name, String phone, Integer status, Long tenantId);
+
+    /**
+     * 后台新增骑手：BCrypt 加密初始密码，同门店手机号唯一校验。
+     *
+     * @param name        姓名
+     * @param phone       手机号
+     * @param rawPassword 初始明文密码（6-20 位）
+     * @return 新建骑手（不含密码）
+     */
+    Rider createRider(String name, String phone, String rawPassword);
+
+    /**
+     * 后台编辑骑手资料（不含密码、不改统计/定位字段）。
+     *
+     * @param id     骑手ID
+     * @param name   姓名
+     * @param phone  手机号
+     * @param avatar 头像（可选）
+     * @return 更新后的骑手（不含密码）
+     */
+    Rider updateRiderProfile(Long id, String name, String phone, String avatar);
+
+    /**
+     * 后台重置骑手密码。
+     *
+     * @param id             骑手ID
+     * @param newRawPassword 新明文密码（6-20 位）
+     * @return 是否成功
+     */
+    boolean resetRiderPassword(Long id, String newRawPassword);
 
     /**
      * 原子调整骑手在途单量（避免读-改-写并发丢失更新）。

@@ -2,9 +2,12 @@ package com.reggie.module.delivery.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.common.PasswordUtils;
+import com.reggie.common.utils.PageUtils;
 import com.reggie.module.delivery.mapper.RiderMapper;
 import com.reggie.module.delivery.mapper.RiderLocationRecordMapper;
 import com.reggie.module.delivery.mapper.DeliveryTimeRecordMapper;
@@ -96,6 +99,10 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
             rider.setTotalOrderCount(0);
             rider.setRating(new BigDecimal("5.0"));
             rider.setTenantId(BaseContext.getCurrentTenantId());
+            // 明文密码必须 BCrypt 加密后入库，否则骑手端登录永远校验失败
+            if (rider.getPassword() != null && !rider.getPassword().isEmpty()) {
+                rider.setPassword(PasswordUtils.encodePassword(rider.getPassword()));
+            }
             return riderMapper.insert(rider) > 0;
         } else {
             // 租户归属校验：防止跨租户篡改骑手信息
@@ -110,8 +117,126 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
             rider.setUpdateTime(LocalDateTime.now());
             // 保留原有租户ID，防止越权改写
             rider.setTenantId(existing.getTenantId());
+            // 通用编辑不允许改密码（置 null 使 updateById 忽略该字段），
+            // 防止前端漏传 password 时把密码更新成空串导致骑手无法登录；改密走 resetRiderPassword
+            rider.setPassword(null);
             return riderMapper.updateById(rider) > 0;
         }
+    }
+
+    @Override
+    public Page<Rider> pageRiders(int page, int pageSize, String name, String phone, Integer status, Long tenantId) {
+        LambdaQueryWrapper<Rider> qw = new LambdaQueryWrapper<>();
+        if (tenantId != null) {
+            qw.eq(Rider::getTenantId, tenantId);
+        }
+        if (name != null && !name.trim().isEmpty()) {
+            qw.like(Rider::getName, name.trim());
+        }
+        if (phone != null && !phone.trim().isEmpty()) {
+            qw.like(Rider::getPhone, phone.trim());
+        }
+        if (status != null) {
+            qw.eq(Rider::getStatus, status);
+        }
+        qw.orderByDesc(Rider::getUpdateTime);
+        return riderMapper.selectPage(PageUtils.of(page, pageSize), qw);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Rider createRider(String name, String phone, String rawPassword) {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        validateRiderBaseInfo(name, phone);
+        if (rawPassword == null || rawPassword.length() < 6 || rawPassword.length() > 20) {
+            throw new CustomException("初始密码长度需为 6-20 位");
+        }
+        // 同门店手机号唯一：避免骑手登录（按手机号查唯一账号）串号
+        Long count = riderMapper.selectCount(new LambdaQueryWrapper<Rider>()
+                .eq(Rider::getTenantId, tenantId)
+                .eq(Rider::getPhone, phone.trim()));
+        if (count != null && count > 0) {
+            throw new CustomException("该手机号已存在骑手账号");
+        }
+        Rider rider = new Rider();
+        rider.setName(name.trim());
+        rider.setPhone(phone.trim());
+        rider.setPassword(PasswordUtils.encodePassword(rawPassword));
+        rider.setStatus(Rider.STATUS_OFFLINE);
+        rider.setCurrentOrderCount(0);
+        rider.setTotalOrderCount(0);
+        rider.setRating(new BigDecimal("5.0"));
+        rider.setTenantId(tenantId);
+        rider.setCreateTime(LocalDateTime.now());
+        rider.setUpdateTime(LocalDateTime.now());
+        riderMapper.insert(rider);
+        rider.setPassword(null);
+        return rider;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Rider updateRiderProfile(Long id, String name, String phone, String avatar) {
+        Rider existing = requireRiderInCurrentTenant(id);
+        validateRiderBaseInfo(name, phone);
+        Long count = riderMapper.selectCount(new LambdaQueryWrapper<Rider>()
+                .eq(Rider::getTenantId, existing.getTenantId())
+                .eq(Rider::getPhone, phone.trim())
+                .ne(Rider::getId, id));
+        if (count != null && count > 0) {
+            throw new CustomException("该手机号已被其他骑手占用");
+        }
+        existing.setName(name.trim());
+        existing.setPhone(phone.trim());
+        if (avatar != null) {
+            existing.setAvatar(avatar.trim());
+        }
+        existing.setUpdateTime(LocalDateTime.now());
+        riderMapper.updateById(existing);
+        existing.setPassword(null);
+        return existing;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean resetRiderPassword(Long id, String newRawPassword) {
+        if (newRawPassword == null || newRawPassword.length() < 6 || newRawPassword.length() > 20) {
+            throw new CustomException("新密码长度需为 6-20 位");
+        }
+        Rider existing = requireRiderInCurrentTenant(id);
+        existing.setPassword(PasswordUtils.encodePassword(newRawPassword));
+        existing.setUpdateTime(LocalDateTime.now());
+        return riderMapper.updateById(existing) > 0;
+    }
+
+    /**
+     * 基础字段校验（姓名/手机号）。
+     */
+    private void validateRiderBaseInfo(String name, String phone) {
+        if (name == null || name.trim().isEmpty() || name.trim().length() > 50) {
+            throw new CustomException("骑手姓名不能为空且不超过 50 个字符");
+        }
+        if (phone == null || !phone.trim().matches("^1\\d{10}$")) {
+            throw new CustomException("请输入正确的 11 位手机号");
+        }
+    }
+
+    /**
+     * 按ID加载骑手并校验属于当前租户，防止跨门店操作。
+     */
+    private Rider requireRiderInCurrentTenant(Long id) {
+        if (id == null) {
+            throw new CustomException("骑手ID不能为空");
+        }
+        Rider rider = riderMapper.selectById(id);
+        if (rider == null) {
+            throw new CustomException("骑手不存在或已删除");
+        }
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId != null && !currentTenantId.equals(rider.getTenantId())) {
+            throw new CustomException("无权操作其他门店的骑手");
+        }
+        return rider;
     }
 
     /**
