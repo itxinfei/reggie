@@ -6,6 +6,7 @@ import com.reggie.common.RateLimit;
 import com.reggie.common.RateLimitType;
 import com.reggie.common.annotation.RequiresPermission;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.module.notification.dto.BatchSendNotificationDTO;
 import com.reggie.module.notification.dto.RegisterDeviceDTO;
 import com.reggie.module.notification.dto.SendNotificationDTO;
@@ -16,6 +17,7 @@ import com.reggie.module.notification.model.NotificationTemplate;
 import com.reggie.module.notification.service.NotificationRecordService;
 import com.reggie.module.notification.service.NotificationService;
 import com.reggie.module.notification.service.NotificationTemplateService;
+import com.reggie.module.notification.sse.SseEmitterManager;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +31,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.MediaType;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.Resource;
 import javax.validation.Valid;
@@ -62,6 +66,9 @@ public class NotificationController {
 
     @Resource
     private NotificationRecordService recordService;
+
+    @Resource
+    private SseEmitterManager sseEmitterManager;
 
     /** 批量发送目标数量上限，防止一次性投递过大任务压垮下游短信/推送通道 */
     private static final int MAX_BATCH_TARGETS = 1000;
@@ -469,6 +476,25 @@ public class NotificationController {
         info.put("available", true);
         info.put("mockMode", notificationService.isMockMode());
         return R.success(info);
+    }
+
+    /**
+     * C端消息实时通道（SSE）。
+     * <p>
+     * 登录的 C 端用户通过 {@code new EventSource('/notification/sse/subscribe')} 建立长连接，
+     * 后台下发通知时由 SseEmitterManager 实时推送 "message" 事件；离线期间的消息已落库
+     * （marketing_message），由消息中心补拉。依赖同源 JSESSIONID 鉴权，GET 请求不走 CSRF。
+     * </p>
+     */
+    @GetMapping(path = "/sse/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "C端消息SSE订阅", description = "建立SSE长连接，实时接收后台推送的消息")
+    public SseEmitter subscribeSse() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            // 理论上 LoginCheckFilter 已拦截未登录请求，此处兜底，避免空键污染连接表
+            throw new CustomException("用户未登录");
+        }
+        return sseEmitterManager.subscribe(userId);
     }
 }
 

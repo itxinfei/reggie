@@ -24,6 +24,7 @@ import com.reggie.module.notification.model.NotificationTemplate;
 import com.reggie.module.notification.model.UserDevice;
 import com.reggie.module.notification.provider.PushProvider;
 import com.reggie.module.notification.model.PushMessage;
+import com.reggie.module.notification.sse.SseEmitterManager;
 import com.reggie.module.notification.service.NotificationService;
 import com.reggie.module.marketing.mapper.MarketingMessageMapper;
 import com.reggie.module.marketing.model.MarketingMessage;
@@ -80,6 +81,10 @@ public class NotificationServiceImpl implements NotificationService {
     /** 推送服务提供商（策略模式） */
     @Resource
     private PushProvider pushProvider;
+
+    /** C端 SSE 实时连接管理器：站内信落库后对在线用户实时推送 */
+    @Resource
+    private SseEmitterManager sseEmitterManager;
 
     /** 模板占位符正则: ${paramName} */
     private static final Pattern TEMPLATE_PATTERN = Pattern.compile("\\$\\{(\\w+)\\}");
@@ -153,10 +158,10 @@ public class NotificationServiceImpl implements NotificationService {
         for (int i = 0; i < targets.size(); i++) {
             String target = targets.get(i);
             try {
-                boolean ok = sendToTarget(target, channel, template, title, content, params);
+                // sendToTarget 内部已无条件落站内信 + 在线 SSE，无需在循环内再同步
+                boolean ok = sendToTarget(target, channel, template, title, content, params, userIdMap);
                 if (ok) {
                     successCount++;
-                    syncToMarketingMessage(target, channel, title, content, userIdMap);
                 } else {
                     failCount++;
                     failReasons.append("[").append(target).append("]发送失败; ");
@@ -234,10 +239,10 @@ public class NotificationServiceImpl implements NotificationService {
 
         for (String target : targets) {
             try {
-                boolean ok = sendToTarget(target, channel, template, title, content, params);
+                // sendToTarget 内部已无条件落站内信 + 在线 SSE，无需在循环内再同步
+                boolean ok = sendToTarget(target, channel, template, title, content, params, userIdMap);
                 if (ok) {
                     successCount++;
-                    syncToMarketingMessage(target, channel, title, content, userIdMap);
                 } else {
                     failCount++;
                 }
@@ -481,25 +486,35 @@ public class NotificationServiceImpl implements NotificationService {
      * @return true=至少一个通道发送成功
      */
     private boolean sendToTarget(String target, Integer channel, NotificationTemplate template,
-                                  String title, String content, Map<String, String> params) {
+                                  String title, String content, Map<String, String> params,
+                                  Map<String, Long> userIdMap) {
+        // channel=1 短信; channel=2 APP推送(H5场景=站内信+SSE); channel=3 短信+APP推送
+        if (channel == null) {
+            channel = 1;
+        }
+
         boolean smsOk = false;
-        boolean pushOk = false;
-
-        // channel=1 短信; channel=2 APP推送; channel=3 短信+APP推送
-        if (channel == null) channel = 1;
-
         if (channel == 1 || channel == 3) {
             smsOk = sendSms(target, template.getSignName(),
                     template.getTemplateCode(), buildSmsParam(params));
         }
         if (channel == 2 || channel == 3) {
-            pushOk = sendPushToUser(target, title, content);
+            // 原生App设备推送为预留增强通道（当前 Mock/无设备时无副作用），结果不决定最终成败；
+            // H5 用户的真实触达由下方站内信落库 + 在线 SSE 保证
+            sendPushToUser(target, title, content);
         }
 
+        // 无条件落站内信 + 在线SSE：消息中心必达，离线用户下次打开页面补拉
+        boolean delivered = deliverSystemMessage(target, channel, title, content, userIdMap) != null;
+
         if (channel == 3) {
-            return smsOk || pushOk;
+            return smsOk || delivered;
         }
-        return channel == 1 ? smsOk : pushOk;
+        if (channel == 1) {
+            return smsOk;
+        }
+        // channel=2：以"站内信/SSE 是否可投递到该用户"为准
+        return delivered;
     }
 
     /**
@@ -556,7 +571,7 @@ public class NotificationServiceImpl implements NotificationService {
      * @param title   消息标题
      * @param content 消息内容
      */
-    private void syncToMarketingMessage(String target, Integer channel, String title, String content, Map<String,
+    private Long deliverSystemMessage(String target, Integer channel, String title, String content, Map<String,
             Long> userIdMap) {
         try {
             Long userId = null;
@@ -566,8 +581,8 @@ public class NotificationServiceImpl implements NotificationService {
                 userId = resolveUserId(target, channel);
             }
             if (userId == null) {
-                log.debug("无法解析target对应用户，跳过消息中心同步: target={}", target);
-                return;
+                log.debug("无法解析target对应用户，跳过消息中心投递: target={}", target);
+                return null;
             }
 
             MarketingMessage msg = new MarketingMessage();
@@ -580,10 +595,15 @@ public class NotificationServiceImpl implements NotificationService {
             msg.setContent(content != null ? content : "");
             msg.setStatus(MarketingMessage.STATUS_SENT);
             marketingMessageMapper.insert(msg);
-            log.debug("消息中心同步成功: userId={}, target={}", userId, target);
+            log.debug("消息中心落库成功: userId={}, target={}", userId, target);
+
+            // 落库后对在线用户实时 SSE 推送；离线无连接时管理器内部静默跳过，不影响落库兜底
+            sseEmitterManager.sendToUser(userId, "message", msg);
+            return userId;
         } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.warn("消息中心同步失败: target={}, channel={}", target, channel, e);
+            // 宽异常兜底：有意捕获 Exception，落库/推送异常只告警，不影响发送主流程与计数
+            log.warn("消息中心投递失败: target={}, channel={}", target, channel, e);
+            return null;
         }
     }
 
@@ -793,12 +813,16 @@ public class NotificationServiceImpl implements NotificationService {
                 // 与 sendSimpleMessage 相同：channel==1 短信（简易模板），其余按推送
                 if (channel != null && channel == 1) {
                     ok = sendSms(target, "瑞吉外卖", null, content);
+                    // 无条件落站内信兜底，不改变短信渠道的成功判定
+                    deliverSystemMessage(target, channel, title, content, userIdMap);
                 } else {
-                    ok = sendPushToUser(target, title, content);
+                    // 原生App设备推送为预留增强，结果不决定成败
+                    sendPushToUser(target, title, content);
+                    // H5 真实触达：站内信落库 + 在线 SSE
+                    ok = deliverSystemMessage(target, channel, title, content, userIdMap) != null;
                 }
                 if (ok) {
                     successCount++;
-                    syncToMarketingMessage(target, channel, title, content, userIdMap);
                 } else {
                     failCount++;
                     failReasons.append("[").append(target).append("]发送失败; ");
@@ -913,10 +937,10 @@ public class NotificationServiceImpl implements NotificationService {
         int failCount = 0;
         for (String target : targets) {
             try {
-                boolean ok = sendToTarget(target, channel, template, title, content, null);
+                // sendToTarget 内部已无条件落站内信 + 在线 SSE
+                boolean ok = sendToTarget(target, channel, template, title, content, null, userIdMap);
                 if (ok) {
                     successCount++;
-                    syncToMarketingMessage(target, channel, title, content, userIdMap);
                 } else {
                     failCount++;
                     failReasons.append("[").append(target).append("]发送失败; ");
@@ -997,14 +1021,16 @@ public class NotificationServiceImpl implements NotificationService {
                 if (channel == 1) {
                     // 短信：使用简易发送模式
                     ok = sendSms(target, "瑞吉外卖", null, content);
+                    // 无条件落站内信兜底，不改变短信渠道成功判定
+                    deliverSystemMessage(target, channel, title, content, userIdMap);
                 } else {
-                    // APP推送
-                    ok = sendPushToUser(target, title, content);
+                    // 原生App设备推送为预留增强，结果不决定成败
+                    sendPushToUser(target, title, content);
+                    // H5 真实触达：站内信落库 + 在线 SSE
+                    ok = deliverSystemMessage(target, channel, title, content, userIdMap) != null;
                 }
                 if (ok) {
                     successCount++;
-                    // 同步到用户消息中心
-                    syncToMarketingMessage(target, channel, title, content, userIdMap);
                 } else {
                     failCount++;
                     failReasons.append("[").append(target).append("]发送失败; ");
@@ -1153,10 +1179,10 @@ public class NotificationServiceImpl implements NotificationService {
         int failCount = 0;
         for (String target : targets) {
             try {
-                boolean ok = sendToTarget(target, channel, template, title, content, params);
+                // sendToTarget 内部已无条件落站内信 + 在线 SSE
+                boolean ok = sendToTarget(target, channel, template, title, content, params, userIdMap);
                 if (ok) {
                     successCount++;
-                    syncToMarketingMessage(target, channel, title, content, userIdMap);
                 } else {
                     failCount++;
                 }
