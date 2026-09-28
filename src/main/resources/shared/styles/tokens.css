@@ -22,14 +22,21 @@
   /* ---- 文字色 ---- */
   --color-text-primary: #333333;
   --color-text-secondary: #666666;
-  --color-text-hint: #999999;
+  /* 修改点(2026-09-27 审查P1对比度族)：#999 on 白仅 2.85:1 不达 AA，
+     与 C端 index.css 对齐加深至 5.10:1（骑手端 hint 文字全部经此令牌生效） */
+  --color-text-hint: #6e6e6e;
   --color-text-disabled: #cccccc;
+  /* 占位符专用：与正文最低可读档一致（Vant 默认 #c8c9cc 仅 1.5:1） */
+  --color-text-placeholder: #6e6e6e;
   --color-text-white: #ffffff;
 
   /* ---- 功能色 ---- */
   --color-danger: #e94e3c;
   --color-success: #07c160;
   --color-warning: #ffb300;
+  /* 修改点(2026-09-27 审查P1对比度族)：品牌橙 #ff9a00 作浅底文字仅 2.13:1，
+     文字场景一律改用深棕金档（on 白 5.36:1 达 AA），与 C端 --color-warning-text 同值 */
+  --color-primary-text-strong: #955f00;
   --color-price: #ff4a26;
 
   /* ---- 背景色 ---- */
@@ -74,6 +81,10 @@
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
   /* 固定在底部的操作条：向上投影 */
   --shadow-bar-top: 0 -2px 8px rgba(0, 0, 0, 0.08);
+  /* 卡片 hover/抬升态 */
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.12);
+  /* 品牌主按钮金色投影（带透明度的主色暗档） */
+  --color-primary-shadow: rgba(255, 154, 0, 0.35);
 
   /* ---- 字体族 ---- */
   --font-family-base: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft Yahei", sans-serif;

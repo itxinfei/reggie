@@ -96,9 +96,10 @@ html, body {
 
 .tool-btn.primary {
   border-color: var(--color-primary);
-  background: var(--color-primary);
+  background: var(--color-primary-gradient);
   color: var(--color-primary-text);
   font-weight: 600;
+  box-shadow: 0 2px 8px var(--color-primary-shadow);
 }
 
 /* ---- 全宽主操作 ---- */
@@ -117,8 +118,9 @@ html, body {
 }
 
 .rider-btn.primary {
-  background: var(--color-primary);
+  background: var(--color-primary-gradient);
   color: var(--color-primary-text);
+  box-shadow: 0 4px 12px var(--color-primary-shadow);
 }
 
 .rider-btn.ghost {
@@ -255,9 +257,10 @@ html, body {
 
 .mini-btn.primary {
   border-color: var(--color-primary);
-  background: var(--color-primary);
+  background: var(--color-primary-gradient);
   color: var(--color-primary-text);
   font-weight: 600;
+  box-shadow: 0 2px 8px var(--color-primary-shadow);
 }
 
 .mini-btn:active { transform: scale(0.97); }
@@ -286,7 +289,7 @@ html, body {
 /* 空态次级提示 */
 .empty-sub { font-size: var(--font-size-sm); margin-top: 8px; }
 /* 导航/状态条文字 */
-.nav-logout { font-size: 15px; }
+.nav-logout { font-size: var(--font-size-md); }
 .online-label { margin-right: 8px; font-size: var(--font-size-md); }
 .history-status { font-size: var(--font-size-sm); color: var(--color-text-hint); }
 /* 登录页：主按钮贴左右、无侧间距 */
@@ -299,29 +302,16 @@ html, body {
 }
 
 /* ================================================================
-   视觉美化增强（2026-09-26）：品牌金主题 / 按钮渐变 / 卡片层次
-   —— 纯视觉装饰，不改动任何布局结构与内容尺寸
+   品牌金主题与卡片层次（渐变/阴影已合并回各组件主定义，此处只保留
+   无法归入组件的主题覆盖与交互装饰）
    ================================================================ */
 
 /* Vant Tabs：选中下划线与文字由默认红改为品牌金 */
 .van-tabs__line { background: var(--color-primary); }
 .van-tab.van-tab--active { color: var(--color-primary-dark); font-weight: 600; }
 
-/* 主按钮：金色渐变 + 柔和投影；沿用深色文字保持户外强光下可读 */
-.rider-btn.primary {
-  background: var(--color-primary-gradient);
-  color: var(--color-primary-text);
-  border: none;
-  box-shadow: 0 4px 12px var(--color-primary-shadow);
-}
-.mini-btn.primary,
-.tool-btn.primary {
-  background: var(--color-primary-gradient);
-  color: var(--color-primary-text);
-  box-shadow: 0 2px 8px var(--color-primary-shadow);
-}
-
-/* 任务卡：左侧金色状态竖条（绝对定位装饰，不占内容、不引起位移） */
+/* 任务卡左侧状态竖条（绝对定位装饰，不占内容、不引起位移）：
+   待接单/配送中金色，已完成灰色，已取消/已退款不显示 */
 .task-card { position: relative; }
 .task-card::before {
   content: '';
@@ -331,6 +321,9 @@ html, body {
   border-radius: 0 2px 2px 0;
   background: var(--color-primary-gradient);
 }
+.task-card.task-st-4::before { background: var(--color-text-hint); }
+.task-card.task-st-5::before,
+.task-card.task-st-6::before { display: none; }
 
 /* 桌面端 hover：卡片轻微抬升（移动端无 hover，不影响） */
 @media (hover: hover) {
@@ -341,7 +334,17 @@ html, body {
   }
 }
 
-/* 导航标题更明确、底部大厅条顶部投影 */
+/* 导航标题更明确 */
 .van-nav-bar__title { font-weight: 600; }
-.hall-entry { box-shadow: var(--shadow-bar-top); }
 .hall-entry .rider-btn { border-radius: var(--radius-md); }
+
+/* 错误态重试按钮：居中等宽，不使用列表全宽规格 */
+.retry-btn {
+  width: 180px;
+  height: 40px;
+  margin: 16px auto 0;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+}

@@ -16,7 +16,7 @@
     <div class="rider-page">
       <van-pull-refresh v-model="refreshing" @refresh="loadList(false)" success-text="刷新成功">
         <div v-if="list.length">
-          <div class="task-card" v-for="t in list" :key="t.id">
+          <div class="task-card" v-for="t in list" :key="t.id" :class="'task-st-' + t.status" @click="openDetail(t)">
             <div class="task-head">
               <span class="task-number">{{ t.number }}</span>
               <span class="task-amount">¥{{ RiderUtil.money(t.amount) }}</span>
@@ -28,7 +28,7 @@
               <span class="task-time">{{ RiderUtil.formatTime(t.orderTime) }} 下单</span>
             </div>
             <div class="rider-actions">
-              <button class="rider-btn primary" :disabled="grabbingId === t.id" @click="onGrab(t)">立即抢单</button>
+              <button class="rider-btn primary" :disabled="grabbingId === t.id" @click.stop="onGrab(t)">立即抢单</button>
             </div>
           </div>
         </div>
@@ -55,7 +55,7 @@
     Vue.use(vant);
     new Vue({
       data: function () {
-        return { list: [], refreshing: false, timer: null, grabbingId: null };
+        return { list: [], refreshing: false, timer: null, grabbingId: null, inflight: false };
       },
       mounted: function () {
         var vm = this;
@@ -77,12 +77,19 @@
       methods: {
         loadList: function (silent) {
           var vm = this;
+          // 上一次请求未归：跳过本轮避免请求堆叠/响应乱序，并复位下拉态
+          if (vm.inflight) { vm.refreshing = false; return; }
+          vm.inflight = true;
           if (!silent) { vm.refreshing = true; }
           RiderApi.hall().then(function (res) {
             vm.list = res.data || [];
           }).catch(function () { /* 提示已统一 */ }).then(function () {
+            vm.inflight = false;
             vm.refreshing = false;
           });
+        },
+        openDetail: function (t) {
+          window.location.href = '/rider/detail.html?id=' + t.id;
         },
         onGrab: function (t) {
           var vm = this;

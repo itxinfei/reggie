@@ -19,7 +19,7 @@
       <div class="rider-card">
         <div class="task-head">
           <span class="task-number">{{ t.number }}</span>
-          <van-tag plain type="warning">{{ RiderUtil.statusText(t.status) }}</van-tag>
+          <van-tag plain :type="statusTagType(t.status)">{{ RiderUtil.statusText(t.status) }}</van-tag>
         </div>
         <div class="info-row"><span class="label">订单金额</span>
           <span class="val amount-val">¥{{ RiderUtil.money(t.amount) }}
@@ -48,7 +48,7 @@
       <div class="rider-card">
         <div class="card-title deliver"><span class="bar"></span>配送给顾客</div>
         <div class="info-row"><span class="label">收货人</span><span class="val strong">{{ t.consignee }}</span></div>
-        <div class="info-row"><span class="label">电话</span><span class="val">{{ t.phone }}</span></div>
+        <div class="info-row"><span class="label">电话</span><span class="val">{{ RiderUtil.maskPhone(t.phone) }}</span></div>
         <div class="info-row"><span class="label">地址</span><span class="val">{{ t.address }}</span></div>
         <div class="row-tools">
           <a v-if="t.phone" class="tool-btn" :href="'tel:' + t.phone"><i class="ri-phone-line"></i> 联系顾客</a>
@@ -74,6 +74,11 @@
 
     </div>
 
+    <div class="rider-empty" v-else-if="loadError">
+      <div>{{ errorMsg }}</div>
+      <button v-if="id" class="rider-btn primary retry-btn" @click="loadDetail">重新加载</button>
+      <button v-else class="rider-btn primary retry-btn" @click="goIndex">返回工作台</button>
+    </div>
     <div class="rider-empty" v-else>加载中…</div>
   </div>
 
@@ -89,7 +94,7 @@
     Vue.use(vant);
     new Vue({
       data: function () {
-        return { t: null, busy: '' };
+        return { t: null, busy: '', id: '', loadError: false, errorMsg: '', seq: 0, timer: null };
       },
       computed: {
         showGrab: function () { return this.t && this.t.status === 2 && this.t.riderId == null; },
@@ -105,19 +110,61 @@
       },
       mounted: function () {
         var vm = this;
-        var id = new URLSearchParams(window.location.search).get('id');
-        if (!id) { vant.Toast('缺少订单ID'); return; }
-        RiderApi.detail(id).then(function (res) { vm.t = res.data; })
-          .catch(function () { /* 提示已统一 */ });
+        vm.id = new URLSearchParams(window.location.search).get('id') || '';
+        if (!vm.id) {
+          vm.loadError = true;
+          vm.errorMsg = '缺少订单ID，请从任务列表进入';
+          return;
+        }
+        vm.loadDetail();
+        // 非终态每 15 秒静默同步：顾客取消、后台改派等状态变化可及时感知
+        vm.timer = setInterval(function () {
+          if (document.hidden || !vm.t || vm.t.status === 4 || vm.t.status === 5 || vm.t.status === 6) return;
+          vm.loadDetail();
+        }, 15000);
+        // 从高德导航经 bfcache 返回本页时重新拉取
+        window.addEventListener('pageshow', vm.onPageShow);
+      },
+      beforeDestroy: function () {
+        if (this.timer) { clearInterval(this.timer); this.timer = null; }
+        window.removeEventListener('pageshow', this.onPageShow);
       },
       created: function () {
         // RiderUtil 是工具对象而非方法，挂在实例上供模板调用（不能放进 methods）
         this.RiderUtil = window.RiderUtil;
       },
       methods: {
-        reload: function () {
+        loadDetail: function () {
           var vm = this;
-          RiderApi.detail(vm.t.id).then(function (res) { vm.t = res.data; });
+          if (!vm.id) { return; }
+          var seq = ++vm.seq;
+          vm.loadError = false;
+          RiderApi.detail(vm.id).then(function (res) {
+            if (seq !== vm.seq) return;  // 丢弃过期响应（轮询/重试乱序）
+            vm.t = res.data;
+          }).catch(function (e) {
+            if (seq !== vm.seq) return;
+            if (e && e.message === 'NOTLOGIN') return;  // 拦截器即将跳登录
+            vm.t = null;
+            vm.loadError = true;
+            vm.errorMsg = '加载失败，请检查网络后重试';
+          });
+        },
+        onPageShow: function (e) {
+          // bfcache 命中（从高德返回）才刷新，首次加载不重复请求
+          if (e.persisted) { this.loadDetail(); }
+        },
+        statusTagType: function (s) {
+          switch (s) {
+            case 3: return 'primary';
+            case 4: return 'success';
+            case 5:
+            case 6: return 'danger';
+            default: return 'warning';
+          }
+        },
+        goIndex: function () {
+          window.location.href = '/rider/index.html';
         },
         onGrab: function () {
           var vm = this;
@@ -125,8 +172,8 @@
           vm.busy = 'grab';
           RiderApi.grab(vm.t.id).then(function () {
             vant.Toast.success('抢单成功');
-            vm.reload();
-          }).catch(function () { vm.reload(); }).then(function () { vm.busy = ''; });
+            vm.loadDetail();
+          }).catch(function () { vm.loadDetail(); }).then(function () { vm.busy = ''; });
         },
         onAccept: function () {
           var vm = this;
@@ -134,7 +181,7 @@
           vm.busy = 'accept';
           RiderApi.accept(vm.t.id).then(function () {
             vant.Toast.success('已接单');
-            vm.reload();
+            vm.loadDetail();
           }).catch(function () { /* 提示已统一 */ }).then(function () { vm.busy = ''; });
         },
         onPickup: function () {
@@ -143,7 +190,7 @@
           vm.busy = 'pickup';
           RiderApi.pickup(vm.t.id).then(function () {
             vant.Toast.success('已取餐，请尽快送达');
-            vm.reload();
+            vm.loadDetail();
           }).catch(function () { /* 提示已统一 */ }).then(function () { vm.busy = ''; });
         },
         onDeliver: function () {
@@ -154,7 +201,7 @@
             return RiderApi.deliver(vm.t.id);
           }).then(function () {
             vant.Toast.success('送达完成');
-            vm.reload();
+            vm.loadDetail();
           }).catch(function () { /* 取消或失败 */ }).then(function () { vm.busy = ''; });
         },
         goBack: function () {

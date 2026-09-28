@@ -17,9 +17,12 @@
       <div class="login-sub">请使用门店分配的骑手账号登录</div>
       <van-cell-group inset>
         <van-field v-model="phone" name="phone" label="手机号" placeholder="请输入手机号"
-                   type="tel" maxlength="11" clearable></van-field>
+                   type="tel" maxlength="11" clearable
+                   :error="!!phoneError" :error-message="phoneError" @input="phoneError = ''"></van-field>
         <van-field v-model="password" name="password" label="密码" placeholder="请输入密码"
-                   type="password" @keyup.enter="onLogin"></van-field>
+                   type="password"
+                   :error="!!passwordError" :error-message="passwordError" @input="passwordError = ''"
+                   @keyup.enter="onLogin"></van-field>
       </van-cell-group>
       <div class="rider-actions">
         <button class="rider-btn primary" :disabled="loading" @click="onLogin">
@@ -40,7 +43,7 @@
     new Vue({
       data: function () {
         return {
-          phone: '', password: '', loading: false,
+          phone: '', password: '', loading: false, phoneError: '', passwordError: '',
           // 仅本机访问显示演示账号，避免在内网/生产环境泄露
           isDev: ['localhost', '127.0.0.1'].indexOf(window.location.hostname) !== -1
         };
@@ -49,15 +52,17 @@
         onLogin: function () {
           var phone = (this.phone || '').trim();
           var password = this.password || '';
+          var vm = this;
+          vm.phoneError = '';
+          vm.passwordError = '';
           if (!/^1[3-9]\d{9}$/.test(phone)) {
-            vant.Toast('请输入正确的手机号');
+            vm.phoneError = '请输入正确的手机号';
             return;
           }
           if (!password) {
-            vant.Toast('请输入密码');
+            vm.passwordError = '请输入密码';
             return;
           }
-          var vm = this;
           vm.loading = true;
           RiderApi.login(phone, password).then(function (res) {
             var rider = res.data || {};

@@ -37,6 +37,13 @@ document.write('<script src="/shared/js/img-path.js?v=20260924"><\/script>');
       '&mode=car&src=reggie&coordinate=gaode&callnative=1';
   }
 
+  /** 手机号脱敏：138****1234；非 11 位原样返回（tel: 链接仍使用真实号码）。 */
+  function maskPhone(p) {
+    if (!p) return '';
+    var s = String(p);
+    return s.length === 11 ? s.substring(0, 3) + '****' + s.substring(7) : s;
+  }
+
   function statusText(s) {
     switch (s) {
       case 2: return '待接单';
@@ -52,6 +59,7 @@ document.write('<script src="/shared/js/img-path.js?v=20260924"><\/script>');
     formatTime: formatTime,
     money: money,
     navUrl: navUrl,
+    maskPhone: maskPhone,
     statusText: statusText
   };
 })(window);

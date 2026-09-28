@@ -20,7 +20,7 @@
     <div class="rider-statusbar">
       <span class="who">{{ me.name || '骑手' }}<small>{{ riderStatusText }}</small></span>
       <div>
-        <span class="online-label">接单中</span>
+        <span class="online-label">{{ online ? '接单中' : '已休息' }}</span>
         <van-switch v-model="online" :loading="statusLoading" @change="onToggleOnline"></van-switch>
       </div>
     </div>
@@ -32,9 +32,9 @@
     </van-tabs>
 
     <div class="rider-page has-bar">
-      <van-pull-refresh v-model="refreshing" @refresh="loadList" success-text="刷新成功">
+      <van-pull-refresh v-model="refreshing" @refresh="loadList(false)" success-text="刷新成功">
         <div v-if="list.length">
-          <div class="task-card" v-for="t in list" :key="t.id" @click="openDetail(t)">
+          <div class="task-card" v-for="t in list" :key="t.id" :class="'task-st-' + t.status" @click="openDetail(t)">
             <div class="task-head">
               <span class="task-number">{{ t.number }}</span>
               <span class="task-amount">¥{{ RiderUtil.money(t.amount) }}</span>
@@ -79,7 +79,9 @@
           list: [],
           refreshing: false,
           loaded: {},
-          acceptingId: null
+          acceptingId: null,
+          seq: 0,        // 请求序号：丢弃切 tab/轮询时的过期响应
+          timer: null    // 列表静默轮询
         };
       },
       computed: {
@@ -99,21 +101,33 @@
           vm.me = res.data || {};
           // status: 0离线 1在线 2忙碌（忙碌也视作接单状态）
           vm.online = vm.me.status === 1 || vm.me.status === 2;
+          RiderLocation.setEnabled(vm.online);
         }).catch(function () { /* 未登录已跳转 */ });
-        vm.loadList();
+        vm.loadList(false);
+        // 待接单/配送中每 15 秒静默刷新，避免新派单漏看；历史 tab 与后台页面不轮询
+        vm.timer = setInterval(function () {
+          if (document.hidden || vm.active === 'history') return;
+          vm.loadList(true);
+        }, 15000);
+      },
+      beforeDestroy: function () {
+        if (this.timer) { clearInterval(this.timer); this.timer = null; }
       },
       created: function () {
         // RiderUtil 是工具对象而非方法，挂在实例上供模板调用（不能放进 methods）
         this.RiderUtil = window.RiderUtil;
       },
       methods: {
-        loadList: function () {
+        loadList: function (silent) {
           var vm = this;
-          vm.refreshing = true;
+          var seq = ++vm.seq;
+          if (!silent) { vm.refreshing = true; }
           RiderApi.myTasks(vm.active).then(function (res) {
+            if (seq !== vm.seq) return;  // 已有更新的请求发起，丢弃过期响应
             vm.list = res.data || [];
             vm.loaded[vm.active] = true;
           }).catch(function () { /* 提示已统一 */ }).then(function () {
+            if (seq !== vm.seq) return;
             vm.refreshing = false;
           });
         },
@@ -129,7 +143,7 @@
           vm.acceptingId = t.id;
           RiderApi.accept(t.id).then(function () {
             vant.Toast.success('已接单');
-            vm.loadList();
+            vm.loadList(true);
           }).catch(function () { /* 提示已统一 */ }).then(function () {
             vm.acceptingId = null;
           });
@@ -138,6 +152,7 @@
           var vm = this;
           vm.statusLoading = true;
           RiderApi.setOnline(v).then(function () {
+            RiderLocation.setEnabled(v);
             vant.Toast(v ? '已上线，可接单' : '已下线，暂停接单');
           }).catch(function () {
             // 失败回滚开关

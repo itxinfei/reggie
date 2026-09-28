@@ -71,6 +71,11 @@
     if (body.code === 1) {
       return body;
     }
+    // HTTP 200 但接口内判定未登录（非经 LoginCheckFilter 的场景）→ 跳登录
+    if (body.msg === 'NOTLOGIN') {
+      goLogin();
+      return Promise.reject(new Error('NOTLOGIN'));
+    }
     // 业务失败
     toast(body.msg || '操作失败');
     return Promise.reject(new Error(body.msg || '业务失败'));
