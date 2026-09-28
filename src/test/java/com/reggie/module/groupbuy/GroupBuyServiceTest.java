@@ -54,7 +54,8 @@ public class GroupBuyServiceTest {
         GroupBuyCampaign saved = groupBuyService.createCampaign(campaign);
         assertNotNull(saved.getId());
         assertEquals("OPEN", saved.getStatus());
-        assertEquals(1L, saved.getTenantId());
+        // tenant_id 由 MyBatis-Plus 租户插件按 BaseContext 落库，本类 setUp 用的是测试租户 999
+        assertEquals(999L, saved.getTenantId().longValue());
     }
 
     @Test

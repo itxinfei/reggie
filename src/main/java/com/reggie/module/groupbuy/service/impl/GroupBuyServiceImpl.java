@@ -7,6 +7,7 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.common.utils.PageUtils;
 import com.reggie.module.dish.service.DishService;
+import com.reggie.module.groupbuy.enums.GroupBuyStatus;
 import com.reggie.module.groupbuy.mapper.GroupBuyCampaignMapper;
 import com.reggie.module.groupbuy.mapper.GroupBuyParticipationMapper;
 import com.reggie.module.groupbuy.model.GroupBuyCampaign;
@@ -82,7 +83,7 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
             throw new CustomException("租户上下文不存在");
         }
         campaign.setTenantId(tenantId);
-        campaign.setStatus("OPEN");
+        campaign.setStatus(GroupBuyStatus.OPEN.getValue());
         campaign.setIsDeleted(0);
         campaign.setCreateTime(LocalDateTime.now());
         campaign.setUpdateTime(LocalDateTime.now());
@@ -177,7 +178,7 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         if (campaign == null) {
             throw new CustomException("拼团活动不存在");
         }
-        if (!"OPEN".equals(campaign.getStatus())) {
+        if (!GroupBuyStatus.OPEN.getValue().equals(campaign.getStatus())) {
             throw new CustomException("拼团活动未开放");
         }
         LocalDateTime now = LocalDateTime.now();
@@ -190,7 +191,7 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         participation.setGroupBuyId(campaignId);
         participation.setOrderId(orderId);
         participation.setUserId(userId);
-        participation.setStatus("JOINED");
+        participation.setStatus(GroupBuyStatus.JOINED.getValue());
         participation.setJoinTime(now);
         participation.setCreateTime(now);
         participationMapper.insert(participation);
@@ -221,13 +222,13 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
     public void markParticipationPaid(Long orderId) {
         LambdaQueryWrapper<GroupBuyParticipation> qw = new LambdaQueryWrapper<>();
         qw.eq(GroupBuyParticipation::getOrderId, orderId);
-        qw.eq(GroupBuyParticipation::getStatus, "JOINED");
+        qw.eq(GroupBuyParticipation::getStatus, GroupBuyStatus.JOINED.getValue());
         GroupBuyParticipation participation = participationMapper.selectOne(qw);
         // 幂等：非拼团单或已支付的订单无 JOINED 记录，直接跳过，供支付回调安全统一调用
         if (participation == null) {
             return;
         }
-        participation.setStatus("PAID");
+        participation.setStatus(GroupBuyStatus.PAID.getValue());
         participation.setPayTime(LocalDateTime.now());
         participationMapper.updateById(participation);
     }
@@ -254,7 +255,7 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
     public int scanGroupFormedAndNotFormed() {
         // 拉取所有已结束且处于 OPEN 的 campaign（endTime 到，但未做成团/未成团判定）
         LambdaQueryWrapper<GroupBuyCampaign> qw = new LambdaQueryWrapper<>();
-        qw.eq(GroupBuyCampaign::getStatus, "OPEN");
+        qw.eq(GroupBuyCampaign::getStatus, GroupBuyStatus.OPEN.getValue());
         qw.le(GroupBuyCampaign::getEndTime, LocalDateTime.now());
         List<GroupBuyCampaign> campaigns = list(qw);
         if (campaigns.isEmpty()) {
@@ -268,10 +269,10 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
             int paidCount = participationMapper.countPaidParticipants(campaign.getId());
             if (paidCount >= campaign.getMinMembers()) {
                 // 成团：标记 CLOSED，下游可据此发券/打标签/履约
-                campaign.setStatus("CLOSED");
+                campaign.setStatus(GroupBuyStatus.CLOSED.getValue());
             } else {
                 // 未成团：标记 ENDED，触发参与订单退款
-                campaign.setStatus("ENDED");
+                campaign.setStatus(GroupBuyStatus.ENDED.getValue());
                 refundNotFormedParticipants(campaign);
             }
             campaign.setUpdateTime(LocalDateTime.now());
@@ -296,7 +297,7 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         List<GroupBuyParticipation> participants = participationMapper.selectList(
                 new LambdaQueryWrapper<GroupBuyParticipation>()
                         .eq(GroupBuyParticipation::getGroupBuyId, campaign.getId())
-                        .eq(GroupBuyParticipation::getStatus, "PAID"));
+                        .eq(GroupBuyParticipation::getStatus, GroupBuyStatus.PAID.getValue()));
         if (participants == null || participants.isEmpty()) {
             return;
         }
@@ -389,7 +390,7 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         List<GroupBuyParticipation> joinedList = participationMapper.selectList(
                 new LambdaQueryWrapper<GroupBuyParticipation>()
                         .eq(GroupBuyParticipation::getGroupBuyId, campaign.getId())
-                        .eq(GroupBuyParticipation::getStatus, "JOINED"));
+                        .eq(GroupBuyParticipation::getStatus, GroupBuyStatus.JOINED.getValue()));
         if (joinedList == null || joinedList.isEmpty()) {
             return;
         }
@@ -402,7 +403,7 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
                         .last("limit 1")
                         .one();
                 if (successPo != null) {
-                    p.setStatus("PAID");
+                    p.setStatus(GroupBuyStatus.PAID.getValue());
                     p.setPayTime(LocalDateTime.now());
                     participationMapper.updateById(p);
                     log.warn("[拼团自愈] JOINED→PAID 补偿标记: campaignId={}, orderId={}, participationId={}",
