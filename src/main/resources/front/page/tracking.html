@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="../styles/tracking.css?v=20260926" />
     <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
     <script src="../js/icon-fallback.js?v=20260917"></script>
+    <!-- 修改点(S0 三端状态机统一)：引入跨端状态字典，作为配送追踪文案单一真源 -->
+    <script src="/shared/js/order-status.js?v=20260928"></script>
     <!-- 修改点(2026-09-17)：配送地图配置——申请到「高德 Web 端(JS API)」Key 后填入 amapKey 并将 enabled 改为 true 即可生效。
          未配置（enabled=false 或 amapKey 为空）时页面自动降级为「ETA + 距离 + 位置新鲜度」文字版，
          不加载地图 SDK、不渲染地图容器，配送追踪主流程完全不受影响。 -->
@@ -217,52 +219,20 @@
                 },
                 statusText() {
                     if (!this.trackingData) return '';
-                    const map = {
-                        PENDING: '待接单',
-                        ACCEPTED: '已接单',
-                        PICKING: '取餐中',
-                        DELIVERING: '配送中',
-                        DELIVERED: '已送达',
-                        CANCELLED: '已取消'
-                    };
-                    return map[this.trackingData.status] || '未知状态';
+                    return OrderStatusDict.deliveryText(this.trackingData.status);
                 },
                 statusDesc() {
                     if (!this.trackingData) return '';
-                    const map = {
-                        PENDING: '商家正在确认订单',
-                        ACCEPTED: '商家已接单，正在准备',
-                        PICKING: '骑手正在取餐',
-                        DELIVERING: '骑手正在配送',
-                        DELIVERED: '订单已送达',
-                        CANCELLED: '订单已取消'
-                    };
-                    return map[this.trackingData.status] || '';
+                    return OrderStatusDict.deliveryDesc(this.trackingData.status);
                 },
                 statusIcon() {
                     if (!this.trackingData) return 'ri-map-pin-line';
-                    const map = {
-                        PENDING: 'ri-time-line',
-                        ACCEPTED: 'ri-restaurant-line',
-                        PICKING: 'ri-store-2-line',
-                        DELIVERING: 'ri-motorbike-line',
-                        DELIVERED: 'ri-check-line',
-                        CANCELLED: 'ri-close-line'
-                    };
-                    return map[this.trackingData.status] || 'ri-map-pin-line';
+                    return OrderStatusDict.deliveryIcon(this.trackingData.status);
                 },
-                // 修改点(2026-09-14)：配送状态 → 全站统一的状态色语义类（--status-*）
+                // 修改点(S0 三端状态机统一)：配送状态 → 跨端字典统一的状态色语义类（--status-*）
                 statusClass() {
                     if (!this.trackingData) return 'status-pending';
-                    const map = {
-                        PENDING: 'status-pending',
-                        ACCEPTED: 'status-accepted',
-                        PICKING: 'status-accepted',
-                        DELIVERING: 'status-shipped',
-                        DELIVERED: 'status-completed',
-                        CANCELLED: 'status-cancelled'
-                    };
-                    return map[this.trackingData.status] || 'status-pending';
+                    return OrderStatusDict.deliveryClass(this.trackingData.status) || 'status-pending';
                 },
                 timelineSteps() {
                     return [

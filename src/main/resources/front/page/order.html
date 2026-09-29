@@ -20,6 +20,8 @@
         <!-- 修改点：加载 remixicon 图标库（复用 backend 真实字体，front/styles 下 404 占位已删） -->
         <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
         <script src="./../js/icon-fallback.js?v=20260917"></script>
+        <!-- 修改点(S0 三端状态机统一)：引入跨端状态字典，使 getStatus 走同一真源 -->
+        <script src="/shared/js/order-status.js?v=20260928"></script>
     </head>
     <body>
         <div id="order" class="app">
@@ -54,7 +56,7 @@
                         <!-- 卡片头部：主标题（外卖订单·下单时间）+ 次要单号行 + 状态（对标美团） -->
                         <div class="order-header">
                             <div class="order-meta">
-                                <span class="order-title">{{order.tableId ? '堂食订单' : '外卖订单'}}<span class="title-dot">·</span><span class="order-time">{{order.orderTime}}</span></span>
+                                <span class="order-title">{{order.tableId ? '堂食订单' : (order.source === 'SELF_PICKUP' ? '自提订单' : '外卖订单')}}<span class="title-dot">·</span><span class="order-time">{{order.orderTime}}</span></span>
                                 <div class="order-no-row">
                                     <span class="order-no">单号 {{order.number || order.id}}</span>
                                     <!-- 订单号一键复制：售后沟通场景免手抄 -->
@@ -68,7 +70,7 @@
                         </div>
                         <!-- 外卖：待接单(status=2)/配送中(3)迷你进度条。
                              注意 status=2 是"待接单"，首步只 active 不 done -->
-                        <div class="order-progress" v-if="!order.tableId && (order.status === 2 || order.status === 3)">
+                        <div class="order-progress" v-if="!order.tableId && order.source !== 'SELF_PICKUP' && (order.status === 2 || order.status === 3)">
                             <div class="progress-step" :class="{done: order.status >= 3, active: order.status === 2}">商家接单</div>
                             <div class="progress-line" :class="{done: order.status >= 3}"></div>
                             <div class="progress-step" :class="{active: order.status === 3}">配送中</div>
@@ -82,6 +84,14 @@
                             <div class="progress-step" :class="{active: order.status === 3}">后厨制作</div>
                             <div class="progress-line"></div>
                             <div class="progress-step">叫号上菜</div>
+                        </div>
+                        <!-- 修改点(P1-2 自提)：自提出餐进度（商家接单→后厨制作→到店取餐） -->
+                        <div class="order-progress" v-else-if="order.source === 'SELF_PICKUP' && (order.status === 2 || order.status === 3)">
+                            <div class="progress-step" :class="{done: order.status >= 3, active: order.status === 2}">商家接单</div>
+                            <div class="progress-line" :class="{done: order.status >= 3}"></div>
+                            <div class="progress-step" :class="{active: order.status === 3}">后厨制作</div>
+                            <div class="progress-line"></div>
+                            <div class="progress-step">到店取餐</div>
                         </div>
                         <!-- 菜品列表：左侧缩略图 + 名称数量 + 右侧价格 -->
                         <div class="dish-list">
@@ -119,7 +129,7 @@
                             <template v-if="order.status === 3">
                                 <div class="act-btn act-outline" @click="urgeOrder(order)">{{ order.tableId ? '催菜' : '催单' }}</div>
                                 <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking(order)">查看配送</div>
-                                <div class="act-btn act-primary" v-if="!order.tableId" @click="confirmReceipt(order)">确认收货</div>
+                                <div class="act-btn act-primary" v-if="!order.tableId && order.source !== 'SELF_PICKUP'" @click="confirmReceipt(order)">确认收货</div>
                             </template>
                             <!-- 已完成 -->
                             <template v-if="order.status === 4">

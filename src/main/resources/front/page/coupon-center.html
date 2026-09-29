@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>领券中心 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js?v=20260917"></script>
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
+    <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+    <script src="../js/icon-fallback.js?v=20260917"></script>
+    <style>
+        /* 仅本页券卡片布局，不另建文件；颜色沿用 Vant 默认 */
+        .cc-points-bar { display:flex; align-items:center; justify-content:space-between;
+            background:#fff; border-radius:8px; padding:12px 14px; margin:10px; }
+        .cc-points-bar .pts { font-size:18px; font-weight:600; color:#ee0a24; }
+        .cc-points-bar .go { color:#969799; font-size:13px; }
+        .cc-coupon { display:flex; align-items:stretch; background:#fff; border-radius:8px;
+            margin:0 10px 10px; overflow:hidden; }
+        .cc-left { width:96px; flex:none; background:#ee0a24; color:#fff; display:flex;
+            flex-direction:column; align-items:center; justify-content:center; padding:10px 0; }
+        .cc-left.is-points { background:#ff976a; }
+        .cc-left .big { font-size:22px; font-weight:700; line-height:1.1; }
+        .cc-left .unit { font-size:11px; margin-top:2px; opacity:.9; }
+        .cc-mid { flex:1; padding:10px 12px; min-width:0; }
+        .cc-name { font-size:15px; font-weight:600; color:#323233;
+            overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+        .cc-cond { font-size:12px; color:#969799; margin-top:4px; }
+        .cc-exp { font-size:11px; color:#c8c9cc; margin-top:6px; }
+        .cc-right { flex:none; display:flex; align-items:center; padding:0 12px; }
+        .cc-empty { text-align:center; color:#969799; padding:50px 0; font-size:13px; }
+    </style>
+</head>
+<body>
+    <div id="app" class="app">
+        <cend-shell title="领券中心" light :show-back="true" :show-home="true">
+            <div class="cc-points-bar">
+                <div>
+                    <div class="pts">{{ points }}</div>
+                    <div class="go">我的积分</div>
+                </div>
+                <div class="go">积分可兑换专属优惠券</div>
+            </div>
+
+            <van-tabs v-model="activeTab" sticky offset-top="0">
+                <van-tab title="可领券">
+                    <div style="height:10px"></div>
+                    <div v-if="available.length===0" class="cc-empty">暂无可领取的优惠券</div>
+                    <div class="cc-coupon" v-for="t in available" :key="'a'+t.id">
+                        <div :class="['cc-left', isPoints(t)?'is-points':'']">
+                            <div class="big">{{ couponValue(t) }}</div>
+                            <div class="unit">{{ isPoints(t) ? ('需'+t.pointsPrice+'积分') : '优惠券' }}</div>
+                        </div>
+                        <div class="cc-mid">
+                            <div class="cc-name">{{ t.name }}</div>
+                            <div class="cc-cond">{{ couponCondition(t) }}</div>
+                            <div class="cc-cond" v-if="!isPoints(t)">剩余 {{ t.remainCount }} 张</div>
+                            <div class="cc-exp">领取后 {{ t.validDays }} 天内有效</div>
+                        </div>
+                        <div class="cc-right">
+                            <van-button size="small" round :type="isPoints(t)?'warning':'danger'"
+                                        :loading="busyId===t.id" @click="isPoints(t)?exchange(t):claim(t)">
+                                {{ isPoints(t) ? '积分兑换' : '免费领取' }}
+                            </van-button>
+                        </div>
+                    </div>
+                </van-tab>
+
+                <van-tab title="我的券">
+                    <div style="height:10px"></div>
+                    <div v-if="my.length===0" class="cc-empty">您还没有优惠券，快去领取吧</div>
+                    <div class="cc-coupon" v-for="c in my" :key="'m'+c.id">
+                        <div class="cc-left">
+                            <div class="big">{{ couponValue(c) }}</div>
+                            <div class="unit">优惠券</div>
+                        </div>
+                        <div class="cc-mid">
+                            <div class="cc-name">{{ c.name }}</div>
+                            <div class="cc-cond">{{ couponCondition(c) }}</div>
+                            <div class="cc-exp">有效期至 {{ fmtDate(c.expireTime) }}</div>
+                        </div>
+                        <div class="cc-right">
+                            <van-tag :type="statusType(c.status)">{{ statusText(c.status) }}</van-tag>
+                        </div>
+                    </div>
+                </van-tab>
+            </van-tabs>
+        </cend-shell>
+    </div>
+
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="./../js/vant.min.js"></script>
+    <script src="./../js/components-cend.js?v=20260922"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js?v=20260927"></script>
+    <script src="./../api/member-center.js?v=20260929"></script>
+    <script src="./../api/coupon.js?v=20260929"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data: function () {
+                return {
+                    activeTab: 0,
+                    points: 0,
+                    available: [],
+                    my: [],
+                    busyId: null
+                };
+            },
+            mounted: function () {
+                this.loadPoints();
+                this.loadAvailable();
+            },
+            methods: {
+                isPoints: function (t) {
+                    return t && t.pointsPrice && Number(t.pointsPrice) > 0;
+                },
+                // 兼容两种口径：枚举字符串 DISCOUNT 与数字码 "2"（库内 1=满减券，2=折扣券）
+                isDiscount: function (t) {
+                    return t && (t.type === 'DISCOUNT' || t.type === '2' || t.type === 2);
+                },
+                couponValue: function (t) {
+                    if (this.isDiscount(t)) {
+                        var r = Number(t.discountRate || 0);
+                        var txt = (r * 10).toFixed(1);
+                        return txt.replace(/\.0$/, '') + '折';
+                    }
+                    return '¥' + Number(t.discountAmount || 0).toFixed(0);
+                },
+                couponCondition: function (t) {
+                    if (this.isDiscount(t)) {
+                        return '折扣券';
+                    }
+                    var c = Number(t.conditionAmount || 0);
+                    return c > 0 ? '满' + c.toFixed(0) + '元可用' : '无门槛';
+                },
+                fmtDate: function (s) {
+                    if (!s) return '-';
+                    return String(s).replace('T', ' ').substring(0, 10);
+                },
+                statusText: function (s) {
+                    if (s === 'unused') return '未使用';
+                    if (s === 'used') return '已使用';
+                    return '已过期';
+                },
+                statusType: function (s) {
+                    if (s === 'unused') return 'success';
+                    if (s === 'used') return 'primary';
+                    return 'default';
+                },
+                loadPoints: function () {
+                    var self = this;
+                    getMyMemberInfo().then(function (res) {
+                        if (res.code === 1 && res.data && res.data.member) {
+                            self.points = Number(res.data.member.points || 0);
+                        }
+                    }).catch(function () {});
+                },
+                loadAvailable: function () {
+                    var self = this;
+                    getAvailableCouponsFront().then(function (res) {
+                        if (res.code === 1) self.available = res.data || [];
+                    }).catch(function () {});
+                },
+                loadMy: function () {
+                    var self = this;
+                    getMyCouponsFront().then(function (res) {
+                        if (res.code === 1) self.my = res.data || [];
+                    }).catch(function () {});
+                },
+                claim: async function (t) {
+                    if (this.busyId) return;
+                    this.busyId = t.id;
+                    try {
+                        var res = await claimCouponFront(t.id);
+                        if (res.code === 1) {
+                            vant.Toast.success('领取成功');
+                            this.loadAvailable();
+                            this.loadMy();
+                        } else {
+                            vant.Toast.fail(res.msg || '领取失败');
+                        }
+                    } catch (e) {
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    }
+                    this.busyId = null;
+                },
+                exchange: async function (t) {
+                    if (this.busyId) return;
+                    this.busyId = t.id;
+                    try {
+                        var res = await exchangeCouponFront(t.id);
+                        if (res.code === 1) {
+                            vant.Toast.success('兑换成功');
+                            this.loadPoints();
+                            this.loadAvailable();
+                            this.loadMy();
+                        } else {
+                            vant.Toast.fail(res.msg || '兑换失败');
+                        }
+                    } catch (e) {
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    }
+                    this.busyId = null;
+                }
+            },
+            watch: {
+                activeTab: function (v) {
+                    if (v === 1) this.loadMy();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

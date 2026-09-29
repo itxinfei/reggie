@@ -304,6 +304,8 @@
             { prop: 'position', label: '岗位', minWidth: 90 },
             { prop: 'username', label: '账号', width: 100 },
             { prop: 'phone', label: '手机号', width: 120, align: 'center' },
+            // 修改点(P1-1)：RBAC 角色（由 employee_role 关联回填；不再展示已失效的 role 数字字段）
+            { prop: 'roleNames', label: '角色', minWidth: 120, align: 'center', slot: true },
             { prop: 'status', label: '状态', width: 80, align: 'center', slot: true }
           ],
              // 数据统计

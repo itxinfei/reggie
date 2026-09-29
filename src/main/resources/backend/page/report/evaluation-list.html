@@ -237,7 +237,7 @@
           <div class="detail-row"><span class="dlabel">评价ID</span><span class="dvalue">{{ detailData.id }}</span></div>
           <div class="detail-row"><span class="dlabel">菜品</span><span class="dvalue">{{ detailData.dishName }}</span></div>
           <div class="detail-row"><span class="dlabel">评分</span>
-            <span class="dvalue"><div class="eval-stars" style="display:inline-flex;" role="img" aria-label="评分 {{ detailData.starRating }} 分"><span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (detailData.starRating || 0) }">★</span></div> {{ detailData.starRating }} 分</span></div>
+            <span class="dvalue"><div class="eval-stars" style="display:inline-flex;" role="img" :aria-label="'评分 ' + (detailData.starRating || 0) + ' 分'"><span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= (detailData.starRating || 0) }">★</span></div> {{ detailData.starRating }} 分</span></div>
           <div class="detail-row"><span class="dlabel">评价人</span><span class="dvalue">{{ detailData.userName || ('用户#' + detailData.userId) }}</span></div>
           <div class="detail-row"><span class="dlabel">评价时间</span><span class="dvalue">{{ formatDate(detailData.createTime) }}</span></div>
           <div class="detail-row"><span class="dlabel">审核状态</span>

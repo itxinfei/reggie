@@ -170,6 +170,8 @@ CREATE TABLE IF NOT EXISTS orders (
   new_customer_discount_amount decimal(10,2) NULL DEFAULT 0.00 COMMENT '新客立减金额（新客活动扣减，未享受为0）',
   remark varchar(100) NULL DEFAULT NULL COMMENT '备注',
   internal_remark varchar(500) NULL DEFAULT NULL COMMENT '内部备注（仅后台可见）',
+  cancel_reason varchar(255) NULL DEFAULT NULL COMMENT '取消/拒单原因（P0-5 回执，顾客端可见；不再覆盖 remark）',
+  pickup_code varchar(16) NULL DEFAULT NULL COMMENT '取餐码（P0-6 核销：派单/抢单时生成，骑手取餐须校验）',
   expect_delivery_time varchar(20) NULL DEFAULT NULL COMMENT '预送达时间',
   user_name varchar(50) NULL DEFAULT NULL COMMENT '用户',
   phone varchar(255) NULL DEFAULT NULL COMMENT '手机',

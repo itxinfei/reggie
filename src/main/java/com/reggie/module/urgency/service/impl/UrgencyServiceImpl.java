@@ -75,6 +75,10 @@ public class UrgencyServiceImpl implements UrgencyService {
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    /** 骑手消息服务（顾客催单时提醒在途骑手，失败不阻塞催单结果） */
+    @Autowired(required = false)
+    private com.reggie.module.delivery.service.RiderMessageService riderMessageService;
+
     /** 每人每天最大催单次数 */
     private static final int MAX_URGENCY_PER_DAY = 3;
 
@@ -230,6 +234,18 @@ public class UrgencyServiceImpl implements UrgencyService {
             // 通知店长；控制台短信模式仅打印不调接口，异常已在 notifyManagers 内兜底，不影响催单结果
             notifyManagers(tenantId, "顾客催单提醒",
                     "顾客对订单 " + tail(order.getNumber()) + " 发起催单，请尽快处理");
+            // 修改点(P0-4)：订单已有骑手在途则同步提醒骑手（宽异常兜底，失败不影响催单结果）
+            if (riderMessageService != null && order.getRiderId() != null) {
+                try {
+                    riderMessageService.send(order.getRiderId(), tenantId,
+                            com.reggie.module.delivery.model.RiderMessage.TYPE_URGENCY,
+                            "顾客催单提醒",
+                            "顾客对订单 " + tail(order.getNumber()) + " 发起催单，请尽快送达", orderId);
+                } catch (Exception e) {
+                    log.error("[骑手消息] 催单提醒写入失败，不影响催单结果: orderId={}, msg={}",
+                            orderId, e.getMessage(), e);
+                }
+            }
         }
         return triggered;
     }

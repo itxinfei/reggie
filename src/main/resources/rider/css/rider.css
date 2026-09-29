@@ -214,6 +214,24 @@ html, body {
   text-align: center;
 }
 
+/* 登录辅助行：记住我 + 忘记密码（功能布局，默认字色与品牌主色） */
+.login-extra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 10px 0;
+  font-size: var(--font-size-sm);
+}
+
+.forgot-link,
+.code-link {
+  color: var(--color-primary-dark);
+}
+
+.code-link.disabled {
+  color: var(--color-text-hint);
+}
+
 /* 顶部状态条：当前骑手与上下线 */
 .rider-statusbar {
   display: flex;
@@ -292,6 +310,41 @@ html, body {
 .nav-logout { font-size: var(--font-size-md); }
 .online-label { margin-right: 8px; font-size: var(--font-size-md); }
 .history-status { font-size: var(--font-size-sm); color: var(--color-text-hint); }
+
+/* ================================================================
+   骑手异常上报 / 转单弹窗（P0-3，2026-09-28）
+   ================================================================ */
+.exc-pop { padding: 18px 16px 24px; }
+.exc-pop .exc-title { font-size: var(--font-size-lg); font-weight: 600; color: var(--color-text-primary); margin-bottom: 14px; }
+.exc-pop .exc-types { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.exc-pop .exc-type {
+  padding: 6px 12px; border-radius: 16px; font-size: var(--font-size-sm);
+  background: var(--bg-hover); color: var(--color-text-secondary); cursor: pointer;
+}
+.exc-pop .exc-type.on { background: var(--color-primary-tint); color: var(--color-primary-text-strong); }
+.exc-pop .exc-actions { display: flex; gap: 12px; margin-top: 16px; }
+.exc-pop .tr-list { max-height: 40vh; overflow-y: auto; margin-bottom: 8px; }
+.exc-pop .tr-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px; border-radius: 10px; margin-bottom: 8px; cursor: pointer;
+  background: var(--bg-hover); color: var(--color-text-primary);
+}
+.exc-pop .tr-item.on { background: var(--color-primary-tint); color: var(--color-primary-text-strong); }
+
+/* 取餐核销提示（P0-6） */
+.pickup-code-tip {
+  margin-top: 8px; text-align: center;
+  font-size: var(--font-size-sm); color: var(--color-text-hint);
+}
+
+/* 消息中心未读角标（P0-4） */
+.msg-badge {
+  display: inline-block; min-width: 18px; height: 18px; line-height: 18px;
+  margin-left: 6px; padding: 0 5px; border-radius: 9px;
+  background: var(--color-danger); color: var(--color-text-white);
+  font-size: var(--font-size-sm); text-align: center; vertical-align: middle;
+}
+.exc-pop .tr-item small { color: var(--color-text-hint); }
 /* 登录页：主按钮贴左右、无侧间距 */
 .login-wrap .rider-actions { margin-left: 0; margin-right: 0; }
 

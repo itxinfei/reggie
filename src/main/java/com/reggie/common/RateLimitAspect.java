@@ -18,7 +18,7 @@ import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * 限流切面
@@ -56,20 +56,22 @@ public class RateLimitAspect {
 
     /**
      * 本地内存降级窗口（fail-safe，而非 fail-open）：
-     * key = 限流Key，值 = 窗口内的累计请求数。
-     * Redis 故障时用 ConcurrentHashMap 兜底计数，保证限流在 Redis 恢复前依然生效；
-     * 本地窗口按注解 time 秒滑动，30s 熔断结束后自动回到 Redis。
+     * key = 限流Key，值 = 滑动窗口内的请求时间戳集合。
+     * Redis 故障时用 ConcurrentHashMap + 时间戳双端队列兜底计数，保证限流在 Redis 恢复前依然生效；
+     * 每次检查移除窗口外的旧时间戳，计数随时间自然衰减，避免计数器只增不减导致 Redis 恢复前永久 429。
+     * 30s 熔断结束后自动回到 Redis。
      * 注：本地降级是进程内近似计数（多实例部署时各实例独立），仅作兜底，
      * 精度不及 Redis 滑动窗口，但绝不允许"Redis 挂了直接放行"。
      */
     private final ConcurrentHashMap<String, LocalWindow> localWindow = new ConcurrentHashMap<>();
 
     /**
-     * 本地内存窗口：进入窗口时记 count=1 并记入窗时间，随后按 limit 上限/时间窗判定。
+     * 本地内存滑动窗口：记录窗口内每次请求的时间戳（毫秒）。
+     * 检查时限时移除 windowMs 之外的旧时间戳，使计数随真实时间衰减；
+     * 窗口大小由注解 time() 决定，语义与 Redis 滑动窗口一致（允许 maxRequestsPerSecond 次/窗口）。
      */
     static class LocalWindow {
-        final AtomicInteger count = new AtomicInteger(0);
-        volatile long windowStartMs;
+        final ConcurrentLinkedDeque<Long> timestamps = new ConcurrentLinkedDeque<>();
     }
 
     /**
@@ -175,26 +177,19 @@ public class RateLimitAspect {
                 log.error("限流检查异常（Redis连接问题），降级本地内存限流30s：{}",
                         e.getMessage(), e);
             }
-            // 本地窗口计数判定：窗口按 rateLimit.time() 秒滑动，窗口起始时间取首次计数时刻，
-            // 超过 time 秒则重置窗口；否则累计。命中即抛 429，绝不静默放行。
+            // 本地滑动窗口计数判定：移除窗口外的旧时间戳后，若窗口内请求数已达阈值则抛 429。
+            // 滑动窗口随时间自然衰减，不会像"只增不减计数器"那样在 Redis 恢复前永久拦截接口。
             long windowMs = (long) rateLimit.time() * 1000L;
-            long ts = System.currentTimeMillis();
-            LocalWindow lw = localWindow.computeIfAbsent(limitKey, k -> {
-                LocalWindow w = new LocalWindow();
-                w.windowStartMs = ts;
-                return w;
-            });
-            int localCount = lw.count.incrementAndGet();
-            if (ts - lw.windowStartMs > windowMs) {
-                // 窗口过期：重置为当前窗口计数 1
-                lw.windowStartMs = ts;
-                lw.count.set(1);
-                localCount = 1;
-            }
-            if (localCount > rateLimit.maxRequestsPerSecond()) {
-                log.warn("本地降级限流触发 - 请求数：{}/{}，Key：{}",
-                        localCount, rateLimit.maxRequestsPerSecond(), limitKey);
-                throw new RateLimitExceededException("请求过于频繁，请稍后重试");
+            LocalWindow lw = localWindow.computeIfAbsent(limitKey, k -> new LocalWindow());
+            synchronized (lw) {
+                // 移除超出窗口时长的旧时间戳（ConcurrentLinkedDeque 在同步块内操作，保证线程安全）
+                lw.timestamps.removeIf(ts -> now - ts > windowMs);
+                if (lw.timestamps.size() >= rateLimit.maxRequestsPerSecond()) {
+                    log.warn("本地降级限流触发 - 请求数：{}/{}，Key：{}",
+                            lw.timestamps.size(), rateLimit.maxRequestsPerSecond(), limitKey);
+                    throw new RateLimitExceededException("请求过于频繁，请稍后重试");
+                }
+                lw.timestamps.add(now);
             }
         }
 

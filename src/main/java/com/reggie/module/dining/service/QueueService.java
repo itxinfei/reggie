@@ -25,6 +25,32 @@ public interface QueueService extends IService<QueueRecord> {
     QueueRecord takeNumber(Integer seatCount, String phone);
 
     /**
+     * C 端顾客自助取号（携带用户ID，便于查询/取消归属校验）
+     *
+     * @param seatCount 就座人数
+     * @param phone     顾客手机号
+     * @param userId    顾客用户ID
+     * @return 排队记录
+     */
+    QueueRecord takeNumber(Integer seatCount, String phone, Long userId);
+
+    /**
+     * 顾客取消自己的排队（WAITING/CALLED 均可），非本人记录抛业务异常
+     *
+     * @param id     排队记录ID
+     * @param userId 顾客用户ID
+     */
+    void cancelMyQueue(Long id, Long userId);
+
+    /**
+     * 前面还在等待的桌数（同租户 WAITING 且取号早于本条），供顾客端展示进度
+     *
+     * @param queueId 排队记录ID
+     * @return 等待桌数；记录不存在返回 0
+     */
+    long countWaitingAhead(Long queueId);
+
+    /**
      * 叫号（按座位数匹配下一位排队顾客）
      *
      * @param seatCount 可提供的座位数

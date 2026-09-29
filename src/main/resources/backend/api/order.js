@@ -86,8 +86,8 @@ const getOrderStatistics = (params) => {
   })
 }
 
-// 取消订单
-const cancelOrder = (params) => {
+// 取消订单（状态机，已支付自动退款）
+const cancelOrderApi = (params) => {
   return $axios({
     url: '/order/cancel',
     method: 'put',
@@ -96,7 +96,7 @@ const cancelOrder = (params) => {
 }
 
 // 确认订单（接单）
-const confirmOrder = (params) => {
+const confirmOrderApi = (params) => {
   return $axios({
     url: '/order/confirm',
     method: 'put',
@@ -105,7 +105,7 @@ const confirmOrder = (params) => {
 }
 
 // 拒绝订单
-const rejectOrder = (params) => {
+const rejectOrderApi = (params) => {
   return $axios({
     url: '/order/reject',
     method: 'put',
@@ -114,11 +114,20 @@ const rejectOrder = (params) => {
 }
 
 // 完成订单
-const completeOrder = (params) => {
+const completeOrderApi = (params) => {
   return $axios({
     url: '/order/complete',
     method: 'put',
     params: params
+  })
+}
+
+// 店员核销自提订单（校验取餐码）
+const verifySelfPickupApi = (data) => {
+  return $axios({
+    url: '/order/selfPickup/verify',
+    method: 'put',
+    data: data
   })
 }
 

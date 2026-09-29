@@ -20,7 +20,9 @@ public enum OrderSource {
     /** 排队取号 */
     QUEUE("QUEUE", "排队"),
     /** 预订到店 */
-    RESERVATION("RESERVATION", "预订");
+    RESERVATION("RESERVATION", "预订"),
+    /** 到店自提 */
+    SELF_PICKUP("SELF_PICKUP", "到店自提");
 
     private final String value;
     private final String desc;

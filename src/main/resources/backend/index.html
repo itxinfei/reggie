@@ -74,7 +74,7 @@
               :text-color="menuTextColor"
               :active-text-color="menuActiveColor"
             >
-              <div v-for="item in menuList" :key="item.id">
+              <div v-for="item in visibleMenuList" :key="item.id">
                 <el-submenu :index="item.id" v-if="item.children && item.children.length>0">
                   <template slot="title">
                     <i :class="item.icon"></i>
@@ -214,6 +214,7 @@
     <script src="js/request.js?v=20260926"></script>
     <script src="js/components.js?v=20260924"></script>
     <script src="./api/login.js?v=20260926"></script>
+    <script src="./api/sys.js?v=20260928"></script>
     <script src="./api/employee.js?v=20260922"></script>
     <script>
 
@@ -255,6 +256,7 @@
                 { id: '3-8', name: '支付渠道配置', url: 'page/payment/channel-config.html', icon: 'ri-bank-card-line' },
                 { id: '3-5', name: '收银台', url: 'page/cashier/index.html', icon: 'ri-money-cny-circle-line' },
                 { id: '3-6', name: '收银日结', url: 'page/cashier/daily-settlement.html', icon: 'ri-calendar-check-line' },
+                { id: '3-9', name: '打印记录', url: 'page/printer/task-list.html', icon: 'ri-file-history-line' },
               ]},
 
               /* ──4. 堂食管理（4 项）── */
@@ -263,7 +265,6 @@
                 { id: '4-2', name: '区域管理', url: 'page/dining/area-list.html', icon: 'ri-map-pin-2-line' },
                 { id: '4-3', name: '排队管理', url: 'page/dining/queue-list.html', icon: 'ri-ticket-line' },
                 { id: '4-4', name: '预订管理', url: 'page/dining/reservation-list.html', icon: 'ri-calendar-check-line' },
-                { id: '4-6', name: '打印记录', url: 'page/printer/task-list.html', icon: 'ri-file-history-line' },
               ]},
 
               /* ──5. 履约配送（3 项，新增骑手管理）── */
@@ -312,10 +313,9 @@
                 { id: '11-6', name: '智能营销', url: 'page/recommend/campaigns.html', icon: 'ri-lightbulb-flash-line' },
               ]},
 
-              /* ──7. 数据报表（8 项，合并报表+导出+支付分析）── */
+              /* ──7. 数据报表（7 项，合并报表+导出+支付分析；原经营报表与日报/销售报表重叠已下线）── */
               { id: '7', name: '数据报表', icon: 'ri-bar-chart-line', children: [
                 { id: '7-1', name: '营业日报', url: 'page/report/daily.html', icon: 'ri-file-chart-line' },
-                { id: '7-2', name: '经营报表', url: 'page/report/business-report.html', icon: 'ri-line-chart-line' },
                 { id: '7-3', name: '销售报表', url: 'page/report/sales-report.html', icon: 'ri-bar-chart-grouped-line' },
                 { id: '7-4', name: '菜品排行', url: 'page/report/dish-ranking.html', icon: 'ri-trophy-line' },
                 { id: '7-5', name: '时段分析', url: 'page/report/time-slot.html', icon: 'ri-time-line' },
@@ -330,14 +330,18 @@
                 { id: '8-2', name: '菜品成本', url: 'page/cost/dish-cost.html', icon: 'ri-restaurant-line' },
                 { id: '8-3', name: '提现管理', url: 'page/finance/withdrawal.html', icon: 'ri-bank-card-2-line' },
                 { id: '8-4', name: '发票管理', url: 'page/finance/invoice-list.html', icon: 'ri-receipt-line' },
+                { id: '8-5', name: '骑手提现', url: 'page/delivery/rider-withdrawal.html', icon: 'ri-bike-line' },
+                { id: '8-6', name: '骑手评价', url: 'page/delivery/rider-evaluation.html', icon: 'ri-star-line' },
+                { id: '8-7', name: '骑手异常', url: 'page/delivery/rider-exception.html', icon: 'ri-alert-line' },
               ]},
 
-              /* ──9. 系统设置（13 项，精简+合并扩展功能）── */
+              /* ──9. 系统设置（14 项，精简+合并扩展功能）── */
               { id: '9', name: '系统设置', icon: 'ri-settings-3-line', children: [
-                { id: '9-16', name: '租户管理', url: 'page/tenant/list.html?v=20260922', icon: 'ri-building-2-line' },
+                { id: '9-16', name: '租户管理', url: 'page/tenant/list.html?v=20260922', icon: 'ri-building-2-line', roles: ['SUPER_ADMIN'] },
                 { id: '9-17', name: '门店管理', url: 'page/store/list.html', icon: 'ri-store-line' },
+                { id: '9-18', name: '总部看板', url: 'page/store/dashboard.html', icon: 'ri-bar-chart-box-line' },
                 { id: '9-1', name: '员工管理', url: 'page/employee/list.html?v=20260922', icon: 'ri-user-settings-line' },
-                { id: '9-2', name: '角色管理', url: 'page/sys/role-list.html', icon: 'ri-shield-user-line' },
+                { id: '9-2', name: '角色管理', url: 'page/sys/role-list.html', icon: 'ri-shield-user-line', roles: ['SUPER_ADMIN'] },
                 { id: '9-3', name: '考勤管理', url: 'page/attendance/attendance.html', icon: 'ri-calendar-check-line' },
                 { id: '9-15', name: '排班管理', url: 'page/schedule/schedule.html', icon: 'ri-calendar-schedule-line' },
                 { id: '9-4', name: '客服管理', url: 'page/customer-service/list.html', icon: 'ri-customer-service-2-line' },
@@ -358,13 +362,41 @@
             timer: null,
             loadingSince: 0,  // 本次切页遮罩显示时刻（用于最短 200ms 防闪）
             navHistory: [],  // 导航历史栈，用于返回按钮
+            // 修改点(P1-1)：菜单按角色过滤所需（角色标识 / 超管标识 / 权限集合）
+            roleKey: '',
+            isSuperAdmin: false,
+            permSet: new Set()
           }
         },
         computed: {
           // 扁平化全部叶子菜单，供命令面板检索（兼容二级与三级菜单）
+          // 修改点(P1-1)：按角色/权限过滤菜单（仅 UX 收敛，越权仍由后端注解拦截）
+          visibleMenuList() {
+            const self = this
+            const allow = function (node) {
+              if (!node) return false
+              if (self.isSuperAdmin) return true
+              if (node.roles && node.roles.length) {
+                return !!self.roleKey && node.roles.indexOf(self.roleKey) !== -1
+              }
+              if (node.perm) {
+                return !!self.permSet && self.permSet.has(node.perm)
+              }
+              // 无显式限制：保留原有可见范围（风险控制：不误伤旧角色）
+              return true
+            }
+            const out = []
+            self.menuList.forEach(function (group) {
+              if (group.roles && group.roles.length && !allow(group)) return
+              const kids = (group.children || []).filter(allow)
+              if (kids.length) out.push(Object.assign({}, group, { children: kids }))
+            })
+            // 兜底：若过滤后为空（异常/无权限）则回退全量，避免整个后台不可用
+            return out.length ? out : self.menuList
+          },
           flatMenuList() {
             const result = []
-            this.menuList.forEach(function (group) {
+            this.visibleMenuList.forEach(function (group) {
               const kids = group.children || []
               kids.forEach(function (leaf) {
                 if (leaf.url) {
@@ -408,8 +440,8 @@
               }
               return false
             }
-            if (!walk(this.menuList, [])) {
-              const currentItem = this.menuList.find(item =>
+            if (!walk(this.visibleMenuList, [])) {
+              const currentItem = this.visibleMenuList.find(item =>
                 item.children && item.children.some(sub => sub.id === this.menuActived)
               )
               if (currentItem && currentItem.children) {
@@ -439,11 +471,12 @@
             return
           }
           this.loadCurrentEmployee()
+          this.loadMenuAccess()
           this.showLoading()
         },
         mounted() {
           // 修改点：将菜单数据与处理方法暴露到全局，供 iframe 内页面通过 window.parent 调用
-          window.menuList = this.menuList
+          window.menuList = this.visibleMenuList
           window.menuHandle = this.menuHandle
           // 修改点(2026-08-12)：监听子页面发来的未登录信号，统一由顶层窗口跳转登录页，
           // 防止登录页被嵌套在 iframe（数据区）内
@@ -458,6 +491,22 @@
         methods: {
           imgUrl(name) {
             return imgPath(name)
+          },
+          // 修改点(P1-1)：拉取当前员工角色与权限，驱动菜单按角色过滤。
+          // 请求失败时保持 permSet 为空但不过滤失败——visibleMenuList 已做全量回退，
+          // 且菜单过滤仅 UX 收敛，真正的越权拦截由后端注解保证。
+          loadMenuAccess() {
+            const self = this
+            sysApi.menuAccess().then(function (res) {
+              if (res && res.code === 1 && res.data) {
+                const d = res.data
+                self.roleKey = d.roleKey || ''
+                self.isSuperAdmin = !!d.isSuperAdmin
+                self.permSet = new Set(d.permissions || [])
+              }
+            }).catch(function (err) {
+              console.warn('[index] 菜单权限加载失败，菜单不做角色收敛:', err)
+            })
           },
           // 拉取当前登录员工最新资料（头像/工号/岗位），失败时静默用 localStorage 兜底
           loadCurrentEmployee() {
@@ -540,7 +589,7 @@
           },
           goHome() {
             this.navHistory = []  // 回到首页清空历史
-            const homeMenu = this.menuList.find(item => item.id === '1')
+            const homeMenu = this.visibleMenuList.find(item => item.id === '1')
             if (homeMenu) {
               this.menuActived = homeMenu.id
               this.iframeUrl = homeMenu.url

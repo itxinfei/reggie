@@ -210,6 +210,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         StoreInfo storeInfo = (storeService != null) ? storeService.findByTenantId(currentTenantId) : null;
         boolean deliveryCheckEnabled = deliveryEnhancedService != null && storeInfo != null
                 && storeInfo.getIsDeliveryEnabled() != null && storeInfo.getIsDeliveryEnabled() == 1;
+        // 修改点（P1-2 自提）：自提单无地址、无配送，强制关闭配送校验，避免空地址 NPE
+        boolean isSelfPickup = com.reggie.enums.OrderSource.SELF_PICKUP.getValue().equals(orders.getSource());
+        if (isSelfPickup) {
+            deliveryCheckEnabled = false;
+        }
 
         long orderId = IdWorker.getId();//订单号
 
@@ -265,21 +270,29 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         if (user == null) {
             throw new CustomException("用户信息不存在，不能下单");
         }
-        Long addressBookId = orders.getAddressBookId();
-        if (addressBookId == null) {
-            throw new CustomException("请选择收货地址");
-        }
-        AddressBook addressBook = addressBookService.getById(addressBookId);
-        if (addressBook == null) {
-            throw new CustomException("用户地址信息有误，不能下单");
-        }
-        // 归属校验：禁止用他人地址下单（previewDeliveryFee 已有此校验，submit 此前缺失，口径对齐）
-        if (addressBook.getUserId() == null || !userId.equals(addressBook.getUserId())) {
-            throw new CustomException("收货地址不属于当前用户");
+        // 修改点（P1-2 自提）：自提单无需收货地址，跳过地址簿校验，返回空地址供下游按 source 分支处理
+        boolean isSelfPickup = com.reggie.enums.OrderSource.SELF_PICKUP.getValue().equals(orders.getSource());
+        if (!isSelfPickup) {
+            Long addressBookId = orders.getAddressBookId();
+            if (addressBookId == null) {
+                throw new CustomException("请选择收货地址");
+            }
+            AddressBook addressBook = addressBookService.getById(addressBookId);
+            if (addressBook == null) {
+                throw new CustomException("用户地址信息有误，不能下单");
+            }
+            // 归属校验：禁止用他人地址下单（previewDeliveryFee 已有此校验，submit 此前缺失，口径对齐）
+            if (addressBook.getUserId() == null || !userId.equals(addressBook.getUserId())) {
+                throw new CustomException("收货地址不属于当前用户");
+            }
+            Map<String, Object> holder = new HashMap<>();
+            holder.put("user", user);
+            holder.put("addressBook", addressBook);
+            return holder;
         }
         Map<String, Object> holder = new HashMap<>();
         holder.put("user", user);
-        holder.put("addressBook", addressBook);
+        holder.put("addressBook", null);
         return holder;
     }
 
@@ -791,13 +804,18 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     public CheckoutPreviewDTO previewCheckout(CheckoutPreviewRequestDTO request) {
         Long userId = BaseContext.getCurrentId();
         Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (request == null || request.getAddressBookId() == null) {
-            throw new CustomException("请选择收货地址");
-        }
-        AddressBook addressBook = addressBookService.getById(request.getAddressBookId());
-        // 校验地址归属，防止越权读取/试算他人地址
-        if (addressBook == null || !userId.equals(addressBook.getUserId())) {
-            throw new CustomException("收货地址不可用");
+        // 修改点（P1-2 自提）：自提单无地址，跳过地址校验；其余按原逻辑校验归属
+        boolean isSelfPickup = com.reggie.enums.OrderSource.SELF_PICKUP.getValue().equals(request.getSource());
+        AddressBook addressBook = null;
+        if (!isSelfPickup) {
+            if (request == null || request.getAddressBookId() == null) {
+                throw new CustomException("请选择收货地址");
+            }
+            addressBook = addressBookService.getById(request.getAddressBookId());
+            // 校验地址归属，防止越权读取/试算他人地址
+            if (addressBook == null || !userId.equals(addressBook.getUserId())) {
+                throw new CustomException("收货地址不可用");
+            }
         }
 
         LambdaQueryWrapper<ShoppingCart> wrapper = new LambdaQueryWrapper<>();
@@ -810,6 +828,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         StoreInfo storeInfo = (storeService != null) ? storeService.findByTenantId(currentTenantId) : null;
         boolean deliveryCheckEnabled = deliveryEnhancedService != null && storeInfo != null
                 && storeInfo.getIsDeliveryEnabled() != null && storeInfo.getIsDeliveryEnabled() == 1;
+        // 自提单无配送，关闭配送费/范围核价
+        if (isSelfPickup) {
+            deliveryCheckEnabled = false;
+        }
 
         // 只读核价，不产生任何写；与 submit 共用 computeCheckout
         CheckoutPricing pricing = computeCheckout(carts, IdWorker.getId(), userId, currentTenantId, addressBook,
@@ -904,10 +926,31 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             orders.setIdempotencyKey(generateIdempotencyKey(userId));
         }
         orders.setUserName(user.getName());
-        orders.setConsignee(addressBook.getConsignee());
-        orders.setPhone(addressBook.getPhone());
-        orders.setAddress(joinAddressParts(addressBook.getProvinceName(), addressBook.getCityName(),
-                addressBook.getDistrictName(), addressBook.getDetail()));
+        // 修改点（P1-2 自提）：自提单无收货地址，地址相关字段置空，联系电话取订单/用户手机，
+        // 并在下单时即生成取餐码，供顾客到店向店员出示核销。
+        if (com.reggie.enums.OrderSource.SELF_PICKUP.getValue().equals(orders.getSource())) {
+            orders.setConsignee(null);
+            orders.setAddress(null);
+            if (orders.getPhone() == null || orders.getPhone().trim().isEmpty()) {
+                orders.setPhone(user.getPhone());
+            }
+            orders.setPickupCode(generateSelfPickupCode());
+        } else {
+            orders.setConsignee(addressBook.getConsignee());
+            orders.setPhone(addressBook.getPhone());
+            orders.setAddress(joinAddressParts(addressBook.getProvinceName(), addressBook.getCityName(),
+                    addressBook.getDistrictName(), addressBook.getDetail()));
+        }
+    }
+
+    /**
+     * 生成自提取餐码（P1-2）。与骑手单取餐码(P0-6)同长度、同算法，
+     * 自提单在提交时即生成，顾客下单后即可在订单详情查看并到店出示。
+     *
+     * @return 6 位数字取餐码
+     */
+    private String generateSelfPickupCode() {
+        return cn.hutool.core.util.RandomUtil.randomNumbers(6);
     }
 
     /**
@@ -991,7 +1034,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             }
 
             // 8) 扣减菜品库存
-            this.deductStockForOrder(shoppingCarts);
+            this.deductStockForOrder(shoppingCarts, orders.getId());
             // 9) 清空购物车数据
             shoppingCartService.remove(wrapper);
         } catch (RuntimeException e) {
@@ -1298,7 +1341,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             this.save(orders);
             orderDetailService.saveBatch(orderDetails);
             // 扣减库存
-            this.deductStockForOrderDetails(orderDetails);
+            this.deductStockForOrderDetails(orderDetails, orders.getId());
         } catch (RuntimeException e) {
             // 落库失败时释放幂等锁，允许用户重试
             if (eatInLockAcquired && redisTemplate != null) {
@@ -1339,7 +1382,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      */
     @FunctionalInterface
     private interface StockOperation {
-        boolean apply(Long dishId, BigDecimal qty);
+        boolean apply(Long dishId, BigDecimal qty, Long orderId);
     }
 
     /**
@@ -1352,12 +1395,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      * @param operation  库存操作（扣减或回退）
      * @return 操作是否全部成功
      */
-    private boolean processStockForItems(Long dishId, Long setmealId, BigDecimal quantity, StockOperation operation) {
+    private boolean processStockForItems(Long dishId, Long setmealId, BigDecimal quantity,
+            Long orderId, StockOperation operation) {
         boolean success = true;
 
         // 单品菜品
         if (dishId != null) {
-            if (!operation.apply(dishId, quantity)) {
+            if (!operation.apply(dishId, quantity, orderId)) {
                 success = false;
             }
         }
@@ -1369,7 +1413,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
             List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
             for (SetmealDish sd : setmealDishes) {
                 int copies = sd.getCopies() != null ? sd.getCopies() : 1;
-                if (!operation.apply(sd.getDishId(), quantity.multiply(new BigDecimal(copies)))) {
+                if (!operation.apply(sd.getDishId(), quantity.multiply(new BigDecimal(copies)), orderId)) {
                     success = false;
                 }
             }
@@ -1381,22 +1425,22 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     /**
      * 扣减库存操作（购物车维度）
      */
-    private void deductStockForOrder(List<ShoppingCart> shoppingCarts) {
+    private void deductStockForOrder(List<ShoppingCart> shoppingCarts, Long orderId) {
         for (ShoppingCart item : shoppingCarts) {
             int number = item.getNumber() != null ? item.getNumber() : 1;
             BigDecimal qty = new BigDecimal(number);
-            processStockForItems(item.getDishId(), item.getSetmealId(), qty, this::deductStockAtomicVoid);
+            processStockForItems(item.getDishId(), item.getSetmealId(), qty, orderId, this::deductStockAtomicVoid);
         }
     }
 
     /**
      * 扣减库存操作（订单明细维度）
      */
-    private void deductStockForOrderDetails(List<OrderDetail> orderDetails) {
+    private void deductStockForOrderDetails(List<OrderDetail> orderDetails, Long orderId) {
         for (OrderDetail detail : orderDetails) {
             int number = detail.getNumber() != null ? detail.getNumber() : 1;
             BigDecimal qty = new BigDecimal(number);
-            processStockForItems(detail.getDishId(), detail.getSetmealId(), qty, this::deductStockAtomicVoid);
+            processStockForItems(detail.getDishId(), detail.getSetmealId(), qty, orderId, this::deductStockAtomicVoid);
         }
     }
 
@@ -1404,8 +1448,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
     /**
      * 扣减库存原子操作（void 版本，失败时抛异常）
      */
-    private boolean deductStockAtomicVoid(Long dishId, BigDecimal qty) {
-        deductStockAtomic(dishId, qty);
+    private boolean deductStockAtomicVoid(Long dishId, BigDecimal qty, Long orderId) {
+        deductStockAtomic(dishId, qty, orderId);
         return true;
     }
 
@@ -1413,15 +1457,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      * 使用乐观锁原子扣减菜品库存
      * WHERE stock_qty >= qty，防止并发超卖
      */
-    private void deductStockAtomic(Long dishId, BigDecimal qty) {
+    private void deductStockAtomic(Long dishId, BigDecimal qty, Long orderId) {
         if (dishId == null || qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
         dishService.deductStock(dishId, qty);
         dishService.autoToggleSoldOut(dishId);
-        // 原料库存联动：按 BOM 配方同步扣减原料
+        // 原料库存联动：按 BOM 配方同步扣减原料，并写订单库存流水
         if (materialStockService != null) {
-            materialStockService.deductMaterialStock(dishId, qty);
+            materialStockService.deductMaterialStock(dishId, qty, orderId);
         }
     }
 
@@ -2175,7 +2219,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 BigDecimal unitPrice = dish.getPrice() != null ? dish.getPrice() : BigDecimal.ZERO;
                 detail.setAmount(unitPrice.multiply(BigDecimal.valueOf(qty)));
                 // 扣库存（复用含 BOM 原料联动的原子扣减，原直接 deductStock 漏扣原料）
-                deductStockAtomic(dish.getId(), BigDecimal.valueOf(qty));
+                deductStockAtomic(dish.getId(), BigDecimal.valueOf(qty), orderId);
             } else {
                 Setmeal setmeal = setmealMap.get(item.getSetmealId());
                 if (setmeal == null) { throw new CustomException("套餐不存在: " + item.getSetmealId()); }
@@ -2191,7 +2235,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 for (SetmealDish sd : sdList) {
                     int copies = sd.getCopies() != null ? sd.getCopies() : 1;
                     deductStockAtomic(sd.getDishId(),
-                            BigDecimal.valueOf((long) copies * qty));
+                            BigDecimal.valueOf((long) copies * qty), orderId);
                 }
             }
             newDetails.add(detail);

@@ -95,6 +95,17 @@ public class Orders implements Serializable {
     @TableField("internal_remark")
     private String internalRemark;
 
+    @Schema(description = "取消/拒单原因（P0-5 回执：顾客端可见；独立字段，不覆盖用户下单备注）",
+            example = "商家备货不足")
+    @Size(max = 255, message = "取消原因不能超过255个字符")
+    @TableField("cancel_reason")
+    private String cancelReason;
+
+    @Schema(description = "取餐码（P0-6 核销：派单/抢单时生成，骑手确认取餐时必须校验）", example = "482913")
+    @Size(max = 16, message = "取餐码不合法")
+    @TableField("pickup_code")
+    private String pickupCode;
+
     @Schema(description = "预计送达时间", example = "30分钟内")
     @Size(max = 20, message = "送达时间格式不正确")
     private String expectDeliveryTime;

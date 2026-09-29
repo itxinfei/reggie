@@ -51,4 +51,16 @@ public interface RechargeRecordService extends IService<RechargeRecord> {
      * @return 充值记录，不存在返回 null
      */
     RechargeRecord getByRechargeNo(String rechargeNo);
+
+    /**
+     * 在线支付成功回调：CAS PENDING→SUCCESS、回填渠道流水，然后原子加余额（本金+赠送）。
+     *
+     * <p>幂等口径：充值单已 SUCCESS 直接返回不重复入账；
+     * 充值单已超时取消（CANCELLED）说明支付迟到，不记入账，仅告警人工退款，避免钱与余额错配。</p>
+     *
+     * @param rechargeId     充值记录ID
+     * @param paymentTradeNo 支付单内部交易号
+     * @param channelTradeNo 渠道交易号（mock 下可能为 null）
+     */
+    void handleRechargePaid(Long rechargeId, String paymentTradeNo, String channelTradeNo);
 }

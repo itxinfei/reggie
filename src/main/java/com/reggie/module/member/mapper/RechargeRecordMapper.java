@@ -30,4 +30,18 @@ public interface RechargeRecordMapper extends BaseMapper<RechargeRecord> {
             "confirm_time = NOW(), update_time = NOW() " +
             "WHERE id = #{id} AND status = 'PENDING'")
     int casConfirm(@Param("id") Long id, @Param("employeeId") Long employeeId);
+
+    /**
+     * 在线支付成功定终态（单向状态机 CAS）：PENDING → SUCCESS，并回填渠道交易号。
+     * 与门店确认 {@link #casConfirm} 的区别：本路径由支付回调触发，操作人为系统、写渠道流水。
+     * affected=0 说明已被确认/取消，调用方据此区分「幂等成功」与「支付迟到（已超时取消）」。
+     *
+     * @param id             充值记录ID
+     * @param channelTradeNo 渠道交易号（mock 下可能为 null）
+     * @return 受影响行数，1=支付定终态成功，0=状态已非 PENDING
+     */
+    @Update("UPDATE recharge_record SET status = 'SUCCESS', trade_no = #{channelTradeNo}, " +
+            "confirm_time = NOW(), update_time = NOW() " +
+            "WHERE id = #{id} AND status = 'PENDING'")
+    int casSuccessByPayment(@Param("id") Long id, @Param("channelTradeNo") String channelTradeNo);
 }

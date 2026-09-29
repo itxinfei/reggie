@@ -112,8 +112,25 @@
         <el-form-item label="发票代码" prop="invoiceCode">
           <el-input v-model="issueForm.invoiceCode" placeholder="请输入发票代码" maxlength="32" class="inv-no"></el-input>
         </el-form-item>
-        <el-form-item label="发票PDF地址">
-          <el-input v-model="issueForm.invoiceUrl" placeholder="选填：电子发票 PDF 访问地址" maxlength="500"></el-input>
+        <el-form-item label="发票PDF">
+          <el-upload
+            action="/common/upload"
+            name="file"
+            accept="application/pdf,.pdf"
+            :data="{ bizType: 'invoice' }"
+            :headers="uploadHeaders"
+            :show-file-list="false"
+            :before-upload="beforePdfUpload"
+            :on-success="onPdfSuccess">
+            <el-button size="small" type="primary" plain :loading="pdfUploading">
+              {{ pdfUploading ? '上传中…' : '上传 PDF' }}
+            </el-button>
+          </el-upload>
+          <div v-if="issueForm.invoiceUrl" class="inv-pdf-name">
+            <i class="ri-file-pdf-2-line"></i>{{ pdfFileName }}
+            <el-button type="text" size="mini" @click="removePdf">移除</el-button>
+          </div>
+          <div v-else class="inv-pdf-hint">选传：电子发票票面 PDF，不超过 5MB</div>
         </el-form-item>
       </el-form>
       <div class="inv-tip">开具后顾客可在订单详情查看电子发票。</div>
@@ -172,6 +189,7 @@
           issueDialogVisible: false,
           currentRow: null,
           issueForm: { invoiceNo: '', invoiceCode: '', invoiceUrl: '' },
+          pdfUploading: false,
           issueRules: {
             invoiceNo: [{ required: true, whitespace: true, message: '请输入发票号码', trigger: 'blur' }],
             invoiceCode: [{ required: true, whitespace: true, message: '请输入发票代码', trigger: 'blur' }]
@@ -187,6 +205,18 @@
             { key: '2', icon: 'ri-checkbox-circle-line', label: '已开具', value: self.stats.issued || 0, color: 'success', clickable: true, active: self.activeFilter === '2' },
             { key: '3', icon: 'ri-close-circle-line', label: '已作废', value: self.stats.voided || 0, color: 'danger', clickable: true, active: self.activeFilter === '3' }
           ]
+        },
+        // el-upload 绕过 axios，手动带 CSRF Token
+        uploadHeaders: function() {
+          var token = (typeof window.getCsrfToken === 'function') ? window.getCsrfToken() : ''
+          return { 'X-CSRF-Token': token || '' }
+        },
+        // 已上传 PDF 的文件名（从相对路径末段取）
+        pdfFileName: function() {
+          var url = this.issueForm.invoiceUrl || ''
+          if (!url) return ''
+          var seg = url.split('/')
+          return seg[seg.length - 1]
         }
       },
       created: function() {
@@ -335,13 +365,43 @@
             })
           }).catch(function(err) { console.warn('[invoice] 作废操作取消或失败:', err) })
         },
-        // 查看发票 PDF（新窗口打开，POST 后使用后端返回链接）
+        // ========== 发票 PDF 上传（P2-5） ==========
+        beforePdfUpload: function(file) {
+          var suffix = file.name.split('.').pop().toLowerCase()
+          if (suffix !== 'pdf') {
+            ReggieUI.error('仅支持 PDF 格式')
+            return false
+          }
+          if (file.size > 5 * 1024 * 1024) {
+            ReggieUI.error('PDF 大小不能超过 5MB')
+            return false
+          }
+          this.pdfUploading = true
+          return true
+        },
+        onPdfSuccess: function(response) {
+          this.pdfUploading = false
+          if (response && String(response.code) === '1' && response.data) {
+            this.issueForm.invoiceUrl = response.data
+            ReggieUI.success('PDF 上传成功')
+          } else {
+            ReggieUI.error((response && response.msg) || '上传失败，请重试')
+          }
+        },
+        removePdf: function() {
+          this.issueForm.invoiceUrl = ''
+        },
+        // 查看发票 PDF：本系统上传为相对路径，经 /common/download 鉴权访问；历史外链直接打开
         openInvoiceUrl: function(url) {
           if (!url) {
             ReggieUI.info('该发票暂未上传票面文件')
             return
           }
-          window.open(url, '_blank', 'noopener,noreferrer')
+          if (/^https?:\/\//i.test(url)) {
+            window.open(url, '_blank', 'noopener,noreferrer')
+            return
+          }
+          window.open('/common/download?name=' + encodeURIComponent(url), '_blank', 'noopener,noreferrer')
         }
       }
     })

@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS coupon_template (
   total_count int NULL DEFAULT 0 COMMENT '发放总数',
   remain_count int NULL DEFAULT 0 COMMENT '剩余数量',
   valid_days int NULL DEFAULT NULL COMMENT '有效天数',
+  points_price int NULL DEFAULT NULL COMMENT '积分兑换所需积分',
   status int NULL DEFAULT 1 COMMENT '状',
   created_time datetime NULL DEFAULT NULL COMMENT '创建时间',
   update_time datetime NULL DEFAULT NULL COMMENT '更新时间',

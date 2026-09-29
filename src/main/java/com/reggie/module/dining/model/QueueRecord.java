@@ -32,6 +32,9 @@ public class QueueRecord implements Serializable {
     /** 客户手机号 */
     private String phone;
 
+    /** 取号顾客用户ID（顾客端自助取号时写入；员工代录为 null） */
+    private Long userId;
+
     /** 需要座位数 */
     private Integer seatCount;
 

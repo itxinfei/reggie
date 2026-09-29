@@ -33,3 +33,11 @@ function claimCouponFront(templateId) {
     method: 'post'
   })
 }
+
+// 积分兑换优惠券（P1-5）
+function exchangeCouponFront(templateId) {
+  return $axios({
+    url: '/front/coupon/exchange/' + templateId,
+    method: 'post'
+  })
+}

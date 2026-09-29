@@ -67,5 +67,6 @@ public class CampaignUsageRecord implements Serializable {
     private Long tenantId;
 
     @Schema(description = "创建时间")
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

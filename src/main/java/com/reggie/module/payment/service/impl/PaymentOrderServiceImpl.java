@@ -84,6 +84,10 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     @Autowired(required = false)
     private MaterialStockService materialStockService;
 
+    /** 会员充值记录服务（bizType=RECHARGE 支付成功时联动入账；member 不反向依赖 payment，无循环） */
+    @Autowired
+    private com.reggie.module.member.service.RechargeRecordService rechargeRecordService;
+
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
@@ -150,6 +154,7 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
 
             PaymentOrder po = new PaymentOrder();
             po.setOrderId(orderId);
+            po.setBizType(PaymentOrder.BIZ_ORDER);
             po.setTenantId(BaseContext.getCurrentTenantId());
             po.setTradeNo(generateTradeNo());
             po.setChannel(channel);
@@ -158,6 +163,62 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
             save(po);
             log.info("创建支付订单: tradeNo={}, orderId={}, channel={}, amount={}", po.getTradeNo(), orderId, channel,
                     amount);
+            return po;
+        } finally {
+            if (lockValue != null) {
+                unlock(lockKey, lockValue);
+            }
+        }
+    }
+
+    /**
+     * 创建通用业务支付单（会员充值）。
+     * @param bizType 业务类型
+     * @param bizId 业务单ID
+     * @param channel 渠道
+     * @param amount 金额
+     * @return 支付单
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PaymentOrder createPaymentOrderForBiz(String bizType, Long bizId, String channel, BigDecimal amount) {
+        if (bizType == null || bizId == null) {
+            throw new CustomException("业务类型或业务单ID不能为空");
+        }
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CustomException("支付金额必须大于0");
+        }
+        String lockKey = "payment:lock:create-biz:" + bizType + ":" + bizId;
+        String lockValue = tryLock(lockKey);
+        try {
+            // 同一业务单已 SUCCESS 拒绝（order_id 即业务单ID；订单与充值ID不同序列，不会跨 bizType 撞）
+            List<String> successStatus = new ArrayList<>();
+            successStatus.add(STATUS_SUCCESS);
+            if (baseMapper.countByOrderIdAndStatuses(bizId, successStatus) > 0) {
+                throw new CustomException("该业务单已支付成功，请勿重复支付");
+            }
+            PaymentOrder existPending = lambdaQuery()
+                    .eq(PaymentOrder::getOrderId, bizId)
+                    .eq(PaymentOrder::getStatus, STATUS_PENDING)
+                    .last("LIMIT 1")
+                    .one();
+            if (existPending != null) {
+                log.info("复用待支付业务单: tradeNo={}, bizType={}, bizId={}",
+                        existPending.getTradeNo(), bizType, bizId);
+                return existPending;
+            }
+
+            PaymentOrder po = new PaymentOrder();
+            po.setOrderId(bizId);
+            po.setBizType(bizType);
+            po.setTenantId(BaseContext.getCurrentTenantId());
+            po.setTradeNo(generateTradeNo());
+            po.setChannel(channel);
+            po.setAmount(amount);
+            po.setStatus(STATUS_PENDING);
+            save(po);
+            log.info("创建业务支付单: tradeNo={}, bizType={}, bizId={}, channel={}, amount={}",
+                    po.getTradeNo(), bizType, bizId, channel, amount);
             return po;
         } finally {
             if (lockValue != null) {
@@ -251,6 +312,11 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
         Long originalTenantId = BaseContext.getCurrentTenantId();
         BaseContext.setCurrentTenantId(po.getTenantId());
         try {
+            // P1-4：bizType=RECHARGE 的支付单联动充值入账，不进订单逻辑；finally 统一清理租户上下文
+            if (PaymentOrder.BIZ_RECHARGE.equals(po.getBizType())) {
+                rechargeRecordService.handleRechargePaid(po.getOrderId(), tradeNo, channelTradeNo);
+                return;
+            }
             Orders order = orderService.getById(po.getOrderId());
             if (order != null && order.getStatus() != null) {
                 if (Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {

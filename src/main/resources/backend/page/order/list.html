@@ -13,6 +13,8 @@
   <style>
     /* 内部备注编辑行（原详情弹窗内联样式收口；间距走令牌） */
     .od-kv--top { align-items: flex-start; }
+    /* 修改点(P0-6)：取餐码醒目展示，便于店员报码 */
+    .od-pickup-code { font-weight: 700; letter-spacing: 2px; font-size: 16px; }
     .od-note-field { flex: 1; display: flex; gap: var(--space-2); align-items: flex-start; }
     .od-note-input { flex: 1; }
     .od-note-btn { flex-shrink: 0; margin-top: 2px; }
@@ -79,12 +81,15 @@
         <template #actions="{ row }">
           <el-button type="text" size="small" @click="goDetail(row)" class="btn-view">查看</el-button>
           <el-button type="text" size="small" @click="printReceipt(row)" class="btn-view">打印</el-button>
-          <!-- 派单（指派骑手）仅外卖单；堂食单无骑手配送环节 -->
-          <el-button v-if="row.status === 2 && !row.riderId && !isEatInOrder(row)" type="text" size="small" @click="openDispatch(row)" class="btn-success">派单</el-button>
-          <!-- 堂食：待接单→开始制作；外卖：待接单→派送 -->
-          <el-button v-if="row.status === 2" type="text" size="small" @click="advanceStatus(row)" class="btn-success">{{ isEatInOrder(row) ? '开始制作' : '派送' }}</el-button>
-          <!-- 堂食：制作中→上菜完成(释放桌台)；外卖：配送中→确认送达 -->
-          <el-button v-if="row.status === 3" type="text" size="small" @click="advanceStatus(row)" class="btn-success">{{ isEatInOrder(row) ? '上菜完成' : '完成' }}</el-button>
+          <!-- 派单（指派骑手）仅外卖单；堂食/自提单无骑手配送环节 -->
+          <el-button v-if="row.status === 2 && !row.riderId && !isEatInOrder(row) && !isSelfPickupOrder(row)" type="text" size="small" @click="openDispatch(row)" class="btn-success">派单</el-button>
+          <!-- 堂食：待接单→开始制作；自提：接单制作；外卖：待接单→派送 -->
+          <el-button v-if="row.status === 2" type="text" size="small" @click="advanceStatus(row)" class="btn-success">{{ isEatInOrder(row) ? '开始制作' : (isSelfPickupOrder(row) ? '接单制作' : '派送') }}</el-button>
+          <!-- 待接单：商家拒单（自动退款/回库存） -->
+          <el-button v-if="row.status === 2" type="text" size="small" class="btn-delete" @click="rejectOrderRow(row)">拒单</el-button>
+          <!-- 堂食：制作中→上菜完成(释放桌台)；自提：核销取餐码；外卖：配送中→确认送达 -->
+          <el-button v-if="row.status === 3 && !isSelfPickupOrder(row)" type="text" size="small" @click="advanceStatus(row)" class="btn-success">{{ isEatInOrder(row) ? '上菜完成' : '完成' }}</el-button>
+          <el-button v-if="row.status === 3 && isSelfPickupOrder(row)" type="text" size="small" @click="openVerify(row)" class="btn-success">核销取餐</el-button>
           <el-button v-if="row.status === 4" type="text" size="small" class="btn-delete" @click="openRefund(row)">退款</el-button>
           <el-button v-if="row.status === 2 || row.status === 3" type="text" size="small" class="btn-warning" @click="cancelOrder(row)">取消</el-button>
         </template>
@@ -180,6 +185,14 @@
               <div class="od-kv"><span>下单时间</span><span>{{ diaForm.orderTime || '-' }}</span></div>
               <div class="od-kv" v-if="diaForm.checkoutTime"><span>结账时间</span><span>{{ diaForm.checkoutTime }}</span></div>
               <div class="od-kv" v-if="diaForm.remark"><span>备注</span><span>{{ diaForm.remark }}</span></div>
+              <!-- 修改点(P0-5)：取消原因回执（独立字段，与顾客端同源，便于店员核对"为什么取消"） -->
+              <div class="od-kv od-kv--top" v-if="diaForm.cancelReason && (diaForm.status === 5 || diaForm.status === 6)">
+                <span>取消原因</span><span>{{ diaForm.cancelReason }}</span>
+              </div>
+              <!-- 修改点(P0-6)：取餐码（店员报码给骑手核销） -->
+              <div class="od-kv" v-if="diaForm.pickupCode">
+                <span>取餐码</span><span class="od-pickup-code">{{ diaForm.pickupCode }}</span>
+              </div>
               <!-- 修改点：内部备注可编辑，店员可补充运营信息（如"少辣""骑手已联系"） -->
               <div class="od-kv od-kv--top">
                 <span>内部备注</span>
@@ -253,6 +266,42 @@
               :disabled="r.status === 0"
             ></el-option>
           </el-select>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 自提核销弹窗：输入顾客取餐码 -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      title="自提核销"
+      :visible.sync="verifyVisible"
+      size="sm"
+      :submit-loading="verifyLoading"
+      submit-text="确认核销"
+      @submit="submitVerify"
+      @close="verifyVisible = false"
+    >
+      <el-form :model="verifyForm" :rules="verifyRules" ref="verifyFormRef" label-width="80px" size="small">
+        <el-form-item label="订单号"><span>{{ verifyForm.number }}</span></el-form-item>
+        <el-form-item prop="pickupCode" label="取餐码">
+          <el-input v-model="verifyForm.pickupCode" placeholder="请输入顾客出示的取餐码" maxlength="10"></el-input>
+        </el-form-item>
+      </el-form>
+    </crud-dialog>
+
+    <!-- 商家取消弹窗：填写取消原因（已支付订单将按此原因自动退款） -->
+    <crud-dialog :show-submit="true" :show-cancel="true"
+      title="取消订单"
+      :visible.sync="cancelDiaVisible"
+      size="sm"
+      :submit-loading="cancelDiaLoading"
+      submit-text="确认取消"
+      @submit="submitCancelOrder"
+      @close="cancelDiaVisible = false"
+    >
+      <el-form :model="cancelDiaForm" :rules="cancelDiaRules" ref="cancelDiaFormRef" label-width="80px" size="small">
+        <el-form-item label="订单号"><span>{{ cancelDiaForm.number }}</span></el-form-item>
+        <el-form-item prop="reason" label="取消原因">
+          <el-input v-model="cancelDiaForm.reason" type="textarea" :rows="2" placeholder="请填写取消原因，将展示给顾客"></el-input>
         </el-form-item>
       </el-form>
     </crud-dialog>
@@ -335,7 +384,15 @@
           riderOptions: [],
           // 修改点：内部备注（仅后台可见，用于店员记录运营信息）
           internalNote: '',
-          noteSaving: false
+          noteSaving: false,
+          // 自提核销
+          verifyVisible: false,
+          verifyLoading: false,
+          verifyForm: { id: null, number: '', pickupCode: '' },
+          // 商家取消（走状态机，已支付自动退款）
+          cancelDiaVisible: false,
+          cancelDiaLoading: false,
+          cancelDiaForm: { id: null, number: '', reason: '' }
         }
       },
       computed: {
@@ -388,6 +445,20 @@
             ],
             reasonDetail: [
               { required: true, message: '请填写详细退款原因', trigger: 'blur' }
+            ]
+          }
+        },
+        verifyRules: function() {
+          return {
+            pickupCode: [
+              { required: true, message: '请输入取餐码', trigger: 'blur' }
+            ]
+          }
+        },
+        cancelDiaRules: function() {
+          return {
+            reason: [
+              { required: true, message: '请填写取消原因', trigger: 'blur' }
             ]
           }
         }
@@ -573,34 +644,92 @@
             console.warn('[order] 保存内部备注失败:', err)
           }).finally(function() { self.noteSaving = false })
         },
+        // 打开商家取消弹窗（走 /order/cancel 状态机：回库存/退款/发取消事件）
         cancelOrder: function(row) {
+          this.cancelDiaForm = { id: row.id, number: row.number, reason: '' }
+          this.cancelDiaVisible = true
+          this.$nextTick(function() {
+            if (this.$refs.cancelDiaFormRef) this.$refs.cancelDiaFormRef.clearValidate()
+          })
+        },
+        submitCancelOrder: function() {
           const self = this
-          ReggieUI.confirm('确认取消该订单？已支付订单将自动按原路径退款。', '提示', { confirmButtonText: '确定', cancelButtonText: '再想想', type: 'warning' })
-            .then(function() {
-              editOrderDetail({ id: row.id, status: 5 }).then(function(res) {
-                if (res && res.code === 1) { ReggieUI.success('订单已取消'); self.init() }
-                else { ReggieUI.error(res.msg || '取消失败') }
+          this.$refs.cancelDiaFormRef.validate(function(valid) {
+            if (!valid) return
+            self.cancelDiaLoading = true
+            cancelOrderApi({ id: self.cancelDiaForm.id, reason: self.cancelDiaForm.reason })
+              .then(function(res) {
+                if (res && res.code === 1) {
+                  ReggieUI.success('订单已取消')
+                  self.cancelDiaVisible = false
+                  self.init()
+                } else { ReggieUI.error((res && res.msg) || '取消失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
-            })
+              .finally(function() { self.cancelDiaLoading = false })
+          })
         },
         // 堂食单判定：以订单来源 EAT_IN 为准（桌台扫码/开台），与桌台结账/释放逻辑同口径
         isEatInOrder: function(row) {
           return !!row && row.source === 'EAT_IN'
         },
+        // 自提单判定：source=SELF_PICKUP，与自提下单口径一致
+        isSelfPickupOrder: function(row) {
+          return !!row && row.source === 'SELF_PICKUP'
+        },
+        // 商家拒单：待接单单，confirm 后走 /order/reject（自动退款/回库存）
+        rejectOrderRow: function(row) {
+          const self = this
+          ReggieUI.confirm('确认拒单？已支付订单将自动全额退款，库存与优惠将回退。', '拒单确认',
+            { confirmButtonText: '确定拒单', cancelButtonText: '再想想', type: 'warning' })
+            .then(function() {
+              rejectOrderApi({ id: row.id }).then(function(res) {
+                if (res && res.code === 1) { ReggieUI.success('已拒单'); self.init() }
+                else { ReggieUI.error((res && res.msg) || '拒单失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
+            })
+        },
+        // 自提核销弹窗
+        openVerify: function(row) {
+          this.verifyForm = { id: row.id, number: row.number, pickupCode: '' }
+          this.verifyVisible = true
+          this.$nextTick(function() {
+            if (this.$refs.verifyFormRef) this.$refs.verifyFormRef.clearValidate()
+          })
+        },
+        submitVerify: function() {
+          const self = this
+          this.$refs.verifyFormRef.validate(function(valid) {
+            if (!valid) return
+            self.verifyLoading = true
+            verifySelfPickupApi({ id: self.verifyForm.id, pickupCode: self.verifyForm.pickupCode })
+              .then(function(res) {
+                if (res && res.code === 1) {
+                  ReggieUI.success('核销成功')
+                  self.verifyVisible = false
+                  self.init()
+                } else { ReggieUI.error((res && res.msg) || '核销失败') }
+              }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
+              .finally(function() { self.verifyLoading = false })
+          })
+        },
         // 状态推进（2→3→4），文案随堂食/外卖切换
         advanceStatus: function(row) {
           const self = this
           const eatIn = this.isEatInOrder(row)
-          const target = row.status === 2 ? 3 : 4
+          const selfPickup = this.isSelfPickupOrder(row)
           const tip = row.status === 2
-            ? (eatIn ? '确认后厨已接单并开始制作？' : '确认已安排骑手派送？')
+            ? (eatIn ? '确认后厨已接单并开始制作？' : (selfPickup ? '确认接单并开始制作？' : '确认接单？'))
             : (eatIn ? '确认上菜完成？完成后桌台将自动释放为空闲。' : '确认订单已送达并完成？')
           const okMsg = row.status === 2
-            ? (eatIn ? '已开始制作' : '订单已派送')
+            ? (eatIn ? '已开始制作' : (selfPickup ? '已接单制作' : '已接单'))
             : (eatIn ? '已上菜完成，桌台已释放' : '订单已完成')
           ReggieUI.confirm(tip, '提示', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
-              editOrderDetail({ status: target, id: row.id }).then(function(res) {
+              // 走状态机：2→3 confirm，3→4 complete（不再用通用 PUT /order 绕过联动）
+              const apiCall = row.status === 2
+                ? confirmOrderApi({ id: row.id })
+                : completeOrderApi({ id: row.id })
+              apiCall.then(function(res) {
                 if (res.code === 1) { ReggieUI.success(okMsg); self.init() }
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })

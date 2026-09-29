@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>排队取号 - 瑞吉外卖</title>
+    <link rel="icon" href="./../images/favico.ico">
+    <script src="./../js/base.js?v=20260917"></script>
+    <link rel="stylesheet" href="../styles/vant.min.css"/>
+    <link rel="stylesheet" href="../styles/index.css?v=20260927d" />
+    <link rel="stylesheet" href="../../backend/plugins/remixicon/remixicon.css" />
+    <script src="./../js/icon-fallback.js?v=20260917"></script>
+    <style>
+        .queue-wrap { padding: 10px; }
+        /* 不用 van-card 做容器：本项目 vant 构建的 card 不渲染默认插槽，用普通面板 */
+        .panel { background: #fff; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+        .queue-no { font-size: 34px; font-weight: 600; text-align: center; margin: 8px 0; letter-spacing: 2px; }
+        .queue-tip { text-align: center; color: #9ca3af; font-size: 13px; margin-bottom: 10px; }
+        .queue-status-tag { text-align: center; margin-top: 12px; }
+        .stepper-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .stepper-row .label { font-size: 15px; color: #1f2937; }
+    </style>
+</head>
+<body>
+    <div id="queue-app" class="app">
+      <cend-shell title="排队取号" light :show-back="true" :show-home="true">
+        <div class="queue-wrap">
+          <!-- 当前无排队：取号区 -->
+          <div v-if="!current" class="panel">
+            <div class="stepper-row">
+              <span class="label">就餐人数</span>
+              <van-stepper v-model="seatCount" :min="1" :max="20" integer></van-stepper>
+            </div>
+            <van-button type="primary" block round :loading="submitting" @click="submit">立即取号</van-button>
+          </div>
+
+          <!-- 已有排队：状态区 -->
+          <div v-if="current" class="panel">
+            <div class="queue-status-tag">
+              <van-tag :type="current.status === 'CALLED' ? 'danger' : 'primary'" plain>
+                {{ statusText(current.status) }}
+              </van-tag>
+            </div>
+            <div class="queue-no">{{ current.queueNo }}</div>
+            <div class="queue-tip">{{ tipText }}</div>
+            <van-button plain type="danger" block round @click="confirmCancel">取消排队</van-button>
+          </div>
+        </div>
+      </cend-shell>
+    </div>
+
+    <script src="../../backend/plugins/vue/vue.js"></script>
+    <script src="./../js/vant.min.js"></script>
+    <script src="../../backend/plugins/axios/axios.min.js"></script>
+    <script src="./../js/request.js?v=20260927"></script>
+    <script src="./../js/common.js?v=20260927"></script>
+    <script src="../api/dining.js?v=20260929"></script>
+    <script src="./../js/components-cend.js?v=20260922"></script>
+    <script>
+        new Vue({
+            el: '#queue-app',
+            data: function () {
+                return {
+                    seatCount: 2,
+                    current: null,
+                    waitingAhead: 0,
+                    submitting: false,
+                    timer: null
+                }
+            },
+            computed: {
+                tipText: function () {
+                    if (!this.current) return ''
+                    if (this.current.status === 'CALLED') {
+                        return '已叫到您的号，请尽快到店就餐'
+                    }
+                    return this.waitingAhead > 0
+                        ? '前面还有 ' + this.waitingAhead + ' 桌，请留意叫号'
+                        : '您是下一位，请留意叫号'
+                }
+            },
+            created: function () {
+                this.loadMy()
+                // 取号期间 15 秒刷新一次叫号进度
+                this.timer = setInterval(this.loadMy, 15000)
+            },
+            beforeDestroy: function () {
+                if (this.timer) clearInterval(this.timer)
+            },
+            methods: {
+                statusText: function (status) {
+                    var map = { WAITING: '等待中', CALLED: '已叫号', SEATED: '已入座', CANCELLED: '已取消' }
+                    return map[status] || status
+                },
+                loadMy: function () {
+                    getMyQueue().then((function (res) {
+                        var data = res.data
+                        if (data) {
+                            this.current = data.record
+                            this.waitingAhead = data.waitingAhead
+                        } else {
+                            this.current = null
+                        }
+                    }).bind(this)).catch((function () {}) )
+                },
+                submit: function () {
+                    this.submitting = true
+                    takeQueue({ seatCount: this.seatCount }).then((function (res) {
+                        this.current = res.data
+                        this.waitingAhead = 0
+                        vant.Toast.success('取号成功')
+                    }).bind(this)).finally((function () {
+                        this.submitting = false
+                    }).bind(this))
+                },
+                confirmCancel: function () {
+                    vant.Dialog.confirm({
+                        title: '取消排队',
+                        message: '确定取消当前排队号码？'
+                    }).then((function () {
+                        cancelMyQueue(this.current.id).then((function () {
+                            this.current = null
+                            vant.Toast.success('已取消排队')
+                        }).bind(this))
+                    }).bind(this)).catch(function () {})
+                }
+            }
+        })
+    </script>
+</body>
+</html>

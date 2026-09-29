@@ -278,6 +278,33 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
     }
 
     /**
+     * 释放骑手一单在途负载（改派 / 取消指派）：在途 -1 且不改累计单量。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int releaseRiderLoad(Long riderId) {
+        if (riderId == null) {
+            throw new CustomException("骑手ID不能为空");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        // 在途原子自减（GREATEST 兜底不为负），不计入累计完成单量
+        riderMapper.update(null, new LambdaUpdateWrapper<Rider>()
+                .eq(Rider::getId, riderId)
+                .setSql("current_order_count = GREATEST(current_order_count - 1, 0)")
+                .set(Rider::getUpdateTime, now));
+        // 在途归零且仍忙碌时回到在线（与送达口径一致的条件更新）
+        riderMapper.update(null, new LambdaUpdateWrapper<Rider>()
+                .eq(Rider::getId, riderId)
+                .eq(Rider::getStatus, Rider.STATUS_BUSY)
+                .eq(Rider::getCurrentOrderCount, 0)
+                .set(Rider::getStatus, Rider.STATUS_ONLINE)
+                .set(Rider::getUpdateTime, now));
+        Rider latest = riderMapper.selectById(riderId);
+        return latest != null && latest.getCurrentOrderCount() != null
+                ? latest.getCurrentOrderCount() : 0;
+    }
+
+    /**
      * 删除 rider。
      * @param id 参数 id
      * @return 返回结果

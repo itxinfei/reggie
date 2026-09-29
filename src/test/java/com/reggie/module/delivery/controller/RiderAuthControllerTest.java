@@ -39,14 +39,23 @@ public class RiderAuthControllerTest extends com.reggie.controller.BaseControlle
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private org.springframework.data.redis.core.RedisTemplate<String, Object> redisTemplate;
+
     @BeforeEach
     void setUp() {
         String bcrypt = PasswordUtils.encodePassword("123456");
         // 先按 id/专用 phone 清理上轮残留（非全表删），再插入 tenant=999 的测试骑手
         jdbcTemplate.update("DELETE FROM rider WHERE id = ? OR phone = ?", RIDER_ID, PHONE);
+        jdbcTemplate.update("DELETE FROM rider_remember_token WHERE rider_id = ?", RIDER_ID);
         jdbcTemplate.update("INSERT INTO rider (id, name, phone, password, status, current_order_count, "
                 + "total_order_count, tenant_id, create_time, update_time) "
                 + "VALUES (?, '张骑手', ?, ?, 1, 0, 0, 999, NOW(), NOW())", RIDER_ID, PHONE, bcrypt);
+        // forgot-password 限流 1/s：清掉滑动窗口，避免连续用例触发 429
+        java.util.Set<String> rateLimitKeys = redisTemplate.keys("rate_limit:*");
+        if (rateLimitKeys != null && !rateLimitKeys.isEmpty()) {
+            redisTemplate.delete(rateLimitKeys);
+        }
     }
 
     @Test
@@ -197,5 +206,142 @@ public class RiderAuthControllerTest extends com.reggie.controller.BaseControlle
                 .content("{\"longitude\":116.397428,\"latitude\":39.90923}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
+    }
+
+    // ---- P2-2：记住我 ----
+
+    @Test
+    void loginWithRememberMeTokenIssued() throws Exception {
+        org.springframework.test.web.servlet.MvcResult result = mockMvc.perform(post("/api/rider/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"phone\":\"" + PHONE + "\",\"password\":\"123456\",\"rememberMe\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andReturn();
+        // cookie 随响应下发且为 HttpOnly
+        String setCookie = result.getResponse().getHeader("Set-Cookie");
+        org.junit.jupiter.api.Assertions.assertNotNull(setCookie);
+        org.junit.jupiter.api.Assertions.assertTrue(setCookie.contains("rider_remember="));
+        org.junit.jupiter.api.Assertions.assertTrue(setCookie.contains("HttpOnly"));
+        // 令牌落库（rider + tenant）
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM rider_remember_token WHERE rider_id = ? AND tenant_id = 999",
+                Integer.class, RIDER_ID);
+        org.junit.jupiter.api.Assertions.assertEquals(1, count);
+    }
+
+    @Test
+    void loginWithoutRememberMeNoToken() throws Exception {
+        org.springframework.test.web.servlet.MvcResult result = mockMvc.perform(post("/api/rider/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"phone\":\"" + PHONE + "\",\"password\":\"123456\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andReturn();
+        String setCookie = result.getResponse().getHeader("Set-Cookie");
+        org.junit.jupiter.api.Assertions.assertTrue(setCookie == null || !setCookie.contains("rider_remember"));
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM rider_remember_token WHERE rider_id = ?", Integer.class, RIDER_ID);
+        org.junit.jupiter.api.Assertions.assertEquals(0, count);
+    }
+
+    // ---- P2-2：自助重置密码 ----
+
+    @Test
+    void forgotPasswordSuccess() throws Exception {
+        String codeKey = "smsCode_" + PHONE;
+        org.springframework.mock.web.MockHttpSession session = new org.springframework.mock.web.MockHttpSession();
+        session.setAttribute(codeKey, "246810");
+        session.setAttribute(codeKey + "_time", System.currentTimeMillis());
+
+        mockMvc.perform(post("/api/rider/forgot-password").session(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"phone\":\"" + PHONE + "\",\"code\":\"246810\",\"newPassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value("密码重置成功，请使用新密码登录"));
+        // 验证码一次性：成功后立即作废
+        org.junit.jupiter.api.Assertions.assertNull(session.getAttribute(codeKey));
+        // 新密码可登录、旧密码失效
+        mockMvc.perform(post("/api/rider/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"phone\":\"" + PHONE + "\",\"password\":\"654321\"}"))
+                .andExpect(jsonPath("$.code").value(1));
+        mockMvc.perform(post("/api/rider/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"phone\":\"" + PHONE + "\",\"password\":\"123456\"}"))
+                .andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test
+    void forgotPasswordWrongCode() throws Exception {
+        String codeKey = "smsCode_" + PHONE;
+        org.springframework.mock.web.MockHttpSession session = new org.springframework.mock.web.MockHttpSession();
+        session.setAttribute(codeKey, "246810");
+        session.setAttribute(codeKey + "_time", System.currentTimeMillis());
+
+        mockMvc.perform(post("/api/rider/forgot-password").session(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"phone\":\"" + PHONE + "\",\"code\":\"111111\",\"newPassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("验证码错误"));
+        // 校验失败码不作废
+        org.junit.jupiter.api.Assertions.assertNotNull(session.getAttribute(codeKey));
+    }
+
+    @Test
+    void forgotPasswordCodeExpired() throws Exception {
+        String codeKey = "smsCode_" + PHONE;
+        org.springframework.mock.web.MockHttpSession session = new org.springframework.mock.web.MockHttpSession();
+        session.setAttribute(codeKey, "246810");
+        // 6 分钟前发出，超过 5 分钟有效期
+        session.setAttribute(codeKey + "_time", System.currentTimeMillis() - 6L * 60 * 1000);
+
+        mockMvc.perform(post("/api/rider/forgot-password").session(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"phone\":\"" + PHONE + "\",\"code\":\"246810\",\"newPassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("验证码已过期，请重新获取"));
+        // 过期码同时作废
+        org.junit.jupiter.api.Assertions.assertNull(session.getAttribute(codeKey));
+    }
+
+    @Test
+    void forgotPasswordCodeMissing() throws Exception {
+        mockMvc.perform(post("/api/rider/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"phone\":\"" + PHONE + "\",\"code\":\"246810\",\"newPassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("验证码不存在或已失效，请重新获取"));
+    }
+
+    @Test
+    void forgotPasswordRiderNotFound() throws Exception {
+        String unknownPhone = "13900999999";
+        String codeKey = "smsCode_" + unknownPhone;
+        org.springframework.mock.web.MockHttpSession session = new org.springframework.mock.web.MockHttpSession();
+        session.setAttribute(codeKey, "246810");
+        session.setAttribute(codeKey + "_time", System.currentTimeMillis());
+
+        mockMvc.perform(post("/api/rider/forgot-password").session(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"phone\":\"" + unknownPhone + "\",\"code\":\"246810\",\"newPassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("该手机号尚未注册为骑手"));
+    }
+
+    @Test
+    void forgotPasswordBadNewPasswordLength() throws Exception {
+        // 密码长度校验在验证码校验之前，无需有效码
+        mockMvc.perform(post("/api/rider/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"phone\":\"" + PHONE + "\",\"code\":\"246810\",\"newPassword\":\"12345\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("新密码长度须为6-20位"));
     }
 }

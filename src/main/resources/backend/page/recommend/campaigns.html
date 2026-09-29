@@ -169,7 +169,7 @@
                 <span style="color:var(--text-muted);"> / </span>
                 <span>{{ row.maxParticipants || '∞' }}</span>
                 <el-progress v-if="row.maxParticipants"
-                    :percentage="Math.round((row.currentParticipants || 0) / row.maxParticipants * 100)"
+                    :percentage="Math.min(100, Math.round((row.currentParticipants || 0) / row.maxParticipants * 100))"
                     :show-text="false" :stroke-width="4" class="status-progress" />
             </template>
             <!-- 操作列契约：编辑+主状态流转常显（≤3 元素含「更多」，宽 180），推送/统计/删除收「更多」 -->

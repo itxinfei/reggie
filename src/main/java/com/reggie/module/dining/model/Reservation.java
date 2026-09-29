@@ -39,6 +39,9 @@ public class Reservation implements Serializable {
     /** 客户手机号 */
     private String phone;
 
+    /** 预订顾客用户ID（顾客端自助预订时写入；员工代录为 null） */
+    private Long userId;
+
     /** 预订时间 */
     private LocalDateTime reservedTime;
 

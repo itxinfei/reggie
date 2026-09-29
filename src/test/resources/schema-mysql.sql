@@ -547,6 +547,7 @@ CREATE TABLE `coupon_template` (
   `total_count` int DEFAULT '0' COMMENT '发放总数',
   `remain_count` int DEFAULT '0' COMMENT '剩余数量',
   `valid_days` int DEFAULT NULL COMMENT '有效天数',
+  `points_price` int DEFAULT NULL COMMENT '积分兑换所需积分',
   `status` int DEFAULT '1' COMMENT '状',
   `created_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT NULL,
@@ -1791,6 +1792,7 @@ DROP TABLE IF EXISTS `payment_order`;
 CREATE TABLE `payment_order` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   `order_id` bigint NOT NULL COMMENT '业务订单id',
+  `biz_type` varchar(20) NOT NULL DEFAULT 'ORDER' COMMENT '业务类型 ORDER/RECHARGE',
   `tenant_id` bigint DEFAULT NULL COMMENT '租户id',
   `trade_no` varchar(64) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin NOT NULL COMMENT '系统交易号',
   `channel_trade_no` varchar(128) CHARACTER SET utf8mb3 COLLATE utf8mb3_bin DEFAULT NULL COMMENT '通道交易号',

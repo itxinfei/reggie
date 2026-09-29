@@ -74,10 +74,11 @@ public class RiderTaskController {
     }
 
     @PostMapping("/{id}/pickup")
-    @Operation(summary = "确认取餐")
-    public R<String> pickup(@PathVariable Long id) {
+    @Operation(summary = "确认取餐", description = "P0-6：订单已生成取餐码时必须传入正确的取餐码方可核销")
+    public R<String> pickup(@PathVariable Long id,
+                            @RequestParam(value = "pickupCode", required = false) String pickupCode) {
         Long riderId = BaseContext.getCurrentId();
-        orderStatusFlowService.pickupRiderTask(id, riderId);
+        orderStatusFlowService.pickupRiderTask(id, riderId, pickupCode);
         return R.success("已取餐");
     }
 
@@ -87,5 +88,14 @@ public class RiderTaskController {
         Long riderId = BaseContext.getCurrentId();
         orderStatusFlowService.deliverRiderOrder(id, riderId);
         return R.success("已送达");
+    }
+
+    @PostMapping("/{id}/transfer")
+    @Operation(summary = "转单（转给其他骑手）", description = "把当前在途订单转给指定的在线骑手，同步调整双方在途单量")
+    public R<String> transfer(@PathVariable Long id,
+                              @RequestParam(value = "newRiderId") Long newRiderId) {
+        Long riderId = BaseContext.getCurrentId();
+        orderStatusFlowService.reassignRiderOrder(id, riderId, newRiderId);
+        return R.success("已转单");
     }
 }

@@ -223,8 +223,12 @@ function toEnumMapDict(data) {
     return out;
 }
 
-// 订单状态映射（优先取后端字典，回退兜底常量）
+// 订单状态映射（优先取跨端字典，回退后端字典，再回退兜底常量）
 function getStatus(status) {
+    if (window.OrderStatusDict) {
+        var t = window.OrderStatusDict.orderText(status);
+        if (t && t !== '未知') return t;
+    }
     var dict = ENUM_DICT.orderStatus || {};
     var val = dict[String(status)];
     if (val) return val;

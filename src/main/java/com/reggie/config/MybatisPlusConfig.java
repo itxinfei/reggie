@@ -48,7 +48,10 @@ public class MybatisPlusConfig {
      */
     private static final Set<String> IGNORE_TABLES = new HashSet<>(Arrays.asList(
         "tenant", "employee", "shopping_cart", "ai_provider_config", "ai_prompt_template",
-        "dish_evaluation", "permission", "role_permission", "region", "store_sync_log"
+        "dish_evaluation", "permission", "role_permission", "region", "store_sync_log",
+        // 记住登录令牌：骑手未登录(无租户上下文)时由 LoginCheckFilter 凭 cookie 校验，
+        // 自动建会话，不能被租户插件追加 tenant_id=-1 导致校验恒空
+        "rider_remember_token"
     ));
 
     /**

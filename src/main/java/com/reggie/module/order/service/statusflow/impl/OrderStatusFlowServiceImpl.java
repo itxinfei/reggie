@@ -58,6 +58,9 @@ public class OrderStatusFlowServiceImpl
     /** 骑手在途单量上限，与派单"可用骑手 currentOrderCount<3"口径保持一致 */
     private static final int MAX_RIDER_LOAD = 3;
 
+    /** 取餐码长度（P0-6 核销） */
+    private static final int PICKUP_CODE_LENGTH = 6;
+
     /** 订单明细服务 */
     @Autowired
     private OrderDetailService orderDetailService;
@@ -100,6 +103,43 @@ public class OrderStatusFlowServiceImpl
     /** 配送跟踪服务（骑手信息、负载计数、接单/取餐/送达时间戳） */
     @Autowired
     private DeliveryTrackingService deliveryTrackingService;
+
+    /** 骑手结算服务（配送完成入账，与会员余额解耦） */
+    @Autowired(required = false)
+    private com.reggie.module.delivery.service.RiderSettlementService riderSettlementService;
+
+    /** 骑手消息服务（派单/改派提醒，失败不阻塞主流程） */
+    @Autowired(required = false)
+    private com.reggie.module.delivery.service.RiderMessageService riderMessageService;
+
+    /**
+     * 写入骑手消息（宽异常兜底：有意捕获 Exception，消息写入失败不得阻塞订单主流程）。
+     */
+    private void sendRiderMessage(Long riderId, Long tenantId, int type,
+                                  String title, String content, Long bizId) {
+        if (riderMessageService == null || riderId == null) {
+            return;
+        }
+        try {
+            riderMessageService.send(riderId, tenantId, type, title, content, bizId);
+        } catch (Exception e) {
+            log.error("[骑手消息] 写入失败，不阻塞主流程: riderId={}, bizId={}, msg={}",
+                    riderId, bizId, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 持久化取消原因（P0-5 回执）：写入独立字段 cancel_reason，供顾客端展示，不覆盖下单备注。
+     */
+    private void persistCancelReason(Long orderId, String reason) {
+        if (orderId == null || reason == null || reason.trim().isEmpty()) {
+            return;
+        }
+        this.lambdaUpdate()
+                .eq(Orders::getId, orderId)
+                .set(Orders::getCancelReason, reason)
+                .update();
+    }
 
     // ==================== 状态流转入口 ====================
 
@@ -162,6 +202,8 @@ public class OrderStatusFlowServiceImpl
 
         // 已支付订单拒单（支付成功会把订单 1→2，待接单可能已付款）→ 自动退款，不置已取消
         if (hasSuccessPaymentOrder(id)) {
+            // 修改点(P0-5)：落拒单原因供顾客端回执
+            persistCancelReason(id, "商家拒单");
             registerAutoRefund(id, "商家拒单自动退款", order.getTenantId());
             log.warn("订单拒单（已支付，自动退款）: id={}, number={}", id, order.getNumber());
             return;
@@ -172,6 +214,8 @@ public class OrderStatusFlowServiceImpl
         if (rejected == null) {
             throw new CustomException("订单状态不正确，无法拒单");
         }
+        // 修改点(P0-5)：拒单原因回执（独立字段，不覆盖顾客下单备注）
+        persistCancelReason(id, "商家拒单");
 
         // 拒单时回退库存（部分失败也允许，补偿任务会重试）
         boolean refundOk = refundStockByOrderId(id);
@@ -243,6 +287,8 @@ public class OrderStatusFlowServiceImpl
         // 已支付订单取消（支付成功会把订单 1→2，配送中同样可能已付款）→ 自动退款，不置已取消
         // 订单状态由退款服务在渠道退款成功后联动为已退款(6)，避免"已取消但已付款"的资金矛盾
         if (hasSuccessPaymentOrder(id)) {
+            // 修改点(P0-5)：已支付取消不置已取消，但仍需落取消原因供顾客端回执
+            persistCancelReason(id, reason);
             registerAutoRefund(id, reason, order.getTenantId());
             eventPublisher.publishEvent(new OrderCancelledEvent(this, id, order.getTenantId(), reason));
             log.warn("订单已取消（已支付，自动退款）: id={}, number={}, reason={}", id, order.getNumber(), reason);
@@ -254,8 +300,9 @@ public class OrderStatusFlowServiceImpl
         wrapper.eq(Orders::getId, id)
                 .eq(Orders::getStatus, curStatus)
                 .set(Orders::getStatus, Orders.STATUS_CANCELLED);
+        // 修改点(P0-5)：取消原因写入独立字段 cancel_reason，不再覆盖顾客下单备注 remark
         if (reason != null && !reason.trim().isEmpty()) {
-            wrapper.set(Orders::getRemark, reason);
+            wrapper.set(Orders::getCancelReason, reason);
         }
         boolean rows = this.update(versionGuardEntity(order.getVersion()), wrapper);
         if (!rows) {
@@ -331,6 +378,13 @@ public class OrderStatusFlowServiceImpl
         if (!this.update(null, wrapper)) {
             throw new CustomException("订单已被处理，请刷新后重试");
         }
+        // 修改点(P0-6)：派单即生成取餐码，供骑手到店核销
+        ensurePickupCode(order);
+        // 修改点(P0-4)：派单即向骑手推送待接单提醒
+        sendRiderMessage(riderId, order.getTenantId(),
+                com.reggie.module.delivery.model.RiderMessage.TYPE_DISPATCH,
+                "新订单待接单",
+                "订单 " + order.getNumber() + " 已派给你，请尽快接单取餐", orderId);
         log.info("订单已派单：orderId={}, riderId={}", orderId, riderId);
     }
 
@@ -365,7 +419,15 @@ public class OrderStatusFlowServiceImpl
             throw new CustomException("手慢了，订单已被其他骑手抢走");
         }
 
+        // 修改点(P0-6)：抢单即生成取餐码，供骑手到店核销
+        ensurePickupCode(order);
         afterRiderAccepted(order, rider);
+        // P0-4：抢单成功也推送一条消息，便于骑手在消息页留痕与回溯（店长派单走 dispatchOrder 已发）
+        sendRiderMessage(riderId, order.getTenantId(),
+                com.reggie.module.delivery.model.RiderMessage.TYPE_DISPATCH,
+                "派单成功",
+                "您已抢到订单 " + order.getNumber() + "，请尽快到店取餐",
+                orderId);
         log.info("骑手抢单成功：orderId={}, riderId={}", orderId, riderId);
     }
 
@@ -402,7 +464,7 @@ public class OrderStatusFlowServiceImpl
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void pickupRiderTask(Long orderId, Long riderId) {
+    public void pickupRiderTask(Long orderId, Long riderId, String pickupCode) {
         Orders order = requireOrderInTenant(orderId);
         if (!Objects.equals(order.getRiderId(), riderId)) {
             throw new CustomException("该订单不属于你");
@@ -410,9 +472,63 @@ public class OrderStatusFlowServiceImpl
         if (!Objects.equals(order.getStatus(), Orders.STATUS_DELIVERING)) {
             throw new CustomException("订单当前为" + getStatusName(order.getStatus()) + "，无法确认取餐");
         }
+        // 修改点(P0-6)：取餐码核销——已生成取餐码的订单必须校验一致，
+        // 防止未到店即点取餐；历史无码订单放行，避免存量数据被卡住。
+        String expected = order.getPickupCode();
+        if (expected != null && !expected.trim().isEmpty()) {
+            if (pickupCode == null || !expected.trim().equals(pickupCode.trim())) {
+                throw new CustomException("取餐码不正确，请向店员索取正确的取餐码");
+            }
+        }
         deliveryTrackingService.recordRiderAction(orderId, order.getNumber(), order.getOrderTime(),
                 riderId, riderNameOf(riderId), DeliveryTrackingService.ACTION_PICKUP);
         log.info("骑手已取餐：orderId={}, riderId={}", orderId, riderId);
+    }
+
+    /**
+     * 店员核销自提订单：核对取餐码后完成（3 → 4）。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void verifySelfPickupOrder(Long orderId, String pickupCode) {
+        Orders order = requireOrderInTenant(orderId);
+        if (!Objects.equals(OrderSource.SELF_PICKUP.getValue(), order.getSource())) {
+            throw new CustomException("该订单不是自提订单");
+        }
+        if (!Objects.equals(order.getStatus(), Orders.STATUS_DELIVERING)) {
+            throw new CustomException("订单当前为" + getStatusName(order.getStatus()) + "，无法核销");
+        }
+        String expected = order.getPickupCode();
+        if (expected == null || expected.trim().isEmpty()) {
+            // 正常不会出现：自提下单即生成码；兜底直接拒绝，避免无码单被任意核销
+            throw new CustomException("订单缺少取餐码，请刷新后重试");
+        }
+        if (pickupCode == null || !expected.trim().equals(pickupCode.trim())) {
+            throw new CustomException("取餐码不正确，请与顾客核对");
+        }
+        // 复用完成逻辑：3 → 4 并发完成事件（积分等）
+        completeOrder(orderId);
+        log.info("自提订单已核销完成：orderId={}", orderId);
+    }
+
+    /**
+     * 生成并持久化取餐码（仅当订单尚无取餐码时）。用于派单 / 抢单环节，
+     * 保证骑手到店前门店已持有一个可核销的取餐码。
+     *
+     * @param order 订单（已加载）
+     * @return 订单当前有效的取餐码
+     */
+    private String ensurePickupCode(Orders order) {
+        String existing = order.getPickupCode();
+        if (existing != null && !existing.trim().isEmpty()) {
+            return existing;
+        }
+        String code = cn.hutool.core.util.RandomUtil.randomNumbers(PICKUP_CODE_LENGTH);
+        this.lambdaUpdate()
+                .eq(Orders::getId, order.getId())
+                .set(Orders::getPickupCode, code)
+                .update();
+        return code;
     }
 
     /**
@@ -435,7 +551,74 @@ public class OrderStatusFlowServiceImpl
                 riderId, rider.getName(), DeliveryTrackingService.ACTION_DELIVER);
         this.completeOrder(orderId);
         changeRiderLoad(rider, -1);
+        // 修改点：配送完成即按配送费入账到骑手独立账户（幂等，与会员余额解耦）
+        if (riderSettlementService != null) {
+            riderSettlementService.settle(orderId, riderId, order.getTenantId(), order.getDeliveryFee());
+        }
         log.info("骑手已送达：orderId={}, riderId={}", orderId, riderId);
+    }
+
+    /**
+     * 订单改派：在途订单（status 2 已指派 或 3 配送中）由原骑手转给目标骑手。
+     * <p>
+     * 使用行级条件更新（rider_id=原骑手 且 status in (2,3)）保证并发下仅一次改派命中；
+     * 成功后原子调整双方在途单量（原骑手 -1、目标骑手 +1），由底层 SQL 维护在线/忙碌状态。
+     * </p>
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void reassignRiderOrder(Long orderId, Long oldRiderId, Long newRiderId) {
+        if (newRiderId == null) {
+            throw new CustomException("请选择目标骑手");
+        }
+        Orders order = requireOrderInTenant(orderId);
+        if (order.getRiderId() == null) {
+            throw new CustomException("订单尚未指派骑手，无法改派");
+        }
+        if (Objects.equals(order.getRiderId(), newRiderId)) {
+            throw new CustomException("目标骑手与原骑手相同，无需改派");
+        }
+        if (oldRiderId != null && !Objects.equals(order.getRiderId(), oldRiderId)) {
+            throw new CustomException("订单已不属于原骑手，改派失败");
+        }
+        if (!Objects.equals(order.getStatus(), Orders.STATUS_ORDERED)
+                && !Objects.equals(order.getStatus(), Orders.STATUS_DELIVERING)) {
+            throw new CustomException("订单当前为" + getStatusName(order.getStatus()) + "，无法改派");
+        }
+        Rider newRider = requireRiderInTenant(newRiderId, order.getTenantId());
+        if (Objects.equals(newRider.getStatus(), Rider.STATUS_OFFLINE)) {
+            throw new CustomException("目标骑手当前离线，无法改派");
+        }
+        int newLoad = newRider.getCurrentOrderCount() == null ? 0 : newRider.getCurrentOrderCount();
+        if (newLoad >= MAX_RIDER_LOAD) {
+            throw new CustomException("目标骑手在途订单已达上限，无法改派");
+        }
+
+        Long fromRiderId = order.getRiderId();
+        // 行级条件：rider_id=原骑手 且 status in (2,3)，防并发重复改派
+        LambdaUpdateWrapper<Orders> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(Orders::getId, orderId)
+                .eq(Orders::getRiderId, fromRiderId)
+                .in(Orders::getStatus, Orders.STATUS_ORDERED, Orders.STATUS_DELIVERING)
+                .set(Orders::getRiderId, newRiderId)
+                .set(Orders::getDispatchTime, LocalDateTime.now());
+        if (!this.update(null, wrapper)) {
+            throw new CustomException("订单已被处理，改派失败，请刷新后重试");
+        }
+
+        // 同步在途单量：原骑手释放在途（不计入累计完成），目标骑手在途 +1
+        deliveryTrackingService.releaseRiderLoad(fromRiderId);
+        deliveryTrackingService.adjustRiderLoad(newRiderId, 1);
+        // 修改点(P0-4)：改派/转单后通知目标骑手与原骑手
+        sendRiderMessage(newRiderId, order.getTenantId(),
+                com.reggie.module.delivery.model.RiderMessage.TYPE_DISPATCH,
+                "新订单转给你",
+                "订单 " + order.getNumber() + " 已转给你，请尽快配送", orderId);
+        sendRiderMessage(fromRiderId, order.getTenantId(),
+                com.reggie.module.delivery.model.RiderMessage.TYPE_OTHER,
+                "订单已转出",
+                "订单 " + order.getNumber() + " 已转给其他骑手", orderId);
+        log.info("订单改派：orderId={}, fromRider={}, toRider={}", orderId, fromRiderId, newRiderId);
     }
 
     // ---- 骑手流程私有辅助 ----

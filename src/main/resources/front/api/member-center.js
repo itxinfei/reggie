@@ -38,9 +38,15 @@ function openMemberApi() {
   return $axios({ url: '/api/member/portal/open', method: 'post' })
 }
 
-// C端发起充值（门店确认到账模式；data: {amount, paymentMethod}）
+// C端发起充值（先建 PENDING 充值单；data: {amount, paymentMethod}）
 function createRechargeApi(data) {
   return $axios({ url: '/api/member/portal/recharge/create', method: 'post', data: data })
+}
+
+// 对充值单发起在线支付（P1-4；data: {rechargeNo, channel}）
+// 返回 PayResponse: tradeNo / payUrl / qrCodeUrl / mockMode
+function rechargePayApi(data) {
+  return $axios({ url: '/api/payment/recharge/pay', method: 'post', data: data })
 }
 
 // 查询本人充值单状态（门店确认到账后轮询）

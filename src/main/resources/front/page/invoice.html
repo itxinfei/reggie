@@ -253,7 +253,13 @@
           return s.indexOf('T') > -1 ? s.replace('T', ' ').substring(0, 19) : s
         },
         viewPdf: function(url) {
-          window.open(url, '_blank', 'noopener,noreferrer')
+          if (!url) { vant.Toast.fail('暂未上传票面文件'); return }
+          // 本系统上传为相对路径，经 /common/download 鉴权访问；历史外链直接打开
+          if (/^https?:\/\//i.test(url)) {
+            window.open(url, '_blank', 'noopener,noreferrer')
+            return
+          }
+          window.open('/common/download?name=' + encodeURIComponent(url), '_blank', 'noopener,noreferrer')
         },
         // 查询订单发票记录
         loadInvoice: function() {

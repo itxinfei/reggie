@@ -49,7 +49,7 @@ public class OrderStockRefundServiceImpl implements OrderStockRefundService {
 
     /** 库存操作函数式接口 */
     private interface StockOperation {
-        boolean apply(Long dishId, BigDecimal qty);
+        boolean apply(Long dishId, BigDecimal qty, Long orderId);
     }
 
     @Override
@@ -77,7 +77,7 @@ public class OrderStockRefundServiceImpl implements OrderStockRefundService {
         for (OrderDetail detail : details) {
             int number = detail.getNumber() != null ? detail.getNumber() : 1;
             BigDecimal qty = new BigDecimal(number);
-            if (!processStockForItems(detail.getDishId(), detail.getSetmealId(), qty, this::refundStockAtomic)) {
+            if (!processStockForItems(detail.getDishId(), detail.getSetmealId(), qty, orderId, this::refundStockAtomic)) {
                 allSuccess = false;
             }
         }
@@ -91,11 +91,12 @@ public class OrderStockRefundServiceImpl implements OrderStockRefundService {
     /**
      * 处理菜品/套餐的库存回补：单品直接回补；套餐遍历 setmeal_dish 按 copies 展开。
      */
-    private boolean processStockForItems(Long dishId, Long setmealId, BigDecimal quantity, StockOperation operation) {
+    private boolean processStockForItems(Long dishId, Long setmealId, BigDecimal quantity,
+            Long orderId, StockOperation operation) {
         boolean success = true;
 
         if (dishId != null) {
-            if (!operation.apply(dishId, quantity)) {
+            if (!operation.apply(dishId, quantity, orderId)) {
                 success = false;
             }
         }
@@ -106,7 +107,7 @@ public class OrderStockRefundServiceImpl implements OrderStockRefundService {
             List<SetmealDish> setmealDishes = setmealDishService.list(sdWrapper);
             for (SetmealDish sd : setmealDishes) {
                 int copies = sd.getCopies() != null ? sd.getCopies() : 1;
-                if (!operation.apply(sd.getDishId(), quantity.multiply(new BigDecimal(copies)))) {
+                if (!operation.apply(sd.getDishId(), quantity.multiply(new BigDecimal(copies)), orderId)) {
                     success = false;
                 }
             }
@@ -119,7 +120,7 @@ public class OrderStockRefundServiceImpl implements OrderStockRefundService {
      * 单项原子回补：菜品库存 + 起售状态恢复 + BOM 原料恢复。
      * 失败记录日志但不抛异常，避免单项失败影响其余项。
      */
-    private boolean refundStockAtomic(Long dishId, BigDecimal qty) {
+    private boolean refundStockAtomic(Long dishId, BigDecimal qty, Long orderId) {
         if (dishId == null || qty == null || qty.compareTo(BigDecimal.ZERO) <= 0) {
             return true;
         }
@@ -127,7 +128,7 @@ public class OrderStockRefundServiceImpl implements OrderStockRefundService {
             dishService.addStock(dishId, qty);
             dishService.autoToggleSoldOut(dishId);
             if (materialStockService != null) {
-                materialStockService.restoreMaterialStock(dishId, qty);
+                materialStockService.restoreMaterialStock(dishId, qty, orderId);
             }
             log.info("[库存回补] 菜品ID={} 回补{}份", dishId, qty);
             return true;

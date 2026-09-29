@@ -180,6 +180,19 @@ public class FrontCouponController {
     }
 
     /**
+     * 积分兑换优惠券。
+     * @param templateId 优惠券模板ID
+     * @return 返回结果
+     */
+    @PostMapping("/exchange/{templateId}")
+    @RateLimit(maxRequestsPerSecond = 5)
+    @Operation(summary = "积分兑换优惠券", description = "按模板积分价扣减当前用户积分并发券；积分不足/已领过/券下架则失败")
+    public R<String> exchange(@Parameter(description = "优惠券模板ID", required = true) @PathVariable Long templateId) {
+        couponTemplateService.exchangeWithPoints(BaseContext.getCurrentId(), templateId);
+        return R.success("兑换成功");
+    }
+
+    /**
      * 下单可用券：按订单金额筛出当前用户可抵扣的未使用且未过期优惠券。
      *
      * @param orderAmount 订单金额（不含运费、不含优惠）

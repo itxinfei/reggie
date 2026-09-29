@@ -101,6 +101,15 @@ public interface DeliveryTrackingService extends IService<Rider> {
     int adjustRiderLoad(Long riderId, int delta);
 
     /**
+     * 释放骑手一单在途负载（改派 / 取消指派场景）：在途 -1（GREATEST 兜底不为负），
+     * <b>不</b>增加累计完成单量；在途归零且仍忙碌时回到在线。
+     *
+     * @param riderId 骑手ID
+     * @return 调整后的在途单量
+     */
+    int releaseRiderLoad(Long riderId);
+
+    /**
      * Delete rider
      *
      * @param id Rider ID

@@ -65,6 +65,11 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
      */
     @Override
     public QueueRecord takeNumber(Integer seatCount, String phone) {
+        return takeNumber(seatCount, phone, null);
+    }
+
+    @Override
+    public QueueRecord takeNumber(Integer seatCount, String phone, Long userId) {
         String lockKey = QUEUE_LOCK_KEY_PREFIX + seatCount;
         String lockValue = UUID.randomUUID().toString();
         Boolean acquired = false;
@@ -104,6 +109,7 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
             record.setTenantId(BaseContext.getCurrentTenantId());
             record.setQueueNo(datePrefix + String.format("%04d", seq));
             record.setPhone(phone);
+            record.setUserId(userId);
             record.setSeatCount(seatCount);
             record.setStatus(QueueRecordStatus.WAITING.getValue());
             save(record);
@@ -237,6 +243,40 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
         if (!success) {
             log.warn("[排队取消] 取消失败，当前状态非WAITING或记录不存在: id={}", id);
         }
+    }
+
+    @Override
+    public void cancelMyQueue(Long id, Long userId) {
+        if (id == null || userId == null) {
+            throw new CustomException("排队记录不存在");
+        }
+        QueueRecord record = getById(id);
+        if (record == null || !userId.equals(record.getUserId())) {
+            throw new CustomException("排队记录不存在");
+        }
+        // 顾客端 WAITING/CALLED 均可取消（CALLED 后放弃到店）；SEATED/CANCELLED 不可重复取消
+        boolean success = lambdaUpdate()
+                .eq(QueueRecord::getId, id)
+                .in(QueueRecord::getStatus,
+                        QueueRecordStatus.WAITING.getValue(),
+                        QueueRecordStatus.CALLED.getValue())
+                .set(QueueRecord::getStatus, QueueRecordStatus.CANCELLED.getValue())
+                .update();
+        if (!success) {
+            throw new CustomException("当前排队状态无法取消");
+        }
+    }
+
+    @Override
+    public long countWaitingAhead(Long queueId) {
+        QueueRecord record = getById(queueId);
+        if (record == null) {
+            return 0L;
+        }
+        return lambdaQuery()
+                .eq(QueueRecord::getStatus, QueueRecordStatus.WAITING.getValue())
+                .lt(QueueRecord::getCreatedTime, record.getCreatedTime())
+                .count();
     }
 
     /**

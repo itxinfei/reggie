@@ -9,6 +9,7 @@ import com.reggie.module.member.model.Member;
 import com.reggie.module.member.model.RechargeRecord;
 import com.reggie.module.member.service.MemberService;
 import com.reggie.module.member.service.RechargeRecordService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ import java.util.UUID;
  * @since 2026-07-09
  */
 @Service
+@Slf4j
 public class RechargeRecordServiceImpl extends ServiceImpl<RechargeRecordMapper, RechargeRecord> implements
         RechargeRecordService {
 
@@ -163,6 +165,48 @@ public class RechargeRecordServiceImpl extends ServiceImpl<RechargeRecordMapper,
     @Override
     public RechargeRecord getByRechargeNo(String rechargeNo) {
         return lambdaQuery().eq(RechargeRecord::getRechargeNo, rechargeNo).one();
+    }
+
+    /**
+     * 在线支付成功定终态并入账。
+     * @param rechargeId 充值记录ID
+     * @param paymentTradeNo 支付单内部交易号
+     * @param channelTradeNo 渠道交易号
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void handleRechargePaid(Long rechargeId, String paymentTradeNo, String channelTradeNo) {
+        if (rechargeId == null) {
+            return;
+        }
+        RechargeRecord record = getById(rechargeId);
+        if (record == null) {
+            log.warn("[充值支付] 支付成功但充值单不存在：rechargeId={}", rechargeId);
+            return;
+        }
+        // 渠道号缺失（mock）时兜底存内部交易号，保证 trade_no 可追溯
+        String storedTradeNo = channelTradeNo != null && !channelTradeNo.trim().isEmpty()
+                ? channelTradeNo : paymentTradeNo;
+        int casRows = rechargeRecordMapper.casSuccessByPayment(rechargeId, storedTradeNo);
+        if (casRows == 0) {
+            if (RechargeRecord.STATUS_SUCCESS.equals(record.getStatus())) {
+                log.info("[充值支付] 充值单已入账，回调幂等跳过：rechargeId={}", rechargeId);
+                return;
+            }
+            // CANCELLED：超时取消后支付迟到，钱已收不能入账，严重告警人工退款
+            log.error("【严重】[充值支付] 支付成功但充值单已{}，未入账需人工退款：rechargeId={}, amount={}",
+                    record.getStatus(), rechargeId, record.getAmount());
+            return;
+        }
+        // CAS 成功后原子加余额。加钱失败不回滚终态（支付已成功），仅严重告警人工补录，避免回调悬挂
+        int rows = memberMapper.addBalance(record.getMemberId(), record.getAmount(), record.getGiftAmount());
+        if (rows == 0) {
+            log.error("【严重】[充值支付] 充值已支付但加余额失败（会员可能被删），需人工补录：rechargeId={}, memberId={}",
+                    rechargeId, record.getMemberId());
+        } else {
+            log.info("[充值支付] 在线充值入账成功：rechargeId={}, memberId={}, amount={}, gift={}",
+                    rechargeId, record.getMemberId(), record.getAmount(), record.getGiftAmount());
+        }
     }
 
     /**

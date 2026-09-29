@@ -42,3 +42,48 @@ const deleteMyEvaluation = (data) => {
     data
   })
 }
+
+// ==================== 骑手评价（P0-2，2026-09-28）====================
+// 提交骑手评价
+const submitRiderEvaluation = (data) => {
+  return $axios({
+    url: '/api/rider-evaluation',
+    method: 'post',
+    data
+  })
+}
+
+// 按订单+骑手查询我的评价（判断是否已评价）
+const getRiderEvaluationByOrder = (orderId, riderId) => {
+  return $axios({
+    url: '/api/rider-evaluation/order/' + orderId,
+    method: 'get',
+    params: { riderId: riderId }
+  })
+}
+
+// 我的骑手评价列表
+const getMyRiderEvaluations = (params) => {
+  return $axios({
+    url: '/api/rider-evaluation/my',
+    method: 'get',
+    params
+  })
+}
+
+// 骑手评价公开列表
+const getRiderEvaluationList = (riderId, params) => {
+  return $axios({
+    url: '/api/rider-evaluation/rider/' + riderId,
+    method: 'get',
+    params
+  })
+}
+
+// 骑手评分统计
+const getRiderEvaluationStats = (riderId) => {
+  return $axios({
+    url: '/api/rider-evaluation/rider/' + riderId + '/stats',
+    method: 'get'
+  })
+}

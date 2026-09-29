@@ -56,3 +56,16 @@ CREATE TABLE IF NOT EXISTS rider_location_record (
   create_time datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id)
 );
+
+-- P2-2 骑手记住登录令牌表（每骑手一条，30天有效，可凭 rider_remember cookie 自动登录）
+CREATE TABLE IF NOT EXISTS rider_remember_token (
+  id bigint NOT NULL AUTO_INCREMENT,
+  rider_id bigint NOT NULL,
+  tenant_id bigint NOT NULL,
+  token varchar(64) NOT NULL,
+  expire_time datetime NOT NULL,
+  created_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_token (token),
+  KEY idx_rider (rider_id)
+);

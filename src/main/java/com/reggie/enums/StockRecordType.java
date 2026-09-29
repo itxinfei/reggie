@@ -18,7 +18,11 @@ public enum StockRecordType {
     /** 出库 */
     OUT("OUT", "出库"),
     /** 盘点调整 */
-    CHECK("CHECK", "盘点调整");
+    CHECK("CHECK", "盘点调整"),
+    /** 订单销售扣减 */
+    SALE_ORDER("SALE_ORDER", "订单销售"),
+    /** 退款/取消回补 */
+    REFUND_ORDER("REFUND_ORDER", "退款回补");
 
     private final String value;
     private final String desc;

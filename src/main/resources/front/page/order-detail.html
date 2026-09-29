@@ -48,9 +48,18 @@
                         <i class="ri-arrow-right-s-line"></i>
                     </div>
 
-                    <!-- 收货地址 / 堂食桌台 -->
+                    <!-- 收货地址 / 堂食桌台 / 到店自提 -->
                     <div class="od-card">
-                        <div v-if="isEatIn" class="od-row">
+                        <!-- 修改点(P1-2 自提)：自提订单醒目展示取餐码，供到店向店员核销 -->
+                        <div v-if="isSelfPickup" class="od-row od-pickup-row">
+                            <span class="od-label">取餐码</span>
+                            <span class="od-value" style="font-size:22px;font-weight:700;letter-spacing:3px;color:#07c160;">{{ order.pickupCode }}</span>
+                        </div>
+                        <div v-if="isSelfPickup" class="od-row">
+                            <span class="od-label">取餐方式</span>
+                            <span class="od-value">到店自提 · 向店员出示上方取餐码</span>
+                        </div>
+                        <div v-else-if="isEatIn" class="od-row">
                             <span class="od-label">就餐桌台</span>
                             <span class="od-value">{{ order.tableName }} · 堂食点餐</span>
                         </div>
@@ -170,6 +179,13 @@
                 <i class="ri-arrow-right-s-line"></i>
             </div>
 
+            <!-- 取消 / 退款原因回执（修改点 P0-5）：终态展示原因，避免顾客"被取消却不知为何" -->
+            <div v-if="!loading && order.cancelReason && (order.status === 5 || order.status === 6)"
+                 class="od-cancel-reason">
+                <div class="od-cr-title">{{ order.status === 5 ? '取消原因' : '退款原因' }}</div>
+                <div class="od-cr-text">{{ order.cancelReason }}</div>
+            </div>
+
             <!-- 售后记录：申请后在此展示审核/退款进度，避免用户无反馈重复申请 -->
             <div v-if="!loading && order.id && refundRecords.length" class="od-refund-records">
                 <div class="od-rr-title">售后记录</div>
@@ -199,19 +215,55 @@
                 <template v-if="order.status === 3">
                     <div class="act-btn act-outline" @click="urgeOrder">{{ isEatIn ? '催菜' : '催单' }}</div>
                     <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking">查看配送</div>
-                    <!-- 堂食由员工上菜完成并释放桌台，顾客无确认收货入口 -->
-                    <div class="act-btn act-primary" v-if="!isEatIn" @click="confirmReceipt">确认收货</div>
+                    <!-- 堂食由员工上菜完成并释放桌台，顾客无确认收货入口；自提到店取餐，亦无确认收货 -->
+                    <div class="act-btn act-primary" v-if="!isEatIn && !isSelfPickup" @click="confirmReceipt">确认收货</div>
                 </template>
                 <template v-if="order.status === 4">
                     <div class="act-btn act-outline" @click="applyRefund">申请售后</div>
                     <div class="act-btn act-outline" v-if="canViewTracking(order)" @click="viewTracking">查看配送</div>
                     <div class="act-btn act-outline" v-if="canEvaluateOrder(order)" @click="evaluate">去评价</div>
+                    <div class="act-btn act-outline" v-if="canEvaluateRider(order)" @click="openRiderEval">评价骑手</div>
                     <div class="act-btn act-primary" @click="addOrderAgain">再来一单</div>
                 </template>
                 <template v-if="order.status === 5 || order.status === 6">
                     <div class="act-btn act-primary" @click="addOrderAgain">再来一单</div>
                 </template>
             </div>
+
+            <!-- 骑手评价提示（已完成且由骑手配送时展示） -->
+            <div class="rider-eval-tip" v-if="order.riderId && riderEval">
+              <span class="ret-label">我的骑手评价</span>
+              <van-rate :value="riderEval.starRating" :size="13" disabled></van-rate>
+              <span class="ret-content" v-if="riderEval.content">{{ riderEval.content }}</span>
+            </div>
+
+            <!-- 评价骑手弹窗 -->
+            <van-popup v-model="showRiderEval" position="bottom" round>
+              <div class="rider-eval-pop">
+                <div class="rep-title">评价骑手</div>
+                <div class="rep-rate">
+                  <span class="rep-label">配送评分</span>
+                  <van-rate v-model="riderStar" :size="22"></van-rate>
+                </div>
+                <div class="rep-tags">
+                  <span v-for="t in riderEvalTags" :key="t"
+                        class="rep-tag" :class="{ on: riderTags.indexOf(t) >= 0 }"
+                        @click="toggleRiderTag(t)">{{ t }}</span>
+                </div>
+                <van-field v-model="riderContent" type="textarea" rows="3"
+                           maxlength="200" show-word-limit placeholder="说说这次配送体验（选填）"></van-field>
+                <van-cell title="匿名评价">
+                  <template #right-icon>
+                    <van-switch v-model="riderAnonymous" size="20"></van-switch>
+                  </template>
+                </van-cell>
+                <div class="rep-actions">
+                  <van-button block @click="showRiderEval = false">取消</van-button>
+                  <van-button block type="primary" :loading="riderSubmitting" @click="submitRiderEval">提交评价</van-button>
+                </div>
+              </div>
+            </van-popup>
+
             </cend-shell>
         </div>
 
@@ -222,6 +274,8 @@
         <script src="./../api/main.js?v=20260921"></script>
         <script src="./../js/common.js?v=20260927"></script>
         <script src="./../api/order.js?v=20260917"></script>
+        <script src="./../api/evaluation.js?v=20260928"></script>
+        <script src="/shared/js/refund-status.js?v=20260928"></script>
         <!-- C 端跨页面复用组件（必须在 new Vue 之前加载） -->
         <script src="./../js/components-cend.js?v=20260922"></script>
         <script>
@@ -237,14 +291,25 @@
                     // 本订单售后/退款记录（审核与退款进度）
                     refundRecords: [],
                     // 我的已评价商品集合（loadEvalKeys 装配），控制「去评价」入口
-                    evalKeys: new Set()
+                    evalKeys: new Set(),
+                    // 骑手评价（修改点 P0-2）
+                    riderEval: null,
+                    showRiderEval: false,
+                    riderStar: 5,
+                    riderContent: '',
+                    riderTags: [],
+                    riderAnonymous: false,
+                    riderEvalTags: ['准时送达', '态度友好', '包装完好', '骑行平稳', '沟通顺畅'],
+                    riderSubmitting: false
                 }
             },
             computed: {
                 isEatIn: function() { return !!this.order.tableId },
-                // 外卖待接单/配送中（堂食不算"送达"），用于hero预计时间高亮与配送入口
+                // 修改点(P1-2 自提)：自提订单标记
+                isSelfPickup: function() { return this.order && this.order.source === 'SELF_PICKUP' },
+                // 外卖待接单/配送中（堂食/自提不算"送达"），用于hero预计时间高亮与配送入口
                 isDeliveringLive: function() {
-                    return !this.isEatIn && (this.order.status === 2 || this.order.status === 3)
+                    return !this.isEatIn && !this.isSelfPickup && (this.order.status === 2 || this.order.status === 3)
                 },
                 // 菜品小计（服务端核价口径，明细行金额求和）
                 goodsAmount: function() {
@@ -307,10 +372,10 @@
                 }
             },
             created: function() {
-                this.orderId = new URLSearchParams(window.location.search).get('id')
-                this.loadDetail()
-                this.loadRefundRecords()
                 var self = this
+                this.orderId = new URLSearchParams(window.location.search).get('id')
+                this.loadDetail().then(function() { self.loadRiderEval() })
+                this.loadRefundRecords()
                 loadEvalKeys().then(function(keys) { self.evalKeys = keys })
             },
             methods: {
@@ -353,15 +418,17 @@
                         console.warn('[order-detail] 售后记录加载失败:', e)
                     }
                 },
+                // 修改点(P0-5)：退款状态文案改走三端共享字典（按大写归一化，大小写不敏感），
+                // 避免后端 SUCCESS 大写与其余小写混用导致漏配时把原始码暴露给顾客
                 refundStatusText: function(status) {
-                    var map = {
-                        pending: '退款申请中',
-                        processing: '退款处理中',
-                        SUCCESS: '退款成功',
-                        fail: '退款失败',
-                        rejected: '审核拒绝'
-                    }
-                    return map[status] || status
+                    return window.RefundStatusDict
+                        ? window.RefundStatusDict.refundText(status)
+                        : status
+                },
+                refundStatusClass: function(status) {
+                    return window.RefundStatusDict
+                        ? window.RefundStatusDict.refundClass(status)
+                        : ''
                 },
                 formatTime: function(t) {
                     if (!t) return ''
@@ -565,9 +632,82 @@
                     } finally {
                         this.submitting = false
                     }
+                },
+                // 修改点(P0-2)：加载本订单对骑手的评价
+                loadRiderEval: function() {
+                    var self = this
+                    if (!this.order || !this.order.riderId || this.order.status !== 4) return
+                    getRiderEvaluationByOrder(this.order.id, this.order.riderId).then(function(res) {
+                        if (res && res.code === 1) { self.riderEval = res.data || null }
+                    }).catch(function() { /* 忽略 */ })
+                },
+                canEvaluateRider: function(order) {
+                    return !!(order && order.riderId && order.status === 4 && !this.riderEval)
+                },
+                openRiderEval: function() {
+                    this.riderStar = 5
+                    this.riderContent = ''
+                    this.riderTags = []
+                    this.riderAnonymous = false
+                    this.showRiderEval = true
+                },
+                toggleRiderTag: function(t) {
+                    var i = this.riderTags.indexOf(t)
+                    if (i >= 0) { this.riderTags.splice(i, 1) } else { this.riderTags.push(t) }
+                },
+                submitRiderEval: function() {
+                    var self = this
+                    if (self.riderSubmitting) return
+                    self.riderSubmitting = true
+                    var data = {
+                        orderId: self.order.id,
+                        riderId: self.order.riderId,
+                        starRating: self.riderStar,
+                        content: self.riderContent,
+                        tags: JSON.stringify(self.riderTags),
+                        anonymous: self.riderAnonymous ? 1 : 0
+                    }
+                    submitRiderEvaluation(data).then(function(res) {
+                        if (res && res.code === 1) {
+                            vant.Toast.success('评价成功')
+                            self.riderEval = res.data || null
+                            self.showRiderEval = false
+                        } else {
+                            vant.Toast.fail((res && res.msg) || '评价失败')
+                        }
+                    }).catch(function() { /* 提示已统一 */ }).then(function() {
+                        self.riderSubmitting = false
+                    })
                 }
             }
         })
         </script>
+
+        <style>
+          .rider-eval-tip {
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+            margin: 10px 14px 0; padding: 10px 12px; border-radius: 10px;
+            background: var(--bg-soft, #f6f7f9); font-size: 13px; color: var(--text-secondary, #8a8f99);
+          }
+          .rider-eval-tip .ret-content { color: var(--text-primary, #1f2329); }
+          .rider-eval-pop { padding: 18px 16px 24px; }
+          .rider-eval-pop .rep-title { font-size: 16px; font-weight: 600; color: var(--text-primary, #1f2329); margin-bottom: 14px; }
+          .rider-eval-pop .rep-rate { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+          .rider-eval-pop .rep-label { font-size: 14px; color: var(--text-primary, #1f2329); }
+          .rider-eval-pop .rep-tags { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+          .rider-eval-pop .rep-tag {
+            padding: 5px 12px; border-radius: 16px; font-size: 13px; cursor: pointer;
+            background: var(--bg-soft, #f6f7f9); color: var(--text-secondary, #8a8f99);
+          }
+          .rider-eval-pop .rep-tag.on { background: rgba(255,107,53,0.12); color: var(--color-primary, #ff6b35); }
+          .rider-eval-pop .rep-actions { display: flex; gap: 12px; margin-top: 16px; }
+          /* 取消 / 退款原因回执（P0-5） */
+          .od-cancel-reason {
+            margin: 10px 14px 0; padding: 12px; border-radius: 10px;
+            background: var(--bg-soft, #f6f7f9);
+          }
+          .od-cr-title { font-size: 13px; color: var(--text-secondary, #8a8f99); margin-bottom: 4px; }
+          .od-cr-text { font-size: 14px; color: var(--text-primary, #1f2329); line-height: 1.5; }
+        </style>
     </body>
 </html>

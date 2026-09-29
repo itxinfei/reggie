@@ -90,6 +90,12 @@ public class Employee implements Serializable {
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
+    // 修改点(P1-1)：RBAC 角色名称（非数据库字段）。employee.role 旧数字字段在 RBAC 改造后
+    // 已不表达管理员身份（全员为 2），直接展示会误导；角色改由 employee_role 关联查询回填。
+    @TableField(exist = false)
+    @Schema(description = "RBAC 角色名称列表（非持久化字段，员工列表展示用）")
+    private java.util.List<String> roleNames;
+
     @Schema(description = "创建人ID", example = "1")
     @TableField(fill = FieldFill.INSERT)
     private Long createUser;

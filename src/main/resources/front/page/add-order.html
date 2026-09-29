@@ -29,7 +29,16 @@
             </div>
             <cend-shell title="确认订单">
             <div class="divContent">
-                <div class="divAddress">
+                <!-- 修改点(P1-2 自提)：履约方式切换（配送 / 到店自提），复用 mode-tabs 样式 -->
+                <div class="mode-tabs fulfillment-tabs" v-if="!reorderId">
+                    <div class="mode-tab" :class="{active: fulfillmentMode === 0}" @click="fulfillmentMode = 0">
+                        <i class="ri-bike-line"></i> 配送上门
+                    </div>
+                    <div class="mode-tab" :class="{active: fulfillmentMode === 1}" @click="fulfillmentMode = 1">
+                        <i class="ri-shopping-bag-3-line"></i> 到店自提
+                    </div>
+                </div>
+                <div class="divAddress" v-if="fulfillmentMode === 0">
                     <div @click="toAddressPage">                    
                         <div class="address">{{ addressFull }}</div>
                         <div class="name">
@@ -41,7 +50,7 @@
                     </div>
                     <div class="divSplit"></div>
                     <!-- 修改点：配送方式选择（立即/预约） -->
-                    <div class="delivery-mode">
+                    <div class="delivery-mode" v-if="fulfillmentMode === 0">
                         <div class="mode-tabs">
                             <div class="mode-tab" :class="{active: deliveryMode === 0}" @click="deliveryMode = 0">
                                 <i class="ri-run-line"></i> 立即配送
@@ -65,6 +74,14 @@
                         <div class="divFinishTime" v-else-if="deliveryMode === 1" @click="showSchedulePicker = true">
                             {{ scheduleLabel }}
                             <i class="ri-arrow-right-s-line finish-time-arrow"></i>
+                        </div>
+                    </div>
+                    <!-- 修改点(P1-2 自提)：自提模式展示到店取餐提示，替代配送时间选择 -->
+                    <div class="self-pickup-tip" v-if="fulfillmentMode === 1" style="display:flex;align-items:center;gap:10px;padding:14px;background:#f6fff9;border:1px solid #c8f0d4;border-radius:10px;margin:10px 0;">
+                        <i class="ri-map-pin-line" style="font-size:22px;color:#07c160;"></i>
+                        <div>
+                            <div class="spt-title" style="font-weight:600;color:#07c160;">到店自提</div>
+                            <div class="spt-desc" style="font-size:12px;color:#666;">下单后到店向店员出示取餐码即可取餐，无需配送</div>
                         </div>
                     </div>
                 </div>
@@ -366,6 +383,8 @@
                         couponLoading:false,
                         // 配送方式：0=立即配送，1=预约配送
                         deliveryMode: 0,
+                        // 修改点(P1-2 自提)：履约方式：0=配送上门，1=到店自提
+                        fulfillmentMode: 0,
                         // 结算预览（/api/order/preview）：确认页价格/赠品/配送范围的唯一数据源
                         pricing: null,
                         previewLoading: false,
@@ -504,7 +523,8 @@
                     // 供页面就地展示——避免只在点击置灰按钮时才 toast、且仍展示无法兑现的送达时间）
                     blockedReason(){
                         if(this.reorderId){ return '' }
-                        if(!this.address || !this.address.id) return '请先选择收货地址'
+                        // 修改点(P1-2 自提)：自提无需收货地址，去除地址必填校验
+                        if(this.fulfillmentMode !== 1 && (!this.address || !this.address.id)) return '请先选择收货地址'
                         if(this.previewLoading || !this.pricing){ return '' }
                         const p = this.pricing
                         if(p.unavailableReason){ return p.unavailableReason }
@@ -744,7 +764,9 @@
                         this.previewLoading = true
                         try{
                             const res = await previewCheckoutApi({
-                                addressBookId: this.address.id,
+                                // 修改点(P1-2 自提)：自提无需地址，传 null，并标记 source
+                                addressBookId: this.fulfillmentMode === 1 ? null : this.address.id,
+                                source: this.fulfillmentMode === 1 ? 'SELF_PICKUP' : 'TAKEOUT',
                                 usedCouponId: couponId
                             })
                             if(res.code === 1 && res.data){
@@ -975,7 +997,9 @@
                         const params = {
                             remark: remarkParts.join('，'),
                             payMethod:this.payMethod,
-                            addressBookId:this.address.id,
+                            // 修改点(P1-2 自提)：自提无需地址，传 null 并标记 source=SELF_PICKUP
+                            addressBookId: this.fulfillmentMode === 1 ? null : this.address.id,
+                            source: this.fulfillmentMode === 1 ? 'SELF_PICKUP' : 'TAKEOUT',
                             // 不传 amount：金额一律由后端 computeCheckout 重算，杜绝前端值被篡改/与服务端口径不一致
                             expectDeliveryTime: this.expectDeliveryTime,
                             usedCouponId: (this.pricing && this.pricing.coupon) ? this.pricing.coupon.campaignId : null,

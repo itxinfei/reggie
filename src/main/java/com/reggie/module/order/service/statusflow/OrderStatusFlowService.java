@@ -67,11 +67,14 @@ public interface OrderStatusFlowService {
     void acceptRiderTask(Long orderId, Long riderId);
 
     /**
-     * 骑手确认取餐（status 仍为 3），记录取餐时间
-     * @param orderId 订单ID
-     * @param riderId 骑手ID
+     * 骑手确认取餐（status 仍为 3），记录取餐时间。
+     * <p>P0-6：订单已生成取餐码时必须核销一致方可取餐（历史无码订单放行，避免存量数据被卡住）。</p>
+     *
+     * @param orderId    订单ID
+     * @param riderId    骑手ID
+     * @param pickupCode 骑手输入的取餐码
      */
-    void pickupRiderTask(Long orderId, Long riderId);
+    void pickupRiderTask(Long orderId, Long riderId, String pickupCode);
 
     /**
      * 骑手确认送达（3 → 4），校验归属后复用完成逻辑
@@ -79,4 +82,23 @@ public interface OrderStatusFlowService {
      * @param riderId 骑手ID
      */
     void deliverRiderOrder(Long orderId, Long riderId);
+
+    /**
+     * 店员核销自提订单：核对取餐码一致后完成订单（3 → 4）。
+     * 仅自提单（source=SELF_PICKUP）可走此入口，防止自提单被不验码直接完成。
+     *
+     * @param orderId    订单ID
+     * @param pickupCode 顾客出示的取餐码
+     */
+    void verifySelfPickupOrder(Long orderId, String pickupCode);
+
+    /**
+     * 订单改派：把在途订单（status 2 已指派 或 3 配送中）从原骑手转给目标骑手，
+     * 同步调整双方在途单量，并记录改派轨迹。用于骑手转单与后台改派。
+     *
+     * @param orderId    订单ID
+     * @param oldRiderId 原骑手ID（当前订单归属，须与订单一致）
+     * @param newRiderId 目标骑手ID（须在线且未达在途上限）
+     */
+    void reassignRiderOrder(Long orderId, Long oldRiderId, Long newRiderId);
 }

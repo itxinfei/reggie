@@ -193,15 +193,39 @@
                 </div>
                 <!-- 第三组：更多 -->
                 <div class="menu-group-title">更多</div>
+                <div class="item" @click="toQueuePage">
+                    <i class="ri-time-line link-icon" aria-hidden="true"></i>
+                    <span>排队取号</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="toReservationPage">
+                    <i class="ri-calendar-check-line link-icon" aria-hidden="true"></i>
+                    <span>到店预订</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
                 <div class="item" @click="toFrequentPage">
                     <i class="ri-shopping-basket-line link-icon li-frequent" aria-hidden="true"></i>
                     <span>常购清单</span>
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
+                <div class="item" @click="toCouponCenterPage">
+                    <i class="ri-coupon-3-line link-icon" aria-hidden="true"></i>
+                    <span>领券中心</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
                 <div class="item" @click="toFavoritePage">
                     <i class="ri-heart-3-line link-icon li-favorite" aria-hidden="true"></i>
                     <span>我的收藏</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                </div>
+                <div class="divSplit"></div>
+                <div class="item" @click="toBrowseHistoryPage">
+                    <i class="ri-history-line link-icon" aria-hidden="true"></i>
+                    <span>我的足迹</span>
                     <i class="ri-arrow-right-s-line"></i>
                 </div>
                 <div class="divSplit"></div>
@@ -470,8 +494,20 @@
                 toFrequentPage: function(){
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/frequent-orders.html' })
                 },
+                toQueuePage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/queue.html' })
+                },
+                toReservationPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/reservation.html' })
+                },
                 toFavoritePage: function(){
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/my-favorites.html' })
+                },
+                toCouponCenterPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/coupon-center.html' })
+                },
+                toBrowseHistoryPage: function(){
+                    window.requestAnimationFrame(function(){ window.location.href = '/front/page/browse-history.html' })
                 },
                 toEvaluationPage: function(){
                     window.requestAnimationFrame(function(){ window.location.href = '/front/page/my-evaluations.html' })

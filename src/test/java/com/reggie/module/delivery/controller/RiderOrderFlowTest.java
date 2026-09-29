@@ -164,8 +164,12 @@ public class RiderOrderFlowTest extends com.reggie.controller.BaseControllerTest
         assertEquals(2, ((Number) afterAccept.get("status")).intValue());
         assertEquals(1, ((Number) afterAccept.get("current_order_count")).intValue());
 
+        // 修改点(P0-6)：派单已生成取餐码，取餐须携带正确取餐码核销
+        String pickupCode = jdbc.queryForObject(
+                "SELECT pickup_code FROM orders WHERE id=5001", String.class);
         // 确认取餐：主状态仍 3，记录取餐时间
         mockMvc.perform(withCsrfToken(mockMvc, post("/api/rider/tasks/5001/pickup")
+                .param("pickupCode", pickupCode)
                 .session(riderSession(RIDER_A))))
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("已取餐"));

@@ -60,6 +60,10 @@ public class PermissionAspect {
     @Autowired
     private RoleService roleService;
 
+    /** 修改点(P1-1)：菜单过滤与接口鉴权共用的权限加载服务 */
+    @Autowired
+    private com.reggie.module.sys.service.MenuAccessService menuAccessService;
+
     private static final String PERMISSION_PREFIX = "sys:employee:permissions:";
 
     /** 缓存过期时间（小时） */
@@ -213,38 +217,11 @@ public class PermissionAspect {
      * @return 权限Key集合，异常时返回空集合（安全降级，不放行）
      */
     private Set<String> loadPermissionsFromDb(Long employeeId, String roleKey) {
-        try {
-            Long tenantId = BaseContext.getCurrentTenantId();
-            // RBAC 闭环：优先查 employee_role 显式关联角色（多对多），实现多角色权限聚合
-            List<Long> roleIds = roleService.getEmployeeRoleIds(employeeId, tenantId);
-            if (roleIds == null || roleIds.isEmpty()) {
-                // 兼容老员工：未显式分配角色时 fallback 到 roleKey 内置角色（不 union，避免越权）
-                Role role = roleMapper.findByRoleKeyAndTenantId(tenantId, roleKey);
-                if (role == null) {
-                    log.warn("[权限加载] 未找到角色：roleKey={}, employeeId={}", roleKey, employeeId);
-                    return Collections.emptySet();
-                }
-                roleIds = new ArrayList<>();
-                roleIds.add(role.getId());
-            }
-
-            List<String> permKeys = permissionService.getPermissionKeysByRoleIds(roleIds);
-            if (permKeys == null || permKeys.isEmpty()) {
-                log.warn("[权限加载] 角色无权限：roleIds={}, roleKey={}, employeeId={}",
-                        roleIds, roleKey, employeeId);
-                return Collections.emptySet();
-            }
-
-            log.info("[权限加载] 数据库加载成功：employeeId={}, roleIds={}, permCount={}",
-                    employeeId, roleIds, permKeys.size());
-            return new HashSet<>(permKeys);
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("[权限加载] 数据库查询异常：employeeId={}, roleKey={}, error={}",
-                    employeeId, roleKey, e.getMessage(), e);
-            // 安全降级：异常时返回空集合，不放行任何权限
-            return Collections.emptySet();
-        }
+        // 修改点(P1-1)：权限加载下沉到 MenuAccessService，与后台菜单过滤共用同一实现，
+        // 避免"菜单能进、接口被拦"两套口径不一致（保留安全降级：异常返回空集合不放行）。
+        Set<String> permissions = menuAccessService.loadPermissionKeys(employeeId, roleKey);
+        log.info("[权限加载] employeeId={}, permCount={}", employeeId, permissions.size());
+        return permissions;
     }
 
     /**

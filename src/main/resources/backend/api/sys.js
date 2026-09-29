@@ -40,6 +40,10 @@ const sysApi = {
     permissionTree() {
         return $axios.get('/sys/role/permissions/tree')
     },
+    // 修改点(P1-1)：当前员工菜单权限（角色标识/超管标识/权限集合），供后台菜单按角色过滤
+    menuAccess() {
+        return $axios.get('/sys/menu/access')
+    },
 
     // ==================== 系统配置 ====================
     configPage(params) {

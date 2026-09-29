@@ -260,7 +260,7 @@
           if (o._confirming) return
           var self = this
           this.$set(o, '_confirming', true)
-          confirmOrder({ id: o.id }).then(function (res) {
+          confirmOrderApi({ id: o.id }).then(function (res) {
             if (res && res.code === 1) {
               ReggieUI.success('接单成功')
               self.loadData()
@@ -279,7 +279,7 @@
             confirmButtonText: '确认拒绝', cancelButtonText: '取消', type: 'warning'
           }).then(function () {
             self.$set(o, '_rejecting', true)
-            rejectOrder({ id: o.id }).then(function (res) {
+            rejectOrderApi({ id: o.id }).then(function (res) {
               if (res && res.code === 1) {
                 ReggieUI.success('已拒绝')
                 self.loadData()

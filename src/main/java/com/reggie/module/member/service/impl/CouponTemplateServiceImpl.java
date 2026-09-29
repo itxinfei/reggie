@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.module.member.mapper.CouponTemplateMapper;
+import com.reggie.module.member.mapper.MemberMapper;
 import com.reggie.module.member.model.CouponEffectVO;
 import com.reggie.module.member.model.CouponTemplate;
 import com.reggie.module.member.model.CouponUser;
@@ -13,11 +14,14 @@ import com.reggie.module.member.model.ExpiringByTemplateVO;
 import com.reggie.module.member.model.ExpiringCouponVO;
 import com.reggie.module.member.model.IssuedMemberVO;
 import com.reggie.module.member.model.Member;
+import com.reggie.module.member.model.PointsRecord;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.enums.CouponStatus;
+import com.reggie.enums.PointsRecordType;
 import com.reggie.module.member.service.CouponTemplateService;
 import com.reggie.module.member.service.CouponUserService;
 import com.reggie.module.member.service.MemberService;
+import com.reggie.module.member.service.PointsRecordService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -48,6 +52,14 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
     /** 会员服务，用于条件筛选会员 */
     @Autowired
     private MemberService memberService;
+
+    /** 会员Mapper：积分兑换条件扣减 */
+    @Autowired
+    private MemberMapper memberMapper;
+
+    /** 积分流水服务：兑换写入 OUT 流水 */
+    @Autowired
+    private PointsRecordService pointsRecordService;
 
     /**
      * 处理 claim coupon。
@@ -101,6 +113,49 @@ public class CouponTemplateServiceImpl extends ServiceImpl<CouponTemplateMapper,
             return false;
         }
         return true;
+    }
+
+    /**
+     * 积分兑换优惠券。
+     * @param userId C端登录用户ID
+     * @param templateId 优惠券模板ID
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void exchangeWithPoints(Long userId, Long templateId) {
+        if (userId == null) {
+            throw new CustomException("NOTLOGIN");
+        }
+        Member member = memberService.getByUserId(userId);
+        if (member == null) {
+            throw new CustomException("尚未开通会员，请先注册会员");
+        }
+        CouponTemplate template = getById(templateId);
+        if (template == null || template.getStatus() == null || template.getStatus() != 1) {
+            throw new CustomException("优惠券不存在或已下架");
+        }
+        Integer price = template.getPointsPrice();
+        if (price == null || price <= 0) {
+            throw new CustomException("该券不支持积分兑换");
+        }
+        // 条件扣积分：余额不足 affected=0 直接拒绝，不会像 GREATEST 兜底那样扣成 0
+        int rows = memberMapper.deductPointsIfEnough(member.getId(), price);
+        if (rows == 0) {
+            throw new CustomException("积分不足");
+        }
+        // 写 OUT 流水（bizType+templateId 便于对账），与 deductPoints 口径一致：存正数、type=OUT 标识消耗
+        PointsRecord record = new PointsRecord();
+        record.setMemberId(member.getId());
+        record.setType(PointsRecordType.OUT.getValue());
+        record.setPoints(price);
+        record.setBizType("POINTS_EXCHANGE");
+        record.setBizId(templateId);
+        pointsRecordService.save(record);
+        // 发券：库存不足/重复领取返回 false → 抛异常，积分扣减与流水随事务整体回滚
+        boolean claimed = claimCoupon(member.getId(), templateId);
+        if (!claimed) {
+            throw new CustomException("优惠券已领完或您已领取过");
+        }
     }
 
     /**

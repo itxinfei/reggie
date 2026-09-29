@@ -57,6 +57,24 @@
     <div class="hall-entry">
       <button class="rider-btn primary" @click="goHall">进入抢单大厅</button>
     </div>
+
+    <div class="income-entry">
+      <button class="rider-btn" @click="goIncome">我的收入</button>
+    </div>
+
+    <div class="income-entry">
+      <button class="rider-btn" @click="goEvaluation">我的评价</button>
+    </div>
+
+    <div class="income-entry">
+      <button class="rider-btn" @click="goException">我的异常</button>
+    </div>
+
+    <div class="income-entry">
+      <button class="rider-btn" @click="goMessage">
+        消息中心<span class="msg-badge" v-if="unread > 0">{{ unread > 99 ? '99+' : unread }}</span>
+      </button>
+    </div>
   </div>
 
   <script src="/backend/plugins/vue/vue.js"></script>
@@ -81,7 +99,8 @@
           loaded: {},
           acceptingId: null,
           seq: 0,        // 请求序号：丢弃切 tab/轮询时的过期响应
-          timer: null    // 列表静默轮询
+          timer: null,   // 列表静默轮询
+          unread: 0      // 未读消息数（修改点 P0-4）
         };
       },
       computed: {
@@ -104,10 +123,12 @@
           RiderLocation.setEnabled(vm.online);
         }).catch(function () { /* 未登录已跳转 */ });
         vm.loadList(false);
+        vm.loadUnread();
         // 待接单/配送中每 15 秒静默刷新，避免新派单漏看；历史 tab 与后台页面不轮询
         vm.timer = setInterval(function () {
           if (document.hidden || vm.active === 'history') return;
           vm.loadList(true);
+          vm.loadUnread();
         }, 15000);
       },
       beforeDestroy: function () {
@@ -171,6 +192,26 @@
         },
         goHall: function () {
           window.location.href = '/rider/hall.html';
+        },
+        goIncome: function () {
+          window.location.href = '/rider/income.html';
+        },
+        goEvaluation: function () {
+          window.location.href = '/rider/evaluation.html';
+        },
+        goException: function () {
+          window.location.href = '/rider/exception.html';
+        },
+        goMessage: function () {
+          window.location.href = '/rider/message.html';
+        },
+        // 修改点(P0-4)：未读消息数（失败静默，不影响工作台）
+        loadUnread: function () {
+          var vm = this;
+          RiderApi.unreadCount().then(function (res) {
+            var d = (res && res.data) ? res.data : {};
+            vm.unread = d.count || 0;
+          }).catch(function () { /* 忽略 */ });
         }
       }
     }).$mount('#app');

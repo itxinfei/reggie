@@ -31,6 +31,14 @@ public interface CouponTemplateService extends IService<CouponTemplate> {
     boolean claimCoupon(Long memberId, Long templateId);
 
     /**
+     * 积分兑换优惠券：条件扣减积分 → 写 OUT 流水 → 发券，任一失败整体回滚。
+     *
+     * @param userId     C 端登录用户ID（内部换算会员，不信任前端传 memberId）
+     * @param templateId 优惠券模板ID
+     */
+    void exchangeWithPoints(Long userId, Long templateId);
+
+    /**
      * 批量清理过期优惠券
      */
     void expireCoupons();

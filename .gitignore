@@ -23,6 +23,12 @@ PROJECT_ANALYSIS_REPORT.md
 .joycode/
 .qoder/
 .rtk/
+.atomcode/
+.review/
+.workbuddy/
+design-review/
+# 第三方分析工具生成的竞品文档（本地留档，非项目交付物）
+docs/竞品与市场分析_竞析_2026.md
 
 # ===== 构建产物 =====
 target/
@@ -48,12 +54,14 @@ node_modules/
 postcss.config.js
 
 # ===== 数据库 =====
-# db/ 建表脚本与真实业务种子数据入库，随代码分发供新环境一键灌数
+# db/ 下仅增量迁移/建表 SQL 入库；全量备份/导出与 seed 模拟数据（tools/db-sim 生成，
+# 含 91MB 交易流水）仅本地保留，不入库
 db/**
 !db/migration/
 !db/migration/**
-!db/seed/
-!db/seed/**
+!db/*.sql
+db/reggie.sql
+db/reggie-backup-*.sql
 
 # ===== 脚本和工具 =====
 # 脚本入库：数据生成器 + 图片资源收口 + 一致性校验，换机可复现

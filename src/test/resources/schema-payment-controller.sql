@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS order_detail (
 CREATE TABLE IF NOT EXISTS payment_order (
   id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
   order_id bigint NOT NULL COMMENT '业务订单id',
+  biz_type varchar(20) NOT NULL DEFAULT 'ORDER' COMMENT '业务类型 ORDER/RECHARGE',
   tenant_id bigint DEFAULT NULL COMMENT '租户id',
   trade_no varchar(64) NOT NULL COMMENT '系统交易号',
   channel_trade_no varchar(128) DEFAULT NULL COMMENT '通道交易号',

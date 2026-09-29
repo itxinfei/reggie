@@ -26,6 +26,17 @@ public interface PaymentOrderService extends IService<PaymentOrder> {
     PaymentOrder createPaymentOrder(Long orderId, String channel, BigDecimal amount);
 
     /**
+     * 创建通用业务支付单（会员充值等非订单业务）。
+     *
+     * @param bizType 业务类型（如 {@link PaymentOrder#BIZ_RECHARGE}）
+     * @param bizId   业务单ID（RECHARGE 时为充值记录ID）
+     * @param channel 支付渠道（WECHAT/ALIPAY）
+     * @param amount  支付金额
+     * @return 支付订单
+     */
+    PaymentOrder createPaymentOrderForBiz(String bizType, Long bizId, String channel, BigDecimal amount);
+
+    /**
      * 处理支付成功回调
      *
      * @param tradeNo       内部交易号

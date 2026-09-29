@@ -19,9 +19,16 @@ public class CheckoutPreviewRequestDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @Schema(description = "收货地址ID", required = true)
-    @NotNull(message = "请选择收货地址")
+    // 修改点（P1-2 自提）：自提单无需地址，去除 @NotNull，改由 Service 按 source 分支校验
+    @Schema(description = "收货地址ID（自提单无需传）")
     private Long addressBookId;
+
+    /**
+     * 订单来源/履约方式：TAKEOUT-外卖配送，SELF_PICKUP-到店自提。
+     * 不传默认 TAKEOUT（向后兼容）。
+     */
+    @Schema(description = "订单来源：TAKEOUT-外卖配送，SELF_PICKUP-到店自提", example = "TAKEOUT")
+    private String source;
 
     @Schema(description = "用户选择的优惠券ID（不使用为 null）")
     private Long usedCouponId;

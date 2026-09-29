@@ -7,6 +7,8 @@ import com.reggie.module.tenant.model.Tenant;
 import com.reggie.enums.OrderSource;
 import com.reggie.module.inventory.mapper.MaterialMapper;
 import com.reggie.module.inventory.model.Material;
+import com.reggie.module.member.model.RechargeRecord;
+import com.reggie.module.member.service.RechargeRecordService;
 import com.reggie.module.report.service.ReportService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.order.service.statusflow.OrderStatusFlowService;
@@ -54,6 +56,10 @@ public class OrderTimeoutTask {
     @Autowired
     private ReportService reportService;
 
+    /** 会员充值记录服务（充值单超时取消） */
+    @Autowired
+    private RechargeRecordService rechargeRecordService;
+
     /** 租户服务（用于获取活跃租户列表） */
     @Autowired
     private TenantService tenantService;
@@ -69,6 +75,10 @@ public class OrderTimeoutTask {
     private static final int DELIVERY_TIMEOUT_HOURS = 24;
     /** 配送超时检查间隔（毫秒）：10分钟 */
     private static final long DELIVERY_TIMEOUT_CHECK_INTERVAL = 10 * 60 * 1000L;
+    /** 充值超时检查间隔（毫秒）：10分钟 */
+    private static final long RECHARGE_TIMEOUT_CHECK_INTERVAL = 10 * 60 * 1000L;
+    /** 充值超时阈值（分钟）：30分钟未支付自动取消 */
+    private static final int RECHARGE_TIMEOUT_MINUTES = 30;
     /** 库存预警检查间隔（毫秒）：1小时 */
     private static final long INVENTORY_ALERT_CHECK_INTERVAL = 60 * 60 * 1000L;
     /** 分布式锁过期时间（毫秒），应大于任务最大执行时间 */
@@ -220,6 +230,79 @@ public class OrderTimeoutTask {
                 // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("[定时任务] 取消超时订单失败: orderId={}, tenantId={}, error={}",
                     order.getId(), BaseContext.getCurrentTenantId(), e.getMessage());
+            }
+        }
+        return cancelled;
+    }
+
+    // ──────────────────────────────────────
+    // 充值超时自动取消（每 10 分钟，P1-4）
+    // ──────────────────────────────────────
+    /**
+     * 取消超时未支付的充值单。
+     */
+    @Scheduled(fixedRate = RECHARGE_TIMEOUT_CHECK_INTERVAL)
+    public void cancelTimeoutRecharges() {
+        String lockValue = tryLock("schedule:lock:recharge-timeout", LOCK_TTL_MS);
+        if (lockValue == null) {
+            log.debug("[定时任务] 充值超时取消任务正在执行中，跳过本次");
+            return;
+        }
+        try {
+            List<Tenant> tenants = tenantService.listActiveTenants();
+            if (tenants.isEmpty()) {
+                return;
+            }
+            LocalDateTime threshold = LocalDateTime.now().minusMinutes(RECHARGE_TIMEOUT_MINUTES);
+            int totalCancelled = 0;
+            for (Tenant tenant : tenants) {
+                BaseContext.setCurrentTenantId(tenant.getId());
+                try {
+                    totalCancelled += cancelTimeoutRechargesForTenant(threshold);
+                } finally {
+                    BaseContext.remove();
+                }
+            }
+            if (totalCancelled > 0) {
+                log.info("[定时任务] 充值超时取消完成，共处理 {} 个租户，取消 {} 个充值单",
+                        tenants.size(), totalCancelled);
+            }
+        } finally {
+            unlock("schedule:lock:recharge-timeout", lockValue);
+        }
+    }
+
+    /**
+     * 为单个租户取消超时充值单（CAS PENDING→CANCELLED，防支付回调并发）。
+     */
+    private int cancelTimeoutRechargesForTenant(LocalDateTime threshold) {
+        LambdaQueryWrapper<RechargeRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(RechargeRecord::getStatus, RechargeRecord.STATUS_PENDING)
+               .lt(RechargeRecord::getCreatedTime, threshold)
+               .eq(RechargeRecord::getTenantId, BaseContext.getCurrentTenantId());
+        List<RechargeRecord> timeoutList = rechargeRecordService.list(wrapper);
+        if (timeoutList.isEmpty()) {
+            return 0;
+        }
+        log.info("[定时任务] 租户 {} 发现 {} 个超时未支付充值单",
+                BaseContext.getCurrentTenantId(), timeoutList.size());
+        int cancelled = 0;
+        for (RechargeRecord record : timeoutList) {
+            try {
+                boolean ok = rechargeRecordService.lambdaUpdate()
+                        .eq(RechargeRecord::getId, record.getId())
+                        .eq(RechargeRecord::getStatus, RechargeRecord.STATUS_PENDING)
+                        .set(RechargeRecord::getStatus, RechargeRecord.STATUS_CANCELLED)
+                        .update();
+                if (ok) {
+                    cancelled++;
+                    log.warn("[定时任务] 充值单超时自动取消: rechargeId={}, rechargeNo={}, tenantId={}",
+                            record.getId(), record.getRechargeNo(), BaseContext.getCurrentTenantId());
+                }
+            } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+                log.error("[定时任务] 取消超时充值单失败: rechargeId={}, error={}",
+                        record.getId(), e.getMessage());
             }
         }
         return cancelled;

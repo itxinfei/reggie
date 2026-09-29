@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>骑手评价管理 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260928" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260928" />
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; background: var(--el-bg-subtle); }
+    html { overflow: hidden; }
+    body { overflow-y: auto; }
+    .container { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+    .tool-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tool-bar .spacer { flex: 1; }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+  <main class="container" id="main-content" role="main" aria-labelledby="page-title">
+    <h1 class="sr-only" id="page-title">骑手评价管理</h1>
+
+    <el-card shadow="never">
+      <div class="tool-bar">
+        <el-input v-model="filterRiderName" placeholder="骑手姓名" clearable style="width: 160px;"></el-input>
+        <el-select v-model="filterStar" placeholder="全部评分" clearable style="width: 130px;">
+          <el-option v-for="n in [1,2,3,4,5]" :key="n" :label="n + ' 星'" :value="n"></el-option>
+        </el-select>
+        <el-select v-model="filterStatus" placeholder="全部状态" clearable style="width: 130px;">
+          <el-option label="待审核" value="0"></el-option>
+          <el-option label="已通过" value="1"></el-option>
+          <el-option label="已拒绝" value="2"></el-option>
+        </el-select>
+        <el-button type="primary" @click="load">查询</el-button>
+        <span class="spacer"></span>
+        <el-pagination
+          layout="total, prev, pager, next"
+          :total="total"
+          :page-size="pageSize"
+          :current-page="page"
+          @current-change="onPageChange">
+        </el-pagination>
+      </div>
+
+      <el-table :data="rows" v-loading="loading" border>
+        <el-table-column prop="id" label="评价ID" width="90" align="center"></el-table-column>
+        <el-table-column prop="riderName" label="骑手" width="110" align="center"></el-table-column>
+        <el-table-column label="顾客" width="110" align="center">
+          <template slot-scope="{ row }">{{ row.anonymous === 1 ? '匿名' : (row.userName || '-') }}</template>
+        </el-table-column>
+        <el-table-column label="评分" width="160" align="center">
+          <template slot-scope="{ row }">
+            <el-rate :value="row.starRating" disabled></el-rate>
+          </template>
+        </el-table-column>
+        <el-table-column prop="content" label="评价内容" min-width="180" align="center">
+          <template slot-scope="{ row }">{{ row.content || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="标签" min-width="160" align="center">
+          <template slot-scope="{ row }">
+            <el-tag v-for="t in (row.tagsParsed || [])" :key="t" size="mini" style="margin:2px;">{{ t }}</el-tag>
+            <span v-if="!row.tagsParsed || !row.tagsParsed.length">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="90" align="center">
+          <template slot-scope="{ row }">
+            <el-tag :type="statusTag(row.status)" size="small">{{ statusText(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="评价时间" width="170" align="center"></el-table-column>
+        <el-table-column label="商家回复" min-width="160" align="center">
+          <template slot-scope="{ row }">{{ row.replyContent || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="120" align="center" fixed="right">
+          <template slot-scope="{ row }">
+            <el-button v-if="!row.replyContent" type="text" size="small"
+                       @click="openReply(row)">回复</el-button>
+            <span v-else class="el-text--secondary">已回复</span>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-dialog title="回复评价" :visible.sync="replyVisible" width="460px">
+      <p>骑手：{{ replyRow ? replyRow.riderName : '' }}　评分：{{ replyRow ? replyRow.starRating : '' }} 星</p>
+      <el-input v-model="replyContent" type="textarea" :rows="3" placeholder="请输入回复内容"></el-input>
+      <span slot="footer">
+        <el-button @click="replyVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitReply">确认回复</el-button>
+      </span>
+    </el-dialog>
+  </main>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260928"></script>
+  <script src="../../js/common.js?v=20260928"></script>
+  <script>
+    function parseTags(tags) {
+      try { return tags ? JSON.parse(tags) : []; } catch (e) { return []; }
+    }
+    new Vue({
+      el: '#main-content',
+      data: function () {
+        return {
+          loading: false,
+          rows: [],
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          filterRiderName: '',
+          filterStar: '',
+          filterStatus: '',
+          replyVisible: false,
+          replyRow: null,
+          replyContent: '',
+          submitting: false
+        };
+      },
+      mounted: function () {
+        this.load();
+      },
+      methods: {
+        load: function () {
+          var vm = this;
+          vm.loading = true;
+          $axios.get('/api/rider-evaluation/admin/page', {
+            params: {
+              riderName: vm.filterRiderName || undefined,
+              starRating: vm.filterStar || undefined,
+              status: vm.filterStatus || undefined,
+              page: vm.page,
+              pageSize: vm.pageSize
+            }
+          }).then(function (res) {
+            var page = res.data || {};
+            var records = page.records || [];
+            for (var i = 0; i < records.length; i++) {
+              records[i].tagsParsed = parseTags(records[i].tags);
+            }
+            vm.rows = records;
+            vm.total = page.total || 0;
+          }).catch(function () { /* 提示已统一 */ }).then(function () {
+            vm.loading = false;
+          });
+        },
+        onPageChange: function (p) {
+          this.page = p;
+          this.load();
+        },
+        openReply: function (row) {
+          this.replyRow = row;
+          this.replyContent = '';
+          this.replyVisible = true;
+        },
+        submitReply: function () {
+          var vm = this;
+          if (!vm.replyContent) {
+            vm.$message.warning('请输入回复内容');
+            return;
+          }
+          vm.submitting = true;
+          $axios.put('/api/rider-evaluation/' + vm.replyRow.id + '/reply', {
+            replyContent: vm.replyContent
+          }).then(function () {
+            vm.$message.success('回复成功');
+            vm.replyVisible = false;
+            vm.load();
+          }).catch(function () { /* 提示已统一 */ }).then(function () {
+            vm.submitting = false;
+          });
+        },
+        statusText: function (s) {
+          if (s === 0) return '待审核';
+          if (s === 1) return '已通过';
+          if (s === 2) return '已拒绝';
+          return s != null ? ('' + s) : '';
+        },
+        statusTag: function (s) {
+          if (s === 0) return 'warning';
+          if (s === 1) return 'success';
+          if (s === 2) return 'danger';
+          return 'info';
+        }
+      }
+    });
+  </script>
+</body>
+</html>

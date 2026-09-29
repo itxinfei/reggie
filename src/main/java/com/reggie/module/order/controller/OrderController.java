@@ -15,6 +15,7 @@ import com.reggie.module.order.dto.OrderAgainDTO;
 import com.reggie.module.order.dto.OrderDispatchDTO;
 import com.reggie.module.order.dto.OrderSubmitDTO;
 import com.reggie.module.order.dto.OrderUpdateStatusDTO;
+import com.reggie.module.order.dto.SelfPickupVerifyDTO;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.service.OrderDetailService;
@@ -107,9 +108,15 @@ public class OrderController {
         orders.setPayMethod(dto.getPayMethod());
         orders.setExpectDeliveryTime(dto.getExpectDeliveryTime());
         orders.setUsedCouponId(dto.getUsedCouponId());
-        log.info("订单数据：手机号={}，地址ID={}",
+        // 修改点（P1-2 自提）：透传履约来源，默认 TAKEOUT 保持外卖向后兼容
+        if (dto.getSource() != null && !dto.getSource().trim().isEmpty()) {
+            orders.setSource(dto.getSource());
+        } else {
+            orders.setSource(com.reggie.enums.OrderSource.TAKEOUT.getValue());
+        }
+        log.info("订单数据：手机号={}，地址ID={}，来源={}",
             LogMaskUtils.maskPhone(orders.getPhone()),
-            dto.getAddressBookId());
+            dto.getAddressBookId(), orders.getSource());
 
         // 幂等性校验：检查是否重复提交
         String idempotencyKey = orders.getIdempotencyKey();
@@ -432,6 +439,18 @@ public class OrderController {
     public R<String> reject(@RequestParam Long id) {
         statusFlowService.rejectOrder(id);
         return R.success("已拒单");
+    }
+
+    /**
+     * 店员核销自提订单：核对取餐码后完成
+     */
+    @PutMapping("/selfPickup/verify")
+    @RequireEmployee
+    @RateLimit(maxRequestsPerSecond = 20, type = RateLimitType.USER)
+    @Operation(summary = "核销自提订单", description = "校验顾客取餐码，通过后订单完成")
+    public R<String> verifySelfPickup(@Valid @RequestBody SelfPickupVerifyDTO dto) {
+        statusFlowService.verifySelfPickupOrder(dto.getId(), dto.getPickupCode());
+        return R.success("核销成功");
     }
 
     /**

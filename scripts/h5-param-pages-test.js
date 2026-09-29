@@ -43,7 +43,7 @@ const shot = (page, name) =>
   const markErrors = () => { const ne = newErrors(); errMark = errors.length; return ne; };
 
   // ---------- 登录 ----------
-  await page.goto('http://localhost:8080/front/page/login.html', { waitUntil: 'networkidle' });
+  await page.goto('http://localhost:8080/front/page/login.html', { waitUntil: 'domcontentloaded' });
   await page.fill('input[type=tel]', PHONE);
   await page.getByText('获取验证码').click();
   await page.waitForTimeout(1000);
@@ -56,7 +56,7 @@ const shot = (page, name) =>
 
   // ---------- 1. 首页加载 + 加购 ----------
   try {
-    await page.goto('http://localhost:8080/front/index.html', { waitUntil: 'networkidle' });
+    await page.goto('http://localhost:8080/front/index.html', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.ri-add-line', { timeout: 8000 });
     const kk = await page.locator('.kingkong').count();
     await page.locator('.ri-add-line').nth(0).click();
@@ -107,7 +107,7 @@ const shot = (page, name) =>
   // ---------- 5. 订单详情 ----------
   try {
     await page.goto('http://localhost:8080/front/page/order-detail.html?id=' + orderId,
-      { waitUntil: 'networkidle' });
+      { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1000);
     const body = await page.locator('body').innerText();
     const ok = page.url().indexOf('login') < 0 && body.indexOf('黄焖鸡') >= 0;
@@ -118,7 +118,7 @@ const shot = (page, name) =>
   // ---------- 6. 配送跟踪 ----------
   try {
     await page.goto('http://localhost:8080/front/page/tracking.html?orderId=' + orderId,
-      { waitUntil: 'networkidle' });
+      { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1200);
     const body = await page.locator('body').innerText();
     const bad = /参数错误|订单不存在|系统异常/.test(body);
@@ -130,7 +130,7 @@ const shot = (page, name) =>
   // ---------- 7. 堂食扫码：两栏点餐 + 到店支付 ----------
   try {
     await page.goto('http://localhost:8080/front/page/qrcode-order.html?tableId=3001',
-      { waitUntil: 'networkidle' });
+      { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.category-rail', { timeout: 8000 });
     await page.waitForSelector('.dish-rows .step-plus', { timeout: 8000 });
     await page.locator('.dish-rows .step-plus').first().click();

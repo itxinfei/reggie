@@ -35,12 +35,21 @@ public class PaymentOrder implements Serializable {
     /** 状态常量：支付失败 */
     public static final String STATUS_FAIL = "FAIL";
 
+    /** 业务类型常量：普通外卖/堂食订单 */
+    public static final String BIZ_ORDER = "ORDER";
+    /** 业务类型常量：会员充值 */
+    public static final String BIZ_RECHARGE = "RECHARGE";
+
     @Schema(description = "支付订单ID", example = "1")
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    @Schema(description = "关联订单ID", example = "1")
+    @Schema(description = "关联业务单ID（bizType=ORDER 时为订单ID，RECHARGE 时为充值记录ID）", example = "1")
     private Long orderId;
+
+    @Schema(description = "业务类型：ORDER=订单，RECHARGE=会员充值（默认ORDER）", example = "ORDER")
+    @TableField("biz_type")
+    private String bizType;
 
     @Schema(description = "租户ID", example = "1")
     @TableField(fill = FieldFill.INSERT)

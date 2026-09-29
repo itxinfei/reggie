@@ -5,9 +5,13 @@ import com.reggie.common.AuthConstants;
 import com.reggie.common.ObjectMapperHolder;
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.module.delivery.model.RiderRememberToken;
+import com.reggie.module.delivery.service.RiderRememberTokenService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.context.support.WebApplicationContextUtils;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -15,6 +19,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.annotation.WebFilter;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -94,6 +99,15 @@ public class LoginCheckFilter implements Filter{
             //4-3、判断骑手会话，如果已登录，则直接放行
             if (session != null && session.getAttribute("rider") != null) {
                 if (applyRiderContext(session, request, response)) {
+                    filterChain.doFilter(request, response);
+                }
+                return;
+            }
+
+            //4-4、骑手会话已过期时，凭「记住登录」cookie 自动恢复会话（cookie 30天有效）
+            HttpSession autoSession = autoLoginByRememberCookie(request);
+            if (autoSession != null) {
+                if (applyRiderContext(autoSession, request, response)) {
                     filterChain.doFilter(request, response);
                 }
                 return;
@@ -214,6 +228,52 @@ public class LoginCheckFilter implements Filter{
         // 将骑手ID存入request属性，供 RiderGuardAspect 鉴权使用
         request.setAttribute("riderId", riderId);
         return true;
+    }
+
+    /**
+     * 凭「记住登录」cookie 自动恢复骑手会话。
+     * <p>{@code @WebFilter} 不由 Spring 管理，通过 WebApplicationContextUtils 取
+     * {@code RiderRememberTokenService}；令牌不存在/已过期或容器中无该 bean 时返回 null。</p>
+     *
+     * @param request 请求
+     * @return 写入 rider / tenantId 的新会话；无法自动登录时 null
+     */
+    private HttpSession autoLoginByRememberCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        String tokenValue = null;
+        for (Cookie cookie : cookies) {
+            if (RiderRememberTokenService.COOKIE_NAME.equals(cookie.getName())) {
+                tokenValue = cookie.getValue();
+                break;
+            }
+        }
+        if (tokenValue == null || tokenValue.isEmpty()) {
+            return null;
+        }
+        try {
+            WebApplicationContext context = WebApplicationContextUtils
+                    .getWebApplicationContext(request.getServletContext());
+            if (context == null) {
+                return null;
+            }
+            RiderRememberTokenService rememberTokenService =
+                    context.getBean(RiderRememberTokenService.class);
+            RiderRememberToken rememberToken = rememberTokenService.validate(tokenValue);
+            if (rememberToken == null) {
+                return null;
+            }
+            HttpSession autoSession = request.getSession(true);
+            autoSession.setAttribute("rider", rememberToken.getRiderId());
+            autoSession.setAttribute("tenantId", rememberToken.getTenantId());
+            log.info("骑手凭记住登录cookie自动登录：riderId={}", rememberToken.getRiderId());
+            return autoSession;
+        } catch (Exception e) {
+            log.warn("记住登录自动登录失败：{}", e.getMessage());
+            return null;
+        }
     }
 
     /**

@@ -1376,16 +1376,9 @@
               if(m >= 1000){ return (Math.round(m / 100) / 10) + 'km' }
               return Math.round(m) + 'm'
             },
-            // 修改点：点击优惠券栏展开优惠券详情
+            // 点击优惠券栏跳转独立领券中心（P1-9）：可看全部可领券、积分兑换、我的券
             showCouponDetail(){
-              // 修改点(2026-09-18)：只展示后端真实券；无真实券时券栏本就不渲染，此处双保险
-              const coupons = this.restaurantInfo.coupons
-              if(!Array.isArray(coupons) || coupons.length === 0) return
-              vant.Dialog.alert({
-                title: '优惠券',
-                message: coupons.map(c => c.text).join(' · '),
-                confirmButtonText: '我知道了'
-              })
+              window.location.href = '/front/page/coupon-center.html'
             },
             // 修改点：点击公告栏查看公告详情
             showNoticeDetail(){

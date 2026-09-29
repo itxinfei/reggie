@@ -1,26 +1,20 @@
 package com.reggie.module.inventory.service.impl;
 
+import com.reggie.enums.StockRecordType;
 import com.reggie.module.inventory.mapper.MaterialMapper;
-import org.springframework.transaction.annotation.Transactional;
+import com.reggie.module.inventory.mapper.StockRecordMapper;
 import com.reggie.module.inventory.model.DishMaterial;
-import org.springframework.transaction.annotation.Transactional;
+import com.reggie.module.inventory.model.StockRecord;
 import com.reggie.module.inventory.service.DishMaterialService;
-import org.springframework.transaction.annotation.Transactional;
 import com.reggie.module.inventory.service.MaterialStockService;
-import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.Collections;
-import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 原料库存联动服务实现
@@ -42,8 +36,16 @@ public class MaterialStockServiceImpl implements MaterialStockService {
     @Autowired
     private MaterialMapper materialMapper;
 
+    @Autowired(required = false)
+    private StockRecordMapper stockRecordMapper;
+
     @Override
     public void deductMaterialStock(Long dishId, BigDecimal dishQty) {
+        deductMaterialStock(dishId, dishQty, null);
+    }
+
+    @Override
+    public void deductMaterialStock(Long dishId, BigDecimal dishQty, Long orderId) {
         if (dishId == null || dishQty == null || dishQty.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
@@ -69,6 +71,9 @@ public class MaterialStockServiceImpl implements MaterialStockService {
                 } else {
                     log.info("[原料扣减] 原料ID={} 扣减{}（菜品ID={} x {}）",
                             bom.getMaterialId(), totalQty, dishId, dishQty);
+                    // P1-7：实际扣减成功才写订单流水（qty 记负值），未扣成功不写，保证流水与库存真实变动一致
+                    writeStockRecord(bom.getMaterialId(), StockRecordType.SALE_ORDER,
+                            totalQty.negate(), orderId);
                 }
             } catch (Exception e) {
                 log.error("[原料扣减失败] 原料ID={} 扣减{}失败（菜品ID={}）: {}",
@@ -82,6 +87,11 @@ public class MaterialStockServiceImpl implements MaterialStockService {
 
     @Override
     public void restoreMaterialStock(Long dishId, BigDecimal dishQty) {
+        restoreMaterialStock(dishId, dishQty, null);
+    }
+
+    @Override
+    public void restoreMaterialStock(Long dishId, BigDecimal dishQty, Long orderId) {
         if (dishId == null || dishQty == null || dishQty.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
@@ -99,10 +109,34 @@ public class MaterialStockServiceImpl implements MaterialStockService {
                 materialMapper.addStock(bom.getMaterialId(), totalQty);
                 log.info("[原料恢复] 原料ID={} 恢复{}（菜品ID={} x {}）",
                         bom.getMaterialId(), totalQty, dishId, dishQty);
+                // P1-7：退款回补写流水（qty 正值）
+                writeStockRecord(bom.getMaterialId(), StockRecordType.REFUND_ORDER,
+                        totalQty, orderId);
             } catch (Exception e) {
                 log.error("[原料恢复失败] 原料ID={} 恢复{}失败（菜品ID={}）: {}",
                         bom.getMaterialId(), totalQty, dishId, e.getMessage(), e);
             }
+        }
+    }
+
+    /**
+     * 写一条库存流水。失败仅告警不抛出——流水是追溯能力，不能因它阻断下单/退款主事务。
+     */
+    private void writeStockRecord(Long materialId, StockRecordType type, BigDecimal qty, Long orderId) {
+        if (stockRecordMapper == null) {
+            return;
+        }
+        try {
+            StockRecord record = new StockRecord();
+            record.setMaterialId(materialId);
+            record.setType(type.getValue());
+            record.setQty(qty);
+            record.setBizId(orderId);
+            record.setRemark(orderId == null ? type.getDesc() : type.getDesc() + "，订单ID=" + orderId);
+            stockRecordMapper.insert(record);
+        } catch (Exception e) {
+            log.error("[库存流水] 写流水失败：materialId={}, type={}, qty={}, orderId={}: {}",
+                    materialId, type.getValue(), qty, orderId, e.getMessage(), e);
         }
     }
 

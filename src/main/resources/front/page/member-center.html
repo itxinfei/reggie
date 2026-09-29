@@ -242,7 +242,7 @@
                @click="pickAmount(a)">{{ a }}元</div>
         </div>
         <input class="rc-custom-input" type="number" v-model="rc.customAmount" min="1" placeholder="自定义金额（元）">
-        <div class="rc-channel-label">支付方式（到店出示，门店确认到账）</div>
+        <div class="rc-channel-label">支付方式（在线支付，立即到账）</div>
         <div class="rc-channel-row">
           <div :class="['rc-channel', rc.paymentMethod==='WECHAT'?'on':'']" @click="rc.paymentMethod='WECHAT'">
             <i class="ri-wechat-pay-line"></i><span>微信</span>
@@ -254,7 +254,7 @@
         <button class="rc-submit" :disabled="rc.submitting" @click="submitRecharge">
           {{ rc.submitting ? '提交中…' : '立即充值' }}
         </button>
-        <div class="rc-tip">提交后请到店出示付款，门店确认收款后余额到账</div>
+        <div class="rc-tip">在线支付成功后余额立即到账，可在下方充值记录查看</div>
       </div>
     </van-popup>
 
@@ -277,7 +277,8 @@
   <script src="../js/vant.min.js"></script>
   <script src="../../backend/plugins/axios/axios.min.js"></script>
   <script src="../js/request.js?v=20260927"></script>
-  <script src="../api/member-center.js?v=20260917"></script>
+  <script src="../api/member-center.js?v=20260929"></script>
+  <script src="../api/payment.js?v=20260929"></script>
   <script src="../api/coupon.js?v=20260917"></script>
   <script>
     new Vue({
@@ -294,7 +295,7 @@
           allLevels: [],
           // 会员在线充值（门店确认到账模式）
           amountOptions: [50, 100, 200, 500],
-          rc: { show: false, amount: 100, customAmount: '', paymentMethod: 'WECHAT', submitting: false },
+          rc: { show: false, amount: 100, customAmount: '', paymentMethod: 'WECHAT', submitting: false, tradeNo: '' },
           pending: { show: false, rechargeNo: '', amount: null, paymentMethod: 'WECHAT' },
           activating: false
         }
@@ -468,19 +469,71 @@
           if (amount > 5000) { vant.Toast.fail('单笔充值不能超过5000元'); return }
           this.rc.submitting = true
           try {
-            var res = await createRechargeApi({ amount: amount, paymentMethod: this.rc.paymentMethod })
-            if (res.code === 1) {
-              var d = res.data || {}
+            // 1. 创建 PENDING 充值单
+            var create = await createRechargeApi({ amount: amount, paymentMethod: this.rc.paymentMethod })
+            if (create.code !== 1) {
+              vant.Toast.fail(create.msg || '提交失败')
+              this.rc.submitting = false
+              return
+            }
+            var rechargeNo = (create.data || {}).rechargeNo
+            // 2. 发起在线支付
+            var pay = await rechargePayApi({ rechargeNo: rechargeNo, channel: this.rc.paymentMethod })
+            if (pay.code !== 1) {
+              // 支付发起失败：充值单仍 PENDING，关闭弹层提示，可走充值记录/门店确认兜底
               this.rc.show = false
-              this.pending.rechargeNo = d.rechargeNo
-              this.pending.amount = d.amount
-              this.pending.paymentMethod = d.paymentMethod || this.rc.paymentMethod
-              this.pending.show = true
-              this.startRechargePolling()
-            } else { vant.Toast.fail(res.msg || '提交失败') }
+              vant.Toast.fail(pay.msg || '支付发起失败，可稍后在充值记录中查看')
+              this.rc.submitting = false
+              return
+            }
+            var p = pay.data || {}
+            this.rc.tradeNo = p.tradeNo
+            if (p.mockMode) {
+              // 3a. 演示环境：模拟渠道支付回调推进入账
+              this.mockNotifyRecharge(amount)
+            } else if (p.payUrl) {
+              // 3b. 真实渠道：跳转支付，返回页面后重新加载确认到账
+              window.location.href = p.payUrl
+            } else {
+              this.rc.show = false
+              vant.Toast.fail('支付渠道响应异常，请稍后在充值记录查看')
+              this.rc.submitting = false
+            }
           } catch(e) {
-            console.warn('[member-center] 充值提交失败:', e)
+            console.warn('[member-center] 充值支付异常:', e)
             vant.Toast.fail('网络异常，请稍后重试')
+            this.rc.submitting = false
+          }
+        },
+        // 演示环境：构造渠道模拟回调，POST /api/payment/notify/{channel}（mock-mode 跳过验签直接受理）
+        mockNotifyRecharge: async function(amount) {
+          var channel = this.rc.paymentMethod
+          var params = { out_trade_no: this.rc.tradeNo, sign: 'mock' }
+          if (channel === 'WECHAT') {
+            // 微信回调：total_fee 单位分，result_code=SUCCESS 表示业务成功
+            params.total_fee = String(Math.round(Number(amount) * 100))
+            params.result_code = 'SUCCESS'
+            params.return_code = 'SUCCESS'
+            params.transaction_id = 'MOCK_WX_RC_' + Date.now()
+          } else {
+            // 支付宝回调：total_amount 单位元，trade_status=TRADE_SUCCESS
+            params.total_amount = Number(amount).toFixed(2)
+            params.trade_status = 'TRADE_SUCCESS'
+            params.trade_no = 'MOCK_ALI_RC_' + Date.now()
+          }
+          try {
+            var res = await paymentNotifyMockApi(channel, params)
+            if (res && res.code === 1) {
+              this.rc.show = false
+              vant.Toast.success('充值成功，余额已到账')
+              this.loadAll()
+            } else {
+              this.rc.show = false
+              vant.Toast.fail((res && res.msg) || '支付确认失败，请稍后在充值记录查看')
+            }
+          } catch(e) {
+            this.rc.show = false
+            vant.Toast.fail('网络异常，支付确认失败，请稍后在充值记录查看')
           }
           this.rc.submitting = false
         },

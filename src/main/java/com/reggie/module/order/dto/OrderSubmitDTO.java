@@ -23,9 +23,17 @@ import javax.validation.constraints.NotNull;
 @Data
 public class OrderSubmitDTO {
 
-    @NotNull(message = "地址ID不能为空")
-    @Schema(description = "收货地址ID", required = true)
+    // 修改点（P1-2 自提）：地址ID 仅在配送/外卖单必填，自提单(source=SELF_PICKUP)无需地址，
+    // 故此处去除 @NotNull，改由 Service 层按 source 分支校验，避免自提交单被统一校验拦截。
+    @Schema(description = "收货地址ID（自提单无需传）")
     private Long addressBookId;
+
+    /**
+     * 订单来源/履约方式：TAKEOUT-外卖配送，EAT_IN-堂食，SELF_PICKUP-到店自提。
+     * 不传默认 TAKEOUT（向后兼容既有外卖下单）。
+     */
+    @Schema(description = "订单来源：TAKEOUT-外卖配送，EAT_IN-堂食，SELF_PICKUP-到店自提", example = "TAKEOUT")
+    private String source;
 
     @Schema(description = "订单备注")
     private String remark;

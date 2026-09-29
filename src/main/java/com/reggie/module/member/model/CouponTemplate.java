@@ -66,6 +66,9 @@ public class CouponTemplate implements Serializable {
     @Min(value = 1, message = "有效天数必须大于0")
     private Integer validDays;
 
+    @Schema(description = "积分兑换所需积分（>0 表示支持积分兑换；null/0 仅支持普通领取）", example = "100")
+    private Integer pointsPrice;
+
     @Schema(description = "状态：0=禁用，1=启用", example = "1")
     private Integer status;
 

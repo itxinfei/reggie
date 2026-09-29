@@ -1,7 +1,9 @@
 package com.reggie.module.delivery.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import cn.hutool.core.util.DesensitizedUtil;
 import com.reggie.module.address.model.AddressBook;
 import com.reggie.module.address.service.AddressBookService;
 import com.reggie.module.delivery.dto.RiderTaskVO;
@@ -129,8 +131,15 @@ public class RiderTaskQueryServiceImpl implements RiderTaskQueryService {
 
         // 送达地址快照
         vo.setConsignee(order.getConsignee());
-        vo.setPhone(order.getPhone());
         vo.setAddress(order.getAddress());
+        // 号码保护（务实分级披露）：仅当该单已归属当前骑手时下发真实手机号，
+        // 抢单大厅/未持单列表统一脱敏（138****5678）。骑手接单后详情/我的单才可见真实号，
+        // 兼顾顾客隐私与骑手履约联系需求；真实双向虚拟号需第三方隐私号平台，暂不接入。
+        Long currentRiderId = BaseContext.getCurrentId();
+        boolean revealPhone = order.getRiderId() != null
+                && order.getRiderId().equals(currentRiderId);
+        vo.setPhone(revealPhone ? order.getPhone()
+                : DesensitizedUtil.mobilePhone(order.getPhone()));
 
         // 取餐门店：名称/地址/电话取租户，坐标取门店档案
         Tenant tenant = tenantService.getById(order.getTenantId());

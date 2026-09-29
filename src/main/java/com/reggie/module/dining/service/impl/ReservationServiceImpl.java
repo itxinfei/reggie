@@ -46,7 +46,18 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
     @Transactional(rollbackFor = Exception.class)
     public Reservation createReservation(String customerName, String phone, LocalDateTime reservedTime,
             Integer seatCount, Long tableId, String remark) {
+        return createReservation(customerName, phone, reservedTime, seatCount, tableId, remark, null);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Reservation createReservation(String customerName, String phone, LocalDateTime reservedTime,
+            Integer seatCount, Long tableId, String remark, Long userId) {
         Long currentTenantId = BaseContext.getCurrentTenantId();
+        // 预订时间必须晚于当前（员工/顾客统一口径；1 分钟容错）
+        if (reservedTime == null || reservedTime.isBefore(LocalDateTime.now().minusMinutes(1))) {
+            throw new CustomException("预订时间需晚于当前时间");
+        }
         // 修复 P2-3：时间冲突检测——同一桌台同一时间窗口（±1小时）已被预订则拒绝
         if (tableId != null && reservedTime != null) {
             LambdaQueryWrapper<Reservation> conflictQw = new LambdaQueryWrapper<>();
@@ -66,6 +77,7 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         r.setTenantId(currentTenantId);
         r.setCustomerName(customerName);
         r.setPhone(phone);
+        r.setUserId(userId);
         r.setReservedTime(reservedTime);
         r.setSeatCount(seatCount);
         r.setTableId(tableId);
@@ -134,6 +146,20 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         if (wasConfirmed && r.getTableId() != null) {
             diningTableService.changeStatus(r.getTableId(), DiningTableStatus.FREE.getValue());
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelMyReservation(Long id, Long userId) {
+        if (id == null || userId == null) {
+            throw new CustomException("预订不存在");
+        }
+        Reservation r = getById(id);
+        if (r == null || !userId.equals(r.getUserId())) {
+            throw new CustomException("预订不存在");
+        }
+        // 复用统一取消逻辑：含 CONFIRMED 桌台释放
+        cancelReservation(id);
     }
 
     /**

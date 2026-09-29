@@ -34,7 +34,7 @@ public final class ImageStoragePathResolver {
     private static final Map<String, String> BIZ_DIRS = new HashMap<String, String>();
     private static final Map<String, String> BIZ_VISIBILITY = new HashMap<String, String>();
     private static final Set<String> PRIVATE_BIZ_DIRS = new HashSet<String>(Arrays.asList(
-            "purchase", "stockcheck", "stockrecord", "supplier", "tenant", "payvoucher"));
+            "purchase", "stockcheck", "stockrecord", "supplier", "tenant", "payvoucher", "invoice"));
 
     static {
         BIZ_DIRS.put("dish", "dishes");
@@ -48,6 +48,7 @@ public final class ImageStoragePathResolver {
         BIZ_DIRS.put("avatar", "avatar");
         BIZ_DIRS.put("chat", "chat");
         BIZ_DIRS.put("payvoucher", "payvoucher");
+        BIZ_DIRS.put("invoice", "invoice");
 
         BIZ_VISIBILITY.put("dish", "public");
         BIZ_VISIBILITY.put("setmeal", "public");
@@ -61,6 +62,8 @@ public final class ImageStoragePathResolver {
         BIZ_VISIBILITY.put("chat", "private");
         // 付款凭证含收款截图等敏感信息，落 private 目录（仅登录后经 /common/download 访问）
         BIZ_VISIBILITY.put("payvoucher", "private");
+        // 发票票面 PDF 含购买方信息，落 private 目录，登录后经 /common/download 鉴权访问
+        BIZ_VISIBILITY.put("invoice", "private");
     }
 
     private ImageStoragePathResolver() {
@@ -109,6 +112,16 @@ public final class ImageStoragePathResolver {
 
     public static boolean isUserPrivatePath(String relativePath) {
         return relativePath != null && relativePath.startsWith("private/user/");
+    }
+
+    /**
+     * 是否发票票面文件（private/{admin|user}/invoice/...）。
+     * 发票由员工上传、需向购买顾客开放，鉴权单独按"任一登录"处理。
+     */
+    public static boolean isInvoicePath(String relativePath) {
+        return relativePath != null
+                && (relativePath.startsWith("private/admin/invoice/")
+                        || relativePath.startsWith("private/user/invoice/"));
     }
 
     /** fallbackBizDir 是否公开业务（迁移 fallback 拼 visibility 用）。 */

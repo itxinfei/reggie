@@ -43,7 +43,8 @@ import java.util.UUID;
 @Tag(name = "公共接口", description = "文件上传下载等公共接口")
 public class CommonController {
 
-    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif");
+    // pdf：发票票面上传（P2-5），仅 bizType=invoice 时使用，落 private 目录
+    private static final List<String> ALLOWED_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif", "pdf");
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
     private static final int BUFFER_SIZE = 1024;
 
@@ -62,6 +63,10 @@ public class CommonController {
         MAGIC_BYTES.put("gif", new byte[][]{
                 { 0x47, 0x49, 0x46, 0x38, 0x37, 0x61 },
                 { 0x47, 0x49, 0x46, 0x38, 0x39, 0x61 }
+        });
+        // PDF 文件头 %PDF-（发票票面，P2-5）
+        MAGIC_BYTES.put("pdf", new byte[][]{
+                { 0x25, 0x50, 0x44, 0x46, 0x2D }
         });
     }
 
@@ -334,6 +339,10 @@ public class CommonController {
         if (com.reggie.utils.ImageStoragePathResolver.isPublicPath(canonicalRelativePath)) {
             return true;
         }
+        // 发票由员工上传、向购买顾客开放：任一登录(employee/user)即可访问，UUID 文件名不可枚举
+        if (com.reggie.utils.ImageStoragePathResolver.isInvoicePath(canonicalRelativePath)) {
+            return hasEmployee || hasUser;
+        }
         if (com.reggie.utils.ImageStoragePathResolver.isAdminPrivatePath(canonicalRelativePath)) {
             return hasEmployee;
         }
@@ -364,6 +373,10 @@ public class CommonController {
                 break;
             case "gif":
                 response.setContentType("image/gif");
+                break;
+            case "pdf":
+                // 发票票面内联展示（P2-5）
+                response.setContentType("application/pdf");
                 break;
             default:
                 response.setContentType("application/octet-stream");

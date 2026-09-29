@@ -659,10 +659,41 @@ public class EmployeeController {
                 emp.setPasswordType(null);
                 emp.setPhone(emp.getPhone() != null ? maskPhone(emp.getPhone()) : null);
                 emp.setIdNumber(null);
+                // 修改点(P1-1)：回填 RBAC 角色名称，员工列表可直接看到该员工的角色
+                emp.setRoleNames(resolveRoleNames(emp.getId(), currentTenantId));
             }
         }
 
         return R.success(pageInfo);
+    }
+
+    /**
+     * 查询员工的 RBAC 角色名称（employee_role → role.name）。
+     * <p>失败时返回空列表，仅影响角色列展示，不阻塞员工列表。</p>
+     *
+     * @param employeeId 员工ID
+     * @param tenantId   租户ID
+     * @return 角色名称列表
+     */
+    private java.util.List<String> resolveRoleNames(Long employeeId, Long tenantId) {
+        try {
+            java.util.List<Long> roleIds = roleService.getEmployeeRoleIds(employeeId, tenantId);
+            if (roleIds == null || roleIds.isEmpty()) {
+                return java.util.Collections.emptyList();
+            }
+            java.util.List<Role> roles = roleService.listByIds(roleIds);
+            java.util.List<String> names = new java.util.ArrayList<>();
+            for (Role r : roles) {
+                if (r != null && r.getRoleName() != null) {
+                    names.add(r.getRoleName());
+                }
+            }
+            return names;
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，角色列留空即可，不应阻塞员工列表
+            log.warn("[员工列表] 查询员工角色失败，角色列留空 - employeeId={}", employeeId, e);
+            return java.util.Collections.emptyList();
+        }
     }
 
     /**

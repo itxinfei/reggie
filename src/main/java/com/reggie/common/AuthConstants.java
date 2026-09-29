@@ -41,6 +41,8 @@ public final class AuthConstants {
         "/user/loginout",
         // 骑手登录接口（匿名，登录前无 CSRF token）
         "/api/rider/login",
+        // 骑手自助重置密码（匿名，凭短信验证码鉴权）
+        "/api/rider/forgot-password",
         "/tenant/register",
         // 注意：/api/ai/** 已从 CSRF 排除列表中移除（2026-08-23 安全加固）
         // AI 模块的写操作接口（/api/ai/chat, /api/ai/session/* 等）需要 CSRF 防护，
@@ -69,6 +71,8 @@ public final class AuthConstants {
         "/user/loginout",
         // 骑手登录接口（匿名）；其余 /api/rider/** 业务接口需登录，不在此列
         "/api/rider/login",
+        // 骑手自助重置密码（匿名，凭短信验证码鉴权）
+        "/api/rider/forgot-password",
         "/tenant/register",
         // 公开的商家信息接口（首页匿名访问）
         "/restaurant/info",

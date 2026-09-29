@@ -30,6 +30,23 @@ public interface ReservationService extends IService<Reservation> {
             Long tableId, String remark);
 
     /**
+     * C 端顾客自助创建预订（携带用户ID，便于查询/取消归属校验）
+     *
+     * @param userId 顾客用户ID，其余参数同 {@link #createReservation}
+     * @return 预订记录
+     */
+    Reservation createReservation(String customerName, String phone, LocalDateTime reservedTime, Integer seatCount,
+            Long tableId, String remark, Long userId);
+
+    /**
+     * 顾客取消自己的预订，非本人记录抛业务异常；CONFIRMED 取消会释放所占桌台
+     *
+     * @param id     预订记录ID
+     * @param userId 顾客用户ID
+     */
+    void cancelMyReservation(Long id, Long userId);
+
+    /**
      * 确认预订
      *
      * @param id 预订记录ID

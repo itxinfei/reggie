@@ -57,6 +57,19 @@ public interface MemberMapper extends BaseMapper<Member> {
     int decrementPointsById(@Param("id") Long id, @Param("points") int points);
 
     /**
+     * 积分兑换条件扣减：points = points - #{points}，WHERE points >= #{points}。
+     * 与 {@link #decrementPointsById}（GREATEST 兜底到 0，用于回退）不同，
+     * 余额不足时受影响行数为 0，由调用方据此判定"积分不足"，
+     * 杜绝积分不足却被扣到 0 仍然发出券。
+     * @param id 会员ID
+     * @param points 扣减积分数（正数）
+     * @return 受影响行数，0 表示积分不足或会员不存在
+     */
+    @Update("UPDATE member SET points = points - #{points}, update_time = NOW() " +
+            "WHERE id = #{id} AND points >= #{points}")
+    int deductPointsIfEnough(@Param("id") Long id, @Param("points") int points);
+
+    /**
      * 原子增加会员余额：balance = balance + #{amount} + IFNULL(#{giftAmount}, 0)
      * 修改点：用于充值场景，消除 read-modify-write 并发丢失更新。
      * tenant_id 由 TenantLineInnerInterceptor 自动注入，无需手动拼接。
