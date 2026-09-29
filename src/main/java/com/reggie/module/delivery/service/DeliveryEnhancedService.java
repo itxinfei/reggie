@@ -50,6 +50,16 @@ public interface DeliveryEnhancedService extends IService<DeliveryRangeRule> {
      */
     boolean deleteRangeRule(Long id);
 
+    /**
+     * 以门店坐标重配圆形配送范围圆心：把指定租户圆形规则的圆心对齐到该租户
+     * 主门店（store_info 中该租户 id 最小门店）的经纬度。
+     * 多边形规则无单一圆心，跳过；该租户无门店坐标时规则不处理。
+     *
+     * @param tenantId 租户ID
+     * @return 实际更新的规则条数
+     */
+    int realignCircleCenters(Long tenantId);
+
     // ==================== 配送费阶梯管理 ====================
 
     /**

@@ -112,6 +112,20 @@ public class DeliveryEnhancedController {
         return success ? R.success("删除成功") : R.error("删除失败");
     }
 
+    /**
+     * 以门店坐标重配圆形配送范围圆心。
+     * @return 更新的规则条数
+     */
+    @PostMapping("/range/realign")
+    @RateLimit(maxRequestsPerSecond = 2)
+    @Operation(summary = "配送圆心对齐门店坐标",
+            description = "把当前租户圆形规则圆心更新为该租户主门店坐标")
+    public R<Integer> realignRangeCenter() {
+        Long tenantId = BaseContext.getCurrentTenantId();
+        int updated = deliveryEnhancedService.realignCircleCenters(tenantId);
+        return R.success(updated);
+    }
+
     // ==================== 配送费阶梯管理 ====================
 
     /**

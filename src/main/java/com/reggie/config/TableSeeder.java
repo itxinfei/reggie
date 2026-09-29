@@ -57,6 +57,14 @@ public class TableSeeder implements ApplicationRunner {
     /** 演示数据统一挂在开发租户上，绝不复用采样到的其它租户 */
     private static final long DEV_TENANT = 1L;
 
+    /**
+     * 行数豁免表：这类业务记录/结果表无数据是正常状态（如新店尚无提现/评价），
+     * 不应为凑 MIN_ROWS 插入全空壳。健康检查 DatabaseSchemaHealthCheckTest 同样据此豁免。
+     * 单一事实来源放在此处，健康检查直接引用。
+     */
+    public static final Set<String> ROW_COUNT_EXEMPT = new HashSet<String>(
+            Arrays.asList("rider_withdrawal", "rider_evaluation"));
+
     /** 种子行的时间基准：往前 90 天起步再逐行铺开，避免整表 create_time 挤在同一秒 */
     private static final LocalDateTime BASE_TIME = LocalDateTime.now().minusDays(90);
 
@@ -152,6 +160,10 @@ public class TableSeeder implements ApplicationRunner {
 
         for (TableInfo info : tables) {
             String table = info.getTableName();
+            if (ROW_COUNT_EXEMPT.contains(table.toLowerCase(Locale.ROOT))) {
+                // 记录/结果表空表正常，不凑行数
+                continue;
+            }
             try {
                 List<Col> cols = loadColumns(table);
                 boolean tenantScoped = hasColumn(cols, "tenant_id");

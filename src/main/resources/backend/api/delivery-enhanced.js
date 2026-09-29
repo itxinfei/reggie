@@ -6,6 +6,7 @@ const getRangeRuleById = (id) => $axios({ url: `/delivery/enhanced/range/${id}`,
 const saveRangeRule = (data) => $axios({ url: '/delivery/enhanced/range', method: 'post', data })
 const updateRangeRule = (data) => $axios({ url: '/delivery/enhanced/range', method: 'put', data })
 const deleteRangeRule = (id) => $axios({ url: `/delivery/enhanced/range/${id}`, method: 'delete' })
+const realignRangeCenter = () => $axios({ url: '/delivery/enhanced/range/realign', method: 'post' })
 
 // 配送费阶梯管理
 const getFeeSteps = (params) => $axios({ url: '/delivery/enhanced/fee-step/list', method: 'get', params })

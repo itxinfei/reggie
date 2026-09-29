@@ -121,6 +121,8 @@
           // status: 0离线 1在线 2忙碌（忙碌也视作接单状态）
           vm.online = vm.me.status === 1 || vm.me.status === 2;
           RiderLocation.setEnabled(vm.online);
+          // 登录/记住登录后进入主页且仍离线 → 询问是否立即上线接单（取消则保持离线）
+          if (!vm.online) { vm.promptGoOnline(); }
         }).catch(function () { /* 未登录已跳转 */ });
         vm.loadList(false);
         vm.loadUnread();
@@ -174,6 +176,7 @@
           vm.statusLoading = true;
           RiderApi.setOnline(v).then(function () {
             RiderLocation.setEnabled(v);
+            vm.me.status = v ? 1 : 0;  // 同步状态文字（离线/在线）
             vant.Toast(v ? '已上线，可接单' : '已下线，暂停接单');
           }).catch(function () {
             // 失败回滚开关
@@ -181,6 +184,26 @@
           }).then(function () {
             vm.statusLoading = false;
           });
+        },
+        // 进入主页时仍离线 → 询问是否立即上线；取消则保持离线，之后可手动拨开关
+        promptGoOnline: function () {
+          var vm = this;
+          vant.Dialog.confirm({
+            title: '欢迎回来',
+            message: '你当前处于离线状态，是否立即上线接单？'
+          }).then(function () {
+            vm.statusLoading = true;
+            RiderApi.setOnline(true).then(function () {
+              vm.online = true;  // 同步 van-switch 选中态
+              vm.me.status = 1;  // 同步状态文字为"在线"
+              RiderLocation.setEnabled(true);
+              vant.Toast.success('已上线，可接单');
+            }).catch(function () {
+              vant.Toast('上线失败，可手动开启');
+            }).then(function () {
+              vm.statusLoading = false;
+            });
+          }).catch(function () { /* 取消，保持离线 */ });
         },
         onLogout: function () {
           vant.Dialog.confirm({ title: '提示', message: '确定退出登录吗？' }).then(function () {

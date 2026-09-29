@@ -86,12 +86,14 @@ public class DatabaseSchemaHealthCheckTest {
                 }
             }
 
-            // 3. 种子计数
+            // 3. 种子计数（记录/结果表豁免：空表是正常业务状态，口径与 TableSeeder 同源）
             boolean tenantScoped = columns.contains("tenant_id");
-            long count = countRows(table, tenantScoped);
-            if (count < MIN_ROWS) {
-                problems.add(table + " 行数不足: " + count + " < " + MIN_ROWS
-                        + (tenantScoped ? "（按 tenant_id=1）" : "（全表）"));
+            if (!TableSeeder.ROW_COUNT_EXEMPT.contains(table)) {
+                long count = countRows(table, tenantScoped);
+                if (count < MIN_ROWS) {
+                    problems.add(table + " 行数不足: " + count + " < " + MIN_ROWS
+                            + (tenantScoped ? "（按 tenant_id=1）" : "（全表）"));
+                }
             }
         }
 

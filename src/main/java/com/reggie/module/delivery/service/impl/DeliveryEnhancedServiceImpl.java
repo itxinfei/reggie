@@ -39,6 +39,9 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
     @Autowired
     private DeliveryFeeStepMapper feeStepMapper;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     // ==================== 配送范围管理 ====================
 
     /**
@@ -101,6 +104,54 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
             rule.setTenantId(existing.getTenantId());
             return rangeRuleMapper.updateById(rule) > 0;
         }
+    }
+
+    /**
+     * 以门店坐标重配圆形规则圆心。
+     * @param tenantId 租户ID
+     * @return 实际更新条数
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int realignCircleCenters(Long tenantId) {
+        // 取每个租户主门店（该租户 id 最小门店）坐标。delivery 模块不依赖 store 模块，
+        // 直接用 JdbcTemplate 查询以避免跨模块 Java 依赖；裸 SQL 也不受 MP 租户插件影响
+        Map<Long, BigDecimal[]> storeCenter = new HashMap<Long, BigDecimal[]>();
+        List<Map<String, Object>> stores = jdbcTemplate.queryForList(
+                "SELECT s.tenant_id AS tid, s.longitude AS lng, s.latitude AS lat "
+                        + "FROM store_info s INNER JOIN (SELECT tenant_id, MIN(id) AS min_id "
+                        + "FROM store_info GROUP BY tenant_id) m ON s.id = m.min_id");
+        for (Map<String, Object> row : stores) {
+            Object tid = row.get("tid");
+            Object lng = row.get("lng");
+            Object lat = row.get("lat");
+            if (tid == null || lng == null || lat == null) {
+                continue;
+            }
+            storeCenter.put(((Number) tid).longValue(), new BigDecimal[]{
+                    new BigDecimal(lng.toString()), new BigDecimal(lat.toString())});
+        }
+
+        // 只处理圆形规则：多边形无单一圆心
+        LambdaQueryWrapper<DeliveryRangeRule> qw = new LambdaQueryWrapper<DeliveryRangeRule>();
+        qw.eq(DeliveryRangeRule::getRangeType, DeliveryRangeRule.TYPE_CIRCLE);
+        if (tenantId != null) {
+            qw.eq(DeliveryRangeRule::getTenantId, tenantId);
+        }
+        List<DeliveryRangeRule> rules = rangeRuleMapper.selectList(qw);
+
+        int updated = 0;
+        for (DeliveryRangeRule rule : rules) {
+            BigDecimal[] center = storeCenter.get(rule.getTenantId());
+            if (center == null) {
+                // 该租户无门店坐标，无法围绕门店重配
+                continue;
+            }
+            rule.setCenterLongitude(center[0]);
+            rule.setCenterLatitude(center[1]);
+            updated += rangeRuleMapper.updateById(rule);
+        }
+        return updated;
     }
 
     /**
