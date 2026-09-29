@@ -144,15 +144,16 @@ public class CheckoutPreviewControllerTest extends BaseControllerTest {
 
     @Test
     void testPreviewMissingAddress() throws Exception {
-        // 缺 addressBookId → @NotNull 校验失败
+        // P1-2 自提改造后 addressBookId 的 @NotNull 已移除（自提单无需地址），
+        // 外卖单缺地址改由 Service 按 source 分支校验 → 业务异常 422
         mockMvc.perform(withCsrfToken(mockMvc, post("/api/order/preview")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}")
                 .sessionAttr("user", USER_ID)
                 .sessionAttr("tenantId", 999L)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.msg").value("参数校验失败：addressBookId: 请选择收货地址"));
+                .andExpect(jsonPath("$.msg").value("请选择收货地址"));
     }
 
     @Test

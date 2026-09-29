@@ -46,6 +46,9 @@ public class RiderAuthControllerTest extends com.reggie.controller.BaseControlle
     void setUp() {
         String bcrypt = PasswordUtils.encodePassword("123456");
         // 先按 id/专用 phone 清理上轮残留（非全表删），再插入 tenant=999 的测试骑手
+        // 轨迹表为 CREATE TABLE IF NOT EXISTS（schema-rider.sql），@Sql 不重建表；
+        // 同 JVM 内其他方法/类的位置上报会残留，按骑手清理后才能断言"恰好一条"
+        jdbcTemplate.update("DELETE FROM rider_location_record WHERE rider_id = ?", RIDER_ID);
         jdbcTemplate.update("DELETE FROM rider WHERE id = ? OR phone = ?", RIDER_ID, PHONE);
         jdbcTemplate.update("DELETE FROM rider_remember_token WHERE rider_id = ?", RIDER_ID);
         jdbcTemplate.update("INSERT INTO rider (id, name, phone, password, status, current_order_count, "

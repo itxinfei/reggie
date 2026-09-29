@@ -448,7 +448,9 @@ public class TableSeeder implements ApplicationRunner {
         } else if (contains(n, "ids", "list", "tags", "params", "options")) {
             value = "[]";
         } else {
-            value = GENERIC_ADJ[i % GENERIC_ADJ.length] + GENERIC_NOUN[(i / GENERIC_ADJ.length + table.hashCode()) % GENERIC_NOUN.length];
+            // floorMod：table.hashCode() 可能为负，普通 % 会产生负索引导致 AIOOBE
+            value = GENERIC_ADJ[i % GENERIC_ADJ.length]
+                    + GENERIC_NOUN[Math.floorMod(i / GENERIC_ADJ.length + table.hashCode(), GENERIC_NOUN.length)];
         }
         value = fit(value, col.length);
         if (mustBeUnique) {
@@ -548,7 +550,7 @@ public class TableSeeder implements ApplicationRunner {
             // 名称类列的可取值已被用尽，再采样就是同名复制；改走语义池给出不同名称
             return null;
         }
-        Object raw = pool.get(Math.abs((rowIndex * 31 + col.name.hashCode()) % pool.size()));
+        Object raw = pool.get(Math.floorMod(rowIndex * 31 + col.name.hashCode(), pool.size()));
         if (mustBeUnique && raw instanceof String) {
             return withTail(fit((String) raw, col.length), rowIndex, col.length);
         }
@@ -595,7 +597,7 @@ public class TableSeeder implements ApplicationRunner {
         if (ids.isEmpty()) {
             return null;
         }
-        return ids.get(Math.abs((rowIndex * 7 + hint.hashCode()) % ids.size()));
+        return ids.get(Math.floorMod(rowIndex * 7 + hint.hashCode(), ids.size()));
     }
 
     private String resolveParent(String hint) {
