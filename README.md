@@ -6,25 +6,25 @@
 
 <img src="https://img.shields.io/badge/Java-1.8-orange?logo=openjdk" alt="Java 1.8">
 <img src="https://img.shields.io/badge/Spring_Boot-2.4.5-6db33f?logo=springboot" alt="Spring Boot 2.4.5">
-<img src="https://img.shields.io/badge/MyBatis_Plus-3.4.2-1677ff?logo=mybatis" alt="MyBatis Plus 3.4.2">
+<img src="https://img.shields.io/badge/MyBatis_Plus-3.5.3.1-1677ff?logo=mybatis" alt="MyBatis Plus 3.5.3.1">
 <img src="https://img.shields.io/badge/Vue.js-2.6.12-4fc08d?logo=vuedotjs" alt="Vue.js 2.6.12">
 <img src="https://img.shields.io/badge/Redis-6.0-DC382D?logo=redis" alt="Redis">
-<img src="https://img.shields.io/badge/MySQL-5.7_|_8.0-4479A1?logo=mysql" alt="MySQL 5.7/8.0">
+<img src="https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql" alt="MySQL 8.0">
 
 <br>
 
 <img src="https://img.shields.io/badge/Element_UI-2.15.10-409eff?logo=element" alt="Element UI">
 <img src="https://img.shields.io/badge/Vant_UI-2.12.0-07c160?logo=vant" alt="Vant UI">
-<img src="https://img.shields.io/badge/Druid-1.1.23-ff69b4?logo=apache" alt="Druid">
+<img src="https://img.shields.io/badge/Druid-1.2.21-ff69b4?logo=apache" alt="Druid">
 <img src="https://img.shields.io/badge/AI-DeepSeek_/_通义千问_/_OpenAI-8a2be2?logo=openai" alt="AI LLM">
 <img src="https://img.shields.io/badge/License-Apache_2.0-333333?logo=apache" alt="License">
 
 <br>
 
 <img src="https://img.shields.io/badge/Modules-39-1677ff?logo=spring" alt="39 Modules">
-<img src="https://img.shields.io/badge/Data_Tables-110-ff6b6b?logo=postgresql" alt="110 Tables">
-<img src="https://img.shields.io/badge/Java_Files-907-4379a7?logo=java" alt="907 Java files">
-<img src="https://img.shields.io/badge/Total_Commits-671-success?logo=git" alt="671 commits">
+<img src="https://img.shields.io/badge/Data_Tables-117-ff6b6b?logo=postgresql" alt="117 Tables">
+<img src="https://img.shields.io/badge/Java_Files-880-4379a7?logo=java" alt="880 Java files">
+<img src="https://img.shields.io/badge/Total_Commits-734-success?logo=git" alt="734 commits">
 <a href="https://gitee.com/itxinfei/reggie"><img src="https://img.shields.io/badge/Gitee-itxinfei/reggie-c71d23?logo=gitee" alt="Gitee"></a>
 <a href="https://github.com/itxinfei/reggie"><img src="https://img.shields.io/badge/GitHub-Mirror-181717?logo=github" alt="GitHub Mirror"></a>
 
@@ -210,7 +210,7 @@
 
 ### 📱 C 端用户（Vant H5）
 
-> 手机号验证码登录（新号自动注册）→ 点餐 → 支付 → 订单/评价/收藏/会员/开票：C 端共 22 个页面。
+> 手机号验证码登录（新号自动注册）→ 点餐 → 支付 → 订单/评价/收藏/会员/开票：C 端共 25 个页面。
 > 以下为**当前运行版本**实拍（390×844 竖屏，Playwright 自动截图，2026-09-24）。
 
 <table align="center">
@@ -273,7 +273,7 @@
 ### 🛵 骑手端（Vant H5）
 
 > **自有骑手配送体系**：骑手账号登录 → 接单大厅抢单 → 我的任务 → 送达上报；
-> 店长在后台「配送订单」派单，C 端订单页可实时查看骑手位置。共 4 个页面。
+> 店长在后台「配送订单」派单，C 端订单页可实时查看骑手位置。骑手端共 8 个页面。
 
 <table align="center">
   <tr>
@@ -300,7 +300,7 @@
 
 | 亮点 | 说明 |
 |------|------|
-| 🏢 **企业级架构** | Spring Boot 2.4.5 + MyBatis Plus 3.4.2，RESTful API，39 个领域模块分层清晰 |
+| 🏢 **企业级架构** | Spring Boot 2.4.5 + MyBatis Plus 3.5.3.1，RESTful API，39 个领域模块分层清晰 |
 | 📱 **三端覆盖** | 管理后台（Element UI，75 页）+ C 端点餐 H5（Vant，22 页）+ 骑手配送 H5（4 页），单 Jar 一并伺服 |
 | 🛵 **自有骑手配送** | 骑手 H5 接单（大厅抢单/任务/送达）+ 店长后台派单 + GPS 上报与订单实时追踪，不依赖三方配送 |
 | 🔐 **行级租户隔离** | MyBatis-Plus 租户插件自动注入 `tenant_id`，多品牌/多门店数据互不穿透 |
@@ -309,9 +309,9 @@
 | 🌐 **平台外卖对接骨架** | 适配器 + 工厂模式 + 拉单/重试/对账定时任务已就位；协议层与签名待按官方文档实现，开关默认关闭（不空转外呼） |
 | 🖨️ **门店本地打印** | 员工在后台一键发起，浏览器调本地打印机出小票；打印记录落库，无需额外代理、服务器无需装打印机 |
 | 📷 **桌贴二维码打印中心** | 桌台二维码 → 海报生成 → 批量打印，C 端扫码即点餐 |
-| 💾 **110 张数据表** | 完整数据库设计 + 44 个迁移脚本（`db/` 本地维护，不入版本库） |
+| 💾 **117 张数据表** | 完整数据库设计：`db/reggie.sql` 全量脚本 + `db/migration/` 增量（`db/` 已入版本库） |
 | 🗂️ **运行时图片统一存储** | 上传/访问按 `uploads/{public\|private}/来源/业务/月份` 分层，公私分流鉴权，三端共享 `imgPath()` 单一真源 |
-| 🧪 **双层测试** | 742 个 JUnit 单测/集成测试 + Playwright E2E（Allure 报告） |
+| 🧪 **双层测试** | 900+ 个 JUnit 单测/集成测试 + Playwright E2E（Allure 报告） |
 | 🤖 **AI 智能引擎** | DeepSeek/通义千问/OpenAI 多模型，点餐推荐 + 描述生成 + 经营分析 + 对话管理 |
 
 </div>
@@ -337,7 +337,7 @@
 ┌────────────────┐   ┌────────────────┐   ┌────────────────┐
 │  管理后台 (PC)  │   │  C 端点餐 (H5)  │   │  骑手端 (H5)    │
 │ Element UI 2.x │   │ Vant UI + AI点餐│   │ Vant 接单/送达  │
-│ 一键打印/派单   │   │   22 个页面     │   │   4 个页面      │
+│ 一键打印/派单   │   │   25 个页面     │   │   8 个页面      │
 └───────┬────────┘   └───────┬────────┘   └───────┬────────┘
         │                    │                    │
         └──────────┬─────────┴────────────────────┘
@@ -349,7 +349,7 @@
             │           │           │
    ┌────────▼─────┐ ┌───▼──────┐ ┌──▼──────────────┐
    │    MySQL     │ │  Redis   │ │    AI 服务       │
-   │  110 张数据表 │ │ 缓存/限流 │ │ DeepSeek / Qwen │
+   │  117 张数据表 │ │ 缓存/限流 │ │ DeepSeek / Qwen │
    │ 行级租户隔离  │ │ Session  │ │ OpenAI / GLM    │
    │ 图片分层存储  │ └──────────┘ └─────────────────┘
    │ public/private│
@@ -380,7 +380,7 @@
 | 依赖 | 版本 | 说明 |
 |------|------|------|
 | ☕ JDK | 8 | **必须 JDK 8**：`pom.xml` 用 maven-enforcer（锁 `[1.8,1.9)`）+ animal-sniffer（字节码级）双保险拦截高版本 |
-| 🗄️ MySQL | 5.7+ / 8.0 | 必须安装，用于存储业务数据（110 张表） |
+| 🗄️ MySQL | 8.0 | 必须安装，用于存储业务数据（117 张表） |
 | 📦 Maven | 3.6+ | 构建和依赖管理 |
 | ⚡ Redis | 6.0+ | 缓存、Session 共享、API 限流、分布式锁 |
 | 🟢 Node.js | 16+ | 仅 E2E 测试（Playwright）需要 |
@@ -396,17 +396,21 @@ cd reggie
 # 2. 创建数据库
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS reggie CHARACTER SET utf8mb4;"
 
-# 3. 依次执行迁移脚本（项目未启用 Flyway，按文件名顺序手动执行）
-cd src/main/resources/db/migration
-for f in $(ls V*.sql | sort); do mysql -u root -p reggie < "$f"; done
+# 3. 导入全量建表脚本（db/reggie.sql 为 Navicat 导出，含全部 117 张表与基础数据；
+#    脚本为 UTF-8 编码，导入时指定字符集，避免中文注释/数据乱码）
+mysql -u root -p --default-character-set=utf8mb4 reggie < db/reggie.sql
 
-# 4.（可选）导入演示数据 —— db/ 目录整体不入版本库（.gitignore 忽略），
-#    迁移与演示脚本均本地维护；有 seed 脚本时按文件名顺序 source 即可
+# 4.（可选）增量脚本与演示种子
+#    db/migration/V*.sql 为后续增量变更（按需按文件名顺序执行）；
+#    db/seed/part-*.sql 为演示数据（01-base / 02-tx / 03-ops，按序导入）
+#    for f in $(ls db/seed/part-*.sql | sort); do
+#      mysql -u root -p --default-character-set=utf8mb4 reggie < "$f";
+#    done
 
 # 5. 配置数据源与 Redis
-#    ⚠️ application*.yml 被 .gitignore 忽略（不入库），需自行创建 application-dev.yml
-#    spring.datasource.druid.url=jdbc:mysql://localhost:3306/reggie?...
-#    spring.redis.host=localhost
+#    application-dev.yml 已随仓库提供，默认连本地 localhost:3306/reggie 与 localhost:6379
+#    如账号/端口不同，修改 spring.datasource.druid.url / username / password
+#    以及 spring.redis.host 即可；生产环境用 application-prod.yml（环境变量注入）
 
 # 6. 编译并启动
 mvn clean package -DskipTests
@@ -426,10 +430,13 @@ mvn spring-boot:run
 
 > **⚠️ 两个高频踩坑**
 >
-> 1. **严禁对本地 `reggie` 库执行 `mvn test`**：测试用 `@Sql` 会执行 `schema.sql` 的 `DROP TABLE`，且 `application-test.yml` 直连 `reggie` 库——跑测试即清空全库数据。
-> 2. **改完前端页面不生效**：若服务从 `target/classes/backend` 伺服静态资源，需同步一次：
+> 1. **测试库与开发库严格分离**：测试 profile 连本地独立库 `reggie_test`（`localhost:3306/reggie_test`），不再连开发库 `reggie`。测试用 `@Sql` 会执行 `schema-*.sql` 的 `DROP TABLE` 重建表、清数据——红线：**严禁把测试连接指向公网/生产库**。本地跑测试前请先建库：
 >    ```bash
->    rm -rf target/classes/backend && cp -r src/main/resources/backend target/classes/backend
+>    mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS reggie_test CHARACTER SET utf8mb4;"
+>    ```
+> 2. **改完前端页面不生效**：`spring-boot:run` 从 `target/classes` 伺服静态资源，改完 HTML/JS/CSS 后需用 Maven 同步一次（切勿手动 cp）：
+>    ```bash
+>    mvn process-resources
 >    ```
 
 ### 生产部署
@@ -527,10 +534,10 @@ java -jar target/reggie_take_out-1.0-SNAPSHOT.jar --spring.profiles.active=prod
 | 语言 | Java | 1.8（硬约束：enforcer + animal-sniffer 双保险） |
 | 框架 | Spring Boot | 2.4.5 |
 | Web | Spring MVC | 5.3.6 |
-| ORM | MyBatis Plus | 3.4.2 |
+| ORM | MyBatis Plus | 3.5.3.1 |
 | 缓存 | Redis + Commons Pool2 | 6.0+ |
-| 连接池 | Druid | 1.1.23 |
-| 数据库 | MySQL（测试亦连真实库） | 5.7+ / 8.0 |
+| 连接池 | Druid | 1.2.21 |
+| 数据库 | MySQL（开发库 reggie / 测试独立库 reggie_test） | 8.0 |
 | 测试 | JUnit 5 + Mockito + JaCoCo | 0.8.10 |
 | 文档 | Springdoc OpenAPI | 1.5.13 |
 | 安全 | Spring Security Crypto + Jasypt | 5.4.6 / 2.1.2 |
@@ -582,20 +589,19 @@ reggie/
 │   │                     #      store/tenant/dashboard/payment/cashier/cost/finance/
 │   │                     #      marketing/recommend/notification/export/customer/
 │   │                     #      attendance/groupbuy/withdraw/region/schedule/common
-│   ├── service/          # 业务接口 + 实现类
 │   └── utils/            # 工具类（二维码、验证码、SMS、文件操作）
 ├── src/main/resources/
-│   ├── backend/          # 🖥️ 管理后台（Element UI，75 个页面 + 设计令牌 tokens.css）
-│   ├── front/            # 📱 C 端点餐 H5（Vant UI，22 个页面）
-│   ├── rider/            # 🛵 骑手配送 H5（Vant UI，4 个页面：登录/接单大厅/任务/详情）
-│   ├── shared/           # 🔗 三端共享静态资源（img-path.js 等单一真源）
-│   ├── db/
-│   │   └── migration/    # 🗄️ 44 个迁移脚本（V<日期>__描述.sql；db/ 整体 gitignore，本地维护，无 Flyway）
-│   ├── com/reggie/.../   # Mapper XML（与 Java 包同路径，非 resources/mapper/）
-│   └── application.yml   # 主配置（application-dev/prod/test.yml 被 gitignore，需自建）
-├── src/test/java/        # 🧪 742 个单元/集成测试
-├── src/test/resources/   # schema.sql + schema-<module>.sql（测试库专用）
+│   ├── backend/          # 🖥️ 管理后台（Element UI，77 个页面 + 设计令牌 tokens.css）
+│   ├── front/            # 📱 C 端点餐 H5（Vant UI，25 个页面）
+│   ├── rider/            # 🛵 骑手配送 H5（Vant UI，8 个页面：登录/首页/接单大厅/详情/异常/评价/收入/消息）
+│   ├── shared/           # 🔗 三端共享静态资源（img-path.js、styles/tokens.css 等单一真源）
+│   ├── com/reggie/.../   # Mapper XML（11 个，与 Java 包同路径，非 resources/mapper/）
+│   └── application.yml   # 主配置（application-dev / application-prod 均入库，prod 敏感值用 Jasypt 加密）
+├── src/test/java/        # 🧪 126 个测试类（单元 + Spring 集成测试，覆盖率 80%+）
+├── src/test/resources/   # schema.sql + schema-<module>.sql（按模块拆分，测试库 reggie_test 专用）
+├── db/                   # 🗄️ 数据库脚本（入库）：reggie.sql 全量 117 表、migration/ 增量、seed/ 演示数据
 ├── tests/                # 🎭 Playwright E2E 测试（TypeScript + Allure 报告）+ 文档截图脚本
+├── scripts/              # 🔧 Node 前端全局/引用检查与数据统计脚本（非运行时）
 ├── docs/                 # 📚 架构决策/数据模型/模块 API/后台页面清单 + screenshots/ 实拍图
 └── pom.xml               # Maven 配置
 ```
@@ -608,9 +614,9 @@ reggie/
 |------|------|
 | [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md) | 项目总览：背景、目标、范围、角色与核心流程 |
 | [docs/ARCHITECTURE_DECISIONS.md](docs/ARCHITECTURE_DECISIONS.md) | 架构决策记录（ADR）：关键技术选型与取舍原因 |
-| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | 数据模型：110 张表的领域划分与核心表结构 |
+| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | 数据模型：117 张表的领域划分与核心表结构 |
 | [docs/MODULES_AND_APIS.md](docs/MODULES_AND_APIS.md) | 模块与接口清单：39 个模块能力与主要 API |
-| [docs/BACKEND_PAGES.md](docs/BACKEND_PAGES.md) | 后台页面清单：75 个页面的实现状态与要点 |
+| [docs/BACKEND_PAGES.md](docs/BACKEND_PAGES.md) | 后台页面清单：77 个页面的实现状态与要点 |
 | `CHANGELOG.md` | 变更记录（**本地维护**：被 `.gitignore` 忽略，不进版本库） |
 
 ---
@@ -637,7 +643,7 @@ reggie/
 | 📋 **RBAC 权限闭环** | 75 个菜单 + 9 个按钮权限 seed、角色分配、权限树分配弹窗、操作日志 |
 | 🤖 **AI 引擎 v2.0** | 多模型适配器（9 种模型）、SSE 流式输出、对话管理、用户画像、后台动态切换供应商 |
 | ⚙️ **自动化任务** | 支付订单超时、定时订单回收、平台拉单/重试/对账、未接单扫描、操作日志归档 |
-| 🧪 **测试体系** | 742 个 JUnit 单测/集成测试（JaCoCo 覆盖率）+ Playwright E2E（Allure 报告） |
+| 🧪 **测试体系** | 900+ 个 JUnit 单测/集成测试（JaCoCo 覆盖率）+ Playwright E2E（Allure 报告） |
 | 🎨 **前端设计系统** | 设计令牌 `tokens.css`、`crud-table`/`crud-dialog` 统一组件、全站表格列宽与居中治理、响应式与 a11y 对比度达标 |
 | 🛡️ **批量质量治理** | 三批缺陷修复（首页初始化/快捷入口/发票隔离/地址去重/AI 助手等）+ 桌台结账源头收敛 + 全站弹窗修复 |
 
@@ -702,7 +708,7 @@ AI 供应商与密钥统一在数据库表 **`ai_provider_config`** 中管理，
 ### 后端（JUnit 5 + Mockito + JaCoCo）
 
 ```bash
-# 全量测试（需先启动本地 MySQL + Redis，测试 profile 连真实库）
+# 全量测试（需先启动本地 MySQL + Redis；测试 profile 连独立库 reggie_test）
 mvn test
 
 # 单个测试类
@@ -715,13 +721,13 @@ mvn -o clean compile
 mvn verify
 ```
 
-> ⚠️ **严禁对本地 `reggie` 业务库执行 `mvn test`**：`application-test.yml` 直连真实 `reggie` 库，且测试的 `@Sql` 会执行 `schema.sql` 中的 `DROP TABLE`——**跑测试会清空全库**。请使用独立测试库，或跑完重灌 seed。
+> ⚠️ **测试只连独立库 `reggie_test`**：测试 profile 连 `localhost:3306/reggie_test`，与开发库 `reggie` 隔离。测试的 `@Sql` 会执行 `schema*.sql` 中的 `DROP TABLE` 重建表、清数据——红线：**严禁把测试连接指向公网/生产库**。开跑前先建好 `reggie_test` 库。
 >
 > ⚠️ **增量编译会"假成功"**：源码有错时 ECJ 会生成占位 class 仍报 BUILD SUCCESS。改过 Java 必须 `mvn -o clean compile`（clean 前先停掉运行中的服务）。
 
 | 测试类型 | 覆盖范围 | 说明 |
 |---------|---------|------|
-| 单元 / 集成测试 | Controller（@SpringBootTest + MockMvc）、Service、Mapper | 742 个，全绿 |
+| 单元 / 集成测试 | Controller（@SpringBootTest + MockMvc）、Service、Mapper | 900+ 个，全绿 |
 | 覆盖率 | JaCoCo 0.8.10，`mvn verify` 生成报告 | — |
 | 核心业务 | 员工登录、菜品查询、订单提交、购物车 | ✅ |
 | 多租户 | 租户行级隔离、忽略表（`permission` / `role_permission`）回归 | ✅ |
@@ -844,7 +850,7 @@ spring:
     database: 0
 ```
 
-> 首次使用需先创建数据库 `CREATE DATABASE reggie CHARACTER SET utf8mb4;`，再按文件名顺序执行 `src/main/resources/db/migration/V*.sql`（项目未启用 Flyway，需手动 source）。⚠️ `db/` 整体被 `.gitignore` 忽略、不入版本库，迁移与演示脚本均本地维护。
+> 首次使用需先创建数据库 `CREATE DATABASE reggie CHARACTER SET utf8mb4;`，再导入全量脚本 `db/reggie.sql`（含全部 117 张表与基础数据）：`mysql -u root -p --default-character-set=utf8mb4 reggie < db/reggie.sql`。后续增量变更在 `db/migration/`，演示种子在 `db/seed/`；`db/` 已入版本库，项目未启用 Flyway。
 </details>
 
 <details>
@@ -1011,7 +1017,7 @@ server:
 
 Made with ❤️ by [itxinfei](https://gitee.com/itxinfei)
 
-**907** Java 源文件 · **75** 管理后台页面 · **22** C 端页面 · **4** 骑手端页面 · **39** 业务模块 · **110** 张数据表 · **671** 次提交
+**880** Java 源文件 · **77** 管理后台页面 · **25** C 端页面 · **8** 骑手端页面 · **39** 业务模块 · **117** 张数据表 · **734** 次提交
 
 </div>
 
