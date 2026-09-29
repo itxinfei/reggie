@@ -233,7 +233,7 @@
     <script src="./../js/common.js?v=20260927"></script>
     <script src="./../js/components-cend.js?v=20260922"></script>
     <script src="./../api/order.js?v=20260917"></script>
-    <script src="./../api/cs.js?v=20260921"></script>
+    <script src="./../api/cs.js?v=20260929"></script>
     <script>
         new Vue({
             el: '#csPage',
@@ -313,7 +313,8 @@
                 onVisibility: function () {
                     if (document.hidden) {
                         this.stopPolling();
-                    } else if (this.view === 'chat') {
+                    } else if (this.view === 'chat' && !this.sessionClosed) {
+                        // 会话已关闭则不再起轮询，避免 4s 定时器空转
                         this.pollMessages();
                         this.startPolling();
                     }
@@ -421,7 +422,23 @@
                 },
                 pollMessages: async function () {
                     if (!this.activeSession) { return; }
+                    // 已关闭的会话不再轮询（防御切视图/可见性时残留的一次触发）
+                    if (Number(this.activeSession.status) >= 2) { this.stopPolling(); return; }
                     try {
+                        // 先同步会话状态：客服在后台关闭会话时不写系统消息，
+                        // 只拉消息列表永远察觉不到，输入栏便不会收起
+                        var sr = await csGetSession(this.activeSession.id, { silent: true });
+                        if (sr && sr.code === 1 && sr.data) {
+                            var newStatus = Number(sr.data.status);
+                            if (newStatus !== Number(this.activeSession.status)) {
+                                this.activeSession = sr.data;
+                            }
+                            if (newStatus >= 2) {
+                                // 会话已被关闭：停轮询，sessionClosed 自动收起输入栏并显示「重新咨询」
+                                this.stopPolling();
+                                return;
+                            }
+                        }
                         var res = await csListMessages(this.activeSession.id, { silent: true });
                         if (res && res.code === 1) {
                             var list = res.data || [];

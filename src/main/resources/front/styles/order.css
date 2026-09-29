@@ -656,3 +656,9 @@
 
 /* 骨架屏容器内边距（原内联 padding 收口） */
 .skeleton-page { padding: 16rem 12rem; }
+
+/* 售后退款弹窗：Vant 裸 popup 无内边距，内容需自带 padding（功能布局，非美化） */
+#order .refund-pop { padding: 18rem 16rem 24rem; }
+#order .refund-pop .rp-title { font-size: 16rem; font-weight: 600; margin-bottom: 12rem; }
+#order .refund-pop .rp-tip { font-size: 13rem; color: var(--color-text-secondary); line-height: 1.5; margin-bottom: 12rem; }
+#order .refund-pop .rp-actions { display: flex; gap: 12rem; margin-top: 16rem; }

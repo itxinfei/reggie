@@ -156,6 +156,20 @@
                 action-text="去逛逛"
                 @action="goHome">
             </cend-empty>
+
+            <!-- 申请售后退款弹窗（Vant2 无 Dialog.prompt，自建 popup 收集原因） -->
+            <van-popup v-model="showRefundDialog" position="bottom" round>
+                <div class="refund-pop">
+                    <div class="rp-title">申请售后退款</div>
+                    <div class="rp-tip">请简要描述退款原因（如商品质量问题、漏送、错送等），提交后客服将尽快处理。</div>
+                    <van-field v-model="refundReason" type="textarea" rows="3"
+                               maxlength="200" show-word-limit placeholder="请输入退款原因"></van-field>
+                    <div class="rp-actions">
+                        <van-button block @click="showRefundDialog = false">取消</van-button>
+                        <van-button block type="primary" :loading="refundSubmitting" @click="submitRefund">提交申请</van-button>
+                    </div>
+                </div>
+            </van-popup>
             </cend-shell>
         </div>
         <!-- 开发环境版本，包含了有帮助的命令行警告 -->
@@ -203,7 +217,12 @@
                     // 修改点：底部 Tab 导航当前项（0=点餐 1=订单 2=我的）
                     activeTab: 1,
                     // 我的已评价商品集合（loadEvalKeys 装配），控制卡片「去评价」入口
-                    evalKeys: new Set()
+                    evalKeys: new Set(),
+                    // 售后退款（Vant2 无 Dialog.prompt，自建 popup 收集原因）
+                    showRefundDialog: false,
+                    refundReason: '',
+                    refundOrder: null,
+                    refundSubmitting: false
                 }
             },
             computed:{
@@ -601,49 +620,40 @@
                         }
                     }).catch((e) => { console.warn('[order.html] 用户取消确认收货:', e) })
                 },
-                // 修改点：用户申请售后（status=4，整单退款申请，需填写原因）
+                // 用户申请售后（整单退款申请，需填写原因）。
+                // Vant2 无 Dialog.prompt：原 confirm+prompt 两层模态合并为单个自建 popup
                 applyRefund(order){
-                    if(this.submitting) return;
-                    vant.Dialog.confirm({
-                        title: '申请售后',
-                        message: '确定要为此订单申请售后退款吗？提交后客服将尽快处理。',
-                        confirmButtonText: '提交申请',
-                        cancelButtonText: '取消'
-                    }).then(() => {
-                        vant.Dialog.prompt({
-                            title: '退款原因',
-                            message: '请简要描述退款原因（如商品质量问题、漏送、错送等）',
-                            inputPlaceholder: '请输入退款原因',
-                            inputValidator: (val) => {
-                                if(!val || !val.trim()) return '退款原因不能为空';
-                                if(val.trim().length > 200) return '退款原因不超过 200 字';
-                                return true;
-                            },
-                            confirmButtonText: '提交',
-                            cancelButtonText: '取消'
-                        }).then(async (val) => {
-                            this.submitting = true
-                            try {
-                                const reason = (val && val.trim) ? val.trim() : ('' + val).trim()
-                                const res = await applyRefundApi({ id: order.id, reason: reason })
-                                if(res && res.code === 1){
-                                    const data = res.data || {}
-                                    vant.Toast.success('售后申请已提交：' + (data.refundNo || ''))
-                                    this.paging.page = 1
-                                    this.orderList = []
-                                    this.finished = false
-                                    this.loading = true
-                                    this.getList()
-                                }else{
-                                    vant.Toast.fail((res && res.msg) || '申请失败');
-                                }
-                            } catch(e) {
-                                vant.Toast.fail('网络异常，请稍后重试');
-                            } finally {
-                                this.submitting = false
-                            }
-                        }).catch((e) => { console.warn('[order.html] 用户取消填写退款原因:', e) })
-                    }).catch((e) => { console.warn('[order.html] 用户取消申请售后:', e) })
+                    this.refundOrder = order
+                    this.refundReason = ''
+                    this.showRefundDialog = true
+                },
+                async submitRefund(){
+                    if(this.submitting || this.refundSubmitting) return;
+                    const order = this.refundOrder
+                    if(!order) return;
+                    const reason = this.refundReason ? this.refundReason.trim() : ''
+                    if(!reason){ vant.Toast.fail('退款原因不能为空'); return }
+                    if(reason.length > 200){ vant.Toast.fail('退款原因不超过 200 字'); return }
+                    this.refundSubmitting = true
+                    try {
+                        const res = await applyRefundApi({ id: order.id, reason: reason })
+                        if(res && res.code === 1){
+                            const data = res.data || {}
+                            vant.Toast.success('售后申请已提交：' + (data.refundNo || ''))
+                            this.showRefundDialog = false
+                            this.paging.page = 1
+                            this.orderList = []
+                            this.finished = false
+                            this.loading = true
+                            this.getList()
+                        }else{
+                            vant.Toast.fail((res && res.msg) || '申请失败');
+                        }
+                    } catch(e) {
+                        vant.Toast.fail('网络异常，请稍后重试');
+                    } finally {
+                        this.refundSubmitting = false
+                    }
                 },
             }
         })

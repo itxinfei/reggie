@@ -132,6 +132,27 @@ public final class ImageStoragePathResolver {
     }
 
     /**
+     * 旧 images 路径下、语义公开的商品图（菜品/套餐/评价/二维码/活动）是否可匿名访问。
+     * 这些业务在新目录下落 public/，但物理文件仍在 images/{dir}/ 旧路径时，
+     * download 兜底鉴权不应要求登录；avatar/ai/私密业务目录不在此列。
+     */
+    public static boolean isLegacyPublicCatalogImage(String relativePath) {
+        if (relativePath == null) {
+            return false;
+        }
+        String p = relativePath.replace('\\', '/');
+        if (!p.startsWith("images/")) {
+            return false;
+        }
+        String rest = p.substring("images/".length());
+        int slash = rest.indexOf('/');
+        if (slash <= 0) {
+            return false;
+        }
+        return isPublicBiz(rest.substring(0, slash));
+    }
+
+    /**
      * 存量相对路径 → 新相对路径映射。
      *
      * @param oldPath        旧相对路径（如 images/dishes/a.jpg）

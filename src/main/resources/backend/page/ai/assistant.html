@@ -569,12 +569,15 @@
 
                 // ==================== 对话列表 ====================
 
-                loadConversations: function() {
+                // options.preserveSelection=true：仅刷新侧栏，不自动改选第一条
+                // （「新建对话」置空 currentId 后用它，否则会被立刻拉回旧会话）
+                loadConversations: function(options) {
                     var self = this;
+                    var autoSelect = !(options && options.preserveSelection);
                     self.sidebarLoading = true;
                     aiBackendApi.getConversations(1, 50).then(function(res) {
                         self.conversations = unwrap(res) || [];
-                        if (self.conversations.length > 0 && !self.currentConversationId) {
+                        if (autoSelect && self.conversations.length > 0 && !self.currentConversationId) {
                             self.selectConversation(self.conversations[0]);
                         }
                     }).catch(function() {
@@ -629,7 +632,8 @@
                     this.inputText = '';
                     this.clearPendingAttachments();
                     this.autoGrowReset();
-                    this.loadConversations();
+                    // 仅刷新侧栏，保留空白新对话态，不被自动改选回旧会话
+                    this.loadConversations({ preserveSelection: true });
                     this.focusInput();
                 },
 

@@ -252,7 +252,7 @@
             { key: '', icon: 'ri-file-list-3-line', label: '模板总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: 'enabled', icon: 'ri-checkbox-circle-line', label: '已启用', value: self.stats.enabled || 0, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
             { key: 'disabled', icon: 'ri-pause-circle-line', label: '已停用', value: self.stats.disabled || 0, color: 'warning', clickable: true, active: self.activeFilter === 'disabled' },
-            { key: 'sms', icon: 'ri-chat-smile-3-line', label: '短信模板', value: self.stats.sms || 0, color: 'info', clickable: true, active: self.activeFilter === 'sms' }
+            { key: 'sms', icon: 'ri-chat-smile-3-line', label: '短信模板', value: self.stats.sms || 0, color: 'info', clickable: false, active: self.activeFilter === 'sms' }
           ]
         }
       },

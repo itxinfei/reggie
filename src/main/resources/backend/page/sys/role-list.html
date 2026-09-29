@@ -272,7 +272,7 @@
           // 表格列配置
           columns: [
             { prop: 'roleName', label: '角色名称', width: 120, align: 'center' },
-            { prop: 'roleKey', label: '角色标识', width: 100, align: 'center' },
+            { prop: 'roleKey', label: '角色标识', width: 100, align: 'center', slot: true },
             { prop: 'description', label: '描述', minWidth: 120 },
             { prop: 'sort', label: '排序', width: 60, align: 'center' },
             { prop: 'status', label: '状态', width: 70, align: 'center', slot: true }
@@ -323,7 +323,7 @@
             { key: '', icon: 'ri-group-line', label: '角色总数', value: self.stats.total || 0, color: 'primary', clickable: true, active: self.activeFilter === '' },
             { key: 'enabled', icon: 'ri-checkbox-circle-line', label: '已启用', value: self.stats.enabled || 0, color: 'success', clickable: true, active: self.activeFilter === 'enabled' },
             { key: 'disabled', icon: 'ri-pause-circle-line', label: '已禁用', value: self.stats.disabled || 0, color: 'warning', clickable: true, active: self.activeFilter === 'disabled' },
-            { key: 'withPerms', icon: 'ri-lock-2-line', label: '已分配权限', value: self.stats.withPerms || 0, color: 'info', clickable: true, active: self.activeFilter === 'withPerms' }
+            { key: 'withPerms', icon: 'ri-lock-2-line', label: '已分配权限', value: self.stats.withPerms || 0, color: 'info', clickable: false, active: self.activeFilter === 'withPerms' }
           ]
         },
         // 弹窗标题带角色名，便于多弹窗区分

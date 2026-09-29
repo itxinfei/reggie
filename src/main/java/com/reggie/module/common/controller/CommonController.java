@@ -339,6 +339,11 @@ public class CommonController {
         if (com.reggie.utils.ImageStoragePathResolver.isPublicPath(canonicalRelativePath)) {
             return true;
         }
+        // 旧 images 路径下的公开商品图（菜品/套餐/评价/二维码/活动）匿名放行，
+        // 否则匿名扫码点餐页全部菜品图 401 裂图；私密目录不在该判定内
+        if (com.reggie.utils.ImageStoragePathResolver.isLegacyPublicCatalogImage(canonicalRelativePath)) {
+            return true;
+        }
         // 发票由员工上传、向购买顾客开放：任一登录(employee/user)即可访问，UUID 文件名不可枚举
         if (com.reggie.utils.ImageStoragePathResolver.isInvoicePath(canonicalRelativePath)) {
             return hasEmployee || hasUser;

@@ -84,6 +84,25 @@ class ImageStoragePathResolverTest {
     }
 
     @Test
+    void legacyPublicCatalogImage() {
+        // 公开商品/营销图匿名放行
+        assertTrue(ImageStoragePathResolver.isLegacyPublicCatalogImage("images/dishes/a.jpg"));
+        assertTrue(ImageStoragePathResolver.isLegacyPublicCatalogImage("images/setmeal/b.jpg"));
+        assertTrue(ImageStoragePathResolver.isLegacyPublicCatalogImage("images/evaluation/c.jpg"));
+        assertTrue(ImageStoragePathResolver.isLegacyPublicCatalogImage("images/qr/d.png"));
+        assertTrue(ImageStoragePathResolver.isLegacyPublicCatalogImage("images/campaign/e.jpg"));
+        // 反斜杠写法同样识别
+        assertTrue(ImageStoragePathResolver.isLegacyPublicCatalogImage("images\\dishes\\a.jpg"));
+        // 私密业务不在放行范围
+        assertFalse(ImageStoragePathResolver.isLegacyPublicCatalogImage("images/avatar/a.jpg"));
+        assertFalse(ImageStoragePathResolver.isLegacyPublicCatalogImage("images/purchase/p.jpg"));
+        // 非 images 前缀 / 无第二级目录 / null
+        assertFalse(ImageStoragePathResolver.isLegacyPublicCatalogImage("public/admin/dishes/a.jpg"));
+        assertFalse(ImageStoragePathResolver.isLegacyPublicCatalogImage("images/a.jpg"));
+        assertFalse(ImageStoragePathResolver.isLegacyPublicCatalogImage(null));
+    }
+
+    @Test
     void migrateSkipsAlreadyMigratedAndExternalUrls() {
         assertNull(ImageStoragePathResolver.migratePath("public/admin/dishes/202609/a.jpg", "admin", "202609", tempDir));
         assertNull(ImageStoragePathResolver.migratePath("private/user/avatar/202609/a.jpg", "user", "202609", tempDir));

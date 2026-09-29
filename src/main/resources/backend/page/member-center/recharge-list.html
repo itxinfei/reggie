@@ -453,7 +453,6 @@
         onSizeChange: function(val) {
           this.page = 1
           this.pageSize = (typeof val === 'object' && val != null) ? (val.pageSize || val) : val
-          if (typeof this.fetchData === 'function') this.fetchData(false)
         },
       }
     })

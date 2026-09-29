@@ -266,7 +266,6 @@
           stats: { totalQueues: 0, waitingCount: 0, calledCount: 0, seatedCount: 0, cancelledCount: 0 },
           // 表格
           tableLoading: false,
-          loading: false,
           page: 1,
           pageSize: 10,
           counts: 0,
@@ -337,7 +336,7 @@
         // 修改点：原 loadStats/loadTable 合并为 fetchData，reloadStats=true 并行重载统计（初始进入/增删改后）；搜索/卡片筛选时传 false 不重算
         async fetchData(reloadStats) {
           if (reloadStats === undefined) { reloadStats = true }
-          this.loading = true
+          this.tableLoading = true
           var self = this
           var params = {
             page: self.page,
@@ -363,7 +362,7 @@
           } catch (err) {
             console.warn('加载排队列表失败:', err)
           } finally {
-            self.loading = false
+            self.tableLoading = false
           }
         },
         // 修改点：加载按状态统计数据（总数/等待中/已叫号/已入座/已取消），供统计卡片展示

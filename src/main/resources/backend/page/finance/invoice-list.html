@@ -313,7 +313,6 @@
         onSizeChange: function(payload) {
           this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.page = 1
-          this.loadData(false)
         },
         // ========== 开具 ==========
         openIssueDialog: function(row) {

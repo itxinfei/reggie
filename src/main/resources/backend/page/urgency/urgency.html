@@ -268,7 +268,6 @@
           <el-radio-group v-model="filterStatus" size="small" @change="onFilterChange" aria-label="按订单状态筛选">
             <el-radio-button label="ALL">全部</el-radio-button>
             <el-radio-button label="COOKING">制作中</el-radio-button>
-            <el-radio-button label="SERVING">上菜中</el-radio-button>
             <el-radio-button label="DONE">已完成</el-radio-button>
           </el-radio-group>
           <span class="filter-row__tip">共 {{ filteredOrders.length }} 单</span>

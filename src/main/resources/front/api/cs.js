@@ -18,6 +18,17 @@ function csMySessions(status) {
   })
 }
 
+// 获取单个会话（轮询时刷新 status，检测客服是否已在后台关闭会话）
+function csGetSession(sessionId, opts) {
+  var silent = opts && opts.silent;
+  return $axios({
+    url: '/cs/portal/session/' + sessionId,
+    method: 'get',
+    skipNoWifiRedirect: !!silent,
+    silent: !!silent
+  })
+}
+
 // 关闭会话
 function csCloseSession(sessionId, rating, feedback) {
   return $axios({

@@ -296,7 +296,7 @@
         },
         fetchAbnormalList: function () {
           const self = this
-          attendanceAbnormal({ weekStart: '' }).then(function (res) {
+          return attendanceAbnormal({ weekStart: '' }).then(function (res) {
             if (res.data && res.data.abnormalList) {
               // 修改点：后端仅返回 status/statusName 数值+文案，前端按后端取值域映射 tag type，
               // 否则 el-tag 直接渲染数字 type（非法值渲染为裸样式）

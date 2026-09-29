@@ -1127,7 +1127,6 @@
         onIssueSizeChange: function(payload) {
           this.issuePageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.issuePage = 1
-          this.loadIssued()
         },
         // 券状态
         couponStatusText: function(s) {
@@ -1165,7 +1164,6 @@
         onExpiringSizeChange: function(payload) {
           this.expiringPageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload
           this.expiringPage = 1
-          this.loadExpiringTable()
         },
         onSelectionChange: function(payload) {
           this.selectedRows = (payload && payload.rows) || payload || []

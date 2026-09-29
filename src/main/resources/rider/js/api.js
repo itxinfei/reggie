@@ -77,7 +77,7 @@
     // ---- 骑手评价（修改点 P0-2）----
     // 收到的评价（当前登录骑手）
     riderEvaluationReceived: function (page, size) {
-      return $axios.get('/api/rider-evaluation/received', { params: { page: page, size: size } });
+      return $axios.get('/api/rider-evaluation/received', { params: { page: page, pageSize: size } });
     },
     // 骑手评分统计（需骑手ID）
     riderEvaluationStats: function (riderId) {

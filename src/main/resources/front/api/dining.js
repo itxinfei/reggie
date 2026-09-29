@@ -51,3 +51,29 @@ const cancelMyReservation = (id) => {
     method: 'put'
   })
 }
+
+// ===== 扫码点餐（堂食） =====
+// 公开菜单：由桌台反查门店，一次返回分类 categories + 在售菜品 dishes（匿名可访问）
+const getTableMenu = (tableId) => {
+  return $axios({
+    url: '/api/dining/table/public/' + tableId + '/menu',
+    method: 'get'
+  })
+}
+
+// 桌台公开信息：名称 / 座位数 seatCount / 区域名 areaName（匿名）
+const tableInfo = (tableId) => {
+  return $axios({
+    url: '/api/dining/table/public/' + tableId,
+    method: 'get'
+  })
+}
+
+// 堂食扫码下单（需登录；data 结构 { order:{...}, orderDetails:[...] }，对齐后端 EatInOrderRequest）
+const submitEatInOrder = (data) => {
+  return $axios({
+    url: '/order/eatIn',
+    method: 'post',
+    data
+  })
+}

@@ -225,8 +225,10 @@
   }
   (function guardLoginOnPageOpen() {
     var path = win.location.pathname;
-    // 登录页自身不守卫（否则死循环）；断网兜底页不守卫（探测必然失败，会误跳）
-    if (path.indexOf('/front/page/login.html') !== -1 || path.indexOf('no-wifi') !== -1) { return; }
+    // 登录页自身不守卫（否则死循环）；断网兜底页不守卫（探测必然失败，会误跳）；
+    // 扫码点餐页匿名可浏览菜单（仅提交下单才需登录，由 /order/eatIn 的 401 触发跳登录）
+    if (path.indexOf('/front/page/login.html') !== -1 || path.indexOf('no-wifi') !== -1
+        || path.indexOf('qrcode-order') !== -1) { return; }
     win.$axios({ url: '/user/info', method: 'get', params: { full: 1 },
                  skipAuthRedirect: true, silent: true })
       .then(function (r) {

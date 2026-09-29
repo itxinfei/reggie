@@ -76,13 +76,15 @@
                             <i class="ri-arrow-right-s-line finish-time-arrow"></i>
                         </div>
                     </div>
-                    <!-- 修改点(P1-2 自提)：自提模式展示到店取餐提示，替代配送时间选择 -->
-                    <div class="self-pickup-tip" v-if="fulfillmentMode === 1" style="display:flex;align-items:center;gap:10px;padding:14px;background:#f6fff9;border:1px solid #c8f0d4;border-radius:10px;margin:10px 0;">
-                        <i class="ri-map-pin-line" style="font-size:22px;color:#07c160;"></i>
-                        <div>
-                            <div class="spt-title" style="font-weight:600;color:#07c160;">到店自提</div>
-                            <div class="spt-desc" style="font-size:12px;color:#666;">下单后到店向店员出示取餐码即可取餐，无需配送</div>
-                        </div>
+                </div>
+
+                <!-- 修改点(P1-2 自提)：自提提示须放在 divAddress 外，
+                     否则外层 v-if mode===0 会把它一起隐藏，自提页什么提示都没有 -->
+                <div class="self-pickup-tip" v-if="fulfillmentMode === 1" style="display:flex;align-items:center;gap:10px;padding:14px;background:#f6fff9;border:1px solid #c8f0d4;border-radius:10px;margin:10px 0;">
+                    <i class="ri-map-pin-line" style="font-size:22px;color:#07c160;"></i>
+                    <div>
+                        <div class="spt-title" style="font-weight:600;color:#07c160;">到店自提</div>
+                        <div class="spt-desc" style="font-size:12px;color:#666;">下单后到店向店员出示取餐码即可取餐，无需配送</div>
                     </div>
                 </div>
 
@@ -419,6 +421,12 @@
                         itemsExpanded: false
                     }
                 },
+                watch:{
+                    // 切换配送/自提：履约方式影响配送费与 source，需重算结算预览
+                    fulfillmentMode(){
+                        this.maybeLoadPreview()
+                    }
+                },
                 computed:{
                     goodsNum(){
                         let num = 0
@@ -725,18 +733,12 @@
                                { label: '约60分钟', time: add(60) }
                            ]
                         }else{
-                            // 修改点(2026-09-17 UX)：仅「新建订单」路径引导去添加地址；
-                            // 续付(reorderId)场景用户只需为已有订单支付，强跳地址编辑会打断支付且流程回不来
-                            if(this.reorderId){
-                                this.finishTime = getFinishTime()
-                                return
-                            }
-                            // 修改点：跳转地址编辑前设置 addressFromCheckout 标志，
-                            // 保存地址后自动跳回结算页（此前未设置此标志，用户卡死在地址列表）
-                            sessionStorage.setItem('addressFromCheckout', '1')
-                            window.requestAnimationFrame(()=>{
-                                window.location.href = '/front/page/address-edit.html'
-                            })
+                            // 无地址不再强制跳地址编辑：停在结算页，用户可切「到店自提」直接下单，
+                            // 或点地址区去新增地址；若坚持配送，提交时由 goToPay 校验拦截并提示选地址。
+                            // （续付 reorderId 场景地址仅作展示，同样不应打断支付）
+                            this.address = {}
+                            this.finishTime = getFinishTime()
+                            if(!this.reorderId){ this.maybeLoadPreview() }
                         }
                     },
                     toAddressPage(){
@@ -749,12 +751,16 @@
                     // 地址 + 购物车就绪后触发同源结算预览；签名（地址|券|总件数）不变则跳过
                     maybeLoadPreview(){
                         if(this.reorderId){ return }
-                        if(!this.address || !this.address.id){ return }
+                        const isPickup = this.fulfillmentMode === 1
+                        // 自提无需收货地址；配送才校验地址
+                        if(!isPickup && (!this.address || !this.address.id)){ return }
                         if(!this.cartData || this.cartData.length === 0){ return }
                         let qty = 0
                         this.cartData.forEach(function(it){ qty += it.number || 0 })
                         const couponId = this.selectedCoupon ? this.selectedCoupon.id : ''
-                        const sig = this.address.id + '|' + couponId + '|' + qty
+                        // 签名纳入履约方式，切换配送/自提才会触发重新预览
+                        const addrKey = isPickup ? 'PICKUP' : this.address.id
+                        const sig = this.fulfillmentMode + '|' + addrKey + '|' + couponId + '|' + qty
                         if(sig === this.lastPreviewSig){ return }
                         this.lastPreviewSig = sig
                         this.loadCheckoutPreview(couponId || null)
@@ -974,7 +980,8 @@
                             vant.Toast.fail('购物车为空，请先添加商品');
                             return
                         }
-                        if(!this.address.id){
+                        // 自提无需收货地址；仅配送模式校验地址（否则无地址用户切自提永远提交不了）
+                        if(this.fulfillmentMode === 0 && !this.address.id){
                             vant.Toast.fail('请先添加收货地址');
                             return
                         }

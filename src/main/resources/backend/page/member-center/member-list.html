@@ -500,7 +500,7 @@
         onSearch: function(p) { this.activeFilter = ''; this.searchInput = { name: p.name || '', phone: p.phone || '', levelId: p.levelId || '' }; this.page = 1; this.init(false) },
         onReset: function() { this.activeFilter = ''; this.searchInput = { name: '', phone: '', levelId: '' }; this.page = 1; this.init(false) },
         onPageChange: function(p) { this.page = p.page; this.init(false) },
-        onSizeChange: function(p) { this.pageSize = (p && p.pageSize !== undefined) ? p.pageSize : p; this.page = 1; this.init(false) },
+        onSizeChange: function(p) { this.pageSize = (p && p.pageSize !== undefined) ? p.pageSize : p; this.page = 1 },
         /* ── 会员详情弹窗 ── */
         // 会员详情弹窗：点击"详情"按钮打开弹窗并加载充值记录/优惠券
         selectMember: function(row) {

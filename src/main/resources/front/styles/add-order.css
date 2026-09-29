@@ -894,6 +894,39 @@
   margin-right: 4rem;
   font-size: 16rem;
 }
+
+/* 顶部履约方式切换（配送上门 / 到店自提）。
+   原实现注释称"复用 mode-tabs 样式"，但 .mode-tabs 规则被限定在 .delivery-mode 下，
+   顶部这组选择器不匹配 = 零样式；tab 又继承了祖先 1px 字号（未定义变量塌缩），
+   整体塌成 1px 高并被下方 .divAddress 盖住，真人根本点不到「到店自提」。在此补齐。 */
+#add_order .fulfillment-tabs {
+  display: flex;
+  gap: 10rem;
+  margin-bottom: 12rem;
+}
+#add_order .fulfillment-tabs .mode-tab {
+  flex: 1;
+  text-align: center;
+  height: 44rem;
+  line-height: 44rem;
+  font-size: 14rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+#add_order .fulfillment-tabs .mode-tab i {
+  margin-right: 4rem;
+  font-size: 16rem;
+}
+#add_order .fulfillment-tabs .mode-tab.active {
+  color: var(--color-primary-text);
+  font-weight: 600;
+  border-color: var(--color-primary);
+  background: var(--color-primary-tint);
+}
 #add_order .divContent .delivery-mode .divFinishTime {
   height: 50rem;
   line-height: 50rem;
