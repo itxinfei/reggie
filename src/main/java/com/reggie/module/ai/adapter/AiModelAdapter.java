@@ -110,5 +110,13 @@ public interface AiModelAdapter {
          * @param isLast     是否为最后一个块
          */
         void onToken(String token, boolean isLast);
+
+        /**
+         * 首 token 已推送后上游中断（POST_START_ERROR，不切换供应商）。
+         * <p>实现方据此把已推送的片段以 stopped（而非 completed）收尾，
+         * 避免"残缺回答被标记为完整"。默认忽略（兼容既有实现）。</p>
+         */
+        default void onUpstreamInterrupted() {
+        }
     }
 }

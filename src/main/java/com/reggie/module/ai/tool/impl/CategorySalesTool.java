@@ -1,6 +1,7 @@
 package com.reggie.module.ai.tool.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.reggie.module.ai.tool.AiMetricsCaliber;
 import com.reggie.module.ai.tool.AiTool;
 import com.reggie.module.ai.tool.AiToolDates;
 import com.reggie.module.ai.tool.ToolExecResult;
@@ -17,6 +18,7 @@ import static com.reggie.module.ai.tool.ToolSchemas.stringType;
 
 /**
  * 菜品分类销量工具（薄封装 {@link ReportService#getCategorySales}）。
+ * 口径：仅已完成订单（{@link AiMetricsCaliber} 统一基线）。
  * 用于回答“热菜/凉菜哪个品类卖得多、分类占比”。
  *
  * @author reggie
@@ -56,7 +58,7 @@ public class CategorySalesTool implements AiTool {
     public ToolExecResult execute(JsonNode args, Long tenantId) {
         AiToolDates.DateRange range = AiToolDates.normalizeRange(args);
         List<Map<String, Object>> categories = reportService.getCategorySales(
-                range.startText(), range.endText(), tenantId);
+                range.startText(), range.endText(), tenantId, AiMetricsCaliber.BASELINE_STATUS);
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("startDate", range.startText());

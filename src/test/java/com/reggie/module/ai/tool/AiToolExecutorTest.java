@@ -160,8 +160,42 @@ class AiToolExecutorTest {
         }
         String content = executor.toToolContent("t", null,
                 ToolExecResult.ok("s", huge.toString()));
-        assertTrue(content.length() < AiToolExecutor.MAX_RESULT_CHARS + 60);
-        assertTrue(content.contains("结果过长已截断"));
+        // JSON 安全截断：包装 truncated 标记且整体仍是合法 JSON（不再硬切成非法串）
+        assertTrue(content.contains("\"truncated\":true"));
+        try {
+            new com.fasterxml.jackson.databind.ObjectMapper().readTree(content);
+        } catch (Exception e) {
+            throw new AssertionError("截断结果应为合法 JSON: " + e.getMessage());
+        }
+    }
+
+    @Test
+    void truncationClosesArraysAndStringsMidValue() {
+        // 构造真实嵌套结构：截断点落在数组元素中间（字符串未闭合、括号未闭合）
+        java.util.List<java.util.Map<String, Object>> data = new java.util.ArrayList<>();
+        for (int i = 0; i < 300; i++) {
+            java.util.Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("name", "菜品名称超长超长超长第" + i + "号");
+            item.put("count", i);
+            data.add(item);
+        }
+        String content = executor.toToolContent("t", null,
+                ToolExecResult.ok("s", data));
+        try {
+            com.fasterxml.jackson.databind.JsonNode root =
+                    new com.fasterxml.jackson.databind.ObjectMapper().readTree(content);
+            assertTrue(root.has("truncated"));
+            assertTrue(root.get("partialResult").get("result").isArray(),
+                    "嵌套数组截断后应闭合为完整数组");
+            assertTrue(root.get("partialResult").get("result").size() > 0);
+            // 已闭合的首个元素应为完整对象（字段齐全）
+            assertEquals("菜品名称超长超长超长第0号",
+                    root.get("partialResult").get("result").get(0).get("name").asText());
+        } catch (AssertionError e) {
+            throw e;
+        } catch (Exception e) {
+            throw new AssertionError("数组中间截断应闭合为合法 JSON: " + e.getMessage());
+        }
     }
 
     @Test

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,9 @@ public class BusinessSnapshotService {
     /** 快照缓存有效期：5 分钟 */
     private static final long CACHE_TTL_MILLIS = 5 * 60 * 1000L;
     private static final int CACHE_TTL_SECONDS = 300;
+
+    /** 缓存容量上限：超过时先清过期项，仍满则整体重建（条目都有 TTL，清了不丢活数据语义） */
+    private static final int CACHE_MAX_ENTRIES = 500;
 
     private static final int SNAPSHOT_DAYS = 7;
     private static final int TOP_DISHES = 10;
@@ -71,10 +75,21 @@ public class BusinessSnapshotService {
         if (cached != null && now - cached.createdAt < CACHE_TTL_MILLIS) {
             return cached.text;
         }
+        // 容量守护：过期条目本不可复用，满员先清过期，仍满（全活跃）则整体重建，
+        // 防止租户数持续增长导致 Map 无界泄漏
+        if (snapshotCache.size() >= CACHE_MAX_ENTRIES) {
+            snapshotCache.values().removeIf(e -> now - e.createdAt >= CACHE_TTL_MILLIS);
+            if (snapshotCache.size() >= CACHE_MAX_ENTRIES) {
+                snapshotCache.clear();
+            }
+        }
         // 并发生成可接受（报表查询轻量且趋势有 Redis 缓存），不加 per-tenant 锁避免过度设计
         String text = loadSnapshot(tenantId);
         if (text != null && !text.isEmpty()) {
             snapshotCache.put(tenantId, new CacheEntry(text, now));
+        } else {
+            // 无数据/生成失败时清掉残留的过期条目，避免死条目常驻
+            snapshotCache.remove(tenantId);
         }
         return text;
     }
@@ -104,18 +119,18 @@ public class BusinessSnapshotService {
                         .append(ToolFormats.money(revenue)).append("，订单 ")
                         .append(orderCount != null ? orderCount : 0).append(" 单\n");
             }
-            BigDecimal avg = totalRevenue.divide(new BigDecimal(SNAPSHOT_DAYS), 2, BigDecimal.ROUND_HALF_UP);
+            BigDecimal avg = totalRevenue.divide(new BigDecimal(SNAPSHOT_DAYS), 2, RoundingMode.HALF_UP);
             sb.append("合计：营业额 ¥").append(ToolFormats.money(totalRevenue))
                     .append("，订单 ").append(totalOrders).append(" 单，日均 ¥")
                     .append(ToolFormats.money(avg)).append("\n\n");
         }
 
-        // 2) 热销 Top10（按订单明细聚合，含全部状态订单，与后台菜品排行同口径）
+        // 2) 热销 Top10（按订单明细聚合，口径与 AI 工具统一基线一致：仅已完成订单）
         List<Map<String, Object>> ranking = reportService.getDishRanking(
-                startText, endText, TOP_DISHES, tenantId, null);
+                startText, endText, TOP_DISHES, tenantId, null, AiMetricsCaliber.BASELINE_STATUS);
         if (ranking != null && !ranking.isEmpty()) {
             sb.append("【近 ").append(SNAPSHOT_DAYS).append(" 天热销菜品 Top").append(ranking.size())
-                    .append("】（按销量份数，含全部状态订单）\n");
+                    .append("】（按销量份数，仅已完成订单）\n");
             int rank = 1;
             for (Map<String, Object> dish : ranking) {
                 sb.append(rank++).append(". ").append(dish.get("name")).append("：")
@@ -125,8 +140,9 @@ public class BusinessSnapshotService {
             sb.append("\n");
         }
 
-        // 3) 支付方式分布（2=微信、3=支付宝，现金/银行卡/余额/货到付款并入 balance）
-        Map<String, Object> payment = reportService.getPaymentAnalysis(startText, endText, tenantId);
+        // 3) 支付方式分布（2=微信、3=支付宝，现金/银行卡/余额/货到付款并入 balance；仅已完成订单）
+        Map<String, Object> payment = reportService.getPaymentAnalysis(
+                startText, endText, tenantId, AiMetricsCaliber.BASELINE_STATUS);
         if (payment != null && !payment.isEmpty()) {
             BigDecimal payTotal = BigDecimal.ZERO;
             String[] keys = {"wechat", "alipay", "balance", "other"};
@@ -166,7 +182,7 @@ public class BusinessSnapshotService {
             amount = toBigDecimal(m.get("amount"));
         }
         BigDecimal percent = amount.multiply(new BigDecimal("100"))
-                .divide(total, 1, BigDecimal.ROUND_HALF_UP);
+                .divide(total, 1, RoundingMode.HALF_UP);
         sb.append("- ").append(label).append("：").append(count).append(" 笔，¥")
                 .append(ToolFormats.money(amount)).append("（占 ").append(percent.toPlainString()).append("%）\n");
     }

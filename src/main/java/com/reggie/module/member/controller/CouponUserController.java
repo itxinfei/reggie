@@ -25,12 +25,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 /**
  * 用户优惠券管理控制器
  * 提供用户优惠券的查询接口
+ * <p>2026-09-30 越权修复：本控制器全部为后台管理口径（可按任意 memberId/userId 查询任意会员的券），
+ * 原先无权限注解导致任意 C 端登录用户可枚举他人券码/持券画像。类级 {@code @RequireEmployee} 收口；
+ * C 端一律走 {@code /front/coupon/*}（session 绑定身份，归属安全）。</p>
  *
  * @author reggie
  * @since 2026-07-09
  */
 @RestController
 @RequestMapping("/api/member/coupon-user")
+@RequireEmployee
 @Tag(name = "用户优惠券")
 public class CouponUserController {
 

@@ -64,14 +64,19 @@ class KnowledgeIndexServiceImplTest {
         when(chunkMapper.insert(any(AiKnowledgeChunk.class))).thenReturn(1);
     }
 
-    // ==================== splitToChunks（反射） ====================
+    // ==================== splitToChunks（反射，2026-09-30 起带标题前缀+段落边界累积） ====================
 
     @SuppressWarnings("unchecked")
     private List<String> split(String content) throws Exception {
+        return splitWithTitle(null, content);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> splitWithTitle(String title, String content) throws Exception {
         Method method = KnowledgeIndexServiceImpl.class
-                .getDeclaredMethod("splitToChunks", String.class);
+                .getDeclaredMethod("splitToChunks", String.class, String.class);
         method.setAccessible(true);
-        return (List<String>) method.invoke(null, content);
+        return (List<String>) method.invoke(null, title, content);
     }
 
     @Test
@@ -113,6 +118,45 @@ class KnowledgeIndexServiceImplTest {
         assertEquals(100, chunks.get(2).length());
         // 块1 前 50 字必须等于块0 尾 50 字（滑窗重叠，位置 350-400）
         assertEquals(chunks.get(0).substring(350), chunks.get(1).substring(0, 50));
+    }
+
+    @Test
+    void titlePrefixAddedToEveryChunk() throws Exception {
+        List<String> chunks = splitWithTitle("退款政策", patterned(800));
+        assertEquals(3, chunks.size());
+        for (String chunk : chunks) {
+            assertTrue(chunk.startsWith("退款政策\n"), "每个切块都应带标题前缀");
+        }
+        // 标题挤占预算：正文窗口 = 400 - 5(标题+\n)
+        assertEquals(400, chunks.get(0).length());
+    }
+
+    @Test
+    void paragraphsAccumulateAtBoundariesWithoutCuttingFaq() throws Exception {
+        StringBuilder content = new StringBuilder();
+        for (int i = 1; i <= 10; i++) {
+            content.append("问：常见问题").append(i).append("的完整描述？\n");
+            content.append("答：这是第").append(i).append("个问题的回答，保持在同一段落内不切断。\n");
+        }
+        List<String> chunks = splitWithTitle("FAQ", content.toString());
+        assertTrue(chunks.size() > 1);
+        for (String chunk : chunks) {
+            String body = chunk.substring(chunk.indexOf('\n') + 1);
+            long q = body.chars().filter(c -> c == '问').count();
+            long a = body.chars().filter(c -> c == '答').count();
+            assertEquals(q, a, "切段内问答对必须成对（段落边界累积）：\n" + body);
+        }
+    }
+
+    @Test
+    void overlongTitleSkipsPrefix() throws Exception {
+        StringBuilder title = new StringBuilder();
+        for (int i = 0; i < 90; i++) {
+            title.append("长");
+        }
+        List<String> chunks = splitWithTitle(title.toString(), "正文内容");
+        assertEquals(1, chunks.size());
+        assertTrue(chunks.get(0).startsWith("正文内容"));
     }
 
     // ==================== doIndex 主流程 ====================

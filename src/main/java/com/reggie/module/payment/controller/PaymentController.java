@@ -149,6 +149,11 @@ public class PaymentController {
         if (!currentTenantId.equals(order.getTenantId())) {
             return R.error("无权操作该订单");
         }
+        // 归属校验：C 端用户只能对本人的订单发起支付（0 元单分支同样受此保护，防任意代付置已支付）
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId == null || !currentUserId.equals(order.getUserId())) {
+            return R.error("无权操作该订单");
+        }
         // 校验订单为待付款状态
         if (!Objects.equals(order.getStatus(), Orders.STATUS_PENDING_PAY)) {
             return R.error("订单状态不允许支付");
@@ -274,17 +279,20 @@ public class PaymentController {
         if (!channel.equalsIgnoreCase(exist.getChannel())) {
             return realAck(channel, false, "渠道不匹配");
         }
-        // 金额 fail-closed 比对：回调金额必须与支付单一致，缺失/不一致一律拒绝
-        if (result.getAmount() != null) {
-            BigDecimal existAmount = exist.getAmount();
-            if (existAmount == null) {
-                return realAck(channel, false, "支付金额非法");
-            }
-            if (result.getAmount().compareTo(existAmount) != 0) {
-                log.warn("真实回调金额不一致：notify={}, order={}, tradeNo={}",
-                        result.getAmount(), existAmount, tradeNo);
-                return realAck(channel, false, "金额不一致");
-            }
+        // 金额 fail-closed 比对：回调金额必须存在且与支付单一致，缺失/不一致一律拒绝
+        // （2026-09-30 修复：原实现 amount==null 时跳过比对放行，与 mock 路径口径不一致）
+        if (result.getAmount() == null) {
+            log.warn("真实回调金额缺失，拒绝：tradeNo={}", tradeNo);
+            return realAck(channel, false, "回调金额缺失");
+        }
+        BigDecimal existAmount = exist.getAmount();
+        if (existAmount == null) {
+            return realAck(channel, false, "支付金额非法");
+        }
+        if (result.getAmount().compareTo(existAmount) != 0) {
+            log.warn("真实回调金额不一致：notify={}, order={}, tradeNo={}",
+                    result.getAmount(), existAmount, tradeNo);
+            return realAck(channel, false, "金额不一致");
         }
         paymentOrderService.handlePaymentSuccess(tradeNo, result.getChannelTradeNo());
         log.info("真实支付回调处理成功 channel={}, tradeNo={}", channel, tradeNo);
@@ -594,15 +602,22 @@ public class PaymentController {
         if (paymentAmount == null) {
             return R.error("支付金额异常，无法退款");
         }
-        BigDecimal alreadyRefunded = refundRecordService.sumRefundedAmount(paymentOrder.getId());
-        if (alreadyRefunded.add(refundAmount).compareTo(paymentAmount) > 0) {
-            return R.error("累计退款金额超过支付金额（已退：" + alreadyRefunded + "元，本次：" + refundAmount + "元）");
-        }
 
         // 复用退款流程的核心部分：Redis 锁 → 渠道退款 → 本地落库
         String refundLockKey = "payment:refund:lock:" + paymentOrder.getId();
         String refundLockValue = tryRefundLock(refundLockKey);
+        if (refundLockValue == null) {
+            log.warn("[售后退款] 分布式锁获取失败，降级 DB+渠道幂等兜底: paymentOrderId={}", paymentOrder.getId());
+        }
         try {
+            // 修改点(2026-09-30 代码审查)：已退累计原本在加锁「之前」读取，两笔并发售后会读到
+            // 同一个 alreadyRefunded 并同时通过校验，合计可超过支付金额（超付退款）。
+            // 现与本文件 applyRefund 的锁内重查范式保持一致：先加锁，锁内重读重判。
+            BigDecimal alreadyRefunded = refundRecordService.sumRefundedAmount(paymentOrder.getId());
+            if (alreadyRefunded.add(refundAmount).compareTo(paymentAmount) > 0) {
+                return R.error("累计退款金额超过支付金额（已退：" + alreadyRefunded + "元，本次：" + refundAmount + "元）");
+            }
+
             R<String> channelResult = doChannelRefund(paymentOrder, record, refundAmount, refundId);
             if (channelResult != null) {
                 return channelResult;

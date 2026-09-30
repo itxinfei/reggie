@@ -209,13 +209,18 @@ public class CouponTemplateController {
     }
 
     /**
-     * 会员领取优惠券
+     * 会员领取优惠券（后台代领口径）。
+     * <p>2026-09-30 越权修复：body 的 memberId 由调用方任意指定，原先无权限注解导致
+     * 任意 C 端登录用户可遍历 memberId 替他人领券并按人次消耗券库存。
+     * C 端自主领券走 {@code /front/coupon/claim/{templateId}}（session 绑定会员）。</p>
+     *
      * @param dto 领券请求
      * @return 操作结果
      */
     @PostMapping("/claim")
+    @RequireEmployee
     @RateLimit(maxRequestsPerSecond = 10)
-    @Operation(summary = "领取优惠券", description = "会员领取优惠券模板")
+    @Operation(summary = "领取优惠券", description = "会员领取优惠券模板（后台代领）")
     public R<String> claim(@Parameter(description = "领券请求（会员ID、模板ID）", required =
             true) @Valid @RequestBody ClaimCouponDTO dto) {
         boolean ok = couponTemplateService.claimCoupon(dto.getMemberId(), dto.getTemplateId());

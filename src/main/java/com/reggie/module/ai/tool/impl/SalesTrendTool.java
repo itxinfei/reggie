@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,7 +84,7 @@ public class SalesTrendTool implements AiTool {
                 }
             }
         }
-        String avg = ToolFormats.money(total.divide(new BigDecimal(days), 2, BigDecimal.ROUND_HALF_UP));
+        String avg = ToolFormats.money(total.divide(new BigDecimal(days), 2, RoundingMode.HALF_UP));
         String summary = "近 " + days + " 天日均营业额 ¥" + avg;
         return ToolExecResult.ok(summary, data);
     }

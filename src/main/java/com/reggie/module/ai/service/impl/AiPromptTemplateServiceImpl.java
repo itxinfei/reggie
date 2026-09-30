@@ -1,26 +1,35 @@
 package com.reggie.module.ai.service.impl;
 
+import com.reggie.common.utils.PageUtils;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
 import com.reggie.module.ai.constant.AiPromptDefaults;
+import com.reggie.module.ai.mapper.AiPromptTemplateHistoryMapper;
 import com.reggie.module.ai.mapper.AiPromptTemplateMapper;
 import com.reggie.module.ai.model.AiPromptTemplate;
+import com.reggie.module.ai.model.AiPromptTemplateHistory;
 import com.reggie.module.ai.service.AiPromptTemplateService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * AI 提示词模板服务实现（P3）
+ * <p>P5 运营闭环：写操作前自动快照历史（版本递增可回滚）；findEffective 带 60s TTL
+ * 缓存 + 写操作即时失效，消除每条消息的热点读；读取失败静默降级 yml。</p>
  *
  * @author reggie
  * @since 2026-09-21
@@ -40,6 +49,27 @@ public class AiPromptTemplateServiceImpl
     /** 自定义模板默认排序 */
     private static final int CUSTOM_DEFAULT_SORT = 100;
 
+    /** 生效模板缓存 TTL：读多写少的运营配置，60s 足够新鲜 */
+    private static final long EFFECTIVE_CACHE_TTL_MS = 60_000L;
+
+    /** 生效模板缓存（scene:type → 快照），写操作即时失效对应键 */
+    private final Map<String, EffectiveCacheEntry> effectiveCache = new ConcurrentHashMap<>();
+
+    /** 历史版本 Mapper */
+    @Resource
+    private AiPromptTemplateHistoryMapper historyMapper;
+
+    /** 生效模板缓存条目（null 值也缓存，避免禁用/缺模板场景反复穿透查库） */
+    private static final class EffectiveCacheEntry {
+        private final AiPromptTemplate template;
+        private final long expireAt;
+
+        private EffectiveCacheEntry(AiPromptTemplate template, long expireAt) {
+            this.template = template;
+            this.expireAt = expireAt;
+        }
+    }
+
     @Override
     public Page<AiPromptTemplate> adminPage(int page, int pageSize, String scene, String type, String keyword) {
         LambdaQueryWrapper<AiPromptTemplate> wrapper = new LambdaQueryWrapper<>();
@@ -54,7 +84,7 @@ public class AiPromptTemplateServiceImpl
             wrapper.and(w -> w.like(AiPromptTemplate::getTitle, kw).or().like(AiPromptTemplate::getCode, kw));
         }
         wrapper.orderByAsc(AiPromptTemplate::getSort).orderByAsc(AiPromptTemplate::getId);
-        return this.page(new Page<>(page, pageSize), wrapper);
+        return this.page(PageUtils.<AiPromptTemplate>of(page, pageSize), wrapper);
     }
 
     @Override
@@ -105,6 +135,7 @@ public class AiPromptTemplateServiceImpl
         }
         template.setVersion(1);
         this.save(template);
+        invalidateCache(template.getScene(), template.getType());
         log.info("新增AI提示词模板: code={}, title={}", template.getCode(), template.getTitle());
         return template.getId();
     }
@@ -119,6 +150,8 @@ public class AiPromptTemplateServiceImpl
         if (existing == null) {
             throw new CustomException("提示词模板不存在");
         }
+        // P5 运营闭环：更新前快照当前内容入历史表，版本递增，可回滚可追溯
+        snapshotHistory(existing);
         // 内置模板：code/scene/type/builtin 不可改，只允许调整展示与内容
         if (Boolean.TRUE.equals(existing.getBuiltin())) {
             template.setCode(existing.getCode());
@@ -148,9 +181,11 @@ public class AiPromptTemplateServiceImpl
         update.setEnabled(template.getEnabled() != null ? template.getEnabled() : existing.getEnabled());
         update.setSort(template.getSort() != null ? template.getSort() : existing.getSort());
         update.setBuiltin(existing.getBuiltin());
-        update.setVersion(existing.getVersion());
+        update.setVersion(existing.getVersion() != null ? existing.getVersion() + 1 : 1);
         this.updateById(update);
-        log.info("更新AI提示词模板: code={}, builtin={}", existing.getCode(), existing.getBuiltin());
+        invalidateCache(existing.getScene(), existing.getType());
+        log.info("更新AI提示词模板: code={}, builtin={}, version={}",
+                existing.getCode(), existing.getBuiltin(), update.getVersion());
     }
 
     @Override
@@ -163,7 +198,10 @@ public class AiPromptTemplateServiceImpl
         if (Boolean.TRUE.equals(existing.getBuiltin())) {
             throw new CustomException("内置模板不可删除，可使用「重置默认」恢复原始内容");
         }
+        // 删除前快照，保留可追溯内容
+        snapshotHistory(existing);
         this.removeById(id);
+        invalidateCache(existing.getScene(), existing.getType());
         log.info("删除AI提示词模板: code={}", existing.getCode());
     }
 
@@ -181,15 +219,17 @@ public class AiPromptTemplateServiceImpl
         if (d == null) {
             throw new CustomException("内置默认内容缺失，无法重置");
         }
+        snapshotHistory(existing);
         AiPromptTemplate update = new AiPromptTemplate();
         update.setId(id);
         update.setTitle(d.getTitle());
         update.setContent(d.getContent());
         update.setQuickQuestions(d.getQuickQuestions() != null ? JSONUtil.toJsonStr(d.getQuickQuestions()) : null);
         update.setEnabled(true);
-        update.setVersion(existing.getVersion());
+        update.setVersion(existing.getVersion() != null ? existing.getVersion() + 1 : 1);
         this.updateById(update);
-        log.info("重置AI提示词模板为默认内容: code={}", existing.getCode());
+        invalidateCache(existing.getScene(), existing.getType());
+        log.info("重置AI提示词模板为默认内容: code={}, version={}", existing.getCode(), update.getVersion());
     }
 
     @Override
@@ -224,15 +264,29 @@ public class AiPromptTemplateServiceImpl
         }
         if (!toInsert.isEmpty()) {
             this.saveBatch(toInsert);
+            effectiveCache.clear();
             log.info("AI提示词内置模板初始化完成，补插 {} 条", toInsert.size());
         }
     }
 
-    /** 取某场景某类型启用中的模板（sort 最小优先）；任何异常静默降级返回 null */
+    /** 取某场景某类型启用中的模板（sort 最小优先）；带 60s TTL 缓存（null 也缓存），任何异常静默降级返回 null */
     private AiPromptTemplate findEffective(String scene, String type) {
         if (!AiPromptDefaults.isValidScene(scene)) {
             return null;
         }
+        String cacheKey = scene + ":" + type;
+        EffectiveCacheEntry cached = effectiveCache.get(cacheKey);
+        long now = System.currentTimeMillis();
+        if (cached != null && now < cached.expireAt) {
+            return cached.template;
+        }
+        AiPromptTemplate template = loadEffectiveFromDb(scene, type);
+        effectiveCache.put(cacheKey, new EffectiveCacheEntry(template, now + EFFECTIVE_CACHE_TTL_MS));
+        return template;
+    }
+
+    /** 实际查库逻辑（无缓存版 findEffective） */
+    private AiPromptTemplate loadEffectiveFromDb(String scene, String type) {
         try {
             LambdaQueryWrapper<AiPromptTemplate> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(AiPromptTemplate::getScene, scene)
@@ -245,6 +299,69 @@ public class AiPromptTemplateServiceImpl
             log.warn("读取AI提示词模板失败 scene={} type={}, 降级: {}", scene, type, e.getMessage());
             return null;
         }
+    }
+
+    /** 写操作后失效对应场景类型的生效缓存；scene/type 未知时全清 */
+    private void invalidateCache(String scene, String type) {
+        if (scene != null && type != null) {
+            effectiveCache.remove(scene + ":" + type);
+        } else {
+            effectiveCache.clear();
+        }
+    }
+
+    @Override
+    public List<AiPromptTemplateHistory> listHistory(Long templateId) {
+        if (templateId == null) {
+            return Collections.emptyList();
+        }
+        return historyMapper.selectList(new LambdaQueryWrapper<AiPromptTemplateHistory>()
+                .eq(AiPromptTemplateHistory::getTemplateId, templateId)
+                .orderByDesc(AiPromptTemplateHistory::getId)
+                .last("LIMIT 20"));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void rollback(Long templateId, Long historyId) {
+        AiPromptTemplate existing = this.getById(templateId);
+        if (existing == null) {
+            throw new CustomException("提示词模板不存在");
+        }
+        AiPromptTemplateHistory history = historyMapper.selectById(historyId);
+        if (history == null || !templateId.equals(history.getTemplateId())) {
+            throw new CustomException("历史版本不存在");
+        }
+        // 当前内容先快照（回滚本身也可再回滚），版本继续递增
+        snapshotHistory(existing);
+        AiPromptTemplate update = new AiPromptTemplate();
+        update.setId(templateId);
+        update.setTitle(history.getTitle());
+        update.setContent(history.getContent());
+        update.setQuickQuestions(history.getQuickQuestions());
+        update.setEnabled(history.getEnabled() != null ? history.getEnabled() : existing.getEnabled());
+        update.setVersion(existing.getVersion() != null ? existing.getVersion() + 1 : 1);
+        this.updateById(update);
+        invalidateCache(existing.getScene(), existing.getType());
+        log.info("AI提示词模板回滚: code={}, →历史版本{}, newVersion={}",
+                existing.getCode(), history.getVersion(), update.getVersion());
+    }
+
+    /** 把模板当前内容快照入历史表（更新/重置/回滚/删除前调用） */
+    private void snapshotHistory(AiPromptTemplate template) {
+        AiPromptTemplateHistory h = new AiPromptTemplateHistory();
+        h.setTemplateId(template.getId());
+        h.setCode(template.getCode());
+        h.setScene(template.getScene());
+        h.setType(template.getType());
+        h.setTitle(template.getTitle());
+        h.setContent(template.getContent());
+        h.setQuickQuestions(template.getQuickQuestions());
+        h.setEnabled(template.getEnabled());
+        h.setVersion(template.getVersion() != null ? template.getVersion() : 1);
+        h.setOperatorId(BaseContext.getCurrentId());
+        h.setCreateTime(java.time.LocalDateTime.now());
+        historyMapper.insert(h);
     }
 
     private Long countBySceneType(String scene, String type, Long excludeId) {

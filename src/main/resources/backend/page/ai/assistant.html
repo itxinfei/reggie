@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="../../plugins/element-ui/index.css?v=20260915" />
     <link rel="stylesheet" href="../../styles/tokens.css?v=20260920a" />
     <link rel="stylesheet" href="../../styles/main.css?v=20260920a" />
-    <link rel="stylesheet" href="../../styles/ai-chat.css?v=20260924" />
+    <link rel="stylesheet" href="../../styles/ai-chat.css?v=20260930" />
 </head>
 <body>
     <!-- 键盘用户：跳转到主内容（WCAG 2.4.1） -->
@@ -264,6 +264,18 @@
                                 </button>
                             </div>
                         </div>
+                        <!-- 智能输入提示（搜索联想模式）：防抖拉取候选，点选回填输入框不自动发送 -->
+                        <div class="sug-panel" v-if="sugVisible && suggestions.length" role="listbox" aria-label="输入建议">
+                            <button type="button" v-for="(s, sIdx) in suggestions" :key="sIdx"
+                                    class="sug-item" :class="{ active: sIdx === sugActive }"
+                                    @mousedown.prevent="applySuggestion(s)"
+                                    @mouseenter="sugActive = sIdx"
+                                    role="option" :aria-selected="sIdx === sugActive ? 'true' : 'false'">
+                                <i :class="sugIconClass(s.source)" aria-hidden="true"></i>
+                                <span class="sug-text">{{ s.text }}</span>
+                                <span class="sug-src">{{ sugSourceLabel(s.source) }}</span>
+                            </button>
+                        </div>
                         <!-- 多行输入：自适应增高（最高 180px 后滚动），Enter 发送 / Shift+Enter 换行 -->
                         <textarea
                             ref="inputEl"
@@ -274,6 +286,8 @@
                             @keydown="onInputKeydown"
                             @paste="onPasteImage"
                             @input="autoGrow"
+                            @focus="onInputFocus"
+                            @blur="onInputBlur"
                             maxlength="4000"
                             aria-label="消息输入框"
                         ></textarea>
@@ -337,12 +351,12 @@
     <script src="../../plugins/vue/vue.js"></script>
     <script src="../../plugins/element-ui/index.js?v=20260915"></script>
     <script src="../../plugins/axios/axios.min.js"></script>
-    <script src="../../js/request.js?v=20260920a"></script>
-    <script src="../../js/components.js?v=20260924"></script>
+    <script src="../../js/request.js?v=20260930"></script>
+    <script src="../../js/components.js?v=20260930"></script>
     <script src="../../js/accessibility-utils.js?v=20260927"></script>
     <script src="../../js/performance-utils.js?v=20260926"></script>
-    <script src="../../js/ai/ai-chat-core.js?v=20260922"></script>
-    <script src="../../api/ai.js?v=20260921"></script>
+    <script src="../../js/ai/ai-chat-core.js?v=20260930"></script>
+    <script src="../../api/ai.js?v=20260930"></script>
     <script>
     (function() {
         'use strict';
@@ -405,6 +419,14 @@
                 inputText: '',
                 loading: false,
                 currentRequestId: 0,
+
+                /* 智能输入提示（搜索联想模式） */
+                suggestions: [],
+                sugVisible: false,
+                sugActive: -1,
+                sugTimer: null,
+                sugRequestId: 0,
+                sugSuppressed: false,
 
                 /* P2 待发送图片附件（上传成功后为后端权威 VO + 本地预览 localUrl） */
                 pendingAttachments: [],
@@ -511,6 +533,13 @@
                 }
             },
 
+            watch: {
+                /* 输入联想：输入变化防抖 250ms 拉取候选（抖音搜索 sug 模式） */
+                inputText: function() {
+                    this.scheduleSuggestions();
+                }
+            },
+
             mounted: function() {
                 this.loadConversations();
                 this.loadSceneConfig();
@@ -594,6 +623,7 @@
                         if (window.ReggieUI) ReggieUI.warning('AI 正在回复，请先停止当前生成');
                         return;
                     }
+                    this.hideSuggestions();
                     var self = this;
                     if (self.currentConversationId === conv.conversationId && self.messages.length > 0) return;
                     self.currentConversationId = conv.conversationId;
@@ -609,14 +639,19 @@
                     self.messages = [];
                     self.loadingHistory = true;
                     aiBackendApi.getConversationDetail(conversationId).then(function(res) {
+                        // 竞态修复：快速连续切换会话时响应可能乱序，丢弃过期响应，
+                        // 防止旧会话历史覆盖当前会话（消息串会话）
+                        if (conversationId !== self.currentConversationId) return;
                         var records = unwrap(res) || [];
                         self.messages = records.map(function(record) {
                             return window.AiChatCore.MessageFactory.fromRecord(record);
                         });
                     }).catch(function() {
+                        if (conversationId !== self.currentConversationId) return;
                         if (window.ReggieUI) ReggieUI.error('加载消息历史失败');
                         self.messages = [];
                     }).finally(function() {
+                        if (conversationId !== self.currentConversationId) return;
                         self.loadingHistory = false;
                         self.scrollToBottom();
                     });
@@ -639,6 +674,12 @@
 
                 handleDeleteConv: function(conv) {
                     var self = this;
+                    // 与 selectConversation/createNewConversation 一致：流式生成中不允许删会话，
+                    // 否则流继续写入已删除会话，完成后列表无此会话且后续消息触发归属校验失败
+                    if (self.loading) {
+                        if (window.ReggieUI) ReggieUI.warning('AI 正在回复，请先停止当前生成');
+                        return;
+                    }
                     ReggieUI.confirm('确定要删除对话“' + (conv.title || '新对话') + '”吗？删除后不可恢复。', '提示', {
                         confirmButtonText: '确定',
                         cancelButtonText: '取消',
@@ -737,6 +778,9 @@
 
                     if (!hasOverride) {
                         this.clearPendingAttachments();
+                        // 发送后抑制联想面板（重新聚焦输入框时恢复）
+                        this.sugSuppressed = true;
+                        this.hideSuggestions();
                         this.inputText = '';
                         this.autoGrowReset();
                     }
@@ -934,7 +978,9 @@
                     opts = opts || {};
                     aiMsg.streaming = false;
                     aiMsg.stopped = !!opts.stopped;
-                    aiMsg.error = !!opts.error && !opts.silent ? aiMsg.error : aiMsg.error;
+                    // 修复：原三元表达式两分支相同，error 标志恒不被赋值，
+                    // 降级失败后无错误态样式、无重试按钮
+                    aiMsg.error = !!opts.error && !opts.silent;
                     if (!opts.stopped && !opts.error) aiMsg.stopped = false;
                     this.loading = false;
                     this.streamClient = null;
@@ -995,12 +1041,15 @@
 
                 sendFeedback: function(msg, type) {
                     if (!msg.dbMessageId) return;
+                    var prev = msg.feedback;
                     msg.feedback = type;
                     aiBackendApi.recordFeedback({
                         messageId: msg.dbMessageId,
                         // 后端只接受 positive/negative（UI 本地状态用 good/bad）
                         feedbackType: type === 'good' ? 'positive' : 'negative'
                     }).catch(function() {
+                        // 乐观更新失败回滚，避免本地状态与后端永久不一致
+                        msg.feedback = prev;
                         if (window.ReggieUI) ReggieUI.error('反馈提交失败');
                     });
                 },
@@ -1013,6 +1062,8 @@
                         if (window.ReggieUI) ReggieUI.warning('AI 正在回复，请先停止当前生成');
                         return;
                     }
+                    // 场景切换后候选集不同：关闭面板，重新聚焦输入框时按新场景拉取
+                    this.hideSuggestions();
                     this.currentScene = scene;
                     this.loadSceneConfig();
                 },
@@ -1142,11 +1193,108 @@
                 // ==================== 输入框 ====================
 
                 onInputKeydown: function(e) {
+                    // 联想面板键盘导航：↑↓ 选择、Enter 回填、Esc 关闭（优先于发送逻辑）
+                    if (this.sugVisible && this.suggestions.length) {
+                        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            var delta = e.key === 'ArrowDown' ? 1 : -1;
+                            var len = this.suggestions.length;
+                            this.sugActive = (this.sugActive + delta + len) % len;
+                            return;
+                        }
+                        if (e.key === 'Escape') {
+                            e.preventDefault();
+                            this.hideSuggestions();
+                            return;
+                        }
+                        if (e.key === 'Enter' && this.sugActive >= 0 && !e.shiftKey
+                                && !e.isComposing && e.keyCode !== 229) {
+                            e.preventDefault();
+                            this.applySuggestion(this.suggestions[this.sugActive]);
+                            return;
+                        }
+                    }
                     // 中文输入法组词期间不拦截 Enter（e.isComposing / keyCode 229）
                     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
                         e.preventDefault();
                         this.sendMessage();
                     }
+                },
+
+                // ==================== 智能输入提示（搜索联想模式） ====================
+
+                /** 输入变化防抖 250ms 拉取联想候选 */
+                scheduleSuggestions: function() {
+                    var self = this;
+                    if (self.sugTimer) clearTimeout(self.sugTimer);
+                    self.sugTimer = setTimeout(function() {
+                        self.fetchSuggestions();
+                    }, 250);
+                },
+
+                fetchSuggestions: function() {
+                    var self = this;
+                    if (self.sugSuppressed) return;
+                    var reqId = ++self.sugRequestId;
+                    aiBackendApi.inputSuggestions(self.inputText, self.currentScene).then(function(res) {
+                        // 竞态守卫：只采纳最新一次输入的候选
+                        if (reqId !== self.sugRequestId) return;
+                        var data = unwrap(res) || [];
+                        self.suggestions = data;
+                        self.sugActive = -1;
+                        self.sugVisible = data.length > 0;
+                    }).catch(function() {
+                        if (reqId === self.sugRequestId) {
+                            self.suggestions = [];
+                            self.sugVisible = false;
+                        }
+                    });
+                },
+
+                /** 点选候选：回填输入框（不自动发送），聚焦等待用户补充或发送 */
+                applySuggestion: function(s) {
+                    if (!s || !s.text) return;
+                    this.inputText = s.text;
+                    this.hideSuggestions();
+                    var self = this;
+                    this.$nextTick(function() {
+                        self.autoGrow();
+                        if (self.$refs.inputEl) self.$refs.inputEl.focus();
+                    });
+                },
+
+                hideSuggestions: function() {
+                    this.sugVisible = false;
+                    this.sugActive = -1;
+                    if (this.sugTimer) {
+                        clearTimeout(this.sugTimer);
+                        this.sugTimer = null;
+                    }
+                },
+
+                onInputFocus: function() {
+                    this.sugSuppressed = false;
+                    this.scheduleSuggestions();
+                },
+
+                onInputBlur: function() {
+                    // 点选候选经 mousedown.prevent 不会触发 blur；blur 只在其他区域点击时发生，直接关闭
+                    this.hideSuggestions();
+                },
+
+                sugIconClass: function(source) {
+                    var map = {
+                        quick: 'ri-lightbulb-flash-line',
+                        dish: 'ri-restaurant-line',
+                        mine: 'ri-history-line',
+                        hot: 'ri-fire-line'
+                    };
+                    return map[source] || 'ri-chat-smile-2-line';
+                },
+
+                sugSourceLabel: function(source) {
+                    var map = { quick: '快捷', dish: '菜品', mine: '我问过', hot: '热点' };
+                    return map[source] || '';
                 },
 
                 autoGrow: function() {

@@ -27,11 +27,35 @@ public class PaymentKeySecurityCheck {
     @Resource
     private PaymentConfigProperties paymentConfig;
 
+    @Resource
+    private org.springframework.core.env.Environment environment;
+
     /**
-     * 启动校验：requireEnvKey 开启时，REGGIE_PAYMENT_KEY 必须为合法 32 字节 Base64，且 JDK 支持 AES-256
+     * 启动校验：
+     * <ul>
+     *   <li>requireEnvKey 开启时，REGGIE_PAYMENT_KEY 必须为合法 32 字节 Base64，且 JDK 支持 AES-256；</li>
+     *   <li>2026-09-30 新增：prod profile 下 mock-mode=true 拒绝启动 —— mock 模式会整体跳过
+     *       支付/平台回调验签，生产误开等于无验签支付回调（匿名凭 tradeNo+金额即可置已支付）。</li>
+     * </ul>
      */
     @PostConstruct
     public void validate() {
+        // mock-mode 防呆：prod profile 与 mock-mode 互斥（fail-fast），非 prod 的 mock 环境打显式警告
+        String[] activeProfiles = environment != null ? environment.getActiveProfiles() : new String[0];
+        boolean prodProfile = false;
+        for (String profile : activeProfiles) {
+            if ("prod".equalsIgnoreCase(profile) || "production".equalsIgnoreCase(profile)) {
+                prodProfile = true;
+                break;
+            }
+        }
+        if (paymentConfig.isMockMode() && prodProfile) {
+            throw new IllegalStateException("[支付] reggie.payment.mock-mode=true 在 prod 环境禁止启用："
+                    + "mock 模式跳过全部回调验签，等于无验签支付回调，生产环境拒绝启动");
+        }
+        if (paymentConfig.isMockMode()) {
+            log.warn("[支付] mock-mode=true：支付/平台回调验签已跳过，仅限开发/演示环境，严禁用于生产！");
+        }
         if (!paymentConfig.isRequireEnvKey()) {
             return;
         }

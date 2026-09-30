@@ -87,7 +87,7 @@ public class KnowledgeIndexServiceImpl implements KnowledgeIndexService {
             // 重建：物理删除旧切块（chunk 表无逻辑删除）
             chunkMapper.delete(new QueryWrapper<AiKnowledgeChunk>().eq("doc_id", docId));
 
-            List<String> pieces = splitToChunks(doc.getContent());
+            List<String> pieces = splitToChunks(doc.getTitle(), doc.getContent());
             if (pieces.isEmpty()) {
                 throw new IllegalStateException("文档内容为空，无法索引");
             }
@@ -163,36 +163,77 @@ public class KnowledgeIndexServiceImpl implements KnowledgeIndexService {
     }
 
     /**
-     * 文本切块：≤400 字单块；超长按 400 字滑窗、相邻重叠 50 字。
+     * 文本切块（语义边界优先）：
+     * <ul>
+     *   <li>每个切块带文档标题前缀——检索命中后模型能看到出处，不再是无头文本；</li>
+     *   <li>段落（按换行切）逐段累积进同一块直到预算用满，FAQ 的问答对不再被拦腰切断；</li>
+     *   <li>单段超预算时对该段做 400 字滑窗（重叠 {@value #CHUNK_OVERLAP}）兜底。</li>
+     * </ul>
+     * 包级可见以便单元测试。
      */
-    private static List<String> splitToChunks(String content) {
+    static List<String> splitToChunks(String title, String content) {
         List<String> chunks = new java.util.ArrayList<>();
         if (content == null) {
             return chunks;
         }
         String text = content.trim();
-        int length = text.length();
-        if (length == 0) {
+        if (text.isEmpty()) {
             return chunks;
         }
-        if (length <= CHUNK_SIZE) {
-            chunks.add(text);
-            return chunks;
+        // 标题前缀：挤占切块预算，超长标题（>80字）不拼，避免正文预算被吃光
+        String prefix = "";
+        if (title != null && !title.trim().isEmpty() && title.trim().length() <= 80) {
+            prefix = title.trim() + "\n";
         }
-        int step = CHUNK_SIZE - CHUNK_OVERLAP;
-        int start = 0;
-        while (start < length) {
-            int end = Math.min(start + CHUNK_SIZE, length);
-            String piece = text.substring(start, end).trim();
-            if (!piece.isEmpty()) {
-                chunks.add(piece);
+        int budget = CHUNK_SIZE - prefix.length();
+
+        StringBuilder current = new StringBuilder();
+        for (String paragraph : text.split("\\n+")) {
+            String p = paragraph.trim();
+            if (p.isEmpty()) {
+                continue;
             }
-            if (end == length) {
+            if (p.length() > budget) {
+                // 单段超预算：先落已累积内容，再对该段滑窗兜底
+                flushChunk(chunks, current, prefix);
+                slidingWindow(p, budget, chunks, prefix);
+                continue;
+            }
+            if (current.length() > 0 && current.length() + 1 + p.length() > budget) {
+                flushChunk(chunks, current, prefix);
+            }
+            if (current.length() > 0) {
+                current.append('\n');
+            }
+            current.append(p);
+        }
+        flushChunk(chunks, current, prefix);
+        return chunks;
+    }
+
+    /** 落一个切块（带标题前缀） */
+    private static void flushChunk(List<String> chunks, StringBuilder current, String prefix) {
+        if (current.length() > 0) {
+            chunks.add(prefix + current);
+            current.setLength(0);
+        }
+    }
+
+    /** 单段超预算的滑窗兜底：400 字窗口、相邻重叠 50 字 */
+    private static void slidingWindow(String paragraph, int window, List<String> chunks, String prefix) {
+        int step = Math.max(1, window - CHUNK_OVERLAP);
+        int start = 0;
+        while (start < paragraph.length()) {
+            int end = Math.min(start + window, paragraph.length());
+            String piece = paragraph.substring(start, end).trim();
+            if (!piece.isEmpty()) {
+                chunks.add(prefix + piece);
+            }
+            if (end == paragraph.length()) {
                 break;
             }
             start += step;
         }
-        return chunks;
     }
 
     private static String truncate(String text, int max) {

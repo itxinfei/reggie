@@ -28,6 +28,7 @@ import com.reggie.module.ai.model.ModelTurn;
 import com.reggie.module.ai.provider.AiProviderManager;
 import com.reggie.module.ai.adapter.AbortableStreamCallback;
 import com.reggie.module.ai.adapter.AiModelAdapter;
+import com.reggie.module.ai.tool.AiMetricsCaliber;
 import com.reggie.module.ai.tool.AiToolOrchestrator;
 import com.reggie.module.ai.tool.BusinessSnapshotService;
 import com.reggie.module.ai.rag.service.KnowledgeRetrievalService;
@@ -336,7 +337,8 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
 
         // 修改点：仅在未提供conversationId时新建对话，避免Controller层与Service层双重创建导致孤立对话
         if (conversationId == null || conversationId.isEmpty()) {
-            AIConversation conv = createConversation(userId, actorType, "order_assistant");
+            // 四参重载 (userId, actorType, title, scene)；三参会把 actorType 误当 title、actor_type 落库 UNKNOWN
+            AIConversation conv = createConversation(userId, actorType, null, "order_assistant");
             conversationId = conv.getConversationId();
         }
 
@@ -716,7 +718,8 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                 + "1. 凡涉及具体经营数字（营业额、销量、订单数、占比、排名、复购率等），"
                 + "必须先调用对应工具获取真实数据，严禁凭常识或上下文猜测编造；\n"
                 + "2. 今天是 " + LocalDate.now() + "（按此日期把“昨天/本周/近几天”换算成 yyyy-MM-dd 入参）；\n"
-                + "3. 工具返回的是本店铺真实数据，金额单位均为元人民币；\n"
+                + "3. 工具返回的是本店铺真实数据，金额单位均为元人民币；"
+                + AiMetricsCaliber.CALIBER_NOTE + "\n"
                 + "4. 取数后用中文简洁回答，可使用表格或要点，并说明统计口径与时间范围；"
                 + "工具未覆盖的问题再结合餐饮经营常识给建议。";
     }
@@ -1380,6 +1383,8 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         private final StringBuilder fullContent = new StringBuilder();
         private final AtomicBoolean aborted = new AtomicBoolean(false);
         private final AtomicBoolean finalized = new AtomicBoolean(false);
+        /** 首 token 后上游中断（POST_START_ERROR）：片段非完整，收尾按 stopped 处理 */
+        private final AtomicBoolean upstreamInterrupted = new AtomicBoolean(false);
         private final AtomicReference<Runnable> abortActionRef = new AtomicReference<>();
 
         private List<AIRecommendedDish> parsedDishes;
@@ -1401,6 +1406,12 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
         @Override
         public boolean isAborted() {
             return aborted.get();
+        }
+
+        @Override
+        public void onUpstreamInterrupted() {
+            // 供应商故障转移层判定：首 token 已发出后上游中断（不切换），片段并非完整回答
+            upstreamInterrupted.set(true);
         }
 
         @Override
@@ -1567,9 +1578,12 @@ public class AIChatServiceImpl extends ServiceImpl<AIConversationMapper, AIConve
                     aiProviderManager.streamChat(messages, maxTokens, temperature, this);
                 }
 
-                // 4) 收尾：中止时保留 stopped 片段；工具轮整体报错且无文本则下发错误；
+                // 4) 收尾：中止/上游中断时保留 stopped 片段；工具轮整体报错且无文本则下发错误；
                 //    适配器未回调 isLast 时保证连接不挂起
                 if (aborted.get()) {
+                    finalizeStream(true);
+                } else if (upstreamInterrupted.get() && fullContent.length() > 0) {
+                    // 修复：上游中断后的残缺内容原先被标为 completed，用户误以为回答完整
                     finalizeStream(true);
                 } else if (toolTurn != null && toolTurn.isError() && fullContent.length() == 0) {
                     String errMsg = toolTurn.getErrorMessage();

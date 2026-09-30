@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.lang.NumberFormatException;
 
 /**
  * 美团外卖开放平台适配器（占位协议，待按官方文档对接）

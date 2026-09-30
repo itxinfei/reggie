@@ -35,6 +35,14 @@ public interface ReportService {
     List<Map<String, Object>> getDishRanking(String startDate, String endDate, int limit, Long tenantId, Long categoryId);
 
     /**
+     * 获取菜品销量排行（带订单状态过滤）。
+     * <p>AI 经营分析工具使用：统一传「仅已完成」状态，保证与营业额口径一致；
+     * statusFilter 传 null 等价于不过滤（与后台报表页行为一致）。</p>
+     */
+    List<Map<String, Object>> getDishRanking(String startDate, String endDate, int limit, Long tenantId,
+                                             Long categoryId, Integer statusFilter);
+
+    /**
      * 获取时段客流分析
      *
      * @param startDate 开始日期
@@ -43,6 +51,9 @@ public interface ReportService {
      * @return 时段分析数据
      */
     List<Map<String, Object>> getTimeSlotAnalysis(String startDate, String endDate, Long tenantId);
+
+    /** 时段分析（带订单状态过滤，语义同 {@link #getDishRanking} 的 AI 统一口径重载） */
+    List<Map<String, Object>> getTimeSlotAnalysis(String startDate, String endDate, Long tenantId, Integer statusFilter);
 
     /**
      * 获取支付方式分析
@@ -53,6 +64,9 @@ public interface ReportService {
      * @return 支付分析数据
      */
     Map<String, Object> getPaymentAnalysis(String startDate, String endDate, Long tenantId);
+
+    /** 支付分析（带订单状态过滤，语义同 {@link #getDishRanking} 的 AI 统一口径重载） */
+    Map<String, Object> getPaymentAnalysis(String startDate, String endDate, Long tenantId, Integer statusFilter);
 
     /**
      * 导出经营报表
@@ -77,6 +91,9 @@ public interface ReportService {
      * @return [{name: "热菜", count: 150}, ...]
      */
     List<Map<String, Object>> getCategorySales(String startDate, String endDate, Long tenantId);
+
+    /** 分类销量（带订单状态过滤，语义同 {@link #getDishRanking} 的 AI 统一口径重载） */
+    List<Map<String, Object>> getCategorySales(String startDate, String endDate, Long tenantId, Integer statusFilter);
 
     /**
      * Top3菜品每日销量趋势（菜品排行-趋势折线图）

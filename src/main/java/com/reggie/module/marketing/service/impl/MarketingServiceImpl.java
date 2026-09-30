@@ -413,10 +413,17 @@ public class MarketingServiceImpl extends ServiceImpl<FullReductionRuleMapper, F
     private BigDecimal ruleDiscount(FullReductionRule rule, BigDecimal goodsAmount) {
         Integer type = rule.getDiscountType();
         if (type != null && type == FullReductionRule.TYPE_REDUCE_AMOUNT) {
-            return rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
+            BigDecimal value = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
+            // 防御性封顶：管理端/种子数据可配出"减额>商品额"的异常档（如满20减30），
+            // 不封顶会使 totalDiscount 超过 goodsAmount、应付被钳成 0
+            return value.min(goodsAmount);
         }
         if (type != null && type == FullReductionRule.TYPE_DISCOUNT) {
-            BigDecimal rate = rule.getDiscountValue() != null ? rule.getDiscountValue() : BigDecimal.ZERO;
+            BigDecimal rate = rule.getDiscountValue();
+            // rate 必须落在 (0,1)：演示库存过 rate=0.00（等于全免）的脏配置
+            if (rate == null || rate.compareTo(BigDecimal.ZERO) <= 0 || rate.compareTo(BigDecimal.ONE) >= 0) {
+                return BigDecimal.ZERO;
+            }
             BigDecimal discount = goodsAmount.multiply(BigDecimal.ONE.subtract(rate));
             return rule.getMaxDiscountAmount() != null ? discount.min(rule.getMaxDiscountAmount()) : discount;
         }

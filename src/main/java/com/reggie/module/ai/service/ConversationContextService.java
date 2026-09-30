@@ -88,7 +88,11 @@ public class ConversationContextService {
         if (state == null || state.messages.isEmpty()) {
             return Collections.emptyList();
         }
-        return state.buildContext();
+        // 同一会话并发请求（双击发送/流式+反馈）下 messages 会被 add/compress 同时改写，
+        // 快照构建必须持 state 锁，避免 ConcurrentModificationException / 撕裂上下文
+        synchronized (state) {
+            return state.buildContext();
+        }
     }
 
     /**
@@ -121,21 +125,23 @@ public class ConversationContextService {
                 .content(content)
                 .attachmentIds(hasImages ? new ArrayList<>(attachmentIds) : null)
                 .build();
-        state.messages.add(msg);
 
-        // 提取关键信息
-        if ("user".equals(role)) {
-            state.keyFacts.addAll(extractKeyFacts(content));
-            capKeyFacts(state.keyFacts);
+        // 关键词提取不触碰 state，放在锁外执行，缩小临界区
+        List<String> facts = "user".equals(role) ? extractKeyFacts(content) : null;
+
+        synchronized (state) {
+            state.messages.add(msg);
+            if (facts != null) {
+                state.keyFacts.addAll(facts);
+                capKeyFacts(state.keyFacts);
+            }
+            // 触发压缩
+            if (state.messages.size() > COMPRESSION_THRESHOLD) {
+                compress(state);
+            }
+            // 清理过期上下文（24小时无活动）
+            state.lastActive = System.currentTimeMillis();
         }
-
-        // 触发压缩
-        if (state.messages.size() > COMPRESSION_THRESHOLD) {
-            compress(state);
-        }
-
-        // 清理过期上下文（24小时无活动）
-        state.lastActive = System.currentTimeMillis();
     }
 
     /**
@@ -149,7 +155,12 @@ public class ConversationContextService {
             return Collections.emptyList();
         }
         ContextState state = contextCache.get(conversationId);
-        return state != null ? new ArrayList<>(state.keyFacts) : Collections.emptyList();
+        if (state == null) {
+            return Collections.emptyList();
+        }
+        synchronized (state) {
+            return new ArrayList<>(state.keyFacts);
+        }
     }
 
     /**
@@ -175,22 +186,24 @@ public class ConversationContextService {
             return;
         }
         ContextState state = contextCache.computeIfAbsent(conversationId, k -> new ContextState());
-        state.messages.clear();
-        state.keyFacts.clear();
-        state.summary = null;
+        synchronized (state) {
+            state.messages.clear();
+            state.keyFacts.clear();
+            state.summary = null;
 
-        for (AIMessage msg : historyMessages) {
-            state.messages.add(msg);
-            if ("user".equals(msg.getRole()) && msg.getContent() != null) {
-                state.keyFacts.addAll(extractKeyFacts(msg.getContent()));
+            for (AIMessage msg : historyMessages) {
+                state.messages.add(msg);
+                if ("user".equals(msg.getRole()) && msg.getContent() != null) {
+                    state.keyFacts.addAll(extractKeyFacts(msg.getContent()));
+                }
             }
-        }
-        capKeyFacts(state.keyFacts);
-        state.lastActive = System.currentTimeMillis();
+            capKeyFacts(state.keyFacts);
+            state.lastActive = System.currentTimeMillis();
 
-        // 如果历史消息过多，立即压缩
-        if (state.messages.size() > COMPRESSION_THRESHOLD) {
-            compress(state);
+            // 如果历史消息过多，立即压缩
+            if (state.messages.size() > COMPRESSION_THRESHOLD) {
+                compress(state);
+            }
         }
         log.debug("已重建对话上下文: conversationId={}, messages={}, keyFacts={}",
                 conversationId, state.messages.size(), state.keyFacts.size());
@@ -207,11 +220,14 @@ public class ConversationContextService {
         if (state == null) {
             return Collections.emptyMap();
         }
-        Map<String, Object> stats = new LinkedHashMap<>();
-        stats.put("totalMessages", state.messages.size());
-        stats.put("keyFacts", state.keyFacts.size());
-        stats.put("hasSummary", state.summary != null);
-        stats.put("lastActive", new Date(state.lastActive));
+        Map<String, Object> stats;
+        synchronized (state) {
+            stats = new LinkedHashMap<>();
+            stats.put("totalMessages", state.messages.size());
+            stats.put("keyFacts", state.keyFacts.size());
+            stats.put("hasSummary", state.summary != null);
+            stats.put("lastActive", new Date(state.lastActive));
+        }
         return stats;
     }
 
@@ -274,25 +290,28 @@ public class ConversationContextService {
     // ==================== 上下文压缩 ====================
 
     /**
-     * 压缩上下文：将早期消息合成为摘要，保留滑动窗口
+     * 压缩上下文：将早期消息合成为摘要，保留滑动窗口。
+     * <p>调用方必须已持有 state 锁（addMessage/rebuild），锁为可重入，此处再同步一次以自保护。</p>
      */
-    private synchronized void compress(ContextState state) {
-        if (state.messages.size() <= COMPRESSION_THRESHOLD) {
-            return;
+    private void compress(ContextState state) {
+        synchronized (state) {
+            if (state.messages.size() <= COMPRESSION_THRESHOLD) {
+                return;
+            }
+
+            int windowStart = Math.max(0, state.messages.size() - SLIDING_WINDOW_SIZE);
+            List<AIMessage> toCompress = new ArrayList<>(state.messages.subList(0, windowStart));
+            List<AIMessage> keepMessages = new ArrayList<>(state.messages.subList(windowStart, state.messages.size()));
+
+            // 生成摘要
+            String newSummary = generateSummary(toCompress, state.summary);
+            state.summary = newSummary;
+            state.messages = keepMessages;
+
+            log.debug("上下文压缩完成: conversationId cached, compressed={} → window={}, summaryLength={}",
+                    toCompress.size(), keepMessages.size(),
+                    newSummary != null ? newSummary.length() : 0);
         }
-
-        int windowStart = Math.max(0, state.messages.size() - SLIDING_WINDOW_SIZE);
-        List<AIMessage> toCompress = new ArrayList<>(state.messages.subList(0, windowStart));
-        List<AIMessage> keepMessages = new ArrayList<>(state.messages.subList(windowStart, state.messages.size()));
-
-        // 生成摘要
-        String newSummary = generateSummary(toCompress, state.summary);
-        state.summary = newSummary;
-        state.messages = keepMessages;
-
-        log.debug("上下文压缩完成: conversationId cached, compressed={} → window={}, summaryLength={}",
-                toCompress.size(), keepMessages.size(),
-                newSummary != null ? newSummary.length() : 0);
     }
 
     /**

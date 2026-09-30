@@ -119,6 +119,12 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
 
         StringBuilder sb = new StringBuilder();
         sb.append("【用户画像】\n");
+        // 置信度驱动注入：低置信度画像降级为"仅供参考"，避免冷启动画像以强语气误导推荐
+        if (profile.getConfidence() != null
+                && profile.getConfidence().compareTo(LOW_CONFIDENCE_THRESHOLD) < 0) {
+            sb.append("（注意：该画像置信度较低（").append(profile.getConfidence())
+              .append("），仅供参考；用户本次对话中的明确表述优先于历史画像）\n");
+        }
 
         // 口味偏好
         if (profile.getTasteTags() != null && !profile.getTasteTags().isEmpty()) {
@@ -136,9 +142,9 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
         if (profile.getPricePreference() != null) {
             sb.append("价格偏好：").append(translatePricePref(profile.getPricePreference())).append("\n");
         }
-        // 常点菜品
+        // 常点菜品：ID 映射为菜名，非点餐场景模型也能直接理解（映射失败降级裸 ID）
         if (profile.getFrequentDishIds() != null && !profile.getFrequentDishIds().isEmpty()) {
-            sb.append("常点菜品：").append(profile.getFrequentDishIds()).append("\n");
+            sb.append("常点菜品：").append(translateDishNames(profile.getFrequentDishIds())).append("\n");
         }
         // 就餐方式偏好
         if (profile.getPreferredDiningType() != null) {
@@ -165,6 +171,9 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
     /** 画像刷新冷却时间（10分钟），避免每次对话都全量刷新 */
     // 修改点：新增节流机制，减少不必要的画像刷新计算
     private static final long REFRESH_COOLDOWN_MS = 10 * 60 * 1000;
+
+    /** 低置信度阈值：低于该值时画像注入降级为"仅供参考" */
+    private static final BigDecimal LOW_CONFIDENCE_THRESHOLD = new BigDecimal("0.4");
 
     /**
      * 刷新 profile。
@@ -301,6 +310,23 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
     }
 
     /**
+     * 查找该 AI 回复之前最近的一条同会话用户消息（口味信号源）。
+     * 反馈挂在 AI 回复上，用户话语在它前面；按主键倒序取第一条。
+     */
+    private AIMessageRecord findPrecedingUserMessage(AIMessageRecord aiReply) {
+        if (aiReply.getConversationId() == null || aiReply.getId() == null) {
+            return null;
+        }
+        LambdaQueryWrapper<AIMessageRecord> qw = new LambdaQueryWrapper<>();
+        qw.eq(AIMessageRecord::getConversationId, aiReply.getConversationId())
+                .eq(AIMessageRecord::getRole, "user")
+                .lt(AIMessageRecord::getId, aiReply.getId())
+                .orderByDesc(AIMessageRecord::getId)
+                .last("LIMIT 1");
+        return aiMessageRecordMapper.selectOne(qw);
+    }
+
+    /**
      * 收集内容中命中的口味关键词（等价抽取，降低嵌套）。
      *
      * @param content 反馈内容
@@ -316,7 +342,10 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
     }
 
     /**
-     * 从 AI 反馈分析口味偏好
+     * 从 AI 反馈分析口味偏好。
+     * <p>信号源修正：口味关键词从该 AI 回复<strong>之前的用户消息</strong>中提取，
+     * 而非 AI 回复文本——AI 推荐文案几乎必然出现口味词，扫回复会把模型措辞
+     * 系统性误归因为用户口味。</p>
      */
     private void analyzeTasteFromFeedback(UserProfile profile) {
         // 查询用户最近的 AI 反馈记录
@@ -329,19 +358,22 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
 
         if (feedbacks.isEmpty()) return;
 
-        // 统计正向反馈中包含的口味关键词
+        // 统计正向/负向反馈对应的用户话语中的口味关键词
         Set<String> goodTastes = new HashSet<>();
         Set<String> badTastes = new HashSet<>();
-        String[] tasteKeywords = {"辣", "清淡", "甜", "酸", "麻", "鲜", "清淡", "重口", "素食", "海鲜"};
+        String[] tasteKeywords = {"辣", "清淡", "甜", "酸", "麻", "鲜", "重口", "素食", "海鲜"};
 
         for (AIMessageRecord feedback : feedbacks) {
-            if (feedback.getContent() == null) {
+            // 信号源修正：取该 AI 回复之前的用户消息作为口味信号源
+            AIMessageRecord userMsg = findPrecedingUserMessage(feedback);
+            if (userMsg == null || userMsg.getContent() == null) {
                 continue;
             }
-            if ("good".equals(feedback.getFeedback())) {
-                collectKeywords(feedback.getContent(), tasteKeywords, goodTastes);
-            } else if ("bad".equals(feedback.getFeedback())) {
-                collectKeywords(feedback.getContent(), tasteKeywords, badTastes);
+            // 值域与 RecordFeedbackRequest 校验一致：positive / negative（原 good/bad 永不命中，口味画像死逻辑）
+            if ("positive".equals(feedback.getFeedback())) {
+                collectKeywords(userMsg.getContent(), tasteKeywords, goodTastes);
+            } else if ("negative".equals(feedback.getFeedback())) {
+                collectKeywords(userMsg.getContent(), tasteKeywords, badTastes);
             }
         }
 
@@ -424,8 +456,9 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
 
         if (feedbacks.isEmpty()) return;
 
-        long goodCount = feedbacks.stream().filter(f -> "good".equals(f.getFeedback())).count();
-        long badCount = feedbacks.stream().filter(f -> "bad".equals(f.getFeedback())).count();
+        // 值域与 RecordFeedbackRequest 校验一致：positive / negative
+        long goodCount = feedbacks.stream().filter(f -> "positive".equals(f.getFeedback())).count();
+        long badCount = feedbacks.stream().filter(f -> "negative".equals(f.getFeedback())).count();
         int total = feedbacks.size();
 
         if (total > 0) {
@@ -473,6 +506,37 @@ public class UserProfileServiceImpl extends ServiceImpl<UserProfileMapper, UserP
     }
 
     // ==================== 翻译辅助方法 ====================
+
+    /**
+     * 常点菜品 ID 串映射为菜名串（"35,41" → "宫保鸡丁、鱼香肉丝"）。
+     * 查询失败/菜品不存在/跨租户被过滤时降级返回原始 ID 串，不阻断画像注入。
+     */
+    private String translateDishNames(String dishIds) {
+        try {
+            List<Long> ids = java.util.Arrays.stream(dishIds.split(","))
+                    .map(String::trim).filter(s -> !s.isEmpty())
+                    .map(Long::valueOf).collect(Collectors.toList());
+            if (ids.isEmpty()) return dishIds;
+            List<com.reggie.module.dish.model.Dish> dishes = dishMapper.selectBatchIds(ids);
+            if (dishes == null || dishes.isEmpty()) return dishIds;
+            java.util.Map<Long, String> nameById = new java.util.HashMap<>();
+            for (com.reggie.module.dish.model.Dish d : dishes) {
+                nameById.put(d.getId(), d.getName() != null ? d.getName() : String.valueOf(d.getId()));
+            }
+            StringBuilder sb = new StringBuilder();
+            for (Long id : ids) {
+                String name = nameById.get(id);
+                if (name != null) {
+                    if (sb.length() > 0) sb.append("、");
+                    sb.append(name);
+                }
+            }
+            return sb.length() > 0 ? sb.toString() : dishIds;
+        } catch (Exception e) {
+            log.debug("常点菜品名映射失败，降级裸ID: {}", e.getMessage());
+            return dishIds;
+        }
+    }
 
     private String translatePricePref(String pref) {
         switch (pref) {

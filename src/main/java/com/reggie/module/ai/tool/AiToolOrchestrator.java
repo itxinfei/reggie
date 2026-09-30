@@ -22,8 +22,10 @@ import java.util.List;
  * 模型答复(可流式) ── 无 tool_calls → 结束（最终答复）
  *                 └─ 有 tool_calls → 逐工具执行（推 SSE tool 事件）→ 结果回填 → 下一轮
  * </pre>
- * 最多 {@value #MAX_ROUNDS} 轮（前 2 轮提供工具，最后 1 轮强制无工具，让模型基于结果作答），
+ * 最多 {@value #MAX_ROUNDS} 轮（前 3 轮提供工具，最后 1 轮强制无工具，让模型基于结果作答），
  * 累计工具调用不超过 {@value #MAX_TOOL_CALLS} 次，防止异常模型空转烧 token。
+ * <p>2026-09-30：MAX_ROUNDS 3→4。对比类复合问题（"本月 vs 上月营业额+建议"）至少需要
+ * 3-4 次工具调用，原 2 个工具轮容易撞上限后被迫用残缺数据作答。</p>
  *
  * @author reggie
  * @since 2026-09-20
@@ -33,7 +35,7 @@ import java.util.List;
 public class AiToolOrchestrator {
 
     /** 最大模型轮次（含最终无工具总结轮） */
-    public static final int MAX_ROUNDS = 3;
+    public static final int MAX_ROUNDS = 4;
 
     /** 单次对话累计工具调用上限 */
     public static final int MAX_TOOL_CALLS = 5;

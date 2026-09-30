@@ -82,18 +82,34 @@ public class ShoppingCartController {
             //添加到购物车的是套餐
             queryWrapper.eq(ShoppingCart::getSetmealId, shoppingCart.getSetmealId());
         }
-        // 口味（规格）相同的才合并数量；不同口味的同一菜品是不同购物车项
+        // 口味（规格）相同的才合并数量；不同口味的同一菜品是不同购物车项。
+        // 修复(2026-09-30)：无口味入参时显式匹配 null/''，与 sub 侧对称——否则无口味加购会把
+        // 数量错误合并进该菜品已存在的带口味行（多行时 getOne 直接 500）。
         if (shoppingCart.getDishFlavor() != null && !shoppingCart.getDishFlavor().isEmpty()) {
             queryWrapper.eq(ShoppingCart::getDishFlavor, shoppingCart.getDishFlavor());
+        } else {
+            queryWrapper.and(w -> w.isNull(ShoppingCart::getDishFlavor).or().eq(ShoppingCart::getDishFlavor, ""));
         }
 
-        //查询当前菜品或者套餐是否在购物车中
-        ShoppingCart cartServiceOne = shoppingCartService.getOne(queryWrapper);
+        // 查询当前菜品或者套餐是否在购物车中。
+        // 2026-09-30 自愈：shopping_cart 无唯一索引（MySQL 唯一索引对 NULL 不去重，setmeal_id 可空），
+        // 历史并发首加可能产生重复行；getOne 命中多行会让后续减购直接 500。改用 list：
+        // 多行时合并数量到首行并删除其余，边用边清；并发窗口内仍可能重复，但下次 add 会自动合并。
+        List<ShoppingCart> existingList = shoppingCartService.list(queryWrapper);
+        ShoppingCart cartServiceOne;
 
-        if (cartServiceOne != null) {
+        if (!existingList.isEmpty()) {
+            ShoppingCart first = existingList.get(0);
+            for (int i = 1; i < existingList.size(); i++) {
+                ShoppingCart dup = existingList.get(i);
+                if (dup.getNumber() != null && dup.getNumber() > 0) {
+                    shoppingCartService.addQuantityAtomically(first.getId(), dup.getNumber());
+                }
+                shoppingCartService.removeById(dup.getId());
+            }
             // 原子加 1 后重新查询最新数据（避免本地对象与 DB 不一致）
-            shoppingCartService.addQuantityAtomically(cartServiceOne.getId(), 1);
-            cartServiceOne = shoppingCartService.getById(cartServiceOne.getId());
+            shoppingCartService.addQuantityAtomically(first.getId(), 1);
+            cartServiceOne = shoppingCartService.getById(first.getId());
         } else {
             //如果不存在，则添加到购物车，数量默认就是一
             shoppingCart.setNumber(1);
@@ -103,7 +119,7 @@ public class ShoppingCartController {
                 // 插入成功：返回新购物车项（此前遗漏赋值导致 R.success(null)，前端拿不到 data）
                 cartServiceOne = shoppingCart;
             } catch (DuplicateKeyException e) {
-                // 并发唯一索引冲突：改为原子累加数量，避免重复购物车项（等价抽取）
+                // 并发唯一索引冲突兜底：改为原子累加数量，避免重复购物车项（等价抽取）
                 cartServiceOne = mergeExistingOnDuplicateKey(shoppingCart, currentId, dishId);
             }
         }
@@ -214,10 +230,13 @@ public class ShoppingCartController {
         wrapper.eq(ShoppingCart::getUserId, BaseContext.getCurrentId());
         if (shoppingCart.getDishId() != null) {
             wrapper.eq(ShoppingCart::getDishId, shoppingCart.getDishId());
-            // 多口味菜同一 dishId 在购物车按口味存多条：必须带 dishFlavor 精确匹配，
-            // 否则下方 getOne 命中多行抛异常（多口味减购失败 Bug）。无口味菜 dishFlavor 为 null，不加此条件。
+            // 多口味菜同一 dishId 在购物车按口味存多条：必须带 dishFlavor 精确匹配。
+            // 修复(2026-09-30)：无口味入参时显式匹配 null/''——原实现不加口味条件，
+            // 该菜品存在多条口味行时 getOne 命中多行抛 TooManyResultsException（减购 500，减不掉）。
             if (shoppingCart.getDishFlavor() != null) {
                 wrapper.eq(ShoppingCart::getDishFlavor, shoppingCart.getDishFlavor());
+            } else {
+                wrapper.and(w -> w.isNull(ShoppingCart::getDishFlavor).or().eq(ShoppingCart::getDishFlavor, ""));
             }
         } else if (shoppingCart.getSetmealId() != null) {
             wrapper.eq(ShoppingCart::getSetmealId, shoppingCart.getSetmealId());
@@ -225,7 +244,9 @@ public class ShoppingCartController {
             return R.error("缺少菜品或套餐ID");
         }
 
-        ShoppingCart cartItem = shoppingCartService.getOne(wrapper);
+        // list + 取首行：即使历史脏数据出现同口径多行也不会 500
+        List<ShoppingCart> matches = shoppingCartService.list(wrapper);
+        ShoppingCart cartItem = matches.isEmpty() ? null : matches.get(0);
         if (cartItem == null) {
             return R.error("购物车商品不存在");
         }

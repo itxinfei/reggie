@@ -428,7 +428,7 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
 
         double distance = earthRadius * c;
 
-        return new BigDecimal(distance).setScale(2, RoundingMode.HALF_UP);
+        return BigDecimal.valueOf(distance).setScale(2, RoundingMode.HALF_UP);
     }
 
     // ==================== 统计分析 ====================

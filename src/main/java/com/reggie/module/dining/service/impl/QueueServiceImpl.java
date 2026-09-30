@@ -70,7 +70,27 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
 
     @Override
     public QueueRecord takeNumber(Integer seatCount, String phone, Long userId) {
-        String lockKey = QUEUE_LOCK_KEY_PREFIX + seatCount;
+        Long tenantId = BaseContext.getCurrentTenantId();
+        // 修复(2026-09-30)：重复取号校验 — 同一用户/手机号在队中（WAITING/CALLED）时禁止再取号，
+        // 防止开新标签页/直接调 API 无限刷号占队（前端隐藏按钮拦不住绕过）。
+        LambdaQueryWrapper<QueueRecord> dupQw = new LambdaQueryWrapper<>();
+        dupQw.eq(QueueRecord::getTenantId, tenantId)
+                .in(QueueRecord::getStatus,
+                        QueueRecordStatus.WAITING.getValue(), QueueRecordStatus.CALLED.getValue());
+        if (userId != null) {
+            dupQw.eq(QueueRecord::getUserId, userId);
+        } else if (phone != null && !phone.trim().isEmpty()) {
+            dupQw.eq(QueueRecord::getPhone, phone);
+        } else {
+            throw new CustomException("请先登录或填写手机号后再取号");
+        }
+        if (count(dupQw) > 0) {
+            throw new CustomException("您已在排队中，请勿重复取号");
+        }
+
+        // 修复(2026-09-30)：锁改为全局单 key — 原 key 按 seatCount 分片，不同桌型并发取号
+        // 会各自读到同一"最大号"生成重复排队号（叫号唯一凭证失效）。
+        String lockKey = QUEUE_LOCK_KEY_PREFIX;
         String lockValue = UUID.randomUUID().toString();
         Boolean acquired = false;
         try {
@@ -90,6 +110,8 @@ public class QueueServiceImpl extends ServiceImpl<QueueMapper, QueueRecord> impl
             String datePrefix = LocalDate.now().format(DATE_PATTERN);
             LambdaQueryWrapper<QueueRecord> qw = new LambdaQueryWrapper<>();
             qw.likeRight(QueueRecord::getQueueNo, datePrefix);
+            // 序列按租户内递增（原实现缺租户过滤，跨租户共享序列且会把别家的号算进来）
+            qw.eq(QueueRecord::getTenantId, tenantId);
             qw.orderByDesc(QueueRecord::getQueueNo);
             qw.last("LIMIT 1");
             QueueRecord last = getOne(qw);

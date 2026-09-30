@@ -277,13 +277,16 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
 
     /**
      * 处理 mark message read。
+     * <p>2026-09-30 越权修复：update 条件追加 user_id，非本人消息静默忽略（原实现仅按
+     * messageId 更新，任意登录用户可遍历 ID 把他人消息置为已读）。</p>
      * @param messageId 参数 messageId
+     * @param userId 参数 userId
      */
     @Override
-    public void markMessageRead(Long messageId) {
-        if (messageId == null) return;
+    public void markMessageRead(Long messageId, Long userId) {
+        if (messageId == null || userId == null) return;
         MarketingMessage message = messageMapper.selectById(messageId);
-        if (message != null) {
+        if (message != null && userId.equals(message.getUserId())) {
             message.setStatus(MarketingMessage.STATUS_READ);
             message.setReadTime(LocalDateTime.now());
             messageMapper.updateById(message);

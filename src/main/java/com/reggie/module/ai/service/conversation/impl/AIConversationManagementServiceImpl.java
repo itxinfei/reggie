@@ -358,7 +358,8 @@ public class AIConversationManagementServiceImpl
         fbWrapper.eq(AIMessageRecord::getId, messageId)
                 .eq(AIMessageRecord::getTenantId, BaseContext.getCurrentTenantId());
         AIMessageRecord record = messageRecordMapper.selectOne(fbWrapper);
-        if (record != null && (record.getUserId() == null || record.getUserId().equals(userId))) {
+        // 越权修复：userId 必须非空且与消息归属一致（原逻辑 userId 为 NULL 的消息任何登录人都可改反馈）
+        if (record != null && record.getUserId() != null && record.getUserId().equals(userId)) {
             record.setFeedback(feedbackType);
             messageRecordMapper.updateById(record);
         }

@@ -52,6 +52,11 @@ public class FirstTokenGuard implements AbortableStreamCallback {
     }
 
     @Override
+    public void onUpstreamInterrupted() {
+        delegate.onUpstreamInterrupted();
+    }
+
+    @Override
     public boolean isAborted() {
         // 被包装者不支持中止时恒为 false
         return abortDelegate != null && abortDelegate.isAborted();

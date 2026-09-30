@@ -293,7 +293,9 @@ public class AiProviderManager {
             return null;
         }
         if (result.getOutcome() == FailoverResult.Outcome.POST_START_ERROR) {
-            // 首 token 后中断：内容已部分推送，不补发末帧（服务层收尾）
+            // 首 token 后中断：通知会话片段非完整，收尾时以 stopped 落库（不伪装成 completed）
+            guard.onUpstreamInterrupted();
+            // 内容已部分推送，不补发末帧（服务层收尾）
             return null;
         }
         // EXHAUSTED / NON_RETRYABLE：首 token 从未发出，安全发末帧错误
@@ -349,6 +351,8 @@ public class AiProviderManager {
             return ModelTurn.builder().finishReason(ModelTurn.FINISH_STOP).build();
         }
         if (result.getOutcome() == FailoverResult.Outcome.POST_START_ERROR) {
+            // 首 token 后中断：通知文本出口所属会话，片段收尾时以 stopped 落库
+            sinkGuard.onUpstreamInterrupted();
             return ModelTurn.error("AI回答生成中断，请稍后重试。");
         }
         // NON_RETRYABLE / EXHAUSTED
@@ -457,13 +461,15 @@ public class AiProviderManager {
     private String buildFailMessage(FailoverResult<?> result) {
         List<FailoverAttempt> attempts = result.getAttempts();
         FailoverAttempt last = attempts.isEmpty() ? null : attempts.get(attempts.size() - 1);
-        if (result.getOutcome() == FailoverResult.Outcome.NON_RETRYABLE && last != null) {
-            return last.getDetail();
+        // 原始 detail 可能携带供应商上游错误体/内部信息（最长500字），仅落日志；终端用户统一友好话术
+        if (last != null && last.getDetail() != null && !last.getDetail().isEmpty()) {
+            log.warn("AI最终失败 outcome={}, provider={}, detail={}", result.getOutcome(),
+                    last.getProviderCode(), last.getDetail());
         }
         if (result.getOutcome() == FailoverResult.Outcome.EXHAUSTED) {
             return "【AI服务暂时不可用】所有供应商均无法响应，请稍后重试。";
         }
-        return last != null ? last.getDetail() : "AI服务暂时不可用，请稍后重试。";
+        return "AI服务暂时不可用，请稍后重试。";
     }
 
     /**

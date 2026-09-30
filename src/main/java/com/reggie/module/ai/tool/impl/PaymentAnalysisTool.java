@@ -1,6 +1,7 @@
 package com.reggie.module.ai.tool.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.reggie.module.ai.tool.AiMetricsCaliber;
 import com.reggie.module.ai.tool.AiTool;
 import com.reggie.module.ai.tool.AiToolDates;
 import com.reggie.module.ai.tool.ToolExecResult;
@@ -16,7 +17,8 @@ import static com.reggie.module.ai.tool.ToolSchemas.stringType;
 
 /**
  * 支付方式分析工具（薄封装 {@link ReportService#getPaymentAnalysis}）。
- * 口径：2=微信、3=支付宝、现金/银行卡/储值/货到付款并入 balance，与后台报表-支付分析一致。
+ * 口径：2=微信、3=支付宝、现金/银行卡/储值/货到付款并入 balance；
+ * 订单状态为仅已完成（{@link AiMetricsCaliber} 统一基线）。
  *
  * @author reggie
  * @since 2026-09-20
@@ -57,7 +59,7 @@ public class PaymentAnalysisTool implements AiTool {
     public ToolExecResult execute(JsonNode args, Long tenantId) {
         AiToolDates.DateRange range = AiToolDates.normalizeRange(args);
         Map<String, Object> payment = reportService.getPaymentAnalysis(
-                range.startText(), range.endText(), tenantId);
+                range.startText(), range.endText(), tenantId, AiMetricsCaliber.BASELINE_STATUS);
         if (payment == null) {
             payment = new LinkedHashMap<>();
         }

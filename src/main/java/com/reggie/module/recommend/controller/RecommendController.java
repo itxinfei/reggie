@@ -1,6 +1,7 @@
 package com.reggie.module.recommend.controller;
 import com.reggie.common.utils.PageUtils;
 
+import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequireEmployee;
@@ -271,7 +272,8 @@ public class RecommendController {
     @Operation(summary = "标记消息已读", description = "将指定营销消息标记为已读")
     public R<String> markMessageRead(
             @Parameter(description = "消息ID", required = true) @PathVariable Long id) {
-        marketingCampaignService.markMessageRead(id);
+        // 2026-09-30 越权修复：传入当前登录用户，只能标记本人消息
+        marketingCampaignService.markMessageRead(id, BaseContext.getCurrentId());
         return R.success("已标记");
     }
 

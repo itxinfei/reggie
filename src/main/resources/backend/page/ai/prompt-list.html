@@ -39,7 +39,7 @@
         :total="counts"
         :loading="loading"
         :show-actions="true"
-        :actions-width="180"
+        :actions-width="220"
         empty-text="暂无提示词模板"
         @page-change="onPageChange"
         @size-change="onSizeChange">
@@ -57,6 +57,7 @@
         </template>
         <template #actions="{ row }">
           <el-button type="text" size="small" class="btn-view" @click="openEdit(row)">修改</el-button>
+          <el-button type="text" size="small" class="btn-view" @click="onHistory(row)">历史</el-button>
           <el-button
             v-if="row.builtin"
             type="text"
@@ -154,14 +155,60 @@
         </el-form-item>
       </el-form>
     </crud-dialog>
+
+    <!-- ========== 历史版本弹窗（P5 运营闭环） ========== -->
+    <el-dialog
+      title="历史版本"
+      :visible.sync="historyVisible"
+      width="680px"
+      append-to-body
+      :close-on-click-modal="false">
+      <el-table
+        v-loading="historyLoading"
+        :data="historyList"
+        size="small"
+        max-height="380">
+        <el-table-column prop="version" label="版本" width="70" align="center">
+          <template slot-scope="{ row }">v{{ row.version }}</template>
+        </el-table-column>
+        <el-table-column prop="title" label="名称" min-width="110" show-overflow-tooltip align="center"></el-table-column>
+        <el-table-column label="内容摘要" min-width="240" align="center">
+          <template slot-scope="{ row }">
+            <span class="history-snippet">{{ row.content || (row.quickQuestions ? '（快捷问题集）' : '（空）') }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="快照时间" width="140" align="center">
+          <template slot-scope="{ row }">{{ formatTime(row.createTime) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="80" align="center">
+          <template slot-scope="{ row }">
+            <el-button type="text" size="small" class="btn-warning" @click="onRollback(row)">回滚到此</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="form-tip" style="margin-top: 8px;">
+        每次修改、重置或回滚前系统会自动保存当前内容为快照；回滚后当前内容同样先保存，可再次回滚。
+      </div>
+    </el-dialog>
   </div>
 
   <script src="../../plugins/vue/vue.js"></script>
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
-  <script src="../../js/request.js?v=20260926"></script>
-  <script src="../../js/components.js?v=20260924"></script>
-  <script src="../../api/ai.js?v=20260922"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../api/ai.js?v=20260930"></script>
+  <style>
+    .history-snippet {
+      display: inline-block;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: bottom;
+      color: var(--text-secondary, #666);
+    }
+  </style>
   <script>
     new Vue({
       el: '#prompt-app',
@@ -200,6 +247,12 @@
           dialogTitle: '新增提示词模板',
           submitting: false,
           form: this.buildEmptyForm(),
+
+          // 历史版本（P5 运营闭环：更新/重置/回滚前自动快照，支持回滚）
+          historyVisible: false,
+          historyLoading: false,
+          historyRow: null,
+          historyList: [],
           formRules: {
             title: [
               { required: true, message: '请输入模板名称', trigger: 'blur' },
@@ -511,6 +564,50 @@
         handleRequestError(err) {
           if (err && err.message === 'NOTLOGIN') return;
           ReggieUI.error('请求失败：' + (err && err.message ? err.message : err));
+        },
+
+        /* ========== 历史版本 / 回滚（P5 运营闭环） ========== */
+        onHistory(row) {
+          this.historyRow = row;
+          this.historyVisible = true;
+          this.historyLoading = true;
+          this.historyList = [];
+          aiBackendApi.promptHistory(row.id).then((res) => {
+            if (String(res.code) === '1') {
+              this.historyList = res.data || [];
+              if (!this.historyList.length) {
+                ReggieUI.info('该模板暂无历史版本（每次修改/重置前会自动保存快照）');
+              }
+            } else {
+              ReggieUI.error(res.msg || '加载历史失败');
+            }
+          }).catch(this.handleRequestError).finally(() => {
+            this.historyLoading = false;
+          });
+        },
+        onRollback(h) {
+          if (!this.historyRow) return;
+          ReggieUI.confirm(
+            '确认将「' + this.historyRow.title + '」回滚到版本 v' + h.version + '？当前内容会先自动保存为快照。',
+            '回滚确认', {
+              confirmButtonText: '确定回滚',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }).then(() => {
+            aiBackendApi.promptRollback(this.historyRow.id, h.id).then((res) => {
+              if (String(res.code) === '1') {
+                ReggieUI.success('回滚成功');
+                this.historyVisible = false;
+                this.fetchData();
+              } else {
+                ReggieUI.error(res.msg || '回滚失败');
+              }
+            }).catch(this.handleRequestError);
+          }).catch(() => {});
+        },
+        formatTime(t) {
+          if (!t) return '-';
+          return String(t).replace('T', ' ').substring(0, 16);
         }
       }
     });

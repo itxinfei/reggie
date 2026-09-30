@@ -1,5 +1,6 @@
 package com.reggie.module.delivery.service.impl;
 
+import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -60,7 +61,7 @@ public class RiderMessageServiceImpl implements RiderMessageService {
 
     @Override
     public Page<RiderMessage> pageMine(Long riderId, Long tenantId, int page, int size) {
-        Page<RiderMessage> p = new Page<>(page, size);
+        Page<RiderMessage> p = PageUtils.of(page, size);
         LambdaQueryWrapper<RiderMessage> qw = new LambdaQueryWrapper<>();
         qw.eq(RiderMessage::getRiderId, riderId)
                 .eq(RiderMessage::getTenantId, tenantId)

@@ -13,4 +13,33 @@
         ORDER BY create_time ASC
     </select>
 
+    <!-- 输入联想-个人历史源：本人最近 user 消息按前缀匹配（prefix 已在服务层做 LIKE 转义） -->
+    <select id="selectPersonalSuggestions" resultType="java.lang.String">
+        SELECT content
+        FROM ai_message
+        WHERE tenant_id = #{tenantId}
+          AND user_id = #{userId}
+          AND role = 'user'
+          AND is_deleted = 0
+          AND content LIKE CONCAT(#{prefix}, '%')
+          AND CHAR_LENGTH(content) BETWEEN 4 AND 100
+        ORDER BY id DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 输入联想-店铺热点源：租户内近 30 天 user 消息按出现频次排序（prefix 已转义） -->
+    <select id="selectHotSuggestions" resultType="java.lang.String">
+        SELECT content
+        FROM ai_message
+        WHERE tenant_id = #{tenantId}
+          AND role = 'user'
+          AND is_deleted = 0
+          AND content LIKE CONCAT(#{prefix}, '%')
+          AND CHAR_LENGTH(content) BETWEEN 4 AND 100
+          AND create_time &gt;= #{since}
+        GROUP BY content
+        ORDER BY COUNT(*) DESC, MAX(id) DESC
+        LIMIT #{limit}
+    </select>
+
 </mapper>

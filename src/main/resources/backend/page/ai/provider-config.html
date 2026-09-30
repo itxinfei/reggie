@@ -261,10 +261,10 @@
 <script src="../../plugins/vue/vue.js"></script>
 <script src="../../plugins/element-ui/index.js?v=20260915"></script>
 <script src="../../plugins/axios/axios.min.js"></script>
-<script src="../../js/request.js?v=20260926"></script>
+<script src="../../js/request.js?v=20260930"></script>
 <script src="../../js/accessibility-utils.js?v=20260927"></script>
 <script src="../../js/performance-utils.js?v=20260926"></script>
-  <script src="../../js/components.js?v=20260924"></script>
+  <script src="../../js/components.js?v=20260930"></script>
 <script src="../../api/ai.js?v=20260921"></script>
 <script>
 (function() {
@@ -579,7 +579,8 @@
                     baseUrl: '', modelName: '', apiKey: '',
                     apiFormat: 'openai_compatible', timeout: 60,
                     maxTokens: 2048, temperature: 0.7, remark: '',
-                    capabilityList: ['chat'], embeddingDimensions: null
+                    capabilityList: ['chat'], embeddingDimensions: null,
+                    _hasExistingKey: false
                 };
                 // 修改点：重置模型列表状态
                 this.modelList = [];
@@ -594,19 +595,21 @@
             },
 
             openEditDialog: function(provider) {
-                this.form = JSON.parse(JSON.stringify(provider));
-                // 修改点(2026-09-18)：列表返回的 apiKey 也是脱敏值，立即清空防止误提交覆盖真实密钥
-                this.form.apiKey = '';
-                // P2：capabilities 为 JSON 字符串，解析为弹窗工作态数组（坏 JSON 降级为仅 chat）
-                this.form.capabilityList = this.parseCapabilityList(provider.capabilities);
-                this.form.embeddingDimensions = provider.embeddingDimensions || null;
                 const self = this;
+                const snapshot = JSON.parse(JSON.stringify(provider));
+                // 修改点(2026-09-18)：列表返回的 apiKey 也是脱敏值，立即清空防止误提交覆盖真实密钥
+                // 修复：capabilityList/_hasExistingKey 等工作态键必须在赋值给 this.form 前就存在，
+                // 否则 Vue2 不会为「已响应式对象上新增的属性」建立 getter/setter，复选框/密钥提示会冻结
+                snapshot.apiKey = '';
+                snapshot.capabilityList = this.parseCapabilityList(provider.capabilities);
+                snapshot.embeddingDimensions = provider.embeddingDimensions || null;
+                // 掩码可能出现在开头（indexOf===0），>= 0 才能正确识别已有 key
+                snapshot._hasExistingKey = !!(provider.apiKey && provider.apiKey.indexOf('****') >= 0);
+                this.form = snapshot;
                 // 修改点(2026-09-18)：重置连通测试状态
                 this.dialogTesting = false;
                 this.dialogTestResult = '';
                 this.dialogTestOk = false;
-                // 修改点：掩码可能出现在开头（indexOf===0），>= 0 才能正确识别已有 key
-                this.form._hasExistingKey = !!(provider.apiKey && provider.apiKey.indexOf('****') >= 0);
                 // 修改点：重置模型列表状态
                 this.modelList = [];
                 this.modelFetchError = '';

@@ -103,12 +103,13 @@ public class AnthropicAdapter extends BaseModelAdapter {
             if (systemPrompt != null && !systemPrompt.isEmpty()) {
                 requestBody.put("system", systemPrompt);
             }
-            requestBody.put("messages", msgList);
+            List<Map<String, Object>> mergedMessages = mergeConsecutiveSameRole(msgList);
+            requestBody.put("messages", mergedMessages);
 
             String jsonBody = getObjectMapper().writeValueAsString(requestBody);
             log.info("AI请求[{} / {}]: url={}, model={}, messages={}, systemPrompt={}, maxTokens={}",
                     config.getProviderCode(), FORMAT_ID, AiSecretMaskUtils.maskUrl(apiUrl), config.getModelName(),
-                    msgList.size(), systemPrompt != null, resolvedMaxTokens);
+                    mergedMessages.size(), systemPrompt != null, resolvedMaxTokens);
 
             // 4) 发送请求
             sendRequestBody(conn, jsonBody);
@@ -178,6 +179,29 @@ public class AnthropicAdapter extends BaseModelAdapter {
         }
         // 图片全部解析失败时回退为纯文本，避免发出空 content
         return blocks.isEmpty() ? msg.getContent() : blocks;
+    }
+
+    /**
+     * 合并相邻同角色消息（内容均为纯文本时以换行拼接）。
+     * <p>删除历史中间 assistant 消息后，DB 重建的历史可能出现连续两条同角色消息；
+     * Anthropic Messages API 要求 user/assistant 严格交替，不合并会被 400 拒绝，
+     * 且 BAD_REQUEST 判为 NON_RETRYABLE 不切换供应商，会话在此家永久失败。</p>
+     * <p>带图消息的 content 是 blocks 列表，不参与合并（视觉场景本就是单轮 user 消息）。</p>
+     */
+    private List<Map<String, Object>> mergeConsecutiveSameRole(List<Map<String, Object>> msgList) {
+        List<Map<String, Object>> merged = new ArrayList<>();
+        for (Map<String, Object> m : msgList) {
+            if (!merged.isEmpty()) {
+                Map<String, Object> last = merged.get(merged.size() - 1);
+                if (m.get("role").equals(last.get("role"))
+                        && last.get("content") instanceof String && m.get("content") instanceof String) {
+                    last.put("content", last.get("content") + "\n\n" + m.get("content"));
+                    continue;
+                }
+            }
+            merged.add(m);
+        }
+        return merged;
     }
 
     /**

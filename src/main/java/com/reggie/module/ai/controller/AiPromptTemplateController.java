@@ -145,4 +145,28 @@ public class AiPromptTemplateController {
         promptTemplateService.resetBuiltin(id);
         return R.success("已重置为默认内容");
     }
+
+    /**
+     * 模板历史版本列表（P5 运营闭环）。
+     * @param id 模板ID
+     * @return 历史版本（最近 20 条，新→旧）
+     */
+    @GetMapping("/history/{id}")
+    @Operation(summary = "历史版本", description = "查询模板的变更历史（更新/重置/回滚前自动快照）")
+    public R<List<com.reggie.module.ai.model.AiPromptTemplateHistory>> history(@PathVariable Long id) {
+        return R.success(promptTemplateService.listHistory(id));
+    }
+
+    /**
+     * 回滚到指定历史版本（当前内容先自动快照，可再回滚）。
+     * @param id 模板ID
+     * @param historyId 历史版本ID
+     * @return 结果
+     */
+    @PostMapping("/rollback/{id}/{historyId}")
+    @Operation(summary = "回滚版本", description = "将模板内容回滚到指定历史版本，当前内容先快照")
+    public R<String> rollback(@PathVariable Long id, @PathVariable Long historyId) {
+        promptTemplateService.rollback(id, historyId);
+        return R.success("回滚成功");
+    }
 }

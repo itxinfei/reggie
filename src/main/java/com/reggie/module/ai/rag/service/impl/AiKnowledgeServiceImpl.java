@@ -1,5 +1,6 @@
 package com.reggie.module.ai.rag.service.impl;
 
+import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -45,7 +46,7 @@ public class AiKnowledgeServiceImpl implements AiKnowledgeService {
     @Override
     public IPage<AiKnowledgeDoc> adminPage(int page, int pageSize, String keyword,
                                            String audience, String status) {
-        Page<AiKnowledgeDoc> pageParam = new Page<>(page, pageSize);
+        Page<AiKnowledgeDoc> pageParam = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<AiKnowledgeDoc> wrapper = new LambdaQueryWrapper<>();
         if (keyword != null && !keyword.trim().isEmpty()) {
             wrapper.like(AiKnowledgeDoc::getTitle, keyword.trim());

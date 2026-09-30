@@ -88,6 +88,10 @@ public class AIChatController {
     @Resource
     private com.reggie.module.ai.service.AiPromptTemplateService promptTemplateService;
 
+    /** P5：智能输入提示（搜索联想模式） */
+    @Resource
+    private com.reggie.module.ai.service.AiInputSuggestionService aiInputSuggestionService;
+
     /**
      * AI 健康探活线程池（见 {@code AsyncConfig#aiHealthProbeExecutor}）。
      * 用于将探活调用与 HTTP 请求线程隔离，配合 Future.get(timeout) 实现有界超时。
@@ -111,16 +115,29 @@ public class AIChatController {
         if (userId != null) request.setUserId(userId);
         // 身份/租户强制以服务端会话为准，忽略请求体伪造值（附件归属校验依赖）
         request.setActorType(resolveActorType(httpRequest));
+        // 场景钳制：顾客不可进入经营分析场景（工具轮会返回租户级经营数据）；
+        // 未指定场景时按身份回落默认（员工=business_analysis，顾客=order_assistant）
+        boolean employeeActor = AiChatConstants.ACTOR_EMPLOYEE.equals(request.getActorType());
+        if (request.getScene() == null || request.getScene().trim().isEmpty()) {
+            request.setScene(employeeActor ? "business_analysis" : "order_assistant");
+        } else {
+            request.setScene(clampSceneForActor(request.getScene(), request.getActorType()));
+        }
         request.setTenantId(BaseContext.getCurrentTenantId());
         log.info("AI对话请求: userId={}, scene={}, messageLength={}",
                 userId, request.getScene(),
                 request.getMessage() != null ? request.getMessage().length() : 0);
 
+        // 已有会话必须归属当前身份（与 /chat/stream 一致），防止写入他人会话与上下文泄露
         if (request.getConversationId() == null || request.getConversationId().isEmpty()) {
-            AIConversation conv = aiChatService.createConversation(userId, null,
+            AIConversation conv = aiChatService.createConversation(userId, request.getActorType(), null,
                     request.getScene() != null ? request.getScene() : "business_analysis");
             request.setConversationId(conv.getConversationId());
             log.info("自动创建新对话: conversationId={}", conv.getConversationId());
+        } else if (userId == null
+                || aiChatService.validateConversationOwnership(request.getConversationId(), userId,
+                        request.getActorType()) == null) {
+            throw new CustomException("对话不存在或无权访问");
         }
 
         AIChatResponse response = aiChatService.chat(request);
@@ -156,6 +173,8 @@ public class AIChatController {
             throw new CustomException("消息内容不能为空");
         }
         String scene = params.getScene() != null ? params.getScene() : "order_assistant";
+        // 场景钳制：顾客不可进入经营分析场景（工具轮会返回租户级经营数据）
+        scene = clampSceneForActor(scene, actorType);
         String conversationId = params.getConversationId();
 
         if (conversationId == null || conversationId.isEmpty()) {
@@ -188,13 +207,31 @@ public class AIChatController {
     /**
      * 从登录会话解析身份类型：session 含 employee=后台员工，否则按 C 端用户处理。
      * <p>不动公共 BaseContext/过滤器，仅 AI 模块内部消歧员工与用户 ID 撞号。</p>
+     * <p>骑手会话显式拒绝：AI 模块身份模型只有 EMPLOYEE/CUSTOMER，骑手若以 CUSTOMER
+     * 身份进入，riderId 与 C 端用户 ID 撞号会串用对方会话（骑手端页面并不调用 AI 接口）。</p>
      */
     private String resolveActorType(HttpServletRequest httpRequest) {
         HttpSession session = httpRequest.getSession(false);
         if (session != null && session.getAttribute("employee") != null) {
             return AiChatConstants.ACTOR_EMPLOYEE;
         }
+        if (session != null && session.getAttribute("rider") != null) {
+            throw new CustomException("骑手端暂不支持AI助手");
+        }
         return AiChatConstants.ACTOR_CUSTOMER;
+    }
+
+    /**
+     * 场景收敛（安全钳制）：C 端顾客禁止进入 business_analysis——该场景会开启
+     * 经营工具轮/快照注入，返回租户级经营数据。与 /scene-config 的身份收敛规则一致；
+     * 其余场景（dish_desc/marketing）为纯文本生成，无数据暴露，保留。
+     */
+    private String clampSceneForActor(String scene, String actorType) {
+        if (!AiChatConstants.ACTOR_EMPLOYEE.equals(actorType)
+                && "business_analysis".equals(scene)) {
+            return "order_assistant";
+        }
+        return scene;
     }
 
     /**
@@ -225,8 +262,12 @@ public class AIChatController {
                 hasAttachments ? params.getAttachments().size() : 0);
 
         if (conversationId == null || conversationId.isEmpty()) {
-            AIConversation conv = aiChatService.createConversation(userId, actorType, "order_assistant");
+            // 修复：原调用落入三参重载 (userId, title, scene)，title 被写成身份串、actor_type 落库 UNKNOWN
+            AIConversation conv = aiChatService.createConversation(userId, actorType, null, "order_assistant");
             conversationId = conv.getConversationId();
+        } else if (userId == null
+                || aiChatService.validateConversationOwnership(conversationId, userId, actorType) == null) {
+            throw new CustomException("对话不存在或无权访问");
         }
 
         // 修改点：已在Controller层统一创建对话，Service层复用此conversationId避免重复创建
@@ -581,9 +622,40 @@ public class AIChatController {
     @GetMapping("/conversations/{conversationId}/context-stats")
     @Operation(summary = "上下文统计", description = "获取对话的上下文使用情况统计")
     @Parameter(description = "对话ID")
-    public R<Map<String, Object>> getContextStats(@PathVariable String conversationId) {
+    public R<Map<String, Object>> getContextStats(@PathVariable String conversationId,
+                                                  HttpServletRequest httpRequest) {
+        // 与同文件其他会话接口一致：先校验归属，防止探测任意会话的统计信息
+        Long userId = BaseContext.getCurrentId();
+        String actorType = resolveActorType(httpRequest);
+        if (userId == null
+                || aiChatService.validateConversationOwnership(conversationId, userId, actorType) == null) {
+            return R.error("对话不存在或无权访问");
+        }
         Map<String, Object> stats = aiChatService.getContextStats(conversationId);
         return R.success(stats);
+    }
+
+    // ==================== 智能输入提示 ====================
+
+    /**
+     * AI 输入联想（搜索 sug 模式）：根据输入前缀返回候选问题，用户点选回填输入框。
+     * <p>候选源：场景快捷问题（运营配置）+ 在售菜品名（点餐场景）+ 个人历史提问 + 店铺热点提问；
+     * 全部本地数据查询，毫秒级响应、零 token 成本。输入为空时返回场景快捷问题作起步候选。</p>
+     *
+     * @param q     输入前缀（可空）
+     * @param scene 场景（可空，按身份收敛）
+     * @return [{text, source: quick|dish|mine|hot}]，最多 8 条
+     */
+    @GetMapping("/input-suggestions")
+    @RateLimit(maxRequestsPerSecond = 10, type = RateLimitType.USER)
+    @Operation(summary = "AI输入联想", description = "根据输入前缀返回候选问题（快捷问题/菜品/个人历史/店铺热点）")
+    public R<List<Map<String, Object>>> inputSuggestions(
+            @Parameter(description = "输入前缀") @RequestParam(required = false) String q,
+            @Parameter(description = "场景") @RequestParam(required = false) String scene,
+            HttpServletRequest httpRequest) {
+        Long userId = BaseContext.getCurrentId();
+        String actorType = resolveActorType(httpRequest);
+        return R.success(aiInputSuggestionService.suggest(userId, actorType, scene, q));
     }
 
     // ==================== AI 服务状态 ====================

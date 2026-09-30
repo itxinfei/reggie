@@ -29,4 +29,26 @@ public interface AIMessageRecordMapper extends BaseMapper<AIMessageRecord> {
     List<AIMessageRecord> selectByConversationId(@Param("conversationId") String conversationId,
                                                    @Param("tenantId") Long tenantId,
                                                    @Param("isDeleted") Integer isDeleted);
+
+    /**
+     * 用户本人最近的 user 消息中按前缀匹配的内容（输入联想-个人历史源）。
+     *
+     * @param prefix 已转义的前缀
+     * @param limit  条数上限
+     */
+    List<String> selectPersonalSuggestions(@Param("userId") Long userId,
+                                           @Param("tenantId") Long tenantId,
+                                           @Param("prefix") String prefix,
+                                           @Param("limit") int limit);
+
+    /**
+     * 租户内近 {@code since} 之后的热点 user 消息（按出现次数排序，输入联想-店铺热点源）。
+     *
+     * @param prefix 已转义的前缀
+     * @param since  起始时间（含）
+     */
+    List<String> selectHotSuggestions(@Param("tenantId") Long tenantId,
+                                      @Param("prefix") String prefix,
+                                      @Param("since") java.time.LocalDateTime since,
+                                      @Param("limit") int limit);
 }

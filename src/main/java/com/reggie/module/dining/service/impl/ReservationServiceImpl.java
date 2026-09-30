@@ -58,6 +58,24 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         if (reservedTime == null || reservedTime.isBefore(LocalDateTime.now().minusMinutes(1))) {
             throw new CustomException("预订时间需晚于当前时间");
         }
+        // 修复(2026-09-30)：同一用户/手机号在相近时段已有有效预订时拒绝重复预订
+        // ——原冲突检测仅在指定 tableId 时生效，C 端预约不传桌台，可无限超订同一时段。
+        LambdaQueryWrapper<Reservation> dupQw = new LambdaQueryWrapper<>();
+        dupQw.eq(Reservation::getTenantId, currentTenantId)
+                .in(Reservation::getStatus,
+                        ReservationStatus.PENDING.getValue(),
+                        ReservationStatus.CONFIRMED.getValue())
+                .ge(Reservation::getReservedTime, reservedTime.minusHours(1))
+                .le(Reservation::getReservedTime, reservedTime.plusHours(1));
+        if (userId != null) {
+            dupQw.eq(Reservation::getUserId, userId);
+        } else if (phone != null && !phone.trim().isEmpty()) {
+            dupQw.eq(Reservation::getPhone, phone);
+        }
+        if (count(dupQw) > 0) {
+            throw new CustomException("您在相近时段已有预订，请勿重复预约");
+        }
+
         // 修复 P2-3：时间冲突检测——同一桌台同一时间窗口（±1小时）已被预订则拒绝
         if (tableId != null && reservedTime != null) {
             LambdaQueryWrapper<Reservation> conflictQw = new LambdaQueryWrapper<>();
@@ -137,6 +155,14 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         Long currentTenantId = BaseContext.getCurrentTenantId();
         if (currentTenantId != null && !currentTenantId.equals(r.getTenantId())) {
             throw new CustomException("无权操作其他租户的预订");
+        }
+        // 修复(2026-09-30)：取消状态守卫 —— 仅 PENDING/CONFIRMED 可取消：
+        // ARRIVED（已到店开台）被"幽灵取消"会导致桌台状态与实际占用永久不一致；CANCELLED 重复取消无意义
+        if (ReservationStatus.ARRIVED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订已到店，无法取消，请联系门店处理");
+        }
+        if (ReservationStatus.CANCELLED.getValue().equals(r.getStatus())) {
+            throw new CustomException("预订已取消，请勿重复操作");
         }
         // 释放桌台：仅 CONFIRMED 预订在确认时把桌台置为 RESERVED，取消须还原 FREE，
         // 否则桌台永久卡在预留态无法接客（PENDING 未占桌台，无需释放）

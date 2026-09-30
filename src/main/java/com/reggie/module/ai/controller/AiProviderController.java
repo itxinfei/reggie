@@ -139,6 +139,11 @@ public class AiProviderController {
                 || config.getApiKey().contains("****")) {
             config.setApiKey(existing.getApiKey());
         }
+        // extraHeaders 无前端编辑入口且列表/详情默认脱敏为空串：空值视为「不修改」，
+        // 防止编辑保存时把库中已配置的请求头（可能含鉴权凭证）静默清空
+        if (config.getExtraHeaders() == null || config.getExtraHeaders().trim().isEmpty()) {
+            config.setExtraHeaders(existing.getExtraHeaders());
+        }
         // 非掩码新值明文直接入库（2026-09-26 起厂家 key 统一明文管理）
         providerConfigService.updateById(config);
 
@@ -292,9 +297,12 @@ public class AiProviderController {
      * 脱敏敏感字段：API密钥、extraHeaders（可能含API Key等凭证）
      */
     private void maskSensitiveFields(AiProviderConfig config) {
-        if (config.getApiKey() != null && config.getApiKey().length() > 8) {
-            config.setApiKey(config.getApiKey().substring(0, 4) + "****"
-                    + config.getApiKey().substring(config.getApiKey().length() - 4));
+        // 短密钥（≤8位）也必须脱敏：全掩码，防止明文回显
+        if (config.getApiKey() != null && !config.getApiKey().isEmpty()) {
+            String key = config.getApiKey();
+            config.setApiKey(key.length() > 8
+                    ? key.substring(0, 4) + "****" + key.substring(key.length() - 4)
+                    : "****");
         }
         // extraHeaders 可能包含 {"api-key": "xxx"} 等凭证信息，直接置空防止泄露
         if (config.getExtraHeaders() != null && !config.getExtraHeaders().isEmpty()) {

@@ -1,5 +1,6 @@
 package com.reggie.module.delivery.service.impl;
 
+import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -129,7 +130,7 @@ public class RiderExceptionServiceImpl implements RiderExceptionService {
 
     @Override
     public Page<RiderExceptionOrder> pageMine(Long riderId, Long tenantId, int page, int size) {
-        Page<RiderExceptionOrder> p = new Page<>(page, size);
+        Page<RiderExceptionOrder> p = PageUtils.of(page, size);
         LambdaQueryWrapper<RiderExceptionOrder> qw = new LambdaQueryWrapper<>();
         qw.eq(RiderExceptionOrder::getRiderId, riderId)
                 .eq(RiderExceptionOrder::getTenantId, tenantId)
@@ -141,7 +142,7 @@ public class RiderExceptionServiceImpl implements RiderExceptionService {
     @Override
     public Page<RiderExceptionOrder> adminPage(Long tenantId, Integer exceptionType, Integer status,
                                               String orderNumber, int page, int size) {
-        Page<RiderExceptionOrder> p = new Page<>(page, size);
+        Page<RiderExceptionOrder> p = PageUtils.of(page, size);
         LambdaQueryWrapper<RiderExceptionOrder> qw = new LambdaQueryWrapper<>();
         qw.eq(RiderExceptionOrder::getTenantId, tenantId)
                 .eq(RiderExceptionOrder::getIsDeleted, 0);

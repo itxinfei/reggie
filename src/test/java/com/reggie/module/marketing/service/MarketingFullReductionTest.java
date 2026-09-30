@@ -142,6 +142,32 @@ class MarketingFullReductionTest {
     }
 
     @Test
+    void evaluate_reduceAmount_cappedAtGoodsAmount() {
+        // 演示库脏配置：满20减30（减额>门槛）。商品26元时立减必须封顶到26，
+        // 否则 totalDiscount 超过 goodsAmount、应付被钳成 0（页面显示"已优惠>商品额"）
+        stubActiveCampaign(Collections.singletonList(
+                rule(6L, FullReductionRule.TYPE_REDUCE_AMOUNT, "20", "30", null, null)));
+
+        Map<String, Object> r = marketingService.evaluateFullReduction(bd("26"), USER_ID, TENANT_ID);
+
+        assertTrue((Boolean) r.get("hit"));
+        assertEquals(0, ((BigDecimal) r.get("discount")).compareTo(bd("26")));
+    }
+
+    @Test
+    void evaluate_discountType_invalidRate_notHit() {
+        // 演示库脏配置：85折档 discount_value 存成 0.00（=0折全免）。
+        // rate∉(0,1) 视为无效配置，不产生优惠
+        stubActiveCampaign(Collections.singletonList(
+                rule(3L, FullReductionRule.TYPE_DISCOUNT, "0", "0", "30", null)));
+
+        Map<String, Object> r = marketingService.evaluateFullReduction(bd("26"), USER_ID, TENANT_ID);
+
+        assertFalse((Boolean) r.get("hit"), "无效折扣率不应命中");
+        assertEquals(0, ((BigDecimal) r.get("discount")).compareTo(BigDecimal.ZERO));
+    }
+
+    @Test
     void evaluate_perUserLimitExceeded_notHit() {
         stubActiveCampaign(Collections.singletonList(
                 rule(1L, FullReductionRule.TYPE_REDUCE_AMOUNT, "30", "10", null, 1)));

@@ -844,6 +844,7 @@
     background: var(--bg-card);
 }
 .composer {
+    position: relative;
     border: 1px solid var(--ai-border-light);
     border-radius: 18px;
     background: var(--bg-card);
@@ -853,6 +854,52 @@
 .composer:focus-within {
     border-color: var(--color-primary);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 智能输入提示面板（搜索联想模式）：悬浮于输入框上方 */
+.sug-panel {
+    position: absolute;
+    left: 0; right: 0; bottom: calc(100% + 8px);
+    background: var(--bg-card);
+    border: 1px solid var(--ai-border-light);
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+    padding: 4px;
+    z-index: 30;
+    max-height: 260px;
+    overflow-y: auto;
+}
+.sug-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    border: none;
+    background: transparent;
+    border-radius: 10px;
+    padding: 9px 10px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-primary, #333);
+    text-align: left;
+    font-family: inherit;
+}
+.sug-item i { color: var(--color-primary, #ff6b35); flex-shrink: 0; }
+.sug-item.active, .sug-item:hover { background: rgba(0, 0, 0, 0.05); }
+.sug-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sug-src {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--text-secondary, #999);
+    border: 1px solid var(--ai-border-light);
+    border-radius: 999px;
+    padding: 0 6px;
+    line-height: 18px;
 }
 .composer-input {
     display: block; width: 100%;

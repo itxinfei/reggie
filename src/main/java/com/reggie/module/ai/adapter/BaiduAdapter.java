@@ -126,7 +126,8 @@ public class BaiduAdapter extends BaseModelAdapter {
                 throw new AiProviderException(AiFailureType.NETWORK, 0,
                         "百度网络异常: " + safeMsg, e);
             }
-            log.error("AI请求[{} / {}]未预期异常", config.getProviderCode(), FORMAT_ID, e);
+            // 堆栈帧不含敏感信息，但异常消息/cause 链可能携带含 access_token 的 URL，只输出脱敏消息
+            log.error("AI请求[{} / {}]未预期异常: {}", config.getProviderCode(), FORMAT_ID, safeMsg);
             throw new AiProviderException(AiFailureType.SERVER_ERROR, 0,
                     "百度调用异常: " + safeMsg, e);
         } finally {

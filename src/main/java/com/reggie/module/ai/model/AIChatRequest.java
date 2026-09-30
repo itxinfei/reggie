@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import javax.validation.constraints.Size;
 import java.util.List;
 import java.util.Map;
 
@@ -20,7 +21,8 @@ import java.util.Map;
 @AllArgsConstructor
 public class AIChatRequest {
 
-    /** 用户消息 */
+    /** 用户消息（与流式入口 ChatStreamRequest 同一上限，防长 prompt 烧供应商 token） */
+    @Size(max = 4000, message = "消息长度不能超过4000字符")
     private String message;
 
     /** 对话场景：order_assistant / dish_desc / business_analysis / marketing */

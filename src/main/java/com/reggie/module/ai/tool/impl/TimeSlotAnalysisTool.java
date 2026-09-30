@@ -1,6 +1,7 @@
 package com.reggie.module.ai.tool.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.reggie.module.ai.tool.AiMetricsCaliber;
 import com.reggie.module.ai.tool.AiTool;
 import com.reggie.module.ai.tool.AiToolDates;
 import com.reggie.module.ai.tool.ToolExecResult;
@@ -18,6 +19,7 @@ import static com.reggie.module.ai.tool.ToolSchemas.stringType;
 /**
  * 时段客流分析工具（薄封装 {@link ReportService#getTimeSlotAnalysis}）。
  * 返回早市(6-10)/午市(10-14)/下午茶(14-17)/晚市(17-21)/夜宵(21-次日6) 五段订单数与金额，
+ * 口径：仅已完成订单（{@link AiMetricsCaliber} 统一基线）。
  * 用于回答“午市和晚市占比/哪个时段最忙”。
  *
  * @author reggie
@@ -58,7 +60,7 @@ public class TimeSlotAnalysisTool implements AiTool {
     public ToolExecResult execute(JsonNode args, Long tenantId) {
         AiToolDates.DateRange range = AiToolDates.normalizeRange(args);
         List<Map<String, Object>> slots = reportService.getTimeSlotAnalysis(
-                range.startText(), range.endText(), tenantId);
+                range.startText(), range.endText(), tenantId, AiMetricsCaliber.BASELINE_STATUS);
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("startDate", range.startText());

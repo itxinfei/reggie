@@ -129,5 +129,17 @@ var aiApi = {
      */
     getProfileSummary: function() {
         return $axios.get('/api/ai/profile/summary');
+    },
+
+    // ==================== 智能输入提示 ====================
+
+    /**
+     * AI 输入联想（搜索 sug 模式）：根据输入前缀返回候选问题
+     * @param {string} q - 输入前缀（空时返回场景快捷问题）
+     * @param {string} scene - 场景（可空）
+     * @returns {Promise} [{text, source: quick|dish|mine|hot}]，最多 8 条
+     */
+    getInputSuggestions: function(q, scene) {
+        return $axios({ url: '/api/ai/input-suggestions', method: 'get', params: { q: q || '', scene: scene || '' } });
     }
 };

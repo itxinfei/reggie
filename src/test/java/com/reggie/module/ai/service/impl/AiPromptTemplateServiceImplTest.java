@@ -2,8 +2,10 @@ package com.reggie.module.ai.service.impl;
 
 import com.reggie.common.CustomException;
 import com.reggie.module.ai.constant.AiPromptDefaults;
+import com.reggie.module.ai.mapper.AiPromptTemplateHistoryMapper;
 import com.reggie.module.ai.mapper.AiPromptTemplateMapper;
 import com.reggie.module.ai.model.AiPromptTemplate;
+import com.reggie.module.ai.model.AiPromptTemplateHistory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -46,11 +48,16 @@ class AiPromptTemplateServiceImplTest {
 
     private AiPromptTemplateServiceImpl service;
     private AiPromptTemplateMapper mapper;
+    private AiPromptTemplateHistoryMapper historyMapper;
 
     @BeforeEach
     void setUp() {
         service = spy(new AiPromptTemplateServiceImpl());
         mapper = mock(AiPromptTemplateMapper.class);
+        // P5 写操作前自动快照历史：mock 历史表 insert，供 updateTemplate/resetBuiltin/deleteTemplate 走通
+        historyMapper = mock(AiPromptTemplateHistoryMapper.class);
+        when(historyMapper.insert(any(AiPromptTemplateHistory.class))).thenReturn(1);
+        ReflectionTestUtils.setField(service, "historyMapper", historyMapper);
         when(mapper.insert(any(AiPromptTemplate.class))).thenAnswer(new Answer<Integer>() {
             @Override
             public Integer answer(InvocationOnMock inv) {

@@ -267,7 +267,19 @@ public class AddressBookController {
                 .set(AddressBook::getRoomNo, roomNo)
                 .set(AddressBook::getDetail, structuredDetail);
         if (addressBook.getLabel() != null) wrapper.set(AddressBook::getLabel, addressBook.getLabel());
-        if (addressBook.getIsDefault() != null) wrapper.set(AddressBook::getIsDefault, addressBook.getIsDefault());
+        if (addressBook.getIsDefault() != null) {
+            // 修复(2026-09-30)：置默认时先清同用户其他默认地址（与 setDefault 同口径）。
+            // 原实现直接写 is_default，出现多条默认地址后 getDefault() 命中多行抛异常，结算页默认地址功能 500。
+            if (addressBook.getIsDefault() == AddressBook.IS_DEFAULT) {
+                LambdaUpdateWrapper<AddressBook> clearWrapper = new LambdaUpdateWrapper<>();
+                clearWrapper.eq(AddressBook::getUserId, currentUserId)
+                        .eq(currentTenantId != null, AddressBook::getTenantId, currentTenantId)
+                        .ne(AddressBook::getId, addressBook.getId())
+                        .set(AddressBook::getIsDefault, AddressBook.NOT_DEFAULT);
+                addressBookService.update(clearWrapper);
+            }
+            wrapper.set(AddressBook::getIsDefault, addressBook.getIsDefault());
+        }
         // 地址内容变化时重新地理编码：用合并后的完整地址（省市区 + 规范化 detail）
         boolean addressChanged = addressBook.getProvinceName() != null || addressBook.getCityName() != null
                 || addressBook.getDistrictName() != null || addressBook.getStreetName() != null

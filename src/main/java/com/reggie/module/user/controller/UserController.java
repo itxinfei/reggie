@@ -56,6 +56,17 @@ public class UserController {
     private UserService userService;
 
     /**
+     * 验证码按手机号频控（2026-09-30 修复：60s 间隔原存 HttpSession，清 Cookie 换新会话即归零，
+     * 可对任意手机号短信轰炸）。Redis 全局维度：60s 冷却 + 每手机号每日上限；Redis 不可用时降级
+     * 回退会话检查（单机部署下仍有效）。
+     */
+    @Autowired(required = false)
+    private org.springframework.data.redis.core.StringRedisTemplate smsRateLimitRedisTemplate;
+
+    /** 每手机号每日验证码发送上限 */
+    private static final int SMS_DAILY_LIMIT = 10;
+
+    /**
      * 当前激活的Spring Profile（dev / prod），用于区分开发/生产环境
      */
 
@@ -114,6 +125,35 @@ public class UserController {
         if(lastSendTime != null && System.currentTimeMillis() - lastSendTime < CODE_INTERVAL_MS){
             long remaining = (CODE_INTERVAL_MS - (System.currentTimeMillis() - lastSendTime)) / 1000;
             return R.error("请" + remaining + "秒后再试");
+        }
+
+        // 按手机号全局频控：60s 冷却（跨会话生效）+ 每日上限，防短信轰炸
+        if (smsRateLimitRedisTemplate != null) {
+            try {
+                String cooldownKey = "sms:cooldown:" + phone;
+                Boolean first = smsRateLimitRedisTemplate.opsForValue()
+                        .setIfAbsent(cooldownKey, "1", java.time.Duration.ofMillis(CODE_INTERVAL_MS));
+                if (!Boolean.TRUE.equals(first)) {
+                    Long ttl = smsRateLimitRedisTemplate.getExpire(cooldownKey);
+                    long remaining = ttl != null && ttl > 0 ? ttl : CODE_INTERVAL_MS / 1000;
+                    return R.error("请" + remaining + "秒后再试");
+                }
+                String dailyKey = "sms:daily:" + phone + ":"
+                        + java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+                Long sent = smsRateLimitRedisTemplate.opsForValue().increment(dailyKey);
+                if (sent != null && sent == 1L) {
+                    smsRateLimitRedisTemplate.expire(dailyKey, java.time.Duration.ofHours(25));
+                }
+                if (sent != null && sent > SMS_DAILY_LIMIT) {
+                    // 超限时回滚本次计数，避免冷却键已占位但短信未发导致的额度虚耗
+                    smsRateLimitRedisTemplate.delete(cooldownKey);
+                    return R.error("今日验证码发送次数已达上限，请明日再试");
+                }
+            } catch (Exception e) {
+                // Redis 异常降级：仅保留会话级 60s 检查，不阻断发送链路
+                log.warn("验证码Redis频控异常，降级会话检查: phone={}, error={}",
+                        LogMaskUtils.maskPhone(phone), e.getMessage());
+            }
         }
 
         // 修改点(2026-09-18)：验证码由 4 位改为 6 位，与 C 端登录页前端正则 /^\d{6}$/ 对齐
@@ -191,12 +231,18 @@ public class UserController {
             user.setTenantId(BaseContext.getCurrentTenantId() != null ? BaseContext
                     .getCurrentTenantId() : DEFAULT_TENANT_ID);
             userService.save(user);
-        } else if (user.getTenantId() == null) {
-            // 兼容历史脏数据：登录查询是跨租户的，若用户 tenant_id 为 null（旧版注册遗漏），
-            // 则归属默认租户（主餐厅），并回写数据库，避免登录后被 LoginCheckFilter 以
-            // "用户登录态不完整"拒绝，同时保证购物车/订单等按租户过滤的查询有上下文。
-            user.setTenantId(DEFAULT_TENANT_ID);
-            userService.updateById(user);
+        } else {
+            // 2026-09-30 修复：被禁用（风控/投诉封禁）的账号不允许登录（须在租户兜底前检查）
+            if (user.getStatus() != null && user.getStatus() == 0) {
+                return R.error("账号已被禁用，如有疑问请联系客服");
+            }
+            if (user.getTenantId() == null) {
+                // 兼容历史脏数据：登录查询是跨租户的，若用户 tenant_id 为 null（旧版注册遗漏），
+                // 则归属默认租户（主餐厅），并回写数据库，避免登录后被 LoginCheckFilter 以
+                // "用户登录态不完整"拒绝，同时保证购物车/订单等按租户过滤的查询有上下文。
+                user.setTenantId(DEFAULT_TENANT_ID);
+                userService.updateById(user);
+            }
         }
 
         session.setAttribute("user", user.getId());

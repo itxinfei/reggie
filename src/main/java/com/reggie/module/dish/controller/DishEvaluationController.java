@@ -45,6 +45,10 @@ public class DishEvaluationController {
     @Autowired
     private DishEvaluationService dishEvaluationService;
 
+    /** 订单归属校验用（评价仅限本人订单） */
+    @Autowired
+    private com.reggie.module.order.service.OrderService orderService;
+
     /**
      * 新增菜品评价
      *
@@ -224,12 +228,14 @@ public class DishEvaluationController {
 
     /**
      * 根据订单ID获取评价
+     * <p>2026-09-30 越权修复：dish_evaluation 表在租户插件白名单内，原实现仅按租户过滤，
+     * 任意登录用户可遍历 orderId 拉取他人订单的全部评价。现校验订单归属当前用户。</p>
      *
      * @param orderId 订单ID
      * @return 评价列表
      */
     @GetMapping("/order/{orderId}")
-    @Operation(summary = "根据订单ID获取评价", description = "查询指定订单下所有菜品的评价")
+    @Operation(summary = "根据订单ID获取评价", description = "查询指定订单下所有菜品的评价（仅限本人订单）")
     @Parameter(name = "orderId", description = "订单ID", required = true)
     public R<List<DishEvaluation>> listByOrderId(@PathVariable Long orderId) {
         log.info("根据订单ID查询评价：orderId={}", orderId);
@@ -237,6 +243,11 @@ public class DishEvaluationController {
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             return R.error("租户信息缺失");
+        }
+        Long userId = BaseContext.getCurrentId();
+        com.reggie.module.order.model.Orders order = orderService != null ? orderService.getById(orderId) : null;
+        if (userId == null || order == null || !userId.equals(order.getUserId())) {
+            return R.error("无权查看该订单的评价");
         }
 
         List<DishEvaluation> result = dishEvaluationService.listByOrderId(tenantId, orderId);
@@ -288,6 +299,7 @@ public class DishEvaluationController {
      * @return 分页评价列表
      */
     @GetMapping("/page")
+    @RequiresPermission("evaluation:view")
     @Operation(summary = "管理端评价分页查询", description = "支持按菜品名称、审核状态、评分、回复状态筛选的评价管理列表")
     public R<Page<DishEvaluation>> adminPage(
             @Parameter(name = "dishName", description = "菜品名称（模糊查询）") @RequestParam(required = false) String dishName,
@@ -318,6 +330,7 @@ public class DishEvaluationController {
      * @return total/pending/approved/rejected 四项计数
      */
     @GetMapping("/stats")
+    @RequiresPermission("evaluation:view")
     @Operation(summary = "评价统计聚合", description = "一次返回全部/待审核/已通过/已拒绝四个计数，1次SQL替代4次分页查询")
     public R<Map<String, Object>> getStats() {
         Long tenantId = BaseContext.getCurrentTenantId();

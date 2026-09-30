@@ -58,11 +58,12 @@ public interface MarketingCampaignService extends IService<MarketingCampaign> {
     List<Map<String, Object>> getUnreadMessages(Long userId);
 
     /**
-     * 标记消息为已读
+     * 标记消息为已读（2026-09-30 越权修复：增加 userId 归属条件，只能标记自己的消息）
      *
      * @param messageId 消息ID
+     * @param userId    当前登录用户ID（与消息归属比对）
      */
-    void markMessageRead(Long messageId);
+    void markMessageRead(Long messageId, Long userId);
 
     /**
      * 批量将指定用户的全部未读消息标记为已读

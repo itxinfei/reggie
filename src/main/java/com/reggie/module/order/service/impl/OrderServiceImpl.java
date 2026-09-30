@@ -549,6 +549,19 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         Map<String, Object> couponHolder = previewCouponDiscount(priceCarrier, userId, goodsAmount);
         BigDecimal couponAmount = toBigDecimal(couponHolder.get("couponDiscount"));
         Long resolvedCouponId = (Long) couponHolder.get("usedCouponId");
+        // 券按「满减/新客立减之后的余额」封顶：叠加各档后总优惠不得超过商品额
+        // （flashSavings 已体现在 goodsAmount 内，不重复扣）
+        BigDecimal couponCeiling = goodsAmount.subtract(frAmount).subtract(ncAmount);
+        if (couponCeiling.compareTo(BigDecimal.ZERO) < 0) {
+            couponCeiling = BigDecimal.ZERO;
+        }
+        if (couponAmount.compareTo(couponCeiling) > 0) {
+            couponAmount = couponCeiling;
+            if (couponAmount.compareTo(BigDecimal.ZERO) == 0) {
+                // 余额已被满减/新客吃光 → 这张券零优惠，不能让它白被核销（明细也会显示"优惠券 -¥0"）
+                resolvedCouponId = null;
+            }
+        }
 
         // 6) 买赠（基数 goodsAmount），并构造 amount=0 赠品明细
         List<GiftMatch> giftHits = marketingToolService != null
@@ -1272,6 +1285,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
 
         for (OrderDetail detail : orderDetails) {
             detail.setOrderId(orderId);
+            // 数量必须为正数：负数数量会产生负行金额并被计入总额，恶意客户端可借此篡改堂食账单
+            Integer num = detail.getNumber() != null ? detail.getNumber() : 0;
+            if (num <= 0) {
+                throw new CustomException("菜品数量必须大于0");
+            }
             BigDecimal unitPrice;
             String dishName;
             if (detail.getDishId() != null) {
@@ -1281,6 +1299,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 }
                 if (currentTenantId != null && !currentTenantId.equals(dish.getTenantId())) {
                     throw new CustomException("无权使用其他门店的菜品");
+                }
+                // 与外卖链路同口径：停售菜品不可经堂食下单（公开菜单虽隐藏，dishId 仍可被直接构造）
+                if (dish.getStatus() == null || dish.getStatus() != DishStatus.ENABLED.getValue()) {
+                    throw new CustomException("菜品「" + dish.getName() + "」已停售，无法下单");
                 }
                 unitPrice = dish.getPrice() != null ? dish.getPrice() : BigDecimal.ZERO;
                 dishName = dish.getName();
@@ -1292,12 +1314,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
                 if (currentTenantId != null && !currentTenantId.equals(setmeal.getTenantId())) {
                     throw new CustomException("无权使用其他门店的套餐");
                 }
+                if (setmeal.getStatus() == null || setmeal.getStatus() != DishStatus.ENABLED.getValue()) {
+                    throw new CustomException("套餐「" + setmeal.getName() + "」已停用，无法下单");
+                }
                 unitPrice = setmeal.getPrice() != null ? setmeal.getPrice() : BigDecimal.ZERO;
                 dishName = setmeal.getName();
             } else {
                 throw new CustomException("订单明细缺少菜品或套餐ID");
             }
-            Integer num = detail.getNumber() != null ? detail.getNumber() : 0;
             BigDecimal lineTotal = unitPrice.multiply(new BigDecimal(num));
             detail.setAmount(lineTotal);
             detail.setName(dishName);
@@ -2088,7 +2112,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
      */
     @Override
     public Page<Orders> platformOrderPage(int page, int pageSize, String platformType, Integer status, String platformOrderId) {
-        Page<Orders> pageParam = new Page<>(page, pageSize);
+        Page<Orders> pageParam = PageUtils.of(page, pageSize);
         LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Orders::getIsDeleted, 0);
         if (StringUtils.isNotBlank(platformType)) {

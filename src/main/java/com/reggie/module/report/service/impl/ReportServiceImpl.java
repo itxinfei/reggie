@@ -130,6 +130,12 @@ public class ReportServiceImpl implements ReportService {
      */
     @Override
     public List<Map<String, Object>> getDishRanking(String startDate, String endDate, int limit, Long tenantId, Long categoryId) {
+        return getDishRanking(startDate, endDate, limit, tenantId, categoryId, null);
+    }
+
+    @Override
+    public List<Map<String, Object>> getDishRanking(String startDate, String endDate, int limit, Long tenantId,
+                                                    Long categoryId, Integer statusFilter) {
         List<Map<String, Object>> ranking = new ArrayList<>();
 
         // 租户隔离
@@ -150,6 +156,10 @@ public class ReportServiceImpl implements ReportService {
             LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
             orderQw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
                     LocalDate.parse(endDate).atTime(LocalTime.MAX));
+            // AI 统一口径入口：statusFilter 非空时只统计该状态订单（后台报表页传 null 保持全量口径）
+            if (statusFilter != null) {
+                orderQw.eq(Orders::getStatus, statusFilter);
+            }
             orderQw.select(Orders::getId);
             List<Orders> orders = orderService.list(orderQw);
             if (orders.isEmpty()) return ranking;
@@ -183,7 +193,7 @@ public class ReportServiceImpl implements ReportService {
                         item.put("name", e.getKey());
                         item.put("count", e.getValue()[0]);
                         item.put("revenue", BigDecimal.valueOf(e.getValue()[1])
-                                .divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_UP));
+                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
                         ranking.add(item);
                     });
         } finally {
@@ -202,6 +212,11 @@ public class ReportServiceImpl implements ReportService {
      */
     @Override
     public List<Map<String, Object>> getTimeSlotAnalysis(String startDate, String endDate, Long tenantId) {
+        return getTimeSlotAnalysis(startDate, endDate, tenantId, null);
+    }
+
+    @Override
+    public List<Map<String, Object>> getTimeSlotAnalysis(String startDate, String endDate, Long tenantId, Integer statusFilter) {
         List<Map<String, Object>> slots = new ArrayList<>();
 
         // 租户隔离
@@ -212,6 +227,9 @@ public class ReportServiceImpl implements ReportService {
             LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
             qw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
                     LocalDate.parse(endDate).atTime(LocalTime.MAX));
+            if (statusFilter != null) {
+                qw.eq(Orders::getStatus, statusFilter);
+            }
             List<Orders> orders = orderService.list(qw);
 
             int[] counts = new int[SLOT_COUNT];
@@ -253,6 +271,11 @@ public class ReportServiceImpl implements ReportService {
      */
     @Override
     public Map<String, Object> getPaymentAnalysis(String startDate, String endDate, Long tenantId) {
+        return getPaymentAnalysis(startDate, endDate, tenantId, null);
+    }
+
+    @Override
+    public Map<String, Object> getPaymentAnalysis(String startDate, String endDate, Long tenantId, Integer statusFilter) {
         // 租户隔离
         Long originalTenantId = BaseContext.getCurrentTenantId();
         try {
@@ -261,6 +284,9 @@ public class ReportServiceImpl implements ReportService {
             LambdaQueryWrapper<Orders> qw = new LambdaQueryWrapper<>();
             qw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
                     LocalDate.parse(endDate).atTime(LocalTime.MAX));
+            if (statusFilter != null) {
+                qw.eq(Orders::getStatus, statusFilter);
+            }
             List<Orders> orders = orderService.list(qw);
 
             int wechatCount = 0, alipayCount = 0, balanceCount = 0, otherCount = 0;
@@ -596,7 +622,7 @@ public class ReportServiceImpl implements ReportService {
 
     private List<String> generateWindowSequence(LocalDate start, LocalDate end, String period) {
         List<String> windows = new ArrayList<>();
-        if (period.equals("week")) {
+        if ("week".equals(period)) {
             // 按周生成
             LocalDate current = start;
             while (!current.isAfter(end)) {
@@ -607,13 +633,13 @@ public class ReportServiceImpl implements ReportService {
                 }
                 current = current.plusWeeks(1);
             }
-        } else if (period.equals("month")) {
+        } else if ("month".equals(period)) {
             LocalDate current = start.withDayOfMonth(1);
             while (!current.isAfter(end)) {
                 windows.add(current.getYear() + "-" + String.format("%02d", current.getMonthValue()));
                 current = current.plusMonths(1);
             }
-        } else if (period.equals("year")) {
+        } else if ("year".equals(period)) {
             int startYear = start.getYear();
             int endYear = end.getYear();
             for (int y = startYear; y <= endYear; y++) {
@@ -639,6 +665,11 @@ public class ReportServiceImpl implements ReportService {
      */
     @Override
     public List<Map<String, Object>> getCategorySales(String startDate, String endDate, Long tenantId) {
+        return getCategorySales(startDate, endDate, tenantId, null);
+    }
+
+    @Override
+    public List<Map<String, Object>> getCategorySales(String startDate, String endDate, Long tenantId, Integer statusFilter) {
         List<Map<String, Object>> result = new ArrayList<>();
         Long originalTenantId = BaseContext.getCurrentTenantId();
         try {
@@ -649,6 +680,9 @@ public class ReportServiceImpl implements ReportService {
             orderQw.between(Orders::getOrderTime,
                     LocalDate.parse(startDate).atStartOfDay(),
                     LocalDate.parse(endDate).atTime(LocalTime.MAX));
+            if (statusFilter != null) {
+                orderQw.eq(Orders::getStatus, statusFilter);
+            }
             orderQw.select(Orders::getId);
             List<Orders> orders = orderService.list(orderQw);
             if (orders.isEmpty()) return result;

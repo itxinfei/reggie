@@ -43,6 +43,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.Max;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
@@ -445,7 +446,7 @@ public class DeliveryController {
                 + Math.cos(Math.toRadians(lat1.doubleValue())) * Math.cos(Math.toRadians(lat2.doubleValue()))
                 * Math.sin(dLng / 2) * Math.sin(dLng / 2);
         double km = earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return new BigDecimal(km).setScale(2, BigDecimal.ROUND_HALF_UP);
+        return BigDecimal.valueOf(km).setScale(2, RoundingMode.HALF_UP);
     }
 
     /**

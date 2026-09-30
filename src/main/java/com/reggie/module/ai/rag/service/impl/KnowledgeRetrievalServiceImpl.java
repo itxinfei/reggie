@@ -33,6 +33,14 @@ public class KnowledgeRetrievalServiceImpl implements KnowledgeRetrievalService 
     /** 返回片段数 */
     private static final int DEFAULT_LIMIT = 4;
 
+    /**
+     * 向量命中的最低余弦相似度：FULLTEXT 预取的候选里必然混入弱相关内容，
+     * 低于该阈值的不注入 prompt（宁可不给 RAG 上下文，也不给噪声——
+     * buildKnowledgePrompt 拿到空结果会自动跳过注入）。阈值取保守值 0.2，
+     * 兼容常见 embedding 模型的相似度分布；若全被过滤，说明知识库确实无相关内容。
+     */
+    static final double MIN_COSINE_SIMILARITY = 0.2;
+
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Resource
@@ -152,8 +160,17 @@ public class KnowledgeRetrievalServiceImpl implements KnowledgeRetrievalService 
             }
         });
         List<String> result = new ArrayList<>();
-        for (int i = 0; i < Math.min(limit, scored.size()); i++) {
-            result.add(scored.get(i).content);
+        for (ScoredSnippet s : scored) {
+            if (result.size() >= limit) {
+                break;
+            }
+            // 已按相似度降序：首个低于阈值即可停，弱相关候选不注入 prompt
+            if (s.score < MIN_COSINE_SIMILARITY) {
+                log.debug("余弦低于阈值({}), 剩余{}个候选全部过滤", MIN_COSINE_SIMILARITY,
+                        scored.size() - result.size());
+                break;
+            }
+            result.add(s.content);
         }
         return result;
     }

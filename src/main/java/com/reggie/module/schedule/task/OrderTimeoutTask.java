@@ -207,9 +207,17 @@ public class OrderTimeoutTask {
         LambdaQueryWrapper<Orders> wrapper = new LambdaQueryWrapper<>();
         // 修复：覆盖两种超时场景 — PENDING_PAY（用户下单未付款）和 ORDERED（已付款/线下支付但未接单）。
         // 此前只查 ORDERED，新增的 PENDING_PAY 订单若用户长期不支付会变为孤儿单，需同样取消并回退库存。
+        // 修复(2026-09-30)：到店消费单（堂食/排队/预订）落库为 PENDING_PAY 等待收银结账，无自动流转，
+        // 不能套用"超时未接单"取消——否则堂食顾客用餐超 30 分钟订单被取消+库存回退，收银台永远无法结账。
+        // 与 autoCompleteDeliveredOrdersForTenant 的排除口径一致；历史 source 为 null 的订单按外卖处理。
         wrapper.in(Orders::getStatus, Orders.STATUS_PENDING_PAY, Orders.STATUS_ORDERED)
                .lt(Orders::getOrderTime, timeoutThreshold)
-               .eq(Orders::getTenantId, BaseContext.getCurrentTenantId());
+               .eq(Orders::getTenantId, BaseContext.getCurrentTenantId())
+               .and(w -> w.isNull(Orders::getSource)
+                       .or().notIn(Orders::getSource,
+                               OrderSource.EAT_IN.getValue(),
+                               OrderSource.QUEUE.getValue(),
+                               OrderSource.RESERVATION.getValue()));
 
         List<Orders> timeoutOrders = orderService.list(wrapper);
         if (timeoutOrders.isEmpty()) {

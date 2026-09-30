@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  * 地图工具类（高德 Web 服务 API）
@@ -93,8 +94,8 @@ public class GeoUtils {
             }
             String[] lngLat = location.split(",");
             return new BigDecimal[]{
-                    new BigDecimal(lngLat[0]).setScale(6, BigDecimal.ROUND_HALF_UP),
-                    new BigDecimal(lngLat[1]).setScale(6, BigDecimal.ROUND_HALF_UP)
+                    new BigDecimal(lngLat[0]).setScale(6, RoundingMode.HALF_UP),
+                    new BigDecimal(lngLat[1]).setScale(6, RoundingMode.HALF_UP)
             };
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程

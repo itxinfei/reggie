@@ -217,6 +217,18 @@
         promptReset: function(id) {
             return $axios.post('/admin/ai/prompt/reset/' + id);
         },
+        promptHistory: function(id) {
+            return $axios.get('/admin/ai/prompt/history/' + id);
+        },
+        promptRollback: function(id, historyId) {
+            return $axios.post('/admin/ai/prompt/rollback/' + id + '/' + historyId);
+        },
+
+        // ==================== AI 智能输入提示 ====================
+
+        inputSuggestions: function(q, scene) {
+            return $axios({ url: '/api/ai/input-suggestions', method: 'get', params: { q: q || '', scene: scene || '' } });
+        },
 
         // ==================== AI 知识库（P5 RAG） ====================
 
