@@ -26,30 +26,14 @@
     /* ============================== 工具函数 ============================== */
 
     /**
-     * 读取 Cookie 值
-     */
-    function getCookie(name) {
-        var cookies = document.cookie ? document.cookie.split(';') : [];
-        for (var i = 0; i < cookies.length; i++) {
-            var pair = cookies[i].trim();
-            if (pair.indexOf(name + '=') === 0) {
-                return decodeURIComponent(pair.substring(name.length + 1));
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 获取 CSRF Token：优先 Cookie，其次 sessionStorage（与 js/request.js 约定一致）
+     * 获取 CSRF Token：统一走跨端共享实现 /shared/js/request-core.js（window.ReggieCsrf.get），
+     * 与 js/request.js 单一真源一致，避免重复实现且编解码错位。
+     * （assistant.html 中 request.js 先于本文件加载，其 document.write 已引入 request-core.js，ReggieCsrf 必然存在）
      */
     function getCsrfToken() {
-        var token = getCookie('csrfToken');
-        if (token) return token;
-        try {
-            return window.sessionStorage.getItem('csrfToken');
-        } catch (e) {
-            return null;
-        }
+        return (window.ReggieCsrf && typeof window.ReggieCsrf.get === 'function')
+            ? window.ReggieCsrf.get()
+            : null;
     }
 
     /**
@@ -427,6 +411,8 @@
         // 单次实例不并发：先终止旧请求
         self.stop();
         self.finished = false;
+        // 请求代际：复用实例时旧请求的延迟回调（abort/error）不得干扰新请求状态
+        var gen = (self._gen = (self._gen || 0) + 1);
 
         var controller = null;
         if (typeof window.AbortController !== 'undefined') {
@@ -435,91 +421,118 @@
         self.controller = controller;
 
         var userAborted = false;
+        var retried = false;
 
         function finalize(handler) {
-            if (self.finished) return;
+            if (self.finished || self._gen !== gen) return;
             self.finished = true;
-            self.controller = null;
+            // 仅当仍是本次请求的 controller 才清空，避免误清新请求的 controller（stop 按钮失效）
+            if (self.controller === controller) self.controller = null;
             try { handler(); } catch (e) { /* 回调异常不影响状态机 */ }
         }
 
-        var fetchOptions = {
-            method: 'POST',
-            headers: self._buildHeaders(),
-            body: JSON.stringify(cfg.body || {}),
-            credentials: 'same-origin'
-        };
-        if (controller) fetchOptions.signal = controller.signal;
+        function send() {
+            var fetchOptions = {
+                method: 'POST',
+                headers: self._buildHeaders(),
+                body: JSON.stringify(cfg.body || {}),
+                credentials: 'same-origin'
+            };
+            if (controller) fetchOptions.signal = controller.signal;
 
-        window.fetch(cfg.url, fetchOptions).then(function (res) {
-            if (!res.ok) {
-                readErrorResponse(res).then(function (info) {
-                    finalize(function () {
-                        if (cfg.onError) cfg.onError(info.message, info);
-                    });
-                });
-                return;
-            }
-
-            // 老浏览器无 ReadableStream：读全文后一次性按帧回放
-            if (!res.body || typeof res.body.getReader !== 'function') {
-                res.text().then(function (fullText) {
-                    var frames = fullText.split('\n\n');
-                    for (var i = 0; i < frames.length; i++) {
-                        dispatchSseFrame(frames[i], cfg);
+            window.fetch(cfg.url, fetchOptions).then(function (res) {
+                if (!res.ok) {
+                    // CSRF Token 过期（30分钟）：后端 403 时已在 X-CSRF-Token 响应头下发新 token，
+                    // 保存后自动用新 token 重试一次，避免用户陷入「重试→403」循环
+                    if (res.status === 403 && !retried) {
+                        var newToken = res.headers.get('x-csrf-token');
+                        if (newToken && window.ReggieCsrf && typeof window.ReggieCsrf.save === 'function') {
+                            window.ReggieCsrf.save(newToken);
+                            retried = true;
+                            send();
+                            return;
+                        }
                     }
-                    finalize(function () {
-                        if (cfg.onComplete) cfg.onComplete();
+                    readErrorResponse(res).then(function (info) {
+                        finalize(function () {
+                            if (cfg.onError) cfg.onError(info.message, info);
+                        });
                     });
-                });
-                return;
-            }
+                    return;
+                }
 
-            var reader = res.body.getReader();
-            var decoder = new window.TextDecoder('utf-8');
-            var buffer = '';
-
-            function pump() {
-                reader.read().then(function (chunk) {
-                    if (chunk.done) {
-                        if (buffer.trim()) dispatchSseFrame(buffer, cfg);
+                // 老浏览器无 ReadableStream：读全文后一次性按帧回放
+                if (!res.body || typeof res.body.getReader !== 'function') {
+                    res.text().then(function (fullText) {
+                        var frames = fullText.split('\n\n');
+                        for (var i = 0; i < frames.length; i++) {
+                            dispatchSseFrame(frames[i], cfg);
+                        }
                         finalize(function () {
                             if (cfg.onComplete) cfg.onComplete();
                         });
-                        return;
-                    }
-                    buffer += decoder.decode(chunk.value, { stream: true });
-                    var frames = buffer.split('\n\n');
-                    // 最后一段可能是不完整帧，留在 buffer
-                    buffer = frames.pop();
-                    for (var i = 0; i < frames.length; i++) {
-                        dispatchSseFrame(frames[i], cfg);
-                    }
-                    pump();
-                }).catch(function (err) {
-                    if (userAborted || (controller && controller.signal.aborted)) {
+                    }).catch(function () {
+                        // 读取中断/abort 时也必须收尾，否则 loading 永久为 true
+                        if (userAborted || (controller && controller.signal.aborted)) {
+                            finalize(function () {
+                                if (cfg.onAbort) cfg.onAbort();
+                            });
+                            return;
+                        }
                         finalize(function () {
-                            if (cfg.onAbort) cfg.onAbort();
+                            if (cfg.onError) cfg.onError('网络连接中断，请重试', { network: true });
                         });
-                        return;
-                    }
-                    finalize(function () {
-                        if (cfg.onError) cfg.onError('网络连接中断，请重试', { network: true });
                     });
-                });
-            }
-            pump();
-        }).catch(function (err) {
-            if (userAborted || (controller && controller.signal.aborted)) {
+                    return;
+                }
+
+                var reader = res.body.getReader();
+                var decoder = new window.TextDecoder('utf-8');
+                var buffer = '';
+
+                function pump() {
+                    reader.read().then(function (chunk) {
+                        if (chunk.done) {
+                            if (buffer.trim()) dispatchSseFrame(buffer, cfg);
+                            finalize(function () {
+                                if (cfg.onComplete) cfg.onComplete();
+                            });
+                            return;
+                        }
+                        buffer += decoder.decode(chunk.value, { stream: true });
+                        var frames = buffer.split('\n\n');
+                        // 最后一段可能是不完整帧，留在 buffer
+                        buffer = frames.pop();
+                        for (var i = 0; i < frames.length; i++) {
+                            dispatchSseFrame(frames[i], cfg);
+                        }
+                        pump();
+                    }).catch(function (err) {
+                        if (userAborted || (controller && controller.signal.aborted)) {
+                            finalize(function () {
+                                if (cfg.onAbort) cfg.onAbort();
+                            });
+                            return;
+                        }
+                        finalize(function () {
+                            if (cfg.onError) cfg.onError('网络连接中断，请重试', { network: true });
+                        });
+                    });
+                }
+                pump();
+            }).catch(function (err) {
+                if (userAborted || (controller && controller.signal.aborted)) {
+                    finalize(function () {
+                        if (cfg.onAbort) cfg.onAbort();
+                    });
+                    return;
+                }
                 finalize(function () {
-                    if (cfg.onAbort) cfg.onAbort();
+                    if (cfg.onError) cfg.onError('网络异常，请稍后重试', { network: true });
                 });
-                return;
-            }
-            finalize(function () {
-                if (cfg.onError) cfg.onError('网络异常，请稍后重试', { network: true });
             });
-        });
+        }
+        send();
 
         // 标记中止来源：仅用户主动 stop 触发 onAbort
         self._onUserStop = function () { userAborted = true; };

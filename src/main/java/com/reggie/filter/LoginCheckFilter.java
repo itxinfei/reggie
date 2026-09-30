@@ -7,6 +7,9 @@ import com.reggie.common.BaseContext;
 import com.reggie.common.R;
 import com.reggie.module.delivery.model.RiderRememberToken;
 import com.reggie.module.delivery.service.RiderRememberTokenService;
+import com.reggie.module.store.service.StoreService;
+import com.reggie.module.tenant.model.Tenant;
+import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
 import org.springframework.util.AntPathMatcher;
@@ -124,8 +127,14 @@ public class LoginCheckFilter implements Filter{
     }
 
     /**
-     * 放行分支：EXCLUDE_URLS 中的公开接口虽不需登录，但若会话已有登录态（employee/user + tenantId）
-     * 仍恢复上下文，保证数据按租户隔离；匿名请求无会话则跳过（由租户插件 fail-open 处理）。
+     * 放行分支：EXCLUDE_URLS 中的公开接口虽不需登录，但按以下优先级恢复租户上下文，
+     * 保证数据按租户隔离（R-21-A 公开端点租户解析）：
+     * <ol>
+     *   <li>会话已有登录态（employee/user + tenantId）→ 按会话恢复；</li>
+     *   <li>匿名 → 请求参数解析（?tenantId= 或 ?storeId=，storeId 经门店档案反查租户）；</li>
+     *   <li>无参数 → 配置 reggie.public-tenant-id（单租户自托管默认租户兜底）。</li>
+     * </ol>
+     * 三级均不可得时保持原状（不设上下文，由租户插件 fail-closed 兜底），零破坏升级。
      *
      * @param request 请求
      */
@@ -133,6 +142,11 @@ public class LoginCheckFilter implements Filter{
         HttpSession excludeSession = request.getSession(false);
         Long excludeTenantId = excludeSession == null ? null : (Long) excludeSession.getAttribute("tenantId");
         if (excludeTenantId == null) {
+            excludeTenantId = resolvePublicTenantId(request);
+            if (excludeTenantId == null) {
+                return;
+            }
+            BaseContext.setCurrentTenantId(excludeTenantId);
             return;
         }
         BaseContext.setCurrentTenantId(excludeTenantId);
@@ -142,6 +156,96 @@ public class LoginCheckFilter implements Filter{
             BaseContext.setCurrentId((Long) empId);
         } else if (userId != null) {
             BaseContext.setCurrentId((Long) userId);
+        }
+    }
+
+    /**
+     * 公开端点租户解析（R-21-A 三级回落的后两级，仅匿名公开请求会走到这里）。
+     * <ol>
+     *   <li>请求参数 tenantId（显式租户）；</li>
+     *   <li>请求参数 storeId → store_info 主键反查所属租户（模式同堂食"桌台反查门店"），
+     *       无会话查库须走 {@code @InterceptorIgnore} 跨租户方法；</li>
+     *   <li>配置 reggie.public-tenant-id（默认公开租户；未配置=不启用）。</li>
+     * </ol>
+     *
+     * @param request 请求
+     * @return 租户 ID；无法解析时 null（调用方保持无上下文现状）
+     */
+    private Long resolvePublicTenantId(HttpServletRequest request) {
+        WebApplicationContext context = WebApplicationContextUtils
+                .getWebApplicationContext(request.getServletContext());
+        if (context == null) {
+            return null;
+        }
+        // 修改点(2026-09-30 代码审查)：?tenantId= 裸参数此前被无条件信任写入租户上下文，
+        // 任何人可遍历任意租户（含已禁用）的公开目录数据。现要求该租户真实存在且 status=1
+        // （口径同 TenantService.listActiveTenants）；校验不过则忽略本级回落，继续走 storeId 反查。
+        Long paramTenantId = parseLongParam(request.getParameter("tenantId"));
+        if (paramTenantId != null) {
+            if (isPublicTenantUsable(context, paramTenantId)) {
+                return paramTenantId;
+            }
+            log.warn("公开请求 tenantId 参数非法或租户未启用，已忽略该参数: tenantId={}", paramTenantId);
+        }
+        String storeIdParam = request.getParameter("storeId");
+        if (storeIdParam != null && !storeIdParam.isEmpty()) {
+            Long storeId = parseLongParam(storeIdParam);
+            if (storeId != null) {
+                try {
+                    Long tenantId = context.getBean(StoreService.class).findTenantIdByStoreId(storeId);
+                    if (tenantId != null) {
+                        return tenantId;
+                    }
+                } catch (Exception e) {
+                    log.warn("公开请求 storeId 反查租户失败: storeId={}", storeIdParam, e);
+                }
+            }
+        }
+        try {
+            String defaultTenantId = context.getEnvironment().getProperty("reggie.public-tenant-id");
+            if (defaultTenantId != null && !defaultTenantId.trim().isEmpty()) {
+                return Long.valueOf(defaultTenantId.trim());
+            }
+        } catch (NumberFormatException e) {
+            log.warn("reggie.public-tenant-id 配置格式错误: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 校验匿名公开请求携带的 tenantId 是否可用：租户必须真实存在且处于启用态（status=1）。
+     * <p>{@code tenant} 表无 tenant_id 且已在 {@code MybatisPlusConfig.IGNORE_TABLES}，
+     * 故此查询不会被租户插件注入条件；查不到即视为不可用（fail-closed）。</p>
+     *
+     * @param context  Spring 上下文
+     * @param tenantId 待校验租户 ID
+     * @return 可用返回 true
+     */
+    private boolean isPublicTenantUsable(WebApplicationContext context, Long tenantId) {
+        try {
+            Tenant tenant = context.getBean(TenantService.class).getById(tenantId);
+            return tenant != null && Integer.valueOf(1).equals(tenant.getStatus());
+        } catch (Exception e) {
+            log.warn("公开请求 tenantId 校验异常，按不可用处理: tenantId={}", tenantId, e);
+            return false;
+        }
+    }
+
+    /**
+     * 解析 Long 型参数值，非法格式返回 null 并告警（公开参数不可信，失败即放弃该级回落）。
+     *
+     * @param value 参数原始值
+     * @return Long 值，或 null
+     */
+    private Long parseLongParam(String value) {
+        if (value == null || value.isEmpty()) {
+            return null;
+        }
+        try {
+            return Long.valueOf(value);
+        } catch (NumberFormatException e) {
+            log.warn("公开请求租户解析参数格式错误: {}", value);
+            return null;
         }
     }
 

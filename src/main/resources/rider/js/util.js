@@ -68,12 +68,25 @@ document.write('<script src="/shared/js/order-status.js?v=20260928"><\/script>')
     return statusText(s);
   }
 
+  /** 统一返回：优先 history.back 保留列表滚动/页签，无历史则回工作台 */
+  function back() {
+    if (win.history.length > 1) { win.history.back(); }
+    else { win.location.href = '/rider/index.html'; }
+  }
+
+  // 配送异常类型文案（单一真源：上报弹窗 excTypeMap 与异常列表 typeText 共用，避免两处各自维护同一枚举）
+  var EXC_TYPE_MAP = { 1: '联系不上顾客', 2: '商品破损', 3: '地址有误', 4: '顾客拒收', 5: '申请转单', 6: '其他' };
+  function excTypeText(t) { return EXC_TYPE_MAP[t] || '异常'; }
+
   win.RiderUtil = {
     formatTime: formatTime,
     money: money,
     navUrl: navUrl,
     maskPhone: maskPhone,
     statusText: statusText,
-    statusTextPickup: statusTextPickup
+    statusTextPickup: statusTextPickup,
+    excTypeMap: EXC_TYPE_MAP,
+    excTypeText: excTypeText,
+    back: back
   };
 })(window);

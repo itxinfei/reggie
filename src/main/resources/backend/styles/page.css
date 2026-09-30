@@ -175,15 +175,16 @@
 }
 
 /* --- 信息按钮：中性灰（白字需≥4.5:1） --- */
+/* 底色统一引用令牌（原硬编码 #6f7276 仅 4.4:1 → --color-info-solid #656b78 达 5.34:1，零视觉回归风险） */
 .container .tableBar .btn-action.el-button--info {
-  background: #6f7276 !important;
+  background: var(--color-info-solid, #656b78) !important;
   border: none !important;
-  color: #fff !important;
+  color: var(--text-inverse, #fff) !important;
   font-weight: 500;
   box-shadow: var(--shadow-sm);
 }
 .container .tableBar .btn-action.el-button--info:hover {
-  background: #5c5f63 !important;
+  background: var(--color-info-solid-hover, #5c5f63) !important;
   box-shadow: var(--shadow-md);
 }
 

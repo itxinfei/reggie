@@ -1,3 +1,8 @@
+/**
+ * C 端请求封装：axios 实例 + CSRF 自动带头 + 统一响应/未登录处理 + SSE/客服守护。
+ * 依赖全局 axios、vant（Vant2 UMD）；CSRF 存取与请求拦截复用 /shared/js/request-core.js。
+ */
+document.write('<script src="/shared/js/request-core.js?v=20260930"><\/script>');
 (function (win) {
   axios.defaults.headers['Content-Type'] = 'application/json;charset=utf-8'
   // 创建axios实例
@@ -7,20 +12,14 @@
     // 超时
     timeout: 30000
   })
-  // request拦截器
-  service.interceptors.request.use(config => {
-    // 为POST/PUT/DELETE请求添加CSRF Token
-    var method = (config.method || 'get').toLowerCase();
-    if (method === 'post' || method === 'put' || method === 'delete') {
-      var csrfToken = getCsrfToken();
-      if (csrfToken) {
-        config.headers['X-CSRF-Token'] = csrfToken;
-      }
-    }
-    return config
-  }, error => {
-      return Promise.reject(error)
-  })
+  // request拦截器：写操作带 CSRF 头（统一实现见 /shared/js/request-core.js）。
+  // 注意：document.write 注入的脚本在本文件顶层代码「之后」才执行，
+  // 故 core 未就绪时先登记 pending 列表，由其加载完成时统一补挂。
+  if (win.ReggieCsrf) {
+    win.ReggieCsrf.attachRequestInterceptor(service, win.ReggieCsrf.get);
+  } else {
+    (win.__reggieCsrfPending = win.__reggieCsrfPending || []).push(service);
+  }
 
   // 修改点(2026-09-18)：未登录跳登录页时携带当前地址，登录成功后回跳来源页（仅站内相对路径，登录页再做安全校验）
   function buildLoginUrl() {
@@ -32,66 +31,19 @@
   // 打开页面必须是登录态，未登录直接进登录页；防重入，并发请求同时 401 只跳一次）
   var notLoginHandled = false;
   function redirectToLogin() {
-    clearCsrfToken();
+    if (win.ReggieCsrf) { win.ReggieCsrf.clear(); }
     if (window.location.pathname.indexOf('login') !== -1) { return; }
     if (notLoginHandled) { return; }
     notLoginHandled = true;
     window.location.replace(buildLoginUrl());
   }
 
-  /**
-   * 获取CSRF Token
-   */
-  function getCsrfToken() {
-    // 尝试从Cookie获取
-    var cookies = document.cookie.split(';');
-    for (var i = 0; i < cookies.length; i++) {
-      var cookie = cookies[i].trim();
-      if (cookie.startsWith('csrfToken=')) {
-        return cookie.substring('csrfToken='.length);
-      }
-    }
-    // 尝试从SessionStorage获取
-    try {
-      return sessionStorage.getItem('csrfToken');
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /**
-   * 保存CSRF Token到Cookie和SessionStorage（与后台 request.js 保持一致）
-   * 修改点(2026-09-01)：C 端此前只读不存，导致所有 POST/PUT/DELETE 被 CsrfFilter 拦截 403
-   */
-  function saveCsrfToken(token) {
-    if (!token) return;
-    try {
-      sessionStorage.setItem('csrfToken', token);
-      var expires = new Date(Date.now() + 30 * 60 * 1000).toUTCString();
-      document.cookie = 'csrfToken=' + encodeURIComponent(token) + '; expires=' + expires + '; path=/; SameSite=Strict';
-    } catch (e) {
-      console.warn('保存CSRF Token失败', e);
-    }
-  }
-
-  /**
-   * 清除CSRF Token
-   */
-  function clearCsrfToken() {
-    try {
-      sessionStorage.removeItem('csrfToken');
-      document.cookie = 'csrfToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-    } catch (e) {
-      console.warn('清除CSRF Token失败', e);
-    }
-  }
-
   // 响应拦截器
   service.interceptors.response.use(res => {
       // 修改点(2026-09-01)：保存后端通过响应头返回的CSRF Token
       var csrfToken = res.headers ? res.headers['x-csrf-token'] : null;
-      if (csrfToken) {
-        saveCsrfToken(csrfToken);
+      if (csrfToken && win.ReggieCsrf) {
+        win.ReggieCsrf.save(csrfToken);
       }
       // 修改点：防御性检查res和res.data，防止异常响应导致TypeError
       if (res && res.data && res.data.code === 0 && res.data.msg === 'NOTLOGIN') {
@@ -296,9 +248,26 @@
     win.__csUnreadTimer = win.setInterval(tick, 15000);
   }
 
-  // 全局错误捕获，防止STATUS_ACCESS_VIOLATION等浏览器底层崩溃
+  // 全局错误捕获：仅吞掉已知、已被统一处理的业务异常（如 NOTLOGIN / 网络异常），
+  // 避免掩盖真实未处理 reject（影响问题排查）
   window.addEventListener('unhandledrejection', function(event) {
-    console.error('[Unhandled Rejection]', event.reason)
-    event.preventDefault()
+    var reason = event.reason;
+    var msg = (reason && reason.message) || String(reason);
+    var known = msg === 'NOTLOGIN'
+      || msg === 'Network Error'
+      || msg.indexOf('timeout') !== -1
+      || msg.indexOf('Request failed with status code') !== -1;
+    if (known) { event.preventDefault(); }
+    else { console.error('[Unhandled Rejection]', reason); }
   })
+
+  // 修改点：真卸载时清理全局副作用（客服未读定时器 / SSE 实时通道）。
+  // 只在 pagehide 且 persisted=false 时执行：进 bfcache 的页面可能被原样恢复，
+  // 误杀定时器会导致返回后未读角标不再刷新；SSE 由 bfcache 自行冻结/恢复。
+  // 注意不挂 beforeunload——它的存在本身会让 Chrome 拒绝该页面进 bfcache。
+  win.addEventListener('pagehide', function (e) {
+    if (e.persisted) { return; }
+    if (win.__csUnreadTimer) { clearInterval(win.__csUnreadTimer); win.__csUnreadTimer = null; }
+    if (win.__reggieSSE) { try { win.__reggieSSE.close(); } catch (e) {} win.__reggieSSE = null; }
+  });
 })(window);

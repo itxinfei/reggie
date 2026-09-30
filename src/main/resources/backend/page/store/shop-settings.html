@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<!--
+  店铺设置（R-21-A 配套 · 店铺品牌化，2026-09-30）
+  ------------------------------------------------------------
+  商家自助维护 店铺名称 / Logo / 门店公告 / 营业时间 四字段：
+  - 读取回填：GET /restaurant/info（商家信息接口，登录后携带租户上下文）
+  - 保存提交：PUT /restaurant/settings（后端强制当前登录租户，防越权改他店）
+  - Logo 上传：复用通用上传通道 /common/upload（el-upload，手动带 X-CSRF-Token）
+  - 改完 C 端顾客端首页（店名/Logo/公告/营业时间）即时生效
+  规范：样式仅布局类，颜色/间距走 tokens.css 设计令牌；a11y 同列表页模板。
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>店铺设置 - 瑞吉外卖管理端</title>
+  <link rel="stylesheet" href="../../styles/tokens.css?v=20260926" />
+  <link rel="stylesheet" href="../../styles/main.css?v=20260926" />
+  <style>
+    /* 页面局部样式：仅布局与尺寸，颜色一律走设计令牌 */
+    .shop-settings-card { max-width: 640px; }
+    .card-header-title { font-weight: 600; }
+    .header-tip { margin-left: var(--space-sm, 8px); font-size: var(--font-size-xs, 12px); font-weight: normal; color: var(--text-secondary, #909399); }
+    .form-tip { margin-top: 4px; font-size: var(--font-size-xs, 12px); color: var(--text-secondary, #909399); line-height: 1.5; }
+    .logo-uploader { width: 96px; height: 96px; border: 1px dashed var(--border-color, #dcdfe6); border-radius: var(--radius-sm, 4px); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition: border-color var(--transition-fast, .2s); }
+    .logo-uploader:hover { border-color: var(--color-primary, #409eff); }
+    .logo-preview { width: 100%; height: 100%; object-fit: contain; }
+    .logo-uploader-icon { font-size: 24px; color: var(--text-secondary, #909399); }
+  </style>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳转到主内容</a>
+
+  <div class="dashboard-container" id="shop-settings-app">
+    <main class="container ds-page" id="main-content" role="main" aria-labelledby="page-title">
+      <h1 class="sr-only" id="page-title">店铺设置</h1>
+
+      <el-card class="shop-settings-card" shadow="never">
+        <div slot="header" class="card-header-title">
+          店铺设置<span class="header-tip">保存后，C 端顾客端首页的店名 / Logo / 公告 / 营业时间即时生效</span>
+        </div>
+
+        <el-form ref="settingsForm" :model="form" :rules="formRules" label-width="100px" v-loading="loading">
+          <el-form-item label="店铺名称:" prop="name">
+            <el-input v-model="form.name" maxlength="64" show-word-limit placeholder="顾客端首页展示的店铺名"></el-input>
+          </el-form-item>
+
+          <el-form-item label="店铺Logo:" prop="logo">
+            <el-upload
+              class="logo-uploader"
+              action="/common/upload"
+              :headers="uploadHeaders()"
+              name="file"
+              accept="image/*"
+              :show-file-list="false"
+              :on-success="onLogoSuccess"
+              :on-error="onLogoError"
+            >
+              <img v-if="form.logo" :src="logoPreview" class="logo-preview" alt="店铺Logo">
+              <i v-else class="ri-add-line logo-uploader-icon" role="img" aria-label="上传店铺Logo"></i>
+            </el-upload>
+            <div class="form-tip">点击上传图片；不上传时顾客端显示系统默认 Logo</div>
+          </el-form-item>
+
+          <el-form-item label="门店公告:" prop="notice">
+            <el-input v-model="form.notice" type="textarea" :rows="3" maxlength="200" show-word-limit
+                      placeholder="显示在顾客端首页公告栏，最长200字"></el-input>
+          </el-form-item>
+
+          <el-form-item label="营业时间:" prop="businessHours">
+            <el-input v-model="form.businessHours" maxlength="100" placeholder="如 09:00-22:00"></el-input>
+          </el-form-item>
+
+          <el-form-item>
+            <el-button type="primary" :loading="submitLoading" @click="onSave">保存设置</el-button>
+          </el-form-item>
+        </el-form>
+      </el-card>
+    </main>
+  </div>
+
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js?v=20260915"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js?v=20260930"></script>
+  <script src="../../js/accessibility-utils.js?v=20260927"></script>
+  <script src="../../api/store.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20260930"></script>
+  <script>
+    new Vue({
+      el: '#shop-settings-app',
+      data() {
+        return {
+          loading: false,
+          submitLoading: false,
+          form: { name: '', logo: '', notice: '', businessHours: '' },
+          formRules: {
+            name: [{ required: true, message: '请输入店铺名称', trigger: 'blur' }],
+            businessHours: [{ max: 100, message: '营业时间不能超过100个字符', trigger: 'blur' }]
+          }
+        }
+      },
+      computed: {
+        // 相对路径规范化为绝对路径，保证 /page/store/ 层级下图片可显示
+        logoPreview() {
+          if (!this.form.logo) return ''
+          var v = this.form.logo
+          return (/^https?:\/\//.test(v) || v.charAt(0) === '/') ? v : ('/' + v)
+        }
+      },
+      created() { this.fetchSettings() },
+      methods: {
+        // el-upload 不走 axios 拦截，手动带 X-CSRF-Token（request.js 统一导出 getCsrfToken）
+        uploadHeaders() {
+          var headers = {}
+          try {
+            var token = window.getCsrfToken ? window.getCsrfToken() : ''
+            if (token) { headers['X-CSRF-Token'] = token }
+          } catch (e) { /* 未就绪时后端按未携带处理 */ }
+          return headers
+        },
+        async fetchSettings() {
+          this.loading = true
+          try {
+            const res = await getShopSettings()
+            if (res && res.code === 1 && res.data) {
+              this.form.name = res.data.name || ''
+              this.form.logo = res.data.logo && res.data.logo !== 'images/common/logo.png' ? res.data.logo : ''
+              this.form.notice = res.data.notice || ''
+              this.form.businessHours = res.data.businessHours || ''
+            } else if (res && res.code !== 1) {
+              ReggieUI.error(res.msg || '读取店铺信息失败')
+            }
+          } catch (e) {
+            console.warn('[店铺设置] 读取失败:', e)
+          } finally {
+            this.loading = false
+          }
+        },
+        onLogoSuccess(res) {
+          // /common/upload 成功返回 { code:1, data:'图片相对路径' }
+          if (res && res.code === 1 && res.data) {
+            this.form.logo = res.data
+            ReggieUI.success('Logo 上传成功，点击「保存设置」生效')
+          } else {
+            ReggieUI.error((res && res.msg) || 'Logo 上传失败')
+          }
+        },
+        onLogoError(err) {
+          // 未登录时后端返回 401 NOTLOGIN，由 request.js 统一跳转
+          ReggieUI.error('Logo 上传失败' + (err && err.message ? '：' + err.message : ''))
+        },
+        async onSave() {
+          try {
+            await new Promise(function (resolve, reject) {
+              this.$refs.settingsForm.validate(function (valid) {
+                if (valid) { resolve() } else { reject(new Error('invalid')) }
+              })
+            }.bind(this))
+          } catch (e) {
+            return
+          }
+          this.submitLoading = true
+          try {
+            const res = await updateShopSettings({
+              name: this.form.name,
+              logo: this.form.logo || null,
+              notice: this.form.notice || null,
+              businessHours: this.form.businessHours || null
+            })
+            if (res && res.code === 1) {
+              ReggieUI.success('店铺设置已保存，C 端首页已生效')
+              // 刷新缓存值（下次回填取到最新）
+              this.fetchSettings()
+            } else {
+              ReggieUI.error((res && res.msg) || '保存失败')
+            }
+          } catch (e) {
+            console.warn('[店铺设置] 保存失败:', e)
+            ReggieUI.error('保存失败，请稍后重试')
+          } finally {
+            this.submitLoading = false
+          }
+        }
+      }
+    })
+  </script>
+</body>
+</html>

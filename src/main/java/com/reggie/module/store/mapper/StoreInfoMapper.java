@@ -54,6 +54,19 @@ public interface StoreInfoMapper extends BaseMapper<StoreInfo> {
     StoreInfo findByStoreCode(@Param("storeCode") String storeCode);
 
     /**
+     * 按 store_info 主键查询（公开端点租户解析专用，R-21-A）
+     * <p>LoginCheckFilter 对匿名公开请求做 storeId→tenantId 反查时无登录会话，
+     * 须绕过租户拦截器（参照 {@link #findByStoreCode} 范本）。仅用于注入租户上下文，
+     * 不将该实体返回给前端。</p>
+     *
+     * @param id store_info 主键
+     * @return 门店信息；不存在或已删除返回 null
+     */
+    @InterceptorIgnore(tenantLine = "true")
+    @Select("SELECT * FROM store_info WHERE id = #{id} AND is_deleted = 0")
+    StoreInfo findByIdIgnoreTenant(@Param("id") Long id);
+
+    /**
      * 分页搜索门店列表（支持多条件筛选与排序）
      * SQL定义在 resources/com/reggie/module/store/mapper/StoreInfoMapper.xml
      *

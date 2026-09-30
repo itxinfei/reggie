@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>抢单大厅</title>
   <link rel="stylesheet" href="/front/styles/vant.min.css">
-  <link rel="stylesheet" href="/shared/styles/tokens.css">
+  <link rel="stylesheet" href="/shared/styles/tokens.css?v=20260930b">
   <link rel="stylesheet" href="/backend/plugins/remixicon/remixicon.css">
-  <link rel="stylesheet" href="/rider/css/rider.css">
+  <link rel="stylesheet" href="/rider/css/rider.css?v=20260930e">
 </head>
 <body>
   <div id="app">
@@ -46,9 +46,9 @@
   <script src="/backend/plugins/vue/vue.js"></script>
   <script src="/backend/plugins/axios/axios.min.js"></script>
   <script src="/front/js/vant.min.js"></script>
-  <script src="/rider/js/request.js"></script>
+  <script src="/rider/js/request.js?v=20260930"></script>
   <script src="/rider/js/api.js"></script>
-  <script src="/rider/js/util.js"></script>
+  <script src="/rider/js/util.js?v=20260930"></script>
   <script src="/rider/js/location.js"></script>
   <script>RiderLocation.start();</script>
   <script>
@@ -108,7 +108,7 @@
           });
         },
         goBack: function () {
-          window.location.href = '/rider/index.html';
+          RiderUtil.back();
         }
       }
     }).$mount('#app');

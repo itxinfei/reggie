@@ -57,6 +57,10 @@ public class StoreInfo implements Serializable {
     @Size(max = 100, message = "营业时间不能超过100个字符")
     private String businessHours;
 
+    /** 门店公告（C 端首页展示，商家"店铺设置"可维护） */
+    @Size(max = 200, message = "门店公告不能超过200个字符")
+    private String notice;
+
     /** 配送半径(米) */
     private Integer deliveryRadius;
 

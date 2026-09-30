@@ -740,9 +740,10 @@ Vue.component('crud-table', {
       // 失败态：列表请求失败时改显"数据加载失败"，不能让用户以为"本来就没数据"
       '<template slot="empty">' +
         '<div :class="listFailed ? \'ds-table-error\' : \'ds-table-empty\'" :role="listFailed ? \'alert\' : \'\'">' +
-          '<i :class="listFailed ? \'el-icon-warning-triangle\' : \'el-icon-document\'" aria-hidden="true"></i>' +
+          '<i :class="listFailed ? \'el-icon-warning-outline\' : \'el-icon-document\'" aria-hidden="true"></i>' +
           '<p>{{ listFailed ? errorText : emptyText }}</p>' +
           '<p v-if="listFailed" class="ds-table-empty__hint">{{ errorHint }}</p>' +
+          '<el-button v-if="listFailed" type="primary" size="small" class="ds-table-error__retry" @click="onListRetry">刷新重试</el-button>' +
           '<p v-else-if="emptyHint" class="ds-table-empty__hint">{{ emptyHint }}</p>' +
         '</div>' +
       '</template>' +
@@ -834,16 +835,21 @@ Vue.component('crud-table', {
     cellText: function (v) {
       return this.isBlankVal(v) ? '-' : v
     },
+    /** 失败态「刷新重试」：通用兜底整页刷新重载列表（与 errorHint「请检查网络后刷新页面重试」一致），
+        对所有列表页零侵入可用；会话失效时刷新会自然走到登录守卫。 */
+    onListRetry: function () {
+      window.location.reload()
+    },
     /**
-     * 列对齐解析：
+     * 列对齐解析（遵循 AGENTS.md crud-table 规范，2026-09-01 起）：
      *  - 页面显式 align 优先（可覆盖一切默认）
-     *  - 金额/数字语义列（type='money'|'number'）默认右对齐，符合 CLAUDE.md 7.2
-     *    "金额/数字列右对齐"与 columns props 文档（自动右对齐 + tabular-nums）
-     *  - 其余列默认居中
+     *  - 其余所有列（含金额/数字 type='money'|'number'）默认居中
+     *  - 表头随数据列对齐，禁止单独写死表头对齐
+     * 注：历史上 CLAUDE.md 7.2 曾要求"金额/数字列右对齐"，已被 AGENTS.md 的"全站居中"
+     *     规范取代，请勿翻转此默认值（默认值曾在 center↔left 间多次回退）。
      */
     resolveColAlign: function (col) {
       if (col.align) return col.align
-      if (col.type === 'money' || col.type === 'number') return 'right'
       return 'center'
     },
     /** 列宽解析（内容驱动策略）：

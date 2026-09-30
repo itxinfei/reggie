@@ -48,6 +48,18 @@ const updateStatus = function(tenantId, status) {
     });
 }
 
+// ==================== 店铺设置（R-21-A 配套 · 店铺品牌化） ====================
+
+// 读取店铺信息（复用商家信息接口，登录后携带租户上下文；name/logo/notice/businessHours 四字段用于表单回填）
+const getShopSettings = function() {
+    return $axios.get('/restaurant/info');
+}
+
+// 更新店铺设置（店名/Logo/公告/营业时间；后端强制当前登录租户，敏感字段不在此接口）
+const updateShopSettings = function(data) {
+    return $axios.put('/restaurant/settings', data);
+}
+
 const togglePauseOrder = function(tenantId, pause) {
     return $axios.put('/store/' + tenantId + '/pause', null, {
         params: { pause: pause }

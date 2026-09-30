@@ -2,18 +2,18 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>骑手工作台</title>
   <link rel="stylesheet" href="/front/styles/vant.min.css">
-  <link rel="stylesheet" href="/shared/styles/tokens.css">
+  <link rel="stylesheet" href="/shared/styles/tokens.css?v=20260930b">
   <link rel="stylesheet" href="/backend/plugins/remixicon/remixicon.css">
-  <link rel="stylesheet" href="/rider/css/rider.css">
+  <link rel="stylesheet" href="/rider/css/rider.css?v=20260930e">
 </head>
 <body>
   <div id="app">
     <van-nav-bar title="骑手工作台">
       <template #right>
-        <span class="nav-logout" @click="onLogout">退出</span>
+        <button type="button" class="nav-logout" @click="onLogout">退出</button>
       </template>
     </van-nav-bar>
 
@@ -34,7 +34,7 @@
     <div class="rider-page has-bar">
       <van-pull-refresh v-model="refreshing" @refresh="loadList(false)" success-text="刷新成功">
         <div v-if="list.length">
-          <div class="task-card" v-for="t in list" :key="t.id" :class="'task-st-' + t.status" @click="openDetail(t)">
+          <div class="task-card" v-for="t in list" :key="t.id" :class="'task-st-' + t.status" @click="openDetail(t)" role="button" tabindex="0" @keyup.enter="openDetail(t)" @keyup.space.prevent="openDetail(t)">
             <div class="task-head">
               <span class="task-number">{{ t.number }}</span>
               <span class="task-amount">¥{{ RiderUtil.money(t.amount) }}</span>
@@ -44,8 +44,8 @@
             <div class="task-foot">
               <span class="task-time">{{ RiderUtil.formatTime(t.orderTime) }}</span>
               <button v-if="active === 'todo'" class="mini-btn primary" :disabled="acceptingId === t.id"
-                      @click.stop="onAccept(t)">确认接单</button>
-              <button v-else-if="active === 'delivering'" class="mini-btn" @click.stop="openDetail(t)">继续配送</button>
+                      @click.stop="onAccept(t)" @keyup.stop>确认接单</button>
+              <button v-else-if="active === 'delivering'" class="mini-btn" @click.stop="openDetail(t)" @keyup.stop>继续配送</button>
               <span v-else class="history-status">{{ RiderUtil.statusText(t.status) }}</span>
             </div>
           </div>
@@ -54,35 +54,35 @@
       </van-pull-refresh>
     </div>
 
-    <div class="hall-entry">
-      <button class="rider-btn primary" @click="goHall">进入抢单大厅</button>
-    </div>
-
-    <div class="income-entry">
-      <button class="rider-btn" @click="goIncome">我的收入</button>
-    </div>
-
-    <div class="income-entry">
-      <button class="rider-btn" @click="goEvaluation">我的评价</button>
-    </div>
-
-    <div class="income-entry">
-      <button class="rider-btn" @click="goException">我的异常</button>
-    </div>
-
-    <div class="income-entry">
-      <button class="rider-btn" @click="goMessage">
-        消息中心<span class="msg-badge" v-if="unread > 0">{{ unread > 99 ? '99+' : unread }}</span>
-      </button>
+    <div class="rider-bottom">
+      <div class="income-entries">
+        <div class="income-entry">
+          <button class="rider-btn" @click="goIncome">我的收入</button>
+        </div>
+        <div class="income-entry">
+          <button class="rider-btn" @click="goEvaluation">我的评价</button>
+        </div>
+        <div class="income-entry">
+          <button class="rider-btn" @click="goException">我的异常</button>
+        </div>
+        <div class="income-entry">
+          <button class="rider-btn" @click="goMessage">
+            消息中心<span class="msg-badge" v-if="unread > 0">{{ unread > 99 ? '99+' : unread }}</span>
+          </button>
+        </div>
+      </div>
+      <div class="hall-entry">
+        <button class="rider-btn primary" @click="goHall">进入抢单大厅</button>
+      </div>
     </div>
   </div>
 
   <script src="/backend/plugins/vue/vue.js"></script>
   <script src="/backend/plugins/axios/axios.min.js"></script>
   <script src="/front/js/vant.min.js"></script>
-  <script src="/rider/js/request.js"></script>
+  <script src="/rider/js/request.js?v=20260930"></script>
   <script src="/rider/js/api.js"></script>
-  <script src="/rider/js/util.js"></script>
+  <script src="/rider/js/util.js?v=20260930"></script>
   <script src="/rider/js/location.js"></script>
   <script>RiderLocation.start();</script>
   <script>

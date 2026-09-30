@@ -11,7 +11,7 @@
          与 common.css（→common-el.css，token 化副本）重复加载，统一由后者单源提供 -->
     <link rel="stylesheet" href="styles/common.css?v=20260926" />
     <link rel="stylesheet" href="styles/index.css?v=20260926" />
-    <link rel="stylesheet" href="styles/design-system.css?v=20260926" />
+    <link rel="stylesheet" href="styles/design-system.css?v=20260930" />
     <!-- Remix Icon v4.6 — 2700+ 免费商用图标，替代原 iconfont（仅7个图标） -->
     <link href="plugins/remixicon/remixicon.css" rel="stylesheet" />
     <style>
@@ -211,8 +211,8 @@
     <script src="plugins/element-ui/index.js?v=20260915"></script>
     <!-- 引入axios -->
     <script src="plugins/axios/axios.min.js"></script>
-    <script src="js/request.js?v=20260926"></script>
-    <script src="js/components.js?v=20260924"></script>
+    <script src="js/request.js?v=20260930"></script>
+    <script src="js/components.js?v=20260930"></script>
     <script src="./api/login.js?v=20260926"></script>
     <script src="./api/sys.js?v=20260928"></script>
     <script src="./api/employee.js?v=20260922"></script>
@@ -340,6 +340,7 @@
                 { id: '9-16', name: '租户管理', url: 'page/tenant/list.html?v=20260922', icon: 'ri-building-2-line', roles: ['SUPER_ADMIN'] },
                 { id: '9-17', name: '门店管理', url: 'page/store/list.html', icon: 'ri-store-line' },
                 { id: '9-18', name: '总部看板', url: 'page/store/dashboard.html', icon: 'ri-bar-chart-box-line' },
+                { id: '9-19', name: '店铺设置', url: 'page/store/shop-settings.html?v=20260930', icon: 'ri-store-2-line' },
                 { id: '9-1', name: '员工管理', url: 'page/employee/list.html?v=20260922', icon: 'ri-user-settings-line' },
                 { id: '9-2', name: '角色管理', url: 'page/sys/role-list.html', icon: 'ri-shield-user-line', roles: ['SUPER_ADMIN'] },
                 { id: '9-3', name: '考勤管理', url: 'page/attendance/attendance.html', icon: 'ri-calendar-check-line' },

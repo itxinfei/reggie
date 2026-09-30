@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>骑手登录</title>
   <link rel="stylesheet" href="/front/styles/vant.min.css">
-  <link rel="stylesheet" href="/shared/styles/tokens.css">
+  <link rel="stylesheet" href="/shared/styles/tokens.css?v=20260930b">
   <link rel="stylesheet" href="/backend/plugins/remixicon/remixicon.css">
-  <link rel="stylesheet" href="/rider/css/rider.css">
+  <link rel="stylesheet" href="/rider/css/rider.css?v=20260930e">
 </head>
 <body>
   <div id="app">
@@ -26,7 +26,7 @@
       </van-cell-group>
       <div class="login-extra">
         <van-checkbox v-model="rememberMe" icon-size="16px">记住我（30天免登录）</van-checkbox>
-        <span class="forgot-link" @click="openForgot">忘记密码</span>
+        <button type="button" class="forgot-link" @click="openForgot">忘记密码</button>
       </div>
       <div class="rider-actions">
         <button class="rider-btn primary" :disabled="loading" @click="onLogin">
@@ -47,10 +47,10 @@
                      @input="fPhoneError = ''"></van-field>
           <van-field v-model="fCode" label="验证码" type="tel" maxlength="6" placeholder="请输入短信验证码">
             <template #button>
-              <span class="code-link" :class="{ disabled: codeCooldown > 0 || codeSending }"
+              <button type="button" class="code-link" :class="{ disabled: codeCooldown > 0 || codeSending }"
                     @click="sendCode">
                 {{ codeCooldown > 0 ? codeCooldown + 's后重发' : (codeSending ? '发送中…' : '获取验证码') }}
-              </span>
+              </button>
             </template>
           </van-field>
           <van-field v-model="fPassword" label="新密码" type="password" maxlength="20"
@@ -70,7 +70,7 @@
   <script src="/backend/plugins/vue/vue.js"></script>
   <script src="/backend/plugins/axios/axios.min.js"></script>
   <script src="/front/js/vant.min.js"></script>
-  <script src="/rider/js/request.js"></script>
+  <script src="/rider/js/request.js?v=20260930"></script>
   <script src="/rider/js/api.js"></script>
   <script>
     Vue.use(vant);

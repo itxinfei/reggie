@@ -701,7 +701,8 @@
   color: var(--color-text-hint);
 }
 #add_order .coupon-popup .coupon-empty a {
-  color: var(--color-primary);
+  /* 2026-09-30 审查：白底 13px 金色链接仅 1.6:1，改深棕金档（图标类 .tm-check/.coupon-check 保留品牌金） */
+  color: var(--color-primary-text-strong);
   text-decoration: underline;
   margin-left: 4rem;
 }

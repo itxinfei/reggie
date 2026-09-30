@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>任务详情</title>
   <link rel="stylesheet" href="/front/styles/vant.min.css">
-  <link rel="stylesheet" href="/shared/styles/tokens.css">
+  <link rel="stylesheet" href="/shared/styles/tokens.css?v=20260930b">
   <link rel="stylesheet" href="/backend/plugins/remixicon/remixicon.css">
-  <link rel="stylesheet" href="/rider/css/rider.css">
+  <link rel="stylesheet" href="/rider/css/rider.css?v=20260930e">
 </head>
 <body>
   <div id="app">
@@ -91,7 +91,9 @@
           <div class="exc-title">上报配送异常</div>
           <div class="exc-types">
             <span v-for="(label, val) in excTypeMap" :key="val" class="exc-type"
-                  :class="{ on: excType === Number(val) }" @click="excType = Number(val)">{{ label }}</span>
+                  :class="{ on: excType === Number(val) }" role="button" tabindex="0"
+                  :aria-pressed="excType === Number(val)"
+                  @click="excType = Number(val)" @keyup.enter="excType = Number(val)" @keyup.space.prevent="excType = Number(val)">{{ label }}</span>
           </div>
           <van-field v-model="excDesc" type="textarea" rows="3" maxlength="200"
                      show-word-limit placeholder="请描述遇到的问题"></van-field>
@@ -108,7 +110,9 @@
           <div class="exc-title">转单给其他骑手</div>
           <div class="tr-list" v-if="transferRiders.length">
             <div v-for="r in transferRiders" :key="r.id" class="tr-item"
-                 :class="{ on: transferRiderId === r.id }" @click="transferRiderId = r.id">
+                 :class="{ on: transferRiderId === r.id }" role="button" tabindex="0"
+                 :aria-pressed="transferRiderId === r.id"
+                 @click="transferRiderId = r.id" @keyup.enter="transferRiderId = r.id" @keyup.space.prevent="transferRiderId = r.id">
               <span>{{ r.name }}</span>
               <small>在途 {{ r.currentOrderCount || 0 }} 单</small>
             </div>
@@ -127,7 +131,7 @@
         <div class="exc-pop">
           <div class="exc-title">取餐核销</div>
           <div class="pickup-code-tip">请输入门店提供的 6 位取餐码完成核销</div>
-          <van-field class="pickup-code-field" v-model="pickupCodeInput" type="digit"
+          <van-field class="pickup-code-field" v-model="pickupCodeInput" type="digit" label="取餐码"
                      maxlength="6" clearable placeholder="6 位取餐码" input-align="center"></van-field>
           <div class="exc-actions">
             <van-button block @click="showPickupCode = false">取消</van-button>
@@ -150,9 +154,9 @@
   <script src="/backend/plugins/vue/vue.js"></script>
   <script src="/backend/plugins/axios/axios.min.js"></script>
   <script src="/front/js/vant.min.js"></script>
-  <script src="/rider/js/request.js"></script>
+  <script src="/rider/js/request.js?v=20260930"></script>
   <script src="/rider/js/api.js"></script>
-  <script src="/rider/js/util.js"></script>
+  <script src="/rider/js/util.js?v=20260930"></script>
   <script src="/rider/js/location.js"></script>
   <script>RiderLocation.start();</script>
   <script>
@@ -163,7 +167,7 @@
           t: null, busy: '', id: '', loadError: false, errorMsg: '', seq: 0, timer: null,
           // 异常上报与转单（修改点 P0-3）
           showException: false, excType: 1, excDesc: '', excSubmitting: false,
-          excTypeMap: { 1: '联系不上顾客', 2: '商品破损', 3: '地址有误', 4: '顾客拒收', 5: '申请转单', 6: '其他' },
+          excTypeMap: RiderUtil.excTypeMap,
           showTransfer: false, transferRiders: [], transferRiderId: null, transferSubmitting: false,
           // 取餐码核销（Vant2 无 Dialog.prompt，改用 popup 输入）
           showPickupCode: false, pickupCodeInput: '', pickupSubmitting: false
@@ -302,8 +306,7 @@
           }).catch(function () { /* 取消或失败 */ }).then(function () { vm.busy = ''; });
         },
         goBack: function () {
-          window.history.length > 1 ? window.history.back()
-            : (window.location.href = '/rider/index.html');
+          RiderUtil.back();
         },
         // 修改点(P0-3)：上报异常
         openException: function () {

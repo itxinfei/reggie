@@ -134,11 +134,15 @@
 }
 
 /* 失败态：列表请求失败时替代空态，避免把后端故障误导成"本来就没数据"。
-   复用 .ds-table-empty 的间距口径，仅图标换成警示色。 */
+   与空态做明确视觉区分：警示红字 + 浅红底/红边框 + 「刷新重试」按钮，让用户一眼识别是"出错了"而非"没数据"。 */
 .ds-table-error {
-  padding: 48px 0 40px;
+  padding: 36px 16px;
   text-align: center;
-  color: var(--text-muted);
+  color: var(--color-danger-text, #c0392b);
+  background: var(--color-danger-light, #fef0f0);
+  border: 1px solid var(--color-danger, #f56c6c);
+  border-radius: var(--radius-md, 8px);
+  margin: 16px;
 }
 .ds-table-error i {
   font-size: 52px;
@@ -149,12 +153,15 @@
 .ds-table-error p {
   margin-top: 12px;
   font-size: var(--font-size-base);
-  color: var(--text-muted);
+  color: var(--color-danger-text, #c0392b);
 }
 .ds-table-error .ds-table-empty__hint {
   margin-top: 4px;
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
+}
+.ds-table-error__retry {
+  margin-top: 16px;
 }
 
 /* 分页区域：.pageList 已由 consistency.css 单一定义（text-align 居中 + margin-top 20px），
@@ -347,21 +354,13 @@
   background: var(--bg-subtle);
   border-bottom: 2px solid var(--color-brand-300);
 }
-/* 修改点(2026-09-01)：全站表格统一居中，金额/数字列不再默认右对齐；
-   .is-right 仅作为页面显式覆盖的兜底通道（等宽数字保留） */
+/* 修改点(2026-09-01)：全站表格统一居中，金额/数字列不再默认右对齐。
+   三态对齐（is-left/is-center/is-right）已由 consistency.css 以 `.is-*/.cell` + !important 单一真源统一，
+   此处禁止再写 text-align（避免与真源争夺、造成回退漂移）。
+   仅保留 is-right 数字列的等宽数字特性（tabular-nums），对齐交由 consistency.css 处理。 */
 .crud-table-wrapper .tableBox.el-table td.is-right,
 .crud-table-wrapper .tableBox.el-table th.is-right {
-  text-align: right;
   font-variant-numeric: tabular-nums;
-}
-/* 修改点：补全表头/单元格对齐类，让 header-align 与 align 同步生效（Element 默认 th 为 left，需显式 center） */
-.crud-table-wrapper .tableBox.el-table td.is-center,
-.crud-table-wrapper .tableBox.el-table th.is-center {
-  text-align: center;
-}
-.crud-table-wrapper .tableBox.el-table td.is-left,
-.crud-table-wrapper .tableBox.el-table th.is-left {
-  text-align: left;
 }
 /* 表格单元格内文本垂直居中 + 溢出省略 */
 .crud-table-wrapper .tableBox.el-table td .cell {
@@ -482,9 +481,11 @@
  * ============================================================ */
 /* el-tabs 选中态：主题金 #ffc200 白底仅 1.62:1 → 文字安全金 4.97:1 */
 .el-tabs__item.is-active { color: var(--color-brand-text) !important; }
-/* el-tag--dark 实色彩底 + 白字：底色加深至白字≥4.5:1 */
-.el-tag--dark.el-tag--primary { background: #8f6a00; border-color: #8f6a00; }
-.el-tag--dark.el-tag--success { background: #2e7d32; border-color: #2e7d32; }
-.el-tag--dark.el-tag--warning { background: #a16207; border-color: #a16207; }
-.el-tag--dark.el-tag--danger  { background: #c0392b; border-color: #c0392b; }
-.el-tag--dark.el-tag--info    { background: #6f7276; border-color: #6f7276; }
+/* el-tag--dark 实色彩底 + 白字：底色统一引用令牌（单一真源，详见 tokens.css）。
+   success/warning/danger 复用 --color-*-dark（色值与旧硬编码完全一致，零视觉回归）；
+   primary 用 --color-brand-solid(#8f6a00)；info 用 --color-info-solid(#656b78，由 #6f7276 加深达标)。 */
+.el-tag--dark.el-tag--primary { background: var(--color-brand-solid, #8f6a00); border-color: var(--color-brand-solid, #8f6a00); }
+.el-tag--dark.el-tag--success { background: var(--color-success-dark, #2e7d32); border-color: var(--color-success-dark, #2e7d32); }
+.el-tag--dark.el-tag--warning { background: var(--color-warning-dark, #a16207); border-color: var(--color-warning-dark, #a16207); }
+.el-tag--dark.el-tag--danger  { background: var(--color-danger-dark, #c0392b); border-color: var(--color-danger-dark, #c0392b); }
+.el-tag--dark.el-tag--info    { background: var(--color-info-solid, #656b78); border-color: var(--color-info-solid, #656b78); }

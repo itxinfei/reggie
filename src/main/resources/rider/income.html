@@ -2,14 +2,14 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>我的收入</title>
   <link rel="stylesheet" href="/front/styles/vant.min.css">
-  <link rel="stylesheet" href="/shared/styles/tokens.css">
+  <link rel="stylesheet" href="/shared/styles/tokens.css?v=20260930b">
   <link rel="stylesheet" href="/backend/plugins/remixicon/remixicon.css">
-  <link rel="stylesheet" href="/rider/css/rider.css">
+  <link rel="stylesheet" href="/rider/css/rider.css?v=20260930e">
   <style>
-    /* 收入页专用样式（使用设计令牌，不硬编码 hex） */
+    /* 收入页专用样式（已迁移至设计令牌：修正孤儿令牌名与裸 hex，对比度达标） */
     .income-summary {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -21,31 +21,31 @@
       border-radius: 12px;
       padding: 12px 8px;
       text-align: center;
-      background: var(--bg-soft, #f6f7f9);
+      background: var(--bg-hover, #f5f5f5);
     }
     .inc-num {
       font-size: 18px;
       font-weight: 700;
-      color: var(--color-primary, #ff6b35);
+      color: var(--color-primary-text-strong, #955f00);
       line-height: 1.2;
     }
     .inc-num.small { font-size: 15px; }
     .inc-label {
       margin-top: 4px;
       font-size: 12px;
-      color: var(--text-secondary, #8a8f99);
+      color: var(--color-text-secondary, #666666);
     }
     .inc-section-title {
       padding: 14px 14px 6px;
       font-size: 13px;
-      color: var(--text-secondary, #8a8f99);
+      color: var(--color-text-secondary, #666666);
     }
     .income-item {
       margin: 0 14px 10px;
       padding: 12px;
       border-radius: 12px;
       background: var(--bg-card, #fff);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      box-shadow: var(--shadow-sm);
     }
     .inc-row {
       display: flex;
@@ -54,16 +54,16 @@
     }
     .inc-row .num {
       font-weight: 600;
-      color: var(--text-primary, #1f2329);
+      color: var(--color-text-primary, #333333);
     }
     .inc-fee {
       font-weight: 700;
-      color: var(--color-primary, #ff6b35);
+      color: var(--color-primary-text-strong, #955f00);
     }
     .inc-sub {
       margin-top: 6px;
       font-size: 12px;
-      color: var(--text-secondary, #8a8f99);
+      color: var(--color-text-secondary, #666666);
     }
     .inc-badge {
       display: inline-block;
@@ -72,8 +72,8 @@
       font-size: 11px;
       margin-left: 6px;
     }
-    .inc-badge.on { color: #1aab5b; background: rgba(26,171,91,0.12); }
-    .inc-badge.off { color: #f56c6c; background: rgba(245,108,108,0.12); }
+    .inc-badge.on { color: var(--color-success-text, #0a7a3f); background: rgba(7,193,96,0.12); }
+    .inc-badge.off { color: var(--color-danger-text, #b3372a); background: rgba(233,78,60,0.12); }
     .account-bar {
       display: flex;
       align-items: center;
@@ -81,18 +81,18 @@
       margin: 12px 14px 0;
       padding: 16px;
       border-radius: 14px;
-      background: linear-gradient(135deg, var(--color-primary, #ff6b35), #ff8f5e);
-      color: #fff;
+      background: linear-gradient(135deg, var(--color-primary, #ffc200), var(--color-primary-dark, #ff9a00));
+      color: var(--color-primary-text);
     }
     .acc-num { font-size: 24px; font-weight: 700; line-height: 1.1; }
     .acc-label { margin-top: 4px; font-size: 12px; opacity: 0.9; }
     .acc-sub {
       padding: 8px 16px 0;
       font-size: 12px;
-      color: var(--text-secondary, #8a8f99);
+      color: var(--color-text-secondary, #666666);
     }
     .apply-box { padding: 18px 16px 24px; }
-    .apply-title { font-size: 16px; font-weight: 600; color: var(--text-primary, #1f2329); margin-bottom: 12px; }
+    .apply-title { font-size: 16px; font-weight: 600; color: var(--color-text-primary, #333333); margin-bottom: 12px; }
     .apply-actions { display: flex; gap: 12px; margin-top: 16px; }
   </style>
 </head>
@@ -155,7 +155,7 @@
             <span class="inc-fee">¥{{ RiderUtil.money(r.income) }}</span>
           </div>
           <div class="inc-sub">
-            {{ formatTime(r.orderTime) }}
+            {{ RiderUtil.formatTime(r.orderTime) }}
             · 里程 {{ r.distance }}km
             · 时长 {{ r.durationMin == null ? '--' : r.durationMin + '分钟' }}
             <span class="inc-badge" :class="r.onTime ? 'on' : 'off'">{{ r.onTime ? '准时' : '超时' }}</span>
@@ -173,8 +173,8 @@
           <span class="inc-badge" :class="badgeClass(w.status)">{{ statusText(w.status) }}</span>
         </div>
         <div class="inc-sub">
-          {{ formatTime(w.applyTime) }}
-          <span v-if="w.reviewTime"> · 审核于 {{ formatTime(w.reviewTime) }}</span>
+          {{ RiderUtil.formatTime(w.applyTime) }}
+          <span v-if="w.reviewTime"> · 审核于 {{ RiderUtil.formatTime(w.reviewTime) }}</span>
           <span v-if="w.remark"> · {{ w.remark }}</span>
         </div>
       </div>
@@ -197,9 +197,9 @@
   <script src="/backend/plugins/vue/vue.js"></script>
   <script src="/backend/plugins/axios/axios.min.js"></script>
   <script src="/front/js/vant.min.js"></script>
-  <script src="/rider/js/request.js"></script>
+  <script src="/rider/js/request.js?v=20260930"></script>
   <script src="/rider/js/api.js"></script>
-  <script src="/rider/js/util.js"></script>
+  <script src="/rider/js/util.js?v=20260930"></script>
   <script>
     Vue.use(vant);
     new Vue({
@@ -290,11 +290,8 @@
           if (!y) return '0.00';
           return (x / y).toFixed(2);
         },
-        formatTime: function (t) {
-          return this.RiderUtil.formatTime(t);
-        },
         goBack: function () {
-          window.location.href = '/rider/index.html';
+          RiderUtil.back();
         }
       }
     }).$mount('#app');

@@ -44,3 +44,86 @@
     win.addEventListener('resize', requestRecalc, false);
     doc.addEventListener('DOMContentLoaded', recalc, false); // 兜底
 })(document, window);
+
+/* ============================================================
+ * 品牌动态化（R-21-A 配套 · 店铺品牌化，2026-09-30）
+ * 本文件被全端页面（/front/index.html 与 /front/page/*.html）加载，
+ * 在此一处把写死的"瑞吉外卖"替换为真实店铺名（/restaurant/info 匿名可访问）。
+ * 策略：sessionStorage 缓存 10 分钟 → 接口失败静默（保留写死文案兜底）。
+ * ============================================================ */
+(function (doc, win) {
+    var BRAND_CACHE_KEY = 'reggieBrandInfo';
+    var BRAND_CACHE_TTL = 10 * 60 * 1000;
+    var DEFAULT_BRAND = '瑞吉外卖';
+
+    function readCache() {
+        try {
+            var raw = win.sessionStorage.getItem(BRAND_CACHE_KEY);
+            if (!raw) return null;
+            var data = JSON.parse(raw);
+            if (!data || !data.name || !data.ts || (Date.now() - data.ts > BRAND_CACHE_TTL)) {
+                return null;
+            }
+            return data;
+        } catch (e) { return null; }
+    }
+
+    function writeCache(data) {
+        try { win.sessionStorage.setItem(BRAND_CACHE_KEY, JSON.stringify(data)); } catch (e) { /* 隐私模式等场景忽略 */ }
+    }
+
+    // 相对路径规范化为上下文绝对路径（/front/page/ 下的页面按相对路径引用图片会 404）
+    function normalizeLogo(url) {
+        if (!url) return null;
+        if (/^https?:\/\//.test(url) || url.charAt(0) === '/') return url;
+        return '/' + url;
+    }
+
+    function applyBrand(info) {
+        if (!info || !info.name || info.name === DEFAULT_BRAND) return;
+        // 1) 标题：各页 <title> 均含写死的"瑞吉外卖"，运行时替换，免逐页改文件
+        if (doc.title && doc.title.indexOf(DEFAULT_BRAND) !== -1) {
+            doc.title = doc.title.split(DEFAULT_BRAND).join(info.name);
+        }
+        // 2) 头部店名/Logo（元素存在才替换，防御式；首页主体由 Vue 读取 /restaurant/info 数据驱动）
+        var nameEl = doc.querySelector('.rc-name');
+        if (nameEl && nameEl.textContent.indexOf(DEFAULT_BRAND) !== -1) {
+            nameEl.textContent = info.name;
+        }
+        var logoUrl = normalizeLogo(info.logo);
+        if (logoUrl) {
+            var logoEl = doc.querySelector('.rc-logo');
+            if (logoEl && logoEl.tagName === 'IMG') {
+                logoEl.setAttribute('src', logoUrl);
+            }
+        }
+    }
+
+    function loadBrand() {
+        var cached = readCache();
+        if (cached) { applyBrand(cached); return; }
+        if (typeof win.fetch !== 'function') return;
+        try {
+            win.fetch('/restaurant/info', { credentials: 'same-origin' })
+                .then(function (res) { return res.ok ? res.json() : null; })
+                .then(function (json) {
+                    if (!json || json.code !== 1 || !json.data) return;
+                    var data = { name: json.data.name, logo: json.data.logo, ts: Date.now() };
+                    writeCache(data);
+                    applyBrand(data);
+                })
+                .catch(function () { /* 静默：网络异常保留写死文案兜底 */ });
+        } catch (e) { /* 静默 */ }
+    }
+
+    if (doc.title && doc.title.indexOf(DEFAULT_BRAND) !== -1) {
+        loadBrand();
+        // Vue 渲染的首页店名可能晚于本次替换，DOM 就绪后再兜底一次
+        if (doc.readyState === 'loading') {
+            doc.addEventListener('DOMContentLoaded', function () {
+                var cached = readCache();
+                if (cached) { applyBrand(cached); }
+            }, false);
+        }
+    }
+})(document, window);

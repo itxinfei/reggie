@@ -2,29 +2,29 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>我的评价</title>
   <link rel="stylesheet" href="/front/styles/vant.min.css">
-  <link rel="stylesheet" href="/shared/styles/tokens.css">
+  <link rel="stylesheet" href="/shared/styles/tokens.css?v=20260930b">
   <link rel="stylesheet" href="/backend/plugins/remixicon/remixicon.css">
-  <link rel="stylesheet" href="/rider/css/rider.css">
+  <link rel="stylesheet" href="/rider/css/rider.css?v=20260930e">
   <style>
     .eval-summary {
       display: flex; align-items: center; gap: 14px;
       margin: 14px; padding: 18px; border-radius: 14px;
-      background: linear-gradient(135deg, var(--color-primary, #ff6b35), #ff8f5e); color: #fff;
+      background: linear-gradient(135deg, var(--color-primary, #ffc200), var(--color-primary-dark, #ff9a00)); color: var(--color-primary-text);
     }
     .eval-score { font-size: 34px; font-weight: 700; line-height: 1; }
     .eval-meta { font-size: 13px; opacity: 0.92; }
-    .eval-section-title { padding: 14px 14px 6px; font-size: 13px; color: var(--text-secondary, #8a8f99); }
-    .eval-item { margin: 0 14px 10px; padding: 12px; border-radius: 12px; background: var(--bg-card, #fff); box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .eval-section-title { padding: 14px 14px 6px; font-size: 13px; color: var(--color-text-secondary, #666666); }
+    .eval-item { margin: 0 14px 10px; padding: 12px; border-radius: 12px; background: var(--bg-card, #fff); box-shadow: var(--shadow-sm); }
     .eval-head { display: flex; align-items: center; justify-content: space-between; }
-    .eval-user { font-size: 14px; color: var(--text-primary, #1f2329); font-weight: 600; }
-    .eval-time { font-size: 12px; color: var(--text-secondary, #8a8f99); }
-    .eval-content { margin-top: 6px; font-size: 13px; color: var(--text-primary, #1f2329); }
+    .eval-user { font-size: 14px; color: var(--color-text-primary, #333333); font-weight: 600; }
+    .eval-time { font-size: 12px; color: var(--color-text-secondary, #666666); }
+    .eval-content { margin-top: 6px; font-size: 13px; color: var(--color-text-primary, #333333); }
     .eval-tags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
-    .eval-tag { padding: 2px 8px; border-radius: 10px; font-size: 11px; background: rgba(255,107,53,0.12); color: var(--color-primary, #ff6b35); }
-    .eval-reply { margin-top: 6px; padding: 8px; border-radius: 8px; background: var(--bg-soft, #f6f7f9); font-size: 12px; color: var(--text-secondary, #8a8f99); }
+    .eval-tag { padding: 2px 8px; border-radius: 10px; font-size: 11px; background: rgba(255,154,0,0.12); color: var(--color-primary-text); }
+    .eval-reply { margin-top: 6px; padding: 8px; border-radius: 8px; background: var(--bg-hover, #f5f5f5); font-size: 12px; color: var(--color-text-secondary, #666666); }
   </style>
 </head>
 <body>
@@ -47,7 +47,7 @@
             <span class="eval-user">{{ e.anonymous === 1 ? '匿名用户' : (e.userName || '顾客') }}</span>
             <van-rate :value="e.starRating" :size="14" disabled></van-rate>
           </div>
-          <div class="eval-time">{{ formatTime(e.createTime) }}</div>
+          <div class="eval-time">{{ RiderUtil.formatTime(e.createTime) }}</div>
           <div class="eval-content" v-if="e.content">{{ e.content }}</div>
           <div class="eval-tags" v-if="e.tagsParsed && e.tagsParsed.length">
             <span class="eval-tag" v-for="t in e.tagsParsed" :key="t">{{ t }}</span>
@@ -62,9 +62,9 @@
   <script src="/backend/plugins/vue/vue.js"></script>
   <script src="/backend/plugins/axios/axios.min.js"></script>
   <script src="/front/js/vant.min.js"></script>
-  <script src="/rider/js/request.js"></script>
+  <script src="/rider/js/request.js?v=20260930"></script>
   <script src="/rider/js/api.js"></script>
-  <script src="/rider/js/util.js"></script>
+  <script src="/rider/js/util.js?v=20260930"></script>
   <script>
     Vue.use(vant);
     new Vue({
@@ -109,11 +109,8 @@
             vm.refreshing = false;
           });
         },
-        formatTime: function (t) {
-          return this.RiderUtil.formatTime(t);
-        },
         goBack: function () {
-          window.location.href = '/rider/index.html';
+          RiderUtil.back();
         }
       }
     }).$mount('#app');

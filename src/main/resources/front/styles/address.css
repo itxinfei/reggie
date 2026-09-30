@@ -174,9 +174,10 @@ body.scrollable-page {
   margin-left: -6rem;
   transition: color 0.2s;
 }
-/* 修改点：默认地址行 —— 选中态整行金色 + 文案加粗 */
+/* 修改点：默认地址行 —— 选中态整行高亮 + 文案加粗
+   （2026-09-30 审查：原用 --color-primary #ffc200 做白底 16px 文字仅 1.62:1，改深棕金档） */
 #address .divContent .divItem .divDefault.isDefault {
-  color: var(--color-primary);
+  color: var(--color-primary-text-strong);
 }
 #address .divContent .divItem .divDefault.isDefault .defaultText {
   font-weight: 600;

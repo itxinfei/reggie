@@ -150,6 +150,30 @@ public interface StoreService {
      */
     StoreInfo findByTenantId(Long tenantId);
 
+    /**
+     * 按门店档案主键（store_info.id）反查所属租户 ID（公开端点租户解析用，R-21-A）
+     * <p>LoginCheckFilter 对匿名公开请求解析 ?storeId= 参数时调用；
+     * 走 {@code @InterceptorIgnore} 跨租户查询，仅返回 tenant_id，不暴露门店档案。</p>
+     *
+     * @param storeId store_info 主键
+     * @return 所属 tenantId；门店不存在返回 null
+     */
+    Long findTenantIdByStoreId(Long storeId);
+
+    /**
+     * 商家自助更新店铺设置（R-21-A 配套，店铺品牌化）
+     * <p>白名单字段：店名/Logo 写 tenant 表，公告/营业时间写 store_info 表；
+     * 均仅更新非 null 字段，目标租户由调用方传入（应为当前登录租户），
+     * 无门店档案时自动创建最小档案，保证 C 端信息有处可落。</p>
+     *
+     * @param tenantId       目标租户（= 当前登录租户）
+     * @param name           店铺名称（null 不修改）
+     * @param logo           Logo 路径（null 不修改）
+     * @param notice         门店公告（null 不修改）
+     * @param businessHours  营业时间（null 不修改）
+     */
+    void updateShopSettings(Long tenantId, String name, String logo, String notice, String businessHours);
+
     // ==================== 集团汇总看板 ====================
 
     /**

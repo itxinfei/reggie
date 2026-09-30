@@ -535,6 +535,7 @@
 
 /* 统一输入卡片（豆包风格大圆角容器） */
 .composer {
+  position: relative;
   border: 1px solid var(--border-default);
   border-radius: 14px;
   background: var(--bg-surface);
@@ -545,6 +546,53 @@
   border-color: var(--color-brand-500);
   box-shadow: 0 2px 14px rgba(255, 194, 0, 0.16);
 }
+
+/* 智能输入提示面板（搜索联想模式）：悬浮于输入框上方 */
+.sug-panel {
+  position: absolute;
+  left: 0; right: 0; bottom: calc(100% + 8px);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.12));
+  padding: 4px;
+  z-index: 30;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.sug-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: var(--font-size-sm, 13px);
+  color: var(--text-primary);
+  text-align: left;
+  font-family: inherit;
+}
+.sug-item i { color: var(--color-brand-500, #f5a623); flex-shrink: 0; }
+.sug-item.active, .sug-item:hover { background: var(--bg-hover, rgba(0, 0, 0, 0.05)); }
+.sug-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sug-src {
+  flex-shrink: 0;
+  font-size: var(--font-size-xs, 11px);
+  color: var(--text-muted);
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  padding: 0 6px;
+  line-height: 18px;
+}
+
 .composer-input {
   display: block; width: 100%;
   border: none; outline: none; resize: none;

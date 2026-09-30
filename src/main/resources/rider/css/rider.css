@@ -225,7 +225,7 @@ html, body {
 
 .forgot-link,
 .code-link {
-  color: var(--color-primary-dark);
+  color: var(--color-primary-text-strong);
 }
 
 .code-link.disabled {
@@ -246,7 +246,8 @@ html, body {
 .rider-statusbar .who small { color: var(--color-text-secondary); font-weight: 400; margin-left: 6px; }
 
 /* 底部固定「抢单大厅」入口 */
-.hall-entry {
+/* 底部操作条：4 个次级入口一行 + 主 CTA（进入抢单大厅）固定底部 */
+.rider-bottom {
   position: fixed;
   left: 0;
   right: 0;
@@ -256,8 +257,18 @@ html, body {
   border-top: 1px solid var(--border-light);
   box-shadow: var(--shadow-bar-top);
 }
+.income-entries {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.income-entry { flex: 1; min-width: 0; }
+.income-entry .rider-btn { width: 100%; font-size: var(--font-size-sm); padding: 0 4px; }
+.hall-entry .rider-btn { width: 100%; }
 
-.rider-page.has-bar { padding-bottom: 84px; }
+/* 底部固定条为双行（4 入口 + 主 CTA，约 108px），预留高度须随之放大，
+   否则最后一张任务卡的「确认接单」会被条子压住 */
+.rider-page.has-bar { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
 
 /* 列表卡片内的小按钮 */
 .mini-btn {
@@ -354,6 +365,31 @@ html, body {
   .rider-btn:active, .tool-btn:active, .mini-btn:active { transform: none; }
 }
 
+/* a11y：统一键盘焦点环（P0 修复：骑手端原无任何焦点样式，键盘/读屏用户无法定位焦点）
+   文字链接型控件（忘记密码/获取验证码/退出）改为 <button> 后去除默认外观，保留文字链接观感 */
+:focus-visible {
+  outline: 2px solid var(--color-primary-text-strong);
+  outline-offset: 2px;
+}
+button.forgot-link, button.code-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--color-primary-text-strong);
+  cursor: pointer;
+}
+button.code-link.disabled { color: var(--color-text-hint, #999); cursor: not-allowed; }
+button.nav-logout {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
 /* ================================================================
    品牌金主题与卡片层次（渐变/阴影已合并回各组件主定义，此处只保留
    无法归入组件的主题覆盖与交互装饰）
@@ -361,7 +397,7 @@ html, body {
 
 /* Vant Tabs：选中下划线与文字由默认红改为品牌金 */
 .van-tabs__line { background: var(--color-primary); }
-.van-tab.van-tab--active { color: var(--color-primary-dark); font-weight: 600; }
+.van-tab.van-tab--active { color: var(--color-primary-text-strong); font-weight: 600; }
 
 /* 任务卡左侧状态竖条（绝对定位装饰，不占内容、不引起位移）：
    待接单/配送中金色，已完成灰色，已取消/已退款不显示 */
@@ -389,6 +425,11 @@ html, body {
 
 /* 导航标题更明确 */
 .van-nav-bar__title { font-weight: 600; }
+/* 蓝金族补漏(2026-09-30 实测)：骑手端走 van-nav-bar/van-switch，Vant 默认蓝 #1989fa
+   与品牌冲突——返回箭头/右侧操作文字改深棕金，接单开关开启态改品牌金 */
+.van-nav-bar .van-icon,
+.van-nav-bar__text { color: var(--color-primary-text-strong); }
+.van-switch--on { background-color: var(--color-primary); border-color: var(--color-primary); }
 .hall-entry .rider-btn { border-radius: var(--radius-md); }
 
 /* 错误态重试按钮：居中等宽，不使用列表全宽规格 */

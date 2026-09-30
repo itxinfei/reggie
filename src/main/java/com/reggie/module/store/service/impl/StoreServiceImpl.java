@@ -688,6 +688,69 @@ public class StoreServiceImpl implements StoreService {
         return storeInfoMapper.findByTenantId(tenantId);
     }
 
+    /**
+     * 按门店档案主键反查所属租户（公开端点租户解析用，R-21-A）。
+     * 走 {@code @InterceptorIgnore} 跨租户方法：调用方（LoginCheckFilter）此时无登录会话。
+     */
+    @Override
+    public Long findTenantIdByStoreId(Long storeId) {
+        if (storeId == null) {
+            return null;
+        }
+        StoreInfo storeInfo = storeInfoMapper.findByIdIgnoreTenant(storeId);
+        return storeInfo == null ? null : storeInfo.getTenantId();
+    }
+
+    /**
+     * 商家自助更新店铺设置（店铺品牌化，R-21-A 配套）。
+     * <p>与 {@link #updateStore} 的差异：仅面向"店铺设置"四字段（店名/Logo/公告/营业时间），
+     * 权限校验由控制器层 {@code @RequireEmployee} + 强制当前租户完成；无门店档案时自动建最小档案
+     * （storeCode 用 "S"+tenantId 保证唯一，类型为直营总店），避免公告/营业时间无处可落。</p>
+     */
+    @Override
+    public void updateShopSettings(Long tenantId, String name, String logo, String notice, String businessHours) {
+        if (tenantId == null) {
+            throw new CustomException("缺少租户上下文，无法更新店铺设置");
+        }
+        // 1) 店名 / Logo → tenant 表（UpdateWrapper 白名单字段，敏感字段不可被覆盖）
+        boolean tenantDirty = false;
+        UpdateWrapper<Tenant> tenantWrapper = new UpdateWrapper<>();
+        tenantWrapper.eq("id", tenantId);
+        if (name != null) {
+            tenantWrapper.set("name", name);
+            tenantDirty = true;
+        }
+        if (logo != null) {
+            tenantWrapper.set("logo", logo);
+            tenantDirty = true;
+        }
+        if (tenantDirty) {
+            tenantService.update(tenantWrapper);
+        }
+        // 2) 公告 / 营业时间 → store_info 表（无档案自动建最小档案）
+        StoreInfo storeInfo = storeInfoMapper.findByTenantId(tenantId);
+        if (storeInfo == null) {
+            StoreInfo created = new StoreInfo();
+            created.setTenantId(tenantId);
+            created.setStoreCode("S" + tenantId);
+            created.setStoreType(StoreInfo.TYPE_HEADQUARTER);
+            created.setNotice(notice);
+            created.setBusinessHours(businessHours);
+            storeInfoMapper.insert(created);
+            log.info("[店铺设置] 租户{}无门店档案，已自动创建最小档案", tenantId);
+            return;
+        }
+        UpdateWrapper<StoreInfo> storeWrapper = new UpdateWrapper<>();
+        storeWrapper.eq("tenant_id", tenantId);
+        if (notice != null) {
+            storeWrapper.set("notice", notice);
+        }
+        if (businessHours != null) {
+            storeWrapper.set("business_hours", businessHours);
+        }
+        storeInfoMapper.update(null, storeWrapper);
+    }
+
     // ==================== 集团汇总看板 ====================
 
     /**

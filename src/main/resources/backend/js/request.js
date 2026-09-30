@@ -1,3 +1,8 @@
+/**
+ * 后台管理端请求封装：axios 实例 + CSRF 自动带头 + 统一响应/未登录处理。
+ * 依赖全局 axios、ELEMENT/ReggieUI；CSRF 存取与请求拦截复用 /shared/js/request-core.js。
+ */
+document.write('<script src="/shared/js/request-core.js?v=20260930"><\/script>');
 (function (win) {
   axios.defaults.headers['Content-Type'] = 'application/json;charset=utf-8'
   // 创建axios实例
@@ -7,74 +12,20 @@
     // 超时
     timeout: 30000
   })
-  // request拦截器
-  // 修改点：移除手动GET参数拼接代码，axios原生支持params序列化，无需手动处理
-  // 修改点：自动携带CSRF Token（从Cookie或SessionStorage获取）
-  service.interceptors.request.use(config => {
-    // 为POST/PUT/DELETE/PATCH请求添加CSRF Token（后端 CsrfFilter 同样校验 PATCH）
-    var method = (config.method || 'get').toLowerCase();
-    if (method === 'post' || method === 'put' || method === 'delete' || method === 'patch') {
-      var csrfToken = getCsrfToken();
-      if (csrfToken) {
-        config.headers['X-CSRF-Token'] = csrfToken;
-      }
-    }
-    return config
-  }, error => {
-      return Promise.reject(error)
-  })
-
-  /**
-   * 获取CSRF Token
-   * 优先从Cookie获取，其次从SessionStorage获取
-   */
-  function getCsrfToken() {
-    // 尝试从Cookie获取
-    var cookies = document.cookie.split(';');
-    for (var i = 0; i < cookies.length; i++) {
-      var cookie = cookies[i].trim();
-      if (cookie.startsWith('csrfToken=')) {
-        return cookie.substring('csrfToken='.length);
-      }
-    }
-    // 尝试从SessionStorage获取
-    try {
-      return sessionStorage.getItem('csrfToken');
-    } catch (e) {
-      return null;
-    }
+  // request拦截器：写操作带 CSRF 头（统一实现见 /shared/js/request-core.js）。
+  // 注意：document.write 注入的脚本在本文件顶层代码「之后」才执行，
+  // 故 core 未就绪时先登记 pending 列表，由其加载完成时统一补挂。
+  if (win.ReggieCsrf) {
+    win.ReggieCsrf.attachRequestInterceptor(service, win.ReggieCsrf.get);
+  } else {
+    (win.__reggieCsrfPending = win.__reggieCsrfPending || []).push(service);
   }
 
   // 暴露给 el-upload 等绕过 axios 的上传场景复用同一 Token（如 /common/upload、/employee/import）
-  win.getCsrfToken = getCsrfToken;
-
-  /**
-   * 保存CSRF Token到Cookie和SessionStorage
-   */
-  function saveCsrfToken(token) {
-    if (!token) return;
-    try {
-      // 保存到SessionStorage
-      sessionStorage.setItem('csrfToken', token);
-      // 保存到Cookie（有效期30分钟，与后端同步）
-      var expires = new Date(Date.now() + 30 * 60 * 1000).toUTCString();
-      document.cookie = 'csrfToken=' + encodeURIComponent(token) + '; expires=' + expires + '; path=/; SameSite=Strict';
-    } catch (e) {
-      console.warn('保存CSRF Token失败', e);
-    }
-  }
-
-  /**
-   * 清除CSRF Token
-   */
-  function clearCsrfToken() {
-    try {
-      sessionStorage.removeItem('csrfToken');
-      document.cookie = 'csrfToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
-    } catch (e) {
-      console.warn('清除CSRF Token失败', e);
-    }
-  }
+  // 惰性取值：调用发生在运行时，此时 request-core 必然已就绪
+  win.getCsrfToken = function () {
+    return win.ReggieCsrf ? win.ReggieCsrf.get() : null;
+  };
 
   /**
    * 未登录统一处理：清理本地登录态，并跳转登录页。
@@ -86,7 +37,7 @@
   var notLoginHandled = false;
   function handleNotLogin() {
     try { localStorage.removeItem('userInfo'); } catch (_) {}
-    clearCsrfToken();
+    win.ReggieCsrf.clear();
     if (notLoginHandled) { return; }
     notLoginHandled = true;
     if (window.self !== window.top) {
@@ -133,7 +84,7 @@
       // 修改点：保存后端返回的CSRF Token
       var csrfToken = res.headers['x-csrf-token'];
       if (csrfToken) {
-        saveCsrfToken(csrfToken);
+        win.ReggieCsrf.save(csrfToken);
       }
       // 修改点：统一code判断，code===0为业务失败，code===1为成功
       const code = res.data ? res.data.code : undefined;

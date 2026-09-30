@@ -26,8 +26,10 @@ function loadEvalKeys(force) {
     if (!force && reggieEvalKeysPromise) return reggieEvalKeysPromise;
     reggieEvalKeysPromise = new Promise(function (resolve) {
         if (typeof $axios !== 'function') { resolve(new Set()); return; }
+        // 后端 /api/dish-evaluation/user/my 的 pageSize 有 @Max(50) 校验，超了会 400 → 兜底空集合，
+        // 「已评价」标记恒为空。取上限 50（最近 50 条评价足以覆盖列表页标记需求）。
         $axios({ url: '/api/dish-evaluation/user/my', method: 'get',
-                 params: { page: 1, pageSize: 200 } })
+                 params: { page: 1, pageSize: 50 } })
             .then(function (res) {
                 var set = new Set();
                 if (res && res.code === 1 && res.data && res.data.records) {

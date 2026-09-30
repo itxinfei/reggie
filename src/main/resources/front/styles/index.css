@@ -478,6 +478,15 @@ select {
   flex-direction: column;
   overflow: hidden;
 }
+/* 2026-09-30 审查：slot 直接子级为 van-pull-refresh 的页面（如我的评价），
+   Vant 默认 overflow:hidden 会把超出 shell 剩余高度的列表裁掉且无法滚动，
+   统一在此建立滚动高度链；非直接子级（订单页 divBody 内）不受影响 */
+.cend-page > .van-pull-refresh {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 /* ================================================================
    cend-shell 导航栏（跨页统一；组件不命中各页 .divHead 金色作用域）
@@ -922,6 +931,11 @@ select {
 .van-notify--primary {
   background-color: var(--color-primary) !important;
   color: var(--color-primary-text) !important;
+}
+/* 2026-09-30 审查：错误通知条（request.js type:'warning'）Vant 默认浅橙底 #ff976a + 白字仅 2.1:1，
+   浅底必须深字（同金底深金字规则），深字 on #ff976a ≈ 6.0:1 */
+.van-notify--warning {
+  color: var(--color-text-primary) !important;
 }
 .van-radio__icon--checked .van-icon {
   background-color: var(--color-primary) !important;
