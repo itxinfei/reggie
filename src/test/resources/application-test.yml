@@ -1,7 +1,9 @@
-# 测试环境配置：连接本地 MySQL 独立测试库 reggie_test（一次性初始化见 AGENTS.md「测试库」）。
-# 与开发库 reggie 隔离：reggie 内的真实业务种子数据（user id 1-25 等）会与
-# 测试硬编码主键/空表断言冲突，导致 148 个用例间歇性失败。
-# 红线：schema*.sql 含 DROP TABLE 会重建表、清空数据，严禁把这里指向公网/生产数据库。
+# 测试环境配置：连接本地 MySQL 独立测试库 reggie_test。
+# 【一次性沙盒】reggie_test 由 TestDbProvisioner 在测试上下文刷新前自动管理：
+# 结构指纹（全部 schema*.sql）变化时自动 DROP+CREATE 重建全量表结构，平时复用。
+# 因此：新加表/列只需改 schema*.sql，本库永远不需要手动执行迁移。
+# 红线不变：与开发库 reggie 隔离是刻意的——测试代码含大量 DELETE FROM 清库动作，
+# 指向 reggie 会清空页面展示的业务数据；本库数据是一次性的，可随时丢弃重建。
 server:
   port: 8080
 spring:

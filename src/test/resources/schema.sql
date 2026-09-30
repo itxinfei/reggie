@@ -490,6 +490,7 @@ CREATE TABLE IF NOT EXISTS store_info (
   store_type int NULL DEFAULT NULL COMMENT '门店类型 1:直营总店 2:直营分店 3:加盟',
   parent_tenant_id bigint NULL DEFAULT NULL COMMENT '上级总店tenantId，NULL表示总店本身',
   business_hours varchar(200) NULL DEFAULT NULL COMMENT '营业时间，如 9:00-22:00',
+  notice varchar(200) NULL DEFAULT NULL COMMENT '门店公告，C端首页展示',
   delivery_radius int NULL DEFAULT NULL COMMENT '配送半径(米)',
   min_delivery_amount decimal(10,2) NULL DEFAULT NULL COMMENT '最低起送金额',
   delivery_fee decimal(10,2) NULL DEFAULT NULL COMMENT '配送费',
@@ -956,6 +957,24 @@ CREATE TABLE IF NOT EXISTS ai_prompt_template (
   update_user bigint DEFAULT NULL,
   is_deleted int NOT NULL DEFAULT 0,
   PRIMARY KEY (id)
+);
+
+-- ai_prompt_template_history（模板历史版本快照，与主表同构、无 tenant_id，已加入租户插件白名单）
+CREATE TABLE IF NOT EXISTS ai_prompt_template_history (
+  id bigint NOT NULL AUTO_INCREMENT,
+  template_id bigint NOT NULL,
+  code varchar(64) NOT NULL,
+  scene varchar(50) NOT NULL,
+  type varchar(16) NOT NULL,
+  title varchar(100) NOT NULL,
+  content text NULL,
+  quick_questions varchar(1000) DEFAULT NULL,
+  enabled tinyint(1) NOT NULL DEFAULT 1,
+  version int NOT NULL,
+  operator_id bigint DEFAULT NULL,
+  create_time datetime NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_apt_history_template (template_id, id)
 );
 
 -- ai_user_profile

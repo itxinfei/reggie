@@ -2621,6 +2621,7 @@ CREATE TABLE `store_info` (
   `store_type` tinyint NOT NULL DEFAULT '1' COMMENT '门店类型 1:直营总店 2:直营分店 3:加盟',
   `parent_tenant_id` bigint DEFAULT NULL COMMENT '上级总店tenantId，NULL表示总店本身',
   `business_hours` varchar(100) DEFAULT NULL COMMENT '营业时间，如 9:00-22:00',
+  `notice` varchar(200) DEFAULT NULL COMMENT '门店公告，C端首页展示',
   `delivery_radius` int NOT NULL DEFAULT '3000' COMMENT '配送半径(米)',
   `min_delivery_amount` decimal(10,2) NOT NULL DEFAULT '20.00' COMMENT '最低起送金额',
   `delivery_fee` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '配送费',

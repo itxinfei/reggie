@@ -282,12 +282,15 @@ public class CommonControllerTest {
 
     @Test
     void testDownloadLegacyPathStillRequiresAnyLogin() throws Exception {
-        // 旧相对路径（迁移窗口期兼容）：未登录 401，user 登录可读
+        // 旧相对路径（迁移窗口期兼容）：未登录 401，user 登录可读。
+        // 注意：公开商品目录（images/dishes|setmeal|evaluation|qr|campaign）匿名放行
+        // （见 ImageStoragePathResolver.isLegacyPublicCatalogImage，否则 C 端菜品图 401 裂图），
+        // 故"需登录"的旧路径用例须选非公开目录（avatar/ai 等）。
         mockMvc.perform(get("/common/download")
-                .param("name", "images/dishes/legacy.jpg"))
+                .param("name", "images/avatar/legacy.jpg"))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/common/download")
-                .param("name", "images/dishes/legacy.jpg")
+                .param("name", "images/avatar/legacy.jpg")
                 .sessionAttr("user", 1L)
                 .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk());

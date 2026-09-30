@@ -3,9 +3,6 @@ package com.reggie.test;
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.reggie.config.CoreDataSeeder;
-import com.reggie.config.TableSeeder;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,16 +19,17 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 数据库结构与种子数据健康检查。
+ * 数据库结构与实体对账（只查结构，不做数据要求）。
  *
- * <p>启动期种子器（CoreDataSeeder / TableSeeder）已先执行，本测试为只读对账：</p>
+ * <p>历史版本曾配合 CoreDataSeeder/TableSeeder 校验"每表 ≥10 行种子数据"；
+ * 2026-09-30 起种子器已删除（演示数据改由 db/reggie-demo-data.sql 一次性导入，
+ * 不再启动期造假数据），本测试收敛为纯结构对账：</p>
  * <ol>
  *   <li>实体表 vs 物理表存在对账；</li>
- *   <li>实体字段 vs 物理列对账；</li>
- *   <li>每张物理表至少 10 行（有 tenant_id 按 tenant=1，否则全表）；</li>
- *   <li>关键唯一索引缺失仅告警，不失败。</li>
+ *   <li>实体字段 vs 物理列对账。</li>
  * </ol>
- * <p>表/列/计数问题全部收集后一次性失败，便于一次暴露全部漂移。</p>
+ * <p>问题全部收集后一次性失败，便于一次暴露全部漂移。测试库 reggie_test 的结构
+ * 由 TestDbProvisioner 在上下文刷新前按 schema*.sql 自动重建，此处天然一致。</p>
  *
  * @author reggie
  * @since 2026-09-25
@@ -41,29 +39,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class DatabaseSchemaHealthCheckTest {
 
-    private static final int MIN_ROWS = 10;
-
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    private CoreDataSeeder coreDataSeeder;
-
-    @Autowired
-    private TableSeeder tableSeeder;
-
-    /**
-     * @SpringBootTest 不会执行 ApplicationRunner，这里显式触发种子器（幂等），
-     * 保证全表 ≥10 后再做对账。
-     */
-    @BeforeAll
-    void seed() {
-        coreDataSeeder.run(null);
-        tableSeeder.run(null);
-    }
-
     @Test
-    void databaseShouldMatchEntitiesAndHaveEnoughRows() {
+    void databaseShouldMatchEntities() {
         List<String> problems = new ArrayList<String>();
 
         Set<String> physicalTables = loadPhysicalTables();
@@ -85,19 +65,9 @@ public class DatabaseSchemaHealthCheckTest {
                     problems.add(table + " 缺失列: " + field.getColumn());
                 }
             }
-
-            // 3. 种子计数（记录/结果表豁免：空表是正常业务状态，口径与 TableSeeder 同源）
-            boolean tenantScoped = columns.contains("tenant_id");
-            if (!TableSeeder.ROW_COUNT_EXEMPT.contains(table)) {
-                long count = countRows(table, tenantScoped);
-                if (count < MIN_ROWS) {
-                    problems.add(table + " 行数不足: " + count + " < " + MIN_ROWS
-                            + (tenantScoped ? "（按 tenant_id=1）" : "（全表）"));
-                }
-            }
         }
 
-        // 4. 关键唯一索引（仅告警）
+        // 3. 关键唯一索引（仅告警）
         warnUniqueIndex("employee", "username");
         warnUniqueIndex("permission", "permission_key");
         warnUniqueIndex("orders", "platform_order_id");
@@ -120,13 +90,6 @@ public class DatabaseSchemaHealthCheckTest {
         } catch (Exception ignored) {
             // 告警项不影响结论
         }
-    }
-
-    private long countRows(String table, boolean tenantScoped) {
-        String sql = "SELECT COUNT(1) FROM " + table
-                + (tenantScoped ? " WHERE tenant_id = 1" : "");
-        Long c = jdbcTemplate.queryForObject(sql, Long.class);
-        return c == null ? 0L : c;
     }
 
     private Set<String> loadColumns(String table) {
