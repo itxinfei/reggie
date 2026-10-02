@@ -228,6 +228,8 @@ Vue.component('stat-cards', {
 // 组件2：table-bar — 搜索筛选 + 操作按钮栏
 // ============================================================
 Vue.component('table-bar', {
+  // 组件标志：供 crud-table 自动查找“与我配对”的操作条（经 $options 读取）
+  _reggieBar: true,
   props: {
     /**
      * 搜索项配置数组
@@ -293,6 +295,8 @@ Vue.component('table-bar', {
     })
     return {
       searchValues: values,
+      // 外部组件（如 crud-table）注入的操作按钮，与 props.actions 合并渲染；不污染页面传入的数组
+      extraActions: [],
       // 修改点：日期时间范围选择器的快捷选项，大幅提升筛选效率
       pickerOptions: {
         shortcuts: [{
@@ -418,7 +422,8 @@ Vue.component('table-bar', {
         '  :icon="btn.icon || \'\'"' +
         '  :class="[\'btn-action\', getBtnClass(btn), btn.cssClass || \'\']"' +
         '  :disabled="!!btn.disabled"' +
-        '  @click="$emit(\'action\', { key: btn.key, btn: btn, searchParams: getSearchParams() })"' +
+        '  :loading="!!btn.loading"' +
+        '  @click="onActionClick(btn)"' +
         '>' +
         '  {{ btn.text }}' +
         '</el-button>' +
@@ -428,9 +433,31 @@ Vue.component('table-bar', {
   computed: {
     visibleActions: function () {
       return this.actions.filter(function (btn) { return btn.visible !== false })
+        .concat(this.extraActions.filter(function (btn) { return btn.visible !== false }))
     }
   },
   methods: {
+    /** 操作按钮点击：注入按钮自带 onClick 时直接闭环，普通按钮仍向上 emit('action') 交页面分发 */
+    onActionClick: function (btn) {
+      if (btn && typeof btn.onClick === 'function') {
+        btn.onClick(btn)
+        return
+      }
+      this.$emit('action', { key: btn.key, btn: btn, searchParams: this.getSearchParams() })
+    },
+    /** 供外部组件（crud-table）注入操作按钮，同 key 先移除再写入 */
+    injectAction: function (btn) {
+      if (!btn || !btn.key) return null
+      this.removeAction(btn.key)
+      this.extraActions.push(btn)
+      return btn
+    },
+    /** 按 key 移除已注入按钮 */
+    removeAction: function (key) {
+      var idx = -1
+      this.extraActions.forEach(function (b, i) { if (b.key === key) idx = i })
+      if (idx >= 0) this.extraActions.splice(idx, 1)
+    },
     /** 将传入的 width 转为带 px 的 CSS 值 */
     toWidth: function (w, defaultW) {
       if (w == null) return defaultW
@@ -713,8 +740,11 @@ Vue.component('crud-table', {
   },
   template:
     '<div class="crud-table-wrapper" role="region" :aria-label="ariaLabel || \'数据列表\'">' +
-      // ===== 批量删除工具条（仅开启 batch-delete 时出现；Element 默认外观，零自定义 CSS） =====
-      '<div v-if="batchDelete" style="margin:0 0 10px;">' +
+      // ===== 批量删除兜底工具条 =====
+      // 正常情况下批量删除按钮由 crud-table 自动注入到“配对 table-bar”的操作按钮组，
+      // 与新增/导出等按钮同行、同样式；仅当找不到配对 table-bar（页面结构异常）时，
+      // 才在此渲染兜底按钮，保证删除功能始终可用。
+      '<div v-if="batchDelete && !partnerBar" style="margin:0 0 10px;">' +
       '  <el-button type="danger" size="small" icon="el-icon-delete"' +
       '    :disabled="selectedRows.length === 0"' +
       '    :loading="batchDeleting"' +
@@ -855,7 +885,9 @@ Vue.component('crud-table', {
       /** 批量删除按钮 loading（确认后到全部请求结束） */
       batchDeleting: false,
       /** 最近一次列表请求是否失败。由 request.js 响应拦截器经事件驱动更新（非轮询，避免时序抖动） */
-      listFailed: false
+      listFailed: false,
+      /** 配对到的 table-bar 实例（找到后批量删除按钮注入其操作组；为 null 时显示兜底工具条） */
+      partnerBar: null
     }
   },
   mounted: function () {
@@ -865,10 +897,16 @@ Vue.component('crud-table', {
     this._onListOk = function () { self.listFailed = false }
     window.addEventListener('reggie:list-fail', this._onListFail)
     window.addEventListener('reggie:list-ok', this._onListOk)
+    // 把批量删除按钮注入配对 table-bar 的操作按钮组
+    this.connectBatchBar()
   },
   beforeDestroy: function () {
     window.removeEventListener('reggie:list-fail', this._onListFail)
     window.removeEventListener('reggie:list-ok', this._onListOk)
+    // 销毁前从操作条移除注入按钮，避免残留（如页面被反复重建）
+    if (this.partnerBar && this._batchBtn) {
+      this.partnerBar.removeAction(this._batchBtn.key)
+    }
   },
   watch: {
     page: function (val) {
@@ -951,6 +989,49 @@ Vue.component('crud-table', {
       this.selectedRows = []
     },
     /**
+     * 查找配对 table-bar：从直接父级向上逐层（最多 5 层），
+     * 取该层 children 中位于本组件“之前”、最近的一个 table-bar。
+     * 只看前面的兄弟，避免误连到页面下方不相关的操作条。
+     */
+    findPartnerBar: function () {
+      var ancestor = this.$parent
+      for (var depth = 0; depth < 5 && ancestor; depth++) {
+        var kids = ancestor.$children || []
+        var myIdx = kids.indexOf(this)
+        var start = myIdx >= 0 ? myIdx - 1 : kids.length - 1
+        for (var j = start; j >= 0; j--) {
+          var c = kids[j]
+          if (c && c.$options && c.$options._reggieBar === true) return c
+        }
+        ancestor = ancestor.$parent
+      }
+      return null
+    },
+    /** 把批量删除按钮注入配对 table-bar；选中禁用/loading 由本组件自管，页面无需改动 */
+    connectBatchBar: function () {
+      if (!this.batchDelete) return
+      var bar = this.findPartnerBar()
+      if (!bar) return
+      var self = this
+      this._batchBtn = bar.injectAction({
+        key: '__crudBatchDelete__',
+        text: self.batchDeleteText,
+        type: 'danger',
+        icon: 'el-icon-delete',
+        disabled: self.selectedRows.length === 0,
+        loading: self.batchDeleting,
+        onClick: function () { self.doBatchDelete() }
+      })
+      this.partnerBar = bar
+    },
+    /** 同步注入按钮的禁用/loading（选中变化、删除进行时调用） */
+    syncBatchBtn: function () {
+      var btn = this._batchBtn
+      if (!btn) return
+      btn.disabled = this.selectedRows.length === 0
+      btn.loading = this.batchDeleting
+    },
+    /**
      * 内建批量删除：空选拦截 → 二次确认（显示条数）→ 调用页面传入的删除函数 →
      * 按返回结果统一提示；成功后清选并 emit('batch-deleted') 让页面刷新。
      */
@@ -970,6 +1051,7 @@ Vue.component('crud-table', {
       ReggieUI.confirm(msg, self.batchDeleteTitle, { type: 'warning' })
         .then(function () {
           self.batchDeleting = true
+          self.syncBatchBtn()
           var fn = typeof self.batchDelete === 'function' ? self.batchDelete : self.batchDelete.fn
           return Promise.resolve(fn.call(self, { rows: rows, ids: ids, count: count }))
         })
@@ -997,7 +1079,7 @@ Vue.component('crud-table', {
           var m = (err && err.message) ? err.message : (err || '请稍后重试')
           ReggieUI.error('删除失败：' + m)
         })
-        .finally(function () { self.batchDeleting = false })
+        .finally(function () { self.batchDeleting = false; self.syncBatchBtn() })
     },
     // ---- 内部事件处理 ----
     onSelectionChange: function (val) {
@@ -1006,6 +1088,7 @@ Vue.component('crud-table', {
       this.selectedRows = val
       var ids = val.map(function (row) { return row[idKey] })
       this.$emit('selection-change', { rows: val, ids: ids, count: val.length })
+      this.syncBatchBtn()
     },
     onSortChange: function (sortInfo) {
       this.$emit('sort-change', sortInfo)
