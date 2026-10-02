@@ -49,8 +49,11 @@ public class SystemConfigServiceImpl extends com.baomidou.mybatisplus.extension.
      * @return 返回结果
      */
     @Override
-    @Cacheable(value = "systemConfig", key =
-            "'config:' + #configKey + ':' + (#tenantId != null ? #tenantId : 'global')")
+    @Cacheable(value = "systemConfig",
+            key = "'config:' + #configKey + ':' + (#tenantId != null ? #tenantId : 'global')",
+            unless = "#result == null")
+    // unless：RedisCache 默认禁止缓存 null，未命中的 key 若写 null 会在事务提交后抛
+    // IllegalArgumentException（2026-10-02 缓存经代理真实生效后暴露）
     /**
      * 获取 config。
      * @param configKey 参数 configKey

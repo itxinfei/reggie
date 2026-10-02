@@ -183,7 +183,10 @@ public class EmployeeControllerTest extends BaseControllerTest {
         emp.setName("员工" + id);
         emp.setPassword(PasswordUtils.encodePassword("123456"));
         emp.setPasswordType(SecurityConstants.PASSWORD_TYPE_BCRYPT);
-        emp.setPhone("13700137" + String.format("%03d", id));
+        // 手机号固定用 11 位合法号：不能再用 id 拼接——id 已抬高为 6 位高 ID（990020），
+        // "13700137"+id 会拼成 13 位超过 phone varchar(11)。本方法每用例至多调用一次且经
+        // cleanTables 清理，固定号码不与 990001(13800138000) 或跨租户夹具冲突
+        emp.setPhone("13900139001");
         emp.setStatus(1);
         emp.setSex("1");
         emp.setRole(0);

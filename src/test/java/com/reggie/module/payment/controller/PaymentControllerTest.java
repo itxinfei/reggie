@@ -475,12 +475,11 @@ public class PaymentControllerTest {
     void testUserQuery_not_owner_rejected() throws Exception {
         PaymentOrder po = paymentOrderService.createPaymentOrder(200L, "WECHAT", new BigDecimal("99.99"));
 
-        // LoginCheckFilter 现经 FilterRegistrationBean 注册（2026-10-02），MockMvc 会执行它，
-        // 故登录态以 session 的 user 显式携带（filter 据此 BaseContext.setCurrentId）。
-        // 订单 200 归属用户 1，以用户 2 的身份查询应被归属校验拒绝
-        mockMvc.perform(get("/api/payment/user/query/{tradeNo}", po.getTradeNo())
-                        .sessionAttr("user", 2L)
-                        .sessionAttr("tenantId", 999L))
+        // MockMvc 已在测试侧移除 LoginCheckFilter（见 MockMvcFilterExclusionAutoConfiguration），
+        // session 不再驱动 BaseContext，故当前用户须显式 setCurrentId。
+        // 订单 200 归属用户 1（setUp 设为 1），改成用户 2 查询应被归属校验拒绝
+        BaseContext.setCurrentId(2L);
+        mockMvc.perform(get("/api/payment/user/query/{tradeNo}", po.getTradeNo()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("支付订单不存在"));
