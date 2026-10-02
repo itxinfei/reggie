@@ -54,8 +54,8 @@ node_modules/
 postcss.config.js
 
 # ===== 数据库 =====
-# db/ 下仅增量迁移/建表 SQL 入库；全量备份/导出与 seed 模拟数据（tools/db-sim 生成，
-# 含 91MB 交易流水）仅本地保留，不入库
+# db/ 下仅增量迁移 SQL 入库；全量导出 db/reggie.sql（124 表 + 演示数据）经用户确认
+# 暂不随开源仓库发布，仅本地保留（2026-10-02）
 db/**
 !db/migration/
 !db/migration/**
