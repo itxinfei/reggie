@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -82,6 +82,9 @@
       :show-actions="true" :viewable="true"
       :actions-width="180"
       :actions-fixed="true"
+      row-key="id"
+      :batch-delete="doBatchDelete"
+      @batch-deleted="fetchData()"
       @page-change="onPageChange"
       @size-change="onSizeChange"
       aria-label="配送范围规则列表"
@@ -332,7 +335,7 @@
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js?v=20260930"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../js/common.js?v=20260926"></script>
@@ -719,6 +722,10 @@
           } catch (err) {
             ReggieUI.error('操作失败')
           }
+        },
+        // 批量删除：顺序循环单删接口，汇总成功/失败
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '配送范围', request: deleteRangeRule })
         },
         async handleDelete(row) {
           try {

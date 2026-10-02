@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -194,8 +194,10 @@
         row-key="id"
         :show-actions="true"
         :actions-width="240"
+        :batch-delete="doBatchDelete"
         @page-change="onPageChange"
-        @size-change="onSizeChange">
+        @size-change="onSizeChange"
+        @batch-deleted="onBatchDeleted">
         <template #col-status="{ row }">
           <el-tag :type="statusType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
         </template>
@@ -473,7 +475,7 @@
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../api/inventory.js?v=20260926"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../js/inventory-helper.js?v=20260922"></script>
   <script>
     new Vue({
@@ -1041,6 +1043,13 @@
               else ReggieUI.error(res.msg || '删除失败')
             }).catch(err => { ReggieUI.error('请求失败：' + err) })
           }).catch((err) => { console.warn('[purchase-list] 删除操作取消或失败:', err) })
+        },
+        // 批量删除：顺序循环单删（后端仅 DELETE /api/inventory/purchase-order/{id}；仅草稿/已取消可删）
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '采购单', request: deletePurchase })
+        },
+        onBatchDeleted() {
+          this.init()
         },
         async submitForm() {
           const self = this

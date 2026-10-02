@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -55,8 +55,11 @@
         :show-index="true"
         :show-actions="true"
         :actions-width="240"
+        row-key="id"
+        :batch-delete="doBatchDelete"
         @page-change="onPageChange"
         @size-change="onSizeChange"
+        @batch-deleted="onBatchDeleted"
       >
         <template #col-status="{ row }">
           <el-tag :type="statusTagType(row.status)" size="small">
@@ -198,7 +201,7 @@
   <script src="../../js/request.js?v=20260930"></script>
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260916"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../api/dining.js?v=20260918b"></script>
   <script>
     new Vue({
@@ -481,6 +484,13 @@
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
             })
+        },
+        // 批量删除：顺序循环单删（后端仅 DELETE /api/dining/reservation/{id}；非已取消行可能被拒）
+        doBatchDelete: function(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '预订', request: deleteReservation })
+        },
+        onBatchDeleted: function() {
+          this.init(true)
         }
       }
     })

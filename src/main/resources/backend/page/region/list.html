@@ -52,6 +52,9 @@
         :show-actions="true" :viewable="true"
         :actions-width="120"
         :page-sizes="[10, 20, 30, 50]"
+        row-key="id"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="fetchData()"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -115,7 +118,7 @@
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../api/region.js?v=20260926"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
 <script>
     new Vue({
       el: '#region-app',
@@ -231,6 +234,9 @@
         },
         // 修改点：原 init() 重命名为 fetchData()，由 ReggieListMixin 的翻页/改大小自动调用
         // reloadStats=true 时并行重载统计卡片（初始进入/增删改后）；搜索/卡片筛选时传 false 不重算
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '地区', request: deleteRegion })
+        },
         async fetchData(reloadStats) {
           if (reloadStats === undefined) { reloadStats = true }
           this.loading = true

@@ -72,10 +72,11 @@
             row-key="id"
             :show-actions="true" :viewable="true"
             :actions-width="180"
-            :actions-fixed="true"
+            :batch-delete="doBatchDelete"
             @page-change="onPageChange"
             @size-change="onSizeChange"
             @selection-change="onSelection"
+            @batch-deleted="refreshAll()"
             aria-label="菜品列表"
           >
             <!-- 图片列（缩略图独占一列，点击预览大图） -->
@@ -138,7 +139,7 @@
               <el-button v-if="row.status == '0'" type="text" size="small" class="btn-success" @click="statusHandle(row)">启售</el-button>
               <el-button v-else type="text" size="small" class="btn-warning" @click="statusHandle(row)">停售</el-button>
               <el-dropdown trigger="click"
-                @command="function(cmd){ if(cmd==='stock'){ editStock(row); } else if(cmd==='bom'){ $refs.bomDialog.open(row); } else if(cmd==='delete'){ deleteHandle('单删', row); } }"
+                @command="function(cmd){ if(cmd==='stock'){ editStock(row); } else if(cmd==='bom'){ $refs.bomDialog.open(row); } else if(cmd==='delete'){ deleteHandle(row); } }"
                 @click.native.stop>
                 <el-button type="text" size="small" class="text-info">更多<i class="el-icon-arrow-down el-icon--right"></i></el-button>
                 <el-dropdown-menu slot="dropdown">
@@ -307,7 +308,7 @@
   <script src="../../js/request.js?v=20260930"></script>
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260926"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <!-- 修改点(2026-09-24)：配方编辑弹窗独立组件（须在 Vue 实例创建前引入） -->
   <script src="../../js/food-bom-dialog.js?v=20260924"></script>
   <script src="../../api/food.js?v=20260926"></script>
@@ -342,12 +343,11 @@
           ],
           // 操作按钮配置
           actionConfig: [
-            { key: 'batchDelete', text: '批量删除', type: 'danger' },
             { key: 'batchStart', text: '批量启售', type: 'success' },
             { key: 'batchStop', text: '批量停售', type: 'warning' },
             { key: 'batchCategory', text: '批量改分类', type: 'primary' },
             { key: 'add', text: '+ 新建菜品', type: 'primary' },
-            { key: 'export', text: '导出', type: 'success', icon: 'ri-download-line' }
+            { key: 'export', text: '导出', type: 'success', icon: 'ri-download-line', disabled: true }
           ],
           // 表格列配置
           columns: [
@@ -491,7 +491,6 @@
         onAction: function(payload) {
           var self = this
           switch (payload.key) {
-            case 'batchDelete': self.deleteHandle('批量', null); break
             case 'batchStart': self.statusHandle('1'); break
             case 'batchStop': self.statusHandle('0'); break
             case 'batchCategory': self.openCategoryDialog(); break
@@ -612,7 +611,15 @@
         },
         onPageChange: function(payload) { this.page = payload.page; this.init() },
         onSizeChange: function(payload) { this.pageSize = (payload && payload.pageSize !== undefined) ? payload.pageSize : payload; this.page = 1; this.init() },
-        onSelection: function(payload) { this.checkList = payload.ids || [] },
+        onSelection: function(payload) {
+          this.checkList = payload.ids || []
+          // 导出必须勾选：按勾选数联动（export 在 actionConfig[4]）
+          this.actionConfig[4].disabled = this.checkList.length === 0
+        },
+        // 内建批量删除：deleteDish 需逗号串（axios 默认会把数组序列化成 ids[]=）
+        doBatchDelete: function(payload) {
+          return deleteDish(payload.ids.join(','))
+        },
         // ========== 菜品弹窗 ==========
         addFoodtype: function(st) {
           this.resetDishForm()
@@ -768,15 +775,12 @@
             return file
           }
         },
-        // 修改点：删除确认文案含对象名（8.8 危险动作规范）
-        deleteHandle: function(type, row) {
+        // 单行删除（确认文案含菜品名，危险动作规范；批量删除由 crud-table 内建）
+        deleteHandle: function(row) {
           var self = this
-          var isBatch = type === '批量'
-          if (isBatch && row === null) { if (self.checkList.length === 0) { ReggieUI.error('请选择删除对象'); return } }
-          var msg = isBatch ? '确认删除选中的 ' + self.checkList.length + ' 个菜品？' : '确认删除菜品「' + row.name + '」？'
-          ReggieUI.confirm(msg, '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
+          ReggieUI.confirm('确认删除菜品「' + row.name + '」？', '确定删除', { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' })
             .then(function() {
-              deleteDish(isBatch ? self.checkList.join(',') : row.id).then(function(res) {
+              deleteDish(row.id).then(function(res) {
                 if (res.code === 1) { ReggieUI.success('删除成功！'); self.refreshAll() }
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + err) })
@@ -799,25 +803,17 @@
             })
         },
         exportDishes: async function(format) {
-          // 勾选了行：只导出选中行；未勾选：按当前筛选（名称/编码/售罄状态）导出
-          var hasSelection = this.checkList.length > 0
-          if (!hasSelection && this.counts === 0) {
-            ReggieUI.warning('当前筛选没有可导出的菜品')
+          // 仅导出勾选行（未勾选时导出按钮已禁用）
+          if (this.checkList.length === 0) {
+            ReggieUI.warning('请先勾选要导出的菜品')
             return
           }
-          var params = {}
-          if (hasSelection) {
-            params.ids = this.checkList.join(',')
-          } else {
-            if (this.lastSearch.name) params.name = this.lastSearch.name
-            if (this.lastSearch.code) params.code = this.lastSearch.code
-            if (this.activeFilter !== '' && this.activeFilter !== undefined && this.activeFilter !== null) params.status = this.activeFilter
-          }
+          var params = { ids: this.checkList.join(',') }
           try {
             var ext = format === 'excel' ? 'xlsx' : 'pdf'
             var apiCall = format === 'excel' ? exportApi.exportDishesExcel(params) : exportApi.exportDishesPdf(params)
             await exportApi.downloadFile(apiCall, '菜品数据.' + ext)
-            ReggieUI.success(hasSelection ? ('已导出选中的 ' + this.checkList.length + ' 个菜品') : ('已按当前筛选导出 ' + (this.counts || 0) + ' 个菜品'))
+            ReggieUI.success('已导出选中的 ' + this.checkList.length + ' 个菜品')
           } catch (err) { ReggieUI.error('导出失败：' + (err.message || err)) }
         },
         // 修改点(2026-09-24)：配方编辑方法（editBOM/loadBOMItems/addBOMItem/delBOMItem/

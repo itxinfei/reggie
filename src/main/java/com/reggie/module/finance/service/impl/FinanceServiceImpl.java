@@ -15,7 +15,10 @@ import com.reggie.module.finance.service.FinanceService;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.cost.service.CostService;
 import com.reggie.module.order.model.Orders;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,12 +28,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Finance Service Implementation
@@ -38,6 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author reggie
  * @since 2026-08-11
  */
+@Slf4j
 @Service
 public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper, WithdrawalApplication> implements
         FinanceService {
@@ -52,14 +58,38 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
     private ProfitAnalysisMapper profitAnalysisMapper;
 
     /**
-     * 按 tenantId+platform+date 串行化对账生成请求，防止并发重复生成（TOCTOU）
+     * 对账生成防重锁 key 前缀（后接 tenantId:platform:date）
      */
-    private final ConcurrentHashMap<String, Object> reconciliationLock = new ConcurrentHashMap<>();
+    private static final String RECONCILIATION_LOCK_PREFIX = "finance:reconciliation:generate:";
 
     /**
-     * 按 tenantId+date 串行化利润分析生成请求，防止并发重复生成（TOCTOU）
+     * 利润分析生成防重锁 key 前缀（后接 tenantId:date）
      */
-    private final ConcurrentHashMap<String, Object> profitAnalysisLock = new ConcurrentHashMap<>();
+    private static final String PROFIT_LOCK_PREFIX = "finance:profit:generate:";
+
+    /**
+     * 生成任务分布式锁 TTL（秒）：对账/利润生成需扫描全量订单并聚合成本，按业务耗时上限给足 10 分钟；
+     * 进程崩溃或请求被中断时锁由 Redis 到期自动释放，不会把该周期永久锁死。
+     */
+    private static final long GENERATE_LOCK_TTL_SECONDS = 10 * 60L;
+
+    /**
+     * acquireGenerateLock 返回值哨兵：Redis 不可用（Bean 缺失或连接异常），与 "锁被他人占用" 区分——
+     * 占用必须拒绝，不可用则降级为仅靠落库前查重兜底，不因基础设施抖动阻断功能。
+     */
+    private static final String LOCK_REDIS_UNAVAILABLE = "REDIS_UNAVAILABLE";
+
+    /**
+     * 分布式锁释放脚本：仅当锁值等于本次持有值时才删除，防止 TTL 到期后误删他人持有的锁。
+     */
+    private static final String UNLOCK_LUA =
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+
+    /**
+     * 集群防重锁依赖：可选注入，缺失时生成任务降级为"仅落库前查重"（见 {@link #acquireGenerateLock(String)}）。
+     */
+    @Autowired(required = false)
+    private StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     private OrderService orderService;
@@ -334,13 +364,16 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
      * @return 返回结果
      */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public ReconciliationStatement generateReconciliation(LocalDate date, String platform, Long tenantId) {
-        // 按 tenantId+platform+date 串行化对账生成请求，防止并发重复生成（TOCTOU）
-        String lockKey = (tenantId != null ? tenantId.toString() : "0") + ":" + platform + ":" + date;
-        Object lock = reconciliationLock.computeIfAbsent(lockKey, k -> new Object());
-        synchronized (lock) {
-            // Check if already exists
+        // 集群防重（P0）：Redis SETNX 锁按 tenantId+platform+date 串行化生成请求。
+        // 原先用 JVM 内 ConcurrentHashMap.computeIfAbsent + synchronized 锁对象，多实例部署下各实例各自加锁
+        //＝形同虚设，且锁 Map 的 key 永不清理（只增不减）造成内存泄漏。
+        // 本方法刻意不加 @Transactional：方法体只有一条 insert，autocommit 保证数据在释放锁之前已对其他实例
+        // 可见；若被事务包裹，锁会在事务提交前释放，第二个实例拿到锁后读不到未提交的行，重复生成竞态依旧存在。
+        String lockKey = RECONCILIATION_LOCK_PREFIX + lockTenantPart(tenantId) + ":" + platform + ":" + date;
+        String lockValue = acquireGenerateLock(lockKey);
+        try {
+            // 双保险：落库前按 (tenant_id, 平台, 对账日期) 条件查重，已存在直接返回，不重复生成
             LambdaQueryWrapper<ReconciliationStatement> qw = new LambdaQueryWrapper<>();
             qw.eq(ReconciliationStatement::getStatementDate, date);
             qw.eq(ReconciliationStatement::getPlatform, platform);
@@ -396,6 +429,8 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
 
             reconciliationMapper.insert(statement);
             return statement;
+        } finally {
+            releaseGenerateLock(lockKey, lockValue);
         }
     }
 
@@ -510,13 +545,15 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
      * @return 返回结果
      */
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public ProfitAnalysis generateProfitAnalysis(LocalDate date, Long tenantId) {
-        // 按 tenantId+date 串行化利润分析生成请求，防止并发重复生成（TOCTOU）
-        String lockKey = (tenantId != null ? tenantId.toString() : "0") + ":" + date;
-        Object lock = profitAnalysisLock.computeIfAbsent(lockKey, k -> new Object());
-        synchronized (lock) {
-            // Check if already exists
+        // 集群防重（P0）：Redis SETNX 锁按 tenantId+date 串行化利润生成请求，替换原 JVM 内
+        // ConcurrentHashMap 锁（多实例失效 + 锁 Map 只增不减的内存泄漏）。
+        // 刻意不加 @Transactional（同 generateReconciliation）：方法体只有一条 insert，autocommit
+        // 保证落库先于释放锁对其它实例可见。
+        String lockKey = PROFIT_LOCK_PREFIX + lockTenantPart(tenantId) + ":" + date;
+        String lockValue = acquireGenerateLock(lockKey);
+        try {
+            // 双保险：落库前按 (tenant_id, 分析日期) 条件查重，已存在直接返回，不重复生成
             ProfitAnalysis existing = getProfitAnalysisByDate(date, tenantId);
             if (existing != null) {
                 return existing;
@@ -541,6 +578,70 @@ public class FinanceServiceImpl extends ServiceImpl<WithdrawalApplicationMapper,
             Map<String, Object> costSummary = costService.getCostSummary(date, date, tenantId);
             // 计算利润并保存（等价抽取）
             return buildAndSaveProfitAnalysis(date, tenantId, totalRevenue, orderCount, customerCount, costSummary);
+        } finally {
+            releaseGenerateLock(lockKey, lockValue);
+        }
+    }
+
+    // ==================== 生成任务分布式锁 ====================
+
+    /**
+     * 锁 key 的租户段：入参 tenantId 为空时回退当前登录租户，仍为空则用 "0"（与历史 key 组成一致）。
+     */
+    private String lockTenantPart(Long tenantId) {
+        if (tenantId != null) {
+            return tenantId.toString();
+        }
+        Long current = BaseContext.getCurrentTenantId();
+        return current != null ? current.toString() : "0";
+    }
+
+    /**
+     * 获取生成任务分布式锁：SETNX + TTL，锁值为 UUID 以便释放时做 ownership 校验。
+     * <p>降级口径：锁被他人占用 → fail-closed 拒绝（重复生成会产出重复报表且全量扫描订单）；
+     * Redis 不可用（Bean 缺失或连接异常）→ fail-open 返回哨兵，仅由"落库前查重"兜底，
+     * 与 payment 模块（RefundServiceImpl / PaymentController）保持一致。</p>
+     *
+     * @param lockKey 锁 key
+     * @return 锁值（UUID），或 {@link #LOCK_REDIS_UNAVAILABLE}（Redis 不可用，调用方无需释放）
+     * @throws CustomException 锁被占用："该周期任务正在执行中"
+     */
+    private String acquireGenerateLock(String lockKey) {
+        if (stringRedisTemplate == null) {
+            log.warn("[周期生成] StringRedisTemplate 不可用，降级为仅落库前查重: {}", lockKey);
+            return LOCK_REDIS_UNAVAILABLE;
+        }
+        String lockValue = UUID.randomUUID().toString();
+        try {
+            Boolean success = stringRedisTemplate.opsForValue()
+                    .setIfAbsent(lockKey, lockValue, GENERATE_LOCK_TTL_SECONDS, TimeUnit.SECONDS);
+            if (Boolean.TRUE.equals(success)) {
+                return lockValue;
+            }
+            throw new CustomException("该周期任务正在执行中");
+        } catch (CustomException e) {
+            throw e;
+        } catch (Exception e) {
+            // 宽异常兜底：Redis 故障不外抛堆栈，降级为无锁 + 落库前查重
+            log.error("[周期生成] 获取分布式锁异常，降级为仅落库前查重: {}, error={}", lockKey, e.getMessage(), e);
+            return LOCK_REDIS_UNAVAILABLE;
+        }
+    }
+
+    /**
+     * 释放生成任务分布式锁：Lua 脚本比对锁值后删除，避免误删 TTL 过期后他人重新持有的锁。
+     * 降级路径（哨兵值）不执行任何删除。
+     */
+    private void releaseGenerateLock(String lockKey, String lockValue) {
+        if (stringRedisTemplate == null || lockValue == null || LOCK_REDIS_UNAVAILABLE.equals(lockValue)) {
+            return;
+        }
+        try {
+            stringRedisTemplate.execute(new DefaultRedisScript<Long>(UNLOCK_LUA, Long.class),
+                    Collections.singletonList(lockKey), lockValue);
+        } catch (Exception e) {
+            // 释放失败不影响业务结果，锁最迟在 TTL 到期后自动释放
+            log.warn("[周期生成] 释放分布式锁失败，将由 TTL 兜底过期: {}, error={}", lockKey, e.getMessage(), e);
         }
     }
 

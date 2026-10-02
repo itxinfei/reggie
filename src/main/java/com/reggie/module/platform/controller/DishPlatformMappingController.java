@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
+import com.reggie.common.annotation.RequiresPermission;
 import com.reggie.common.utils.PageUtils;
 import com.reggie.module.platform.model.DishPlatformMapping;
 import com.reggie.module.platform.service.DishPlatformMappingService;
@@ -20,6 +22,10 @@ import java.util.*;
 
 /**
  * 商品平台映射管理控制器
+ * <p>
+ * 后台管理接口（仅员工会话可访问）；写操作需 platform:manage 权限（超管自动放行），
+ * 与 {@link PlatformConfigController} 保持同一鉴权口径。
+ * </p>
  *
  * @author reggie
  * @since 2026-08-24
@@ -124,6 +130,8 @@ public class DishPlatformMappingController {
      */
     @Operation(summary = "新增映射")
     @PostMapping
+    @RequireEmployee
+    @RequiresPermission("platform:manage")
     public R<DishPlatformMapping> add(@Parameter(description = "映射信息（菜品ID、平台类型、平台菜品ID）", required =
             true) @RequestBody DishPlatformMapping mapping) {
         mapping.setIsDeleted(0);
@@ -139,6 +147,8 @@ public class DishPlatformMappingController {
      */
     @Operation(summary = "更新映射")
     @PutMapping
+    @RequireEmployee
+    @RequiresPermission("platform:manage")
     public R<Boolean> update(@Parameter(description = "映射信息（含ID）", required =
             true) @RequestBody DishPlatformMapping mapping) {
         return R.success(mappingService.updateById(mapping));
@@ -151,6 +161,8 @@ public class DishPlatformMappingController {
      */
     @Operation(summary = "删除映射")
     @DeleteMapping("/{id}")
+    @RequireEmployee
+    @RequiresPermission("platform:manage")
     public R<Boolean> delete(@Parameter(description = "映射ID", required = true) @PathVariable Long id) {
         return R.success(mappingService.removeById(id));
     }

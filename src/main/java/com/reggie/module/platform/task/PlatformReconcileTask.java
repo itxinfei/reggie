@@ -1,6 +1,7 @@
 package com.reggie.module.platform.task;
 
 import com.reggie.common.BaseContext;
+import com.reggie.common.RedisLockUtil;
 import com.reggie.module.platform.model.PlatformConfig;
 import com.reggie.module.platform.service.PlatformConfigService;
 import com.reggie.module.platform.service.PlatformReconcileTaskService;
@@ -9,16 +10,11 @@ import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 平台对账定时任务
@@ -38,8 +34,8 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class PlatformReconcileTask {
 
-    /** 分布式锁过期时间（毫秒），对账为批量任务，TTL 设大于普通任务 */
-    private static final long LOCK_TTL_MS = 10 * 60 * 1000L; // 10分钟
+    /** 分布式锁过期时间（秒），对账为批量任务，TTL 设大于普通任务 */
+    private static final long LOCK_TTL_SECONDS = 10 * 60L; // 10分钟
 
     @Autowired
     private PlatformConfigService platformConfigService;
@@ -50,8 +46,8 @@ public class PlatformReconcileTask {
     @Autowired
     private TenantService tenantService;
 
-    @Autowired(required = false)
-    private RedisTemplate<String, Object> redisTemplate;
+    @Autowired
+    private RedisLockUtil redisLockUtil;
 
     /** 修改点(2026-09-15)：平台同步总开关（默认 false）。适配器为占位协议时对账无真实数据可对，
      * 关闭开关可避免无效对账外呼 */
@@ -68,14 +64,8 @@ public class PlatformReconcileTask {
             log.debug("[平台对账] reggie.platform.sync-enabled=false，跳过本次对账");
             return;
         }
-        // 分布式锁防止多实例重复执行（fail-closed：Redis 不可用则跳过）
-        String lockValue = tryLock("platform:lock:reconcile", LOCK_TTL_MS);
-        if (lockValue == null) {
-            log.debug("对账任务正在执行中，跳过本次");
-            return;
-        }
-
-        try {
+        // 分布式锁防止多实例重复执行（fail-closed：拿不到锁=另一实例在执行或 Redis 不可用，跳过本轮）
+        redisLockUtil.executeWithLock("platform:lock:reconcile", LOCK_TTL_SECONDS, () -> {
             log.info("开始执行平台对账任务");
             LocalDate yesterday = LocalDate.now().minusDays(1);
             List<Tenant> tenants = tenantService.listActiveTenants();
@@ -100,9 +90,7 @@ public class PlatformReconcileTask {
                     }
                 }
             }
-        } finally {
-            unlock("platform:lock:reconcile", lockValue);
-        }
+        });
     }
 
     /**
@@ -124,57 +112,6 @@ public class PlatformReconcileTask {
                 // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
                 log.error("对账失败: platformType={}", config.getPlatformType(), e);
             }
-        }
-    }
-
-    // ──────────────────────────────────────
-    // 分布式锁辅助方法（与 OrderTimeoutTask 同模式）
-    // ──────────────────────────────────────
-
-    /**
-     * 尝试获取分布式锁
-     * @param lockKey 锁Key
-     * @param ttlMs 锁过期时间（毫秒）
-     * @return 锁值（UUID），获取失败返回null
-     */
-    private String tryLock(String lockKey, long ttlMs) {
-        if (redisTemplate == null) {
-            // fail-closed：Redis 不可用时跳过本次执行，避免多实例重复对账
-            log.warn("[平台对账] Redis不可用，跳过本次执行（分布式锁获取失败）: {}", lockKey);
-            return null;
-        }
-        try {
-            String lockValue = UUID.randomUUID().toString();
-            Boolean success = redisTemplate.opsForValue()
-                    .setIfAbsent(lockKey, lockValue, ttlMs, TimeUnit.MILLISECONDS);
-            return Boolean.TRUE.equals(success) ? lockValue : null;
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("[平台对账] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
-            return null;
-        }
-    }
-
-    /**
-     * 释放分布式锁（Lua 脚本原子操作：比对锁值后才删除）
-     * @param lockKey 锁Key
-     * @param lockValue 锁值（UUID）
-     */
-    private void unlock(String lockKey, String lockValue) {
-        if (redisTemplate == null || lockValue == null) {
-            return;
-        }
-        try {
-            String luaScript =
-                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
-            redisTemplate.execute(
-                new DefaultRedisScript<Long>(luaScript, Long.class),
-                Collections.singletonList(lockKey),
-                lockValue
-            );
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("[平台对账] 释放分布式锁失败: {}", lockKey, e);
         }
     }
 }

@@ -2,6 +2,7 @@ package com.reggie.module.schedule.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
+import com.reggie.common.RedisLockUtil;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.tenant.model.Tenant;
 import com.reggie.enums.OrderSource;
@@ -15,14 +16,12 @@ import com.reggie.module.order.service.statusflow.OrderStatusFlowService;
 import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -64,8 +63,9 @@ public class OrderTimeoutTask {
     @Autowired
     private TenantService tenantService;
 
-    @Autowired(required = false)
-    private RedisTemplate<String, Object> redisTemplate;
+    /** 公共 Redis 分布式锁工具（fail-closed，见类 Javadoc 与 RedisLockUtil） */
+    @Autowired
+    private RedisLockUtil redisLockUtil;
 
     /** 订单超时检查间隔（毫秒）：5分钟 */
     private static final long ORDER_TIMEOUT_CHECK_INTERVAL = 5 * 60 * 1000L;
@@ -81,8 +81,8 @@ public class OrderTimeoutTask {
     private static final int RECHARGE_TIMEOUT_MINUTES = 30;
     /** 库存预警检查间隔（毫秒）：1小时 */
     private static final long INVENTORY_ALERT_CHECK_INTERVAL = 60 * 60 * 1000L;
-    /** 分布式锁过期时间（毫秒），应大于任务最大执行时间 */
-    private static final long LOCK_TTL_MS = 4 * 60 * 1000L; // 4分钟
+    /** 分布式锁过期时间（秒），应大于任务最大执行时间 */
+    private static final long LOCK_TTL_SECONDS = 4 * 60L; // 4分钟
 
     // ──────────────────────────────────────
     // 配送超时自动确认收货（每 10 分钟）
@@ -92,12 +92,7 @@ public class OrderTimeoutTask {
      */
     @Scheduled(fixedRate = DELIVERY_TIMEOUT_CHECK_INTERVAL)
     public void autoCompleteDeliveredOrders() {
-        String lockValue = tryLock("schedule:lock:delivery-timeout", LOCK_TTL_MS);
-        if (lockValue == null) {
-            log.debug("[定时任务] 配送超时自动完成任务正在执行中，跳过本次");
-            return;
-        }
-        try {
+        redisLockUtil.executeWithLock("schedule:lock:delivery-timeout", LOCK_TTL_SECONDS, () -> {
             List<Tenant> tenants = tenantService.listActiveTenants();
             if (tenants.isEmpty()) {
                 return;
@@ -116,9 +111,7 @@ public class OrderTimeoutTask {
                 log.info("[定时任务] 配送超时自动完成收货完成，共处理 {} 个租户，完成 {} 个订单",
                     tenants.size(), totalCompleted);
             }
-        } finally {
-            unlock("schedule:lock:delivery-timeout", lockValue);
-        }
+        });
     }
 
     /**
@@ -165,14 +158,8 @@ public class OrderTimeoutTask {
      */
     @Scheduled(fixedRate = ORDER_TIMEOUT_CHECK_INTERVAL)
     public void cancelTimeoutOrders() {
-        // 分布式锁防止任务重叠
-        String lockValue = tryLock("schedule:lock:order-timeout", LOCK_TTL_MS);
-        if (lockValue == null) {
-            log.debug("[定时任务] 订单超时取消任务正在执行中，跳过本次");
-            return;
-        }
-
-        try {
+        // 分布式锁防止任务重叠（fail-closed：拿不到锁即另一实例在执行，跳过本轮）
+        redisLockUtil.executeWithLock("schedule:lock:order-timeout", LOCK_TTL_SECONDS, () -> {
             List<Tenant> tenants = tenantService.listActiveTenants();
             if (tenants.isEmpty()) {
                 return;
@@ -195,9 +182,7 @@ public class OrderTimeoutTask {
                 log.info("[定时任务] 订单超时取消完成，共处理 {} 个租户，取消 {} 个订单",
                     tenants.size(), totalCancelled);
             }
-        } finally {
-            unlock("schedule:lock:order-timeout", lockValue);
-        }
+        });
     }
 
     /**
@@ -251,12 +236,7 @@ public class OrderTimeoutTask {
      */
     @Scheduled(fixedRate = RECHARGE_TIMEOUT_CHECK_INTERVAL)
     public void cancelTimeoutRecharges() {
-        String lockValue = tryLock("schedule:lock:recharge-timeout", LOCK_TTL_MS);
-        if (lockValue == null) {
-            log.debug("[定时任务] 充值超时取消任务正在执行中，跳过本次");
-            return;
-        }
-        try {
+        redisLockUtil.executeWithLock("schedule:lock:recharge-timeout", LOCK_TTL_SECONDS, () -> {
             List<Tenant> tenants = tenantService.listActiveTenants();
             if (tenants.isEmpty()) {
                 return;
@@ -275,9 +255,7 @@ public class OrderTimeoutTask {
                 log.info("[定时任务] 充值超时取消完成，共处理 {} 个租户，取消 {} 个充值单",
                         tenants.size(), totalCancelled);
             }
-        } finally {
-            unlock("schedule:lock:recharge-timeout", lockValue);
-        }
+        });
     }
 
     /**
@@ -324,12 +302,7 @@ public class OrderTimeoutTask {
      */
     @Scheduled(cron = "0 0 2 * * ?")
     public void dailyStatistics() {
-        String lockValue = tryLock("schedule:lock:daily-statistics", LOCK_TTL_MS);
-        if (lockValue == null) {
-            log.debug("[定时任务] 每日经营统计任务正在执行中，跳过本次");
-            return;
-        }
-        try {
+        redisLockUtil.executeWithLock("schedule:lock:daily-statistics", LOCK_TTL_SECONDS, () -> {
             List<Tenant> tenants = tenantService.listActiveTenants();
             if (tenants.isEmpty()) {
                 return;
@@ -351,9 +324,7 @@ public class OrderTimeoutTask {
                     BaseContext.remove();
                 }
             }
-        } finally {
-            unlock("schedule:lock:daily-statistics", lockValue);
-        }
+        });
     }
 
     // ──────────────────────────────────────
@@ -364,12 +335,7 @@ public class OrderTimeoutTask {
      */
     @Scheduled(fixedRate = INVENTORY_ALERT_CHECK_INTERVAL)
     public void checkInventoryAlert() {
-        String lockValue = tryLock("schedule:lock:inventory-alert", LOCK_TTL_MS);
-        if (lockValue == null) {
-            log.debug("[定时任务] 库存预警检查正在执行中，跳过本次");
-            return;
-        }
-        try {
+        redisLockUtil.executeWithLock("schedule:lock:inventory-alert", LOCK_TTL_SECONDS, () -> {
             List<Tenant> tenants = tenantService.listActiveTenants();
             if (tenants.isEmpty()) {
                 return;
@@ -383,9 +349,7 @@ public class OrderTimeoutTask {
                     BaseContext.remove();
                 }
             }
-        } finally {
-            unlock("schedule:lock:inventory-alert", lockValue);
-        }
+        });
     }
 
     /**
@@ -420,60 +384,6 @@ public class OrderTimeoutTask {
         if (alertCount > 0) {
             log.warn("[定时任务] 库存预警(tenantId={}): 共{}个食材库存不足。{}",
                 BaseContext.getCurrentTenantId(), alertCount, alertBuilder);
-        }
-    }
-
-    // ──────────────────────────────────────
-    // 分布式锁辅助方法
-    // ──────────────────────────────────────
-
-    /**
-     * 尝试获取分布式锁
-     * @param lockKey 锁Key
-     * @param ttlMs 锁过期时间（毫秒）
-     * @return 锁值（UUID），获取失败返回null
-     */
-    private String tryLock(String lockKey, long ttlMs) {
-        if (redisTemplate == null) {
-            // fail-closed：写操作类定时任务在 Redis 不可用时跳过本次执行，避免多实例重复取消订单
-            log.warn("[定时任务] Redis不可用，跳过本次执行（分布式锁获取失败）: {}", lockKey);
-            return null;
-        }
-        try {
-            // 使用UUID作为锁值，标识持有者身份
-            String lockValue = java.util.UUID.randomUUID().toString();
-            // SET NX EX：原子操作，不存在才设置并过期
-            Boolean success = redisTemplate.opsForValue()
-                    .setIfAbsent(lockKey, lockValue, ttlMs, TimeUnit.MILLISECONDS);
-            return Boolean.TRUE.equals(success) ? lockValue : null;
-        } catch (Exception e) {
-            // fail-closed：获取锁异常时跳过本次执行，避免多实例重复取消订单
-            log.error("[定时任务] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
-            return null;
-        }
-    }
-
-    /**
-     * 释放分布式锁（Lua脚本原子操作：比对锁值后才删除）
-     * @param lockKey 锁Key
-     * @param lockValue 锁值（UUID）
-     */
-    private void unlock(String lockKey, String lockValue) {
-        if (redisTemplate == null || lockValue == null) {
-            return;
-        }
-        try {
-            // Lua脚本：比对锁值后才删除，防止误删他人的锁
-            String luaScript =
-                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
-            redisTemplate.execute(
-                new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
-                java.util.Collections.singletonList(lockKey),
-                lockValue
-            );
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("[定时任务] 释放分布式锁失败: {}", lockKey, e);
         }
     }
 }

@@ -11,6 +11,8 @@
 </head>
 <body>
   <div id="app">
+    <main id="rider-main">
+      <h1 class="sr-only">任务详情</h1>
     <van-nav-bar title="任务详情" left-arrow @click-left="goBack"></van-nav-bar>
 
     <div class="rider-page" v-if="t">
@@ -149,6 +151,7 @@
       <button v-else class="rider-btn primary retry-btn" @click="goIndex">返回工作台</button>
     </div>
     <div class="rider-empty" v-else>加载中…</div>
+  </main>
   </div>
 
   <script src="/backend/plugins/vue/vue.js"></script>

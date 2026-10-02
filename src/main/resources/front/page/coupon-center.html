@@ -14,23 +14,23 @@
     <style>
         /* 仅本页券卡片布局，不另建文件；颜色沿用 Vant 默认 */
         .cc-points-bar { display:flex; align-items:center; justify-content:space-between;
-            background:#fff; border-radius:8px; padding:12px 14px; margin:10px; }
-        .cc-points-bar .pts { font-size:18px; font-weight:600; color:#ee0a24; }
-        .cc-points-bar .go { color:#969799; font-size:13px; }
-        .cc-coupon { display:flex; align-items:stretch; background:#fff; border-radius:8px;
+            background:var(--color-text-white); border-radius:8px; padding:12px 14px; margin:10px; }
+        .cc-points-bar .pts { font-size:18px; font-weight:600; color:var(--c-red); }
+        .cc-points-bar .go { color:var(--c-gray-5); font-size:13px; }
+        .cc-coupon { display:flex; align-items:stretch; background:var(--color-text-white); border-radius:8px;
             margin:0 10px 10px; overflow:hidden; }
-        .cc-left { width:96px; flex:none; background:#ee0a24; color:#fff; display:flex;
+        .cc-left { width:96px; flex:none; background:var(--c-red); color:var(--color-text-white); display:flex;
             flex-direction:column; align-items:center; justify-content:center; padding:10px 0; }
-        .cc-left.is-points { background:#ff976a; }
+        .cc-left.is-points { background:var(--c-orange); }
         .cc-left .big { font-size:22px; font-weight:700; line-height:1.1; }
         .cc-left .unit { font-size:11px; margin-top:2px; opacity:.9; }
         .cc-mid { flex:1; padding:10px 12px; min-width:0; }
-        .cc-name { font-size:15px; font-weight:600; color:#323233;
+        .cc-name { font-size:15px; font-weight:600; color:var(--c-text);
             overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-        .cc-cond { font-size:12px; color:#969799; margin-top:4px; }
-        .cc-exp { font-size:11px; color:#c8c9cc; margin-top:6px; }
+        .cc-cond { font-size:12px; color:var(--c-gray-5); margin-top:4px; }
+        .cc-exp { font-size:11px; color:var(--c-gray-4); margin-top:6px; }
         .cc-right { flex:none; display:flex; align-items:center; padding:0 12px; }
-        .cc-empty { text-align:center; color:#969799; padding:50px 0; font-size:13px; }
+        .cc-empty { text-align:center; color:var(--c-gray-5); padding:50px 0; font-size:13px; }
     </style>
 </head>
 <body>

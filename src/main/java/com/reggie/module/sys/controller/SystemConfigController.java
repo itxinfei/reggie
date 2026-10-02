@@ -4,6 +4,7 @@ import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.BaseContext;
+import com.reggie.common.ObjectMapperHolder;
 import com.reggie.common.R;
 import com.reggie.common.RateLimit;
 import com.reggie.common.annotation.RequiresAdmin;
@@ -68,48 +69,42 @@ public class SystemConfigController {
 
     /**
      * 根路径 PUT — 兼容前端 PUT /sys/config
+     * <p>修复：@RequestBody Object 时 Jackson 只会注入 LinkedHashMap/ArrayList，
+     * 原实现 instanceof SystemConfig 恒为 false，静默不更新任何配置。
+     * 改为显式 convertValue 为 SystemConfig（与 /batch 端点入参同构），
+     * 并保留单对象与数组两种请求体形态的兼容（前端 sys.js configUpdate 发送单对象）。</p>
      */
     @PutMapping
     @RateLimit(maxRequestsPerSecond = 3)
     @Operation(summary = "批量更新配置", description = "批量更新系统配置项")
     public R<String> rootBatchUpdate(
             @Parameter(description = "系统配置列表（configKey/configValue），兼容单对象与数组两种形态", required =
-                    true) @Valid @RequestBody Object body) {
-        // 修改点：根路径 PUT 此前仅接收 List<SystemConfig>，前端 sys.js configUpdate 发送单对象时
-        // Jackson 将对象反序列化到 List 参数失败返回 400。改为 Object 兼容单对象与数组两种形态。
-        List<SystemConfig> configs = null;
+                    true) @RequestBody Object body) {
+        com.fasterxml.jackson.databind.ObjectMapper mapper = ObjectMapperHolder.getDefault();
+        List<SystemConfig> configs = new java.util.ArrayList<>();
         if (body instanceof List) {
-            // 修改点：泛型擦除后逐个转换为 SystemConfig，非 SystemConfig 元素忽略并告警
             for (Object element : (List<?>) body) {
-                if (element instanceof SystemConfig) {
-                    if (configs == null) {
-                        configs = new java.util.ArrayList<>();
-                    }
-                    configs.add((SystemConfig) element);
-                } else {
-                    log.warn("根路径 PUT 配置批量更新：忽略非 SystemConfig 元素 {}", element);
+                if (element == null) {
+                    continue;
+                }
+                try {
+                    configs.add(mapper.convertValue(element, SystemConfig.class));
+                } catch (IllegalArgumentException ex) {
+                    log.warn("根路径 PUT 配置批量更新：无法转换的元素 {} 已忽略", element);
                 }
             }
-        } else if (body instanceof SystemConfig) {
-            SystemConfig single = (SystemConfig) body;
-            configs = new java.util.ArrayList<>();
-            configs.add(single);
+        } else if (body instanceof Map) {
+            try {
+                configs.add(mapper.convertValue(body, SystemConfig.class));
+            } catch (IllegalArgumentException ex) {
+                log.warn("根路径 PUT 配置批量更新：无法转换的请求体，已忽略", ex);
+            }
         } else {
             log.warn("根路径 PUT 配置批量更新：无法识别的请求体类型 {}，已忽略",
                     body == null ? "null" : body.getClass().getName());
         }
-        if (configs != null) {
-            for (SystemConfig config : configs) {
-                if (config.getConfigKey() != null) {
-                    systemConfigService.setConfig(
-                            BaseContext.getCurrentTenantId(),
-                            config.getConfigKey(),
-                            config.getConfigValue()
-                    );
-                }
-            }
-        }
-        return R.success("配置批量更新成功");
+        // 与 /batch 端点逻辑合并：统一走批量 setConfig 更新
+        return batchUpdate(configs);
     }
 
     /**

@@ -35,6 +35,50 @@ document.write('<script src="/shared/js/img-path.js?v=20260924"><\/script>');
 var DIALOG_SIZE = { sm: '420px', md: '560px', lg: '720px', xl: '840px', fullscreen: '92%' }
 
 // ============================================================
+// 公共批量删除 helper：顺序循环调用"单条删除"接口（禁止并发，避开 @RateLimit）
+// 用于后端暂无批量 DELETE 的模块。返回带 __batch 的汇总结果，供 crud-table 统一提示。
+// 用法：RgBatchDeleteByOne({ ids:[1,2], label:'食材', request:(id)=>Promise })
+// ============================================================
+window.RgBatchDeleteByOne = function (opts) {
+  var ids = (opts && opts.ids) || []
+  var label = (opts && opts.label) || '记录'
+  var ok = []
+  var fail = []
+  return ids.reduce(function (chain, id) {
+    return chain.then(function () {
+      return Promise.resolve(opts.request(id))
+        .then(function (res) {
+          if (res && res.code != null && String(res.code) !== '1') {
+            fail.push({ id: id, msg: res.msg || res.message })
+          } else {
+            ok.push(id)
+          }
+        })
+        .catch(function (e) {
+          fail.push({ id: id, msg: (e && e.message) ? e.message : String(e) })
+        })
+    })
+  }, Promise.resolve()).then(function () {
+    var message
+    if (fail.length === 0) {
+      message = '成功删除 ' + ok.length + ' 条' + label
+    } else if (ok.length === 0) {
+      message = '删除失败 ' + fail.length + ' 条' + label
+    } else {
+      message = '成功 ' + ok.length + ' 条，失败 ' + fail.length + ' 条' + label
+    }
+    return {
+      __batch: true,
+      succeedCount: ok.length,
+      failedCount: fail.length,
+      partial: ok.length > 0 && fail.length > 0,
+      message: message,
+      fail: fail
+    }
+  })
+}
+
+// ============================================================
 // 组件1：stat-cards — 数据统计卡片组
 // ============================================================
 Vue.component('stat-cards', {
@@ -642,10 +686,40 @@ Vue.component('crud-table', {
     errorHint: {
       type: String,
       default: '请检查网络后刷新页面重试'
+    },
+    /**
+     * 批量删除：传入 Function({rows, ids, count}) => Promise 即开启；
+     * 也接受配置对象 { fn }。开启后若页面未显式传 selection，组件自动渲染多选列。
+     */
+    batchDelete: {
+      type: [Function, Object],
+      default: null
+    },
+    /** 批量删除按钮文字（默认"批量删除"） */
+    batchDeleteText: {
+      type: String,
+      default: '批量删除'
+    },
+    /** 二次确认文案：字符串或 Function(count, rows) => string；不传用内置文案 */
+    batchDeleteConfirm: {
+      type: [String, Function],
+      default: null
+    },
+    /** 二次确认框标题 */
+    batchDeleteTitle: {
+      type: String,
+      default: '批量删除'
     }
   },
   template:
     '<div class="crud-table-wrapper" role="region" :aria-label="ariaLabel || \'数据列表\'">' +
+      // ===== 批量删除工具条（仅开启 batch-delete 时出现；Element 默认外观，零自定义 CSS） =====
+      '<div v-if="batchDelete" style="margin:0 0 10px;">' +
+      '  <el-button type="danger" size="small" icon="el-icon-delete"' +
+      '    :disabled="selectedRows.length === 0"' +
+      '    :loading="batchDeleting"' +
+      '    @click="doBatchDelete">{{ batchDeleteText }}</el-button>' +
+      '</div>' +
       // ===== 加载骨架屏（首次加载且无数据时显示，替代纯转圈；Element UI 2.15 无 el-skeleton，用纯 CSS 脉冲骨架） =====
       '<div v-if="showSkeleton" class="ds-skeleton-table">' +
         '<div v-for="i in 5" :key="i" class="ds-skeleton-row">' +
@@ -679,7 +753,7 @@ Vue.component('crud-table', {
         '</template>' +
       '</el-table-column>' +
       // 多选列（页面显式传 row-key 时开启跨翻页保留勾选；未传则维持默认单页行为）
-      '<el-table-column v-if="selection" type="selection" align="center" :width="selectionWidth" :reserve-selection="!!rowKey"></el-table-column>' +
+      '<el-table-column v-if="selection || batchDelete" type="selection" align="center" :width="selectionWidth" :reserve-selection="!!rowKey"></el-table-column>' +
       // 行号列
       '<el-table-column v-if="showIndex" type="index" :label="indexLabel" :width="indexWidth" align="center"></el-table-column>' +
       // 数据列
@@ -778,6 +852,8 @@ Vue.component('crud-table', {
       selectedRows: [],
       viewVisible: false,
       viewRow: null,
+      /** 批量删除按钮 loading（确认后到全部请求结束） */
+      batchDeleting: false,
       /** 最近一次列表请求是否失败。由 request.js 响应拦截器经事件驱动更新（非轮询，避免时序抖动） */
       listFailed: false
     }
@@ -808,7 +884,7 @@ Vue.component('crud-table', {
     skeletonCols: function () {
       var n = (this.columns || []).length
       if (this.showActions) n += 1
-      if (this.selection) n += 1
+      if (this.selection || this.batchDelete) n += 1
       if (this.showIndex) n += 1
       return n
     },
@@ -873,6 +949,55 @@ Vue.component('crud-table', {
         this.$refs.elTable.clearSelection()
       }
       this.selectedRows = []
+    },
+    /**
+     * 内建批量删除：空选拦截 → 二次确认（显示条数）→ 调用页面传入的删除函数 →
+     * 按返回结果统一提示；成功后清选并 emit('batch-deleted') 让页面刷新。
+     */
+    doBatchDelete: function () {
+      var self = this
+      var rows = self.selectedRows
+      if (!rows || rows.length === 0) {
+        ReggieUI.warning('请先勾选要删除的记录')
+        return
+      }
+      var idKey = self.rowIdKey || 'id'
+      var ids = rows.map(function (r) { return r[idKey] })
+      var count = rows.length
+      var msg = typeof self.batchDeleteConfirm === 'function'
+        ? self.batchDeleteConfirm(count, rows)
+        : (self.batchDeleteConfirm || ('确认删除选中的 ' + count + ' 条记录？此操作不可恢复。'))
+      ReggieUI.confirm(msg, self.batchDeleteTitle, { type: 'warning' })
+        .then(function () {
+          self.batchDeleting = true
+          var fn = typeof self.batchDelete === 'function' ? self.batchDelete : self.batchDelete.fn
+          return Promise.resolve(fn.call(self, { rows: rows, ids: ids, count: count }))
+        })
+        .then(function (res) {
+          // ① 循环单删 helper 的汇总结果：全失败保留勾选不刷新，部分失败仍刷新已删行
+          if (res && res.__batch) {
+            if (res.succeedCount === 0) {
+              ReggieUI.error(res.message)
+              return
+            }
+            ReggieUI[res.failedCount > 0 ? 'warning' : 'success'](res.message)
+          } else if (res && res.code != null && String(res.code) !== '1') {
+            // ② 页面直接返回后端 R 对象：code 非 1 视为失败
+            ReggieUI.error(res.msg || res.message || '删除失败')
+            return
+          } else {
+            ReggieUI.success('删除成功')
+          }
+          self.clearSelection()
+          self.$emit('batch-deleted', { count: count })
+        })
+        .catch(function (err) {
+          // 用户点取消/关闭遮罩：静默
+          if (err === 'cancel' || err === 'close') return
+          var m = (err && err.message) ? err.message : (err || '请稍后重试')
+          ReggieUI.error('删除失败：' + m)
+        })
+        .finally(function () { self.batchDeleting = false })
     },
     // ---- 内部事件处理 ----
     onSelectionChange: function (val) {

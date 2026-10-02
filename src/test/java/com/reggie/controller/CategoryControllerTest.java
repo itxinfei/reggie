@@ -43,7 +43,8 @@ public class CategoryControllerTest extends BaseControllerTest {
         BaseContext.setCurrentTenantId(999L);
 
         Category category = new Category();
-        category.setId(1L);
+        // 主键用测试专用高 ID，避开 reggie 库租户 1 演示分类占用的小主键（单库改造，2026-10-02）
+        category.setId(991001L);
         category.setName("测试分类");
         category.setType(1);
         category.setSort(1);
@@ -102,17 +103,17 @@ public class CategoryControllerTest extends BaseControllerTest {
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":1,\"name\":\"修改后分类\",\"type\":1,\"sort\":1}")))
+                .content("{\"id\":991001,\"name\":\"修改后分类\",\"type\":1,\"sort\":1}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("分类修改成功"));
 
-        org.junit.jupiter.api.Assertions.assertEquals("修改后分类", categoryService.getById(1L).getName());
+        org.junit.jupiter.api.Assertions.assertEquals("修改后分类", categoryService.getById(991001L).getName());
     }
 
     @Test
     void testGetById() throws Exception {
-        mockMvc.perform(get("/category/1")
+        mockMvc.perform(get("/category/991001")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())

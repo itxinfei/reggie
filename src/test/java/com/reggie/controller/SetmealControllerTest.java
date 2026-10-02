@@ -58,16 +58,17 @@ public class SetmealControllerTest extends BaseControllerTest {
         BaseContext.setCurrentTenantId(999L);
 
         Category category = new Category();
-        category.setId(1L);
+        // 主键用测试专用高 ID，避开 reggie 库租户 1 演示数据占用的小主键（单库改造，2026-10-02）
+        category.setId(991001L);
         category.setName("测试分类");
         category.setType(2);
         category.setSort(1);
         categoryService.save(category);
 
         Setmeal setmeal = new Setmeal();
-        setmeal.setId(1L);
+        setmeal.setId(993001L);
         setmeal.setName("测试套餐");
-        setmeal.setCategoryId(1L);
+        setmeal.setCategoryId(991001L);
         setmeal.setPrice(new BigDecimal("50.00"));
         setmeal.setCode("S001");
         setmeal.setStatus(1);
@@ -78,7 +79,7 @@ public class SetmealControllerTest extends BaseControllerTest {
     void testSave() throws Exception {
         SetmealDto dto = new SetmealDto();
         dto.setName("新套餐");
-        dto.setCategoryId(1L);
+        dto.setCategoryId(991001L);
         dto.setPrice(new BigDecimal("80.00"));
         dto.setCode("S002");
         dto.setStatus(1);
@@ -129,7 +130,7 @@ public class SetmealControllerTest extends BaseControllerTest {
 
     @Test
     void testGetSetmealById() throws Exception {
-        mockMvc.perform(get("/setmeal/1")
+        mockMvc.perform(get("/setmeal/993001")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
@@ -140,9 +141,9 @@ public class SetmealControllerTest extends BaseControllerTest {
     @Test
     void testUpdateSetmeal() throws Exception {
         SetmealDto dto = new SetmealDto();
-        dto.setId(1L);
+        dto.setId(993001L);
         dto.setName("修改后的套餐");
-        dto.setCategoryId(1L);
+        dto.setCategoryId(991001L);
         dto.setPrice(new BigDecimal("60.00"));
         dto.setCode("S001");
         dto.setStatus(1);
@@ -165,22 +166,22 @@ public class SetmealControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("修改套餐成功"));
 
-        org.junit.jupiter.api.Assertions.assertEquals("修改后的套餐", setmealService.getById(1L).getName());
+        org.junit.jupiter.api.Assertions.assertEquals("修改后的套餐", setmealService.getById(993001L).getName());
     }
 
     @Test
     void testUpdateStatus() throws Exception {
         Setmeal setmeal = new Setmeal();
-        setmeal.setId(2L);
+        setmeal.setId(993002L);
         setmeal.setName("状态测试套餐");
-        setmeal.setCategoryId(1L);
+        setmeal.setCategoryId(991001L);
         setmeal.setPrice(new BigDecimal("30.00"));
         setmeal.setCode("S002");
         setmeal.setStatus(1);
         setmealService.save(setmeal);
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/setmeal/status/0")
-                .param("ids", "2")
+                .param("ids", "993002")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)))
@@ -188,21 +189,21 @@ public class SetmealControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("操作成功"));
 
-        org.junit.jupiter.api.Assertions.assertEquals(0, setmealService.getById(2L).getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals(0, setmealService.getById(993002L).getStatus());
     }
 
     @Test
     void testDishList() throws Exception {
         SetmealDish dish = new SetmealDish();
-        dish.setId(1L);
-        dish.setSetmealId(1L);
+        dish.setId(993101L);
+        dish.setSetmealId(993001L);
         dish.setDishId(1L);
         dish.setName("套餐内菜品");
         dish.setPrice(new BigDecimal("20.00"));
         dish.setCopies(2);
         setmealDishService.save(dish);
 
-        mockMvc.perform(get("/setmeal/dish/1")
+        mockMvc.perform(get("/setmeal/dish/993001")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
@@ -213,29 +214,29 @@ public class SetmealControllerTest extends BaseControllerTest {
     @Test
     void testDelete() throws Exception {
         Setmeal setmeal2 = new Setmeal();
-        setmeal2.setId(3L);
+        setmeal2.setId(993003L);
         setmeal2.setName("待删除套餐");
-        setmeal2.setCategoryId(1L);
+        setmeal2.setCategoryId(991001L);
         setmeal2.setPrice(new BigDecimal("40.00"));
         setmeal2.setCode("S003");
         setmeal2.setStatus(0);
         setmealService.save(setmeal2);
 
         mockMvc.perform(withCsrfToken(mockMvc, delete("/setmeal")
-                .param("ids", "3")
+                .param("ids", "993003")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("套餐数据删除成功"));
 
-        org.junit.jupiter.api.Assertions.assertNull(setmealService.getById(3L));
+        org.junit.jupiter.api.Assertions.assertNull(setmealService.getById(993003L));
     }
 
     @Test
     void testList() throws Exception {
         mockMvc.perform(get("/setmeal/list")
-                .param("categoryId", "1")
+                .param("categoryId", "991001")
                 .param("status", "1")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L))

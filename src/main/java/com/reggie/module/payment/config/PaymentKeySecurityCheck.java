@@ -1,5 +1,6 @@
 package com.reggie.module.payment.config;
 
+import com.reggie.common.LocalDevFallback;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -11,10 +12,10 @@ import java.util.Base64;
 /**
  * 支付凭据主密钥安全启动检查。
  * <p>
- * 背景：{@code PaymentCredentialEncryptor} 在 REGGIE_PAYMENT_KEY 未配置时回退到代码内置兜底密钥，
+ * 背景：{@code PaymentCredentialEncryptor} 曾于 REGGIE_PAYMENT_KEY 未配置时静默回退到代码内置兜底密钥，
  * 兜底密钥随仓库公开——生产环境若未配置环境变量，任何人都能用它解密数据库中的支付密钥/私钥。
- * 因此生产（{@code reggie.payment.require-env-key=true}）必须 fail-fast：
- * REGGIE_PAYMENT_KEY 缺失、非法或当前 JDK 不支持 AES-256 时拒绝启动。
+ * 现默认 fail-fast（{@code reggie.payment.require-env-key} 默认 true）：非 dev/test/local 环境下
+ * REGGIE_PAYMENT_KEY 缺失、非法或当前 JDK 不支持 AES-256 时拒绝启动；显式置 false 可关闭（不推荐）。
  * </p>
  *
  * @author reggie
@@ -33,9 +34,11 @@ public class PaymentKeySecurityCheck {
     /**
      * 启动校验：
      * <ul>
-     *   <li>requireEnvKey 开启时，REGGIE_PAYMENT_KEY 必须为合法 32 字节 Base64，且 JDK 支持 AES-256；</li>
      *   <li>2026-09-30 新增：prod profile 下 mock-mode=true 拒绝启动 —— mock 模式会整体跳过
      *       支付/平台回调验签，生产误开等于无验签支付回调（匿名凭 tradeNo+金额即可置已支付）。</li>
+     *   <li>dev/test/local：允许回退 DEV_FALLBACK 兜底密钥，仅显式告警；</li>
+     *   <li>其余环境：requireEnvKey（默认 true）开启时，REGGIE_PAYMENT_KEY 必须为合法 32 字节 Base64，
+     *       且 JDK 支持 AES-256；显式 false 视为知情豁免（打 WARN）。</li>
      * </ul>
      */
     @PostConstruct
@@ -56,13 +59,27 @@ public class PaymentKeySecurityCheck {
         if (paymentConfig.isMockMode()) {
             log.warn("[支付] mock-mode=true：支付/平台回调验签已跳过，仅限开发/演示环境，严禁用于生产！");
         }
-        if (!paymentConfig.isRequireEnvKey()) {
+        String keyBase64 = System.getenv("REGGIE_PAYMENT_KEY");
+        boolean keyMissing = keyBase64 == null || keyBase64.trim().isEmpty();
+        if (LocalDevFallback.isDevLikeProfiles(activeProfiles)) {
+            if (keyMissing) {
+                log.warn("[支付凭据] REGGIE_PAYMENT_KEY 未配置，使用内置 DEV_FALLBACK 兜底密钥"
+                        + "（该密钥随仓库公开，仅限 dev/test/local，严禁用于生产！）");
+            }
             return;
         }
-        String keyBase64 = System.getenv("REGGIE_PAYMENT_KEY");
-        if (keyBase64 == null || keyBase64.trim().isEmpty()) {
-            throw new IllegalStateException("[支付凭据] reggie.payment.require-env-key=true 但未配置 REGGIE_PAYMENT_KEY 环境变量，"
-                    + "生产环境拒绝启动（防止使用内置兜底密钥解密支付凭据）");
+        if (!paymentConfig.isRequireEnvKey()) {
+            if (keyMissing) {
+                log.warn("[支付凭据] 非 dev/test/local 环境显式配置 reggie.payment.require-env-key=false 且未配置 "
+                        + "REGGIE_PAYMENT_KEY：启动放行，但支付凭据加解密会在使用时 fail-fast 抛错"
+                        + "（内置 DEV_FALLBACK 兜底密钥仅限 dev/test/local）");
+            }
+            return;
+        }
+        if (keyMissing) {
+            throw new IllegalStateException("[支付凭据] 未配置 REGGIE_PAYMENT_KEY 环境变量（require-env-key 默认 true），"
+                    + "生产环境拒绝启动（防止使用内置兜底密钥解密支付凭据）；如确需关闭检查须显式配置 "
+                    + "reggie.payment.require-env-key=false");
         }
         byte[] key;
         try {

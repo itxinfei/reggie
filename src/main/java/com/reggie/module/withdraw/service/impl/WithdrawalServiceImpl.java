@@ -12,6 +12,7 @@ import com.reggie.module.withdraw.mapper.WithdrawalRequestMapper;
 import com.reggie.module.withdraw.model.WithdrawalRecord;
 import com.reggie.module.withdraw.model.WithdrawalRequest;
 import com.reggie.module.withdraw.service.WithdrawalService;
+import com.reggie.module.member.model.Member;
 import com.reggie.module.member.service.MemberService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,7 +39,16 @@ public class WithdrawalServiceImpl extends ServiceImpl<WithdrawalRequestMapper, 
     private MemberService memberService;
 
     /**
+     * 单笔提现金额上限（元）：与 {@link WithdrawalRequest} 的 {@code @DecimalMax} 口径一致，
+     * 服务端兜底二次校验（防绕过 Controller @Valid 直接调用 Service 的资金安全场景）。
+     */
+    private static final BigDecimal MAX_WITHDRAWAL_AMOUNT = new BigDecimal("50000.00");
+
+    /**
      * 提交 withdrawal。
+     * <p>资金安全校验（P0，2026-10-02 审查 §2.2-11）：金额非空/正数/单笔上限、申请金额不超当前可提现余额、
+     * 申请人身份取当前会话用户（不采信客户端 userId）。原实现零校验，负额申请可在 approve 时经
+     * {@code deductBalance} 反向加钱。</p>
      * @param request 参数 request
      * @return 返回结果
      */
@@ -48,6 +58,30 @@ public class WithdrawalServiceImpl extends ServiceImpl<WithdrawalRequestMapper, 
         Long tenantId = BaseContext.getCurrentTenantId();
         if (tenantId == null) {
             throw new CustomException("租户上下文不存在");
+        }
+        // 服务端金额兜底断言（不依赖 @Valid 注解路径）：必须 > 0 且不超单笔上限
+        BigDecimal amount = request.getAmount();
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CustomException("提现金额必须大于0");
+        }
+        if (amount.compareTo(MAX_WITHDRAWAL_AMOUNT) > 0) {
+            throw new CustomException("提现金额不能超过" + MAX_WITHDRAWAL_AMOUNT.toPlainString() + "元");
+        }
+        // 申请人身份取当前会话用户，禁止采信客户端传入的 userId（防代他人提交/越权提现）
+        Long applicantId = BaseContext.getCurrentId();
+        if (applicantId == null) {
+            throw new CustomException("登录状态异常，无法提交提现申请");
+        }
+        request.setUserId(applicantId);
+        // 可提现余额校验：申请金额不得超过账户当前余额。账户口径与 approve 扣款一致
+        // （MemberService.deductBalance 以 userId 作为会员ID定位账户），故此处同样按 userId 取会员余额。
+        Member member = memberService.getById(applicantId);
+        if (member == null) {
+            throw new CustomException("会员账户不存在，无法申请提现");
+        }
+        BigDecimal balance = member.getBalance() == null ? BigDecimal.ZERO : member.getBalance();
+        if (amount.compareTo(balance) > 0) {
+            throw new CustomException("提现金额超过当前可提现余额");
         }
         request.setTenantId(tenantId);
         request.setStatus("PENDING");
@@ -75,6 +109,11 @@ public class WithdrawalServiceImpl extends ServiceImpl<WithdrawalRequestMapper, 
         }
         if (!"PENDING".equals(exist.getStatus())) {
             throw new CustomException("仅待审批状态的提现申请可审批");
+        }
+        // 兜底复核金额为正（P0 资金安全，2026-10-02 审查 §2.2-11）：负额/零额申请绝不允许进入扣款，
+        // 防经 deductBalance 反向加钱。deductBalance 自身对 <=0 返回 false，但审批链前置断言不依赖下游实现细节，更稳妥。
+        if (exist.getAmount() == null || exist.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CustomException("提现金额异常，无法审批通过");
         }
         // 审批通过即扣减会员余额：MemberService.deductBalance 内部用原子 SQL
         // (UPDATE member SET balance=balance-amount WHERE id=? AND balance>=amount) 防超扣；
@@ -123,6 +162,11 @@ public class WithdrawalServiceImpl extends ServiceImpl<WithdrawalRequestMapper, 
         }
         if (!"PENDING".equals(exist.getStatus())) {
             throw new CustomException("仅待审批状态的提现申请可审批");
+        }
+        // 兜底复核金额为正（P0 资金安全，2026-10-02 审查 §2.2-11）：异常金额申请在拒绝路径同样拦截，
+        // 避免脏数据流入后续流程。
+        if (exist.getAmount() == null || exist.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CustomException("提现金额异常，无法处理该申请");
         }
         exist.setStatus("REJECTED");
         exist.setRejectReason(rejectReason);

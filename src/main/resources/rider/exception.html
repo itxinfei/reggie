@@ -20,6 +20,8 @@
 </head>
 <body>
   <div id="app">
+    <main id="rider-main">
+      <h1 class="sr-only">我的异常工单</h1>
     <van-nav-bar title="我的异常工单" left-text="返回" left-arrow @click-left="goBack"></van-nav-bar>
 
     <van-pull-refresh v-model="refreshing" @refresh="load" success-text="刷新成功">
@@ -37,6 +39,7 @@
       </div>
       <div class="rider-empty" v-else>{{ refreshing ? '加载中…' : '暂无异常工单' }}</div>
     </van-pull-refresh>
+  </main>
   </div>
 
   <script src="/backend/plugins/vue/vue.js"></script>

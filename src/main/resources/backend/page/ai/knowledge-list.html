@@ -43,6 +43,9 @@
         :show-actions="true"
         :actions-width="180"
         empty-text="暂无知识库文档，可点击右上角「新增文档」创建"
+        row-key="id"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="fetchData(true)"
         @page-change="onPageChange"
         @size-change="onSizeChange">
         <!-- 类型 -->
@@ -127,7 +130,7 @@
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js?v=20260930"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../api/ai.js?v=20260924"></script>
   <script>
     new Vue({
@@ -384,6 +387,14 @@
           })
         },
 
+        /* ========== 批量删除：顺序循环单删，汇总成功/失败 ========== */
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({
+            ids: payload.ids,
+            label: '知识库文档',
+            request: (id) => aiBackendApi.knowledgeDelete(id)
+          })
+        },
         /* ========== 删除（二次确认） ========== */
         onDelete(row) {
           ReggieUI.confirm('确认删除文档「' + row.title + '」？其全部切块将一并删除，且不可恢复。',

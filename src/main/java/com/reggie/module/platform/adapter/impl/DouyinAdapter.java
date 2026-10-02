@@ -2,6 +2,7 @@ package com.reggie.module.platform.adapter.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reggie.common.LogMaskUtils;
 import com.reggie.module.platform.adapter.PlatformAdapter;
 import com.reggie.module.platform.adapter.PlatformOrder;
 import com.reggie.module.platform.model.PlatformConfig;
@@ -88,8 +89,10 @@ public class DouyinAdapter implements PlatformAdapter {
             }
             log.warn("[抖音] 拉单响应异常: status={}", response.getStatusCode());
         } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("[抖音] 拉单失败", e);
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程。
+            // 安全修复（2026-10-02）：RestTemplate 异常消息含带 access_token 的完整 URL，
+            // 只打脱敏后的消息、不打堆栈，防止令牌明文入日志。
+            log.error("[抖音] 拉单失败: {}", LogMaskUtils.maskUrl(e.getMessage()));
         }
         return Collections.emptyList();
     }
@@ -256,7 +259,7 @@ public class DouyinAdapter implements PlatformAdapter {
             return true;
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("[抖音] 健康检查失败", e);
+            log.error("[抖音] 健康检查失败: {}", LogMaskUtils.maskUrl(e.getMessage()));
             return false;
         }
     }
@@ -269,10 +272,10 @@ public class DouyinAdapter implements PlatformAdapter {
             headers.set("access-token", accessToken);
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
             restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-            log.info("[抖音] 调用成功: url={}", url);
+            log.info("[抖音] 调用成功: url={}", LogMaskUtils.maskUrl(url));
         } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("[抖音] 调用失败: url={}", url, e);
+            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程；url 统一脱敏
+            log.error("[抖音] 调用失败: url={}", LogMaskUtils.maskUrl(url), e);
         }
     }
 

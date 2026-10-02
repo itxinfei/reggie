@@ -55,7 +55,8 @@ public class OrderDetailControllerTest {
         orderDetail.setOrderId(1L);
         orderDetailService.save(orderDetail);
 
-        mockMvc.perform(get("/order-detail/1"))
+        mockMvc.perform(get("/order-detail/1")
+                .sessionAttr("employee", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.id").value(1))
@@ -64,7 +65,8 @@ public class OrderDetailControllerTest {
 
     @Test
     void testGetOrderDetailNotFound() throws Exception {
-        mockMvc.perform(get("/order-detail/999"))
+        mockMvc.perform(get("/order-detail/999")
+                .sessionAttr("employee", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("没有找到该对象"));
@@ -82,7 +84,8 @@ public class OrderDetailControllerTest {
         orderDetailService.save(orderDetail);
         Long actualId = orderDetail.getId();
 
-        mockMvc.perform(get("/order-detail/" + actualId))
+        mockMvc.perform(get("/order-detail/" + actualId)
+                .sessionAttr("employee", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.id").value(actualId.toString()))

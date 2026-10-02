@@ -121,7 +121,7 @@ public class SupplierSettlementTest {
     }
 
     @Test
-    void paySettlement_overPayment_allowsOverpayment() {
+    void paySettlement_overPayment_rejected() {
         // 准备供应商和结算单
         Supplier supplier = new Supplier();
         supplier.setTenantId(999L);
@@ -138,10 +138,19 @@ public class SupplierSettlementTest {
         settlement.setStatus("PENDING");
         settlement = settlementService.createSettlement(settlement);
 
-        // 超额付款 1500
-        SupplierSettlement paid = settlementService.paySettlement(settlement.getId(), new BigDecimal("1500.00"));
-        assertEquals(new BigDecimal("1500.00"), paid.getPaidAmount());
-        assertEquals("PAID", paid.getStatus()); // 超过总额也置PAID
+        // P0 修复后：超额付款被拒绝，已付金额与状态保持不动
+        final Long settlementId = settlement.getId();
+        assertThrows(com.reggie.common.CustomException.class,
+                () -> settlementService.paySettlement(settlementId, new BigDecimal("1500.00")));
+        SupplierSettlement unchanged = settlementService.getById(settlementId);
+        assertEquals(0, BigDecimal.ZERO.compareTo(unchanged.getPaidAmount() == null ? BigDecimal.ZERO : unchanged.getPaidAmount()));
+        assertEquals("PENDING", unchanged.getStatus());
+
+        // 正常付款路径仍可分两笔付清
+        settlementService.paySettlement(settlement.getId(), new BigDecimal("600.00"));
+        SupplierSettlement paid = settlementService.paySettlement(settlement.getId(), new BigDecimal("400.00"));
+        assertEquals(new BigDecimal("1000.00"), paid.getPaidAmount());
+        assertEquals("PAID", paid.getStatus());
     }
 
     @Test

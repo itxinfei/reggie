@@ -46,9 +46,10 @@ public class DiningTableControllerTest {
         BaseContext.setCurrentTenantId(999L);
 
         DiningTable table = new DiningTable();
-        table.setId(1L);
+        // 主键 / 区域用测试专用高 ID，避开 reggie 库租户 1 演示数据占用的小主键（单库改造，2026-10-02）
+        table.setId(996001L);
         table.setTenantId(999L);
-        table.setAreaId(1L);
+        table.setAreaId(996101L);
         table.setName("桌台1");
         table.setSeatCount(4);
         table.setStatus("FREE");
@@ -76,7 +77,7 @@ public class DiningTableControllerTest {
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"新桌台\",\"seatCount\":2,\"areaId\":1,\"minAmount\":\"50.00\"}"))
+                .content("{\"name\":\"新桌台\",\"seatCount\":2,\"areaId\":996101,\"minAmount\":\"50.00\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.name").value("新桌台"));
@@ -88,7 +89,7 @@ public class DiningTableControllerTest {
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":1,\"name\":\"修改后桌台\",\"seatCount\":6}"))
+                .content("{\"id\":996001,\"name\":\"修改后桌台\",\"seatCount\":6}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("修改桌台成功"));
@@ -96,7 +97,7 @@ public class DiningTableControllerTest {
 
     @Test
     void testDelete() throws Exception {
-        mockMvc.perform(delete("/api/dining/table/1")
+        mockMvc.perform(delete("/api/dining/table/996001")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
@@ -106,7 +107,7 @@ public class DiningTableControllerTest {
 
     @Test
     void testGetById() throws Exception {
-        mockMvc.perform(get("/api/dining/table/1")
+        mockMvc.perform(get("/api/dining/table/996001")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
@@ -130,7 +131,7 @@ public class DiningTableControllerTest {
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":1,\"status\":\"RESERVED\"}"))
+                .content("{\"id\":996001,\"status\":\"RESERVED\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("修改状态成功"));
@@ -144,7 +145,7 @@ public class DiningTableControllerTest {
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":1,\"status\":\"OCCUPIED\"}"))
+                .content("{\"id\":996001,\"status\":\"OCCUPIED\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value(org.hamcrest.Matchers.containsString("开台")));
@@ -152,7 +153,7 @@ public class DiningTableControllerTest {
 
     @Test
     void testQrcode() throws Exception {
-        mockMvc.perform(get("/api/dining/table/qrcode/1")
+        mockMvc.perform(get("/api/dining/table/qrcode/996001")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
@@ -173,7 +174,7 @@ public class DiningTableControllerTest {
     void testQrcodePoster() throws Exception {
         // 海报端点：返回 base64 PNG（schema-dining 无 tenant，storeName 走空串兜底）
         mockMvc.perform(get("/api/dining/table/qrcode/poster")
-                .param("tableId", "1")
+                .param("tableId", "996001")
                 .param("siteUrl", "http://localhost:8080")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L))
@@ -199,12 +200,12 @@ public class DiningTableControllerTest {
     void testSplitBill_partsExceedsLimit() throws Exception {
         // 先建一个有效订单，确保 @Valid 通过，走到业务层的 parts 上限校验
         Orders master = new Orders();
-        master.setId(2001L);
+        master.setId(996202L);
         master.setNumber("ORD-LIMIT-TEST");
         master.setStatus(OrderStatus.ORDERED.getValue());
         master.setAmount(new BigDecimal("200.00"));
         master.setTenantId(999L);
-        master.setTableId(1L);
+        master.setTableId(996001L);
         master.setOrderTime(LocalDateTime.now());
         orderService.save(master);
 
@@ -212,7 +213,7 @@ public class DiningTableControllerTest {
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"orderId\":2001,\"parts\":21}"))
+                .content("{\"orderId\":996202,\"parts\":21}"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.msg").value("分账份数不能超过20份"));
     }
@@ -222,12 +223,12 @@ public class DiningTableControllerTest {
     void testSplitBill_masterAmountZeroed() throws Exception {
         // 创建主订单
         Orders master = new Orders();
-        master.setId(1001L);
+        master.setId(996201L);
         master.setNumber("ORD-TEST-001");
         master.setStatus(OrderStatus.ORDERED.getValue());
         master.setAmount(new BigDecimal("100.00"));
         master.setTenantId(999L);
-        master.setTableId(1L);
+        master.setTableId(996001L);
         master.setOrderTime(LocalDateTime.now());
         orderService.save(master);
 
@@ -235,12 +236,12 @@ public class DiningTableControllerTest {
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"orderId\":1001,\"parts\":3}"))
+                .content("{\"orderId\":996201,\"parts\":3}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
         // 验证主订单金额归零、状态为 SPLIT
-        Orders masterAfter = orderService.getById(1001L);
+        Orders masterAfter = orderService.getById(996201L);
         assertNotNull(masterAfter);
         assertEquals(0, masterAfter.getAmount().compareTo(BigDecimal.ZERO),
                 "分账后主订单金额应为 0");

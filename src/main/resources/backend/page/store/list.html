@@ -367,7 +367,7 @@
 <script src="../../js/accessibility-utils.js?v=20260927"></script>
 <script src="../../js/performance-utils.js?v=20260926"></script>
 <script src="../../api/store.js?v=20260926"></script>
-<script src="../../js/components.js?v=20260930"></script>
+<script src="../../js/components.js?v=20261002"></script>
 <script>
   new Vue({
     el: '#app',
@@ -463,7 +463,7 @@
                 { key: 'create', text: '新建门店', type: 'primary', icon: 'ri-add-line' },
                 { key: 'batchEnable', text: '批量启用', type: 'warning', icon: 'ri-upload-2-line', disabled: noSelection },
                 { key: 'batchDisable', text: '批量停用', type: 'info', icon: 'ri-download-line', disabled: noSelection },
-                { key: 'export', text: '导出数据', icon: 'ri-download-line' }
+                { key: 'export', text: '导出数据', icon: 'ri-download-line', disabled: noSelection }
             ];
         }
     },
@@ -609,27 +609,30 @@
         },
         doExport: function() {
             var self = this;
-            // 修改点：防重守卫——导出期间禁止重复触发（连点多次调用会创建多个 Blob 下载）
+            // 修改点：防重守卫——导出期间禁止重复触发（连点多次会创建多个 Blob 下载）
             if (self.exporting) return;
+            // 仅导出勾选行（未勾选时按钮已禁用）
+            var rows = self.selection || [];
+            if (!rows.length) { ReggieUI.warning('请先勾选要导出的门店'); return; }
             self.exporting = true;
-            var params = {
-                keyword: self.search.keyword || null,
-                storeType: self.search.storeType,
-                status: self.search.status
-            };
-            ReggieUI.message({ message: '正在导出，请稍候...', type: 'info', duration: 2000 });
-            exportStores(params).then(function(res) {
-                var blob = new Blob([res], { type: 'text/csv;charset=utf-8' });
-                var url = window.URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'store_export_' + new Date().toISOString().slice(0,10) + '.csv';
-                a.click();
-                window.URL.revokeObjectURL(url);
-                ReggieUI.success('导出成功');
-            }).catch(function() {
-                ReggieUI.error('导出失败');
-            }).finally(function() { self.exporting = false; });
+            var esc = function(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+            var header = ['门店名称', '门店编码', '联系人', '状态', '今日订单', '今日营收（元）'];
+            var lines = rows.map(function(r) {
+                var statusText = Number(r.status) === 1 ? '启用' : '停用';
+                return [r.storeName, r.storeCode, r.contactPerson, statusText,
+                        r.todayOrders != null ? r.todayOrders : 0,
+                        r.todayAmount != null ? r.todayAmount : 0].map(esc).join(',');
+            });
+            var csv = '﻿' + header.map(esc).join(',') + '\r\n' + lines.join('\r\n');
+            var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            var url = window.URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'store_export_' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            self.exporting = false;
+            ReggieUI.success('已导出选中的 ' + rows.length + ' 家门店');
         },
 
         // ========== 单行操作 ==========

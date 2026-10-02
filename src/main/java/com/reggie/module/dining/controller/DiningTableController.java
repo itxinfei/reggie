@@ -381,7 +381,15 @@ public class DiningTableController {
     @Operation(summary = "生成桌台二维码", description = "生成桌台扫码点餐二维码（Base64格式）")
     @Parameter(name = "id", description = "桌台ID", required = true)
     public R<String> qrcode(@PathVariable Long id) {
-        DiningTable table = diningTableService.getById(id);
+        // 租户归属校验：按 id + tenantId 查询，防止跨租户生成他门店桌台的点餐二维码
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        LambdaQueryWrapper<DiningTable> checkWrapper = new LambdaQueryWrapper<>();
+        checkWrapper.eq(DiningTable::getId, id)
+                    .eq(DiningTable::getTenantId, tenantId);
+        DiningTable table = diningTableService.getOne(checkWrapper);
         if (table == null) {
             return R.error("桌台不存在");
         }
@@ -414,19 +422,24 @@ public class DiningTableController {
                             @RequestParam("tableId") Long tableId,
                             @Parameter(name = "siteUrl", description = "站点地址（前端传入）")
                             @RequestParam(value = "siteUrl", required = false) String siteUrl) {
-        DiningTable table = diningTableService.getById(tableId);
+        // 租户归属校验：按 id + tenantId 查询，防止跨租户打印他门店桌贴海报
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            return R.error("无操作权限");
+        }
+        LambdaQueryWrapper<DiningTable> checkWrapper = new LambdaQueryWrapper<>();
+        checkWrapper.eq(DiningTable::getId, tableId)
+                    .eq(DiningTable::getTenantId, tenantId);
+        DiningTable table = diningTableService.getOne(checkWrapper);
         if (table == null) {
             return R.error("桌台不存在");
         }
 
         // 门店名取当前租户（tenant 表在多租户白名单内，按 ID 显式查询）
         String storeName = "";
-        Long tenantId = BaseContext.getCurrentTenantId();
-        if (tenantId != null) {
-            com.reggie.module.tenant.model.Tenant tenant = tenantService.getById(tenantId);
-            if (tenant != null && tenant.getName() != null) {
-                storeName = tenant.getName();
-            }
+        com.reggie.module.tenant.model.Tenant tenant = tenantService.getById(tenantId);
+        if (tenant != null && tenant.getName() != null) {
+            storeName = tenant.getName();
         }
 
         String posterBase64 = qrCodeUtil.generateTablePoster(tableId, table.getName(), storeName, siteUrl);

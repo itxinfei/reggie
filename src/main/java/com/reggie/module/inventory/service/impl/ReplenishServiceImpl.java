@@ -3,6 +3,7 @@ package com.reggie.module.inventory.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.transaction.annotation.Transactional;
 import com.reggie.common.BaseContext;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,7 +69,7 @@ import org.springframework.transaction.annotation.Transactional;
  * - 建议采购量：日均消耗 × 补货周期 + 安全库存 - 当前库存
  * </p>
  * <p>
- * Redis 缓存：Key=inventory:replenish:suggest:{tenantId}，TTL=10分钟
+ * Redis 缓存：Key=inventory:replenish:suggest:{tenantId}:days={days}:cycle={replenishCycle}，TTL=10分钟
  * </p>
  *
  * @author reggie
@@ -218,22 +219,27 @@ public class ReplenishServiceImpl implements ReplenishService {
             return empty;
         }
 
-        // 查询近 N 天所有出库记录
-        LocalDateTime since = LocalDateTime.now().minusDays(days);
+        // 查询近 N 天所有出库记录（一次性查询，按物料分组后在内存中计算日均消耗，避免逐物料查流水的 N+1）
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime since = now.minusDays(days);
         LambdaQueryWrapper<StockRecord> outQw = new LambdaQueryWrapper<>();
         outQw.eq(StockRecord::getType, StockRecordType.OUT.getValue());
         outQw.ge(StockRecord::getCreatedTime, since);
+        outQw.le(StockRecord::getCreatedTime, now);
         if (tenantId != null) {
             outQw.eq(StockRecord::getTenantId, tenantId);
         }
         List<StockRecord> outRecords = stockRecordService.list(outQw);
+        Map<Long, List<StockRecord>> outRecordsByMaterial = outRecords.stream()
+                .filter(r -> r.getMaterialId() != null)
+                .collect(Collectors.groupingBy(StockRecord::getMaterialId));
 
         // 批量查询物料分类名（等价抽取）
         Map<Long, String> categoryNameMap = loadCategoryNameMap(allMaterials);
 
         // 计算补货建议（等价抽取）
         List<Map<String, Object>> suggestList = buildSuggestList(allMaterials, days, tenantId, replenishCycle,
-                categoryNameMap);
+                categoryNameMap, outRecordsByMaterial, now);
 
         // 排序：按紧急度等级降序（紧急在前），同等级按 estimatedDays 升序
         sortByUrgency(suggestList);
@@ -276,16 +282,21 @@ public class ReplenishServiceImpl implements ReplenishService {
      * @param tenantId 租户ID
      * @param replenishCycle 补货周期
      * @param categoryNameMap 分类名映射
+     * @param outRecordsByMaterial 近 N 天出库流水按物料ID分组的映射（内存消费，避免逐物料查库）
+     * @param now 统计基准时间（与流水查询窗口一致）
      * @return 补货建议列表
      */
     private List<Map<String, Object>> buildSuggestList(List<Material> allMaterials, int days, Long tenantId,
-            int replenishCycle, Map<Long, String> categoryNameMap) {
+            int replenishCycle, Map<Long, String> categoryNameMap,
+            Map<Long, List<StockRecord>> outRecordsByMaterial, LocalDateTime now) {
         List<Map<String, Object>> suggestList = new ArrayList<Map<String, Object>>();
         BigDecimal replenishCycleDays = new BigDecimal(replenishCycle);
 
         for (Material m : allMaterials) {
             BigDecimal stockQty = m.getStockQty() != null ? m.getStockQty() : BigDecimal.ZERO;
-            BigDecimal dailyUsage = calcWeightedDailyUsage(m.getId(), days, tenantId);
+            List<StockRecord> materialRecords = outRecordsByMaterial.get(m.getId());
+            BigDecimal dailyUsage = weightedDailyUsageFromRecords(
+                    materialRecords != null ? materialRecords : new ArrayList<StockRecord>(), now);
 
             // 安全库存 = 日均消耗 × 2
             BigDecimal safetyStock = dailyUsage.multiply(SAFETY_STOCK_DAYS).setScale(2, RoundingMode.HALF_UP);
@@ -354,6 +365,19 @@ public class ReplenishServiceImpl implements ReplenishService {
         }
         List<StockRecord> records = stockRecordService.list(qw);
 
+        return weightedDailyUsageFromRecords(records, now);
+    }
+
+    /**
+     * 基于一批出库流水计算加权日均消耗（近7天 weight=1.5，其余 weight=1.0）。
+     * <p>纯内存计算：供 {@link #calcWeightedDailyUsage} 查库后复用，
+     * 也供补货建议在一次性查出全部流水后按物料分组消费（消 N+1）。</p>
+     *
+     * @param records 该物料的出库流水
+     * @param now     加权判断基准时间
+     * @return 加权日均消耗
+     */
+    private BigDecimal weightedDailyUsageFromRecords(List<StockRecord> records, LocalDateTime now) {
         if (CollectionUtils.isEmpty(records)) {
             return BigDecimal.ZERO;
         }
@@ -401,8 +425,8 @@ public class ReplenishServiceImpl implements ReplenishService {
         }
 
         BigDecimal weightedDailyUsage = totalWeighted.divide(totalWeight, 4, RoundingMode.HALF_UP);
-        log.debug("[智能补货] materialId={}, 加权日均消耗={}, 加权总量={}, 权重总量={}",
-                materialId, weightedDailyUsage, totalWeighted, totalWeight);
+        log.debug("[智能补货] 加权日均消耗={}, 加权总量={}, 权重总量={}",
+                weightedDailyUsage, totalWeighted, totalWeight);
         return weightedDailyUsage;
     }
 
@@ -447,18 +471,18 @@ public class ReplenishServiceImpl implements ReplenishService {
     /**
      * 从 Redis 缓存中尝试读取补货建议数据
      * <p>
-     * 缓存格式：JSON 数组字符串
-     * Key: inventory:replenish:suggest:{tenantId}
+     * 缓存格式：JSON 数组字符串（写入侧序列化的是 List，读取侧必须按 List 反序列化）
+     * Key: inventory:replenish:suggest:{tenantId}:days={days}:cycle={replenishCycle}
+     * （days/replenishCycle 是计算维度，必须参与 Key，否则不同参数会串用缓存）
      * </p>
      *
      * @return 缓存中的数据列表，未命中或 Redis 不可用时返回 null
      */
-    @SuppressWarnings("unchecked")
     private List<Map<String, Object>> tryGetFromCache(Long tenantId, int days, int replenishCycle) {
         if (redisTemplate == null || tenantId == null) {
             return null;
         }
-        String redisKey = REDIS_KEY_PREFIX + tenantId;
+        String redisKey = buildCacheKey(tenantId, days, replenishCycle);
         try {
             Object cached = redisTemplate.opsForValue().get(redisKey);
             if (cached == null) {
@@ -471,17 +495,25 @@ public class ReplenishServiceImpl implements ReplenishService {
                 json = ObjectMapperHolder.getDefault().writeValueAsString(cached);
             }
             com.fasterxml.jackson.databind.ObjectMapper mapper = ObjectMapperHolder.getDefault();
-            Object parsed = mapper.readValue(json, Map.class);
-            // 如果反序列化后是数组，转为 List<Map>
-            if (parsed instanceof List) {
-                return (List<Map<String, Object>>) parsed;
-            }
+            // 写入侧序列化 List<Map>（JSON 数组），按 List.class 反序列化；
+            // 原 readValue(json, Map.class) 对数组必抛 MismatchedInputException 导致缓存永不命中
+            return mapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {
+            });
+        } catch (JsonProcessingException e) {
+            log.warn("[智能补货] Redis 缓存反序列化失败，按未命中处理并降级重算：{}", e.getMessage());
             return null;
         } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.warn("[智能补货] Redis 读取缓存失败，降级为直接计算：{}", e.getMessage());
+            // 宽异常兜底：Redis 故障等不应影响主流程，仅记录降级日志
+            log.warn("[智能补货] Redis 读取缓存失败，降级为直接计算：{}", e.getMessage(), e);
             return null;
         }
+    }
+
+    /**
+     * 构建补货建议缓存 Key（包含 tenantId/days/replenishCycle 三个计算维度）
+     */
+    private String buildCacheKey(Long tenantId, int days, int replenishCycle) {
+        return REDIS_KEY_PREFIX + tenantId + ":days=" + days + ":cycle=" + replenishCycle;
     }
 
     /**
@@ -492,12 +524,11 @@ public class ReplenishServiceImpl implements ReplenishService {
      * @param replenishCycle 补货周期
      * @param data           补货建议数据
      */
-    @SuppressWarnings("unchecked")
     private void tryPutToCache(Long tenantId, int days, int replenishCycle, List<Map<String, Object>> data) {
         if (redisTemplate == null || tenantId == null) {
             return;
         }
-        String redisKey = REDIS_KEY_PREFIX + tenantId;
+        String redisKey = buildCacheKey(tenantId, days, replenishCycle);
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = ObjectMapperHolder.getDefault();
             String json = mapper.writeValueAsString(data);

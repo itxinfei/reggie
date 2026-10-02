@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -126,9 +126,11 @@
         row-key="id"
         :show-actions="true" :viewable="true"
         :actions-width="180"
+        :batch-delete="doBatchDelete"
         @page-change="onPageChange"
         @size-change="onSizeChange"
-        @expand-change="loadDetails">
+        @expand-change="loadDetails"
+        @batch-deleted="onBatchDeleted">
         <!-- 展开行：仅已完成状态显示明细 -->
         <template #expand="{ row }">
           <template v-if="row.status === 'DONE' && row.details && row.details.length">
@@ -339,7 +341,7 @@
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../api/inventory.js?v=20260926"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../js/inventory-helper.js?v=20260922"></script>
   <script>
     new Vue({
@@ -747,6 +749,13 @@
               }
             }).catch(function(err) { ReggieUI.error('删除失败：' + err); });
           }).catch(function(e) { if (e === 'cancel' || e === 'close') return; ReggieUI.error('删除失败：' + e); });
+        },
+        // 批量删除：顺序循环单删（后端仅 DELETE /api/inventory/stock-check/{id}）
+        doBatchDelete: function(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '盘点单', request: deleteStockCheck })
+        },
+        onBatchDeleted: function() {
+          this.init(true)
         },
         /* 修改点：盘点冲正 — 已完成的盘点单回退到进行中，允许重新录入修正 */
         rollbackHandle: function(row) {

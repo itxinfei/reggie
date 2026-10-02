@@ -174,7 +174,10 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
     @Override
     @Transactional(rollbackFor = Exception.class)
     public GroupBuyParticipation joinGroupBuy(Long campaignId, Long orderId, Long userId) {
-        GroupBuyCampaign campaign = getById(campaignId);
+        // P0-7 并发超员修复：campaign 表无参与人数计数列，无法用「原子 UPDATE 计数 + WHERE 上限」
+        // 的条件 SQL（FlashSaleMapper.deductStock 范式），改为 SELECT ... FOR UPDATE 对活动行加
+        // 排他锁——同一活动的并发参团在数据库层串行排队，以下"上限校验 + 防重 + 插入"整体为临界区。
+        GroupBuyCampaign campaign = getBaseMapper().selectByIdForUpdate(campaignId);
         if (campaign == null) {
             throw new CustomException("拼团活动不存在");
         }
@@ -184,6 +187,33 @@ public class GroupBuyServiceImpl extends ServiceImpl<GroupBuyCampaignMapper, Gro
         LocalDateTime now = LocalDateTime.now();
         if (now.isBefore(campaign.getStartTime()) || now.isAfter(campaign.getEndTime())) {
             throw new CustomException("拼团活动不在有效期内");
+        }
+
+        // 防重（代码级）：同一用户/同一订单在 JOINED/PAID 占用中不得重复参团；
+        // 最终防线为 (group_buy_id, user_id) 唯一索引，见 db/20261002_groupbuy_unique_participation.sql
+        LambdaQueryWrapper<GroupBuyParticipation> dupQw = new LambdaQueryWrapper<>();
+        dupQw.eq(GroupBuyParticipation::getGroupBuyId, campaignId)
+                .in(GroupBuyParticipation::getStatus,
+                        GroupBuyStatus.JOINED.getValue(), GroupBuyStatus.PAID.getValue());
+        if (userId != null && orderId != null) {
+            dupQw.and(w -> w.eq(GroupBuyParticipation::getUserId, userId)
+                    .or().eq(GroupBuyParticipation::getOrderId, orderId));
+        } else if (userId != null) {
+            dupQw.eq(GroupBuyParticipation::getUserId, userId);
+        } else if (orderId != null) {
+            dupQw.eq(GroupBuyParticipation::getOrderId, orderId);
+        }
+        if (participationMapper.selectCount(dupQw) > 0) {
+            throw new CustomException("您已参与该拼团，请勿重复参团");
+        }
+
+        // 人数上限校验（maxMembers 为 null 视为不限，保持字段既有语义）；
+        // 活动行锁已持有，count 与 insert 之间不会被并发穿透
+        if (campaign.getMaxMembers() != null) {
+            int count = participationMapper.countParticipants(campaignId);
+            if (count >= campaign.getMaxMembers()) {
+                throw new CustomException("拼团人数已满");
+            }
         }
 
         GroupBuyParticipation participation = new GroupBuyParticipation();

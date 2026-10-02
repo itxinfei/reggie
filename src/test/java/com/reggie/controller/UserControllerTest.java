@@ -61,12 +61,24 @@ public class UserControllerTest {
         if (lockedKeys != null && !lockedKeys.isEmpty()) {
             redisTemplate.delete(lockedKeys);
         }
+        // 清除验证码按手机号频控键（sms:cooldown:*/sms:daily:*，2026-09-30 新增）：
+        // 该频控为跨会话的全局 Redis 状态，本类多个用例对同一测试手机号连续 sendMsg，
+        // 不清理会被 60s 冷却拦截、session 拿不到验证码导致登录断言失败
+        Set<String> smsCooldownKeys = redisTemplate.keys("sms:cooldown:*");
+        if (smsCooldownKeys != null && !smsCooldownKeys.isEmpty()) {
+            redisTemplate.delete(smsCooldownKeys);
+        }
+        Set<String> smsDailyKeys = redisTemplate.keys("sms:daily:*");
+        if (smsDailyKeys != null && !smsDailyKeys.isEmpty()) {
+            redisTemplate.delete(smsDailyKeys);
+        }
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(999L);
 
         // 创建测试用户
         User user = new User();
-        user.setId(1L);
+        // 主键用测试专用高 ID，避开 reggie 库租户 1 演示用户占用的小主键（单库改造，2026-10-02）
+        user.setId(994001L);
         user.setPhone("13800138000");
         user.setName("测试用户");
         user.setStatus(1);

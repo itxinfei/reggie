@@ -127,11 +127,12 @@ public class QueueControllerTest {
 
     @Test
     void testCancelNonExistent() throws Exception {
+        // P0 修复后：取消不存在的排队记录不再假成功，服务层抛 CustomException → 422 + code=0
         mockMvc.perform(put("/api/dining/queue/cancel/999")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(1));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value(0));
     }
 
     @Test

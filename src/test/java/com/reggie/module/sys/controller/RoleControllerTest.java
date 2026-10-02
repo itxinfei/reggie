@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
 import com.reggie.module.sys.model.Permission;
 import com.reggie.module.sys.model.Role;
+import com.reggie.module.auth.model.Employee;
+import com.reggie.module.auth.service.EmployeeService;
 import com.reggie.module.sys.mapper.PermissionMapper;
 import com.reggie.module.sys.service.PermissionService;
 import com.reggie.module.sys.service.RoleService;
@@ -48,13 +50,16 @@ public class RoleControllerTest extends BaseControllerTest {
     private PermissionMapper permissionMapper;
 
     @Autowired
+    private EmployeeService employeeService;
+
+    @Autowired
     private TestDatabaseCleaner cleaner;
 
     private static final String ADMIN_BYPASS_ATTRIBUTE = "SUPER_ADMIN";
 
     private Long testRoleId;
     private Long testPermId;
-    // 测试员工ID（employee_role 表无 FK 约束，虚拟 id 即可验证关联逻辑，无需建员工实体）
+    // 测试员工ID（控制器现已校验员工须属于当前租户，故 setUp 会真实落库这两个员工）
     private static final Long TEST_EMP_ID_1 = 990101L;
     private static final Long TEST_EMP_ID_2 = 990102L;
 
@@ -67,8 +72,11 @@ public class RoleControllerTest extends BaseControllerTest {
         cleaner.cleanByCondition("role_permission",
                 "role_id IN (SELECT id FROM role WHERE role_key LIKE ?)", "TEST\\_%");
         cleaner.cleanByCondition("role", "role_key LIKE ?", "TEST\\_%");
+        // 固定 ID 的测试员工需按 ID 清理（employee 不在 cleanTables 的租户范围内时仍可复用）
+        cleaner.cleanByCondition("employee", "id IN (?, ?)", TEST_EMP_ID_1, TEST_EMP_ID_2);
         BaseContext.setCurrentId(1L);
         BaseContext.setCurrentTenantId(999L);
+        prepareTenantEmployees();
 
         // 创建测试权限（permission_key 全局唯一，统一加 test: 前缀，固定 990xxx id）
         Permission perm = new Permission();
@@ -88,6 +96,27 @@ public class RoleControllerTest extends BaseControllerTest {
         Role role = roleService.getOne(
                 new LambdaQueryWrapper<Role>().eq(Role::getRoleKey, "test_manager"));
         testRoleId = role.getId();
+    }
+
+    /**
+     * 落库两个属于当前租户（999）的员工，供 /sys/role/{id}/users 分配用例使用。
+     * <p>P0 修复后控制器会校验 employeeId 归属当前租户，虚拟 ID 会被拒绝。</p>
+     */
+    private void prepareTenantEmployees() {
+        for (Long id : new Long[]{TEST_EMP_ID_1, TEST_EMP_ID_2}) {
+            Employee emp = new Employee();
+            emp.setId(id);
+            emp.setUsername("role_test_emp_" + id);
+            emp.setName("角色测试员工" + id);
+            emp.setPassword(com.reggie.common.PasswordUtils.encodePassword("123456"));
+            emp.setPasswordType(com.reggie.common.SecurityConstants.PASSWORD_TYPE_BCRYPT);
+            emp.setPhone("13700" + String.format("%06d", id));
+            emp.setStatus(1);
+            emp.setSex("1");
+            emp.setRole(0);
+            emp.setTenantId(999L);
+            employeeService.save(emp);
+        }
     }
 
     // ==================== 分页查询 ====================

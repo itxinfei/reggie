@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -68,7 +68,9 @@
         row-key="id"
         :show-actions="true"
         :actions-width="240"
+        :batch-delete="doBatchDelete"
         @selection-change="onSelectionChange"
+        @batch-deleted="onBatchDeleted"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -271,7 +273,7 @@
     <script src="../../api/employee.js?v=20260922"></script>
     <script src="../../api/export.js?v=20260926"></script>
     <script src="../../js/validate.js?v=20260926"></script>
-    <script src="../../js/components.js?v=20260930"></script>
+    <script src="../../js/components.js?v=20261002"></script>
     <script>
       new Vue({
         el: '#employee-app',
@@ -294,7 +296,7 @@
           tableActions: [
             { key: 'add', text: '+ 添加员工', type: 'primary' },
             { key: 'import', text: '导入', type: 'warning', icon: 'ri-upload-line' },
-            { key: 'export', text: '导出', type: 'success', icon: 'ri-download-line' }
+            { key: 'export', text: '导出', type: 'success', icon: 'ri-download-line', disabled: true }
           ],
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
@@ -471,9 +473,18 @@
             this.page = 1;
             this.fetchData(false);
           },
-          // 勾选行变化；勾了导出选中行，没勾按当前筛选导出
+          // 勾选行变化：同步导出按钮禁用态（必须勾选才能导出）
           onSelectionChange(payload) {
             this.selectedIds = (payload && payload.ids) ? payload.ids : []
+            this.tableActions[2].disabled = this.selectedIds.length === 0
+          },
+          // 内建批量删除：employee.js 的 deleteEmployee 已兼容数组（内部 join 逗号串）
+          doBatchDelete(payload) {
+            return deleteEmployee(payload.ids)
+          },
+          // 批量删除成功后刷新列表与统计
+          onBatchDeleted() {
+            this.fetchData(true)
           },
           clearSelection() {
             this.selectedIds = []
@@ -678,27 +689,20 @@
               }
             }).catch((e) => { console.warn('[member/list.html] 用户取消删除操作:', e) })
           },
-          // 导出员工数据：勾选了行只导选中行；未勾选按当前筛选（姓名/状态）导出
+          // 导出员工数据：仅导出勾选行（未勾选时导出按钮已禁用）
           async exportEmployees(format) {
-            const hasSelection = this.selectedIds.length > 0
-            if (!hasSelection && this.counts === 0) {
-              ReggieUI.warning('当前筛选没有可导出的员工')
+            if (this.selectedIds.length === 0) {
+              ReggieUI.warning('请先勾选要导出的员工')
               return
             }
-            const params = {}
-            if (hasSelection) {
-              params.ids = this.selectedIds.join(',')
-            } else {
-              if (this.input) params.name = this.input
-              if (this.activeFilter) params.status = this.activeFilter
-            }
+            const params = { ids: this.selectedIds.join(',') }
             try {
               const ext = format === 'excel' ? 'xlsx' : 'pdf'
               const apiCall = format === 'excel'
                 ? exportApi.exportEmployeesExcel(params)
                 : exportApi.exportEmployeesPdf(params)
               await exportApi.downloadFile(apiCall, '员工数据.' + ext)
-              ReggieUI.success(hasSelection ? ('已导出选中的 ' + this.selectedIds.length + ' 名员工') : ('已按当前筛选导出 ' + (this.counts || 0) + ' 名员工'))
+              ReggieUI.success('已导出选中的 ' + this.selectedIds.length + ' 名员工')
             } catch (err) {
               ReggieUI.error('导出失败：' + (err.message || err))
             }

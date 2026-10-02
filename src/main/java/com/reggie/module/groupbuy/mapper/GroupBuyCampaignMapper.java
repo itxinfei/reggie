@@ -32,4 +32,19 @@ public interface GroupBuyCampaignMapper extends BaseMapper<GroupBuyCampaign> {
     @Select("SELECT * FROM group_buy_campaign WHERE status = 'OPEN' AND start_time <= #{now} AND end_time >= #{now} " +
             "AND is_deleted = 0")
     java.util.List<GroupBuyCampaign> selectActiveCampaigns(@Param("now") LocalDateTime now);
+
+    /**
+     * 加行锁读取活动（SELECT ... FOR UPDATE），供参团临界区串行化使用（P0 超员修复）。
+     * <p>
+     * group_buy_campaign 无参与人数计数列，无法照 FlashSaleMapper.deductStock 的
+     * 「原子 UPDATE 计数 + WHERE 上限」范式落库；改为对活动行加排他锁，同一活动的并发
+     * 参团请求在数据库层排队，"人数上限校验 + 防重 + 插入参与记录"在锁保护下原子执行。
+     * 必须在事务中调用；tenant_id 条件由 MyBatis-Plus 租户插件自动注入。
+     * </p>
+     *
+     * @param campaignId 拼团活动ID
+     * @return 加锁后的活动行（不存在/已删除/跨租户返回 null）
+     */
+    @Select("SELECT * FROM group_buy_campaign WHERE id = #{campaignId} AND is_deleted = 0 FOR UPDATE")
+    GroupBuyCampaign selectByIdForUpdate(@Param("campaignId") Long campaignId);
 }

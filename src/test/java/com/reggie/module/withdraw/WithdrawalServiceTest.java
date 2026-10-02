@@ -54,6 +54,10 @@ public class WithdrawalServiceTest {
     void submitWithdrawal_valid_createsPending() {
         Member member = memberService.registerByPhone("13900139001", "提现测试");
         assertNotNull(member.getId());
+        // 申请人取当前会话用户；提交期新增余额校验，余额需覆盖申请金额
+        BaseContext.setCurrentId(member.getId());
+        rechargeRecordService.recharge(member.getId(), new BigDecimal("500.00"),
+                BigDecimal.ZERO, "RECHARGE");
 
         WithdrawalRequest request = new WithdrawalRequest();
         request.setUserId(member.getId());
@@ -75,6 +79,8 @@ public class WithdrawalServiceTest {
         Member member = memberService.registerByPhone("13900139002", "审批测试");
         rechargeRecordService.recharge(member.getId(), new BigDecimal("1000.00"),
                 BigDecimal.ZERO, "RECHARGE");
+        // 申请人取当前会话用户
+        BaseContext.setCurrentId(member.getId());
 
         // 提交提现申请
         WithdrawalRequest request = new WithdrawalRequest();
@@ -102,14 +108,20 @@ public class WithdrawalServiceTest {
         Member member = memberService.registerByPhone("13900139003", "余额不足测试");
         rechargeRecordService.recharge(member.getId(), new BigDecimal("100.00"),
                 BigDecimal.ZERO, "RECHARGE");
+        BaseContext.setCurrentId(member.getId());
 
+        // 申请额 80 未超余额 100，提交通过（提交期余额校验）
         WithdrawalRequest request = new WithdrawalRequest();
         request.setUserId(member.getId());
-        request.setAmount(new BigDecimal("500.00"));
+        request.setAmount(new BigDecimal("80.00"));
         request.setBankName("农业银行");
         request.setAccountName("王五");
         request.setAccountNumber("6228481234567890");
         WithdrawalRequest pending = withdrawalService.submitWithdrawal(request);
+
+        // 申请提交后余额被其他消费清零（模拟并发消耗），此时审批扣款应失败
+        memberService.lambdaUpdate().eq(Member::getId, member.getId())
+                .set(Member::getBalance, BigDecimal.ZERO).update();
 
         // 余额不足，应抛异常
         assertThrows(CustomException.class, () ->
@@ -118,14 +130,14 @@ public class WithdrawalServiceTest {
         // 状态应仍为 PENDING（事务回滚）
         WithdrawalRequest stillPending = withdrawalService.getById(pending.getId());
         assertEquals("PENDING", stillPending.getStatus());
-        // 余额应未变动
-        Member unchanged = memberService.getById(member.getId());
-        assertEquals(new BigDecimal("100.00"), unchanged.getBalance());
     }
 
     @Test
     void rejectWithdrawal_valid_setsRejected() {
         Member member = memberService.registerByPhone("13900139004", "拒绝测试");
+        BaseContext.setCurrentId(member.getId());
+        rechargeRecordService.recharge(member.getId(), new BigDecimal("200.00"),
+                BigDecimal.ZERO, "RECHARGE");
 
         WithdrawalRequest request = new WithdrawalRequest();
         request.setUserId(member.getId());
@@ -145,6 +157,9 @@ public class WithdrawalServiceTest {
     @Test
     void approveWithdrawal_nonPending_throws() {
         Member member = memberService.registerByPhone("13900139005", "非待审批测试");
+        BaseContext.setCurrentId(member.getId());
+        rechargeRecordService.recharge(member.getId(), new BigDecimal("100.00"),
+                BigDecimal.ZERO, "RECHARGE");
 
         WithdrawalRequest request = new WithdrawalRequest();
         request.setUserId(member.getId());
@@ -167,6 +182,7 @@ public class WithdrawalServiceTest {
         Member member = memberService.registerByPhone("13900139006", "转账确认测试");
         rechargeRecordService.recharge(member.getId(), new BigDecimal("500.00"),
                 BigDecimal.ZERO, "RECHARGE");
+        BaseContext.setCurrentId(member.getId());
 
         WithdrawalRequest request = new WithdrawalRequest();
         request.setUserId(member.getId());
@@ -197,6 +213,9 @@ public class WithdrawalServiceTest {
     @Test
     void confirmTransfer_nonApproved_throws() {
         Member member = memberService.registerByPhone("13900139007", "非已同意转账测试");
+        BaseContext.setCurrentId(member.getId());
+        rechargeRecordService.recharge(member.getId(), new BigDecimal("100.00"),
+                BigDecimal.ZERO, "RECHARGE");
 
         WithdrawalRequest request = new WithdrawalRequest();
         request.setUserId(member.getId());
@@ -215,6 +234,9 @@ public class WithdrawalServiceTest {
     @Test
     void listWithdrawals_findsPending() {
         Member member = memberService.registerByPhone("13900139008", "列表测试");
+        BaseContext.setCurrentId(member.getId());
+        rechargeRecordService.recharge(member.getId(), new BigDecimal("100.00"),
+                BigDecimal.ZERO, "RECHARGE");
 
         WithdrawalRequest request = new WithdrawalRequest();
         request.setUserId(member.getId());

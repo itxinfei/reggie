@@ -142,8 +142,11 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
         //更新dish表基本信息
         this.updateById(dishDto);
 
-        //修改后检查是否需要自动切换售罄状态
-        autoToggleSoldOut(dishDto.getId());
+        //修改后校验售罄强制停售（stock<=0 时置停售）；
+        //修复：不再调用双向的 autoToggleSoldOut —— dish 表无独立 soldOut 标记，status 是唯一停售/起售口径，
+        //编辑保存即商户显式提交，若库存>0 就自动把停售改回起售，会静默覆盖商户"手动停售"的意图。
+        //售罄自动恢复仍由库存/订单回调路径（deductStock/addStock/OrderStatusFlow 等）的 autoToggleSoldOut 负责。
+        enforceSoldOutStoppage(dishDto.getId());
 
         //清理当前菜品对应口味数据---dish_flavor表的delete操作
         LambdaQueryWrapper<DishFlavor> queryWrapper = new LambdaQueryWrapper<>();
@@ -298,6 +301,28 @@ public class DishServiceImpl extends ServiceImpl<DishMapper,Dish> implements Dis
             dish.setStatus(newStatus);
             this.updateById(dish);
             log.info("[库存] 菜品「{}」状态自动切换为：{}", dish.getName(), newStatus == 1 ? "起售" : "停售");
+        }
+    }
+
+    /**
+     * 单向售罄校验：库存<=0 且当前为起售时强制置停售（与 saveDish 的售罄置停售口径一致）。
+     * <p>只向下切换、不做"库存>0 自动恢复起售"，用于商户编辑保存路径，
+     * 避免覆盖商户手动停售的意图。</p>
+     *
+     * @param dishId 菜品ID
+     */
+    private void enforceSoldOutStoppage(Long dishId) {
+        if (dishId == null) return;
+
+        Dish dish = this.getById(dishId);
+        if (dish == null) return;
+
+        BigDecimal stock = dish.getStockQty() != null ? dish.getStockQty() : BigDecimal.ZERO;
+        if (stock.compareTo(BigDecimal.ZERO) <= 0 && Integer.valueOf(1).equals(dish.getStatus())) {
+            LambdaUpdateWrapper<Dish> statusWrapper = new LambdaUpdateWrapper<>();
+            statusWrapper.eq(Dish::getId, dishId).set(Dish::getStatus, 0);
+            this.update(statusWrapper);
+            log.info("[库存] 菜品「{}」售罄（库存<=0），编辑保存后强制置停售", dish.getName());
         }
     }
 

@@ -85,6 +85,13 @@ public class DeliveryEnhancedServiceImpl extends ServiceImpl<DeliveryRangeRuleMa
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean saveOrUpdateRangeRule(DeliveryRangeRule rule) {
+        // 半径单位防御：单位为米（与后台表单 min=100/max=50000 同口径），
+        // 拦截把公里值（如 3）直接写入——历史上该脏数据导致所有地址被误判不在配送范围
+        if (rule.getRadius() != null
+                && (rule.getRadius().compareTo(new BigDecimal("100")) < 0
+                || rule.getRadius().compareTo(new BigDecimal("50000")) > 0)) {
+            throw new CustomException("配送半径单位为米，范围 100~50000，请确认不是按公里填写（如 3 公里应填 3000）");
+        }
         if (rule.getId() == null) {
             rule.setCreateTime(LocalDateTime.now());
             rule.setUpdateTime(LocalDateTime.now());

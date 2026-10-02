@@ -314,6 +314,33 @@ public class SystemConfigControllerTest extends BaseControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("配置批量更新成功"));
+
+        // 修复回归断言：原 @RequestBody Object + instanceof SystemConfig 恒为 false，静默不更新；
+        // 现根路径 PUT 与 /batch 同构，必须真正写入配置值
+        String value = systemConfigService.getConfig("order.auto_cancel_minutes");
+        assert "120".equals(value);
+    }
+
+    @Test
+    void testRootBatchUpdateSingleObject() throws Exception {
+        // 前端 sys.js configUpdate 发送单对象形态（含多余字段），同样必须生效
+        String json = "{\"id\":" + testConfigId + ",\"configKey\":\"order.auto_cancel_minutes\","
+                + "\"configValue\":\"45\",\"configType\":1}";
+
+        mockMvc.perform(withCsrfToken(mockMvc, put("/sys/config")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .with(request -> {
+                    request.setAttribute("employeeId", 1L);
+                    request.setAttribute("roleKey", ADMIN_BYPASS_ATTRIBUTE);
+                    return request;
+                })))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data").value("配置批量更新成功"));
+
+        String value = systemConfigService.getConfig("order.auto_cancel_minutes");
+        assert "45".equals(value);
     }
 
     // ==================== 删除 ====================

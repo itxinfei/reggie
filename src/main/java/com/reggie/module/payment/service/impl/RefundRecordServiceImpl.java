@@ -17,6 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -60,8 +62,29 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
     @Lazy
     private OrderService orderService;
 
-    /** 按 paymentOrderId 串行化退款创建请求，防止并发超额退款 */
-    private final ConcurrentHashMap<Long, Object> refundLock = new ConcurrentHashMap<>();
+    /**
+     * 退款记录创建防重锁 key 前缀（后接 paymentOrderId）。
+     * 与调用方 PaymentController / RefundServiceImpl 持有的 {@code payment:refund:lock:{id}} 刻意不同名，
+     * 否则同一线程在外层锁内对本键 SETNX 会与自身冲突（分布式锁不可重入）。
+     */
+    private static final String REFUND_RECORD_LOCK_PREFIX = "payment:refund:record:lock:";
+
+    /** 防重锁 TTL（秒）：覆盖锁内"重查已退总额 + 落库"耗时，与 RefundServiceImpl.LOCK_TTL_MS(30s) 同量级 */
+    private static final long REFUND_RECORD_LOCK_TTL_SECONDS = 30L;
+
+    /** tryLock 返回值哨兵：Redis 不可用（与 null="锁被占用" 区分，调用方据此走降级路径） */
+    private static final String LOCK_REDIS_UNAVAILABLE = "REDIS_UNAVAILABLE";
+
+    /** 释放锁脚本：比对锁值后才删除，防止误删他人重新持有的锁 */
+    private static final String UNLOCK_LUA =
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+
+    /**
+     * 按 paymentOrderId 串行化退款创建请求的分布式锁（集群生效）。
+     * 可选依赖：Redis 不可用时 fail-open，降级为调用方事务内的 DB 校验（见 {@link #createRefund}）。
+     */
+    @Autowired(required = false)
+    private StringRedisTemplate stringRedisTemplate;
 
     /**
      * 查询列表 by order id。
@@ -110,24 +133,30 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
         if (currentTenantId != null && !currentTenantId.equals(paymentOrder.getTenantId())) {
             throw new CustomException("无权对其他租户的支付单发起退款");
         }
-        // 串行化同一支付单的退款创建请求，防止并发超额退款（TOCTOU）
-        Object lock = refundLock.computeIfAbsent(paymentOrderId, k -> new Object());
-        synchronized (lock) {
+        // 集群防重（P0）：Redis SETNX 锁串行化同一支付单的退款创建，替换原 JVM 内 ConcurrentHashMap 锁
+        //（多实例形同虚设 —— 原注释自认 fail-open，且锁 Map 只增不减）。
+        // 锁内重查"已退总额"走一条原子聚合 SQL，不再依赖进程内计数。
+        String lockKey = REFUND_RECORD_LOCK_PREFIX + paymentOrderId;
+        String lockValue = tryLock(lockKey);
+        if (lockValue == null) {
+            throw new CustomException("该退款单正在处理中，请勿重复提交");
+        }
+        if (LOCK_REDIS_UNAVAILABLE.equals(lockValue)) {
+            // fail-open：Redis 不可用时降级为 DB 侧校验——调用方（PaymentController.refund /
+            // RefundServiceImpl.persistRefundInTransaction）持 payment:refund:lock:{id} 分布式锁，
+            // 并在事务内 SELECT ... FOR UPDATE 锁支付单行后复核累计退款额。
+            log.warn("[退款] Redis 不可用，退款创建降级为事务内 DB 校验: {}", lockKey);
+        }
+        try {
             BigDecimal paid = paymentOrder.getAmount();
             if (paid == null || amount.compareTo(paid) > 0) {
                 throw new CustomException("退款金额超过支付金额");
             }
-            // 查询该支付单累计已退款金额（排除本条待创建记录）
-            BigDecimal refunded = this.lambdaQuery()
-                    .eq(RefundRecord::getPaymentOrderId, paymentOrderId)
-                    .eq(RefundRecord::getTenantId, currentTenantId)
-                    .eq(RefundRecord::getStatus, RefundStatus.SUCCESS.getCode())
-                    .select(RefundRecord::getAmount)
-                    .list()
-                    .stream()
-                    .map(RefundRecord::getAmount)
-                    .filter(a -> a != null)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            // 锁内重查该支付单累计已成功退款总额（单条 COALESCE(SUM(amount)) 聚合 SQL，跨租户由 Mapper
+            // 的 @InterceptorIgnore 保证；支付单归属已在加锁前校验，此处无需再按 tenantId 过滤）。
+            // 原 Java 侧 list + stream 求和在 currentTenantId 为 null（渠道回调场景）时会生成
+            // tenant_id = NULL 条件而永远查不到已退记录，从而放行超额退款，一并修掉。
+            BigDecimal refunded = sumRefundedAmount(paymentOrderId);
             if (refunded.add(amount).compareTo(paid) > 0) {
                 throw new CustomException("累计退款金额超过支付金额，当前已退款:"
                         + refunded + "，本次退款:" + amount);
@@ -145,6 +174,46 @@ public class RefundRecordServiceImpl extends ServiceImpl<RefundRecordMapper, Ref
             record.setCreatedTime(LocalDateTime.now());
             this.save(record);
             return record;
+        } finally {
+            unlock(lockKey, lockValue);
+        }
+    }
+
+    /**
+     * 尝试获取退款记录创建防重锁（SETNX + TTL，锁值 UUID 用于释放时的 ownership 校验）。
+     *
+     * @param lockKey 锁 key
+     * @return 锁值 UUID；{@link #LOCK_REDIS_UNAVAILABLE}=Redis 不可用（调用方降级）；null=锁被他人占用
+     */
+    private String tryLock(String lockKey) {
+        if (stringRedisTemplate == null) {
+            return LOCK_REDIS_UNAVAILABLE;
+        }
+        String lockValue = UUID.randomUUID().toString();
+        try {
+            Boolean success = stringRedisTemplate.opsForValue()
+                    .setIfAbsent(lockKey, lockValue, REFUND_RECORD_LOCK_TTL_SECONDS, TimeUnit.SECONDS);
+            return Boolean.TRUE.equals(success) ? lockValue : null;
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，Redis 故障不外抛，降级为 DB 校验
+            log.error("[退款] 获取分布式锁异常，降级为 DB 校验: {}", lockKey, e);
+            return LOCK_REDIS_UNAVAILABLE;
+        }
+    }
+
+    /**
+     * 释放分布式锁：Lua 脚本原子比对锁值后删除，防止误删他人锁；降级路径（哨兵值）不执行删除。
+     */
+    private void unlock(String lockKey, String lockValue) {
+        if (stringRedisTemplate == null || lockValue == null || LOCK_REDIS_UNAVAILABLE.equals(lockValue)) {
+            return;
+        }
+        try {
+            stringRedisTemplate.execute(new DefaultRedisScript<Long>(UNLOCK_LUA, Long.class),
+                    Collections.singletonList(lockKey), lockValue);
+        } catch (Exception e) {
+            // 释放失败不影响业务结果，锁最迟在 TTL 到期后自动释放
+            log.warn("[退款] 释放分布式锁失败，将由 TTL 兜底过期: {}, error={}", lockKey, e.getMessage(), e);
         }
     }
 

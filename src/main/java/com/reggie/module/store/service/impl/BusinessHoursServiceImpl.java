@@ -35,7 +35,8 @@ public class BusinessHoursServiceImpl implements BusinessHoursService {
             return;
         }
 
-        StoreInfo store = storeMapper.selectById(tenantId);
+        // store_info 主键是自增 id，与租户 ID 不同：必须按 tenant_id 查询（同项目 StoreServiceImpl 等处的 findByTenantId 范式）
+        StoreInfo store = storeMapper.findByTenantId(tenantId);
         if (store == null) {
             return;
         }

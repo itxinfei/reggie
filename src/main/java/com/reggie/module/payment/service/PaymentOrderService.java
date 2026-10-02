@@ -59,4 +59,14 @@ public interface PaymentOrderService extends IService<PaymentOrder> {
      * @return 支付订单
      */
     PaymentOrder selectByTradeNoIgnoreTenant(String tradeNo);
+
+    /**
+     * 0 元订单自动完成支付（优惠券/折扣把实付压到 0，无需调用渠道）。
+     * <p>收敛自 PaymentController.pay 的 0 元分支：原实现直接双表 lambdaUpdate 无事务，支付单与订单
+     * 可能部分更新（支付单已 SUCCESS 而订单仍待付款）。此处以单一事务原子更新：PENDING 支付单（若有）翻
+     * SUCCESS + 待付款订单 1→2。归属/状态校验仍由调用方完成。</p>
+     *
+     * @param orderId 业务订单ID
+     */
+    void completeZeroAmountPayment(Long orderId);
 }

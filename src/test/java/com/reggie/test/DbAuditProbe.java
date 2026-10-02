@@ -38,8 +38,9 @@ import java.util.regex.Pattern;
  * Redis 消息流/定时任务，产生写库副作用。这里只用 DriverManager 直连，读
  * {@code application-<profile>.yml} 的 datasource 配置，全程 SELECT。</p>
  *
- * <p>目标库由 {@code -Dreggie.audit.profile} 选择，默认 {@code dev}（= 演示库 {@code reggie}，
- * 页面上真正展示的数据）；{@code test} = {@code reggie_test}（自动化测试库）。</p>
+ * <p>目标库由 {@code -Dreggie.audit.profile} 选择读取哪份 {@code application-<profile>.yml}，
+ * 默认 {@code dev}。自单库改造（2026-10-02）起，dev 与 test profile 均指向本地 {@code reggie}
+ * （开发 / 测试共用单库），差别仅在测试数据挂租户 999、演示数据挂租户 1。</p>
  *
  * <p>输出五段：① role 表唯一键残留证据 ② 表级行数与租户分布 ③ 数据真实性问题清单
  * ④ 外键孤儿 ⑤ 摘要。真实性体检只统计业务租户 1 的数据。

@@ -1,20 +1,16 @@
 package com.reggie.module.schedule.task;
 
 import com.reggie.common.BaseContext;
+import com.reggie.common.RedisLockUtil;
 import com.reggie.module.groupbuy.service.GroupBuyService;
 import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.tenant.service.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 定时任务：自动关闭已过期的拼团活动
@@ -50,8 +46,8 @@ public class GroupBuyExpireTask {
 
     private final TenantService tenantService;
 
-    /** Redis 模板（可选，不可用时跳过锁降级） */
-    private final RedisTemplate<String, Object> redisTemplate;
+    /** 公共 Redis 分布式锁工具（SET NX EX + Lua 释放，fail-closed） */
+    private final RedisLockUtil redisLockUtil;
 
     /**
      * 每小时第 5 分钟检查一次过期拼团活动（错开优惠券任务的第 0 分钟，降低峰值）
@@ -60,18 +56,10 @@ public class GroupBuyExpireTask {
     public void closeExpiredCampaigns() {
         log.info("开始执行拼团过期关闭定时任务");
 
-        String lockValue = UUID.randomUUID().toString();
-        Boolean acquired = false;
-        try {
-            acquired = tryAcquire(LOCK_KEY, lockValue);
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.warn("[拼团过期] 获取分布式锁异常，跳过本次执行: {}", e.getMessage(), e);
-            return;
-        }
-
-        if (!Boolean.TRUE.equals(acquired)) {
-            log.warn("[拼团过期] 获取分布式锁失败，其他实例正在执行，跳过本次");
+        String lockValue = RedisLockUtil.newLockValue();
+        if (!tryAcquire(lockValue)) {
+            // fail-closed：拿不到锁（其他实例正在执行或 Redis 异常），跳过本次
+            log.info("[拼团过期] 获取分布式锁失败（其他实例正在执行或 Redis 不可用），跳过本次");
             return;
         }
 
@@ -82,7 +70,7 @@ public class GroupBuyExpireTask {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.error("[拼团过期] 处理异常", e);
         } finally {
-            tryReleaseLock(LOCK_KEY, lockValue);
+            redisLockUtil.unlockIfOwned(LOCK_KEY, lockValue);
         }
     }
 
@@ -115,18 +103,14 @@ public class GroupBuyExpireTask {
     }
 
     /**
-     * 获取分布式锁：SETNX + EXPIRE
+     * 自旋获取分布式锁：最长等待 {@code LOCK_WAIT_MILLIS}，每 {@code LOCK_RETRY_INTERVAL} 重试一次。
+     * fail-closed：Redis 异常由 {@link RedisLockUtil#tryLock} 内部按未拿到锁处理并记日志，不向外抛出。
      */
-    private Boolean tryAcquire(String lockKey, String lockValue) {
-        if (redisTemplate == null) {
-            return false;
-        }
+    private boolean tryAcquire(String lockValue) {
         long startTime = System.currentTimeMillis();
         try {
             while (System.currentTimeMillis() - startTime < LOCK_WAIT_MILLIS) {
-                Boolean success = redisTemplate.opsForValue()
-                        .setIfAbsent(lockKey, lockValue, LOCK_EXPIRE_SECONDS, TimeUnit.SECONDS);
-                if (Boolean.TRUE.equals(success)) {
+                if (redisLockUtil.tryLock(LOCK_KEY, lockValue, LOCK_EXPIRE_SECONDS)) {
                     return true;
                 }
                 Thread.sleep(LOCK_RETRY_INTERVAL);
@@ -134,33 +118,7 @@ public class GroupBuyExpireTask {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("[拼团过期] 获取锁被中断");
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("[拼团过期] 获取锁异常", e);
         }
         return false;
-    }
-
-    /**
-     * 释放分布式锁：Lua 脚本原子校验 + 删除，防止 TTL 过期瞬间 get+delete 的 TOCTOU 竞态。
-     * 与 CouponExpirationTask / OrderTimeoutTask 保持一致的 Lua 脚本模式。
-     */
-    private void tryReleaseLock(String lockKey, String lockValue) {
-        if (redisTemplate == null || lockValue == null) {
-            return;
-        }
-        try {
-            // Lua 脚本：比对锁值后才删除，防止误删他人的锁；同时消除 get+delete 之间的竞态窗口
-            String luaScript =
-                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
-            redisTemplate.execute(
-                    new DefaultRedisScript<Long>(luaScript, Long.class),
-                    Collections.singletonList(lockKey),
-                    lockValue
-            );
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.warn("[拼团过期] 释放锁失败: {}", e.getMessage(), e);
-        }
     }
 }

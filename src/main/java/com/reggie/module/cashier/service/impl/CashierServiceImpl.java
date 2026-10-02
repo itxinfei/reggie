@@ -23,6 +23,7 @@ import com.reggie.module.payment.service.PaymentOrderService;
 import com.reggie.module.payment.service.RefundRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -123,9 +124,16 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
     private static final long CASHIER_IDEMPOTENCY_TTL_SECONDS = 3600;
 
     /**
-     * 按 tenantId+date 串行化日结请求，防止并发重复日结（TOCTOU）
+     * 按 tenantId+date 串行化日结请求，防止并发重复日结（TOCTOU）。
+     * P0-12：仅作 Redis 不可用时的单机降级兜底，集群正确性依赖下方 Redis SETNX 锁。
      */
     private final ConcurrentHashMap<String, Object> settlementLock = new ConcurrentHashMap<>();
+
+    /** 日结分布式锁 key 前缀（key 含 tenantId+日期，TTL 短锁） */
+    private static final String SETTLEMENT_LOCK_KEY_PREFIX = "cashier:settlement:lock:";
+
+    /** 日结锁过期时间（秒）：覆盖一次日结耗时，进程异常时由 TTL 兜底释放 */
+    private static final long SETTLEMENT_LOCK_TTL_SECONDS = 120;
 
     // ==================== 收银记录管理 ====================
 
@@ -332,6 +340,9 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         if (tableId == null) {
             throw new CustomException("桌台ID不能为空");
         }
+        // P0-12 修复(1/2)：payType 归一（与单笔路径 cashPayment 同口径），
+        // 防 validateActualAmount 内 payType == 1 拆箱 NPE
+        payType = (payType == null || payType < 1 || payType > 5) ? 1 : payType;
         // 1. 查询该桌台所有待付款堂食订单（租户隔离由拦截器 + 显式条件双重保证）
         List<Orders> orders = orderService.lambdaQuery()
                 .eq(Orders::getTenantId, BaseContext.getCurrentTenantId())
@@ -343,93 +354,103 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
         if (orders == null || orders.isEmpty()) {
             throw new CustomException("该桌台没有待结账订单");
         }
-        // 2. 幂等：任一张单已收银则整单拒绝，避免重复收款
-        for (Orders o : orders) {
-            CashierRecord exist = cashierRecordMapper.selectOne(
-                    new LambdaQueryWrapper<CashierRecord>().eq(CashierRecord::getOrderId, o.getId()));
-            if (exist != null) {
-                throw new CustomException("该桌台存在已结账订单，请勿重复结账");
-            }
-        }
-        // 3. 合并金额：逐单以服务端金额为准（占位单用订单明细汇总兜底），同时收集各单折前金额
-        BigDecimal orderAmount = BigDecimal.ZERO;
-        List<BigDecimal> detailAmounts = new ArrayList<>();
-        for (Orders o : orders) {
-            BigDecimal amt = o.getAmount();
-            if (amt == null || amt.compareTo(BigDecimal.ZERO) <= 0) {
-                amt = computeOrderDetailTotal(o.getId());
-            }
-            if (amt == null || amt.compareTo(BigDecimal.ZERO) <= 0) {
-                amt = BigDecimal.ZERO;
-            }
-            detailAmounts.add(amt);
-            orderAmount = orderAmount.add(amt);
-        }
-        if (orderAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new CustomException("该桌台尚未点单，请先加菜后再结账");
-        }
-        // 4. 券抵扣 + 会员等级折扣（与普通收银同一口径）
-        BigDecimal couponDiscount = resolveCouponDiscount(usedCouponId, memberUserId, orderAmount);
-        BigDecimal levelDiscount = resolveMemberLevelDiscount(memberUserId);
-        BigDecimal payable = orderAmount.subtract(couponDiscount).multiply(levelDiscount)
-                .setScale(2, RoundingMode.HALF_UP);
-        if (payable.compareTo(BigDecimal.ZERO) < 0) {
-            payable = BigDecimal.ZERO;
-        }
-        // 合并实收按各单折前占比分摊，末单兜底差额，保证各单 amount 之和恰等于总实收
-        List<BigDecimal> paidAmounts = allocatePaidAmounts(detailAmounts, payable);
-        // 5. 实收校验 + 储值扣减
-        validateActualAmount(payType, actualAmount, payable);
-        deductStoredBalanceIfNeeded(payType, memberUserId, payable);
-
-        // 6. 找零（仅现金）
-        BigDecimal changeAmount = BigDecimal.ZERO;
-        if (payType != null && payType == 1 && actualAmount.compareTo(payable) > 0) {
-            changeAmount = actualAmount.subtract(payable);
-        }
-        // 7. 写一条收银记录（主单取最早一张，备注标注合并笔数）
+        // P0-12 修复(2/2)：复用单笔路径的 Redis SETNX 幂等锁（按主单加锁，同一桌台并发
+        // 双击/重复提交被串行化）；锁内保留 cashier_record 先查 + 订单状态 CAS 双保险。
         Orders main = orders.get(0);
-        String mergedRemark = (remark == null ? "" : remark)
-                + "【按桌台合并结账，共" + orders.size() + "笔订单】";
-        CashierRecord record = buildCashierRecord(main.getId(), main.getNumber(), payType, orderAmount,
-                actualAmount, changeAmount, cashierId, cashierName, mergedRemark, voucherUrl);
-        cashierRecordMapper.insert(record);
+        if (!acquireCashPaymentLock(main.getId())) {
+            throw new CustomException("收银失败：该桌台订单正在处理中，请勿重复提交");
+        }
+        try {
+            // 2. 幂等：任一张单已收银则整单拒绝，避免重复收款
+            for (Orders o : orders) {
+                CashierRecord exist = cashierRecordMapper.selectOne(
+                        new LambdaQueryWrapper<CashierRecord>().eq(CashierRecord::getOrderId, o.getId()));
+                if (exist != null) {
+                    throw new CustomException("该桌台存在已结账订单，请勿重复结账");
+                }
+            }
+            // 3. 合并金额：逐单以服务端金额为准（占位单用订单明细汇总兜底），同时收集各单折前金额
+            BigDecimal orderAmount = BigDecimal.ZERO;
+            List<BigDecimal> detailAmounts = new ArrayList<>();
+            for (Orders o : orders) {
+                BigDecimal amt = o.getAmount();
+                if (amt == null || amt.compareTo(BigDecimal.ZERO) <= 0) {
+                    amt = computeOrderDetailTotal(o.getId());
+                }
+                if (amt == null || amt.compareTo(BigDecimal.ZERO) <= 0) {
+                    amt = BigDecimal.ZERO;
+                }
+                detailAmounts.add(amt);
+                orderAmount = orderAmount.add(amt);
+            }
+            if (orderAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new CustomException("该桌台尚未点单，请先加菜后再结账");
+            }
+            // 4. 券抵扣 + 会员等级折扣（与普通收银同一口径）
+            BigDecimal couponDiscount = resolveCouponDiscount(usedCouponId, memberUserId, orderAmount);
+            BigDecimal levelDiscount = resolveMemberLevelDiscount(memberUserId);
+            BigDecimal payable = orderAmount.subtract(couponDiscount).multiply(levelDiscount)
+                    .setScale(2, RoundingMode.HALF_UP);
+            if (payable.compareTo(BigDecimal.ZERO) < 0) {
+                payable = BigDecimal.ZERO;
+            }
+            // 合并实收按各单折前占比分摊，末单兜底差额，保证各单 amount 之和恰等于总实收
+            List<BigDecimal> paidAmounts = allocatePaidAmounts(detailAmounts, payable);
+            // 5. 实收校验 + 储值扣减
+            validateActualAmount(payType, actualAmount, payable);
+            deductStoredBalanceIfNeeded(payType, memberUserId, payable);
 
-        // 8. 所有订单统一置「已完成(4)」，amount 回写为各单分摊实收，并写支付记录
-        //    （堂食无 2→3→4 流转，直接完成）
-        String channel = resolvePayChannel(payType);
-        for (int idx = 0; idx < orders.size(); idx++) {
-            Orders o = orders.get(idx);
-            BigDecimal alloc = paidAmounts.get(idx);
-            boolean updated = orderService.lambdaUpdate()
-                    .eq(Orders::getId, o.getId())
-                    .eq(Orders::getTenantId, o.getTenantId())
-                    .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
-                    .set(Orders::getStatus, Orders.STATUS_COMPLETED)
-                    .set(Orders::getPayMethod, payType)
-                    .set(Orders::getCheckoutTime, LocalDateTime.now())
-                    .set(Orders::getAmount, alloc)
-                    .set(usedCouponId != null, Orders::getUsedCouponId, usedCouponId)
-                    .set(memberUserId != null, Orders::getUserId, memberUserId)
-                    .update();
-            if (!updated) {
-                throw new CustomException("订单状态已变更，请刷新后重试");
+            // 6. 找零（仅现金）
+            BigDecimal changeAmount = BigDecimal.ZERO;
+            if (payType == 1 && actualAmount.compareTo(payable) > 0) {
+                changeAmount = actualAmount.subtract(payable);
             }
-            saveSuccessPaymentOrder(o.getId(), channel, alloc);
-            // 堂食单直接完成，事务提交后补发完成事件：积分按实收发放、券核销
-            publishCompletedAfterCommit(o.getId(), o.getTenantId());
-        }
-        // 9. 释放桌台（与订单更新同一事务，fail-closed 依赖租户上下文，不能异步）
-        if (diningTableService != null) {
-            try {
-                diningTableService.changeStatus(tableId, DiningTableStatus.FREE.getValue());
-                log.info("[收银] 桌台{}合并结账完成，已释放为空闲（共{}笔订单）", tableId, orders.size());
-            } catch (Exception e) {
-                // 宽异常兜底：有意捕获 Exception，避免桌台释放失败回滚已完成的收款
-                log.error("[收银] 桌台{}释放失败，需人工核查: {}", tableId, e.getMessage(), e);
+            // 7. 写一条收银记录（主单取最早一张，备注标注合并笔数）
+            String mergedRemark = (remark == null ? "" : remark)
+                    + "【按桌台合并结账，共" + orders.size() + "笔订单】";
+            CashierRecord record = buildCashierRecord(main.getId(), main.getNumber(), payType, orderAmount,
+                    actualAmount, changeAmount, cashierId, cashierName, mergedRemark, voucherUrl);
+            cashierRecordMapper.insert(record);
+
+            // 8. 所有订单统一置「已完成(4)」，amount 回写为各单分摊实收，并写支付记录
+            //    （堂食无 2→3→4 流转，直接完成）
+            String channel = resolvePayChannel(payType);
+            for (int idx = 0; idx < orders.size(); idx++) {
+                Orders o = orders.get(idx);
+                BigDecimal alloc = paidAmounts.get(idx);
+                boolean updated = orderService.lambdaUpdate()
+                        .eq(Orders::getId, o.getId())
+                        .eq(Orders::getTenantId, o.getTenantId())
+                        .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
+                        .set(Orders::getStatus, Orders.STATUS_COMPLETED)
+                        .set(Orders::getPayMethod, payType)
+                        .set(Orders::getCheckoutTime, LocalDateTime.now())
+                        .set(Orders::getAmount, alloc)
+                        .set(usedCouponId != null, Orders::getUsedCouponId, usedCouponId)
+                        .set(memberUserId != null, Orders::getUserId, memberUserId)
+                        .update();
+                if (!updated) {
+                    throw new CustomException("订单状态已变更，请刷新后重试");
+                }
+                saveSuccessPaymentOrder(o.getId(), channel, alloc);
+                // 堂食单直接完成，事务提交后补发完成事件：积分按实收发放、券核销
+                publishCompletedAfterCommit(o.getId(), o.getTenantId());
             }
+            // 9. 释放桌台（与订单更新同一事务，fail-closed 依赖租户上下文，不能异步）
+            if (diningTableService != null) {
+                try {
+                    diningTableService.changeStatus(tableId, DiningTableStatus.FREE.getValue());
+                    log.info("[收银] 桌台{}合并结账完成，已释放为空闲（共{}笔订单）", tableId, orders.size());
+                } catch (Exception e) {
+                    // 宽异常兜底：有意捕获 Exception，避免桌台释放失败回滚已完成的收款
+                    log.error("[收银] 桌台{}释放失败，需人工核查: {}", tableId, e.getMessage(), e);
+                }
+            }
+            return record;
+        } finally {
+            // 与单笔路径一致：事务提交/回滚后立即释放，TTL 仅作进程异常兜底
+            releaseCashPaymentLock(main.getId());
         }
-        return record;
     }
 
     /**
@@ -940,75 +961,134 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
     public DailySettlement executeDailySettlement(LocalDate settlementDate, Long userId, String userName,
             Long tenantId) {
         // 按 tenantId+date 串行化日结请求，防止并发重复日结（TOCTOU）
+        // P0-12 修复：JVM 内 ConcurrentHashMap+synchronized 只在单实例生效，集群下失效；
+        // 改为 Redis SETNX 短锁（key 含 tenantId）+ DB 条件查询双保险：
+        // 拿不到 Redis 锁直接抛"正在日结中"；Redis 不可用时降级回 JVM 锁（单机兜底）；
+        // 锁内先查当日 settlement（原逻辑），插入再受唯一索引 uk_daily_settlement_tenant_date 保护
         String lockKey = (tenantId != null ? tenantId.toString() : "0") + ":" + settlementDate.toString();
-        Object lock = settlementLock.computeIfAbsent(lockKey, k -> new Object());
-        synchronized (lock) {
-            // 1. 检查是否已日结
-            DailySettlement existing = getDailySettlementByDate(settlementDate, tenantId);
-            if (existing != null && existing.getStatus() == 1) {
-                throw new CustomException("该日期已日结，不能重复日结");
-            }
-
-            // 2. 查询当日订单（等价抽取）
-            List<Orders> orders = queryDailyOrders(settlementDate, tenantId);
-
-            // 3. 创建或复用日结记录
-            DailySettlement settlement;
-            if (existing != null) {
-                settlement = existing;
-            } else {
-                settlement = new DailySettlement();
-                settlement.setSettlementDate(settlementDate);
-                settlement.setTenantId(tenantId);
-            }
-
-            // 4. 统计营业额与支付方式构成（等价抽取）
-            applyDailyStats(settlement, orders);
-
-            // 4.1 当日实际成功退款：直接从退款记录按创建时间聚合实际金额，
-            // 全额/部分退款均准确，跨日订单的退款也归集在退款当日（旧逻辑按订单状态取全额，
-            // 会双重扣减当日全退单、漏扣部分退款、漏算跨日退款）
-            Map<String, Object> refundStat = refundRecordService.sumRefundBetween(
-                    tenantId, settlementDate.atStartOfDay(), settlementDate.atTime(LocalTime.MAX));
-            BigDecimal refundAmount = (BigDecimal) refundStat.get("amount");
-            int refundCount = (Integer) refundStat.get("count");
-            settlement.setRefundAmount(refundAmount);
-            settlement.setRefundCount(refundCount);
-
-            // 5. 计算净收入、成本、毛利润
-            BigDecimal netIncome = settlement.getTotalRevenue().subtract(refundAmount);
-
-            // 从 DishCost 表聚合当日已完成订单的材料/人工/其他成本
-            // DishCost 按菜品维度记录单位成本（materialCost/laborCost/otherCost），
-            // 乘以订单明细数量后汇总，得到当日总成本
-            Map<String, BigDecimal> costBreakdown = aggregateDailyCosts(orders, tenantId);
-            BigDecimal materialCost = costBreakdown.get("materialCost");
-            BigDecimal laborCost = costBreakdown.get("laborCost");
-            BigDecimal otherCost = costBreakdown.get("otherCost");
-            BigDecimal totalCost = materialCost.add(laborCost).add(otherCost);
-
-            BigDecimal grossProfit = netIncome.subtract(totalCost);
-            BigDecimal profitRate = BigDecimal.ZERO;
-            if (netIncome.compareTo(BigDecimal.ZERO) > 0) {
-                profitRate = grossProfit.divide(netIncome, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
-            }
-
-            settlement.setNetIncome(netIncome);
-            settlement.setMaterialCost(materialCost);
-            settlement.setLaborCost(laborCost);
-            settlement.setOtherCost(otherCost);
-            settlement.setTotalCost(totalCost);
-            settlement.setGrossProfit(grossProfit);
-            settlement.setProfitRate(profitRate);
-            settlement.setStatus(1); // 已结账
-            settlement.setSettlementTime(LocalDateTime.now());
-            settlement.setSettlementUserId(userId);
-            settlement.setSettlementUserName(userName);
-
-            // 6. 持久化（等价抽取）
-            persistDailySettlement(settlement, existing == null, userId);
-            return settlement;
+        Boolean redisLocked = tryAcquireSettlementLock(SETTLEMENT_LOCK_KEY_PREFIX + lockKey);
+        if (Boolean.FALSE.equals(redisLocked)) {
+            throw new CustomException("正在日结中，请稍后重试");
         }
+        boolean useRedis = Boolean.TRUE.equals(redisLocked);
+        try {
+            if (useRedis) {
+                return doExecuteDailySettlement(settlementDate, userId, userName, tenantId);
+            }
+            // Redis 不可用（Template 缺失/异常）：降级为 JVM 锁，保持原单机串行行为
+            Object jvmLock = settlementLock.computeIfAbsent(lockKey, k -> new Object());
+            synchronized (jvmLock) {
+                return doExecuteDailySettlement(settlementDate, userId, userName, tenantId);
+            }
+        } finally {
+            if (useRedis) {
+                releaseSettlementLock(SETTLEMENT_LOCK_KEY_PREFIX + lockKey);
+            }
+        }
+    }
+
+    /**
+     * 获取日结 Redis 短锁（SETNX + TTL）。
+     *
+     * @return true=已获取；false=他人正在日结；null=Redis 不可用（调用方降级 JVM 锁）
+     */
+    private Boolean tryAcquireSettlementLock(String key) {
+        if (stringRedisTemplate == null) {
+            return null;
+        }
+        try {
+            Boolean ok = stringRedisTemplate.opsForValue()
+                    .setIfAbsent(key, UUID.randomUUID().toString(), SETTLEMENT_LOCK_TTL_SECONDS, TimeUnit.SECONDS);
+            return Boolean.TRUE.equals(ok);
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception——Redis 故障不应阻断日结，降级 JVM 锁
+            log.warn("[日结] Redis 锁不可用，降级 JVM 锁: key={}, err={}", key, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 释放日结 Redis 锁（删除失败不阻断，TTL 兜底自动过期）。
+     */
+    private void releaseSettlementLock(String key) {
+        try {
+            stringRedisTemplate.delete(key);
+        } catch (Exception e) {
+            // 宽异常兜底：有意捕获 Exception，锁将随 TTL 自动过期
+            log.warn("[日结] 释放 Redis 锁失败（TTL兜底）: key={}, err={}", key, e.getMessage());
+        }
+    }
+
+    /**
+     * 日结核心逻辑（在 Redis 锁或降级 JVM 锁保护下执行）。
+     */
+    private DailySettlement doExecuteDailySettlement(LocalDate settlementDate, Long userId, String userName,
+            Long tenantId) {
+        // 1. 检查是否已日结
+        DailySettlement existing = getDailySettlementByDate(settlementDate, tenantId);
+        if (existing != null && Integer.valueOf(1).equals(existing.getStatus())) {
+            throw new CustomException("该日期已日结，不能重复日结");
+        }
+
+        // 2. 查询当日订单（等价抽取）
+        List<Orders> orders = queryDailyOrders(settlementDate, tenantId);
+
+        // 3. 创建或复用日结记录
+        DailySettlement settlement;
+        if (existing != null) {
+            settlement = existing;
+        } else {
+            settlement = new DailySettlement();
+            settlement.setSettlementDate(settlementDate);
+            settlement.setTenantId(tenantId);
+        }
+
+        // 4. 统计营业额与支付方式构成（等价抽取）
+        applyDailyStats(settlement, orders);
+
+        // 4.1 当日实际成功退款：直接从退款记录按创建时间聚合实际金额，
+        // 全额/部分退款均准确，跨日订单的退款也归集在退款当日（旧逻辑按订单状态取全额，
+        // 会双重扣减当日全退单、漏扣部分退款、漏算跨日退款）
+        Map<String, Object> refundStat = refundRecordService.sumRefundBetween(
+                tenantId, settlementDate.atStartOfDay(), settlementDate.atTime(LocalTime.MAX));
+        BigDecimal refundAmount = (BigDecimal) refundStat.get("amount");
+        int refundCount = (Integer) refundStat.get("count");
+        settlement.setRefundAmount(refundAmount);
+        settlement.setRefundCount(refundCount);
+
+        // 5. 计算净收入、成本、毛利润
+        BigDecimal netIncome = settlement.getTotalRevenue().subtract(refundAmount);
+
+        // 从 DishCost 表聚合当日已完成订单的材料/人工/其他成本
+        // DishCost 按菜品维度记录单位成本（materialCost/laborCost/otherCost），
+        // 乘以订单明细数量后汇总，得到当日总成本
+        Map<String, BigDecimal> costBreakdown = aggregateDailyCosts(orders, tenantId);
+        BigDecimal materialCost = costBreakdown.get("materialCost");
+        BigDecimal laborCost = costBreakdown.get("laborCost");
+        BigDecimal otherCost = costBreakdown.get("otherCost");
+        BigDecimal totalCost = materialCost.add(laborCost).add(otherCost);
+
+        BigDecimal grossProfit = netIncome.subtract(totalCost);
+        BigDecimal profitRate = BigDecimal.ZERO;
+        if (netIncome.compareTo(BigDecimal.ZERO) > 0) {
+            profitRate = grossProfit.divide(netIncome, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100"));
+        }
+
+        settlement.setNetIncome(netIncome);
+        settlement.setMaterialCost(materialCost);
+        settlement.setLaborCost(laborCost);
+        settlement.setOtherCost(otherCost);
+        settlement.setTotalCost(totalCost);
+        settlement.setGrossProfit(grossProfit);
+        settlement.setProfitRate(profitRate);
+        settlement.setStatus(1); // 已结账
+        settlement.setSettlementTime(LocalDateTime.now());
+        settlement.setSettlementUserId(userId);
+        settlement.setSettlementUserName(userName);
+
+        // 6. 持久化（等价抽取）
+        persistDailySettlement(settlement, existing == null, userId);
+        return settlement;
     }
 
     /**
@@ -1125,12 +1205,19 @@ public class CashierServiceImpl extends ServiceImpl<CashierRecordMapper, Cashier
 
     /**
      * 持久化日结记录：新增或更新（等价抽取）。
+     * <p>P0-12 双保险：Redis 锁释放先于事务提交，存在极小竞态窗口；
+     * 依赖 daily_settlement(tenant_id, settlement_date) 唯一索引（见
+     * db/20261002_settlement_unique_index.sql）在插入冲突时兜底拒绝重复日结。</p>
      */
     private void persistDailySettlement(DailySettlement settlement, boolean isNew, Long userId) {
         if (isNew) {
             settlement.setCreateTime(LocalDateTime.now());
             settlement.setCreateUser(userId);
-            dailySettlementMapper.insert(settlement);
+            try {
+                dailySettlementMapper.insert(settlement);
+            } catch (DuplicateKeyException e) {
+                throw new CustomException("该日期已日结，不能重复日结");
+            }
         } else {
             settlement.setUpdateTime(LocalDateTime.now());
             settlement.setUpdateUser(userId);

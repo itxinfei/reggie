@@ -82,7 +82,9 @@
         :show-pagination="false"
         :stripe="true"
         :border="true"
+        :selection="true"
         aria-label="时段分布数据"
+        @selection-change="onSelectionChange"
       >
         <template #col-ratio="{ row }"><span>{{ calcPercent(row.count) }}%</span></template>
         <template #col-amount="{ row }"><span>¥{{ formatMoney(row.amount) }}</span></template>
@@ -104,7 +106,7 @@
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../api/report.js?v=20260926"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../js/chart-panel.js?v=20260926"></script>
   <script>
     (function() {
@@ -115,9 +117,11 @@
         data: function() {
           return {
             loading: false, dateRange: [], tableData: [],
+            // 勾选要导出的时段行（聚合结果，直接用行对象）
+            exportRows: [],
             // 修改点：table-bar 统一组件配置
             searchItems: [{ type: 'daterange', field: 'dateRange', placeholder: '日期范围' }],
-            searchActions: [{ key: 'export', text: '导出 CSV', type: 'success', icon: 'ri-download-line' }],
+            searchActions: [{ key: 'export', text: '导出 CSV', type: 'success', icon: 'ri-download-line', disabled: true }],
             // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
             timeSlotColumns: [
               { prop: 'name', label: '时段', width: 120, align: 'center' },
@@ -372,10 +376,10 @@
           handleExport: function() {
             const self = this;
             if (!self.dateRange || self.dateRange.length < 2) { ReggieUI.warning('请先选择日期范围'); return; }
-            if (!self.tableData || !self.tableData.length) { ReggieUI.warning('暂无数据可导出'); return; }
+            if (!self.exportRows || !self.exportRows.length) { ReggieUI.warning('请先勾选要导出的记录'); return; }
             const esc = function(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"' }
             const header = ['时段', '订单数', '营业额（元）', '占比']
-            const lines = self.tableData.map(function(r) {
+            const lines = self.exportRows.map(function(r) {
               return [r.name, r.count, r.amount != null ? r.amount : 0, self.calcPercent(r.count) + '%'].map(esc).join(',')
             })
             const csv = '\uFEFF' + header.map(esc).join(',') + '\r\n' + lines.join('\r\n')
@@ -401,7 +405,12 @@
             this.tableData = [];
             this.loadData();
           },
-          handleAction: function(action) { if (action.key === 'export') this.handleExport(); }
+          handleAction: function(action) { if (action.key === 'export') this.handleExport(); },
+          // 勾选变化：存勾选行并联动导出按钮
+          onSelectionChange: function(payload) {
+            this.exportRows = (payload && payload.rows) ? payload.rows : [];
+            this.searchActions[0].disabled = this.exportRows.length === 0;
+          }
         }
       })
     })();

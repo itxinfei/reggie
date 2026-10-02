@@ -23,6 +23,8 @@
 </head>
 <body>
   <div id="app">
+    <main id="rider-main">
+      <h1 class="sr-only">消息中心</h1>
     <van-nav-bar title="消息中心" left-text="返回" left-arrow @click-left="goBack"></van-nav-bar>
 
     <div class="msg-bar">
@@ -48,6 +50,7 @@
       </div>
       <div class="rider-empty" v-else>{{ refreshing ? '加载中…' : '暂无消息' }}</div>
     </van-pull-refresh>
+  </main>
   </div>
 
   <script src="/backend/plugins/vue/vue.js"></script>

@@ -2,6 +2,7 @@ package com.reggie.module.schedule.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
+import com.reggie.common.RedisLockUtil;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.setmeal.model.SetmealDish;
@@ -66,11 +67,15 @@ public class StockRefundCompensationTask {
     @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
+    /** 公共 Redis 分布式锁工具（fail-closed） */
+    @Autowired
+    private RedisLockUtil redisLockUtil;
+
     /** 补偿任务检查时间窗口（24小时内） */
     private static final long COMPENSATION_WINDOW_HOURS = 24;
 
-    /** 分布式锁过期时间（毫秒），应大于任务最大执行时间 */
-    private static final long LOCK_TTL_MS = 3 * 60 * 1000L; // 3分钟
+    /** 分布式锁过期时间（秒），应大于任务最大执行时间 */
+    private static final long LOCK_TTL_SECONDS = 3 * 60L; // 3分钟
 
     /**
      * 库存回退补偿任务
@@ -78,14 +83,8 @@ public class StockRefundCompensationTask {
      */
     @Scheduled(fixedRate = 30 * 60 * 1000)
     public void compensateStockRefund() {
-        // 分布式锁防止任务重叠
-        String lockValue = tryLock("schedule:lock:stock-refund-compensation", LOCK_TTL_MS);
-        if (lockValue == null) {
-            log.debug("[库存补偿] 补偿任务正在执行中，跳过本次");
-            return;
-        }
-
-        try {
+        // 分布式锁防止任务重叠（fail-closed：拿不到锁=另一实例在执行，跳过本轮）
+        redisLockUtil.executeWithLock("schedule:lock:stock-refund-compensation", LOCK_TTL_SECONDS, () -> {
             List<Tenant> tenants = tenantService.listActiveTenants();
             if (tenants.isEmpty()) {
                 return;
@@ -107,9 +106,7 @@ public class StockRefundCompensationTask {
             if (totalCompensated > 0) {
                 log.info("[库存补偿] 批量补偿完成，共处理 {} 个租户，补偿 {} 个订单", tenants.size(), totalCompensated);
             }
-        } finally {
-            unlock("schedule:lock:stock-refund-compensation", lockValue);
-        }
+        });
     }
 
     /**
@@ -265,7 +262,7 @@ public class StockRefundCompensationTask {
         return "stock:refund:" + orderId + ":" + detailId + ":" + subKey;
     }
 
-    /** 该明细项是否已补偿过（Redis 不可用时返回 false，但此时 tryLock 已跳过整个任务，不会执行到此处） */
+    /** 该明细项是否已补偿过（Redis 不可用时返回 false，但此时 RedisLockUtil 未拿到锁已跳过整个任务，不会执行到此处） */
     private boolean isCompensated(Long orderId, Long detailId, String subKey) {
         if (redisTemplate == null) {
             return false;
@@ -290,48 +287,6 @@ public class StockRefundCompensationTask {
         } catch (Exception e) {
             // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
             log.debug("[库存补偿] 幂等标记异常: {}", e.getMessage());
-        }
-    }
-
-    // ──────────────────────────────────────
-    // 分布式锁辅助方法
-    // ──────────────────────────────────────
-
-    private String tryLock(String lockKey, long ttlMs) {
-        if (redisTemplate == null) {
-            // fail-closed：写操作类定时任务在 Redis 不可用时跳过本次执行，避免多实例重复补偿
-            log.warn("[库存补偿] Redis不可用，跳过本次执行（分布式锁获取失败）: {}", lockKey);
-            return null;
-        }
-        try {
-            // 使用UUID作为锁值，标识持有者身份
-            String lockValue = java.util.UUID.randomUUID().toString();
-            Boolean success = redisTemplate.opsForValue()
-                    .setIfAbsent(lockKey, lockValue, ttlMs, TimeUnit.MILLISECONDS);
-            return Boolean.TRUE.equals(success) ? lockValue : null;
-        } catch (Exception e) {
-            // fail-closed：获取锁异常时跳过本次执行，避免多实例重复补偿
-            log.error("[库存补偿] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
-            return null;
-        }
-    }
-
-    private void unlock(String lockKey, String lockValue) {
-        if (redisTemplate == null || lockValue == null) {
-            return;
-        }
-        try {
-            // Lua脚本：比对锁值后才删除，防止误删他人的锁
-            String luaScript =
-                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
-            redisTemplate.execute(
-                new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
-                java.util.Collections.singletonList(lockKey),
-                lockValue
-            );
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("[库存补偿] 释放分布式锁失败: {}", lockKey, e);
         }
     }
 }

@@ -14,16 +14,16 @@
     <style>
         .reserve-wrap { padding: 10px; }
         /* 不用 van-card 做容器：本项目 vant 构建的 card 不渲染默认插槽，用普通面板 */
-        .panel { background: #fff; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+        .panel { background: var(--color-text-white); border-radius: 8px; padding: 14px; margin-bottom: 10px; }
         .resv-item { padding: 4px 0; }
         .resv-head { display: flex; justify-content: space-between; align-items: center; }
-        .resv-time { font-size: 16px; font-weight: 600; color: #1f2937; }
-        .resv-meta { color: #6b7280; font-size: 13px; margin-top: 4px; }
-        .resv-remark { color: #9ca3af; font-size: 12px; margin-top: 4px; }
+        .resv-time { font-size: 16px; font-weight: 600; color: var(--c-gray-800); }
+        .resv-meta { color: var(--c-gray-500); font-size: 13px; margin-top: 4px; }
+        .resv-remark { color: var(--c-gray-400); font-size: 12px; margin-top: 4px; }
         .resv-cancel { text-align: right; margin-top: 6px; }
-        .list-title { font-size: 14px; color: #4b5563; margin: 4px 2px 8px; }
+        .list-title { font-size: 14px; color: var(--c-gray-600); margin: 4px 2px 8px; }
         .stepper-cell { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; }
-        .stepper-cell .label { font-size: 14px; color: #1f2937; }
+        .stepper-cell .label { font-size: 14px; color: var(--c-gray-800); }
     </style>
 </head>
 <body>
@@ -64,7 +64,7 @@
           <!-- 我的预订 -->
           <div class="list-title">我的预订</div>
           <div v-if="list.length === 0" class="panel">
-            <div style="text-align:center; color:#9ca3af; font-size:13px;">暂无预订记录</div>
+            <div style="text-align:center; color:var(--c-gray-400); font-size:13px;">暂无预订记录</div>
           </div>
           <div v-for="item in list" :key="item.id" class="panel resv-item">
             <div class="resv-head">

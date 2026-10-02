@@ -97,7 +97,9 @@
         :show-pagination="false"
         :stripe="true"
         :border="true"
+        :selection="true"
         aria-label="菜品销量排行"
+        @selection-change="onSelectionChange"
       >
         <template #col-rank="{ $index }">
           <span :class="['rank-badge', $index === 0 ? 'r1' : $index === 1 ? 'r2' : $index === 2 ? 'r3' : 'rn']">
@@ -123,7 +125,7 @@
   <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../api/report.js?v=20260926"></script>
   <script src="../../api/category.js?v=20260918"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../js/chart-panel.js?v=20260926"></script>
   <script>
     new Vue({
@@ -131,6 +133,8 @@
       data: function() {
         return {
           loading: false, dateRange: [], limit: 10, tableData: [], categoryId: null,
+          // 勾选要导出的行（报表聚合结果，直接用行对象而非 id）
+          exportRows: [],
           // 修改点：分类筛选下拉
           categoryOptions: [],
           searchConfig: [
@@ -138,7 +142,7 @@
           ],
           // 操作按钮配置
           actionConfig: [
-            { key: 'export', text: '导出 CSV', type: 'success', icon: 'ri-download-line' }
+            { key: 'export', text: '导出 CSV', type: 'success', icon: 'ri-download-line', disabled: true }
           ],
           // 表格列配置（配合 crud-table 组件，替代原手写 el-table 列定义）
           dishColumns: [
@@ -224,6 +228,11 @@
           if (payload.key === 'export') {
             this.handleExport();
           }
+        },
+        // 勾选变化：存勾选行并联动导出按钮（未勾选禁用）
+        onSelectionChange: function(payload) {
+          this.exportRows = (payload && payload.rows) ? payload.rows : [];
+          this.actionConfig[0].disabled = this.exportRows.length === 0;
         },
         loadData: function() {
           const self = this;
@@ -394,13 +403,15 @@
           if (!self.dateRange || self.dateRange.length < 2) {
             ReggieUI.warning('请先选择日期范围'); return;
           }
-          if (!self.tableData || !self.tableData.length) {
-            ReggieUI.warning('暂无数据可导出'); return;
+          if (!self.exportRows || !self.exportRows.length) {
+            ReggieUI.warning('请先勾选要导出的记录'); return;
           }
           const esc = function(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"' }
           const header = ['排名', '菜品名称', '销量（份）', '相对榜首(%)']
-          const lines = self.tableData.map(function(r, i) {
-            return [i + 1, r.name, r.count, self.calcPercent(r.count) + '%'].map(esc).join(',')
+          // 仅导出勾选行；排名保留该行在原榜单中的位次
+          const lines = self.exportRows.map(function(r) {
+            var rank = self.tableData.indexOf(r) + 1
+            return [rank, r.name, r.count, self.calcPercent(r.count) + '%'].map(esc).join(',')
           })
           const csv = '\uFEFF' + header.map(esc).join(',') + '\r\n' + lines.join('\r\n')
           const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })

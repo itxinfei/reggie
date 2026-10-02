@@ -20,7 +20,6 @@ import com.reggie.dto.auth.EmployeeLoginDTO;
 import com.reggie.module.auth.dto.UpdateEmployeeStatusBatchDTO;
 import com.reggie.module.auth.dto.UpdateEmployeeStatusDTO;
 import com.reggie.module.auth.model.Employee;
-import com.reggie.enums.EmployeeRole;
 import com.reggie.enums.UserStatus;
 import com.reggie.module.auth.service.EmployeeService;
 import com.reggie.module.sys.model.Role;
@@ -568,11 +567,6 @@ public class EmployeeController {
     @Operation(summary = "新增员工", description = "创建新的员工账号，仅管理员可操作，初始密码统一设置")
     @Parameter(name = "employee", description = "员工信息（用户名、姓名、手机号、角色等）", required = true)
     public R<Map<String, Object>> save(HttpServletRequest request,@Valid @RequestBody Employee employee){
-        // 权限校验：仅管理员可新增员工
-        if (!isAdmin(request)) {
-            return R.error("权限不足，仅管理员可新增员工");
-        }
-
         log.info("新增员工，员工信息：手机号={}，身份证号={}",
             LogMaskUtils.maskPhone(employee.getPhone()),
             LogMaskUtils.maskIdCard(employee.getIdNumber()));
@@ -799,9 +793,6 @@ public class EmployeeController {
     @Operation(summary = "批量导入员工", description = "上传 xlsx 批量创建员工，仅管理员可操作")
     public R<Map<String, Object>> importEmployees(HttpServletRequest request,
             @RequestParam("file") MultipartFile file) {
-        if (!isAdmin(request)) {
-            return R.error("权限不足，仅管理员可导入员工");
-        }
         if (file == null || file.isEmpty()) {
             return R.error("请选择要导入的文件");
         }
@@ -991,10 +982,6 @@ public class EmployeeController {
     @Operation(summary = "修改员工信息", description = "根据ID更新员工信息，仅管理员可操作")
     @Parameter(name = "employee", description = "员工信息（包含ID）", required = true)
     public R<String> update(HttpServletRequest request, @Valid @RequestBody Employee employee) {
-        // 权限校验：仅管理员可修改员工信息
-        if (!isAdmin(request)) {
-            return R.error("权限不足，仅管理员可修改员工信息");
-        }
         if (employee.getId() == null) {
             return R.error("员工ID不能为空");
         }
@@ -1059,21 +1046,21 @@ public class EmployeeController {
     @RateLimit(maxRequestsPerSecond = 10)
     @Operation(summary = "修改员工状态", description = "仅更新员工启用/禁用状态，不影响其他字段，自动校验租户权限")
     public R<String> updateStatus(HttpServletRequest request, @Valid @RequestBody UpdateEmployeeStatusDTO dto) {
-        if (!isAdmin(request)) {
-            return R.error("权限不足");
-        }
         Long id = dto.getId();
         Integer status = dto.getStatus();
         if (id == null || status == null) {
             return R.error("参数错误");
         }
-        // 租户校验：确保只能修改当前租户的员工
+        // 租户校验：确保只能修改当前租户的员工（employee 表在租户忽略列表内需手动过滤，租户缺失一律拒绝）
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId == null) {
+            return R.error("租户信息缺失，无法操作");
+        }
         Employee target = employeeService.getById(id);
         if (target == null) {
             return R.error("员工不存在");
         }
-        Long currentTenantId = BaseContext.getCurrentTenantId();
-        if (currentTenantId != null && !currentTenantId.equals(target.getTenantId())) {
+        if (!currentTenantId.equals(target.getTenantId())) {
             return R.error("无权操作其他租户的员工");
         }
         Employee emp = new Employee();
@@ -1093,22 +1080,22 @@ public class EmployeeController {
     @Operation(summary = "批量修改员工状态", description = "批量更新员工启用/禁用状态，自动校验租户权限")
     public R<String> updateStatusBatch(HttpServletRequest request,
             @Valid @RequestBody UpdateEmployeeStatusBatchDTO dto) {
-        if (!isAdmin(request)) {
-            return R.error("权限不足");
-        }
         List<Long> ids = dto.getIds();
         Integer status = dto.getStatus();
         if (ids == null || ids.isEmpty() || status == null) {
             return R.error("参数错误");
         }
         Long currentTenantId = BaseContext.getCurrentTenantId();
+        if (currentTenantId == null) {
+            return R.error("租户信息缺失，无法操作");
+        }
         List<Employee> targets = employeeService.listByIds(ids);
         List<Long> unauthorizedIds = new ArrayList<>();
         for (Employee target : targets) {
             if (target == null) {
                 continue;
             }
-            if (currentTenantId != null && !currentTenantId.equals(target.getTenantId())) {
+            if (!currentTenantId.equals(target.getTenantId())) {
                 unauthorizedIds.add(target.getId());
             }
         }
@@ -1165,9 +1152,6 @@ public class EmployeeController {
     @Operation(summary = "删除员工", description = "批量删除员工，仅管理员可操作，不允许删除自己")
     @Parameter(name = "ids", description = "员工ID列表", required = true)
     public R<String> delete(HttpServletRequest request, @RequestParam List<Long> ids) {
-        if (!isAdmin(request)) {
-            return R.error("权限不足，仅管理员可删除员工");
-        }
         if (ids == null || ids.isEmpty()) {
             return R.error("请选择要删除的员工");
         }
@@ -1251,30 +1235,6 @@ public class EmployeeController {
 
         log.info("员工 {} 修改密码成功，Session 已失效", emp.getUsername());
         return R.success("密码修改成功，请重新登录");
-    }
-
-    /**
-     * 检查当前登录用户是否为管理员
-     */
-    private boolean isAdmin(HttpServletRequest request) {
-        Object empIdObj = request.getSession().getAttribute("employee");
-        if (empIdObj == null) {
-            return false;
-        }
-        // 安全转型，避免 ClassCastException
-        Long empId = (empIdObj instanceof Number) ? ((Number) empIdObj).longValue() : null;
-        if (empId == null) {
-            return false;
-        }
-        Employee currentEmp = employeeService.getById(empId);
-
-        // 更新 Session 中的租户信息（确保租户上下文最新）
-        if (currentEmp != null) {
-            request.getSession().setAttribute("tenantId", currentEmp.getTenantId());
-            return EmployeeRole.isAdmin(currentEmp.getRole());
-        }
-
-        return false;
     }
 
     /**

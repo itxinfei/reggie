@@ -18,15 +18,9 @@ function getMyRechargeList(params) {
   return $axios({ url: '/api/member/member/my-recharges', method: 'get', params: params })
 }
 
-// 获取我的优惠券列表
-function getMyCoupons(memberId) {
-  return $axios({ url: '/api/member/coupon-user/my/' + memberId, method: 'get' })
-}
-
-// 领取优惠券
-function claimCoupon(data) {
-  return $axios({ url: '/api/member/coupon-template/claim', method: 'post', data: data })
-}
+// 2026-09-30 移除 getMyCoupons(memberId) / claimCoupon(data)：
+// 打的是后台管理口径端点（已加 @RequireEmployee），C 端调用会 401；
+// C 端一律使用下方 getMyCouponsFront / claimCouponFront（/front/coupon/*，登录态绑定身份）
 
 // 获取可领取优惠券列表
 function getAvailableCoupons() {

@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.util.StringUtils;
 
 /**
  * Jasypt 配置加密器
@@ -28,7 +29,9 @@ import org.springframework.context.annotation.Profile;
  * - 不同环境应使用不同的加密密钥
  * - 若密钥泄露，需重新加密所有 ENC(...) 值并轮换密钥
  *
- * 仅在生产环境启用，开发环境使用明文密码便于调试。内网明文部署无 ENC() 值时使用内置默认口令（见 encryptorPassword 注释）。
+ * 仅在生产环境启用（{@code @Profile("prod")}），开发环境使用明文密码便于调试、不加载本 Bean。
+ * 2026-10-02 安全修复（审查报告 P0 问题 2）：删除内置默认口令 "reggie-intranet"，
+ * 未配置 JASYPT_ENCRYPTOR_PASSWORD 时启动阶段 fail-fast 拒绝，不再静默使用公开默认口令。
  *
  * @author reggie
  * @since 2026-08-27
@@ -39,13 +42,12 @@ import org.springframework.context.annotation.Profile;
 public class JasyptConfig {
 
     /**
-     * Jasypt 加密密钥，通过环境变量 JASYPT_ENCRYPTOR_PASSWORD 传入
+     * Jasypt 加密口令，仅接受环境变量 JASYPT_ENCRYPTOR_PASSWORD 传入，无默认值。
      *
-     * 内网部署：配置文件全部明文硬编码、无 ENC(...) 值，加密器初始化后也不会被调用，
-     * 故提供内置默认口令，未设环境变量也能正常启动；若将来改用 ENC(...) 存储敏感值，
-     * 仍应通过环境变量 JASYPT_ENCRYPTOR_PASSWORD 覆盖该默认口令。
+     * 本 Bean 只在 prod profile 加载，生产环境口令缺失一律拒绝启动；
+     * dev/test 不经过此处（明文配置，无 ENC(...) 解密需求）。
      */
-    @Value("${JASYPT_ENCRYPTOR_PASSWORD:reggie-intranet}")
+    @Value("${JASYPT_ENCRYPTOR_PASSWORD:}")
     private String encryptorPassword;
 
     /**
@@ -58,9 +60,15 @@ public class JasyptConfig {
      * - ivGeneratorClassName：IV 向量生成器，3DES 需要
      *
      * @return Jasypt 字符串加密器
+     * @throws IllegalStateException 环境变量 JASYPT_ENCRYPTOR_PASSWORD 未配置（fail-fast）
      */
     @Bean("jasyptStringEncryptor")
     public StringEncryptor stringEncryptor() {
+        if (!StringUtils.hasText(encryptorPassword)) {
+            throw new IllegalStateException("[Jasypt] 未配置环境变量 JASYPT_ENCRYPTOR_PASSWORD："
+                    + "JasyptConfig 仅在 prod 环境加载，禁止回退内置默认口令，拒绝启动。"
+                    + "请通过环境变量注入加密口令后重启");
+        }
         PooledPBEStringEncryptor encryptor = new PooledPBEStringEncryptor();
         SimpleStringPBEConfig config = new SimpleStringPBEConfig();
 

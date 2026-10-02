@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -54,8 +54,11 @@
         :total="counts"
         :show-actions="true" :viewable="true"
         :actions-width="180"
+        row-key="id"
+        :batch-delete="doBatchDelete"
         @page-change="onPageChange"
         @size-change="onSizeChange"
+        @batch-deleted="onBatchDeleted"
       >
         <template #col-stockQty="{ row }">
           <span :class="{ 'stock-low': row.stockQty <= row.minStock }">{{ row.stockQty }}</span>
@@ -185,7 +188,7 @@
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260926"></script>
     <script src="../../api/inventory.js?v=20260926"></script>
-    <script src="../../js/components.js?v=20260930"></script>
+    <script src="../../js/components.js?v=20261002"></script>
     <script src="../../js/inventory-helper.js?v=20260922"></script>
     <script>
       new Vue({
@@ -509,6 +512,13 @@
               if (e === 'cancel' || e === 'close') return
               ReggieUI.error('删除失败：' + e)
             })
+          },
+          // 批量删除：顺序循环单删（后端仅 DELETE /api/inventory/material/{id}）
+          doBatchDelete(payload) {
+            return RgBatchDeleteByOne({ ids: payload.ids, label: '食材', request: deleteMaterial })
+          },
+          onBatchDeleted() {
+            this.fetchData(true)
           },
           warningHandle() {
             materialWarning().then(res => {

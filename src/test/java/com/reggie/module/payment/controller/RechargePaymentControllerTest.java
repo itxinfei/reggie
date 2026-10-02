@@ -162,14 +162,16 @@ class RechargePaymentControllerTest extends BaseControllerTest {
 
     @Test
     void payWithoutLoginContext() throws Exception {
-        // MockMvc 不经过 LoginCheckFilter（@WebFilter 非 Spring bean），真实链路的 401 由 filter 保障；
-        // 这里清空 ThreadLocal 登录态，验证 controller 自身的未登录防御返回 code=0
+        // MockMvc 已在测试侧移除 LoginCheckFilter（见 MockMvcFilterExclusionAutoConfiguration），
+        // 这里清空 ThreadLocal 登录态，验证 controller 自身的未登录纵深防御：200 + code=0 + 请先登录。
+        // filter 层的 401 拦截由 LoginCheckFilter 独立单元测试覆盖。
         BaseContext.setCurrentId(null);
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/api/payment/recharge/pay"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("RC-PAY-1", "WECHAT")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(0));
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("请先登录"));
     }
 }

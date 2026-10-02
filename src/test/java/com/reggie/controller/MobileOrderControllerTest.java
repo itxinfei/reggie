@@ -49,16 +49,17 @@ public class MobileOrderControllerTest extends BaseControllerTest {
     @BeforeEach
     void setUp() {
         cleaner.cleanTables("order_detail", "orders");
-        BaseContext.setCurrentId(1L);
+        // 登录用户用测试专用高 ID，避开 reggie 库租户 1 演示用户的小主键（单库改造，2026-10-02）
+        BaseContext.setCurrentId(994001L);
         BaseContext.setCurrentTenantId(999L);
     }
 
     @Test
     void testUserPage() throws Exception {
         Orders order = new Orders();
-        order.setId(1L);
+        order.setId(997001L);
         order.setNumber("20250101001");
-        order.setUserId(1L);
+        order.setUserId(994001L);
         order.setStatus(2);
         order.setAmount(new BigDecimal("99.00"));
         order.setOrderTime(LocalDateTime.now());
@@ -70,9 +71,9 @@ public class MobileOrderControllerTest extends BaseControllerTest {
         orderService.save(order);
 
         OrderDetail detail = new OrderDetail();
-        detail.setId(1L);
-        detail.setOrderId(1L);
-        detail.setDishId(1L);
+        detail.setId(997101L);
+        detail.setOrderId(997001L);
+        detail.setDishId(992001L);
         detail.setName("测试菜品");
         detail.setNumber(2);
         detail.setAmount(new BigDecimal("99.00"));
@@ -81,7 +82,7 @@ public class MobileOrderControllerTest extends BaseControllerTest {
         mockMvc.perform(get("/order/userPage")
                 .param("page", "1")
                 .param("pageSize", "10")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L))
+                .sessionAttr("user", 994001L).sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.records[0].orderDetails[0].name").value("测试菜品"));
@@ -90,9 +91,9 @@ public class MobileOrderControllerTest extends BaseControllerTest {
     @Test
     void testAgain() throws Exception {
         Orders order = new Orders();
-        order.setId(2L);
+        order.setId(997002L);
         order.setNumber("20250101002");
-        order.setUserId(1L);
+        order.setUserId(994001L);
         order.setStatus(2);
         order.setAmount(new BigDecimal("59.00"));
         order.setOrderTime(LocalDateTime.now());
@@ -100,9 +101,9 @@ public class MobileOrderControllerTest extends BaseControllerTest {
         orderService.save(order);
 
         OrderDetail detail = new OrderDetail();
-        detail.setId(2L);
-        detail.setOrderId(2L);
-        detail.setDishId(1L);
+        detail.setId(997102L);
+        detail.setOrderId(997002L);
+        detail.setDishId(992001L);
         detail.setName("再来一单菜品");
         detail.setNumber(1);
         detail.setAmount(new BigDecimal("59.00"));
@@ -110,8 +111,8 @@ public class MobileOrderControllerTest extends BaseControllerTest {
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/order/again")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":2}")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L)))
+                .content("{\"id\":997002}")
+                .sessionAttr("user", 994001L).sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }
@@ -121,7 +122,7 @@ public class MobileOrderControllerTest extends BaseControllerTest {
         mockMvc.perform(get("/order/userPage")
                 .param("page", "1")
                 .param("pageSize", "10")
-                .sessionAttr("user", 1L).sessionAttr("tenantId", 999L))
+                .sessionAttr("user", 994001L).sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }

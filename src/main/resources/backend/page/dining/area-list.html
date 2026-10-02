@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -54,8 +54,11 @@
         :index-width="45"
         :show-actions="true" :viewable="true"
         :actions-width="120"
+        row-key="id"
+        :batch-delete="doBatchDelete"
         @page-change="onPageChange"
         @size-change="onSizeChange"
+        @batch-deleted="onBatchDeleted"
       >
         <template #col-name="{ row }">
           <span style="font-weight:500;">{{ row.name }}</span>
@@ -93,7 +96,7 @@
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../api/dining.js?v=20260918b"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script>
       new Vue({
         el: '#area-app',
@@ -352,6 +355,13 @@
               ReggieUI.error('请求失败：' + err)
             })
           }).catch(() => {})
+        },
+        // 批量删除：顺序循环单删（后端仅 DELETE /api/dining/area/{id}）
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '区域', request: deleteArea })
+        },
+        onBatchDeleted() {
+          this.fetchData(true)
         },
         // 修改点：分页处理统一交由 ReggieListMixin 的 onPageChange / onSizeChange 处理，手写分页方法已移除
       }

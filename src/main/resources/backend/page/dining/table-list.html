@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -136,8 +136,11 @@
           :actions-width="120"
           :stripe="true"
           :border="true"
+          row-key="id"
+          :batch-delete="doBatchDelete"
           aria-label="桌台列表"
           @page-change="onCrudPageChange"
+          @batch-deleted="onBatchDeleted"
         >
           <template #col-name="{ row }">
             <span style="font-weight:500;">{{ row.name }}</span>
@@ -386,7 +389,7 @@
   <script src="../../js/request.js?v=20260930"></script>
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260926"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../api/dining.js?v=20260918b"></script>
   <script>
     new Vue({
@@ -690,6 +693,13 @@
                 else { ReggieUI.error(res.msg || '操作失败') }
               }).catch(function(err) { ReggieUI.error('请求失败：' + (err.message || err)) })
             })
+        },
+        // 批量删除：顺序循环单删（后端仅 DELETE /api/dining/table/{id}）
+        doBatchDelete: function(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '桌台', request: deleteTable })
+        },
+        onBatchDeleted: function() {
+          this.init(true)
         },
         // 操作列「更多」下拉命令分发
         onTableCommand: function(cmd, row) {

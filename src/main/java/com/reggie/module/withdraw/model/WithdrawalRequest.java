@@ -9,6 +9,9 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import javax.validation.constraints.DecimalMax;
+import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -38,6 +41,9 @@ public class WithdrawalRequest implements Serializable {
     private Long userId;
 
     @Schema(description = "提现金额（元）", example = "1000.00")
+    @NotNull(message = "提现金额不能为空")
+    @DecimalMin(value = "0.01", message = "提现金额必须大于0")
+    @DecimalMax(value = "50000.00", message = "单笔提现金额不能超过50000元")
     private BigDecimal amount;
 
     @Schema(description = "银行名称", example = "中国工商银行")

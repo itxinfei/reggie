@@ -8,6 +8,7 @@ import com.reggie.module.sys.service.SystemConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,15 @@ public class SystemConfigServiceImpl extends com.baomidou.mybatisplus.extension.
 
     @Autowired
     private SystemConfigMapper systemConfigMapper;
+
+    /**
+     * 自身代理（@Lazy 避免循环依赖）：
+     * getConfig(String) 原先直接 this.getConfig(String, Long) 自调用，绕过 Spring 代理，
+     * 导致 @Cacheable 永不生效；经 self 调用才能让缓存切面真正拦截。
+     */
+    @Autowired
+    @Lazy
+    private SystemConfigService self;
 
     /**
      * 获取 config。
@@ -60,7 +70,8 @@ public class SystemConfigServiceImpl extends com.baomidou.mybatisplus.extension.
     @Override
     public String getConfig(String configKey) {
         Long tenantId = BaseContext.getCurrentTenantId();
-        return getConfig(configKey, tenantId);
+        // 经自身代理调用，@Cacheable 才会被切面拦截（原 this 自调用绕过代理，缓存形同虚设）
+        return self.getConfig(configKey, tenantId);
     }
 
     /**
@@ -94,8 +105,14 @@ public class SystemConfigServiceImpl extends com.baomidou.mybatisplus.extension.
      */
     public boolean setConfig(Long tenantId, String configKey, String configValue) {
         LambdaQueryWrapper<SystemConfig> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(SystemConfig::getConfigKey, configKey)
-               .eq(SystemConfig::getTenantId, tenantId);
+        wrapper.eq(SystemConfig::getConfigKey, configKey);
+        // tenantId 为 null 时 eq(col, null) 生成 tenant_id = NULL 条件（SQL 三值逻辑永不命中），
+        // 导致每次 setGlobalConfig 都重复插入全局配置行，必须用 isNull
+        if (tenantId != null) {
+            wrapper.eq(SystemConfig::getTenantId, tenantId);
+        } else {
+            wrapper.isNull(SystemConfig::getTenantId);
+        }
         SystemConfig existing = this.getOne(wrapper);
 
         if (existing != null) {

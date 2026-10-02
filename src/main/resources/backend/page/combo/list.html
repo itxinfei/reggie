@@ -187,7 +187,9 @@
       row-key="id"
       :show-actions="true" :viewable="true"
       :actions-width="180"
+      :batch-delete="doBatchDelete"
       @selection-change="handleSelectionChange"
+      @batch-deleted="handleQuery()"
       @page-change="onPageChange"
       @size-change="onSizeChange"
     >
@@ -220,7 +222,7 @@
         <el-button type="text" size="small" class="btn-view" @click="addSetMeal(row.id)">修改</el-button>
         <el-button v-if="row.status == '0'" type="text" size="small" class="btn-success" @click="statusHandle(row)">启售</el-button>
         <el-button v-else type="text" size="small" class="btn-warning" @click="statusHandle(row)">停售</el-button>
-        <el-button type="text" size="small" class="btn-delete" @click="deleteHandle('单删', row)">删除</el-button>
+        <el-button type="text" size="small" class="btn-delete" @click="deleteHandle(row)">删除</el-button>
       </template>
     </crud-table>
   </main>
@@ -415,7 +417,7 @@
 <script src="../../js/performance-utils.js?v=20260926"></script>
 <script src="../../api/combo.js?v=20260926"></script>
 <script src="../../api/food.js?v=20260926"></script>
-<script src="../../js/components.js?v=20260930"></script>
+<script src="../../js/components.js?v=20261002"></script>
 
 <script>
 new Vue({
@@ -449,7 +451,6 @@ new Vue({
       // 修改点：<table-bar> 统一组件配置
       tableSearchItems: [],
       tableActions: [
-        { key: 'batchDelete', text: '批量删除', type: 'danger' },
         { key: 'batchOn', text: '批量启售', type: 'success' },
         { key: 'batchOff', text: '批量停售', type: 'warning' },
         { key: 'add', text: '+ 新建套餐', type: 'primary' }
@@ -565,8 +566,7 @@ new Vue({
     },
     // 修改点：<table-bar> 组件统一操作分发
     onTableAction: function(payload) {
-      if (payload.key === 'batchDelete') { this.deleteHandle('批量'); }
-      else if (payload.key === 'batchOn') { this.statusHandle('1'); }
+      if (payload.key === 'batchOn') { this.statusHandle('1'); }
       else if (payload.key === 'batchOff') { this.statusHandle('0'); }
       else if (payload.key === 'add') { this.addSetMeal('add'); }
     },
@@ -688,23 +688,14 @@ new Vue({
     },
 
     // ========== 删除 ==========
-    // 修改点：删除确认文案含对象名（8.8 危险动作规范）
-    deleteHandle(type, row) {
-      const isBatch = type === '批量'
-      // 修改点：批量入口 row 为 undefined（非 null），守卫用 !row 同时兼容 null/undefined
-      if (isBatch && !row) {
-        if (this.checkList.length === 0) {
-          ReggieUI.error('请选择删除对象')
-          return
-        }
-      }
-      const msg = isBatch ? '确认删除选中的 ' + this.checkList.length + ' 个套餐？' : '确认删除套餐「' + row.name + '」？'
-      ReggieUI.confirm(msg, '确定删除', {
+    // 单行删除（确认文案含套餐名；批量删除由 crud-table 内建）
+    deleteHandle(row) {
+      ReggieUI.confirm('确认删除套餐「' + row.name + '」？', '确定删除', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        deleteSetmeal(isBatch ? this.checkList.join(',') : row.id).then(res => {
+        deleteSetmeal(row.id).then(res => {
           if (res.code === 1) {
             ReggieUI.success('删除成功！')
             this.handleQuery()
@@ -715,6 +706,10 @@ new Vue({
           ReggieUI.error('请求失败：' + err)
         })
       })
+    },
+    // 内建批量删除：deleteSetmeal 需逗号串（axios 默认会把数组序列化成 ids[]=）
+    doBatchDelete(payload) {
+      return deleteSetmeal(payload.ids.join(','))
     },
 
     // ========== 状态变更（启售 / 停售） ==========

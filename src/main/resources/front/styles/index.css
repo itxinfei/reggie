@@ -287,6 +287,19 @@
   --shadow-bubble-assistant: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-bubble-user: 0 2px 8px rgba(201, 146, 0, 0.25);
   --shadow-lightbox: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  /* ---- C 端页面内联样式复用令牌（Vant 标准灰阶 / 品牌色 / 中性文字，避免裸 hex） ---- */
+  --c-gray-1:     #f2f3f5; /* Vant 灰阶-1：浅底背景 */
+  --c-gray-3:     #dcdee0; /* Vant 灰阶-3：极淡文字/线条 */
+  --c-gray-4:     #c8c9cc; /* Vant 灰阶-4：占位/辅助文字 */
+  --c-gray-5:     #969799; /* Vant 灰阶-5：次要文字 */
+  --c-gray-400:   #9ca3af; /* Tailwind 灰-400：提示/空态文字 */
+  --c-gray-500:   #6b7280; /* Tailwind 灰-500：元信息文字 */
+  --c-gray-600:   #4b5563; /* Tailwind 灰-600：小标题文字 */
+  --c-gray-800:   #1f2937; /* Tailwind 灰-800：重点文字（与 --color-code-bg 同值，专用于前景色） */
+  --c-text:       #323233; /* Vant 主文字色 */
+  --c-red:        #ee0a24; /* Vant 品牌红（优惠券价值/图标强调） */
+  --c-orange:     #ff976a; /* Vant 橙（积分券底色） */
 }
 /* 修改点(2026-09-17)：全站骨架屏动画统一为 @keyframes rg-skeleton-shine，各页面删除独立定义 */
 @keyframes rg-skeleton-shine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }

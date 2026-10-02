@@ -63,21 +63,22 @@ public class OrderControllerTest extends BaseControllerTest {
     @BeforeEach
     void setUp() {
         cleaner.cleanTables("order_detail", "orders", "dish", "dish_flavor", "category", "shopping_cart", "address_book", "user");
-        BaseContext.setCurrentId(1L);
+        // 主键统一抬高到测试专用高 ID，避开 reggie 库租户 1 演示数据占用的小主键（单库改造，2026-10-02）
+        BaseContext.setCurrentId(994001L);
         BaseContext.setCurrentTenantId(999L);
 
         jdbcTemplate.update("INSERT INTO user (id, name, phone, status, create_time, tenant_id) VALUES (?, ?, ?, ?, ?, ?)",
-                1L, "测试用户", "13800138000", 1, java.time.LocalDateTime.now(), 999L);
+                994001L, "测试用户", "13800138000", 1, java.time.LocalDateTime.now(), 999L);
 
         // 插入分类和菜品（submit 会查询菜品并扣减库存，dish 表不在租户忽略列表中，需设置 tenant_id）
         jdbcTemplate.update("INSERT INTO category (id, name, type, sort, create_time, update_time, create_user, update_user, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                1L, "测试分类", 1, 1, java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 999L);
+                991001L, "测试分类", 1, 1, java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 999L);
         jdbcTemplate.update("INSERT INTO dish (id, category_id, name, code, price, status, stock_qty, image, description, create_time, update_time, create_user, update_user, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                1L, 1L, "测试菜品", "001", new BigDecimal("10.00"), 1, new BigDecimal("100"), "test.jpg", "测试", java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 999L);
+                992001L, 991001L, "测试菜品", "001", new BigDecimal("10.00"), 1, new BigDecimal("100"), "test.jpg", "测试", java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 999L);
 
         AddressBook address = new AddressBook();
-        address.setId(1L);
-        address.setUserId(1L);
+        address.setId(995001L);
+        address.setUserId(994001L);
         address.setConsignee("张三");
         address.setPhone("13800138000");
         address.setProvinceName("浙江省");
@@ -88,9 +89,9 @@ public class OrderControllerTest extends BaseControllerTest {
         addressBookService.save(address);
 
         ShoppingCart cart = new ShoppingCart();
-        cart.setId(1L);
-        cart.setUserId(1L);
-        cart.setDishId(1L);
+        cart.setId(996001L);
+        cart.setUserId(994001L);
+        cart.setDishId(992001L);
         cart.setName("测试菜品");
         cart.setNumber(2);
         cart.setAmount(new BigDecimal("10.00"));
@@ -103,10 +104,10 @@ public class OrderControllerTest extends BaseControllerTest {
     void testSubmit() throws Exception {
         // 控制器返回 Map（id/number/amount/status/duplicate），不再是纯字符串
         mockMvc.perform(withCsrfToken(mockMvc, post("/order/submit")
-                .sessionAttr("user", 1L)
+                .sessionAttr("user", 994001L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"addressBookId\":1}")))
+                .content("{\"addressBookId\":995001}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data.id").exists())
@@ -120,15 +121,15 @@ public class OrderControllerTest extends BaseControllerTest {
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         // 生效满减活动：满20减5（setUp 购物车商品金额=2×10=20，正好命中）
         jdbcTemplate.update("INSERT INTO marketing_campaign (id, tenant_id, name, campaign_type, status, start_time, end_time, create_time, update_time, create_user, update_user) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                10L, 999L, "满20减5", 1, 1, now.minusDays(1), now.plusDays(1), now, now, 1L,1L);
+                997110L, 999L, "满20减5", 1, 1, now.minusDays(1), now.plusDays(1), now, now, 1L,1L);
         jdbcTemplate.update("INSERT INTO full_reduction_rule (id, campaign_id, rule_name, discount_type, min_amount, discount_value, status, tenant_id, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                1L, 10L, "满20减5", 1, new BigDecimal("20.00"), new BigDecimal("5.00"), 1, 999L, now, now);
+                997101L, 997110L, "满20减5", 1, new BigDecimal("20.00"), new BigDecimal("5.00"), 1, 999L, now, now);
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/order/submit")
-                .sessionAttr("user", 1L)
+                .sessionAttr("user", 994001L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"addressBookId\":1}")))
+                .content("{\"addressBookId\":995001}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
@@ -139,20 +140,20 @@ public class OrderControllerTest extends BaseControllerTest {
         assertEquals(0, new BigDecimal(String.valueOf(orderRow.get("full_reduction_amount"))).compareTo(new BigDecimal("5.00")));
         // 核销记录1条，支撑每人限次与对账
         Integer usageCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM campaign_usage_record WHERE campaign_id = 10 AND rule_id = 1", Integer.class);
+                "SELECT COUNT(*) FROM campaign_usage_record WHERE campaign_id = 997110 AND rule_id = 997101", Integer.class);
         assertEquals(1, usageCount);
     }
 
     @Test
     void testSubmitEmptyCart() throws Exception {
         shoppingCartService.remove(
-                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ShoppingCart>().eq("user_id", 1L));
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ShoppingCart>().eq("user_id", 994001L));
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/order/submit")
-                .sessionAttr("user", 1L)
+                .sessionAttr("user", 994001L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"addressBookId\":1}")))
+                .content("{\"addressBookId\":995001}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
@@ -160,11 +161,11 @@ public class OrderControllerTest extends BaseControllerTest {
     @Test
     void testOrderPage() throws Exception {
         Orders order = new Orders();
-        order.setId(10L);
+        order.setId(997010L);
         order.setNumber("2024001");
         order.setStatus(2);
         order.setAmount(new BigDecimal("100.00"));
-        order.setUserId(1L);
+        order.setUserId(994001L);
         order.setOrderTime(LocalDateTime.now());
         orderService.save(order);
 
@@ -181,11 +182,11 @@ public class OrderControllerTest extends BaseControllerTest {
     @Test
     void testOrderPageWithFilter() throws Exception {
         Orders order = new Orders();
-        order.setId(11L);
+        order.setId(997011L);
         order.setNumber("2024002");
         order.setStatus(2);
         order.setAmount(new BigDecimal("200.00"));
-        order.setUserId(1L);
+        order.setUserId(994001L);
         order.setOrderTime(LocalDateTime.now());
         orderService.save(order);
 
@@ -203,16 +204,16 @@ public class OrderControllerTest extends BaseControllerTest {
     @Test
     void testList() throws Exception {
         Orders order = new Orders();
-        order.setId(20L);
+        order.setId(997020L);
         order.setNumber("2024010");
         order.setStatus(2);
         order.setAmount(new BigDecimal("150.00"));
-        order.setUserId(1L);
+        order.setUserId(994001L);
         order.setOrderTime(LocalDateTime.now());
         orderService.save(order);
 
         mockMvc.perform(get("/order/list")
-                .sessionAttr("user", 1L)
+                .sessionAttr("user", 994001L)
                 .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
@@ -222,18 +223,18 @@ public class OrderControllerTest extends BaseControllerTest {
     @Test
     void testUserPage() throws Exception {
         Orders order = new Orders();
-        order.setId(30L);
+        order.setId(997030L);
         order.setNumber("2024030");
         order.setStatus(2);
         order.setAmount(new BigDecimal("250.00"));
-        order.setUserId(1L);
+        order.setUserId(994001L);
         order.setOrderTime(LocalDateTime.now());
         orderService.save(order);
 
         mockMvc.perform(get("/order/userPage")
                 .param("page", "1")
                 .param("pageSize", "10")
-                .sessionAttr("user", 1L))
+                .sessionAttr("user", 994001L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
     }
@@ -241,17 +242,17 @@ public class OrderControllerTest extends BaseControllerTest {
     @Test
     void testAgain() throws Exception {
         Orders order = new Orders();
-        order.setId(40L);
+        order.setId(997040L);
         order.setNumber("2024040");
         order.setStatus(4);
         order.setAmount(new BigDecimal("100.00"));
-        order.setUserId(1L);
+        order.setUserId(994001L);
         order.setOrderTime(LocalDateTime.now());
         orderService.save(order);
 
         OrderDetail detail = new OrderDetail();
-        detail.setOrderId(40L);
-        detail.setDishId(1L);
+        detail.setOrderId(997040L);
+        detail.setDishId(992001L);
         detail.setName("测试菜品");
         detail.setNumber(2);
         detail.setAmount(new BigDecimal("10.00"));
@@ -259,10 +260,10 @@ public class OrderControllerTest extends BaseControllerTest {
         orderDetailService.save(detail);
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/order/again")
-                .sessionAttr("user", 1L)
+                .sessionAttr("user", 994001L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":40}")))
+                .content("{\"id\":997040}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("添加购物车成功"));
@@ -271,11 +272,11 @@ public class OrderControllerTest extends BaseControllerTest {
     @Test
     void testUpdateOrderStatus() throws Exception {
         Orders order = new Orders();
-        order.setId(50L);
+        order.setId(997050L);
         order.setNumber("2024050");
         order.setStatus(2);
         order.setAmount(new BigDecimal("200.00"));
-        order.setUserId(1L);
+        order.setUserId(994001L);
         order.setOrderTime(LocalDateTime.now());
         orderService.save(order);
 
@@ -283,12 +284,12 @@ public class OrderControllerTest extends BaseControllerTest {
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"id\":50,\"status\":3}")))
+                .content("{\"id\":997050,\"status\":3}")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("操作成功"));
 
-        org.junit.jupiter.api.Assertions.assertEquals(3, orderService.getById(50L).getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals(3, orderService.getById(997050L).getStatus());
     }
 }
 

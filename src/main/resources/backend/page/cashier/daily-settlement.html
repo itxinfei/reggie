@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -90,6 +90,8 @@
         :show-pagination="false"
         :show-actions="true"
         :actions-width="180"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="fetchData()"
         border stripe size="small">
         <template #col-refundAmount="{ row }">
           <span style="color: var(--el-color-danger);">¥{{ formatMoney(row.refundAmount) }}</span>
@@ -162,7 +164,7 @@
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js?v=20260930"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../js/common.js?v=20260926"></script>
@@ -259,6 +261,9 @@
         formatMoney(value) {
           if (!value && value !== 0) return '0.00'
           return Number(value).toFixed(2)
+        },
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '结算记录', request: deleteDailySettlement })
         },
         async fetchData() {
           this.loading = true

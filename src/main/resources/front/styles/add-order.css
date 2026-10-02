@@ -5,6 +5,9 @@
   --add-order-coupon-active-end: #fff8e0;  /* 优惠券激活渐变结束色（浅金） */
   --color-flash-tag: #ff4d4f;              /* 秒杀标记红（区别于 --color-danger #e94e3c） */
   --color-gift-tag-text: #b35900;          /* 赠品标记文字棕 */
+  /* 2026-10-02：到店自提提示框配色收敛为令牌 */
+  --selfpickup-tip-bg: #f6fff9;       /* 自提提示框底（浅绿） */
+  --selfpickup-tip-border: #c8f0d4;   /* 自提提示框描边 */
 }
 
 /* 头部已由 cend-shell 的 .cend-navbar 统一接管（2026-09-22），不再定义金色 .divHead */

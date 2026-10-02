@@ -6,6 +6,7 @@ import com.reggie.common.utils.PageUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.service.OrderDetailService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 订单明细管理
+ * <p>后台明细查询接口（C 端订单详情走 {@code /order/{id}}，不经过本控制器），
+ * 仅员工会话可访问，防止顾客会话按 ID/订单号遍历本租户全部订单明细。</p>
  *
  * @author reggie
  * @since 2026-07-09
@@ -36,6 +39,7 @@ public class OrderDetailController {
      * 根据ID查询订单明细详情
      */
     @GetMapping("/{id}")
+    @RequireEmployee
     @Operation(summary = "查询订单明细", description = "根据ID查询订单明细详情")
     @Parameter(name = "id", description = "订单明细ID", required = true)
     public R<OrderDetail> get(@PathVariable Long id) {
@@ -50,6 +54,7 @@ public class OrderDetailController {
      * 订单明细分页查询
      */
     @GetMapping("/page")
+    @RequireEmployee
     @Operation(summary = "订单明细分页", description = "分页查询订单明细列表")
     public R<Page<OrderDetail>> page(
                         @Parameter(description = "页码") @RequestParam(defaultValue = "1") @Min(1) int page,

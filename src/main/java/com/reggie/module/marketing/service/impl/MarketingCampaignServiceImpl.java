@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
+import com.reggie.common.CustomException;
 import com.reggie.common.utils.PageUtils;
 import com.reggie.module.user.model.User;
 import com.reggie.module.user.mapper.UserMapper;
@@ -221,10 +222,24 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
             return false;
         }
 
-        // 检查参与人数上限
-        if (campaign.getMaxParticipants() != null &&
-            campaign.getCurrentParticipants() >= campaign.getMaxParticipants()) {
+        // 检查参与人数上限（P0 修复：currentParticipants 判空，null 视为 0，防 Integer 拆箱 NPE）
+        int currentParticipants = campaign.getCurrentParticipants() != null
+                ? campaign.getCurrentParticipants() : 0;
+        if (campaign.getMaxParticipants() != null && currentParticipants >= campaign.getMaxParticipants()) {
             log.info("[营销推送] 活动{}已达参与上限", campaignId);
+            return false;
+        }
+
+        // P0 修复：先以 setSql 原子自增占额（WHERE 带 max_participants 上限条件），
+        // 替代原「读实体→改字段→updateById 整行覆盖」——后者并发互相吞计数且不防超上限；
+        // 占额失败（条件不满足/被并发占满）直接返回 false，消息尚未写入无需回滚
+        boolean slotTaken = lambdaUpdate()
+                .eq(MarketingCampaign::getId, campaignId)
+                .apply("(max_participants IS NULL OR COALESCE(current_participants, 0) < max_participants)")
+                .setSql("current_participants = COALESCE(current_participants, 0) + 1, update_time = NOW()")
+                .update();
+        if (!slotTaken) {
+            log.info("[营销推送] 活动{}已达参与上限（原子占额失败）", campaignId);
             return false;
         }
 
@@ -238,12 +253,6 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         message.setStatus(MarketingMessage.STATUS_SENT);
 
         messageMapper.insert(message);
-
-        // 更新参与人数
-        // 防御性 null 检查：currentParticipants 可能在数据库中为 null（历史数据或外部导入）
-        Integer curParticipants = campaign.getCurrentParticipants();
-        campaign.setCurrentParticipants((curParticipants != null ? curParticipants : 0) + 1);
-        updateById(campaign);
 
         log.info("[营销推送] 活动{}推送至用户{}, 状态=SENT", campaignId, userId);
         return true;
@@ -587,10 +596,20 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
         }
 
         // 更新参与人数
-        // 防御性 null 检查：currentParticipants 可能在数据库中为 null（历史数据或外部导入）
-        Integer curParticipants = campaign.getCurrentParticipants();
-        campaign.setCurrentParticipants((curParticipants != null ? curParticipants : 0) + pushed);
-        updateById(campaign);
+        // P0 修复：setSql 原子自增 + WHERE 上限条件（max_participants 存在时），
+        // 替代原「读实体→改字段→updateById 整行覆盖」的读-改-写模式；
+        // 条件不满足说明并发已占满名额，抛业务异常回滚本批次消息插入，避免计数被吞或超限
+        if (pushed > 0) {
+            boolean counted = lambdaUpdate()
+                    .eq(MarketingCampaign::getId, campaignId)
+                    .apply("(max_participants IS NULL OR COALESCE(current_participants, 0) + {0} <= max_participants)", pushed)
+                    .setSql("current_participants = COALESCE(current_participants, 0) + " + pushed
+                            + ", update_time = NOW()")
+                    .update();
+            if (!counted) {
+                throw new CustomException("活动参与人数已达上限或数据已变更，请刷新后重试");
+            }
+        }
 
         log.info("[批量推送] 活动{}批量推送完成：推送{}/{}人", campaignId, pushed, totalScanned);
         return pushed;
@@ -606,6 +625,10 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
             List<MarketingMessage> messagesToInsert, int[] scannedHolder) {
         int pushed = 0;
         int totalScanned = 0;
+        // P0 修复：上限判定改用「起始参与数(null 视为 0，防拆箱 NPE) + 本轮已推送数」滚动比较，
+        // 原实现只比对实体初始快照，循环内不累加，批量推送可穿透 max_participants 上限
+        int baseParticipants = campaign.getCurrentParticipants() != null
+                ? campaign.getCurrentParticipants() : 0;
         // 每页 500，避免大租户全量加载 OOM
         int pageSize = 500;
         long pageNum = 1;
@@ -648,9 +671,9 @@ public class MarketingCampaignServiceImpl extends ServiceImpl<MarketingCampaignM
                         continue;
                     }
 
-                    // 检查参与上限
+                    // 检查参与上限（基数 + 本轮已推送数，null 基数按 0 处理）
                     if (campaign.getMaxParticipants() != null
-                            && campaign.getCurrentParticipants() >= campaign.getMaxParticipants()) {
+                            && baseParticipants + pushed >= campaign.getMaxParticipants()) {
                         reachedLimit = true;
                         break;
                     }

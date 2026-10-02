@@ -245,22 +245,58 @@ public class RecommendServiceImpl implements RecommendService {
             }
         }
 
-        // 套餐推荐逻辑：根据用户浏览/购买最多的菜品分类推荐同类别套餐
-        List<Map<String, Object>> topCategories = browseHistoryMapper.findTopViewedDishes(userId, 3);
+        // 套餐推荐逻辑：根据用户浏览/购买最多的菜品所属分类推荐同类别套餐
+        // 修复：findTopViewedDishes 返回的 target_id 是菜品ID（target_type=1），并非分类ID，
+        // 需先把菜品ID批量映射为 dish.categoryId（一次 in 查询避免 N+1），去重后再查套餐
+        List<Map<String, Object>> topViewedDishes = browseHistoryMapper.findTopViewedDishes(userId, 3);
         List<Long> setmealIds;
-        if (!topCategories.isEmpty()) {
+        List<Long> categoryIds = resolveDishCategoryIds(topViewedDishes);
+        if (!categoryIds.isEmpty()) {
             // 基于用户偏好推荐套餐：按分类数向上取整分配配额，避免整数除法截断导致数量不足
             setmealIds = new ArrayList<>();
-            int perCategory = (int) Math.ceil((double) limit / topCategories.size());
-            for (Map<String, Object> cat : topCategories) {
-                List<Long> ids = findSetmealsByCategory((Long) cat.get("target_id"), perCategory);
-                setmealIds.addAll(ids);
+            int perCategory = (int) Math.ceil((double) limit / categoryIds.size());
+            for (Long categoryId : categoryIds) {
+                setmealIds.addAll(findSetmealsByCategory(categoryId, perCategory));
             }
         } else {
-            // 基于热门套餐推荐
+            // 无偏好分类数据：基于热门套餐推荐
             setmealIds = findHotSetmeals(tenantId, limit);
         }
         return buildSetmealResultList(setmealIds, limit);
+    }
+
+    /**
+     * 将浏览最多的菜品记录（target_id 为菜品ID）批量映射为去重后的分类ID列表（保持浏览频次顺序）。
+     * <p>一次 in 查询取 dish.categoryId，避免逐条查询产生 N+1。</p>
+     * <p>TODO: findTopViewedDishes 的 SQL 未过滤 target_type 且结果不含该列，
+     * 套餐浏览记录只能依赖 Dish 主键查询自然过滤（查不到即丢弃），如需严格语义应在 SQL 中加 target_type=1。</p>
+     *
+     * @param topViewedDishes findTopViewedDishes 结果行（含 target_id）
+     * @return 去重后的菜品分类ID列表
+     */
+    private List<Long> resolveDishCategoryIds(List<Map<String, Object>> topViewedDishes) {
+        if (topViewedDishes == null || topViewedDishes.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Long> dishIds = new ArrayList<>();
+        for (Map<String, Object> row : topViewedDishes) {
+            Object targetId = row.get("target_id");
+            if (targetId instanceof Number) {
+                dishIds.add(((Number) targetId).longValue());
+            }
+        }
+        if (dishIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        LambdaQueryWrapper<Dish> wrapper = new LambdaQueryWrapper<>();
+        wrapper.in(Dish::getId, dishIds).select(Dish::getId, Dish::getCategoryId);
+        Set<Long> categoryIdSet = new LinkedHashSet<>();
+        for (Dish dish : dishService.list(wrapper)) {
+            if (dish.getCategoryId() != null) {
+                categoryIdSet.add(dish.getCategoryId());
+            }
+        }
+        return new ArrayList<>(categoryIdSet);
     }
 
     /**

@@ -313,7 +313,7 @@
   <script src="../../js/request.js?v=20260930"></script>
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260926"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../js/print-util.js?v=20260921"></script>
   <script src="../../api/order.js?v=20260926"></script>
   <script src="../../api/delivery.js?v=20260924"></script>
@@ -349,8 +349,8 @@
           ],
           // 操作按钮配置
           actionConfig: [
-            { key: 'exportExcel', text: '导出Excel', type: 'success', icon: 'ri-download-line' },
-            { key: 'exportPdf', text: '导出PDF', type: 'danger', icon: 'ri-file-text-line' }
+            { key: 'exportExcel', text: '导出Excel', type: 'success', icon: 'ri-download-line', disabled: true },
+            { key: 'exportPdf', text: '导出PDF', type: 'danger', icon: 'ri-file-text-line', disabled: true }
           ],
           // 表格列配置
           columns: [
@@ -542,9 +542,12 @@
           this.page = 1
           this.init()
         },
-        // 勾选行变化（跨翻页保留）；勾了导出选中行，没勾按当前筛选导出
+        // 勾选行变化（跨翻页保留）：同步导出按钮禁用态（必须勾选才能导出）
         onSelectionChange: function(payload) {
           this.selectedIds = (payload && payload.ids) ? payload.ids : []
+          var noSel = this.selectedIds.length === 0
+          this.actionConfig[0].disabled = noSel
+          this.actionConfig[1].disabled = noSel
         },
         clearSelection: function() {
           this.selectedIds = []
@@ -804,27 +807,17 @@
           self.refundLoading = false
         },
         exportOrders: async function(format) {
-          // 勾选了行：只导出选中行（跨翻页保留）；未勾选：按当前筛选条件导出
-          const hasSelection = this.selectedIds.length > 0
-          if (!hasSelection && this.counts === 0) {
-            ReggieUI.warning('当前筛选没有可导出的订单')
+          // 仅导出勾选行（跨翻页保留；未勾选时导出按钮已禁用）
+          if (this.selectedIds.length === 0) {
+            ReggieUI.warning('请先勾选要导出的订单')
             return
           }
-          const params = {}
-          if (hasSelection) {
-            params.ids = this.selectedIds.join(',')
-          } else {
-            // 列表日期控件输出 yyyy-MM-dd HH:mm:ss，导出接口按 yyyy-MM-dd 接收，截取日期部分
-            if (this.lastSearch.beginTime) params.startDate = String(this.lastSearch.beginTime).slice(0, 10)
-            if (this.lastSearch.endTime) params.endDate = String(this.lastSearch.endTime).slice(0, 10)
-            if (this.lastSearch.number) params.number = this.lastSearch.number
-            if (this.lastSearch.status !== undefined && this.lastSearch.status !== null && this.lastSearch.status !== '') params.status = this.lastSearch.status
-          }
+          const params = { ids: this.selectedIds.join(',') }
           try {
             const ext = format === 'excel' ? 'xlsx' : 'pdf'
             const apiCall = format === 'excel' ? exportApi.exportOrdersExcel(params) : exportApi.exportOrdersPdf(params)
             await exportApi.downloadFile(apiCall, '订单数据.' + ext)
-            ReggieUI.success(hasSelection ? ('已导出选中的 ' + this.selectedIds.length + ' 条订单') : ('已按当前筛选导出 ' + (this.counts || 0) + ' 条订单'))
+            ReggieUI.success('已导出选中的 ' + this.selectedIds.length + ' 条订单')
           } catch (err) { ReggieUI.error('导出失败：' + (err.message || err)) }
         }
       }

@@ -18,12 +18,10 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -34,7 +32,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * {@link AiPromptTemplateServiceImpl} 单元测试：自定义模板创建校验（场景/类型/长度/重复）、
- * QUICK 多格式解析与条数上限、内置更新锁字段、内置禁删与重置默认、Seeder 补插去重。
+ * QUICK 多格式解析与条数上限、内置更新锁字段、内置禁删与重置默认。
  *
  * 说明：service 使用 Mockito {@link spy} 包装，{@code saveBatch}/{@code removeById}
  * 在 MP 3.5.x 中依赖 TableInfoHelper 的 TableInfo 初始化（无 Spring/MyBatis 上下文时
@@ -269,7 +267,7 @@ class AiPromptTemplateServiceImplTest {
         assertThrows(CustomException.class, () -> service.resetBuiltin(404L));
     }
 
-    // ==================== 读取 / Seeder ====================
+    // ==================== 读取（生效模板） ====================
 
     @Test
     void getQuickQuestionsParsesOrReturnsEmpty() {
@@ -305,47 +303,6 @@ class AiPromptTemplateServiceImplTest {
         assertNull(service.getWelcome(null));
         assertTrue(service.getQuickQuestions(" ").isEmpty());
         verify(mapper, never()).selectList(any());
-    }
-
-    @Test
-    @SuppressWarnings("unchecked")
-    void seedOnEmptyDatabaseInsertsTwelveBuiltins() {
-        doReturn(true).when(service).saveBatch(anyList());
-        service.seedBuiltinsIfMissing();
-
-        org.mockito.ArgumentCaptor<List<AiPromptTemplate>> cap =
-                org.mockito.ArgumentCaptor.forClass(List.class);
-        verify(service).saveBatch(cap.capture());
-        List<AiPromptTemplate> batch = cap.getValue();
-        assertEquals(12, batch.size());
-        // 抽查首条（static 块首条 put 的是 order_assistant 的 SYSTEM）：
-        // code 与「场景序×10+类型序」sort 就位：order_assistant 场景序 3 → 4×10+1=41
-        AiPromptTemplate first = batch.get(0);
-        assertEquals("system_order_assistant", first.getCode());
-        assertEquals(true, first.getBuiltin());
-        assertEquals(Integer.valueOf(1), first.getVersion());
-        assertEquals(Integer.valueOf(41), first.getSort());
-    }
-
-    @Test
-    @SuppressWarnings("unchecked")
-    void seedSkipsExistingCodes() {
-        AiPromptTemplate existing = builtin(1L, "system_business_analysis",
-                "business_analysis", "SYSTEM");
-        when(mapper.selectList(any())).thenReturn(Collections.singletonList(existing));
-        doReturn(true).when(service).saveBatch(anyList());
-
-        service.seedBuiltinsIfMissing();
-
-        org.mockito.ArgumentCaptor<List<AiPromptTemplate>> cap =
-                org.mockito.ArgumentCaptor.forClass(List.class);
-        verify(service).saveBatch(cap.capture());
-        List<AiPromptTemplate> batch = cap.getValue();
-        assertEquals(11, batch.size());
-        for (AiPromptTemplate t : batch) {
-            assertNotEquals("system_business_analysis", t.getCode());
-            assertEquals(true, t.getBuiltin());
-        }
     }
 
     // ==================== 辅助 ====================

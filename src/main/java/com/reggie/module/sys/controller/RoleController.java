@@ -263,6 +263,31 @@ public class RoleController {
             @Parameter(description = "角色ID") @PathVariable Long id,
             @Parameter(description = "员工ID列表") @RequestBody Map<String, List<Long>> body) {
         List<Long> employeeIds = body.get("employeeIds");
+        // 租户归属校验：employee 表在多租户忽略白名单内（不自动注入 tenant_id），
+        // 必须逐个确认员工属于当前租户，否则可把其他租户员工挂到本租户角色上（越权授权）
+        if (employeeIds != null && !employeeIds.isEmpty()) {
+            Long tenantId = com.reggie.common.BaseContext.getCurrentTenantId();
+            if (tenantId == null) {
+                return R.error("租户信息缺失，无法分配员工");
+            }
+            LambdaQueryWrapper<Employee> ownedWrapper = new LambdaQueryWrapper<>();
+            ownedWrapper.in(Employee::getId, employeeIds)
+                        .eq(Employee::getTenantId, tenantId)
+                        .select(Employee::getId);
+            Set<Long> ownedIds = new HashSet<>();
+            for (Employee emp : employeeService.list(ownedWrapper)) {
+                ownedIds.add(emp.getId());
+            }
+            List<Long> unauthorizedIds = new ArrayList<>();
+            for (Long empId : employeeIds) {
+                if (empId == null || !ownedIds.contains(empId)) {
+                    unauthorizedIds.add(empId);
+                }
+            }
+            if (!unauthorizedIds.isEmpty()) {
+                return R.error("以下员工不属于当前租户，无法分配：ID=" + unauthorizedIds);
+            }
+        }
         roleService.assignUsersToRole(id, employeeIds);
         // 角色-用户变更，清除全量员工权限缓存
         permissionAspect.clearAllEmployeePermissionCache();

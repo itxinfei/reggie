@@ -175,6 +175,7 @@ public class EmployeeControllerTest extends BaseControllerTest {
     }
 
     /** 构造一个已占用工号 EMP001 的在职员工（绕过控制器直接落库） */
+    // id 由调用方传测试专用高 ID（990020），避开 reggie 库小主键（单库改造，2026-10-02）
     private void prepareEmployeeWithJobNumber(long id, String username, String jobNumber) {
         Employee emp = new Employee();
         emp.setId(id);
@@ -193,7 +194,7 @@ public class EmployeeControllerTest extends BaseControllerTest {
 
     @Test
     void testSaveDuplicateJobNumberRejected() throws Exception {
-        prepareEmployeeWithJobNumber(2L, "emp1", "EMP001");
+        prepareEmployeeWithJobNumber(990020L, "emp1", "EMP001");
 
         // 同租户再建同工号员工，应被应用层唯一校验拦截
         MockHttpServletRequestBuilder duplicate = post("/employee")
@@ -250,7 +251,7 @@ public class EmployeeControllerTest extends BaseControllerTest {
 
     @Test
     void testUpdateDuplicateJobNumberRejected() throws Exception {
-        prepareEmployeeWithJobNumber(2L, "emp1", "EMP001");
+        prepareEmployeeWithJobNumber(990020L, "emp1", "EMP001");
 
         // 把 test_admin 工号改成已被占用的 EMP001，应失败
         mockMvc.perform(withCsrfToken(mockMvc, put("/employee")
@@ -331,8 +332,8 @@ public class EmployeeControllerTest extends BaseControllerTest {
 
     @Test
     void testBadgeQrcodeSameTenantAllowed() throws Exception {
-        prepareEmployeeWithJobNumber(2L, "emp1", "EMP001");
-        mockMvc.perform(get("/employee/badge-qrcode/2")
+        prepareEmployeeWithJobNumber(990020L, "emp1", "EMP001");
+        mockMvc.perform(get("/employee/badge-qrcode/990020")
                 .sessionAttr("employee", 990001L)
                 .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
@@ -394,7 +395,7 @@ public class EmployeeControllerTest extends BaseControllerTest {
     @Test
     void testSameJobNumberAllowedAcrossTenants() throws Exception {
         // 直接落库：租户999与租户2各有一个工号 EMP020，复合唯一域为租户内，应共存不冲突
-        prepareEmployeeWithJobNumber(2L, "empA", "EMP020");
+        prepareEmployeeWithJobNumber(990020L, "empA", "EMP020");
         Employee other = new Employee();
         other.setId(60L);
         other.setUsername("empB");

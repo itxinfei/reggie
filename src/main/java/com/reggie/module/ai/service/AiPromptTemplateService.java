@@ -43,9 +43,6 @@ public interface AiPromptTemplateService extends IService<AiPromptTemplate> {
     /** 内置模板重置为默认内容；重置前自动快照历史 */
     void resetBuiltin(Long id);
 
-    /** 首次启动补插缺失的内置模板（已存在的 code 不动，保留运营修改） */
-    void seedBuiltinsIfMissing();
-
     /** 模板历史版本列表（最近 20 条，新→旧） */
     List<AiPromptTemplateHistory> listHistory(Long templateId);
 

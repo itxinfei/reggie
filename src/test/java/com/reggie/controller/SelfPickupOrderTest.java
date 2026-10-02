@@ -69,20 +69,21 @@ public class SelfPickupOrderTest extends BaseControllerTest {
     @BeforeEach
     void setUp() {
         cleaner.cleanTables("order_detail", "orders", "dish", "dish_flavor", "category", "shopping_cart", "address_book", "user");
-        BaseContext.setCurrentId(1L);
+        // 主键全部抬高到测试专用高 ID，避开 reggie 库租户 1 演示数据占用的小主键（单库改造，2026-10-02）
+        BaseContext.setCurrentId(994001L);
         BaseContext.setCurrentTenantId(999L);
 
         jdbcTemplate.update("INSERT INTO user (id, name, phone, status, create_time, tenant_id) VALUES (?, ?, ?, ?, ?, ?)",
-                1L, "测试用户", "13800138000", 1, java.time.LocalDateTime.now(), 999L);
+                994001L, "测试用户", "13800138000", 1, java.time.LocalDateTime.now(), 999L);
 
         jdbcTemplate.update("INSERT INTO category (id, name, type, sort, create_time, update_time, create_user, update_user, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                1L, "测试分类", 1, 1, java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 999L);
+                991001L, "测试分类", 1, 1, java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 994001L, 994001L, 999L);
         jdbcTemplate.update("INSERT INTO dish (id, category_id, name, code, price, status, stock_qty, image, description, create_time, update_time, create_user, update_user, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                1L, 1L, "测试菜品", "001", new BigDecimal("10.00"), 1, new BigDecimal("100"), "test.jpg", "测试", java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 1L, 1L, 999L);
+                992001L, 991001L, "测试菜品", "001", new BigDecimal("10.00"), 1, new BigDecimal("100"), "test.jpg", "测试", java.time.LocalDateTime.now(), java.time.LocalDateTime.now(), 994001L, 994001L, 999L);
 
         AddressBook address = new AddressBook();
-        address.setId(1L);
-        address.setUserId(1L);
+        address.setId(995001L);
+        address.setUserId(994001L);
         address.setConsignee("张三");
         address.setPhone("13800138000");
         address.setProvinceName("浙江省");
@@ -93,9 +94,9 @@ public class SelfPickupOrderTest extends BaseControllerTest {
         addressBookService.save(address);
 
         ShoppingCart cart = new ShoppingCart();
-        cart.setId(1L);
-        cart.setUserId(1L);
-        cart.setDishId(1L);
+        cart.setId(996001L);
+        cart.setUserId(994001L);
+        cart.setDishId(992001L);
         cart.setName("测试菜品");
         cart.setNumber(2);
         cart.setAmount(new BigDecimal("10.00"));
@@ -107,7 +108,7 @@ public class SelfPickupOrderTest extends BaseControllerTest {
     @Test
     void testSubmitSelfPickupGeneratesPickupCode() throws Exception {
         mockMvc.perform(withCsrfToken(mockMvc, post("/order/submit")
-                .sessionAttr("user", 1L)
+                .sessionAttr("user", 994001L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"source\":\"SELF_PICKUP\"}")))
@@ -127,7 +128,7 @@ public class SelfPickupOrderTest extends BaseControllerTest {
     void testTakeoutWithoutAddressRejected() throws Exception {
         // 回归：自提豁免地址校验后，外卖单不传地址仍应被拒绝，避免误伤必填约束
         mockMvc.perform(withCsrfToken(mockMvc, post("/order/submit")
-                .sessionAttr("user", 1L)
+                .sessionAttr("user", 994001L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}")))

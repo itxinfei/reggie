@@ -81,6 +81,9 @@
         :total="counts"
         :show-actions="true"
         :actions-width="180"
+        row-key="id"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="init(true)"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -168,7 +171,7 @@
   <script src="../../js/request.js?v=20260930"></script>
   <script src="../../js/accessibility-utils.js?v=20260927"></script>
   <script src="../../js/performance-utils.js?v=20260926"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../api/sys.js?v=20260926"></script>
   <script>
     new Vue({
@@ -258,6 +261,9 @@
       },
       methods: {
         /* ========== 数据加载 ========== */
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({ ids: payload.ids, label: '消息模板', request: sysApi.templateDelete })
+        },
         async init(reloadStats = true) {
           this.loading = true
           try {

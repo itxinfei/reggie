@@ -41,6 +41,9 @@
         :show-actions="true"
         :actions-width="220"
         empty-text="暂无提示词模板"
+        row-key="id"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="fetchData()"
         @page-change="onPageChange"
         @size-change="onSizeChange">
         <template #col-scene="{ row }">
@@ -196,7 +199,7 @@
   <script src="../../plugins/element-ui/index.js?v=20260915"></script>
   <script src="../../plugins/axios/axios.min.js"></script>
   <script src="../../js/request.js?v=20260930"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../api/ai.js?v=20260930"></script>
   <style>
     .history-snippet {
@@ -540,6 +543,14 @@
               }
             }).catch(this.handleRequestError);
           }).catch(() => {});
+        },
+        // 批量删除：顺序循环单删，内置 builtin 不可删会汇总为失败
+        doBatchDelete(payload) {
+          return RgBatchDeleteByOne({
+            ids: payload.ids,
+            label: '提示词模板',
+            request: (id) => aiBackendApi.promptDelete(id)
+          })
         },
         onDelete(row) {
           ReggieUI.confirm('确认删除自定义模板「' + row.title + '」？删除后该场景将回落到内置默认模板。', '删除确认', {

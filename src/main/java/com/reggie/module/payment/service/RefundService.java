@@ -45,4 +45,30 @@ public interface RefundService {
      * @return true=记账成功；false=支付单不存在/非 SUCCESS/记账失败
      */
     boolean refundOfflineByPaymentOrderId(Long paymentOrderId, BigDecimal amount, String reason);
+
+    /**
+     * 员工按支付单手动退款（支持部分退款）——退款编排的唯一实现，收敛自 {@code PaymentController.refund}。
+     * <p>编排：租户/状态/金额校验 → 离线通道走本地记账；在线通道走「Redis 锁 → 渠道 HTTP（事务外）→
+     * REQUIRED 编程式事务落库（行锁二次校验 + 新建退款记录 + 全额联动）」。渠道调用不被事务包裹。</p>
+     *
+     * @param tenantId       当前会话租户（null 视为越权，fail-closed）
+     * @param paymentOrderId 支付单ID
+     * @param refundAmount   本次退款金额（须 &lt;= 支付金额、&lt;= 剩余可退额）
+     * @param reason         退款原因
+     * @return 成功文案（终态成功 / 处理中 / 线下记账成功），供 Controller 包装为 {@code R.success}
+     * @throws com.reggie.common.CustomException 校验失败、渠道拒绝/异常、本地落库失败，供 Controller 捕获转 {@code R.error}
+     */
+    String refundByPaymentOrder(Long tenantId, Long paymentOrderId, BigDecimal refundAmount, String reason);
+
+    /**
+     * 售后单审核通过后触发渠道退款——退款编排的唯一实现，收敛自 {@code PaymentController.executeUserRefund}。
+     * <p>复用既有售后单退款号（不新建同号财务记录）：「Redis 锁 → 渠道 HTTP（事务外）→ REQUIRED 编程式事务落库
+     *（售后单本身 processing→SUCCESS + 全额联动支付单 REFUND + 权益/库存回退）」。</p>
+     *
+     * @param tenantId 当前会话租户
+     * @param refundId 售后记录ID（状态须为 PROCESSING）
+     * @return 成功文案（终态成功 / 处理中 / 已退款幂等提示 / 渠道已处理请核对），供 Controller 包装为 {@code R.success}
+     * @throws com.reggie.common.CustomException 记录不存在、越权、状态不符、无有效支付单、渠道拒绝/异常
+     */
+    String executeUserRefundByRecord(Long tenantId, Long refundId);
 }

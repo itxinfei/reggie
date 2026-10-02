@@ -80,11 +80,11 @@
 
                 <!-- 修改点(P1-2 自提)：自提提示须放在 divAddress 外，
                      否则外层 v-if mode===0 会把它一起隐藏，自提页什么提示都没有 -->
-                <div class="self-pickup-tip" v-if="fulfillmentMode === 1" style="display:flex;align-items:center;gap:10px;padding:14px;background:#f6fff9;border:1px solid #c8f0d4;border-radius:10px;margin:10px 0;">
-                    <i class="ri-map-pin-line" style="font-size:22px;color:#07c160;"></i>
+                <div class="self-pickup-tip" v-if="fulfillmentMode === 1" style="display:flex;align-items:center;gap:10px;padding:14px;background:var(--selfpickup-tip-bg);border:1px solid var(--selfpickup-tip-border);border-radius:10px;margin:10px 0;">
+                    <i class="ri-map-pin-line" style="font-size:22px;color:var(--color-success);"></i>
                     <div>
-                        <div class="spt-title" style="font-weight:600;color:#07c160;">到店自提</div>
-                        <div class="spt-desc" style="font-size:12px;color:#666;">下单后到店向店员出示取餐码即可取餐，无需配送</div>
+                        <div class="spt-title" style="font-weight:600;color:var(--color-success);">到店自提</div>
+                        <div class="spt-desc" style="font-size:12px;color:var(--color-text-secondary);">下单后到店向店员出示取餐码即可取餐，无需配送</div>
                     </div>
                 </div>
 
@@ -266,7 +266,7 @@
                   <i class="ri-close-line coupon-popup-close" @click="couponPopupVisible = false"></i>
                 </div>
                 <div class="coupon-list">
-                  <div class="coupon-loading" v-if="couponLoading">加载中…</div>
+                  <div class="coupon-loading" v-if="couponLoading || !couponsLoaded">加载中…</div>
                   <div class="coupon-empty" v-else-if="couponList.length === 0">
                     暂无可用优惠券，去 <a href="javascript:void(0)" @click="goMemberCenter">领券</a>
                   </div>
@@ -317,7 +317,7 @@
             <div class="divCart">
                 <div class="cart-entry" :class="{active: cartData && cartData.length > 0}" @click="openItemsPopup">
                   <i class="ri-shopping-cart-2-fill"></i>
-                  <div class="divGoodsNum" :class="{moreGoods:cartData && cartData.length > 99}" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
+                  <div class="divGoodsNum" :class="{moreGoods: goodsNum === '99+'}" v-if="cartData && cartData.length > 0">{{ goodsNum }}</div>
                 </div>
                 <div class="divNum">
                     <span class="num-symbol">¥</span>
@@ -383,6 +383,8 @@
                         couponList:[],
                         selectedCoupon:null,
                         couponLoading:false,
+                        // 修改点：是否已完成过一次可用券加载——区分「冷启动尚未加载」与「加载完确实无券」
+                        couponsLoaded:false,
                         // 配送方式：0=立即配送，1=预约配送
                         deliveryMode: 0,
                         // 修改点(P1-2 自提)：履约方式：0=配送上门，1=到店自提
@@ -390,6 +392,8 @@
                         // 结算预览（/api/order/preview）：确认页价格/赠品/配送范围的唯一数据源
                         pricing: null,
                         previewLoading: false,
+                        // 修改点：预览请求序号——并发预览时只采纳最新一次响应，丢弃过期结果（防快速切配送/自提显错价）
+                        previewSeq: 0,
                         // 上次预览签名（地址|券|总件数），签名不变不重复请求
                         lastPreviewSig: '',
                         // 已按某商品金额加载过可用券（金额不变不重复拉券）
@@ -767,6 +771,7 @@
                     },
                     // 调只读结算预览，回填 pricing；并按权威商品金额加载可用券列表
                     async loadCheckoutPreview(couponId){
+                        const seq = ++this.previewSeq
                         this.previewLoading = true
                         try{
                             const res = await previewCheckoutApi({
@@ -775,6 +780,8 @@
                                 source: this.fulfillmentMode === 1 ? 'SELF_PICKUP' : 'TAKEOUT',
                                 usedCouponId: couponId
                             })
+                            // 修改点：已有更新的预览请求发出，丢弃本次过期响应，避免旧结果覆盖新价格
+                            if(seq !== this.previewSeq){ return }
                             if(res.code === 1 && res.data){
                                 this.pricing = res.data
                                 const resolvedId = res.data.coupon ? res.data.coupon.campaignId : null
@@ -791,9 +798,15 @@
                                 }
                             }
                         }catch(e){
-                            console.warn('[add-order] 结算预览失败:', e)
+                            // 过期请求的失败无需提示（已有更新请求在进行）
+                            if(seq === this.previewSeq){
+                                console.warn('[add-order] 结算预览失败:', e)
+                            }
                         }finally{
-                            this.previewLoading = false
+                            // 仅最新一次请求才能复位 loading，防止过期响应提前结束"核算中"态
+                            if(seq === this.previewSeq){
+                                this.previewLoading = false
+                            }
                         }
                     },
                     //获取购物车数据
@@ -832,6 +845,9 @@
                     openItemsPopup(){
                         if(this.cartData && this.cartData.length > 0){
                             this.itemsPopupVisible = true
+                        }else{
+                            // 修改点：空车点击给轻提示，与注释口径一致
+                            vant.Toast('购物车还是空的')
                         }
                     },
                     // 修改点：加载当前订单金额对应的可用券列表
@@ -839,7 +855,9 @@
                         // 仅在服务端预览给出权威商品金额后加载（金额为预览 goodsAmount）
                         const baseAmount = this.pricing ? (Number(this.pricing.goodsAmount) || 0) : 0
                         if(baseAmount <= 0){
+                            // 金额为 0（如空购物车）：确定无可用券，标记已加载以免弹层一直转圈
                             this.couponList = []
+                            this.couponsLoaded = true
                             return
                         }
                         if(this.couponLoading) return
@@ -878,6 +896,8 @@
                             this.couponList = []
                         }finally{
                             this.couponLoading = false
+                            // 修改点：无论成功失败，发起过请求即视为"已加载"，弹层才能在真无券时显示空态
+                            this.couponsLoaded = true
                         }
                     },
                     // 修改点：跳转到会员中心领券

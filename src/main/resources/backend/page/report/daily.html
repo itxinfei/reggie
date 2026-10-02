@@ -366,7 +366,7 @@
   <script src="../../api/export.js?v=20260926"></script>
   <script src="../../api/report.js?v=20260926"></script>
   <script src="../../api/report-enhanced.js?v=20260919a"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script src="../../js/chart-panel.js?v=20260926"></script>
   <script>
     new Vue({
@@ -446,14 +446,24 @@
             }
           ],
           // table-bar 统一组件配置
-          tableSearchItems: [],
-          tableActions: [
-            { key: 'exportExcel', text: '导出 Excel', type: 'success' },
-            { key: 'exportPdf', text: '导出 PDF', type: 'warning' }
-          ]
+          tableSearchItems: []
         }
       },
       computed: {
+        // 本页无明细行可勾选，折中：必须选好日期范围且查到数据才允许导出
+        canExport() {
+          const q = this.queryDate
+          if (this.loading || !q || q.length < 2 || !q[0] || !q[1]) return false
+          const d = this.dailyData || {}
+          return (Number(d.totalOrders) || 0) > 0 || (Number(d.totalAmount) || 0) > 0
+        },
+        tableActions() {
+          const dis = !this.canExport || this.exporting
+          return [
+            { key: 'exportExcel', text: '导出 Excel', type: 'success', disabled: dis },
+            { key: 'exportPdf', text: '导出 PDF', type: 'warning', disabled: dis }
+          ]
+        },
         // 趋势图标题中的日期范围，随筛选实时变化（单日只显示一个日期）
         trendRangeLabel() {
           const q = this.queryDate
@@ -902,10 +912,8 @@
           }
         },
 
-        // 导出期间禁用/恢复导出按钮，防止重复触发
-        setExportDisabled(flag) {
-          this.tableActions.forEach(function(a) { a.disabled = flag })
-        },
+        // 导出期间禁用/恢复按钮已由 tableActions computed 根据 canExport/exporting 自动计算
+        setExportDisabled() {},
 
         // 重新下载
         reDownload(record) {

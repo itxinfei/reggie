@@ -1,12 +1,10 @@
 package com.reggie.filter;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.annotation.Order;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
-import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -30,15 +28,14 @@ import java.util.List;
  * 表现为页面打不开并报错 "Framing ... violates frame-ancestors 'none'"。
  * 采用 SAMEORIGIN 仍可阻断任意外部站点以 iframe 嵌入本系统的点击劫持攻击。
  *
- * 执行顺序：@Order(0) 确保在 CsrfFilter(@Order(1)) 之前执行，
- * 使得安全头在所有响应中都能被设置（包括被 CsrfFilter 拒绝的请求）。
+ * 执行顺序（2026-10-02 P0 修复）：本类已改由 com.reggie.config.FilterRegistrationConfig
+ * 经 FilterRegistrationBean 显式注册（order=0，原 @Order(0)，最先执行），
+ * 确保安全头在所有响应中都能被设置（包括被 CsrfFilter(order=2) 拒绝的请求）。
  *
  * @author reggie
  * @since 2026-08-27
  */
 @Slf4j
-@WebFilter(filterName = "securityHeaderFilter", urlPatterns = "/*", asyncSupported = true)
-@Order(0) // 最先执行，确保安全头始终被设置
 public class SecurityHeaderFilter extends OncePerRequestFilter {
 
     // ==================== CSP 配置 ====================

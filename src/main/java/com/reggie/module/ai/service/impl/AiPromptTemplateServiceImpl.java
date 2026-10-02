@@ -232,43 +232,6 @@ public class AiPromptTemplateServiceImpl
         log.info("重置AI提示词模板为默认内容: code={}, version={}", existing.getCode(), update.getVersion());
     }
 
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void seedBuiltinsIfMissing() {
-        List<AiPromptTemplate> all = this.list();
-        Set<String> existingCodes = new HashSet<>();
-        for (AiPromptTemplate t : all) {
-            existingCodes.add(t.getCode());
-        }
-        List<AiPromptTemplate> toInsert = new ArrayList<>();
-        List<AiPromptDefaults.TemplateDefault> defaults = AiPromptDefaults.all();
-        for (int i = 0; i < defaults.size(); i++) {
-            AiPromptDefaults.TemplateDefault d = defaults.get(i);
-            String code = AiPromptDefaults.code(d.getType(), d.getScene());
-            if (existingCodes.contains(code)) {
-                continue;
-            }
-            AiPromptTemplate t = new AiPromptTemplate();
-            t.setCode(code);
-            t.setScene(d.getScene());
-            t.setType(d.getType());
-            t.setTitle(d.getTitle());
-            t.setContent(d.getContent());
-            t.setQuickQuestions(d.getQuickQuestions() != null ? JSONUtil.toJsonStr(d.getQuickQuestions()) : null);
-            t.setBuiltin(true);
-            t.setEnabled(true);
-            // 场景序 × 10 + 类型序（SYSTEM=1/WELCOME=2/QUICK=3）
-            t.setSort(resolveSort(d.getScene(), d.getType()));
-            t.setVersion(1);
-            toInsert.add(t);
-        }
-        if (!toInsert.isEmpty()) {
-            this.saveBatch(toInsert);
-            effectiveCache.clear();
-            log.info("AI提示词内置模板初始化完成，补插 {} 条", toInsert.size());
-        }
-    }
-
     /** 取某场景某类型启用中的模板（sort 最小优先）；带 60s TTL 缓存（null 也缓存），任何异常静默降级返回 null */
     private AiPromptTemplate findEffective(String scene, String type) {
         if (!AiPromptDefaults.isValidScene(scene)) {
@@ -458,18 +421,5 @@ public class AiPromptTemplateServiceImpl
             throw new CustomException("快捷问题最多" + MAX_QUICK_QUESTIONS + "条");
         }
         return result;
-    }
-
-    private int resolveSort(String scene, String type) {
-        int sceneIdx = AiPromptDefaults.SCENES.indexOf(scene);
-        int typeIdx;
-        if (AiPromptDefaults.TYPE_SYSTEM.equals(type)) {
-            typeIdx = 1;
-        } else if (AiPromptDefaults.TYPE_WELCOME.equals(type)) {
-            typeIdx = 2;
-        } else {
-            typeIdx = 3;
-        }
-        return (sceneIdx + 1) * 10 + typeIdx;
     }
 }

@@ -11,6 +11,8 @@
 </head>
 <body>
   <div id="app">
+    <main id="rider-main">
+      <h1 class="sr-only">骑手工作台</h1>
     <van-nav-bar title="骑手工作台">
       <template #right>
         <button type="button" class="nav-logout" @click="onLogout">退出</button>
@@ -75,6 +77,7 @@
         <button class="rider-btn primary" @click="goHall">进入抢单大厅</button>
       </div>
     </div>
+  </main>
   </div>
 
   <script src="/backend/plugins/vue/vue.js"></script>

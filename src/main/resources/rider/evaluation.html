@@ -29,6 +29,8 @@
 </head>
 <body>
   <div id="app">
+    <main id="rider-main">
+      <h1 class="sr-only">我的评价</h1>
     <van-nav-bar title="我的评价" left-text="返回" left-arrow @click-left="goBack"></van-nav-bar>
 
     <div class="eval-summary">
@@ -57,6 +59,7 @@
       </div>
       <div class="rider-empty" v-else>{{ refreshing ? '加载中…' : '暂无评价' }}</div>
     </van-pull-refresh>
+  </main>
   </div>
 
   <script src="/backend/plugins/vue/vue.js"></script>

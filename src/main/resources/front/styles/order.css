@@ -422,9 +422,9 @@
   color: var(--color-primary-text);
 }
 
-#order .od-hero.s-4 { background: var(--color-success-text); color: #fff; }
+#order .od-hero.s-4 { background: var(--color-success-text); color: var(--color-text-white); }
 #order .od-hero.s-5 { background: var(--bg-hover); color: var(--color-text-secondary); }
-#order .od-hero.s-6 { background: var(--color-danger); color: #fff; }
+#order .od-hero.s-6 { background: var(--color-danger); color: var(--color-text-white); }
 
 #order .od-hero-icon { font-size: 34rem; line-height: 1; }
 

@@ -98,6 +98,8 @@
 </head>
 <body>
   <div id="app">
+    <main id="rider-main">
+      <h1 class="sr-only">我的收入</h1>
     <van-nav-bar title="我的收入" left-text="返回" left-arrow @click-left="goBack"></van-nav-bar>
 
     <van-tabs v-model="range" @change="load" sticky offset-top="0">
@@ -192,6 +194,7 @@
         </div>
       </div>
     </van-popup>
+  </main>
   </div>
 
   <script src="/backend/plugins/vue/vue.js"></script>

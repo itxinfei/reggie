@@ -531,7 +531,21 @@ public class DeliveryTrackingServiceImpl extends ServiceImpl<RiderMapper, Rider>
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateDeliveryTimeRecord(DeliveryTimeRecord record) {
+        if (record == null || record.getId() == null) {
+            throw new CustomException("配送时效记录ID不能为空");
+        }
+        // 租户归属校验：防止跨租户篡改他门店的配送时效记录（口径同本文件骑手相关校验）
+        Long currentTenantId = BaseContext.getCurrentTenantId();
+        DeliveryTimeRecord existing = timeRecordMapper.selectById(record.getId());
+        if (existing == null) {
+            throw new CustomException("配送时效记录不存在");
+        }
+        if (currentTenantId != null && !currentTenantId.equals(existing.getTenantId())) {
+            throw new CustomException("无权操作其他门店的配送时效记录");
+        }
         record.setUpdateTime(LocalDateTime.now());
+        // 保留原有租户ID，防止越权改写
+        record.setTenantId(existing.getTenantId());
         return timeRecordMapper.updateById(record) > 0;
     }
 

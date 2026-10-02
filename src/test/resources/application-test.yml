@@ -1,15 +1,15 @@
-# 测试环境配置：连接本地 MySQL 独立测试库 reggie_test。
-# 【一次性沙盒】reggie_test 由 TestDbProvisioner 在测试上下文刷新前自动管理：
-# 结构指纹（全部 schema*.sql）变化时自动 DROP+CREATE 重建全量表结构，平时复用。
-# 因此：新加表/列只需改 schema*.sql，本库永远不需要手动执行迁移。
-# 红线不变：与开发库 reggie 隔离是刻意的——测试代码含大量 DELETE FROM 清库动作，
-# 指向 reggie 会清空页面展示的业务数据；本库数据是一次性的，可随时丢弃重建。
+# 测试环境配置：连接本地 MySQL 开发库 reggie（开发 / 测试共用单库）。
+# 测试数据与演示数据通过「租户 + 命名空间」隔离，绝不互相清删：
+#  - 演示数据挂在租户 1（页面默认展示），测试永不触碰；
+#  - 自动化测试数据挂在租户 999（TenantTestExecutionListener 全局注入），
+#    全局字典表用 test: / test_ 前缀（见 TestDatabaseCleaner）。
+# 本环境不做整库 DROP / 重建；cleaner 只清测试租户 999 与 test 命名空间，测试可反复执行。
 server:
   port: 8080
 spring:
   datasource:
     druid:
-      url: jdbc:mysql://localhost:3306/reggie_test?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      url: jdbc:mysql://localhost:3306/reggie?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
       username: root
       password: 123456
       driver-class-name: com.mysql.cj.jdbc.Driver

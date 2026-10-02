@@ -6,10 +6,8 @@ import com.reggie.common.ObjectMapperHolder;
 import com.reggie.common.CsrfTokenUtil;
 import com.reggie.common.R;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.annotation.Order;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.context.annotation.Profile;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -17,7 +15,6 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
@@ -35,10 +32,11 @@ import java.io.IOException;
  * @author reggie
  * @since 2026-07-23
  */
+// 注册方式（2026-10-02 P0 修复）：原 @WebFilter + @Order(1) + @Profile("!dev") 经
+// ServletComponentScan 注册时 @Order/@Profile 均不生效，已改由
+// com.reggie.config.FilterRegistrationConfig 以 FilterRegistrationBean 显式注册
+// （order=2，先于 LoginCheckFilter；dev 环境经 setEnabled(false) 真实禁用）。
 @Slf4j
-@WebFilter(filterName = "csrfFilter", urlPatterns = "/*", asyncSupported = true)
-@Order(1) // 在LoginCheckFilter之前执行
-@Profile("!dev") // 开发环境禁用 CSRF：内网测试无需，避免前后端联调 Token 失效问题
 public class CsrfFilter implements Filter {
 
     private static final ObjectMapper OBJECT_MAPPER = ObjectMapperHolder.getDefault();
@@ -48,8 +46,6 @@ public class CsrfFilter implements Filter {
 
     /** CSRF Token Session Key */
     private static final String CSRF_TOKEN_KEY = "csrfToken";
-    /** Token 时间戳 Session Key（用于过期校验） */
-    private static final String CSRF_TOKEN_TIME_KEY = "csrfTokenTime";
     /** Token 有效期：30 分钟（与会话超时一致） */
     private static final long CSRF_TOKEN_MAX_AGE_MS = 30L * 60 * 1000;
 

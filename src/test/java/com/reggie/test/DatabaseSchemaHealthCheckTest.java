@@ -22,14 +22,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 数据库结构与实体对账（只查结构，不做数据要求）。
  *
  * <p>历史版本曾配合 CoreDataSeeder/TableSeeder 校验"每表 ≥10 行种子数据"；
- * 2026-09-30 起种子器已删除（演示数据改由 db/reggie-demo-data.sql 一次性导入，
- * 不再启动期造假数据），本测试收敛为纯结构对账：</p>
+ * 种子器已删除（演示数据由 db/reggie.sql 全库导出一次性导入，不再启动期造假数据），
+ * 本测试收敛为纯结构对账：</p>
  * <ol>
  *   <li>实体表 vs 物理表存在对账；</li>
  *   <li>实体字段 vs 物理列对账。</li>
  * </ol>
- * <p>问题全部收集后一次性失败，便于一次暴露全部漂移。测试库 reggie_test 的结构
- * 由 TestDbProvisioner 在上下文刷新前按 schema*.sql 自动重建，此处天然一致。</p>
+ * <p>问题全部收集后一次性失败，便于一次暴露全部漂移。测试连接本地 reggie 单库
+ * （application-test.yml），结构以该库现状为准；各 schema*.sql 仅作为 @Sql 的幂等
+ * 建表兜底（均为 CREATE TABLE IF NOT EXISTS），表已存在时不重建。</p>
  *
  * @author reggie
  * @since 2026-09-25

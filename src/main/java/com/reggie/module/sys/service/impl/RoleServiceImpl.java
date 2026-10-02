@@ -69,6 +69,19 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void assignPermissions(Long roleId, List<Long> permissionIds) {
+        // 租户归属校验（前置）：role_permission 无 tenant_id、不受租户插件保护，
+        // 必须先确认角色属于当前租户，否则可通过猜测 roleId 清空他租户角色的权限（口径同 deleteTenantRole）。
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在，无法分配角色权限");
+        }
+        LambdaQueryWrapper<Role> roleWrapper = new LambdaQueryWrapper<>();
+        roleWrapper.eq(Role::getId, roleId)
+                   .eq(Role::getTenantId, tenantId)
+                   .eq(Role::getIsDeleted, 0);
+        if (this.getOne(roleWrapper) == null) {
+            throw new CustomException("角色不存在或不属于当前租户（id=" + roleId + "）");
+        }
         // 删除旧权限关联
         LambdaQueryWrapper<RolePermission> delWrapper = new LambdaQueryWrapper<>();
         delWrapper.eq(RolePermission::getRoleId, roleId);
@@ -112,8 +125,20 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void assignUsersToRole(Long roleId, List<Long> employeeIds) {
-        // 删除旧关联：按 role_id + 当前租户过滤，防跨租户误删（与 MP 租户拦截器双保险）
+        // 租户归属校验（前置）：确认角色属于当前租户，否则可借他租户 roleId 篡改其员工-角色关联
+        // （口径同 deleteTenantRole）
         Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在，无法分配角色员工");
+        }
+        LambdaQueryWrapper<Role> roleWrapper = new LambdaQueryWrapper<>();
+        roleWrapper.eq(Role::getId, roleId)
+                   .eq(Role::getTenantId, tenantId)
+                   .eq(Role::getIsDeleted, 0);
+        if (this.getOne(roleWrapper) == null) {
+            throw new CustomException("角色不存在或不属于当前租户（id=" + roleId + "）");
+        }
+        // 删除旧关联：按 role_id + 当前租户过滤，防跨租户误删（与 MP 租户拦截器双保险）
         LambdaQueryWrapper<EmployeeRoleRelation> delWrapper = new LambdaQueryWrapper<>();
         delWrapper.eq(EmployeeRoleRelation::getRoleId, roleId);
         if (tenantId != null) {

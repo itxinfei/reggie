@@ -1,18 +1,16 @@
 package com.reggie.module.schedule.task;
 
 import com.reggie.common.BaseContext;
+import com.reggie.common.RedisLockUtil;
 import com.reggie.module.member.service.PointsRecordService;
 import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.tenant.service.TenantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 定时任务：每天凌晨扫描过期积分并自动扣减
@@ -38,7 +36,8 @@ public class PointsExpireTask {
 
     private final PointsRecordService pointsRecordService;
     private final TenantService tenantService;
-    private final RedisTemplate<String, Object> redisTemplate;
+    /** 公共 Redis 分布式锁工具（SET NX EX + Lua 释放，fail-closed） */
+    private final RedisLockUtil redisLockUtil;
 
     /**
      * 每天凌晨 2:00 执行积分过期扫描
@@ -47,17 +46,11 @@ public class PointsExpireTask {
     public void expirePoints() {
         log.info("[积分过期] 开始执行积分过期定时任务");
 
-        String lockValue = UUID.randomUUID().toString();
-        Boolean acquired = false;
-        try {
-            acquired = tryAcquire(lockValue);
-        } catch (Exception e) {
-            log.warn("[积分过期] 获取分布式锁异常，跳过本次执行: {}", e.getMessage(), e);
-            return;
-        }
-
-        if (!Boolean.TRUE.equals(acquired)) {
-            log.warn("[积分过期] 获取分布式锁失败，其他实例正在执行，跳过本次");
+        String lockValue = RedisLockUtil.newLockValue();
+        if (!tryAcquire(lockValue)) {
+            // fail-closed：拿不到锁（其他实例正在执行或 Redis 异常）跳过本次，
+            // 绝不无锁裸跑，避免多实例重复扣积分/发通知
+            log.info("[积分过期] 获取分布式锁失败（其他实例正在执行或 Redis 不可用），跳过本次");
             return;
         }
 
@@ -67,7 +60,7 @@ public class PointsExpireTask {
         } catch (Exception e) {
             log.error("[积分过期] 处理异常", e);
         } finally {
-            tryReleaseLock(lockValue);
+            redisLockUtil.unlockIfOwned(LOCK_KEY, lockValue);
         }
     }
 
@@ -98,16 +91,18 @@ public class PointsExpireTask {
         }
     }
 
-    private Boolean tryAcquire(String lockValue) {
-        if (redisTemplate == null) {
-            return true; // Redis 不可用时降级直接执行（单实例部署场景）
-        }
+    /**
+     * 自旋获取分布式锁：最长等待 {@code LOCK_WAIT_MILLIS}，每 {@code LOCK_RETRY_INTERVAL} 重试一次。
+     *
+     * <p>修复(P0)：原实现在 Redis 不可用时 {@code return true} 无锁裸跑，多实例下会重复扣积分/发通知；
+     * 现统一为 fail-closed——Redis 异常由 {@link RedisLockUtil#tryLock} 按未拿到锁处理并记 log.error，
+     * 本方法返回 false，任务跳过本轮。</p>
+     */
+    private boolean tryAcquire(String lockValue) {
         long startTime = System.currentTimeMillis();
         try {
             while (System.currentTimeMillis() - startTime < LOCK_WAIT_MILLIS) {
-                Boolean success = redisTemplate.opsForValue()
-                        .setIfAbsent(LOCK_KEY, lockValue, LOCK_EXPIRE_SECONDS, TimeUnit.SECONDS);
-                if (Boolean.TRUE.equals(success)) {
+                if (redisLockUtil.tryLock(LOCK_KEY, lockValue, LOCK_EXPIRE_SECONDS)) {
                     return true;
                 }
                 Thread.sleep(LOCK_RETRY_INTERVAL);
@@ -115,26 +110,7 @@ public class PointsExpireTask {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.warn("[积分过期] 获取锁被中断");
-        } catch (Exception e) {
-            log.error("[积分过期] 获取锁异常", e);
         }
         return false;
-    }
-
-    private void tryReleaseLock(String lockValue) {
-        if (redisTemplate == null || lockValue == null) {
-            return;
-        }
-        try {
-            String luaScript =
-                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
-            redisTemplate.execute(
-                    new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
-                    java.util.Collections.singletonList(LOCK_KEY),
-                    lockValue
-            );
-        } catch (Exception e) {
-            log.warn("[积分过期] 释放锁失败: {}", e.getMessage(), e);
-        }
     }
 }

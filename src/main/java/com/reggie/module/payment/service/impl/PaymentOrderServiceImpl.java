@@ -286,6 +286,32 @@ public class PaymentOrderServiceImpl extends ServiceImpl<PaymentOrderMapper, Pay
     }
 
     /**
+     * 0 元订单自动完成支付（单事务原子更新：PENDING 支付单（若有）翻 SUCCESS + 待付款订单 1→2）。
+     * <p>收敛自 PaymentController.pay 的 0 元分支——原实现直接双表 lambdaUpdate 且无事务，支付单与订单
+     * 可能部分更新（支付单已 SUCCESS 而订单仍待付款）。归属/状态校验仍由调用方（Controller）完成，此处只做原子落库。</p>
+     *
+     * @param orderId 业务订单ID
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void completeZeroAmountPayment(Long orderId) {
+        LocalDateTime now = LocalDateTime.now();
+        lambdaUpdate()
+                .eq(PaymentOrder::getOrderId, orderId)
+                .eq(PaymentOrder::getStatus, STATUS_PENDING)
+                .set(PaymentOrder::getStatus, STATUS_SUCCESS)
+                .set(PaymentOrder::getPaidTime, now)
+                .update();
+        orderService.lambdaUpdate()
+                .eq(Orders::getId, orderId)
+                .eq(Orders::getStatus, Orders.STATUS_PENDING_PAY)
+                .set(Orders::getStatus, Orders.STATUS_ORDERED)
+                .set(Orders::getCheckoutTime, now)
+                .update();
+        log.info("0元订单自动完成支付: orderId={}", orderId);
+    }
+
+    /**
      * 处理 payment success。
      * @param tradeNo 参数 tradeNo
      * @param channelTradeNo 参数 channelTradeNo

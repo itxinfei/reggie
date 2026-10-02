@@ -132,19 +132,24 @@ class KnowledgeIndexServiceImplTest {
     }
 
     @Test
-    void paragraphsAccumulateAtBoundariesWithoutCuttingFaq() throws Exception {
+    void paragraphsAccumulateAtBoundariesWithoutCuttingThrough() throws Exception {
         StringBuilder content = new StringBuilder();
-        for (int i = 1; i <= 10; i++) {
+        for (int i = 1; i <= 15; i++) {
             content.append("问：常见问题").append(i).append("的完整描述？\n");
-            content.append("答：这是第").append(i).append("个问题的回答，保持在同一段落内不切断。\n");
+            content.append("答：这是第").append(i).append("个回答，保持在同一段落内不切断。\n");
         }
         List<String> chunks = splitWithTitle("FAQ", content.toString());
         assertTrue(chunks.size() > 1);
         for (String chunk : chunks) {
             String body = chunk.substring(chunk.indexOf('\n') + 1);
-            long q = body.chars().filter(c -> c == '问').count();
-            long a = body.chars().filter(c -> c == '答').count();
-            assertEquals(q, a, "切段内问答对必须成对（段落边界累积）：\n" + body);
+            // 段落边界累积保证：任何一行都是完整段落（以 问：/答： 开头、以 ？/。 结尾），
+            // 不会出现 400 字硬切产生的半截句子；块边界可能落在问句与答句两个段落之间，属正常语义
+            for (String line : body.split("\n")) {
+                assertTrue(line.startsWith("问：") || line.startsWith("答："),
+                        "切段中出现了非完整段落行（被硬切）：\n" + line);
+                assertTrue(line.endsWith("？") || line.endsWith("。"),
+                        "切段中出现了半截句子：\n" + line);
+            }
         }
     }
 

@@ -3,6 +3,7 @@ package com.reggie.module.platform.task;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.reggie.common.BaseContext;
 import com.reggie.common.CustomException;
+import com.reggie.common.RedisLockUtil;
 import com.reggie.module.platform.adapter.PlatformOrder;
 import com.reggie.module.platform.model.PlatformConfig;
 import com.reggie.module.platform.model.PlatformSyncLog;
@@ -14,16 +15,11 @@ import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 平台同步重试任务
@@ -49,8 +45,8 @@ public class PlatformRetryTask {
     /** 成功日志保留天数：超过此天数的成功日志将被清理 */
     private static final int SUCCESS_LOG_RETAIN_DAYS = 7;
 
-    /** 分布式锁过期时间（毫秒），应大于任务最大执行时间 */
-    private static final long LOCK_TTL_MS = 4 * 60 * 1000L; // 4分钟
+    /** 分布式锁过期时间（秒），应大于任务最大执行时间 */
+    private static final long LOCK_TTL_SECONDS = 4 * 60L; // 4分钟
 
     @Autowired
     private PlatformSyncLogService syncLogService;
@@ -64,8 +60,8 @@ public class PlatformRetryTask {
     @Autowired
     private TenantService tenantService;
 
-    @Autowired(required = false)
-    private RedisTemplate<String, Object> redisTemplate;
+    @Autowired
+    private RedisLockUtil redisLockUtil;
 
     /** 修改点(2026-09-15)：平台同步总开关（默认 false）。适配器为占位协议时重试必然失败且无限堆积，
      * 关闭开关可避免每 2 分钟空转重试并刷 ERROR 日志 */
@@ -82,14 +78,8 @@ public class PlatformRetryTask {
             log.debug("[平台重试] reggie.platform.sync-enabled=false，跳过本次重试");
             return;
         }
-        // 分布式锁防止多实例重复执行（fail-closed：Redis 不可用则跳过）
-        String lockValue = tryLock("platform:lock:retry", LOCK_TTL_MS);
-        if (lockValue == null) {
-            log.debug("[平台重试] 重试任务正在执行中，跳过本次");
-            return;
-        }
-
-        try {
+        // 分布式锁防止多实例重复执行（fail-closed：拿不到锁=另一实例在执行或 Redis 不可用，跳过本轮）
+        redisLockUtil.executeWithLock("platform:lock:retry", LOCK_TTL_SECONDS, () -> {
             log.info("[平台重试] 开始扫描失败日志");
             List<Tenant> tenants = tenantService.listActiveTenants();
             if (tenants == null || tenants.isEmpty()) {
@@ -113,9 +103,7 @@ public class PlatformRetryTask {
                     }
                 }
             }
-        } finally {
-            unlock("platform:lock:retry", lockValue);
-        }
+        });
     }
 
     /**
@@ -215,83 +203,26 @@ public class PlatformRetryTask {
      */
     @Scheduled(cron = "0 0 3 * * ?")
     public void cleanOldSuccessLogs() {
-        // 分布式锁防止多实例重复清理（fail-closed）
-        String lockValue = tryLock("platform:lock:clean-logs", LOCK_TTL_MS);
-        if (lockValue == null) {
-            log.debug("[平台重试] 日志清理任务正在执行中，跳过本次");
-            return;
-        }
+        // 分布式锁防止多实例重复清理（fail-closed：拿不到锁则跳过本轮）
+        redisLockUtil.executeWithLock("platform:lock:clean-logs", LOCK_TTL_SECONDS, () -> {
+            try {
+                LocalDateTime threshold = LocalDateTime.now().minusDays(SUCCESS_LOG_RETAIN_DAYS);
+                LambdaQueryWrapper<PlatformSyncLog> qw = new LambdaQueryWrapper<>();
+                qw.eq(PlatformSyncLog::getStatus, 0) // 仅清理成功日志
+                  .lt(PlatformSyncLog::getCreateTime, threshold);
 
-        try {
-            LocalDateTime threshold = LocalDateTime.now().minusDays(SUCCESS_LOG_RETAIN_DAYS);
-            LambdaQueryWrapper<PlatformSyncLog> qw = new LambdaQueryWrapper<>();
-            qw.eq(PlatformSyncLog::getStatus, 0) // 仅清理成功日志
-              .lt(PlatformSyncLog::getCreateTime, threshold);
-
-            long count = syncLogService.count(qw);
-            if (count == 0) {
-                log.info("[平台重试] 无需清理：无 {} 天前的成功日志", SUCCESS_LOG_RETAIN_DAYS);
-                return;
+                long count = syncLogService.count(qw);
+                if (count == 0) {
+                    log.info("[平台重试] 无需清理：无 {} 天前的成功日志", SUCCESS_LOG_RETAIN_DAYS);
+                    return;
+                }
+                boolean removed = syncLogService.remove(qw);
+                log.info("[平台重试] 清理旧成功日志完成: threshold={}, 删除={}, 成功={}",
+                        threshold, count, removed);
+            } catch (Exception e) {
+                // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
+                log.error("[平台重试] 清理旧日志失败", e);
             }
-            boolean removed = syncLogService.remove(qw);
-            log.info("[平台重试] 清理旧成功日志完成: threshold={}, 删除={}, 成功={}",
-                    threshold, count, removed);
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("[平台重试] 清理旧日志失败", e);
-        } finally {
-            unlock("platform:lock:clean-logs", lockValue);
-        }
-    }
-
-    // ──────────────────────────────────────
-    // 分布式锁辅助方法（与 OrderTimeoutTask 同模式）
-    // ──────────────────────────────────────
-
-    /**
-     * 尝试获取分布式锁
-     * @param lockKey 锁Key
-     * @param ttlMs 锁过期时间（毫秒）
-     * @return 锁值（UUID），获取失败返回null
-     */
-    private String tryLock(String lockKey, long ttlMs) {
-        if (redisTemplate == null) {
-            // fail-closed：Redis 不可用时跳过本次执行，避免多实例重复重试
-            log.warn("[平台重试] Redis不可用，跳过本次执行（分布式锁获取失败）: {}", lockKey);
-            return null;
-        }
-        try {
-            String lockValue = UUID.randomUUID().toString();
-            Boolean success = redisTemplate.opsForValue()
-                    .setIfAbsent(lockKey, lockValue, ttlMs, TimeUnit.MILLISECONDS);
-            return Boolean.TRUE.equals(success) ? lockValue : null;
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("[平台重试] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
-            return null;
-        }
-    }
-
-    /**
-     * 释放分布式锁（Lua 脚本原子操作：比对锁值后才删除）
-     * @param lockKey 锁Key
-     * @param lockValue 锁值（UUID）
-     */
-    private void unlock(String lockKey, String lockValue) {
-        if (redisTemplate == null || lockValue == null) {
-            return;
-        }
-        try {
-            String luaScript =
-                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
-            redisTemplate.execute(
-                new DefaultRedisScript<Long>(luaScript, Long.class),
-                Collections.singletonList(lockKey),
-                lockValue
-            );
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免单个失败影响主流程
-            log.error("[平台重试] 释放分布式锁失败: {}", lockKey, e);
-        }
+        });
     }
 }

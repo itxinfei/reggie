@@ -10,7 +10,8 @@ import java.util.Map;
  * AI 提示词模板内置默认内容（P3）。
  * <p>来源搬迁：SYSTEM 原为 {@code AIConfigProperties} 写死常量（marketing 原为 AIChatServiceImpl 内联串），
  * WELCOME/QUICK 原为 AIChatController 静态 Map。</p>
- * <p>用途：①首次启动 Seeder 补插内置模板；②后台「重置默认」按 code 恢复原文。</p>
+ * <p>用途：①后台「重置默认」按 code 恢复原文；②内置模板落库脚本 db/20261002_ai_prompt_template_seed.sql
+ * 由本类生成（启动期种子器 AiPromptTemplateSeeder 已于 2026-10-02 下线，应用启动不再写库）。</p>
  *
  * @author reggie
  * @since 2026-09-21

@@ -56,6 +56,9 @@
         :loading="loading"
         :show-actions="true" :viewable="true"
         :actions-width="120"
+        row-key="id"
+        :batch-delete="doBatchDelete"
+        @batch-deleted="fetchData(true)"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -138,7 +141,7 @@
     <script src="../../api/category.js?v=20260926"></script>
     <script src="../../api/food.js?v=20260926"></script>
     <script src="../../api/combo.js?v=20260926"></script>
-    <script src="../../js/components.js?v=20260930"></script>
+    <script src="../../js/components.js?v=20261002"></script>
     <script>
       new Vue({
         el: '#category-app',
@@ -245,6 +248,10 @@
               this.optionsLoading = false
             }
           },
+        doBatchDelete(payload) {
+          // 后端 DELETE /category 支持批量；ids 传逗号串，避免数组被默认序列化成 ids[]
+          return $axios({ url: '/category?ids=' + payload.ids.join(','), method: 'delete' })
+        },
         async fetchData(reloadStats = true) {
           this.loading = true
           // 修改点：传递分页参数 + 类型筛选 + 名称搜索到后端（原漏传 page/pageSize，翻页永远查第一页）

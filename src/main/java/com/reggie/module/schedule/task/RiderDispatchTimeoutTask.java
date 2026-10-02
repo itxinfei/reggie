@@ -2,6 +2,7 @@ package com.reggie.module.schedule.task;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.reggie.common.BaseContext;
+import com.reggie.common.RedisLockUtil;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.order.service.OrderService;
 import com.reggie.module.tenant.model.Tenant;
@@ -9,13 +10,11 @@ import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 派单超时回流任务。
@@ -39,8 +38,8 @@ public class RiderDispatchTimeoutTask {
     /** 扫描间隔（毫秒）：30 秒 */
     private static final long SCAN_INTERVAL_MS = 30 * 1000L;
 
-    /** 分布式锁过期时间（毫秒） */
-    private static final long LOCK_TTL_MS = 20 * 1000L;
+    /** 分布式锁过期时间（秒） */
+    private static final long LOCK_TTL_SECONDS = 20L;
 
     /** 派单后等待骑手接单的最长时间（秒），超时回流大厅 */
     @Value("${reggie.rider.dispatch-timeout-seconds:90}")
@@ -52,20 +51,16 @@ public class RiderDispatchTimeoutTask {
     @Autowired
     private TenantService tenantService;
 
-    @Autowired(required = false)
-    private RedisTemplate<String, Object> redisTemplate;
+    @Autowired
+    private RedisLockUtil redisLockUtil;
 
     /**
      * 每 30 秒扫描超时未接的派单并回流大厅。
      */
     @Scheduled(fixedRate = SCAN_INTERVAL_MS)
     public void reflowTimeoutDispatches() {
-        String lockValue = tryLock("schedule:lock:rider-dispatch-timeout", LOCK_TTL_MS);
-        if (lockValue == null) {
-            log.debug("[派单回流] 任务正在执行中，跳过本次");
-            return;
-        }
-        try {
+        // 分布式锁防多实例重复回流（fail-closed：拿不到锁=另一实例在执行，跳过本轮）
+        redisLockUtil.executeWithLock("schedule:lock:rider-dispatch-timeout", LOCK_TTL_SECONDS, () -> {
             List<Tenant> tenants = tenantService.listActiveTenants();
             if (tenants.isEmpty()) {
                 return;
@@ -96,49 +91,6 @@ public class RiderDispatchTimeoutTask {
             if (totalReflowed > 0) {
                 log.info("[派单回流] 本轮扫描完成，共回流 {} 个超时订单", totalReflowed);
             }
-        } finally {
-            unlock("schedule:lock:rider-dispatch-timeout", lockValue);
-        }
-    }
-
-    /**
-     * 尝试获取分布式锁（SET NX EX 原子操作）。
-     */
-    private String tryLock(String lockKey, long ttlMs) {
-        if (redisTemplate == null) {
-            // fail-closed：Redis 不可用时跳过本轮，避免多实例重复回流
-            log.warn("[派单回流] Redis不可用，跳过本次执行（分布式锁获取失败）: {}", lockKey);
-            return null;
-        }
-        try {
-            String lockValue = java.util.UUID.randomUUID().toString();
-            Boolean success = redisTemplate.opsForValue()
-                    .setIfAbsent(lockKey, lockValue, ttlMs, TimeUnit.MILLISECONDS);
-            return Boolean.TRUE.equals(success) ? lockValue : null;
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免任务整体中断
-            log.error("[派单回流] 获取分布式锁失败，跳过本次执行: {}", lockKey, e);
-            return null;
-        }
-    }
-
-    /**
-     * 释放分布式锁（Lua 脚本原子操作：比对锁值后才删除）。
-     */
-    private void unlock(String lockKey, String lockValue) {
-        if (redisTemplate == null || lockValue == null) {
-            return;
-        }
-        try {
-            String luaScript =
-                    "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
-            redisTemplate.execute(
-                    new org.springframework.data.redis.core.script.DefaultRedisScript<>(luaScript, Long.class),
-                    java.util.Collections.singletonList(lockKey),
-                    lockValue);
-        } catch (Exception e) {
-            // 宽异常兜底：有意捕获 Exception，避免影响调度线程
-            log.error("[派单回流] 释放分布式锁失败: {}", lockKey, e);
-        }
+        });
     }
 }

@@ -790,10 +790,10 @@ public class ReportServiceImpl implements ReportService {
                 d = d.plusDays(1);
             }
 
-            // 一次性查询整个日期范围内的订单ID
+            // 一次性查询整个日期范围内的订单ID与下单时间（fillDishData 需按 orderTime 建日期映射）
             LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
             orderQw.between(Orders::getOrderTime, start.atStartOfDay(), end.atTime(LocalTime.MAX));
-            orderQw.select(Orders::getId);
+            orderQw.select(Orders::getId, Orders::getOrderTime);
             List<Orders> allOrders = orderService.list(orderQw);
 
             // 聚合每个菜品每天的销量（等价抽取，降低方法长度）
@@ -846,7 +846,7 @@ public class ReportServiceImpl implements ReportService {
         List<Long> allOrderIds = allOrders.stream().map(Orders::getId).collect(Collectors.toList());
         LambdaQueryWrapper<OrderDetail> detailQw = new LambdaQueryWrapper<>();
         detailQw.in(OrderDetail::getOrderId, allOrderIds);
-        detailQw.select(OrderDetail::getName, OrderDetail::getNumber);
+        detailQw.select(OrderDetail::getOrderId, OrderDetail::getName, OrderDetail::getNumber);
         List<OrderDetail> allDetails = orderDetailService.list(detailQw);
 
         // 构建 orderId -> 日期映射，用于确定每笔订单所属日期
@@ -1093,14 +1093,14 @@ public class ReportServiceImpl implements ReportService {
     }
 
     /**
-     * 查询日期范围内已完成订单（仅 id）（等价抽取）。
+     * 查询日期范围内已完成订单（仅 id/userId，buildRepurchaseRanking 需按 userId 统计）（等价抽取）。
      */
     private List<Orders> loadCompletedOrders(String startDate, String endDate) {
         LambdaQueryWrapper<Orders> orderQw = new LambdaQueryWrapper<>();
         orderQw.between(Orders::getOrderTime, LocalDate.parse(startDate).atStartOfDay(),
                 LocalDate.parse(endDate).atTime(LocalTime.MAX));
         orderQw.in(Orders::getStatus, Orders.STATUS_COMPLETED);
-        orderQw.select(Orders::getId);
+        orderQw.select(Orders::getId, Orders::getUserId);
         return orderService.list(orderQw);
     }
 
@@ -1122,9 +1122,13 @@ public class ReportServiceImpl implements ReportService {
             int limit) {
         List<Map<String, Object>> ranking = new ArrayList<>();
 
-        // 通过 orderId 反查 userId
-        Map<Long, Long> orderIdUserIdMap = orders.stream()
-                .collect(Collectors.toMap(Orders::getId, Orders::getUserId, (a, b) -> a));
+        // 通过 orderId 反查 userId（user_id 可为 NULL，toMap 不接受 null value，改手工容错构建）
+        Map<Long, Long> orderIdUserIdMap = new HashMap<>();
+        for (Orders o : orders) {
+            if (o.getId() != null) {
+                orderIdUserIdMap.putIfAbsent(o.getId(), o.getUserId());
+            }
+        }
 
         // 按 (dishId, userId) 分组统计购买次数
         Map<Long, Map<Long, Integer>> dishUserCountMap = new HashMap<>();

@@ -55,9 +55,11 @@ private boolean mockMode = false;
 
     /**
      * 生产强制使用环境变量主密钥开关：true 时 REGGIE_PAYMENT_KEY 缺失/非法将拒绝启动，
-     * 防止用代码内置兜底密钥解密数据库中的支付凭据。默认 false，仅在 prod 置 true。
+     * 防止用代码内置兜底密钥解密数据库中的支付凭据。
+     * <p>2026-10-02 安全修复（审查报告 P0 问题 2）：默认改为 true（fail-fast）；
+     * 仅显式配置 reggie.payment.require-env-key=false 可关闭（dev/test/local 环境本就豁免此检查）。</p>
      */
-    private boolean requireEnvKey = false;
+    private boolean requireEnvKey = true;
 
     /**
      * 支付宝开放平台网关地址。默认正式环境；沙箱联调时在 application.yml 覆盖为沙箱网关。

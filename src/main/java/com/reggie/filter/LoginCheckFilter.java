@@ -11,7 +11,6 @@ import com.reggie.module.store.service.StoreService;
 import com.reggie.module.tenant.model.Tenant;
 import com.reggie.module.tenant.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.annotation.Order;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.context.WebApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
@@ -21,7 +20,6 @@ import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -42,9 +40,10 @@ import java.io.IOException;
  * @author 心飞为你飞
  * @since 2024-01-01
  */
-@WebFilter(filterName = "loginCheckFilter",urlPatterns = "/*", asyncSupported = true)
+// 注册方式（2026-10-02 P0 修复）：原 @WebFilter + @Order(3) 经 ServletComponentScan 注册时
+// @Order 不生效，已改由 com.reggie.config.FilterRegistrationConfig 以 FilterRegistrationBean
+// 显式注册（order=3，在 CsrfFilter(order=2) 之后，保证先过 CSRF 再过登录校验）。
 @Slf4j
-@Order(3) // 在 CsrfFilter(@Order(1)) 之后，保证先过 CSRF 再过登录校验
 public class LoginCheckFilter implements Filter{
     /** 路径匹配器，支持通配符 */
     public static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
@@ -336,8 +335,9 @@ public class LoginCheckFilter implements Filter{
 
     /**
      * 凭「记住登录」cookie 自动恢复骑手会话。
-     * <p>{@code @WebFilter} 不由 Spring 管理，通过 WebApplicationContextUtils 取
-     * {@code RiderRememberTokenService}；令牌不存在/已过期或容器中无该 bean 时返回 null。</p>
+     * <p>本过滤器非 Spring Bean（由 {@code FilterRegistrationConfig} 显式 new 并注册），
+     * 通过 WebApplicationContextUtils 取 {@code RiderRememberTokenService}；
+     * 令牌不存在/已过期或容器中无该 bean 时返回 null。</p>
      *
      * @param request 请求
      * @return 写入 rider / tenantId 的新会话；无法自动登录时 null

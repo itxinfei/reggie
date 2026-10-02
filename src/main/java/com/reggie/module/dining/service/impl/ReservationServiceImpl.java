@@ -134,11 +134,21 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         if (!ReservationStatus.PENDING.getValue().equals(r.getStatus())) {
             throw new CustomException("当前预订状态无法确认");
         }
+        // P0-14 修复：带期望旧值的 CAS 更新，消除 getById→updateById 整行读改写的并发丢失更新；
+        // 影响行数 0 说明状态已被并发请求迁移
+        boolean updated = lambdaUpdate()
+                .eq(Reservation::getId, id)
+                .eq(Reservation::getStatus, ReservationStatus.PENDING.getValue())
+                .set(Reservation::getStatus, ReservationStatus.CONFIRMED.getValue())
+                .set(Reservation::getUpdateTime, LocalDateTime.now())
+                .update();
+        if (!updated) {
+            throw new CustomException("预订状态已变更，请刷新后重试");
+        }
+        // 桌台预留放在 CAS 成功之后，避免确认失败时误占桌台
         if (r.getTableId() != null) {
             diningTableService.changeStatus(r.getTableId(), DiningTableStatus.RESERVED.getValue());
         }
-        r.setStatus(ReservationStatus.CONFIRMED.getValue());
-        updateById(r);
     }
 
     /**
@@ -167,8 +177,17 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         // 释放桌台：仅 CONFIRMED 预订在确认时把桌台置为 RESERVED，取消须还原 FREE，
         // 否则桌台永久卡在预留态无法接客（PENDING 未占桌台，无需释放）
         boolean wasConfirmed = ReservationStatus.CONFIRMED.getValue().equals(r.getStatus());
-        r.setStatus(ReservationStatus.CANCELLED.getValue());
-        updateById(r);
+        // P0-14 修复：以读到的期望旧状态做 CAS，防止并发确认/取消与本次取消互相覆盖
+        boolean updated = lambdaUpdate()
+                .eq(Reservation::getId, id)
+                .eq(Reservation::getStatus, r.getStatus())
+                .set(Reservation::getStatus, ReservationStatus.CANCELLED.getValue())
+                .set(Reservation::getUpdateTime, LocalDateTime.now())
+                .update();
+        if (!updated) {
+            throw new CustomException("预订状态已变更，请刷新后重试");
+        }
+        // 桌台释放放在 CAS 成功之后
         if (wasConfirmed && r.getTableId() != null) {
             diningTableService.changeStatus(r.getTableId(), DiningTableStatus.FREE.getValue());
         }
@@ -214,8 +233,16 @@ public class ReservationServiceImpl extends ServiceImpl<ReservationMapper, Reser
         if (!ReservationStatus.CONFIRMED.getValue().equals(r.getStatus())) {
             throw new CustomException("预订尚未确认，请先确认后再办理到店");
         }
-        r.setStatus(ReservationStatus.ARRIVED.getValue());
-        updateById(r);
+        // P0-14 修复：CAS（期望旧值 CONFIRMED）成功后才开台，杜绝双击"到店"重复建占位订单
+        boolean updated = lambdaUpdate()
+                .eq(Reservation::getId, id)
+                .eq(Reservation::getStatus, ReservationStatus.CONFIRMED.getValue())
+                .set(Reservation::getStatus, ReservationStatus.ARRIVED.getValue())
+                .set(Reservation::getUpdateTime, LocalDateTime.now())
+                .update();
+        if (!updated) {
+            throw new CustomException("预订状态已变更，请刷新后重试");
+        }
         if (r.getTableId() != null) {
             // 到店即开台：预订确认时桌台为 RESERVED，先在本事务内释放回 FREE，再一键开台
             // 建 EAT_IN 占位订单并置占用，修复旧实现裸改占用却不建单、结账无单可结的问题。

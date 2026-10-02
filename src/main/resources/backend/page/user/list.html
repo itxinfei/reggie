@@ -67,7 +67,9 @@
         row-key="id"
         :show-actions="true"
         :actions-width="180"
+        :batch-delete="doBatchDelete"
         @selection-change="onSelectionChange"
+        @batch-deleted="onBatchDeleted"
         @page-change="onPageChange"
         @size-change="onSizeChange"
       >
@@ -174,7 +176,7 @@
   <script src="../../js/performance-utils.js?v=20260926"></script>
   <script src="../../api/user.js?v=20260926"></script>
   <script src="../../api/export.js?v=20260926"></script>
-  <script src="../../js/components.js?v=20260930"></script>
+  <script src="../../js/components.js?v=20261002"></script>
   <script>
     new Vue({
       el: '#user-app',
@@ -219,8 +221,8 @@
           tableActions: [],
           // 修改点：列表操作区按钮（导出），与 table-bar 的 @action 事件联动
           actionConfig: [
-            { key: 'exportExcel', text: '导出Excel', type: 'success', icon: 'ri-download-line' },
-            { key: 'exportPdf', text: '导出PDF', type: 'danger', icon: 'ri-file-text-line' }
+            { key: 'exportExcel', text: '导出Excel', type: 'success', icon: 'ri-download-line', disabled: true },
+            { key: 'exportPdf', text: '导出PDF', type: 'danger', icon: 'ri-file-text-line', disabled: true }
           ],
           // 修改点：列配置（供 <crud-table> 组件使用，替代手写 el-table-column）
           columns: [
@@ -291,9 +293,20 @@
           this.page = 1
           this.fetchData()
         },
-        // 勾选行变化；勾了导出选中行，没勾按当前筛选导出
+        // 勾选行变化：同步导出按钮禁用态（必须勾选才能导出）
         onSelectionChange: function(payload) {
           this.selectedIds = (payload && payload.ids) ? payload.ids : []
+          var noSel = this.selectedIds.length === 0
+          this.actionConfig[0].disabled = noSel
+          this.actionConfig[1].disabled = noSel
+        },
+        // 内建批量删除：后端 /user 仅支持单 id，顺序循环单删
+        doBatchDelete: function(payload) {
+          return window.RgBatchDeleteByOne({ ids: payload.ids, label: '用户', request: userDelete })
+        },
+        // 批量删除成功后刷新列表与统计
+        onBatchDeleted: function() {
+          this.refreshAll()
         },
         clearSelection: function() {
           this.selectedIds = []
@@ -487,34 +500,18 @@
           if (payload.key === 'exportExcel') this.exportUsers('excel')
           else if (payload.key === 'exportPdf') this.exportUsers('pdf')
         },
-        // 导出C端用户数据（Excel/PDF）：勾选了行只导选中行；未勾选按当前筛选导出
+        // 导出C端用户数据（Excel/PDF）：仅导出勾选行（未勾选时导出按钮已禁用）
         exportUsers: async function(format) {
-          const hasSelection = this.selectedIds.length > 0
-          if (!hasSelection && this.counts === 0) {
-            ReggieUI.warning('当前筛选没有可导出的用户')
+          if (this.selectedIds.length === 0) {
+            ReggieUI.warning('请先勾选要导出的用户')
             return
           }
-          const params = {}
-          if (hasSelection) {
-            params.ids = this.selectedIds.join(',')
-          } else {
-            // 与 getUserPage 的取值保持一致：优先 lastSearch，回退手写搜索框 input
-            const s = this.lastSearch || {}
-            const name = s.name || this.input.name || ''
-            const phone = s.phone || this.input.phone || ''
-            if (name) params.name = name
-            if (phone) params.phone = phone
-            if (s.status != null) {
-              if (s.status !== '') params.status = Number(s.status)
-            } else if (this.input.status != null) {
-              params.status = this.input.status
-            }
-          }
+          const params = { ids: this.selectedIds.join(',') }
           try {
             const ext = format === 'excel' ? 'xlsx' : 'pdf'
             const apiCall = format === 'excel' ? exportApi.exportUsersExcel(params) : exportApi.exportUsersPdf(params)
             await exportApi.downloadFile(apiCall, '用户数据.' + ext)
-            ReggieUI.success(hasSelection ? ('已导出选中的 ' + this.selectedIds.length + ' 个用户') : ('已按当前筛选导出 ' + (this.counts || 0) + ' 个用户'))
+            ReggieUI.success('已导出选中的 ' + this.selectedIds.length + ' 个用户')
           } catch (err) {
             ReggieUI.error('导出失败：' + (err.message || err))
           }

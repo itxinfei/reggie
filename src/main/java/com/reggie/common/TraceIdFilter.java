@@ -2,8 +2,6 @@ package com.reggie.common;
 
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
-import org.springframework.core.annotation.Order;
-import org.springframework.core.Ordered;
 
 import javax.servlet.FilterChain;
 import javax.servlet.Filter;
@@ -11,7 +9,6 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -27,21 +24,24 @@ import java.util.UUID;
  * 3. 设置到 MDC("traceId") + 响应头 X-Trace-Id（返回给调用方）+ BaseContext
  * 4. finally 中清理 MDC 与 BaseContext，防止线程池内存泄漏
  *
- * 执行顺序（@Order 越小越靠前）：
- *  1. TraceIdFilter            (HIGHEST_PRECEDENCE + 1) — 注入 traceId
- *  2. CsrfFilter               (@Order(1))              — CSRF 校验
- *  3. LoginCheckFilter         (无 @Order，字母序)      — 登录态校验
+ * 执行顺序（@Order 越小越靠前；2026-10-02 P0 修复后由
+ * com.reggie.config.FilterRegistrationConfig 以 FilterRegistrationBean 显式注册）：
+ *  1. SecurityHeaderFilter     (order=0) — 设置安全响应头
+ *  2. TraceIdFilter            (order=1) — 注入 traceId（原 @Order(HIGHEST_PRECEDENCE+1)，
+ *                                          语义"尽可能靠前"，仍在 CSRF/登录校验之前）
+ *  3. CsrfFilter               (order=2) — CSRF 校验
+ *  4. LoginCheckFilter         (order=3) — 登录态校验
  *
  * 修复记录：此前该类只有 @Order 没有 @WebFilter，未被 ServletComponentScan
  * 扫描注册，是死代码，MDC traceId 与响应头 X-Trace-Id 完全不生效。
- * 现补 @WebFilter 使全链路 traceId 生效（可观测性）。
+ * 后补 @WebFilter 使全链路 traceId 生效（可观测性）；现 @WebFilter 已移除，
+ * 统一改由 FilterRegistrationBean 显式注册（@WebFilter 机制下 @Order 本就不生效，
+ * 顺序此前实际未定义）。
  *
  * @author AI
  * @since 2026-08-22
  */
 @Slf4j
-@WebFilter(filterName = "traceIdFilter", urlPatterns = "/*", asyncSupported = true)
-@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class TraceIdFilter implements Filter {
 
     /** 请求头名称 */

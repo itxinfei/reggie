@@ -9,6 +9,53 @@ package com.reggie.common;
 public class LogMaskUtils {
 
     /**
+     * URL 脱敏：保留 scheme://host/path 与查询参数名，所有查询参数值一律替换为 {@code ***}。
+     * <p>
+     * 用于 access_token / sign 等按平台协议必须拼在 URL query 中的敏感参数写入日志前脱敏
+     * （约定与 {@code com.reggie.module.ai.util.AiSecretMaskUtils#maskUrl} 一致）。
+     * </p>
+     * <p>示例：{@code https://openapi.example.com/order/query?accessToken=abcd1234&pageNo=1}
+     * → {@code https://openapi.example.com/order/query?accessToken=***&pageNo=***}</p>
+     *
+     * @param url 原始 URL，允许为 null
+     * @return 脱敏后的 URL；无查询参数时原样返回
+     */
+    public static String maskUrl(String url) {
+        if (url == null || url.isEmpty()) {
+            return url;
+        }
+        int queryIdx = url.indexOf('?');
+        if (queryIdx < 0) {
+            return url;
+        }
+        StringBuilder sb = new StringBuilder(url);
+        int paramStart = queryIdx + 1;
+        while (paramStart < sb.length()) {
+            int amp = sb.indexOf("&", paramStart);
+            int eq = sb.indexOf("=", paramStart);
+            if (eq < 0 || (amp >= 0 && amp < eq)) {
+                // 无值参数（如 ?flag）或非法片段，保持原样
+                if (amp < 0) {
+                    break;
+                }
+                paramStart = amp + 1;
+                continue;
+            }
+            int valueEnd = (amp >= 0) ? amp : sb.length();
+            if (eq + 1 < valueEnd) {
+                sb.replace(eq + 1, valueEnd, "***");
+            } else {
+                sb.insert(eq + 1, "***");
+            }
+            if (amp < 0) {
+                break;
+            }
+            paramStart = amp + 1;
+        }
+        return sb.toString();
+    }
+
+    /**
      * 手机号脱敏
      * 示例：13812341234 -> 138****1234
      */

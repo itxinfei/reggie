@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import java.math.BigDecimal;
 
 /**
@@ -33,13 +34,15 @@ public class WithdrawalController {
 
     /**
      * 提交。
+     * <p>申请人身份（userId）由服务端从当前会话取值，不采信客户端传入；金额经 @Valid 做
+     * 非空/正数/上限校验，服务端另有兜底断言。</p>
      * @param request 参数 request
      * @return 返回结果
      */
     @PostMapping
     @Operation(summary = "用户提交提现申请")
-    public R<WithdrawalRequest> submit(@Parameter(description = "提现申请信息（金额、收款方式等）", required =
-            true) @RequestBody WithdrawalRequest request) {
+    public R<WithdrawalRequest> submit(@Parameter(description = "提现申请信息（金额、收款方式等），申请人身份由服务端会话确定", required =
+            true) @Valid @RequestBody WithdrawalRequest request) {
         return R.success(withdrawalService.submitWithdrawal(request));
     }
 

@@ -2,6 +2,7 @@ package com.reggie.module.dish.controller;
 
 import com.reggie.common.BaseContext;
 import com.reggie.common.R;
+import com.reggie.common.annotation.RequireEmployee;
 import com.reggie.module.dish.model.Dish;
 import com.reggie.module.dish.model.DishFlavor;
 import com.reggie.module.dish.service.DishFlavorService;
@@ -47,6 +48,7 @@ public class DishFlavorController {
      * @return 操作结果
      */
     @PostMapping
+    @RequireEmployee
     @Operation(summary = "新增口味", description = "为菜品新增一个口味规格")
     @Parameter(name = "dishFlavor", description = "口味信息（名称、值、菜品ID）", required = true)
     public R<DishFlavor> save(@RequestBody DishFlavor dishFlavor) {
@@ -86,6 +88,7 @@ public class DishFlavorController {
      * @return 操作结果
      */
     @PutMapping
+    @RequireEmployee
     @Operation(summary = "修改口味", description = "根据ID更新口味信息（名称、值）")
     @Parameter(name = "dishFlavor", description = "口味信息（必须包含ID）", required = true)
     public R<String> update(@RequestBody DishFlavor dishFlavor) {
@@ -105,6 +108,7 @@ public class DishFlavorController {
      * @return 操作结果
      */
     @DeleteMapping("/{id}")
+    @RequireEmployee
     @Operation(summary = "删除口味", description = "根据ID删除单个口味")
     @Parameter(name = "id", description = "口味ID", required = true)
     public R<String> delete(@PathVariable Long id) {

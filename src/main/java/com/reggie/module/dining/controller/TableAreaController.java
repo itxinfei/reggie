@@ -163,7 +163,15 @@ public class TableAreaController {
     @Operation(summary = "根据id查询区域", description = "根据ID查询桌台区域详情")
     @Parameter(name = "id", description = "区域ID", required = true)
     public R<TableArea> getById(@PathVariable Long id) {
-        TableArea area = tableAreaService.getById(id);
+        // 租户归属校验：与 update/delete 同一口径，先确认区域属于当前租户
+        Long tenantId = BaseContext.getCurrentTenantId();
+        if (tenantId == null) {
+            throw new CustomException("租户上下文不存在");
+        }
+        LambdaQueryWrapper<TableArea> qw = new LambdaQueryWrapper<>();
+        qw.eq(TableArea::getId, id)
+          .eq(TableArea::getTenantId, tenantId);
+        TableArea area = tableAreaService.getOne(qw);
         if (area != null) {
             return R.success(area);
         }

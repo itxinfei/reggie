@@ -63,16 +63,17 @@ public class DishControllerTest extends BaseControllerTest {
 
         // 确保测试分类存在（saveDish 需要校验分类存在性）
         Category category = new Category();
-        category.setId(1L);
+        // 主键用测试专用高 ID，避开 reggie 库租户 1 演示数据占用的小主键（单库改造，2026-10-02）
+        category.setId(991001L);
         category.setName("测试分类");
         category.setType(1);
         category.setSort(1);
         categoryService.save(category);
 
         Dish dish = new Dish();
-        dish.setId(1L);
+        dish.setId(992001L);
         dish.setName("测试菜品");
-        dish.setCategoryId(1L);
+        dish.setCategoryId(991001L);
         dish.setPrice(new BigDecimal("10.00"));
         dish.setCode("001");
         dish.setImage("test.jpg");
@@ -85,7 +86,7 @@ public class DishControllerTest extends BaseControllerTest {
     void testSave() throws Exception {
         DishSaveDTO dto = new DishSaveDTO();
         dto.setName("新菜品");
-        dto.setCategoryId(1L);
+        dto.setCategoryId(991001L);
         dto.setPrice(new BigDecimal("15.00"));
         dto.setCode("002");
         dto.setImage("new.jpg");
@@ -141,7 +142,7 @@ public class DishControllerTest extends BaseControllerTest {
 
     @Test
     void testGetById() throws Exception {
-        mockMvc.perform(get("/dish/1")
+        mockMvc.perform(get("/dish/992001")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())
@@ -152,9 +153,9 @@ public class DishControllerTest extends BaseControllerTest {
     @Test
     void testUpdate() throws Exception {
         DishDto dto = new DishDto();
-        dto.setId(1L);
+        dto.setId(992001L);
         dto.setName("修改后菜品");
-        dto.setCategoryId(1L);
+        dto.setCategoryId(991001L);
         dto.setPrice(new BigDecimal("20.00"));
         dto.setCode("001");
         dto.setImage("test.jpg");
@@ -163,7 +164,7 @@ public class DishControllerTest extends BaseControllerTest {
 
         List<DishFlavor> flavors = new ArrayList<>();
         DishFlavor flavor = new DishFlavor();
-        flavor.setDishId(1L);
+        flavor.setDishId(992001L);
         flavor.setName("辣度");
         flavor.setValue("中辣");
         flavors.add(flavor);
@@ -180,15 +181,15 @@ public class DishControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("修改菜品成功"));
 
-        org.junit.jupiter.api.Assertions.assertEquals("修改后菜品", dishService.getById(1L).getName());
+        org.junit.jupiter.api.Assertions.assertEquals("修改后菜品", dishService.getById(992001L).getName());
     }
 
     @Test
     void testDelete() throws Exception {
         Dish dish2 = new Dish();
-        dish2.setId(2L);
+        dish2.setId(992002L);
         dish2.setName("待删除菜品");
-        dish2.setCategoryId(1L);
+        dish2.setCategoryId(991001L);
         dish2.setPrice(new BigDecimal("5.00"));
         dish2.setCode("003");
         dish2.setImage("del.jpg");
@@ -197,20 +198,20 @@ public class DishControllerTest extends BaseControllerTest {
         dishService.save(dish2);
 
         mockMvc.perform(withCsrfToken(mockMvc, delete("/dish")
-                .param("ids", "2")
+                .param("ids", "992002")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("删除成功"));
 
-        org.junit.jupiter.api.Assertions.assertNull(dishService.getById(2L));
+        org.junit.jupiter.api.Assertions.assertNull(dishService.getById(992002L));
     }
 
     @Test
     void testUpdateStatus() throws Exception {
         mockMvc.perform(withCsrfToken(mockMvc, post("/dish/status/0")
-                .param("ids", "1")
+                .param("ids", "992001")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)))
@@ -218,16 +219,16 @@ public class DishControllerTest extends BaseControllerTest {
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").value("操作成功"));
 
-        Dish updated = dishService.getById(1L);
+        Dish updated = dishService.getById(992001L);
         org.junit.jupiter.api.Assertions.assertEquals(0, updated.getStatus());
     }
 
     @Test
     void testUpdateStatusBatch() throws Exception {
         Dish dish2 = new Dish();
-        dish2.setId(2L);
+        dish2.setId(992002L);
         dish2.setName("测试菜品2");
-        dish2.setCategoryId(1L);
+        dish2.setCategoryId(991001L);
         dish2.setPrice(new BigDecimal("20.00"));
         dish2.setCode("002");
         dish2.setImage("test2.jpg");
@@ -236,21 +237,21 @@ public class DishControllerTest extends BaseControllerTest {
         dishService.save(dish2);
 
         mockMvc.perform(withCsrfToken(mockMvc, post("/dish/status/0")
-                .param("ids", "1,2")
+                .param("ids", "992001,992002")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L)
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        org.junit.jupiter.api.Assertions.assertEquals(0, dishService.getById(1L).getStatus());
-        org.junit.jupiter.api.Assertions.assertEquals(0, dishService.getById(2L).getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals(0, dishService.getById(992001L).getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals(0, dishService.getById(992002L).getStatus());
     }
 
     @Test
     void testList() throws Exception {
         mockMvc.perform(get("/dish/list")
-                .param("categoryId", "1")
+                .param("categoryId", "991001")
                 .sessionAttr("employee", 1L)
                 .sessionAttr("tenantId", 999L))
                 .andExpect(status().isOk())

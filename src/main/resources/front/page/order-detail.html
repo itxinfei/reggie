@@ -53,7 +53,7 @@
                         <!-- 修改点(P1-2 自提)：自提订单醒目展示取餐码，供到店向店员核销 -->
                         <div v-if="isSelfPickup" class="od-row od-pickup-row">
                             <span class="od-label">取餐码</span>
-                            <span class="od-value" style="font-size:22px;font-weight:700;letter-spacing:3px;color:#07c160;">{{ order.pickupCode }}</span>
+                            <span class="od-value" style="font-size:22px;font-weight:700;letter-spacing:3px;color:var(--color-success);">{{ order.pickupCode }}</span>
                         </div>
                         <div v-if="isSelfPickup" class="od-row">
                             <span class="od-label">取餐方式</span>

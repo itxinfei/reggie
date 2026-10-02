@@ -1,6 +1,7 @@
 package com.reggie.module.inventory.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.reggie.common.BaseContext;
@@ -73,6 +74,9 @@ public class SupplierSettlementServiceImpl extends ServiceImpl<SupplierSettlemen
 
     /**
      * 支付 settlement。
+     * <p>P0-13 修复：totalAmount 判空防 compareTo NPE；超额付款拦截；
+     * 已付金额与状态改用条件原子更新（WHERE 期望旧状态 + 余额上限条件），
+     * 消除 getById→updateById 整行读改写的并发丢失更新与并发超额。</p>
      * @param id 参数 id
      * @param payAmount 参数 payAmount
      * @return 返回结果
@@ -94,14 +98,34 @@ public class SupplierSettlementServiceImpl extends ServiceImpl<SupplierSettlemen
         if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new CustomException("付款金额必须大于0");
         }
-        BigDecimal paid = (settlement.getPaidAmount() == null ? BigDecimal.ZERO : settlement.getPaidAmount())
-                .add(payAmount);
-        settlement.setPaidAmount(paid);
-        if (paid.compareTo(settlement.getTotalAmount()) >= 0) {
-            settlement.setStatus("PAID");
+        if (settlement.getTotalAmount() == null) {
+            throw new CustomException("结算单总金额未设置，无法付款");
         }
-        settlement.setUpdateTime(LocalDateTime.now());
-        updateById(settlement);
-        return settlement;
+        BigDecimal totalAmount = settlement.getTotalAmount();
+        BigDecimal paidBefore = settlement.getPaidAmount() == null ? BigDecimal.ZERO : settlement.getPaidAmount();
+        BigDecimal remaining = totalAmount.subtract(paidBefore);
+        if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new CustomException("结算单已付清，请勿重复付款");
+        }
+        if (payAmount.compareTo(remaining) > 0) {
+            throw new CustomException("付款金额不能超过未付余额 " + remaining.toPlainString() + " 元");
+        }
+        boolean fullPayment = paidBefore.add(payAmount).compareTo(totalAmount) >= 0;
+
+        // 条件原子更新：状态仍为 PENDING 且累加后不超过总额才生效；
+        // 并发第二笔付款条件不满足 → 影响行数 0 → 抛错，杜绝丢失更新与超额付款
+        LambdaUpdateWrapper<SupplierSettlement> uw = new LambdaUpdateWrapper<>();
+        uw.eq(SupplierSettlement::getId, id)
+                .eq(SupplierSettlement::getStatus, "PENDING")
+                .apply("COALESCE(paid_amount, 0) + {0} <= COALESCE(total_amount, 0)", payAmount)
+                .set(SupplierSettlement::getUpdateTime, LocalDateTime.now());
+        // payAmount 已校验为非空正数 BigDecimal，toPlainString 无注入风险
+        uw.setSql("paid_amount = COALESCE(paid_amount, 0) + " + payAmount.toPlainString()
+                + (fullPayment ? ", status = 'PAID'" : ""));
+        boolean updated = update(uw);
+        if (!updated) {
+            throw new CustomException("结算单状态或金额已变更，请刷新后重试");
+        }
+        return getById(id);
     }
 }
