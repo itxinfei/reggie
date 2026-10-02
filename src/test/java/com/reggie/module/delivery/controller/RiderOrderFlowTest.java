@@ -76,6 +76,10 @@ public class RiderOrderFlowTest extends com.reggie.controller.BaseControllerTest
         jdbc.update("DELETE FROM orders WHERE id BETWEEN 5001 AND 5010");
         jdbc.update("DELETE FROM rider_location_record WHERE tenant_id = 999");
         jdbc.update("DELETE FROM rider WHERE id IN (2001, 2002, 2003)");
+        // 单库共享自防御：schema-payment 的夹具订单 100/101/102 被支付流程推进到
+        // 待配送(status=2)且无骑手后会进入抢单大厅，若上一轮测试未清干净会污染本类
+        // 的 data[0] 与“大厅清空”断言。这里显式清掉这三个外部 id，保证大厅只看到本类的单
+        jdbc.update("DELETE FROM orders WHERE id IN (100, 101, 102)");
         jdbc.update("DELETE FROM address_book WHERE id = 3001");
         jdbc.update("DELETE FROM user WHERE id = 9001");
         jdbc.update("DELETE FROM store_info WHERE id = 4001");
