@@ -57,10 +57,10 @@
         <div class="sidebar-container" :class="{ collapsed: sidebarCollapsed, 'mobile-open': sidebarOpen }">
           <div class="sidebar-logo" @click="goHome()">
             <div class="logo-icon">
-              <img src="images/login/login-logo.png" alt="瑞吉外卖" style="width: 36px; height: 36px;" />
+              <img :src="shopLogo || 'images/login/login-logo.png'" :alt="shopName" style="width: 36px; height: 36px;" />
             </div>
             <div class="logo-text">
-              <span class="logo-brand">瑞吉外卖</span>
+              <span class="logo-brand">{{ shopName }}</span>
               <span class="logo-sub">REGGIE TAKEOUT</span>
             </div>
           </div>
@@ -216,6 +216,7 @@
     <script src="./api/login.js?v=20260926"></script>
     <script src="./api/sys.js?v=20260928"></script>
     <script src="./api/employee.js?v=20260922"></script>
+    <script src="./api/store.js?v=20261003"></script>
     <script>
 
       new Vue({
@@ -225,6 +226,9 @@
             defAct: '1',
             menuActived: '1',
             userInfo: {},
+            // 侧边栏品牌：登录后从 /restaurant/info 实时拉取，商家"店铺设置"改名后同步
+            shopName: '瑞吉外卖',
+            shopLogo: '',
             sidebarCollapsed: false,
             sidebarOpen: false,
             // 全局菜单检索命令面板（Ctrl+K）
@@ -473,12 +477,15 @@
           }
           this.loadCurrentEmployee()
           this.loadMenuAccess()
+          this.loadShopBrand()
           this.showLoading()
         },
         mounted() {
           // 修改点：将菜单数据与处理方法暴露到全局，供 iframe 内页面通过 window.parent 调用
           window.menuList = this.visibleMenuList
           window.menuHandle = this.menuHandle
+          // 供 iframe 内"店铺设置"保存成功后通知外壳实时刷新侧边栏品牌
+          window.loadShopBrand = this.loadShopBrand.bind(this)
           // 修改点(2026-08-12)：监听子页面发来的未登录信号，统一由顶层窗口跳转登录页，
           // 防止登录页被嵌套在 iframe（数据区）内
           window.addEventListener('message', this.handleChildNotLogin)
@@ -524,6 +531,24 @@
               }
             }).catch(function (err) {
               console.warn('[index] 当前员工信息加载失败，使用本地缓存:', err)
+            })
+          },
+          // 拉取店铺品牌（店名/Logo）：侧边栏与浏览器标题实时同步，失败时静默保留默认品牌
+          loadShopBrand() {
+            const self = this
+            getShopSettings().then(function (res) {
+              if (res && res.code === 1 && res.data) {
+                if (res.data.name) {
+                  self.shopName = res.data.name
+                  document.title = res.data.name + '管理端'
+                }
+                // 仅商家自定义 Logo 才替换默认图标；系统默认 logo 不替换登录 Logo
+                if (res.data.logo && res.data.logo !== '/images/common/logo.png') {
+                  self.shopLogo = res.data.logo
+                }
+              }
+            }).catch(function (err) {
+              console.warn('[index] 店铺品牌加载失败，使用默认品牌:', err)
             })
           },
           /* ── 全局菜单检索命令面板 ── */

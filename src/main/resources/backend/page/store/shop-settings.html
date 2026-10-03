@@ -171,6 +171,13 @@
             })
             if (res && res.code === 1) {
               ReggieUI.success('店铺设置已保存，C 端首页已生效')
+              // 通知后台外壳立即刷新侧边栏品牌（iframe 同域可访问 parent）
+              try {
+                var parentWin = window.parent
+                if (parentWin && parentWin !== window && typeof parentWin.loadShopBrand === 'function') {
+                  parentWin.loadShopBrand()
+                }
+              } catch (e) { /* 独立打开页面等场景静默 */ }
               // 刷新缓存值（下次回填取到最新）
               this.fetchSettings()
             } else {

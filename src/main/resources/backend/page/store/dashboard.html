@@ -380,7 +380,9 @@
                     // 修改点：此前 overview 失败静默，补齐 else 与 summary 分支一致
                     ReggieUI.error((ov && ov.msg) || '加载门店排行失败');
                 }
-                if (!self.currentStoreName && self.dashboard && self.dashboard.storeRanking) {
+                // 始终用实时排行中的店名；URL ?name= 仅作加载初始占位，
+                // 避免收藏旧链接后改名仍显示旧店名（快照不同步）
+                if (self.dashboard && self.dashboard.storeRanking) {
                     var hit = null;
                     for (var i = 0; i < self.dashboard.storeRanking.length; i++) {
                         if (String(self.dashboard.storeRanking[i].tenantId) === String(self.currentStoreId)) {
@@ -388,7 +390,7 @@
                             break;
                         }
                     }
-                    if (hit) self.currentStoreName = hit.storeName || '';
+                    if (hit && hit.storeName) self.currentStoreName = hit.storeName;
                 }
                 self.lastUpdated = new Date();
                 self.$nextTick(function() {

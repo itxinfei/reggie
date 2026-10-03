@@ -4,7 +4,11 @@ import com.reggie.module.order.model.OrderDetail;
 import com.reggie.module.order.model.Orders;
 import com.reggie.module.printer.model.PrintJob;
 import com.reggie.module.printer.model.PrintLine;
+import com.reggie.module.tenant.model.Tenant;
+import com.reggie.module.tenant.service.TenantService;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
@@ -20,10 +24,17 @@ import java.util.List;
  * @since 2026-07-09
  */
 @Component
+@Slf4j
 public class PrinterTemplate {
 
     /** 日期时间格式化器 */
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /** 查不到店名时的兜底名（与 /restaurant/info 的默认名保持一致） */
+    private static final String DEFAULT_STORE_NAME = "瑞吉外卖";
+
+    @Autowired
+    private TenantService tenantService;
 
     /**
      * 根据打印类型构建打印任务
@@ -61,7 +72,9 @@ public class PrinterTemplate {
         List<PrintLine> lines = new ArrayList<>();
 
         lines.add(new PrintLine("=== 收银小票 ===", 3, true, PrintLine.Align.CENTER, PrintLine.LineType.TEXT));
-        lines.add(new PrintLine("店铺名称: Reggie Takeout", 0, false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
+        // 店名实时取 tenant.name（商家"店铺设置"改名后小票同步），查不到才用兜底名
+        lines.add(new PrintLine("店铺名称: " + resolveStoreName(order), 0, false, PrintLine.Align.LEFT,
+                PrintLine.LineType.TEXT));
         lines.add(new PrintLine("订单号: " + order.getNumber(), 0, false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
         lines.add(new PrintLine("日期: " + (order.getOrderTime() != null ? order.getOrderTime().format(DTF) : ""), 0,
                 false, PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
@@ -136,6 +149,9 @@ public class PrinterTemplate {
         List<PrintLine> lines = new ArrayList<>();
 
         lines.add(new PrintLine("=== 外卖单 ===", 3, true, PrintLine.Align.CENTER, PrintLine.LineType.TEXT));
+        // 店名实时取 tenant.name，配送员取餐核对用
+        lines.add(new PrintLine("店铺: " + resolveStoreName(order), 1, true,
+                PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
         boolean isPlatform = StringUtils.isNotBlank(order.getPlatformType());
         lines.add(new PrintLine("平台: " + platformName(order.getPlatformType()), 1, true,
                 PrintLine.Align.LEFT, PrintLine.LineType.TEXT));
@@ -177,6 +193,28 @@ public class PrinterTemplate {
 
         job.setLines(lines);
         return job;
+    }
+
+    /**
+     * 按订单所属租户实时解析店铺名称。
+     * tenantService 未注入（纯单测直接 new）、查询异常或租户无名称时，回退兜底名，绝不阻断打印。
+     *
+     * @param order 订单（取 tenantId）
+     * @return 当前店铺名称
+     */
+    private String resolveStoreName(Orders order) {
+        try {
+            if (tenantService != null && order != null && order.getTenantId() != null) {
+                Tenant tenant = tenantService.getById(order.getTenantId());
+                if (tenant != null && StringUtils.isNotBlank(tenant.getName())) {
+                    return tenant.getName();
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[打印] 读取租户{}店名失败，使用兜底名",
+                    order != null ? order.getTenantId() : null, e);
+        }
+        return DEFAULT_STORE_NAME;
     }
 
     /**
