@@ -38,30 +38,30 @@
 
 <br>
 
-<!-- ============ 徽章墙：集成能力 ============ -->
+<!-- ============ 徽章墙：集成能力（7 个 / 745px） ============ -->
 <img src="docs/badges/shield-19.svg" alt="微信支付">
 <img src="docs/badges/shield-20.svg" alt="支付宝">
 <img src="docs/badges/shield-21.svg" alt="阿里云短信">
 <img src="docs/badges/shield-22.svg" alt="SSE">
 <img src="docs/badges/shield-23.svg" alt="WebSocket">
 <img src="docs/badges/shield-24.svg" alt="OpenAPI 3">
-<img src="docs/badges/shield-25.svg" alt="ZXing 二维码">
 <img src="docs/badges/shield-26.svg" alt="Apache POI">
-<img src="docs/badges/shield-27.svg" alt="iText PDF">
 
 <br>
 
-<!-- ============ 徽章墙：工程质量 & 指标 ============ -->
+<!-- ============ 徽章墙：质量与工具（7 个 / 626px） ============ -->
+<img src="docs/badges/shield-25.svg" alt="ZXing 二维码">
+<img src="docs/badges/shield-27.svg" alt="iText PDF">
 <img src="docs/badges/shield-28.svg" alt="JUnit 5">
 <img src="docs/badges/shield-29.svg" alt="Mockito">
 <img src="docs/badges/shield-30.svg" alt="JaCoCo">
 <img src="docs/badges/shield-31.svg" alt="Maven">
 <img src="docs/badges/shield-32.svg" alt="Apache 2.0">
-<img src="docs/badges/shield-33.svg" alt="多租户隔离">
 
 <br>
 
-<!-- ============ 硬实力数据 ============ -->
+<!-- ============ 徽章墙：系统能力与规模（6 个 / 592px） ============ -->
+<img src="docs/badges/shield-33.svg" alt="多租户隔离">
 <img src="docs/badges/shield-34.svg" alt="39 模块">
 <img src="docs/badges/shield-35.svg" alt="124 表">
 <img src="docs/badges/shield-36.svg" alt="943 测试">
