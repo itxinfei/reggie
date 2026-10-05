@@ -9,21 +9,21 @@
 
 | 文件 | 内容 |
 |---|---|
-| [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md) | 项目概览、技术栈、目录结构、构建与运行 |
-| [MODULES_AND_APIS.md](./MODULES_AND_APIS.md) | 36 个业务模块清单、73 个 Controller 与 API 端点分组 |
-| [DATA_MODEL.md](./DATA_MODEL.md) | 117 个持久化实体、字段约定、多租户与乐观锁策略 |
-| [BACKEND_PAGES.md](./BACKEND_PAGES.md) | 管理后台页面清单、目录结构、组件与样式规范 |
-| [ARCHITECTURE_DECISIONS.md](./ARCHITECTURE_DECISIONS.md) | 分层架构、异常处理、多租户、安全、约定等关键设计决策 |
+| [项目总览.md](./项目总览.md) | 项目概览、技术栈、目录结构、构建与运行 |
+| [模块与接口.md](./模块与接口.md) | 业务模块清单、Controller 与 API 端点分组 |
+| [数据模型.md](./数据模型.md) | 持久化实体、字段约定、多租户与乐观锁策略 |
+| [后台页面清单.md](./后台页面清单.md) | 管理后台页面清单、目录结构、组件与样式规范 |
+| [架构设计.md](./架构设计.md) | 分层架构、异常处理、多租户、安全、约定等关键设计决策 |
 
 ---
 
 ## 快速入口
 
-- **想快速了解"这个系统是干什么的"** → [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md)
-- **想查某个业务模块提供了哪些 API** → [MODULES_AND_APIS.md](./MODULES_AND_APIS.md)
-- **想查某张表对应的实体类和字段** → [DATA_MODEL.md](./DATA_MODEL.md)
-- **想查某个功能在哪个页面** → [BACKEND_PAGES.md](./BACKEND_PAGES.md)
-- **想理解"为什么代码是这样写的"** → [ARCHITECTURE_DECISIONS.md](./ARCHITECTURE_DECISIONS.md)
+- **想快速了解"这个系统是干什么的"** → [项目总览.md](./项目总览.md)
+- **想查某个业务模块提供了哪些 API** → [模块与接口.md](./模块与接口.md)
+- **想查某张表对应的实体类和字段** → [数据模型.md](./数据模型.md)
+- **想查某个功能在哪个页面** → [后台页面清单.md](./后台页面清单.md)
+- **想理解"为什么代码是这样写的"** → [架构设计.md](./架构设计.md)
 
 ---
 

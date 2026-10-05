@@ -19,8 +19,11 @@
 <img src="https://img.shields.io/badge/Modules-39-1677ff" alt="39 Modules">
 <img src="https://img.shields.io/badge/Tables-124-ff6b6b" alt="124 Tables">
 <a href="https://gitee.com/itxinfei/reggie"><img src="https://img.shields.io/badge/Gitee-itxinfei/reggie-c71d23?logo=gitee" alt="Gitee"></a>
+<a href="https://itxinfei.github.io/reggie/"><img src="https://img.shields.io/badge/🏠_项目官网-在线浏览-ffc200" alt="项目官网"></a>
 
 </p>
+
+<p align="center"><b>🌐 还在等什么？</b> 先逛逛 👉 <a href="https://itxinfei.github.io/reggie/"><b>瑞吉外卖 · 项目官网</b></a></p>
 
 ---
 
@@ -35,6 +38,15 @@
 系统在数据层内置 **MyBatis-Plus 行级租户隔离**（自动注入 `tenant_id`，上下文缺失时 fail-closed），一套实例可服务多品牌/多门店，数据互不穿透；同时预留美团 / 京东 / 饿了么 / 抖音多平台外卖对接骨架（工厂 + 适配器，默认关闭，协议层待按官方文档对接）。
 
 **核心亮点：AI 智能引擎**——接入大语言模型实现智能点餐推荐（SSE 流式）、菜品文案生成、经营分析与多轮对话；配送侧内置**自有骑手体系**（骑手接单、店长派单、GPS 实时追踪），不依赖第三方配送平台。
+
+> **🥇 这不是一个玩具级 Demo。** 系统在真实餐饮业务上打磨：**39 个业务模块、124 张数据表、943 个自动化测试**，覆盖多租户隔离、资金支付、库存成本、履约配送、会员营销等企业级关注点。克隆即可运行，**可学习、可毕设、可二开、可商用**。
+
+## 🧭 内容导航
+
+- [项目介绍](#-项目介绍) · [界面预览](#-界面预览) · [功能清单](#-功能清单)
+- [技术栈](#-技术栈) · [快速开始](#-快速开始) · [AI 配置](#-ai-配置)
+- [测试](#-测试) · [项目结构](#-项目结构) · [延伸文档](#-延伸文档)
+- [常见问题](#-常见问题) · [联系与社区](#-联系与支持)
 
 ---
 
@@ -120,6 +132,17 @@
 ### 安全防护
 
 Session + HttpOnly Cookie 鉴权 · MyBatis-Plus 行级租户隔离（上下文缺失 fail-closed）· CSRF Token · Redis 滑动窗口限流（`@RateLimit`）· 全量 `#{}` 预编译防 SQL 注入 · XSS 转义 · BCrypt 密码加密（兼容历史 MD5 并自动升级）· 日志敏感信息脱敏。
+
+---
+
+## 🎯 适用人群
+
+| 你是… | 瑞吉能给你 |
+|---|---|
+| 🎓 计算机专业学生 | 罕见「大而全」的全栈实战项目：三端 + AI + 多租户，简历 / 毕设利器 |
+| 🍜 餐饮商家 / 创业者 | 自助部署、数据自持，一套系统管门店，无需为 SaaS 持续付费 |
+| 👨‍💻 全栈开发者 | 标准分层 + 多租户 + 支付 + 943 个测试，可直接二开或作为脚手架 |
+| 🏢 外包 / 技术团队 | Apache-2.0 协议允许商用交付，省去从零搭建的大量成本 |
 
 ---
 
@@ -266,11 +289,11 @@ reggie/
 
 | 文档 | 说明 |
 |---|---|
-| [项目总览](docs/PROJECT_OVERVIEW.md) | 业务背景与整体设计 |
-| [模块与 API](docs/MODULES_AND_APIS.md) | 各模块接口清单 |
-| [数据模型](docs/DATA_MODEL.md) | 数据表与关系设计 |
-| [架构决策](docs/ARCHITECTURE_DECISIONS.md) | 关键技术选型与决策记录 |
-| [后台页面清单](docs/BACKEND_PAGES.md) | 管理后台全部页面索引 |
+| [项目总览](docs/项目总览.md) | 业务背景与整体设计 |
+| [模块与接口](docs/模块与接口.md) | 各模块接口清单 |
+| [数据模型](docs/数据模型.md) | 数据表与关系设计 |
+| [架构设计](docs/架构设计.md) | 关键技术选型与决策记录 |
+| [后台页面清单](docs/后台页面清单.md) | 管理后台全部页面索引 |
 
 ---
 

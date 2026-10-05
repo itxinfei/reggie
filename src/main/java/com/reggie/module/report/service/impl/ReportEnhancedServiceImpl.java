@@ -253,6 +253,8 @@ public class ReportEnhancedServiceImpl implements ReportEnhancedService {
             }
 
             Map<String, Object> weekData = getPeriodSummary(current, weekEnd, tenantId);
+            // 补周起始标签：前端按 item.weekStart 渲染 X 轴与明细表，缺失会显示 undefined
+            weekData.put("weekStart", current.toString());
             weeklyData.add(weekData);
 
             totalRevenue = totalRevenue.add((BigDecimal) weekData.getOrDefault("revenue", BigDecimal.ZERO));
