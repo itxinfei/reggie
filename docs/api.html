@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>模块与接口 · 瑞吉外卖</title>
+  <meta name="description" content="瑞吉外卖 36 个业务模块、73 个 Controller 的完整 REST API 端点清单，支持实时检索。">
+  <link rel="stylesheet" href="site/style.css">
+  <link rel="stylesheet" href="site/docview.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍜</text></svg>">
+</head>
+<body data-mode="api">
+
+<!-- ============ 导航 ============ -->
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="nav-logo" href="index.html"><span class="bowl">🍜</span> 瑞吉外卖</a>
+    <nav class="nav-links">
+      <a href="index.html">官网首页</a>
+      <a href="api.html" class="active">API 文档</a>
+      <a href="doc.html?p=项目总览.md">项目总览</a>
+    </nav>
+    <div class="nav-actions">
+      <button class="icon-btn" id="themeToggle" title="切换明暗主题" aria-label="切换主题">🌙</button>
+      <button class="icon-btn side-fab" id="sideToggle" title="模块目录" aria-label="模块目录">🗂️</button>
+      <a class="btn btn-dark btn-sm" href="https://github.com/itxinfei/reggie" target="_blank" rel="noopener">⭐ Star</a>
+    </div>
+  </div>
+</header>
+
+<!-- ============ 主体 ============ -->
+<div class="container">
+  <div class="shell">
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-title" id="sideTitle">模块导航</div>
+      <nav class="side-nav" id="sideNav"></nav>
+      <div class="side-links">
+        <a href="api.html" class="cur">📘 模块与接口</a>
+        <a href="doc.html?p=项目总览.md">📗 项目总览</a>
+        <a href="doc.html?p=架构设计.md">🏛️ 架构设计</a>
+        <a href="doc.html?p=数据模型.md">🗃️ 数据模型</a>
+        <a href="index.html">🏠 返回官网</a>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div id="docContent">
+        <div class="doc-status"><span class="spin"></span><br>正在加载接口文档…</div>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<div class="side-backdrop" id="sideBackdrop"></div>
+
+<!-- ============ 页脚 ============ -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="logo">🍜 瑞吉外卖 Reggie Takeout</div>
+    <div class="links">
+      <a href="https://github.com/itxinfei/reggie" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://gitee.com/itxinfei/reggie" target="_blank" rel="noopener">Gitee</a>
+      <a href="doc.html?p=项目总览.md">项目总览</a>
+      <a href="api.html">模块与接口</a>
+    </div>
+    <div class="copy">Copyright © 2026 心飞为你飞 · 基于 Apache License 2.0 开源 · 本站由 GitHub Pages 提供托管</div>
+  </div>
+</footer>
+
+<script src="site/doc-data.js"></script>
+<script src="site/docview.js"></script>
+</body>
+</html>
